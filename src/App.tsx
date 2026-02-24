@@ -24,20 +24,58 @@ const C = {
   gradEnd:    "#2d1b4e",
 };
 
-const MENUS: Record<string, { key: string; label: string; icon: string }[]> = {
-  admin: [
-    { key: "dashboard",     label: "Dashboard",     icon: "📊" },
-    { key: "influencers",   label: "Influencers",   icon: "👥" },
-    { key: "relatorios",    label: "Relatórios",    icon: "📈" },
-    { key: "configuracoes", label: "Configurações", icon: "⚙️" },
-  ],
-  influencer: [
-    { key: "dashboard", label: "Meu Dashboard",      icon: "📊" },
-    { key: "vendas",    label: "Vendas & Comissões",  icon: "💰" },
-    { key: "agenda",    label: "Agenda de Lives",     icon: "🎥" },
-    { key: "perfil",    label: "Meu Perfil",          icon: "👤" },
-  ],
+const MENU_SECTIONS_ADMIN = [
+  {
+    section: "Dashboards",
+    items: [
+      { key: "dashboard", label: "Dashboard", icon: "📊" },
+    ],
+  },
+  {
+    section: "Lives",
+    items: [
+      { key: "agenda", label: "Agenda de Lives", icon: "🎥" },
+    ],
+  },
+  {
+    section: "Operações",
+    items: [
+      { key: "influencers", label: "Influencers", icon: "👥" },
+      { key: "relatorios",  label: "Relatórios",  icon: "📈" },
+    ],
+  },
+];
+
+const MENU_SECTIONS_INFLUENCER = [
+  {
+    section: "Dashboards",
+    items: [
+      { key: "dashboard", label: "Meu Dashboard", icon: "📊" },
+    ],
+  },
+  {
+    section: "Lives",
+    items: [
+      { key: "agenda", label: "Agenda de Lives", icon: "🎥" },
+    ],
+  },
+  {
+    section: "Operações",
+    items: [
+      { key: "vendas", label: "Vendas & Comissões", icon: "💰" },
+      { key: "perfil", label: "Meu Perfil",         icon: "👤" },
+    ],
+  },
+];
+
+const btnBase: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: "10px",
+  width: "100%", padding: "11px 14px", borderRadius: "12px", border: "none",
+  cursor: "pointer", fontSize: "13px", fontWeight: 500, textAlign: "left",
+  background: "transparent", color: C.textMuted, fontFamily: FONT.bodyMedium,
 };
+
+// ─── LOGIN ───────────────────────────────────────────────────────────────────
 
 function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
   const [email, setEmail]       = useState("");
@@ -114,7 +152,21 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
               />
               <button onClick={() => setShowPass(!showPass)}
                 style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "#e5dce1" }}>
-                {showPass ? "🙈" : "👁️"}
+                {showPass ? (
+                  // Olho aberto
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e5dce1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <ellipse cx="12" cy="12" rx="10" ry="6" />
+                    <circle cx="12" cy="12" r="2.5" />
+                  </svg>
+                ) : (
+                  // Olho fechado
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e5dce1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 12c2.5-5 5.5-7 10-7s7.5 2 10 7" />
+                    <path d="M6 16.5l1.5-2" />
+                    <path d="M12 18v-2.5" />
+                    <path d="M18 16.5l-1.5-2" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
@@ -157,10 +209,21 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
   );
 }
 
+// ─── LAYOUT ───────────────────────────────────────────────────────────────────
+
 function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
   const [activePage, setActivePage] = useState("dashboard");
-  const menu = MENUS[user.role];
-  const currentItem = menu.find((m: any) => m.key === activePage);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    Dashboards: true, Lives: true, "Operações": true,
+  });
+
+  const sections = user.role === "admin" ? MENU_SECTIONS_ADMIN : MENU_SECTIONS_INFLUENCER;
+  const allItems = sections.flatMap(s => s.items);
+  const currentItem = allItems.find(i => i.key === activePage);
+
+  function toggleSection(name: string) {
+    setOpenSections(prev => ({ ...prev, [name]: !prev[name] }));
+  }
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -169,57 +232,91 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: FONT.bodyRoman }}>
+
+      {/* ── SIDEBAR ── */}
       <aside style={{
-        width: "240px", minHeight: "100vh", flexShrink: 0,
+        width: "240px", height: "100vh", flexShrink: 0, position: "sticky", top: 0,
         background: `linear-gradient(180deg, ${C.gradEnd} 0%, ${C.gradStart} 100%)`,
-        display: "flex", flexDirection: "column", padding: "28px 16px",
-        borderRight: `1px solid ${C.darkBorder}`
+        display: "flex", flexDirection: "column", padding: "24px 16px",
+        borderRight: `1px solid ${C.darkBorder}`, boxSizing: "border-box",
       }}>
-        <div style={{ marginBottom: "36px", paddingLeft: "8px" }}>
+        {/* LOGO */}
+        <div style={{ marginBottom: "28px", paddingLeft: "8px" }}>
           <img src="/Logo Spin Gaming White.png" alt="Spin Gaming"
-            style={{ height: "32px", objectFit: "contain", marginBottom: "6px" }} />
-          <div style={{ color: C.textMuted, fontSize: "10px", marginTop: "4px", letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>
-            {user.role === "admin" ? "Painel Administrativo" : "Painel do Influencer"}
-          </div>
+            style={{ height: "56px", objectFit: "contain", display: "block" }} />
         </div>
 
-        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
-          {menu.map((item: any) => {
-            const active = activePage === item.key;
+        {/* NAV — scrollável */}
+        <nav style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", paddingRight: "4px" }}>
+          {sections.map(sec => {
+            const isOpen = openSections[sec.section];
+            const hasActive = sec.items.some(i => i.key === activePage);
             return (
-              <button key={item.key} onClick={() => setActivePage(item.key)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "10px",
-                  padding: "11px 14px", borderRadius: "12px", border: "none",
-                  cursor: "pointer", fontSize: "13px", fontWeight: 500, textAlign: "left",
-                  background: active ? `linear-gradient(135deg, ${C.purple}cc, ${C.blue}cc)` : "transparent",
-                  color: active ? "white" : C.textMuted,
-                  boxShadow: active ? `0 4px 16px ${C.purple}44` : "none",
-                  fontFamily: FONT.bodyMedium, letterSpacing: "0.5px"
+              <div key={sec.section}>
+                <button
+                  onClick={() => toggleSection(sec.section)}
+                  style={{
+                    ...btnBase,
+                    justifyContent: "space-between", padding: "10px 14px",
+                    color: hasActive ? "white" : "#8888aa",
+                    fontWeight: 700, fontSize: "11px", letterSpacing: "1.5px", textTransform: "uppercase",
+                  }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{
+                      fontSize: "10px", display: "inline-block",
+                      transition: "transform 0.25s",
+                      transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                      color: "#6b6b8a",
+                    }}>▶</span>
+                    <span style={{ fontFamily: FONT.bodyMedium }}>{sec.section}</span>
+                  </span>
+                </button>
+
+                <div style={{
+                  overflow: "hidden",
+                  maxHeight: isOpen ? `${sec.items.length * 52}px` : "0px",
+                  transition: "max-height 0.25s ease",
+                  display: "flex", flexDirection: "column", gap: "2px",
+                  paddingLeft: "8px",
                 }}>
-                <span style={{ fontSize: "15px" }}>{item.icon}</span>
-                {item.label}
-              </button>
+                  {sec.items.map(item => {
+                    const active = activePage === item.key;
+                    return (
+                      <button key={item.key} onClick={() => setActivePage(item.key)}
+                        style={{
+                          ...btnBase,
+                          background: active ? `linear-gradient(135deg, ${C.purple}cc, ${C.blue}cc)` : "transparent",
+                          color: active ? "white" : C.textMuted,
+                          boxShadow: active ? `0 4px 16px ${C.purple}44` : "none",
+                        }}>
+                        <span style={{ fontSize: "15px" }}>{item.icon}</span>
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </nav>
 
-        <div style={{ borderTop: `1px solid ${C.darkBorder}`, paddingTop: "16px", marginTop: "16px" }}>
-          <div style={{ padding: "8px 14px", marginBottom: "4px" }}>
+        {/* RODAPÉ FIXO */}
+        <div style={{ borderTop: "2px solid #3a3a5c", paddingTop: "14px", marginTop: "16px", flexShrink: 0 }}>
+          <div style={{ padding: "4px 14px 10px" }}>
             <p style={{ color: C.textPrimary, fontSize: "13px", fontWeight: 600, margin: 0, fontFamily: FONT.bodyMedium }}>{user.name}</p>
             <p style={{ color: C.textMuted, fontSize: "11px", margin: "3px 0 0", fontFamily: FONT.bodyRoman }}>{user.email}</p>
           </div>
-          <button onClick={handleLogout}
-            style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "11px 14px", borderRadius: "12px", border: "none", cursor: "pointer", background: "transparent", color: C.textMuted, fontSize: "13px", fontFamily: FONT.bodyMedium }}>
-            🚪 Sair
-          </button>
+          <button onClick={() => setActivePage("configuracoes")} style={{ ...btnBase, padding: "7px 14px" }}>⚙️ Configurações</button>
+          <button style={{ ...btnBase, padding: "7px 14px" }}>❓ Ajuda</button>
+          <button onClick={handleLogout} style={{ ...btnBase, padding: "7px 14px" }}>🚪 Sair</button>
         </div>
       </aside>
 
+      {/* ── MAIN ── */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f4f4f8" }}>
         <header style={{ background: "white", borderBottom: "1px solid #e8e8f0", padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ color: C.black, fontWeight: 800, fontSize: "15px", letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.title }}>
-            {currentItem?.icon} {currentItem?.label}
+            {currentItem?.icon} {currentItem?.label ?? "⚙️ Configurações"}
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{ textAlign: "right" }}>
@@ -230,7 +327,7 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
               width: "36px", height: "36px", borderRadius: "50%",
               background: `linear-gradient(135deg, ${C.purple}, ${C.blue})`,
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "white", fontSize: "14px", fontWeight: 700
+              color: "white", fontSize: "14px", fontWeight: 700,
             }}>
               {user.name[0]}
             </div>
@@ -242,7 +339,7 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
             <div style={{ fontSize: "52px", marginBottom: "20px" }}>🚧</div>
             <p style={{ fontSize: "18px", fontWeight: 800, color: C.black, margin: 0, textTransform: "uppercase", letterSpacing: "1px", fontFamily: FONT.title }}>Em construção</p>
             <p style={{ fontSize: "13px", color: "#888", marginTop: "8px", fontFamily: FONT.bodyRoman }}>
-              <strong style={{ color: C.purple }}>{currentItem?.label}</strong> será montada aqui na próxima etapa.
+              <strong style={{ color: C.purple }}>{currentItem?.label ?? "Configurações"}</strong> será montada aqui na próxima etapa.
             </p>
           </div>
         </div>
@@ -250,6 +347,8 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
     </div>
   );
 }
+
+// ─── ROOT ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
