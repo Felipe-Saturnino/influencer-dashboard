@@ -132,7 +132,7 @@ export default function Configuracoes() {
           {(["pt", "en"] as const).map(l => (
             <button key={l} onClick={() => setLang(l)}
               style={{ flex: 1, padding: "14px 12px", borderRadius: "12px", cursor: "pointer", border: `2px solid ${lang === l ? BASE_COLORS.blue : t.cardBorder}`, background: lang === l ? `${BASE_COLORS.blue}18` : t.inputBg, display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", transition: "all 0.2s" }}>
-              <span style={{ fontSize: "22px" }}>{l === "pt" ? "🇧🇷" : "🇺🇸"}</span>
+              <img src={l === "pt" ? "https://flagcdn.com/w40/br.png" : "https://flagcdn.com/w40/us.png"} alt={l} style={{ width: "28px", height: "20px", borderRadius: "3px", objectFit: "cover" }} />
               <span style={{ fontSize: "13px", fontWeight: 600, color: t.text, fontFamily: FONT.body }}>
                 {l === "pt" ? "Português" : "English"}
               </span>
