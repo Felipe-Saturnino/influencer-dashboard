@@ -154,13 +154,13 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
                 style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "#e5dce1" }}>
                 {showPass ? (
                   // Olho aberto
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e5dce1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <ellipse cx="12" cy="12" rx="10" ry="6" />
                     <circle cx="12" cy="12" r="2.5" />
                   </svg>
                 ) : (
                   // Olho fechado
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e5dce1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M2 12c2.5-5 5.5-7 10-7s7.5 2 10 7" />
                     <path d="M6 16.5l1.5-2" />
                     <path d="M12 18v-2.5" />
