@@ -243,7 +243,7 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
         {/* LOGO */}
         <div style={{ marginBottom: "28px", paddingLeft: "8px" }}>
           <img src="/Logo Spin Gaming White.png" alt="Spin Gaming"
-            style={{ height: "56px", objectFit: "contain", display: "block" }} />
+            style={{ height: "80px", objectFit: "contain", display: "block" }} />
         </div>
 
         {/* NAV — scrollável */}
