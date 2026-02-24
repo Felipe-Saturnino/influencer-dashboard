@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../constants/theme";
 import { supabase } from "../../lib/supabase";
+import { useT } from "../../hooks/useT";
 
 function passwordStrength(pwd: string) {
   let s = 0;
@@ -26,8 +27,9 @@ function EyeIcon({ open }: { open: boolean }) {
 
 export default function Configuracoes() {
   const { theme: t, isDark, setIsDark, lang, setLang } = useApp();
+  const T = useT();
+  const c = T.config;
 
-  // Password state
   const [curPass,  setCurPass]  = useState("");
   const [newPass,  setNewPass]  = useState("");
   const [confPass, setConfPass] = useState("");
@@ -40,40 +42,38 @@ export default function Configuracoes() {
 
   const strength = passwordStrength(newPass);
   const strengthColor = ["#e94025","#e94025","#f5a623","#27ae60","#27ae60"][strength];
-  const strengthLabel = strength <= 1 ? "Fraca" : strength <= 2 ? "Média" : "Forte";
+  const strengthLabel = strength <= 1 ? c.strengthWeak : strength <= 2 ? c.strengthMedium : c.strengthStrong;
 
   const reqs = [
-    { ok: newPass.length >= 8,                              label: "Mínimo 8 caracteres" },
-    { ok: /[a-z]/.test(newPass) && /[A-Z]/.test(newPass),  label: "Maiúsculas e minúsculas" },
-    { ok: /\d/.test(newPass),                               label: "Pelo menos um número" },
-    { ok: /[^a-zA-Z0-9]/.test(newPass),                    label: "Pelo menos um caractere especial" },
+    { ok: newPass.length >= 8,                             label: c.req8chars },
+    { ok: /[a-z]/.test(newPass) && /[A-Z]/.test(newPass), label: c.reqUpperLower },
+    { ok: /\d/.test(newPass),                              label: c.reqNumber },
+    { ok: /[^a-zA-Z0-9]/.test(newPass),                   label: c.reqSpecial },
   ];
 
   async function handleChangePassword() {
     setPassErr(""); setPassOk(false);
-    if (!curPass)             return setPassErr("Informe sua senha atual.");
-    if (newPass.length < 8)  return setPassErr("A nova senha deve ter pelo menos 8 caracteres.");
-    if (newPass !== confPass) return setPassErr("As senhas não coincidem.");
-    if (curPass === newPass)  return setPassErr("A nova senha deve ser diferente da atual.");
+    if (!curPass)             return setPassErr(c.errCurrentEmpty);
+    if (newPass.length < 8)  return setPassErr(c.errTooShort);
+    if (newPass !== confPass) return setPassErr(c.errNoMatch);
+    if (curPass === newPass)  return setPassErr(c.errSamePass);
 
     setSaving(true);
-    // Reautentica para validar senha atual
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) { setPassErr("Sessão inválida."); setSaving(false); return; }
+    if (!user?.email) { setPassErr(c.errInvalidSession); setSaving(false); return; }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: user.email, password: curPass });
-    if (signInError) { setPassErr("Senha atual incorreta."); setSaving(false); return; }
+    if (signInError) { setPassErr(c.errWrongPass); setSaving(false); return; }
 
     const { error: updateError } = await supabase.auth.updateUser({ password: newPass });
     setSaving(false);
-    if (updateError) { setPassErr("Erro ao atualizar senha. Tente novamente."); return; }
+    if (updateError) { setPassErr(c.errUpdate); return; }
 
     setPassOk(true);
     setCurPass(""); setNewPass(""); setConfPass("");
     setTimeout(() => setPassOk(false), 4000);
   }
 
-  // Styles helpers
   const card: React.CSSProperties = {
     background: t.cardBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: "16px", padding: "28px", marginBottom: "20px",
@@ -102,10 +102,10 @@ export default function Configuracoes() {
   return (
     <div style={{ maxWidth: "640px", margin: "0 auto", padding: "32px 4px" }}>
 
-      {/* ── APARÊNCIA ── */}
+      {/* APARÊNCIA */}
       <div style={card}>
-        <p style={sectionTitle}>🎨 Aparência</p>
-        <p style={desc}>Escolha como a interface será exibida.</p>
+        <p style={sectionTitle}>{c.appearance}</p>
+        <p style={desc}>{c.appearanceDesc}</p>
         <div style={{ display: "flex", gap: "12px" }}>
           {([false, true] as const).map(dark => (
             <button key={String(dark)} onClick={() => setIsDark(dark)}
@@ -114,20 +114,20 @@ export default function Configuracoes() {
                 {dark ? "🌙" : "☀️"}
               </div>
               <span style={{ fontSize: "13px", fontWeight: 600, color: t.text, fontFamily: FONT.body }}>
-                {dark ? "Modo Escuro" : "Modo Claro"}
+                {dark ? c.darkMode : c.lightMode}
               </span>
               {isDark === dark && (
-                <span style={{ fontSize: "10px", background: BASE_COLORS.purple, color: "#fff", padding: "2px 8px", borderRadius: "20px" }}>✓ Ativo</span>
+                <span style={{ fontSize: "10px", background: BASE_COLORS.purple, color: "#fff", padding: "2px 8px", borderRadius: "20px" }}>{c.active}</span>
               )}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── IDIOMA ── */}
+      {/* IDIOMA */}
       <div style={card}>
-        <p style={sectionTitle}>🌐 Idioma</p>
-        <p style={desc}>Selecione o idioma da plataforma.</p>
+        <p style={sectionTitle}>{c.language}</p>
+        <p style={desc}>{c.languageDesc}</p>
         <div style={{ display: "flex", gap: "12px" }}>
           {(["pt", "en"] as const).map(l => (
             <button key={l} onClick={() => setLang(l)}
@@ -142,14 +142,14 @@ export default function Configuracoes() {
         </div>
       </div>
 
-      {/* ── ALTERAR SENHA ── */}
+      {/* ALTERAR SENHA */}
       <div style={card}>
-        <p style={sectionTitle}>🔒 Alterar Senha</p>
-        <p style={desc}>Para sua segurança, use uma senha forte.</p>
+        <p style={sectionTitle}>{c.password}</p>
+        <p style={desc}>{c.passwordDesc}</p>
 
         {passOk && (
           <div style={{ background: "#27ae6018", border: "1px solid #27ae6044", color: "#27ae60", borderRadius: "10px", padding: "12px 16px", fontSize: "13px", marginBottom: "16px" }}>
-            ✓ Senha alterada com sucesso!
+            {c.passSuccess}
           </div>
         )}
         {passErr && (
@@ -160,7 +160,7 @@ export default function Configuracoes() {
 
         {/* Senha atual */}
         <div style={{ marginBottom: "14px" }}>
-          <label style={labelStyle}>Senha Atual</label>
+          <label style={labelStyle}>{c.currentPass}</label>
           <div style={{ position: "relative" }}>
             <input type={showCur ? "text" : "password"} value={curPass} placeholder="••••••••"
               onChange={e => { setCurPass(e.target.value); setPassErr(""); setPassOk(false); }}
@@ -173,7 +173,7 @@ export default function Configuracoes() {
 
         {/* Nova senha */}
         <div style={{ marginBottom: "14px" }}>
-          <label style={labelStyle}>Nova Senha</label>
+          <label style={labelStyle}>{c.newPass}</label>
           <div style={{ position: "relative" }}>
             <input type={showNew ? "text" : "password"} value={newPass} placeholder="••••••••"
               onChange={e => { setNewPass(e.target.value); setPassErr(""); setPassOk(false); }}
@@ -190,7 +190,7 @@ export default function Configuracoes() {
                 ))}
               </div>
               <p style={{ fontSize: "11px", color: strengthColor, margin: "0 0 8px", fontFamily: FONT.body }}>
-                Força: {strengthLabel}
+                {c.strengthLabel} {strengthLabel}
               </p>
               {reqs.map((r, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: r.ok ? "#27ae60" : t.textMuted, fontFamily: FONT.body, marginBottom: "3px" }}>
@@ -203,7 +203,7 @@ export default function Configuracoes() {
 
         {/* Confirmar senha */}
         <div style={{ marginBottom: "20px" }}>
-          <label style={labelStyle}>Confirmar Nova Senha</label>
+          <label style={labelStyle}>{c.confirmPass}</label>
           <div style={{ position: "relative" }}>
             <input type={showConf ? "text" : "password"} value={confPass} placeholder="••••••••"
               onChange={e => { setConfPass(e.target.value); setPassErr(""); setPassOk(false); }}
@@ -213,16 +213,16 @@ export default function Configuracoes() {
             </button>
           </div>
           {confPass.length > 0 && confPass !== newPass && (
-            <p style={{ fontSize: "11px", color: "#e94025", margin: "4px 0 0", fontFamily: FONT.body }}>⚠️ As senhas não coincidem</p>
+            <p style={{ fontSize: "11px", color: "#e94025", margin: "4px 0 0", fontFamily: FONT.body }}>{c.passNoMatch}</p>
           )}
           {confPass.length > 0 && confPass === newPass && newPass.length >= 8 && (
-            <p style={{ fontSize: "11px", color: "#27ae60", margin: "4px 0 0", fontFamily: FONT.body }}>✓ Senhas coincidem</p>
+            <p style={{ fontSize: "11px", color: "#27ae60", margin: "4px 0 0", fontFamily: FONT.body }}>{c.passMatch}</p>
           )}
         </div>
 
         <button onClick={handleChangePassword} disabled={saving}
           style={{ width: "100%", border: "none", borderRadius: "10px", padding: "14px", fontSize: "14px", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "white", fontFamily: FONT.title }}>
-          {saving ? "⏳ Salvando..." : "🔒 Salvar Nova Senha"}
+          {saving ? c.saving : c.savePass}
         </button>
       </div>
     </div>
