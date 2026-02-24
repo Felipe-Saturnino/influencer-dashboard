@@ -1,31 +1,25 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// ── SUPABASE ──
 const supabase = createClient(
   "https://dzyuqibobeujzedomlsc.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6eXVxaWJvYmV1anplZG9tbHNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjA3NzEsImV4cCI6MjA4NzQzNjc3MX0.2wpTD_5_FmdPpihTDs-ELvVwQXxAQuYcKcT0vsgYJk4"
 );
 
-// ── FONTES ──
 const FONT = {
   title:      "'Barlow Condensed', 'Impact', 'Arial Black', sans-serif",
   bodyMedium: "'Inter', 'Helvetica Neue', Arial, sans-serif",
   bodyRoman:  "'Inter', 'Helvetica Neue', Arial, sans-serif",
 };
 
-// ── DESIGN TOKENS ──
 const C = {
   blue:       "#1e36f8",
   red:        "#e94025",
-  cyan:       "#70cae4",
   purple:     "#4a3082",
   black:      "#000000",
-  darkBg:     "#0a0a0f",
-  darkCard:   "#0f0f1a",
   darkBorder: "#1a1a2e",
   textPrimary:"#ffffff",
-  textMuted:  "#8888aa",
+  textMuted:  "#e5dce1",
   gradStart:  "#0a0a0f",
   gradEnd:    "#2d1b4e",
 };
@@ -45,7 +39,6 @@ const MENUS: Record<string, { key: string; label: string; icon: string }[]> = {
   ],
 };
 
-// ── LOGIN ──
 function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
@@ -65,31 +58,16 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
     const err = validate();
     if (err) { setError(err); return; }
     setLoading(true);
-
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.toLowerCase().trim(),
-      password,
+      email: email.toLowerCase().trim(), password,
     });
-
-    if (authError) {
-      setError("E-mail ou senha incorretos.");
-      setLoading(false);
-      return;
-    }
-
+    if (authError) { setError("E-mail ou senha incorretos."); setLoading(false); return; }
     const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("name, role, email")
-      .eq("id", authData.user.id)
-      .single();
-
+      .from("profiles").select("name, role, email").eq("id", authData.user.id).single();
     if (profileError || !profile) {
       setError("Perfil não encontrado. Contate o administrador.");
-      await supabase.auth.signOut();
-      setLoading(false);
-      return;
+      await supabase.auth.signOut(); setLoading(false); return;
     }
-
     onLogin({ email: profile.email, role: profile.role, name: profile.name });
   }
 
@@ -98,68 +76,55 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
       minHeight: "100vh",
       background: `linear-gradient(135deg, ${C.gradStart} 0%, ${C.gradEnd} 100%)`,
       display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "16px", fontFamily: FONT.bodyRoman,
-      position: "relative", overflow: "hidden"
+      padding: "16px", fontFamily: FONT.bodyRoman, position: "relative", overflow: "hidden"
     }}>
       <div style={{ position: "absolute", top: "-80px", right: "-80px", width: "300px", height: "300px", borderRadius: "50%", background: `radial-gradient(circle, ${C.purple}44, transparent 70%)`, pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: "-60px", left: "-60px", width: "250px", height: "250px", borderRadius: "50%", background: `radial-gradient(circle, ${C.blue}33, transparent 70%)`, pointerEvents: "none" }} />
 
       <div style={{ width: "100%", maxWidth: "400px", position: "relative", zIndex: 1 }}>
-
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "40px" }}>
-          <img
-            src="/Logo Spin Gaming White.png"
-            alt="Spin Gaming"
-            style={{ height: "72px", marginBottom: "16px", objectFit: "contain" }}
-          />
-          <div style={{ color: C.textMuted, fontSize: "13px", marginTop: "6px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>
+          <img src="/Logo Spin Gaming White.png" alt="Spin Gaming"
+            style={{ height: "110px", marginBottom: "16px", objectFit: "contain" }} />
+          <div style={{ color: "#e5dce1", fontSize: "13px", marginTop: "6px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>
             Acquisition Hub
           </div>
         </div>
 
-        {/* Card */}
         <div style={{
-          background: "rgba(15, 15, 26, 0.85)",
-          backdropFilter: "blur(20px)",
-          border: `1px solid ${C.darkBorder}`,
-          borderRadius: "24px", padding: "36px",
+          background: "rgba(15, 15, 26, 0.85)", backdropFilter: "blur(20px)",
+          border: `1px solid ${C.darkBorder}`, borderRadius: "24px", padding: "36px",
           boxShadow: "0 32px 64px rgba(0,0,0,0.6)"
         }}>
-          {/* Email */}
           <div style={{ marginBottom: "20px" }}>
-            <label style={{ display: "block", color: C.textMuted, fontSize: "11px", fontWeight: 600, marginBottom: "8px", letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>E-mail</label>
+            <label style={{ display: "block", color: "#e5dce1", fontSize: "11px", fontWeight: 700, marginBottom: "8px", letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>E-mail</label>
             <input type="email" value={email} placeholder="seu@email.com"
               onChange={e => { setEmail(e.target.value); setError(""); }}
               onKeyDown={e => e.key === "Enter" && handleSubmit()}
-              style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.05)", border: `1px solid ${C.darkBorder}`, borderRadius: "12px", color: C.textPrimary, fontSize: "14px", padding: "14px 16px", outline: "none", fontFamily: FONT.bodyRoman }}
+              style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(229,220,225,0.15)", borderRadius: "12px", color: "#ffffff", fontSize: "14px", padding: "14px 16px", outline: "none", fontFamily: FONT.bodyRoman }}
             />
           </div>
 
-          {/* Senha */}
           <div style={{ marginBottom: "20px" }}>
-            <label style={{ display: "block", color: C.textMuted, fontSize: "11px", fontWeight: 600, marginBottom: "8px", letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>Senha</label>
+            <label style={{ display: "block", color: "#e5dce1", fontSize: "11px", fontWeight: 700, marginBottom: "8px", letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>Senha</label>
             <div style={{ position: "relative" }}>
               <input type={showPass ? "text" : "password"} value={password} placeholder="••••••••"
                 onChange={e => { setPassword(e.target.value); setError(""); }}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.05)", border: `1px solid ${C.darkBorder}`, borderRadius: "12px", color: C.textPrimary, fontSize: "14px", padding: "14px 48px 14px 16px", outline: "none", fontFamily: FONT.bodyRoman }}
+                style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(229,220,225,0.15)", borderRadius: "12px", color: "#ffffff", fontSize: "14px", padding: "14px 48px 14px 16px", outline: "none", fontFamily: FONT.bodyRoman }}
               />
               <button onClick={() => setShowPass(!showPass)}
-                style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: C.textMuted }}>
+                style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "#e5dce1" }}>
                 {showPass ? "🙈" : "👁️"}
               </button>
             </div>
           </div>
 
-          {/* Erro */}
           {error && (
-            <div style={{ background: `${C.red}18`, border: `1px solid ${C.red}44`, color: "#ff6b6b", borderRadius: "12px", padding: "12px 16px", fontSize: "13px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px", fontFamily: FONT.bodyRoman }}>
+            <div style={{ background: `${C.red}18`, border: `1px solid ${C.red}44`, color: "#ff6b6b", borderRadius: "12px", padding: "12px 16px", fontSize: "13px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
               ⚠️ {error}
             </div>
           )}
 
-          {/* Botão */}
           <button onClick={handleSubmit} disabled={loading}
             style={{
               width: "100%", border: "none", borderRadius: "12px", padding: "15px",
@@ -167,14 +132,15 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
               cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               background: `linear-gradient(135deg, ${C.purple}, ${C.blue})`,
-              color: "white", boxShadow: `0 4px 20px ${C.purple}55`,
-              fontFamily: FONT.title
+              color: "white", boxShadow: `0 4px 20px ${C.purple}55`, fontFamily: FONT.title
             }}>
             {loading ? "⏳ Entrando..." : "Entrar"}
           </button>
 
           <div style={{ borderTop: `1px solid ${C.darkBorder}`, marginTop: "24px", paddingTop: "20px", textAlign: "center" }}>
-            <p style={{ color: "#333355", fontSize: "11px", letterSpacing: "0.5px", fontFamily: FONT.bodyRoman }}>Acesso restrito — use suas credenciais</p>
+            <p style={{ color: "#ffffff", fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: FONT.bodyMedium, margin: 0 }}>
+              Acesso restrito — use suas credenciais
+            </p>
           </div>
         </div>
       </div>
@@ -182,7 +148,6 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
   );
 }
 
-// ── APP LAYOUT ──
 function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
   const [activePage, setActivePage] = useState("dashboard");
   const menu = MENUS[user.role];
@@ -195,8 +160,6 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: FONT.bodyRoman }}>
-
-      {/* Sidebar */}
       <aside style={{
         width: "240px", minHeight: "100vh", flexShrink: 0,
         background: `linear-gradient(180deg, ${C.gradEnd} 0%, ${C.gradStart} 100%)`,
@@ -204,7 +167,8 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
         borderRight: `1px solid ${C.darkBorder}`
       }}>
         <div style={{ marginBottom: "36px", paddingLeft: "8px" }}>
-          <img src="/Logo Spin Gaming White.png" alt="Spin Gaming" style={{ height: "32px", objectFit: "contain", marginBottom: "6px" }} />
+          <img src="/Logo Spin Gaming White.png" alt="Spin Gaming"
+            style={{ height: "32px", objectFit: "contain", marginBottom: "6px" }} />
           <div style={{ color: C.textMuted, fontSize: "10px", marginTop: "4px", letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>
             {user.role === "admin" ? "Painel Administrativo" : "Painel do Influencer"}
           </div>
@@ -243,7 +207,6 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
         </div>
       </aside>
 
-      {/* Main */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", background: "#f4f4f8" }}>
         <header style={{ background: "white", borderBottom: "1px solid #e8e8f0", padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ color: C.black, fontWeight: 800, fontSize: "15px", letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.title }}>
@@ -258,7 +221,7 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
               width: "36px", height: "36px", borderRadius: "50%",
               background: `linear-gradient(135deg, ${C.purple}, ${C.blue})`,
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "white", fontSize: "14px", fontWeight: 700, fontFamily: FONT.bodyMedium
+              color: "white", fontSize: "14px", fontWeight: 700
             }}>
               {user.name[0]}
             </div>
@@ -279,13 +242,11 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
   );
 }
 
-// ── ROOT ──
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Carregar fontes do Google
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;500;600;700&display=swap";
