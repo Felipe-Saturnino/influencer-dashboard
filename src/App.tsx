@@ -82,10 +82,10 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
       <div style={{ position: "absolute", bottom: "-60px", left: "-60px", width: "250px", height: "250px", borderRadius: "50%", background: `radial-gradient(circle, ${C.blue}33, transparent 70%)`, pointerEvents: "none" }} />
 
       <div style={{ width: "100%", maxWidth: "400px", position: "relative", zIndex: 1 }}>
-        <div style={{ textAlign: "center", marginBottom: "40px" }}>
+        <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <img src="/Logo Spin Gaming White.png" alt="Spin Gaming"
-            style={{ height: "110px", marginBottom: "16px", objectFit: "contain" }} />
-          <div style={{ color: "#e5dce1", fontSize: "13px", marginTop: "6px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>
+            style={{ height: "140px", marginBottom: "6px", objectFit: "contain" }} />
+          <div style={{ color: "#e5dce1", fontSize: "13px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: FONT.bodyMedium }}>
             Acquisition Hub
           </div>
         </div>
@@ -128,7 +128,7 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
           <button onClick={handleSubmit} disabled={loading}
             style={{
               width: "100%", border: "none", borderRadius: "12px", padding: "15px",
-              fontSize: "13px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase",
+              fontSize: "18px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase",
               cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               background: `linear-gradient(135deg, ${C.purple}, ${C.blue})`,
@@ -138,8 +138,17 @@ function LoginScreen({ onLogin }: { onLogin: (u: any) => void }) {
           </button>
 
           <div style={{ borderTop: `1px solid ${C.darkBorder}`, marginTop: "24px", paddingTop: "20px", textAlign: "center" }}>
-            <p style={{ color: "#ffffff", fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: FONT.bodyMedium, margin: 0 }}>
+            <p style={{ color: "#ffffff", fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: FONT.bodyMedium, margin: "0 0 8px" }}>
               Acesso restrito — use suas credenciais
+            </p>
+            <p style={{ color: C.textMuted, fontSize: "12px", fontFamily: FONT.bodyRoman, margin: 0 }}>
+              Caso precise de acesso{" "}
+              <a
+                href="mailto:felipe.saturnino@spingaming.com.br?subject=Solicitação de Acesso — Acquisition Hub"
+                style={{ color: C.blue, fontWeight: 600, textDecoration: "underline", cursor: "pointer" }}
+              >
+                entre em contato
+              </a>
             </p>
           </div>
         </div>
