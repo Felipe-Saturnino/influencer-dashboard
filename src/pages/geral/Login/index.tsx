@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
-import { BASE_COLORS, FONT } from "../../constants/theme";
-import { User } from "../../types";
+import { supabase } from "../../../lib/supabase";
+import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { User } from "../../../types";
 
 interface Props {
   onLogin: (u: User) => void;
@@ -27,7 +27,7 @@ export default function Login({ onLogin }: Props) {
     if (authError) { setError("E-mail ou senha incorretos."); setLoading(false); return; }
 
     const { data: profile, error: profileError } = await supabase
-      .from("profiles").select("id, name, role, email").eq("id", authData.user.id).single();
+      .from("profiles").select("name, role, email").eq("id", authData.user.id).single();
     if (profileError || !profile) {
       setError("Perfil não encontrado. Contate o administrador.");
       await supabase.auth.signOut(); setLoading(false); return;
