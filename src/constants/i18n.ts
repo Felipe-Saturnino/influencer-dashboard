@@ -1,6 +1,5 @@
 export const translations = {
   pt: {
-    // Sidebar
     sidebar: {
       settings:   "Configurações",
       help:       "Ajuda",
@@ -11,17 +10,16 @@ export const translations = {
         "Operações":"Operações",
       },
     },
-    // Menu items
     menu: {
       dashboard:        "Dashboard",
       dashboardMy:      "Meu Dashboard",
-      agenda:           "Agenda de Lives",
+      agenda:           "Agenda",
+      resultado_lives:  "Resultados",
       influencers:      "Influencers",
       relatorios:       "Relatórios",
       vendas:           "Vendas & Comissões",
       perfil:           "Meu Perfil",
     },
-    // Configurações page
     config: {
       appearance:       "🎨 Aparência",
       appearanceDesc:   "Escolha como a interface será exibida.",
@@ -38,7 +36,6 @@ export const translations = {
       savePass:         "🔒 Salvar Nova Senha",
       saving:           "⏳ Salvando...",
       passSuccess:      "✓ Senha alterada com sucesso!",
-      // Erros
       errCurrentEmpty:  "Informe sua senha atual.",
       errTooShort:      "A nova senha deve ter pelo menos 8 caracteres.",
       errNoMatch:       "As senhas não coincidem.",
@@ -46,7 +43,6 @@ export const translations = {
       errWrongPass:     "Senha atual incorreta.",
       errInvalidSession:"Sessão inválida.",
       errUpdate:        "Erro ao atualizar senha. Tente novamente.",
-      // Força de senha
       strengthWeak:     "Fraca",
       strengthMedium:   "Média",
       strengthStrong:   "Forte",
@@ -55,13 +51,11 @@ export const translations = {
       reqUpperLower:    "Maiúsculas e minúsculas",
       reqNumber:        "Pelo menos um número",
       reqSpecial:       "Pelo menos um caractere especial",
-      // Confirmação
       passNoMatch:      "⚠️ As senhas não coincidem",
       passMatch:        "✓ Senhas coincidem",
     },
   },
   en: {
-    // Sidebar
     sidebar: {
       settings:   "Settings",
       help:       "Help",
@@ -72,17 +66,16 @@ export const translations = {
         "Operações":"Operations",
       },
     },
-    // Menu items
     menu: {
       dashboard:        "Dashboard",
       dashboardMy:      "My Dashboard",
-      agenda:           "Live Schedule",
+      agenda:           "Schedule",
+      resultado_lives:  "Results",
       influencers:      "Influencers",
       relatorios:       "Reports",
       vendas:           "Sales & Commissions",
       perfil:           "My Profile",
     },
-    // Settings page
     config: {
       appearance:       "🎨 Appearance",
       appearanceDesc:   "Choose how the interface is displayed.",
@@ -99,7 +92,6 @@ export const translations = {
       savePass:         "🔒 Save New Password",
       saving:           "⏳ Saving...",
       passSuccess:      "✓ Password changed successfully!",
-      // Errors
       errCurrentEmpty:  "Enter your current password.",
       errTooShort:      "New password must be at least 8 characters.",
       errNoMatch:       "Passwords do not match.",
@@ -107,7 +99,6 @@ export const translations = {
       errWrongPass:     "Current password is incorrect.",
       errInvalidSession:"Invalid session.",
       errUpdate:        "Error updating password. Please try again.",
-      // Password strength
       strengthWeak:     "Weak",
       strengthMedium:   "Medium",
       strengthStrong:   "Strong",
@@ -116,7 +107,6 @@ export const translations = {
       reqUpperLower:    "Uppercase and lowercase letters",
       reqNumber:        "At least one number",
       reqSpecial:       "At least one special character",
-      // Confirmation
       passNoMatch:      "⚠️ Passwords do not match",
       passMatch:        "✓ Passwords match",
     },
