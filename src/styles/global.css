@@ -1,14 +1,18 @@
 /* Scrollbar da sidebar */
-aside::-webkit-scrollbar {
+aside::-webkit-scrollbar,
+aside nav::-webkit-scrollbar {
   width: 4px;
 }
-aside::-webkit-scrollbar-track {
+aside::-webkit-scrollbar-track,
+aside nav::-webkit-scrollbar-track {
   background: transparent;
 }
-aside::-webkit-scrollbar-thumb {
+aside::-webkit-scrollbar-thumb,
+aside nav::-webkit-scrollbar-thumb {
   background: #3a3a5c;
   border-radius: 4px;
 }
-aside::-webkit-scrollbar-thumb:hover {
+aside::-webkit-scrollbar-thumb:hover,
+aside nav::-webkit-scrollbar-thumb:hover {
   background: #5a5a8c;
 }
