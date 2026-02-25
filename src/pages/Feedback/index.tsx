@@ -46,16 +46,14 @@ function getRange(periodo: Periodo): { start: string; end: string } {
 export default function Feedback() {
   const { theme: t, isDark } = useApp();
 
-  // ── Filtros ──
-  const [periodo,          setPeriodo]          = useState<Periodo>("semana");
-  const [statusFiltro,     setStatusFiltro]     = useState<LiveStatus | "todos">("todos");
+  const [periodo, setPeriodo] = useState<Periodo>("semana");
+  const [statusFiltro, setStatusFiltro] = useState<LiveStatus | "todos">("todos");
   const [influencerFiltro, setInfluencerFiltro] = useState<string>("todos");
 
-  // ── Dados ──
-  const [lives,       setLives]       = useState<Live[]>([]);
-  const [resultados,  setResultados]  = useState<Record<string, LiveResultado>>({});
+  const [lives, setLives] = useState<Live[]>([]);
+  const [resultados, setResultados] = useState<Record<string, LiveResultado>>({});
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
-  const [loading,     setLoading]     = useState(true);
+  const [loading, setLoading] = useState(true);
 
   async function loadData() {
     setLoading(true);
@@ -104,17 +102,14 @@ export default function Feedback() {
 
   useEffect(() => { loadData(); }, [periodo, statusFiltro, influencerFiltro]);
 
-  // ── Styles ──
   const badge = (color: string): React.CSSProperties => ({
     fontSize: "11px", padding: "3px 10px", borderRadius: "20px",
-    background: `${color}22`, color, fontWeight: 600,
-    fontFamily: FONT.body, whiteSpace: "nowrap",
+    background: `${color}22`, color, fontWeight: 600, fontFamily: FONT.body, whiteSpace: "nowrap",
   });
 
   const statBox = (color: string): React.CSSProperties => ({
     flex: 1, textAlign: "center" as const, padding: "10px 8px", borderRadius: "10px",
-    background: isDark ? `${color}11` : `${color}09`,
-    border: `1px solid ${color}33`, minWidth: 0,
+    background: isDark ? `${color}11` : `${color}09`, border: `1px solid ${color}33`, minWidth: 0,
   });
 
   const filterBtn = (active: boolean, color = BASE_COLORS.purple): React.CSSProperties => ({
@@ -122,19 +117,16 @@ export default function Feedback() {
     border: `1px solid ${active ? color : t.cardBorder}`,
     background: active ? `${color}22` : t.inputBg,
     color: active ? color : t.textMuted,
-    fontSize: "12px", fontWeight: 600, cursor: "pointer",
-    fontFamily: FONT.body, whiteSpace: "nowrap" as const,
+    fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body, whiteSpace: "nowrap" as const,
   });
 
-  const selectStyle: React.CSSProperties = {
+  const select: React.CSSProperties = {
     padding: "7px 12px", borderRadius: "20px",
     border: `1px solid ${t.cardBorder}`,
     background: t.inputBg, color: t.inputText,
-    fontSize: "12px", fontFamily: FONT.body,
-    cursor: "pointer", outline: "none",
+    fontSize: "12px", fontFamily: FONT.body, cursor: "pointer", outline: "none",
   };
 
-  // ── Card de Live ──
   function LiveCard({ live }: { live: Live }) {
     const res = resultados[live.id];
     const isRealizada = live.status === "realizada";
@@ -147,7 +139,6 @@ export default function Feedback() {
         borderRadius: "16px", padding: "20px", marginBottom: "10px",
         borderLeft: `4px solid ${statusColor}`,
       }}>
-        {/* Linha 1 — info principal */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{
@@ -163,8 +154,7 @@ export default function Feedback() {
                 {live.titulo}
               </div>
               <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>
-                <span>{live.influencer_name} · </span>
-                {live.data} · {live.horario?.slice(0, 5)}
+                {live.influencer_name} · {live.data} · {live.horario?.slice(0, 5)}
               </div>
               <div style={{ display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap" }}>
                 <span style={badge(PLAT_COLOR[live.plataforma])}>{live.plataforma}</span>
@@ -174,7 +164,6 @@ export default function Feedback() {
           </div>
         </div>
 
-        {/* Linha 2 — stats de resultado */}
         {isRealizada && res && (
           <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
             <div style={statBox("#8e44ad")}>
@@ -204,7 +193,6 @@ export default function Feedback() {
           </div>
         )}
 
-        {/* Linha 3 — observação */}
         {res?.observacao && (
           <div style={{
             marginTop: "12px", padding: "10px 14px", borderRadius: "10px",
@@ -232,8 +220,6 @@ export default function Feedback() {
 
   return (
     <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
-
-      {/* Header */}
       <div style={{ marginBottom: "20px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
           💬 Feedback de Lives
@@ -251,11 +237,11 @@ export default function Feedback() {
           </button>
         ))}
         <div style={{ width: "1px", background: t.cardBorder, margin: "0 4px" }} />
-        <button onClick={() => setStatusFiltro("todos")}        style={filterBtn(statusFiltro === "todos",        "#888")}>Todos</button>
-        <button onClick={() => setStatusFiltro("realizada")}    style={filterBtn(statusFiltro === "realizada",    "#27ae60")}>✅ Realizada</button>
-        <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada","#e94025")}>❌ Não Realizada</button>
+        <button onClick={() => setStatusFiltro("todos")}        style={filterBtn(statusFiltro === "todos", "#888")}>Todos</button>
+        <button onClick={() => setStatusFiltro("realizada")}    style={filterBtn(statusFiltro === "realizada", "#27ae60")}>✅ Realizada</button>
+        <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", "#e94025")}>❌ Não Realizada</button>
         <div style={{ width: "1px", background: t.cardBorder, margin: "0 4px" }} />
-        <select value={influencerFiltro} onChange={e => setInfluencerFiltro(e.target.value)} style={selectStyle}>
+        <select value={influencerFiltro} onChange={e => setInfluencerFiltro(e.target.value)} style={select}>
           <option value="todos">Todos influencers</option>
           {influencers.map(inf => (
             <option key={inf.id} value={inf.id}>{inf.name}</option>
@@ -263,14 +249,12 @@ export default function Feedback() {
         </select>
       </div>
 
-      {/* Contador */}
       {!loading && lives.length > 0 && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
           {lives.length} live(s) encontrada(s)
         </div>
       )}
 
-      {/* Lista */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
           Carregando...
@@ -278,8 +262,8 @@ export default function Feedback() {
       ) : lives.length === 0 ? (
         <div style={{
           background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-          borderRadius: "16px", padding: "48px",
-          textAlign: "center", color: t.textMuted, fontFamily: FONT.body,
+          borderRadius: "16px", padding: "48px", textAlign: "center",
+          color: t.textMuted, fontFamily: FONT.body,
         }}>
           💬 Nenhuma live encontrada para o período selecionado.
         </div>
