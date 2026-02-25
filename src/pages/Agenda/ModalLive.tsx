@@ -23,9 +23,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     titulo:        live?.titulo        ?? "",
     data:          live?.data          ?? "",
     horario:       live?.horario       ?? "",
-    periodo:       live?.periodo       ?? "noite" as Periodo,
     plataforma:    live?.plataforma    ?? "Twitch" as Plataforma,
-    status:        live?.status        ?? "agendada" as LiveStatus,
+    status:        "agendada" as LiveStatus,
     link:          live?.link          ?? "",
   });
   const [saving,  setSaving]  = useState(false);
@@ -134,16 +133,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           </div>
         </div>
 
-        {/* Período */}
-        <div style={row}>
-          <label style={labelStyle}>{lang === "en" ? "Period" : "Período"}</label>
-          <select value={form.periodo} onChange={e => set("periodo", e.target.value)} style={inputStyle}>
-            <option value="manha">{lang === "en" ? "Morning" : "Manhã"}</option>
-            <option value="tarde">{lang === "en" ? "Afternoon" : "Tarde"}</option>
-            <option value="noite">{lang === "en" ? "Evening" : "Noite"}</option>
-          </select>
-        </div>
-
         {/* Plataforma */}
         <div style={row}>
           <label style={labelStyle}>{lang === "en" ? "Platform" : "Plataforma"}</label>
@@ -155,16 +144,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Status */}
-        <div style={row}>
-          <label style={labelStyle}>Status</label>
-          <select value={form.status} onChange={e => set("status", e.target.value)} style={inputStyle}>
-            <option value="agendada">{lang === "en" ? "Scheduled" : "Agendada"}</option>
-            <option value="realizada">{lang === "en" ? "Completed" : "Realizada"}</option>
-            <option value="nao_realizada">{lang === "en" ? "Not Completed" : "Não Realizada"}</option>
-          </select>
         </div>
 
         {/* Link */}
