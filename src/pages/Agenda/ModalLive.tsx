@@ -2,20 +2,20 @@ import { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../constants/theme";
 import { supabase } from "../../lib/supabase";
-import { Live, Plataforma, Periodo, LiveStatus } from "../../types";
+import { Live, Plataforma, LiveStatus } from "../../types";
 
 interface Props {
-  live?:    Live;
-  onClose:  () => void;
-  onSave:   () => void;
+  live?:   Live;
+  onClose: () => void;
+  onSave:  () => void;
 }
 
 const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Instagram", "TikTok", "Kick"];
 
 export default function ModalLive({ live, onClose, onSave }: Props) {
   const { theme: t, user, lang } = useApp();
-  const isAdmin  = user?.role === "admin";
-  const isEdit   = !!live;
+  const isAdmin = user?.role === "admin";
+  const isEdit  = !!live;
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
@@ -23,8 +23,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     titulo:        live?.titulo        ?? "",
     data:          live?.data          ?? "",
     horario:       live?.horario       ?? "",
-    plataforma:    live?.plataforma    ?? "Twitch" as Plataforma,
-    status:        "agendada" as LiveStatus,
+    plataforma:    (live?.plataforma   ?? "Twitch") as Plataforma,
+    status:        (live?.status       ?? "agendada") as LiveStatus,
     link:          live?.link          ?? "",
   });
   const [saving,  setSaving]  = useState(false);
@@ -35,9 +35,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     if (isAdmin) {
       supabase.from("profiles").select("id, name").eq("role", "influencer")
         .then(({ data }) => { if (data) setInfluencers(data); });
-    } else if (user) {
-      // influencer só pode criar para si mesmo
-      setForm(f => ({ ...f, influencer_id: "" })); // será preenchido no save
     }
   }, []);
 
@@ -45,21 +42,35 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   async function handleSave() {
     setError("");
-    if (!form.titulo)   return setError(lang === "en" ? "Title is required." : "Informe o título.");
-    if (!form.data)     return setError(lang === "en" ? "Date is required."  : "Informe a data.");
-    if (!form.horario)  return setError(lang === "en" ? "Time is required."  : "Informe o horário.");
-    if (isAdmin && !form.influencer_id) return setError(lang === "en" ? "Select an influencer." : "Selecione um influencer.");
+    if (!form.titulo)  return setError(lang === "en" ? "Title is required."      : "Informe o título.");
+    if (!form.data)    return setError(lang === "en" ? "Date is required."        : "Informe a data.");
+    if (!form.horario) return setError(lang === "en" ? "Time is required."        : "Informe o horário.");
+    if (isAdmin && !form.influencer_id)
+                       return setError(lang === "en" ? "Select an influencer."    : "Selecione um influencer.");
 
     setSaving(true);
-    const payload = {
-      ...form,
-      influencer_id: isAdmin ? form.influencer_id : undefined, // RLS garante o próprio id
+
+    // Busca o uid autenticado para registrar created_by
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    const payload: Record<string, any> = {
+      titulo:       form.titulo,
+      data:         form.data,
+      horario:      form.horario,
+      plataforma:   form.plataforma,
+      status:       form.status,
+      link:         form.link || null,
+      influencer_id: isAdmin ? form.influencer_id : undefined,
     };
-    if (!isAdmin) delete (payload as any).influencer_id;
+    if (!isAdmin) delete payload.influencer_id; // RLS + trigger define no backend se necessário
+
+    if (!isEdit) {
+      payload.created_by = authUser?.id ?? null;
+    }
 
     const { error: err } = isEdit
       ? await supabase.from("lives").update(payload).eq("id", live!.id)
-      : await supabase.from("lives").insert({ ...payload, created_by: undefined });
+      : await supabase.from("lives").insert(payload);
 
     setSaving(false);
     if (err) { setError(err.message); return; }
@@ -172,6 +183,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             {saving ? "⏳" : isEdit ? (lang === "en" ? "Save Changes" : "Salvar Alterações") : (lang === "en" ? "Create Live" : "Criar Live")}
           </button>
         </div>
+
       </div>
     </div>
   );
