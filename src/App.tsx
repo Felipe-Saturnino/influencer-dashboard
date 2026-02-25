@@ -11,7 +11,6 @@ import Agenda         from "./pages/Agenda";
 import ResultadoLives from "./pages/ResultadoLives";
 import Feedback       from "./pages/Feedback";
 import Influencers    from "./pages/Influencers";
-import Relatorios     from "./pages/Relatorios";
 import Configuracoes  from "./pages/Configuracoes";
 import Ajuda          from "./pages/Ajuda";
 
@@ -22,7 +21,6 @@ const PAGE_MAP: Record<string, React.FC> = {
   resultado_lives: ResultadoLives,
   feedback:        Feedback,
   influencers:     Influencers,
-  relatorios:      Relatorios,
   configuracoes:   Configuracoes,
   ajuda:           Ajuda,
 };
@@ -36,10 +34,9 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: t.bg }}>
       <Sidebar
-        activePage={activePage as any}
+        activePage={activePage}
         onNavigate={setActivePage}
         onLogout={onLogout}
-        user={user}
       />
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Header activePage={activePage} />
@@ -51,13 +48,15 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-// ─── ROOT ─────────────────────────────────────────────────────────────────────
+// ─── ROOT ────────────────────────────────────────────────────────────────────
 function Root() {
   const { user, setUser, checking } = useApp();
+
   async function handleLogout() {
     await supabase.auth.signOut();
     setUser(null);
   }
+
   if (checking) {
     return (
       <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", color: "#e5dce1", fontFamily: "Inter, sans-serif" }}>
@@ -65,11 +64,13 @@ function Root() {
       </div>
     );
   }
+
   return user
     ? <AppLayout onLogout={handleLogout} />
     : <Login onLogin={setUser} />;
 }
 
+// ─── APP ─────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <AppProvider>
