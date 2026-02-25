@@ -9,6 +9,7 @@ import Login          from "./pages/Login";
 import Dashboard      from "./pages/Dashboard";
 import Agenda         from "./pages/Agenda";
 import ResultadoLives from "./pages/ResultadoLives";
+import Feedback       from "./pages/Feedback";
 import Influencers    from "./pages/Influencers";
 import Relatorios     from "./pages/Relatorios";
 import Configuracoes  from "./pages/Configuracoes";
