@@ -42,9 +42,9 @@ export default function Configuracoes() {
   const strengthLabel = strength <= 1 ? "Fraca" : strength <= 2 ? "Média" : "Forte";
 
   const reqs = [
-    { ok: newPass.length >= 8,                             label: "Mínimo 8 caracteres" },
-    { ok: /[a-z]/.test(newPass) && /[A-Z]/.test(newPass), label: "Maiúsculas e minúsculas" },
-    { ok: /\d/.test(newPass),                              label: "Pelo menos um número" },
+    { ok: newPass.length >= 8,                             label: "Mínimo 8 caracteres"          },
+    { ok: /[a-z]/.test(newPass) && /[A-Z]/.test(newPass), label: "Maiúsculas e minúsculas"       },
+    { ok: /\d/.test(newPass),                              label: "Pelo menos um número"          },
     { ok: /[^a-zA-Z0-9]/.test(newPass),                   label: "Pelo menos um caractere especial" },
   ];
 
