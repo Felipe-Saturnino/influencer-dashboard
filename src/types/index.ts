@@ -36,6 +36,7 @@ export interface Live {
   titulo:          string;
   data:            string;  // ISO date: "2026-02-24"
   horario:         string;  // "HH:MM"
+    observacao?:   string;
   plataforma:      Plataforma;
   status:          LiveStatus;
   link?:           string;
