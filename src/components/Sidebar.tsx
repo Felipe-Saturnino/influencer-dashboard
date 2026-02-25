@@ -1,34 +1,19 @@
 import { useState } from "react";
 import { useApp } from "../context/AppContext";
-import { MENU_ADMIN, MENU_INFLUENCER } from "../constants/menu";
+import { MENU } from "../constants/menu";
 import { BASE_COLORS, FONT } from "../constants/theme";
-import { PageKey, User } from "../types";
-import { useT } from "../hooks/useT";
 
 interface Props {
-  activePage: PageKey | "configuracoes" | "ajuda";
-  onNavigate: (page: any) => void;
+  activePage: string;
+  onNavigate: (page: string) => void;
   onLogout:   () => void;
-  user:       User;
 }
 
-export default function Sidebar({ activePage, onNavigate, onLogout, user }: Props) {
+export default function Sidebar({ activePage, onNavigate, onLogout }: Props) {
   const { theme: t } = useApp();
-  const T = useT();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Dashboards: true, Lives: true, "Operações": true,
   });
-
-  const rawSections = user.role === "admin" ? MENU_ADMIN : MENU_INFLUENCER;
-
-  const sections = rawSections.map(sec => ({
-    ...sec,
-    section: T.sidebar.sections[sec.section as keyof typeof T.sidebar.sections] ?? sec.section,
-    items: sec.items.map(item => ({
-      ...item,
-      label: T.menu[item.key as keyof typeof T.menu] ?? item.label,
-    })),
-  }));
 
   const btnBase: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: "10px",
@@ -55,14 +40,13 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }: Prop
 
       {/* NAV */}
       <nav style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", paddingRight: "4px", minHeight: 0 }}>
-        {sections.map((sec, idx) => {
-          const originalKey = (user.role === "admin" ? MENU_ADMIN : MENU_INFLUENCER)[idx].section;
-          const isOpen    = openSections[originalKey];
+        {MENU.map(sec => {
+          const isOpen    = openSections[sec.section];
           const hasActive = sec.items.some(i => i.key === activePage);
           return (
-            <div key={originalKey}>
+            <div key={sec.section}>
               <button
-                onClick={() => setOpenSections(p => ({ ...p, [originalKey]: !p[originalKey] }))}
+                onClick={() => setOpenSections(p => ({ ...p, [sec.section]: !p[sec.section] }))}
                 style={{ ...btnBase, justifyContent: "space-between", padding: "10px 14px", color: hasActive ? "white" : "#8888aa", fontWeight: 700, fontSize: "11px", letterSpacing: "1.5px", textTransform: "uppercase" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ fontSize: "10px", display: "inline-block", transition: "transform 0.25s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", color: "#6b6b8a" }}>▶</span>
@@ -87,18 +71,18 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }: Prop
         })}
       </nav>
 
-      {/* RODAPÉ — sem nome/email (exibidos no Header) */}
+      {/* RODAPÉ */}
       <div style={{ borderTop: "2px solid #3a3a5c", paddingTop: "14px", marginTop: "16px", flexShrink: 0 }}>
         <button onClick={() => onNavigate("configuracoes")}
           style={{ ...btnBase, padding: "7px 14px", background: activePage === "configuracoes" ? `${BASE_COLORS.purple}44` : "transparent" }}>
-          ⚙️ {T.sidebar.settings}
+          ⚙️ Configurações
         </button>
         <button onClick={() => onNavigate("ajuda")}
           style={{ ...btnBase, padding: "7px 14px", background: activePage === "ajuda" ? `${BASE_COLORS.purple}44` : "transparent" }}>
-          ❓ {T.sidebar.help}
+          ❓ Ajuda
         </button>
         <button onClick={onLogout} style={{ ...btnBase, padding: "7px 14px" }}>
-          🚪 {T.sidebar.logout}
+          🚪 Sair
         </button>
       </div>
     </aside>
