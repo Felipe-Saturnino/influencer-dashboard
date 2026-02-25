@@ -246,6 +246,14 @@ export default function Agenda() {
                     <span style={{ fontSize: "11px", background: `${STATUS_COLOR[l.status]}22`, color: STATUS_COLOR[l.status], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{STATUS_LABEL[l.status][lang]}</span>
                     <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>🕐 {l.horario.slice(0, 5)}</span>
                   </div>
+                  {l.link && (
+                    <a href={l.link.startsWith("http") ? l.link : `https://${l.link}`}
+                      target="_blank" rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "6px", fontSize: "11px", color: BASE_COLORS.blue, fontFamily: FONT.body, textDecoration: "none", wordBreak: "break-all" }}>
+                      🔗 {l.link}
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
