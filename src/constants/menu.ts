@@ -1,5 +1,4 @@
 import { PageKey } from "../types";
-
 export interface MenuItem {
   key:   PageKey;
   label: string;
@@ -9,42 +8,40 @@ export interface MenuSection {
   section: string;
   items:   MenuItem[];
 }
-
 export const MENU_ADMIN: MenuSection[] = [
   {
     section: "Dashboards",
     items: [
-      { key: "dashboard",        label: "Dashboard",          icon: "📊" },
+      { key: "dashboard",        label: "Dashboard",    icon: "📊" },
     ],
   },
   {
     section: "Lives",
     items: [
-      { key: "agenda",           label: "Agenda de Lives",    icon: "🎥" },
-      { key: "resultado_lives",  label: "Resultado de Lives", icon: "📋" },
+      { key: "agenda",           label: "Agenda",       icon: "🎥" },
+      { key: "resultado_lives",  label: "Resultados",   icon: "📋" },
     ],
   },
   {
     section: "Operações",
     items: [
-      { key: "influencers",      label: "Influencers",        icon: "👥" },
-      { key: "relatorios",       label: "Relatórios",         icon: "📈" },
+      { key: "influencers",      label: "Influencers",  icon: "👥" },
+      { key: "relatorios",       label: "Relatórios",   icon: "📈" },
     ],
   },
 ];
-
 export const MENU_INFLUENCER: MenuSection[] = [
   {
     section: "Dashboards",
     items: [
-      { key: "dashboard",        label: "Meu Dashboard",      icon: "📊" },
+      { key: "dashboard",        label: "Meu Dashboard", icon: "📊" },
     ],
   },
   {
     section: "Lives",
     items: [
-      { key: "agenda",           label: "Agenda de Lives",    icon: "🎥" },
-      { key: "resultado_lives",  label: "Resultado de Lives", icon: "📋" },
+      { key: "agenda",           label: "Agenda",        icon: "🎥" },
+      { key: "resultado_lives",  label: "Resultados",    icon: "📋" },
     ],
   },
   {
