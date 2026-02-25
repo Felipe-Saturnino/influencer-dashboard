@@ -16,9 +16,9 @@ const PLAT_ICON: Record<Plataforma, string> = {
 
 type Operadora = "blaze" | "bet_nacional" | "casa_apostas";
 const OPERADORAS: { key: Operadora; label: string }[] = [
-  { key: "blaze",        label: "Blaze"           },
-  { key: "bet_nacional", label: "Bet Nacional"     },
-  { key: "casa_apostas", label: "Casa de Apostas"  },
+  { key: "blaze",        label: "Blaze"          },
+  { key: "bet_nacional", label: "Bet Nacional"    },
+  { key: "casa_apostas", label: "Casa de Apostas" },
 ];
 
 interface Perfil {
@@ -46,9 +46,9 @@ interface Perfil {
 }
 
 interface Influencer {
-  id:    string;
-  name:  string;
-  email: string;
+  id:     string;
+  name:   string;
+  email:  string;
   perfil: Perfil | null;
 }
 
@@ -63,9 +63,7 @@ const emptyPerfil = (id: string): Perfil => ({
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
-  const { theme: t, lang, isDark, user } = useApp();
-  const isAdmin = user?.role === "admin";
-  const L = (pt: string, en: string) => lang === "en" ? en : pt;
+  const { theme: t, isDark } = useApp();
 
   const [list,    setList]    = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,34 +73,25 @@ export default function Influencers() {
   async function loadData() {
     setLoading(true);
 
-    if (isAdmin) {
-      // Admin: carrega todos os influencers
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, name, email")
-        .eq("role", "influencer")
-        .order("name");
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, name, email")
+      .eq("role", "influencer")
+      .order("name");
 
-      if (profiles) {
-        const ids = profiles.map((p: any) => p.id);
-        const { data: perfis } = ids.length > 0
-          ? await supabase.from("influencer_perfil").select("*").in("id", ids)
-          : { data: [] };
+    if (profiles) {
+      const ids = profiles.map((p: any) => p.id);
+      const { data: perfis } = ids.length > 0
+        ? await supabase.from("influencer_perfil").select("*").in("id", ids)
+        : { data: [] };
 
-        const perfisMap: Record<string, Perfil> = {};
-        (perfis ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
+      const perfisMap: Record<string, Perfil> = {};
+      (perfis ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
 
-        setList(profiles.map((p: any) => ({
-          id: p.id, name: p.name ?? p.email, email: p.email,
-          perfil: perfisMap[p.id] ?? null,
-        })));
-      }
-    } else {
-      // Influencer: só vê o próprio perfil
-      if (!user) return;
-      const { data: perfil } = await supabase
-        .from("influencer_perfil").select("*").eq("id", user.id).single();
-      setList([{ id: user.id, name: user.name, email: user.email, perfil: perfil ?? null }]);
+      setList(profiles.map((p: any) => ({
+        id: p.id, name: p.name ?? p.email, email: p.email,
+        perfil: perfisMap[p.id] ?? null,
+      })));
     }
     setLoading(false);
   }
@@ -138,45 +127,41 @@ export default function Influencers() {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "20px", gap: "12px", flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
-            👥 {L("Influencers", "Influencers")}
+            👥 Influencers
           </h1>
           <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
-            {isAdmin
-              ? L("Gerencie o cadastro completo dos influencers parceiros.", "Manage all partner influencer profiles.")
-              : L("Seu perfil completo na plataforma.", "Your complete profile on the platform.")}
+            Gerencie o cadastro completo dos influencers parceiros.
           </p>
         </div>
       </div>
 
-      {/* Busca (só admin) */}
-      {isAdmin && (
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder={L("Buscar por nome ou e-mail...", "Search by name or email...")}
-          style={{
-            width: "100%", boxSizing: "border-box", padding: "10px 16px",
-            borderRadius: "12px", border: `1px solid ${t.inputBorder}`,
-            background: t.inputBg, color: t.inputText, fontSize: "13px",
-            fontFamily: FONT.body, outline: "none", marginBottom: "16px",
-          }}
-        />
-      )}
+      {/* Busca */}
+      <input
+        value={search} onChange={e => setSearch(e.target.value)}
+        placeholder="Buscar por nome ou e-mail..."
+        style={{
+          width: "100%", boxSizing: "border-box", padding: "10px 16px",
+          borderRadius: "12px", border: `1px solid ${t.inputBorder}`,
+          background: t.inputBg, color: t.inputText, fontSize: "13px",
+          fontFamily: FONT.body, outline: "none", marginBottom: "16px",
+        }}
+      />
 
       {/* Contador */}
-      {!loading && isAdmin && (
+      {!loading && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
-          {filtered.length} {L("influencer(s)", "influencer(s)")}
+          {filtered.length} influencer(s)
         </div>
       )}
 
       {/* Lista */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
-          {L("Carregando...", "Loading...")}
+          Carregando...
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-          👥 {L("Nenhum influencer encontrado.", "No influencers found.")}
+          👥 Nenhum influencer encontrado.
         </div>
       ) : (
         filtered.map(inf => {
@@ -215,14 +200,14 @@ export default function Influencers() {
                       <span key={o.key} style={badge("#f39c12")}>🎰 {o.label}</span>
                     ))}
                     {!inf.perfil && (
-                      <span style={badge("#e94025")}>⚠️ {L("Perfil incompleto", "Incomplete profile")}</span>
+                      <span style={badge("#e94025")}>⚠️ Perfil incompleto</span>
                     )}
                   </div>
                 </div>
               </div>
 
               <button onClick={() => setModal(inf)} style={actionBtn()}>
-                ✏️ {L("Editar", "Edit")}
+                ✏️ Editar
               </button>
             </div>
           );
@@ -234,7 +219,7 @@ export default function Influencers() {
           influencer={modal}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); loadData(); }}
-          L={L} t={t} isDark={isDark}
+          t={t} isDark={isDark}
         />
       )}
     </div>
@@ -243,16 +228,16 @@ export default function Influencers() {
 
 // ─── Modal de Perfil ──────────────────────────────────────────────────────────
 function ModalPerfil({
-  influencer, onClose, onSaved, L, t, isDark,
+  influencer, onClose, onSaved, t, isDark,
 }: {
   influencer: Influencer;
   onClose: () => void;
   onSaved: () => void;
-  L: (pt: string, en: string) => string;
-  t: any; isDark: boolean;
+  t: any;
+  isDark: boolean;
 }) {
   const existing = influencer.perfil;
-  const [form, setForm] = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
+  const [form,   setForm]   = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
   const [tab,    setTab]    = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
@@ -291,10 +276,10 @@ function ModalPerfil({
   const grid2: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" };
 
   const tabs: { key: typeof tab; label: string }[] = [
-    { key: "cadastral",   label: L("Cadastral",   "Profile")    },
-    { key: "canais",      label: L("Canais",      "Channels")   },
-    { key: "financeiro",  label: L("Financeiro",  "Financial")  },
-    { key: "operadoras",  label: L("Operadoras",  "Operators")  },
+    { key: "cadastral",  label: "Cadastral"  },
+    { key: "canais",     label: "Canais"     },
+    { key: "financeiro", label: "Financeiro" },
+    { key: "operadoras", label: "Operadoras" },
   ];
 
   return (
@@ -317,7 +302,8 @@ function ModalPerfil({
           {tabs.map(tb => (
             <button key={tb.key} onClick={() => setTab(tb.key)}
               style={{
-                padding: "7px 14px", borderRadius: "20px", border: `1px solid ${tab === tb.key ? BASE_COLORS.purple : t.cardBorder}`,
+                padding: "7px 14px", borderRadius: "20px",
+                border: `1px solid ${tab === tb.key ? BASE_COLORS.purple : t.cardBorder}`,
                 background: tab === tb.key ? `${BASE_COLORS.purple}22` : t.inputBg,
                 color: tab === tb.key ? BASE_COLORS.purple : t.textMuted,
                 fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
@@ -337,14 +323,14 @@ function ModalPerfil({
         {tab === "cadastral" && (
           <>
             <div style={row}>
-              <label style={labelStyle}>{L("Nome Completo", "Full Name")}</label>
+              <label style={labelStyle}>Nome Completo</label>
               <input value={influencer.name} disabled style={{ ...inputStyle, opacity: 0.6 }} />
               <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>
-                {L("Gerenciado pelo sistema de autenticação.", "Managed by the auth system.")}
+                Gerenciado pelo sistema de autenticação.
               </span>
             </div>
             <div style={row}>
-              <label style={labelStyle}>{L("Nome Artístico", "Stage Name")}</label>
+              <label style={labelStyle}>Nome Artístico</label>
               <input value={form.nome_artistico ?? ""} onChange={e => set("nome_artistico", e.target.value)} style={inputStyle} placeholder="Ex: StreamerX" />
             </div>
             <div style={row}>
@@ -352,7 +338,7 @@ function ModalPerfil({
               <input value={influencer.email} disabled style={{ ...inputStyle, opacity: 0.6 }} />
             </div>
             <div style={row}>
-              <label style={labelStyle}>{L("Telefone", "Phone")}</label>
+              <label style={labelStyle}>Telefone</label>
               <input value={form.telefone ?? ""} onChange={e => set("telefone", e.target.value)} style={inputStyle} placeholder="(11) 99999-9999" />
             </div>
             <div style={row}>
@@ -366,7 +352,7 @@ function ModalPerfil({
         {tab === "canais" && (
           <>
             <div style={row}>
-              <label style={labelStyle}>{L("Plataformas Ativas", "Active Platforms")}</label>
+              <label style={labelStyle}>Plataformas Ativas</label>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 {PLATAFORMAS.map(p => {
                   const ativo = (form.canais ?? []).includes(p);
@@ -390,7 +376,7 @@ function ModalPerfil({
               const linkKey = `link_${c.toLowerCase()}` as keyof Perfil;
               return (
                 <div key={c} style={row}>
-                  <label style={labelStyle}>{L("Link", "Link")} {c}</label>
+                  <label style={labelStyle}>Link {c}</label>
                   <input
                     value={(form[linkKey] as string) ?? ""}
                     onChange={e => set(linkKey, e.target.value)}
@@ -403,7 +389,7 @@ function ModalPerfil({
 
             {(form.canais ?? []).length === 0 && (
               <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>
-                {L("Selecione ao menos uma plataforma acima.", "Select at least one platform above.")}
+                Selecione ao menos uma plataforma acima.
               </p>
             )}
           </>
@@ -413,25 +399,25 @@ function ModalPerfil({
         {tab === "financeiro" && (
           <>
             <div style={row}>
-              <label style={labelStyle}>{L("Cachê por Hora (R$)", "Hourly Rate (R$)")}</label>
+              <label style={labelStyle}>Cachê por Hora (R$)</label>
               <input type="number" min={0} value={form.cache_hora ?? 0}
                 onChange={e => set("cache_hora", Number(e.target.value))} style={inputStyle} />
             </div>
             <div style={row}>
-              <label style={labelStyle}>{L("Chave PIX", "PIX Key")}</label>
+              <label style={labelStyle}>Chave PIX</label>
               <input value={form.chave_pix ?? ""} onChange={e => set("chave_pix", e.target.value)} style={inputStyle} placeholder="CPF, e-mail, telefone ou chave aleatória" />
             </div>
             <div style={row}>
-              <label style={labelStyle}>{L("Banco", "Bank")}</label>
+              <label style={labelStyle}>Banco</label>
               <input value={form.banco ?? ""} onChange={e => set("banco", e.target.value)} style={inputStyle} placeholder="Ex: Nubank, Itaú, Bradesco" />
             </div>
             <div style={{ ...row, ...grid2 }}>
               <div>
-                <label style={labelStyle}>{L("Agência", "Branch")}</label>
+                <label style={labelStyle}>Agência</label>
                 <input value={form.agencia ?? ""} onChange={e => set("agencia", e.target.value)} style={inputStyle} placeholder="0000" />
               </div>
               <div>
-                <label style={labelStyle}>{L("Conta", "Account")}</label>
+                <label style={labelStyle}>Conta</label>
                 <input value={form.conta ?? ""} onChange={e => set("conta", e.target.value)} style={inputStyle} placeholder="00000-0" />
               </div>
             </div>
@@ -442,9 +428,9 @@ function ModalPerfil({
         {tab === "operadoras" && (
           <>
             {OPERADORAS.map(op => {
-              const opKey   = `op_${op.key}` as keyof Perfil;
-              const idKey   = `id_${op.key}` as keyof Perfil;
-              const ativo   = !!form[opKey];
+              const opKey = `op_${op.key}` as keyof Perfil;
+              const idKey = `id_${op.key}` as keyof Perfil;
+              const ativo = !!form[opKey];
               return (
                 <div key={op.key} style={{ ...row, padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? "12px" : 0 }}>
@@ -453,12 +439,13 @@ function ModalPerfil({
                     </span>
                     <button onClick={() => set(opKey, !ativo)}
                       style={{
-                        padding: "5px 14px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`,
+                        padding: "5px 14px", borderRadius: "20px",
+                        border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`,
                         background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg,
                         color: ativo ? BASE_COLORS.purple : t.textMuted,
                         fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body,
                       }}>
-                      {ativo ? L("Ativo", "Active") : L("Inativo", "Inactive")}
+                      {ativo ? "Ativo" : "Inativo"}
                     </button>
                   </div>
                   {ativo && (
@@ -481,7 +468,7 @@ function ModalPerfil({
         {/* Salvar */}
         <button onClick={handleSave} disabled={saving}
           style={{ width: "100%", marginTop: "8px", padding: "13px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-          {saving ? "⏳" : L("Salvar Perfil", "Save Profile")}
+          {saving ? "⏳" : "Salvar Perfil"}
         </button>
       </div>
     </div>
