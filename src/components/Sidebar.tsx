@@ -21,7 +21,6 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }: Prop
 
   const rawSections = user.role === "admin" ? MENU_ADMIN : MENU_INFLUENCER;
 
-  // Traduz labels do menu dinamicamente
   const sections = rawSections.map(sec => ({
     ...sec,
     section: T.sidebar.sections[sec.section as keyof typeof T.sidebar.sections] ?? sec.section,
@@ -42,15 +41,15 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }: Prop
     <aside style={{
       width: "240px", height: "100vh", flexShrink: 0, position: "sticky", top: 0,
       background: t.sidebar, display: "flex", flexDirection: "column",
-      padding: "24px 16px", borderRight: `1px solid ${t.sidebarBorder}`,
+      padding: "12px 16px 24px", borderRight: `1px solid ${t.sidebarBorder}`,
       boxSizing: "border-box",
     }}>
       {/* LOGO */}
-      <div style={{ marginBottom: "28px", paddingLeft: "8px" }}>
+      <div style={{ marginBottom: "16px", display: "flex", justifyContent: "center" }}>
         <img
           src="/Logo Spin Gaming White.png"
           alt="Spin Gaming"
-          style={{ height: "80px", objectFit: "contain", display: "block" }}
+          style={{ height: "96px", objectFit: "contain", display: "block" }}
         />
       </div>
 
@@ -88,12 +87,8 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }: Prop
         })}
       </nav>
 
-      {/* RODAPÉ */}
+      {/* RODAPÉ — sem nome/email (exibidos no Header) */}
       <div style={{ borderTop: "2px solid #3a3a5c", paddingTop: "14px", marginTop: "16px", flexShrink: 0 }}>
-        <div style={{ padding: "4px 14px 10px" }}>
-          <p style={{ color: "#fff", fontSize: "13px", fontWeight: 600, margin: 0, fontFamily: FONT.body }}>{user.name}</p>
-          <p style={{ color: "#e5dce1", fontSize: "11px", margin: "3px 0 0", fontFamily: FONT.body }}>{user.email}</p>
-        </div>
         <button onClick={() => onNavigate("configuracoes")}
           style={{ ...btnBase, padding: "7px 14px", background: activePage === "configuracoes" ? `${BASE_COLORS.purple}44` : "transparent" }}>
           ⚙️ {T.sidebar.settings}
