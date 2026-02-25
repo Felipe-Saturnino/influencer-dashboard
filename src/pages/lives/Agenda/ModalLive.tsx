@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { useApp } from "../../context/AppContext";
-import { BASE_COLORS, FONT } from "../../constants/theme";
-import { supabase } from "../../lib/supabase";
-import { Live, Plataforma, LiveStatus } from "../../types";
+import { useApp } from "../../../context/AppContext";
+import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { supabase } from "../../../lib/supabase";
+import { Live, Plataforma, LiveStatus } from "../../../types";
 
 interface Props {
   live?:   Live;
@@ -13,8 +13,9 @@ interface Props {
 const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Instagram", "TikTok", "Kick"];
 
 export default function ModalLive({ live, onClose, onSave }: Props) {
-  const { theme: t } = useApp();
-  const isEdit = !!live;
+  const { theme: t, user, lang } = useApp();
+  const isAdmin = user?.role === "admin";
+  const isEdit  = !!live;
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
@@ -31,36 +32,37 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const [confirm, setConfirm] = useState(false);
 
   useEffect(() => {
-    supabase.from("profiles").select("id, name").eq("role", "influencer")
-      .then(({ data }) => { if (data) setInfluencers(data); });
+    if (isAdmin) {
+      supabase.from("profiles").select("id, name").eq("role", "influencer")
+        .then(({ data }) => { if (data) setInfluencers(data); });
+    }
   }, []);
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   async function handleSave() {
     setError("");
-    if (!form.titulo)         return setError("Informe o título.");
-    if (!form.data)           return setError("Informe a data.");
-    if (!form.horario)        return setError("Informe o horário.");
-    if (!form.influencer_id)  return setError("Selecione um influencer.");
+    if (!form.titulo)  return setError(lang === "en" ? "Title is required."   : "Informe o título.");
+    if (!form.data)    return setError(lang === "en" ? "Date is required."    : "Informe a data.");
+    if (!form.horario) return setError(lang === "en" ? "Time is required."    : "Informe o horário.");
+    if (isAdmin && !form.influencer_id)
+                       return setError(lang === "en" ? "Select an influencer." : "Selecione um influencer.");
 
     setSaving(true);
 
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
     const payload: Record<string, any> = {
-      titulo:        form.titulo,
-      data:          form.data,
-      horario:       form.horario,
-      plataforma:    form.plataforma,
-      status:        form.status,
-      link:          form.link || null,
-      influencer_id: form.influencer_id,
+      titulo:       form.titulo,
+      data:         form.data,
+      horario:      form.horario,
+      plataforma:   form.plataforma,
+      status:       form.status,
+      link:         form.link || null,
+      influencer_id: isAdmin ? form.influencer_id : undefined,
     };
-
-    if (!isEdit) {
-      payload.created_by = authUser?.id ?? null;
-    }
+    if (!isAdmin) delete payload.influencer_id;
+    if (!isEdit)  payload.created_by = authUser?.id ?? null;
 
     const { error: err } = isEdit
       ? await supabase.from("lives").update(payload).eq("id", live!.id)
@@ -94,10 +96,9 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
       <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "480px", maxHeight: "90vh", overflowY: "auto" }}>
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
-            {isEdit ? "Editar Live" : "Nova Live"}
+            {isEdit ? (lang === "en" ? "Edit Live" : "Editar Live") : (lang === "en" ? "New Live" : "Nova Live")}
           </h2>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
         </div>
@@ -108,37 +109,35 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           </div>
         )}
 
-        {/* Influencer */}
-        <div style={row}>
-          <label style={labelStyle}>Influencer</label>
-          <select value={form.influencer_id} onChange={e => set("influencer_id", e.target.value)} style={inputStyle}>
-            <option value="">Selecione...</option>
-            {influencers.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-          </select>
-        </div>
+        {isAdmin && (
+          <div style={row}>
+            <label style={labelStyle}>Influencer</label>
+            <select value={form.influencer_id} onChange={e => set("influencer_id", e.target.value)} style={inputStyle}>
+              <option value="">{lang === "en" ? "Select..." : "Selecione..."}</option>
+              {influencers.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </select>
+          </div>
+        )}
 
-        {/* Título */}
         <div style={row}>
-          <label style={labelStyle}>Título</label>
+          <label style={labelStyle}>{lang === "en" ? "Title" : "Título"}</label>
           <input value={form.titulo} onChange={e => set("titulo", e.target.value)} style={inputStyle}
-            placeholder="Título da live..." />
+            placeholder={lang === "en" ? "Live title..." : "Título da live..."} />
         </div>
 
-        {/* Data + Horário */}
         <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
           <div>
-            <label style={labelStyle}>Data</label>
+            <label style={labelStyle}>{lang === "en" ? "Date" : "Data"}</label>
             <input type="date" value={form.data} onChange={e => set("data", e.target.value)} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Horário</label>
+            <label style={labelStyle}>{lang === "en" ? "Time" : "Horário"}</label>
             <input type="time" value={form.horario} onChange={e => set("horario", e.target.value)} style={inputStyle} />
           </div>
         </div>
 
-        {/* Plataforma */}
         <div style={row}>
-          <label style={labelStyle}>Plataforma</label>
+          <label style={labelStyle}>{lang === "en" ? "Platform" : "Plataforma"}</label>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             {PLATAFORMAS.map(p => (
               <button key={p} onClick={() => set("plataforma", p)}
@@ -149,33 +148,29 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           </div>
         </div>
 
-        {/* Link */}
         <div style={row}>
           <label style={labelStyle}>Link</label>
-          <input value={form.link} onChange={e => set("link", e.target.value)} style={inputStyle}
-            placeholder="https://..." />
+          <input value={form.link} onChange={e => set("link", e.target.value)} style={inputStyle} placeholder="https://..." />
         </div>
 
-        {/* Ações */}
         <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
           {isEdit && !confirm && (
             <button onClick={() => setConfirm(true)}
               style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid #e94025`, background: "#e9402511", color: "#e94025", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
-              🗑 Excluir
+              🗑 {lang === "en" ? "Delete" : "Excluir"}
             </button>
           )}
           {isEdit && confirm && (
             <button onClick={handleDelete} disabled={saving}
               style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "none", background: "#e94025", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
-              Confirmar exclusão?
+              {lang === "en" ? "Confirm delete?" : "Confirmar exclusão?"}
             </button>
           )}
           <button onClick={handleSave} disabled={saving}
             style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: FONT.body }}>
-            {saving ? "⏳" : isEdit ? "Salvar Alterações" : "Criar Live"}
+            {saving ? "⏳" : isEdit ? (lang === "en" ? "Save Changes" : "Salvar Alterações") : (lang === "en" ? "Create Live" : "Criar Live")}
           </button>
         </div>
-
       </div>
     </div>
   );
