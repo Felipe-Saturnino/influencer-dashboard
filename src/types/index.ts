@@ -275,3 +275,4 @@ export default function ResultadoLives() {
     </div>
   );
 }
+
