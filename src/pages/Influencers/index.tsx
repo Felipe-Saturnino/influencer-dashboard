@@ -3,7 +3,6 @@ import { useApp } from "../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../constants/theme";
 import { supabase } from "../../lib/supabase";
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
 type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
 const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok"];
 const PLAT_COLOR: Record<Plataforma, string> = {
@@ -46,13 +45,12 @@ interface Perfil {
 }
 
 interface Influencer {
-  id:     string;
-  name:   string;
-  email:  string;
+  id:    string;
+  name:  string;
+  email: string;
   perfil: Perfil | null;
 }
 
-// ─── Formulário vazio ─────────────────────────────────────────────────────────
 const emptyPerfil = (id: string): Perfil => ({
   id, nome_artistico: "", telefone: "", cpf: "",
   canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
@@ -61,7 +59,6 @@ const emptyPerfil = (id: string): Perfil => ({
   op_casa_apostas: false, id_casa_apostas: "",
 });
 
-// ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
   const { theme: t, isDark } = useApp();
 
@@ -103,7 +100,6 @@ export default function Influencers() {
     i.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ── Styles ──
   const card: React.CSSProperties = {
     background: t.cardBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: "16px", padding: "18px 20px", marginBottom: "10px",
@@ -123,7 +119,6 @@ export default function Influencers() {
   return (
     <div style={{ padding: "24px", maxWidth: "860px", margin: "0 auto" }}>
 
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "20px", gap: "12px", flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
@@ -135,7 +130,6 @@ export default function Influencers() {
         </div>
       </div>
 
-      {/* Busca */}
       <input
         value={search} onChange={e => setSearch(e.target.value)}
         placeholder="Buscar por nome ou e-mail..."
@@ -147,14 +141,12 @@ export default function Influencers() {
         }}
       />
 
-      {/* Contador */}
       {!loading && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
           {filtered.length} influencer(s)
         </div>
       )}
 
-      {/* Lista */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
           Carregando...
@@ -170,7 +162,6 @@ export default function Influencers() {
           return (
             <div key={inf.id} style={card}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
-                {/* Avatar */}
                 <div style={{
                   width: "44px", height: "44px", borderRadius: "50%", flexShrink: 0,
                   background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
@@ -179,7 +170,6 @@ export default function Influencers() {
                 }}>
                   {(inf.name ?? inf.email)[0]?.toUpperCase()}
                 </div>
-
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
                     {inf.name}
@@ -205,7 +195,6 @@ export default function Influencers() {
                   </div>
                 </div>
               </div>
-
               <button onClick={() => setModal(inf)} style={actionBtn()}>
                 ✏️ Editar
               </button>
@@ -226,18 +215,16 @@ export default function Influencers() {
   );
 }
 
-// ─── Modal de Perfil ──────────────────────────────────────────────────────────
 function ModalPerfil({
   influencer, onClose, onSaved, t, isDark,
 }: {
   influencer: Influencer;
   onClose: () => void;
   onSaved: () => void;
-  t: any;
-  isDark: boolean;
+  t: any; isDark: boolean;
 }) {
   const existing = influencer.perfil;
-  const [form,   setForm]   = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
+  const [form, setForm] = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
   const [tab,    setTab]    = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
@@ -261,7 +248,6 @@ function ModalPerfil({
     onSaved();
   }
 
-  // ── Estilos internos ──
   const inputStyle: React.CSSProperties = {
     width: "100%", boxSizing: "border-box", padding: "10px 14px",
     borderRadius: "10px", border: `1px solid ${t.inputBorder}`,
@@ -286,7 +272,6 @@ function ModalPerfil({
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
       <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
           <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
             ✏️ {influencer.name}
@@ -297,7 +282,6 @@ function ModalPerfil({
           {influencer.email}
         </div>
 
-        {/* Tabs */}
         <div style={{ display: "flex", gap: "6px", marginBottom: "20px", flexWrap: "wrap" }}>
           {tabs.map(tb => (
             <button key={tb.key} onClick={() => setTab(tb.key)}
@@ -319,7 +303,6 @@ function ModalPerfil({
           </div>
         )}
 
-        {/* ── Tab: Cadastral ── */}
         {tab === "cadastral" && (
           <>
             <div style={row}>
@@ -348,7 +331,6 @@ function ModalPerfil({
           </>
         )}
 
-        {/* ── Tab: Canais ── */}
         {tab === "canais" && (
           <>
             <div style={row}>
@@ -371,7 +353,6 @@ function ModalPerfil({
                 })}
               </div>
             </div>
-
             {(form.canais ?? []).map(c => {
               const linkKey = `link_${c.toLowerCase()}` as keyof Perfil;
               return (
@@ -386,7 +367,6 @@ function ModalPerfil({
                 </div>
               );
             })}
-
             {(form.canais ?? []).length === 0 && (
               <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>
                 Selecione ao menos uma plataforma acima.
@@ -395,7 +375,6 @@ function ModalPerfil({
           </>
         )}
 
-        {/* ── Tab: Financeiro ── */}
         {tab === "financeiro" && (
           <>
             <div style={row}>
@@ -424,7 +403,6 @@ function ModalPerfil({
           </>
         )}
 
-        {/* ── Tab: Operadoras ── */}
         {tab === "operadoras" && (
           <>
             {OPERADORAS.map(op => {
@@ -465,7 +443,6 @@ function ModalPerfil({
           </>
         )}
 
-        {/* Salvar */}
         <button onClick={handleSave} disabled={saving}
           style={{ width: "100%", marginTop: "8px", padding: "13px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
           {saving ? "⏳" : "Salvar Perfil"}
