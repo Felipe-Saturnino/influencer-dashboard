@@ -11,6 +11,7 @@ export type Language = "pt" | "en";
 export type PageKey =
   | "dashboard"
   | "agenda"
+  | "resultado_lives"
   | "influencers"
   | "relatorios"
   | "vendas"
@@ -21,6 +22,16 @@ export type PageKey =
 export type Plataforma = "Twitch" | "YouTube" | "Instagram" | "TikTok" | "Kick";
 export type Periodo    = "manha" | "tarde" | "noite";
 export type LiveStatus = "agendada" | "realizada" | "nao_realizada";
+
+export interface LiveResultado {
+  id?:           string;
+  live_id:       string;
+  duracao_horas: number;
+  duracao_min:   number;
+  media_views:   number;
+  max_views:     number;
+  observacao?:   string;
+}
 
 export interface Live {
   id:             string;
