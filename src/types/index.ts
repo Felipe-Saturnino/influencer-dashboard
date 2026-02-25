@@ -10,6 +10,7 @@ export type PageKey =
   | "dashboard"
   | "agenda"
   | "resultado_lives"
+  | "feedback"
   | "influencers"
   | "relatorios"
   | "vendas"
