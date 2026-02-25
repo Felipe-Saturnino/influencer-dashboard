@@ -44,20 +44,18 @@ function getRange(periodo: Periodo): { start: string; end: string } {
 }
 
 export default function Feedback() {
-  const { theme: t, lang, isDark, user } = useApp();
-  const isAdmin = user?.role === "admin";
-  const L = (pt: string, en: string) => lang === "en" ? en : pt;
+  const { theme: t, isDark } = useApp();
 
   // ── Filtros ──
-  const [periodo, setPeriodo] = useState<Periodo>("semana");
-  const [statusFiltro, setStatusFiltro] = useState<LiveStatus | "todos">("todos");
+  const [periodo,          setPeriodo]          = useState<Periodo>("semana");
+  const [statusFiltro,     setStatusFiltro]     = useState<LiveStatus | "todos">("todos");
   const [influencerFiltro, setInfluencerFiltro] = useState<string>("todos");
 
   // ── Dados ──
-  const [lives, setLives] = useState<Live[]>([]);
-  const [resultados, setResultados] = useState<Record<string, LiveResultado>>({});
+  const [lives,       setLives]       = useState<Live[]>([]);
+  const [resultados,  setResultados]  = useState<Record<string, LiveResultado>>({});
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading,     setLoading]     = useState(true);
 
   async function loadData() {
     setLoading(true);
@@ -72,9 +70,8 @@ export default function Feedback() {
       .order("data", { ascending: false })
       .order("horario", { ascending: true });
 
-    if (!isAdmin && user?.id) query = query.eq("influencer_id", user.id);
     if (statusFiltro !== "todos") query = query.eq("status", statusFiltro);
-    if (isAdmin && influencerFiltro !== "todos") query = query.eq("influencer_id", influencerFiltro);
+    if (influencerFiltro !== "todos") query = query.eq("influencer_id", influencerFiltro);
 
     const { data: livesData } = await query;
 
@@ -85,12 +82,10 @@ export default function Feedback() {
       }));
       setLives(mapped);
 
-      if (isAdmin) {
-        const unique = Array.from(
-          new Map(mapped.map(l => [l.influencer_id, { id: l.influencer_id, name: l.influencer_name ?? l.influencer_id }])).values()
-        );
-        setInfluencers(unique);
-      }
+      const unique = Array.from(
+        new Map(mapped.map(l => [l.influencer_id, { id: l.influencer_id, name: l.influencer_name ?? l.influencer_id }])).values()
+      );
+      setInfluencers(unique);
 
       const ids = mapped.map(l => l.id);
       if (ids.length > 0) {
@@ -111,49 +106,32 @@ export default function Feedback() {
 
   // ── Styles ──
   const badge = (color: string): React.CSSProperties => ({
-    fontSize: "11px",
-    padding: "3px 10px",
-    borderRadius: "20px",
-    background: `${color}22`,
-    color,
-    fontWeight: 600,
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
+    fontSize: "11px", padding: "3px 10px", borderRadius: "20px",
+    background: `${color}22`, color, fontWeight: 600,
+    fontFamily: FONT.body, whiteSpace: "nowrap",
   });
 
   const statBox = (color: string): React.CSSProperties => ({
-    flex: 1,
-    textAlign: "center" as const,
-    padding: "10px 8px",
-    borderRadius: "10px",
+    flex: 1, textAlign: "center" as const, padding: "10px 8px", borderRadius: "10px",
     background: isDark ? `${color}11` : `${color}09`,
-    border: `1px solid ${color}33`,
-    minWidth: 0,
+    border: `1px solid ${color}33`, minWidth: 0,
   });
 
   const filterBtn = (active: boolean, color = BASE_COLORS.purple): React.CSSProperties => ({
-    padding: "7px 14px",
-    borderRadius: "20px",
+    padding: "7px 14px", borderRadius: "20px",
     border: `1px solid ${active ? color : t.cardBorder}`,
     background: active ? `${color}22` : t.inputBg,
     color: active ? color : t.textMuted,
-    fontSize: "12px",
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap" as const,
+    fontSize: "12px", fontWeight: 600, cursor: "pointer",
+    fontFamily: FONT.body, whiteSpace: "nowrap" as const,
   });
 
-  const select: React.CSSProperties = {
-    padding: "7px 12px",
-    borderRadius: "20px",
+  const selectStyle: React.CSSProperties = {
+    padding: "7px 12px", borderRadius: "20px",
     border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.inputText,
-    fontSize: "12px",
-    fontFamily: FONT.body,
-    cursor: "pointer",
-    outline: "none",
+    background: t.inputBg, color: t.inputText,
+    fontSize: "12px", fontFamily: FONT.body,
+    cursor: "pointer", outline: "none",
   };
 
   // ── Card de Live ──
@@ -161,15 +139,12 @@ export default function Feedback() {
     const res = resultados[live.id];
     const isRealizada = live.status === "realizada";
     const statusColor = isRealizada ? "#27ae60" : "#e94025";
-    const statusLabel = isRealizada ? L("Realizada", "Completed") : L("Não Realizada", "Not Completed");
+    const statusLabel = isRealizada ? "Realizada" : "Não Realizada";
 
     return (
       <div style={{
-        background: t.cardBg,
-        border: `1px solid ${t.cardBorder}`,
-        borderRadius: "16px",
-        padding: "20px",
-        marginBottom: "10px",
+        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+        borderRadius: "16px", padding: "20px", marginBottom: "10px",
         borderLeft: `4px solid ${statusColor}`,
       }}>
         {/* Linha 1 — info principal */}
@@ -188,7 +163,7 @@ export default function Feedback() {
                 {live.titulo}
               </div>
               <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>
-                {isAdmin && <span>{live.influencer_name} · </span>}
+                <span>{live.influencer_name} · </span>
                 {live.data} · {live.horario?.slice(0, 5)}
               </div>
               <div style={{ display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap" }}>
@@ -199,7 +174,7 @@ export default function Feedback() {
           </div>
         </div>
 
-        {/* Linha 2 — stats de resultado (só se realizada e tiver dados) */}
+        {/* Linha 2 — stats de resultado */}
         {isRealizada && res && (
           <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
             <div style={statBox("#8e44ad")}>
@@ -207,7 +182,7 @@ export default function Feedback() {
                 {res.duracao_horas}h {res.duracao_min}m
               </div>
               <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>
-                {L("Duração", "Duration")}
+                Duração
               </div>
             </div>
             <div style={statBox("#2980b9")}>
@@ -215,7 +190,7 @@ export default function Feedback() {
                 {res.media_views.toLocaleString("pt-BR")}
               </div>
               <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>
-                {L("Média Views", "Avg Views")}
+                Média Views
               </div>
             </div>
             <div style={statBox("#27ae60")}>
@@ -223,26 +198,21 @@ export default function Feedback() {
                 {res.max_views.toLocaleString("pt-BR")}
               </div>
               <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>
-                {L("Pico Views", "Peak Views")}
+                Pico Views
               </div>
             </div>
           </div>
         )}
 
-        {/* Linha 3 — observação (CORRIGIDO: res?.observacao em vez de live.observacao) */}
+        {/* Linha 3 — observação */}
         {res?.observacao && (
           <div style={{
-            marginTop: "12px",
-            padding: "10px 14px",
-            borderRadius: "10px",
+            marginTop: "12px", padding: "10px 14px", borderRadius: "10px",
             background: isDark ? "#ffffff08" : "#00000006",
             border: `1px solid ${t.cardBorder}`,
           }}>
-            <span style={{
-              fontSize: "11px", fontWeight: 700, color: t.textMuted,
-              fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px",
-            }}>
-              {L("Observação", "Notes")}:
+            <span style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
+              Observação:
             </span>
             <p style={{ margin: "4px 0 0", fontSize: "12px", color: t.text, fontFamily: FONT.body, lineHeight: "1.5" }}>
               {res.observacao}
@@ -253,22 +223,23 @@ export default function Feedback() {
     );
   }
 
-  const periodos: { value: Periodo; labelPt: string; labelEn: string }[] = [
-    { value: "semana", labelPt: "Semana", labelEn: "Week" },
-    { value: "mes", labelPt: "Mês", labelEn: "Month" },
-    { value: "30dias", labelPt: "30 dias", labelEn: "30 days" },
-    { value: "todos", labelPt: "Tudo", labelEn: "All time" },
+  const periodos: { value: Periodo; label: string }[] = [
+    { value: "semana",  label: "Semana"  },
+    { value: "mes",     label: "Mês"     },
+    { value: "30dias",  label: "30 dias" },
+    { value: "todos",   label: "Tudo"    },
   ];
 
   return (
     <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
+
       {/* Header */}
       <div style={{ marginBottom: "20px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
-          💬 {L("Feedback de Lives", "Live Feedback")}
+          💬 Feedback de Lives
         </h1>
         <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
-          {L("Histórico de lives realizadas e não realizadas.", "History of completed and missed lives.")}
+          Histórico de lives realizadas e não realizadas.
         </p>
       </div>
 
@@ -276,49 +247,41 @@ export default function Feedback() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
         {periodos.map(p => (
           <button key={p.value} onClick={() => setPeriodo(p.value)} style={filterBtn(periodo === p.value)}>
-            {lang === "en" ? p.labelEn : p.labelPt}
+            {p.label}
           </button>
         ))}
         <div style={{ width: "1px", background: t.cardBorder, margin: "0 4px" }} />
-        <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", "#888")}>{L("Todos", "All")}</button>
-        <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", "#27ae60")}>✅ {L("Realizada", "Completed")}</button>
-        <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", "#e94025")}>❌ {L("Não Realizada", "Not Completed")}</button>
-        {isAdmin && (
-          <>
-            <div style={{ width: "1px", background: t.cardBorder, margin: "0 4px" }} />
-            <select value={influencerFiltro} onChange={e => setInfluencerFiltro(e.target.value)} style={select}>
-              <option value="todos">{L("Todos influencers", "All influencers")}</option>
-              {influencers.map(inf => (
-                <option key={inf.id} value={inf.id}>{inf.name}</option>
-              ))}
-            </select>
-          </>
-        )}
+        <button onClick={() => setStatusFiltro("todos")}        style={filterBtn(statusFiltro === "todos",        "#888")}>Todos</button>
+        <button onClick={() => setStatusFiltro("realizada")}    style={filterBtn(statusFiltro === "realizada",    "#27ae60")}>✅ Realizada</button>
+        <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada","#e94025")}>❌ Não Realizada</button>
+        <div style={{ width: "1px", background: t.cardBorder, margin: "0 4px" }} />
+        <select value={influencerFiltro} onChange={e => setInfluencerFiltro(e.target.value)} style={selectStyle}>
+          <option value="todos">Todos influencers</option>
+          {influencers.map(inf => (
+            <option key={inf.id} value={inf.id}>{inf.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* Contador */}
       {!loading && lives.length > 0 && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
-          {lives.length} {L("live(s) encontrada(s)", "live(s) found")}
+          {lives.length} live(s) encontrada(s)
         </div>
       )}
 
       {/* Lista */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
-          {L("Carregando...", "Loading...")}
+          Carregando...
         </div>
       ) : lives.length === 0 ? (
         <div style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: "16px",
-          padding: "48px",
-          textAlign: "center",
-          color: t.textMuted,
-          fontFamily: FONT.body,
+          background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+          borderRadius: "16px", padding: "48px",
+          textAlign: "center", color: t.textMuted, fontFamily: FONT.body,
         }}>
-          💬 {L("Nenhuma live encontrada para o período selecionado.", "No lives found for the selected period.")}
+          💬 Nenhuma live encontrada para o período selecionado.
         </div>
       ) : (
         lives.map(l => <LiveCard key={l.id} live={l} />)
