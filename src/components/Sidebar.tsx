@@ -54,7 +54,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }: Prop
       </div>
 
       {/* NAV */}
-      <nav style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", paddingRight: "4px" }}>
+      <nav style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", paddingRight: "4px", minHeight: 0 }}>
         {sections.map((sec, idx) => {
           const originalKey = (user.role === "admin" ? MENU_ADMIN : MENU_INFLUENCER)[idx].section;
           const isOpen    = openSections[originalKey];
