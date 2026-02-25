@@ -15,6 +15,7 @@ export const translations = {
       dashboardMy:      "Meu Dashboard",
       agenda:           "Agenda",
       resultado_lives:  "Resultados",
+      feedback:         "Feedback",       // ← ADICIONADO
       influencers:      "Influencers",
       relatorios:       "Relatórios",
       vendas:           "Vendas & Comissões",
@@ -71,6 +72,7 @@ export const translations = {
       dashboardMy:      "My Dashboard",
       agenda:           "Schedule",
       resultado_lives:  "Results",
+      feedback:         "Feedback",       // ← ADICIONADO
       influencers:      "Influencers",
       relatorios:       "Reports",
       vendas:           "Sales & Commissions",
