@@ -161,11 +161,7 @@ export default function Feedback() {
               <div style={{ display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap" }}>
                 <span style={badge(PLAT_COLOR[live.plataforma])}>{live.plataforma}</span>
                 <span style={badge(statusColor)}>{statusLabel}</span>
-                {live.valor_combinado && (
-                  <span style={badge("#8e44ad")}>
-                    💰 R$ {Number(live.valor_combinado).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </span>
-                )}
+
               </div>
             </div>
           </div>
