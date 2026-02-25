@@ -1,20 +1,16 @@
-export type Role = "admin" | "influencer";
+export type Role = "admin";
 export interface User {
   id:    string;
   name:  string;
   email: string;
   role:  Role;
 }
-export type Language = "pt" | "en";
 export type PageKey =
   | "dashboard"
   | "agenda"
   | "resultado_lives"
   | "feedback"
   | "influencers"
-  | "relatorios"
-  | "vendas"
-  | "perfil"
   | "configuracoes"
   | "ajuda";
 export type Plataforma = "Twitch" | "YouTube" | "Instagram" | "TikTok" | "Kick";
@@ -29,16 +25,16 @@ export interface LiveResultado {
   observacao?:   string;
 }
 export interface Live {
-  id:              string;
-  influencer_id:   string;
+  id:               string;
+  influencer_id:    string;
   influencer_name?: string; // join com profiles
-  created_by?:     string; // auth.uid() de quem criou
-  titulo:          string;
-  data:            string;  // ISO date: "2026-02-24"
-  horario:         string;  // "HH:MM"
-    observacao?:   string;
-  plataforma:      Plataforma;
-  status:          LiveStatus;
-  link?:           string;
-  created_at?:     string;
+  created_by?:      string; // auth.uid() de quem criou
+  titulo:           string;
+  data:             string;  // ISO date: "2026-02-24"
+  horario:          string;  // "HH:MM"
+  observacao?:      string;
+  plataforma:       Plataforma;
+  status:           LiveStatus;
+  link?:            string;
+  created_at?:      string;
 }
