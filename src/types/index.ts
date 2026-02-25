@@ -25,16 +25,15 @@ export interface LiveResultado {
   observacao?:   string;
 }
 export interface Live {
-  id:               string;
-  influencer_id:    string;
-  influencer_name?: string; // join com profiles
-  created_by?:      string; // auth.uid() de quem criou
-  titulo:           string;
-  data:             string;  // ISO date: "2026-02-24"
-  horario:          string;  // "HH:MM"
-  observacao?:      string;
-  plataforma:       Plataforma;
-  status:           LiveStatus;
-  link?:            string;
-  created_at?:      string;
+  id:              string;
+  influencer_id:   string;
+  influencer_name?: string;
+  created_by?:     string;
+  titulo:          string;
+  data:            string;
+  horario:         string;
+  plataforma:      Plataforma;
+  status:          LiveStatus;
+  link?:           string;
+  created_at?:     string;
 }
