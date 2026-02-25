@@ -57,7 +57,7 @@ function toISO(d: Date) {
 }
 
 export default function Agenda() {
-  const { theme: t, user, lang } = useApp();
+  const { theme: t, user, lang, isDark } = useApp();
   const isAdmin = user?.role === "admin";
   const L = (obj: { pt: string; en: string }) => lang === "en" ? obj.en : obj.pt;
 
