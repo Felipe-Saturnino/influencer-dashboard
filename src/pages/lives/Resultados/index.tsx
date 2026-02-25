@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { useApp } from "../../context/AppContext";
-import { BASE_COLORS, FONT } from "../../constants/theme";
-import { supabase } from "../../lib/supabase";
-import { Live, LiveResultado, LiveStatus } from "../../types";
+import { useApp } from "../../../context/AppContext";
+import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { supabase } from "../../../lib/supabase";
+import { Live, LiveResultado, LiveStatus } from "../../../types";
 
 const PLAT_COLOR: Record<string, string> = {
   Twitch: "#9146ff", YouTube: "#ff0000", Instagram: "#e1306c",
@@ -16,7 +16,7 @@ const STATUS_OPTS: { value: LiveStatus; labelPt: string; labelEn: string; color:
 
 function toISO(d: Date) { return d.toISOString().split("T")[0]; }
 
-export default function ResultadoLives() {
+export default function Resultados() {
   const { theme: t, lang, isDark, user } = useApp();
   const isAdmin = user?.role === "admin";
 
@@ -30,7 +30,6 @@ export default function ResultadoLives() {
   async function loadData() {
     setLoading(true);
 
-    // Lives com data anterior a hoje e ainda com status agendada
     const { data: livesData } = await supabase
       .from("lives")
       .select("*, profiles!lives_influencer_id_fkey(name)")
@@ -61,7 +60,6 @@ export default function ResultadoLives() {
 
   const L = (pt: string, en: string) => lang === "en" ? en : pt;
 
-  // ── Styles ──
   const card: React.CSSProperties = {
     background: t.cardBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: "16px", padding: "20px", marginBottom: "12px",
@@ -70,16 +68,8 @@ export default function ResultadoLives() {
     fontSize: "11px", padding: "3px 10px", borderRadius: "20px",
     background: `${color}22`, color, fontWeight: 600, fontFamily: FONT.body,
   });
-  const statBox = (color: string): React.CSSProperties => ({
-    flex: 1, textAlign: "center", padding: "14px 10px", borderRadius: "12px",
-    background: isDark ? `${color}11` : `${color}08`,
-    border: `1px solid ${color}33`,
-  });
 
-  // ── Live Card ──
   function LiveCard({ live }: { live: Live }) {
-    const res = resultados[live.id];
-
     return (
       <div style={card}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
@@ -111,7 +101,6 @@ export default function ResultadoLives() {
     );
   }
 
-  // ── Modal de Validação ──
   function ModalValidacao({ live }: { live: Live }) {
     const existing = resultados[live.id];
     const [status,       setStatus]       = useState<LiveStatus>("realizada");
@@ -136,12 +125,10 @@ export default function ResultadoLives() {
 
       setSaving(true);
 
-      // 1. Atualiza status e observação na live
       await supabase.from("lives")
         .update({ status, observacao: observacao || null })
         .eq("id", live.id);
 
-      // 2. Se realizada, salva/atualiza resultado
       if (showResultFields) {
         const payload = {
           live_id:       live.id,
@@ -176,7 +163,6 @@ export default function ResultadoLives() {
       <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
         <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "480px", maxHeight: "90vh", overflowY: "auto" }}>
 
-          {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
             <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
               ✅ {L("Validar Live", "Validate Live")}
@@ -193,7 +179,6 @@ export default function ResultadoLives() {
             </div>
           )}
 
-          {/* Status */}
           <div style={row}>
             <label style={labelStyle}>{L("Status da Live", "Live Status")}</label>
             <div style={{ display: "flex", gap: "10px" }}>
@@ -206,7 +191,6 @@ export default function ResultadoLives() {
             </div>
           </div>
 
-          {/* Observação */}
           <div style={row}>
             <label style={labelStyle}>{L("Observação", "Notes")}</label>
             <textarea value={observacao} onChange={e => setObservacao(e.target.value)}
@@ -214,10 +198,8 @@ export default function ResultadoLives() {
               style={{ ...inputStyle, resize: "vertical", lineHeight: "1.5" }} />
           </div>
 
-          {/* Campos de resultado — só se realizada */}
           {showResultFields && (
             <>
-              {/* Duração */}
               <div style={row}>
                 <label style={labelStyle}>{L("Duração", "Duration")}</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -234,14 +216,12 @@ export default function ResultadoLives() {
                 </div>
               </div>
 
-              {/* Média de views */}
               <div style={row}>
                 <label style={labelStyle}>{L("Média de Views", "Average Views")}</label>
                 <input type="number" min={0} value={mediaViews}
                   onChange={e => setMediaViews(Number(e.target.value))} style={inputStyle} placeholder="0" />
               </div>
 
-              {/* Máximo de views */}
               <div style={row}>
                 <label style={labelStyle}>{L("Máximo de Views", "Peak Views")}</label>
                 <input type="number" min={0} value={maxViews}
@@ -265,8 +245,6 @@ export default function ResultadoLives() {
 
   return (
     <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
-
-      {/* Header */}
       <div style={{ marginBottom: "24px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
           📋 {L("Resultado de Lives", "Live Results")}
