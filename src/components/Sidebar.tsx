@@ -40,12 +40,12 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }: Prop
   return (
     <aside style={{
       width: "240px", height: "100vh", flexShrink: 0, position: "sticky", top: 0,
-      background: t.sidebar, display: "flex", flexDirection: "column",
+      background: t.sidebar, display: "flex", flexDirection: "column", justifyContent: "flex-start",
       padding: "0px 16px 24px", borderRight: `1px solid ${t.sidebarBorder}`,
       boxSizing: "border-box",
     }}>
       {/* LOGO */}
-      <div style={{ marginBottom: "4px", display: "flex", justifyContent: "center" }}>
+      <div style={{ marginBottom: "4px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
         <img
           src="/Logo Spin Gaming White.png"
           alt="Spin Gaming"
