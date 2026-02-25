@@ -39,10 +39,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   async function handleSave() {
     setError("");
-    if (!form.titulo)        return setError("Informe o título.");
-    if (!form.data)          return setError("Informe a data.");
-    if (!form.horario)       return setError("Informe o horário.");
-    if (!form.influencer_id) return setError("Selecione um influencer.");
+    if (!form.titulo)         return setError("Informe o título.");
+    if (!form.data)           return setError("Informe a data.");
+    if (!form.horario)        return setError("Informe o horário.");
+    if (!form.influencer_id)  return setError("Selecione um influencer.");
 
     setSaving(true);
 
