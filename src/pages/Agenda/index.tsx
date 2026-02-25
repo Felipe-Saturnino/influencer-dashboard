@@ -161,6 +161,32 @@ export default function Agenda() {
   }
 
   // ── Views ──
+  function dayStyle(date: Date, todayISO: string): React.CSSProperties {
+    const iso = toISO(date);
+    const isToday = iso === todayISO;
+    const isPast  = iso < todayISO;
+    const isDarkMode = isDark;
+    if (isToday) return {
+      border: `1.5px solid ${BASE_COLORS.blue}`,
+      background: isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.85)",
+    };
+    if (isPast) return {
+      border: `1.5px solid rgba(233,64,37,0.2)`,
+      background: isDarkMode ? "rgba(233,64,37,0.07)" : "rgba(233,64,37,0.05)",
+    };
+    return {
+      border: `1.5px solid rgba(39,174,96,0.2)`,
+      background: isDarkMode ? "rgba(39,174,96,0.07)" : "rgba(39,174,96,0.05)",
+    };
+  }
+
+  function dayNumberColor(date: Date, todayISO: string) {
+    const iso = toISO(date);
+    if (iso === todayISO) return BASE_COLORS.blue;
+    if (iso < todayISO)   return isDark ? "rgba(233,64,37,0.6)"  : "rgba(233,64,37,0.7)";
+    return                       isDark ? "rgba(39,174,96,0.7)"  : "rgba(39,174,96,0.8)";
+  }
+
   function ViewMes() {
     const cells = getMonthDays(current.getFullYear(), current.getMonth());
     const todayISO = toISO(new Date());
@@ -179,8 +205,8 @@ export default function Agenda() {
             const dayLives = livesForDay(date);
             return (
               <div key={i} onClick={() => { setCurrent(date); setView("dia"); }}
-                style={{ minHeight: "90px", padding: "6px", borderRadius: "10px", cursor: "pointer", border: `1.5px solid ${isToday ? BASE_COLORS.blue : t.cardBorder}`, background: isToday ? `${BASE_COLORS.blue}11` : t.inputBg, transition: "background 0.15s" }}>
-                <span style={{ fontSize: "13px", fontWeight: isToday ? 700 : 400, color: isToday ? BASE_COLORS.blue : t.text, fontFamily: FONT.body }}>{date.getDate()}</span>
+                style={{ minHeight: "90px", padding: "6px", borderRadius: "10px", cursor: "pointer", transition: "background 0.15s", ...dayStyle(date, todayISO) }}>
+                <span style={{ fontSize: "13px", fontWeight: isToday ? 700 : 400, color: dayNumberColor(date, todayISO), fontFamily: FONT.body }}>{date.getDate()}</span>
                 <div style={{ marginTop: "4px" }}>
                   {dayLives.slice(0, 3).map(l => <LiveChip key={l.id} live={l} />)}
                   {dayLives.length > 3 && <span style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 3}</span>}
@@ -203,10 +229,10 @@ export default function Agenda() {
           const isToday = iso === todayISO;
           const dayLives = livesForDay(date);
           return (
-            <div key={i} style={{ borderRadius: "12px", border: `1.5px solid ${isToday ? BASE_COLORS.blue : t.cardBorder}`, background: isToday ? `${BASE_COLORS.blue}11` : t.inputBg, padding: "10px 8px", minHeight: "200px" }}>
+            <div key={i} style={{ borderRadius: "12px", padding: "10px 8px", minHeight: "200px", transition: "background 0.15s", ...dayStyle(date, todayISO) }}>
               <div style={{ textAlign: "center", marginBottom: "8px" }}>
                 <div style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{days[date.getDay()]}</div>
-                <div style={{ fontSize: "20px", fontWeight: 700, color: isToday ? BASE_COLORS.blue : t.text, fontFamily: FONT.title }}>{date.getDate()}</div>
+                <div style={{ fontSize: "20px", fontWeight: 700, color: dayNumberColor(date, todayISO), fontFamily: FONT.title }}>{date.getDate()}</div>
               </div>
               {dayLives.map(l => <LiveChip key={l.id} live={l} />)}
               {dayLives.length === 0 && <div style={{ fontSize: "11px", color: t.textMuted, textAlign: "center", marginTop: "12px", fontFamily: FONT.body }}>—</div>}
