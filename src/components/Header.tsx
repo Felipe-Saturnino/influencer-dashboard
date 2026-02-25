@@ -1,5 +1,5 @@
 import { useApp } from "../context/AppContext";
-import { MENU_ADMIN, MENU_INFLUENCER } from "../constants/menu";
+import { MENU } from "../constants/menu";
 import { BASE_COLORS, FONT } from "../constants/theme";
 
 interface Props {
@@ -15,7 +15,7 @@ export default function Header({ activePage }: Props) {
   const { theme: t, user } = useApp();
   if (!user) return null;
 
-  const allItems = [...MENU_ADMIN, ...MENU_INFLUENCER].flatMap(s => s.items);
+  const allItems = MENU.flatMap(s => s.items);
   const found    = allItems.find(i => i.key === activePage);
   const current  = found ?? STATIC_LABELS[activePage] ?? { icon: "📄", label: activePage };
 
@@ -30,10 +30,9 @@ export default function Header({ activePage }: Props) {
       </span>
 
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <div style={{ textAlign: "right" }}>
-          <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: t.headerText, fontFamily: FONT.body }}>{user.name}</p>
-          <p style={{ margin: 0, fontSize: "11px", color: t.headerSub, textTransform: "uppercase", letterSpacing: "0.5px", fontFamily: FONT.body }}>{user.role}</p>
-        </div>
+        <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: t.headerText, fontFamily: FONT.body }}>
+          {user.name}
+        </p>
         <div style={{
           width: "36px", height: "36px", borderRadius: "50%",
           background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
