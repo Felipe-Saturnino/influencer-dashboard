@@ -26,8 +26,9 @@ export default function Login({ onLogin }: Props) {
     });
     if (authError) { setError("E-mail ou senha incorretos."); setLoading(false); return; }
 
+    // MELHORIA 4: id incluído no select para evitar bug silencioso com user.id
     const { data: profile, error: profileError } = await supabase
-      .from("profiles").select("name, role, email").eq("id", authData.user.id).single();
+      .from("profiles").select("id, name, role, email").eq("id", authData.user.id).single();
     if (profileError || !profile) {
       setError("Perfil não encontrado. Contate o administrador.");
       await supabase.auth.signOut(); setLoading(false); return;
@@ -50,7 +51,8 @@ export default function Login({ onLogin }: Props) {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <img src="/Logo Spin Gaming White.png" alt="Spin Gaming" style={{ height: "140px", marginBottom: "6px", objectFit: "contain" }} />
-          <div style={{ color: "#e5dce1", fontSize: "13px", letterSpacing: "2px", textTransform: "uppercase", fontFamily: FONT.body }}>
+          {/* MELHORIA 5: fontSize aumentado para 15px e fontWeight 600 para hierarquia correta */}
+          <div style={{ color: "#e5dce1", fontSize: "15px", fontWeight: 600, letterSpacing: "3px", textTransform: "uppercase", fontFamily: FONT.body }}>
             Acquisition Hub
           </div>
         </div>
@@ -92,6 +94,7 @@ export default function Login({ onLogin }: Props) {
             </div>
           </div>
 
+          {/* MELHORIA 2: cor do erro usando token BASE_COLORS.red (#e84025) em vez de #ff6b6b hardcoded */}
           {error && (
             <div style={{ background: `${BASE_COLORS.red}18`, border: `1px solid ${BASE_COLORS.red}44`, color: BASE_COLORS.red, borderRadius: "12px", padding: "12px 16px", fontSize: "13px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
               ⚠️ {error}
