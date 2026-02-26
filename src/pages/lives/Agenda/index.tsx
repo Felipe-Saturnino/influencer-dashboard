@@ -234,7 +234,8 @@ function InfluencerMultiSelect({ selected, onChange, influencers, t, lang }: Inf
 
 // ── Componente principal ───────────────────────────────────────────────────
 export default function Agenda() {
-  const { theme: t, user, lang, isDark } = useApp();
+  const { theme: t, user, isDark } = useApp();
+  const lang = "pt" as const;
   const isAdmin = user?.role === "admin";
   const L = (obj: { pt: string; en: string }) => lang === "en" ? obj.en : obj.pt;
 
@@ -550,7 +551,7 @@ export default function Agenda() {
                 onChange={setFilterInfluencers}
                 influencers={influencerList}
                 t={t}
-                lang={lang}
+                lang={lang as "pt" | "en"}
               />
             </>
           )}
