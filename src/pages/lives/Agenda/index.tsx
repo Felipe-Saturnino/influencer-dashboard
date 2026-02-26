@@ -15,11 +15,14 @@ const STATUS_COLOR: Record<string, string> = {
   agendada: "#1e36f8", realizada: "#27ae60", nao_realizada: "#e94025",
 };
 
-const STATUS_LABEL: Record<string, { pt: string; en: string }> = {
-  agendada:      { pt: "Agendada",      en: "Scheduled"     },
-  realizada:     { pt: "Realizada",     en: "Completed"     },
-  nao_realizada: { pt: "Não Realizada", en: "Not Completed" },
+const STATUS_LABEL: Record<string, string> = {
+  agendada:      "Agendada",
+  realizada:     "Realizada",
+  nao_realizada: "Não Realizada",
 };
+
+const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const DAYS   = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 
 function getWeekDays(date: Date): Date[] {
   const day = date.getDay();
@@ -43,9 +46,8 @@ function getMonthDays(year: number, month: number): (Date | null)[] {
 function toISO(d: Date) { return d.toISOString().split("T")[0]; }
 
 export default function Agenda() {
-  const { theme: t, user, lang, isDark } = useApp();
+  const { theme: t, user, isDark } = useApp();
   const isAdmin = user?.role === "admin";
-  const L = (obj: { pt: string; en: string }) => lang === "en" ? obj.en : obj.pt;
 
   const [view,    setView]    = useState<ViewMode>("mes");
   const [current, setCurrent] = useState(new Date());
@@ -100,20 +102,13 @@ export default function Agenda() {
   }
   function goToday() { setCurrent(new Date()); }
 
-  const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-  const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const DAYS_PT   = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-  const DAYS_EN   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const months    = lang === "en" ? MONTHS_EN : MONTHS_PT;
-  const days      = lang === "en" ? DAYS_EN   : DAYS_PT;
-
   function headerTitle() {
-    if (view === "mes")    return `${months[current.getMonth()]} ${current.getFullYear()}`;
+    if (view === "mes")    return `${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
     if (view === "semana") {
       const w = getWeekDays(current);
-      return `${w[0].getDate()} – ${w[6].getDate()} ${months[w[6].getMonth()]} ${w[6].getFullYear()}`;
+      return `${w[0].getDate()} – ${w[6].getDate()} ${MONTHS[w[6].getMonth()]} ${w[6].getFullYear()}`;
     }
-    return `${current.getDate()} ${months[current.getMonth()]} ${current.getFullYear()}`;
+    return `${current.getDate()} ${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
   }
 
   const card: React.CSSProperties = {
@@ -140,9 +135,9 @@ export default function Agenda() {
 
   function dayStyle(date: Date, todayISO: string): React.CSSProperties {
     const iso = toISO(date);
-    if (iso === todayISO) return { border: `1.5px solid ${BASE_COLORS.blue}`,       background: isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.85)" };
-    if (iso < todayISO)   return { border: `1.5px solid rgba(233,64,37,0.2)`,        background: isDark ? "rgba(233,64,37,0.07)"   : "rgba(233,64,37,0.05)"   };
-    return                       { border: `1.5px solid rgba(39,174,96,0.2)`,        background: isDark ? "rgba(39,174,96,0.07)"   : "rgba(39,174,96,0.05)"   };
+    if (iso === todayISO) return { border: `1.5px solid ${BASE_COLORS.blue}`,      background: isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.85)" };
+    if (iso < todayISO)   return { border: `1.5px solid rgba(233,64,37,0.2)`,       background: isDark ? "rgba(233,64,37,0.07)"   : "rgba(233,64,37,0.05)"   };
+    return                       { border: `1.5px solid rgba(39,174,96,0.2)`,       background: isDark ? "rgba(39,174,96,0.07)"   : "rgba(39,174,96,0.05)"   };
   }
 
   function dayNumberColor(date: Date, todayISO: string) {
@@ -158,7 +153,7 @@ export default function Agenda() {
     return (
       <div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", marginBottom: "4px" }}>
-          {days.map(d => (
+          {DAYS.map(d => (
             <div key={d} style={{ textAlign: "center", fontSize: "11px", fontWeight: 700, color: t.textMuted, padding: "8px 0", fontFamily: FONT.body }}>{d}</div>
           ))}
         </div>
@@ -192,7 +187,7 @@ export default function Agenda() {
           return (
             <div key={i} style={{ borderRadius: "12px", padding: "10px 8px", minHeight: "200px", ...dayStyle(date, todayISO) }}>
               <div style={{ textAlign: "center", marginBottom: "8px" }}>
-                <div style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{days[date.getDay()]}</div>
+                <div style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{DAYS[date.getDay()]}</div>
                 <div style={{ fontSize: "20px", fontWeight: 700, color: dayNumberColor(date, todayISO), fontFamily: FONT.title }}>{date.getDate()}</div>
               </div>
               {dayLives.map(l => <LiveChip key={l.id} live={l} />)}
@@ -212,11 +207,11 @@ export default function Agenda() {
       <div>
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
           <span style={{ fontSize: "32px", fontWeight: 900, color: isToday ? BASE_COLORS.blue : t.text, fontFamily: FONT.title }}>{current.getDate()}</span>
-          <span style={{ fontSize: "16px", color: t.textMuted, marginLeft: "8px", fontFamily: FONT.body }}>{days[current.getDay()]}</span>
+          <span style={{ fontSize: "16px", color: t.textMuted, marginLeft: "8px", fontFamily: FONT.body }}>{DAYS[current.getDay()]}</span>
         </div>
         {dayLives.length === 0 ? (
           <div style={{ textAlign: "center", color: t.textMuted, fontSize: "14px", padding: "40px 0", fontFamily: FONT.body }}>
-            {L({ pt: "Nenhuma live agendada para este dia.", en: "No lives scheduled for this day." })}
+            Nenhuma live agendada para este dia.
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -231,7 +226,7 @@ export default function Agenda() {
                   {isAdmin && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{l.influencer_name}</div>}
                   <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "11px", background: `${PLAT_COLOR[l.plataforma]}33`, color: PLAT_COLOR[l.plataforma], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{l.plataforma}</span>
-                    <span style={{ fontSize: "11px", background: `${STATUS_COLOR[l.status]}22`, color: STATUS_COLOR[l.status], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{STATUS_LABEL[l.status][lang]}</span>
+                    <span style={{ fontSize: "11px", background: `${STATUS_COLOR[l.status]}22`, color: STATUS_COLOR[l.status], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{STATUS_LABEL[l.status]}</span>
                     <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>🕐 {l.horario.slice(0, 5)}</span>
                   </div>
                   {l.link && (
@@ -255,12 +250,12 @@ export default function Agenda() {
     <div style={{ padding: "24px", maxWidth: "1100px", margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: 0 }}>
-          {L({ pt: "Agenda de Lives", en: "Live Schedule" })}
+          🎥 Agenda de Lives
         </h1>
         {isAdmin && (
           <button onClick={() => setModal({ open: true })}
             style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            + {L({ pt: "Nova Live", en: "New Live" })}
+            + Nova Live
           </button>
         )}
       </div>
@@ -271,30 +266,30 @@ export default function Agenda() {
             <button onClick={prev} style={{ ...chip(false), padding: "6px 12px" }}>‹</button>
             <span style={{ fontSize: "15px", fontWeight: 700, color: t.text, fontFamily: FONT.title, minWidth: "200px", textAlign: "center" }}>{headerTitle()}</span>
             <button onClick={next} style={{ ...chip(false), padding: "6px 12px" }}>›</button>
-            <button onClick={goToday} style={chip(false)}>{L({ pt: "Hoje", en: "Today" })}</button>
+            <button onClick={goToday} style={chip(false)}>Hoje</button>
           </div>
           <div style={{ display: "flex", gap: "6px" }}>
             {(["mes","semana","dia"] as ViewMode[]).map(v => (
               <button key={v} onClick={() => setView(v)} style={chip(view === v)}>
-                {v === "mes" ? L({ pt: "Mês", en: "Month" }) : v === "semana" ? L({ pt: "Semana", en: "Week" }) : L({ pt: "Dia", en: "Day" })}
+                {v === "mes" ? "Mês" : v === "semana" ? "Semana" : "Dia"}
               </button>
             ))}
           </div>
         </div>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder={L({ pt: "Buscar live ou influencer...", en: "Search live or influencer..." })}
+            placeholder="Buscar live ou influencer..."
             style={{ flex: 1, minWidth: "180px", padding: "8px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }} />
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
             style={{ padding: "8px 12px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, cursor: "pointer" }}>
-            <option value="todos">{L({ pt: "Todos os status", en: "All statuses" })}</option>
-            <option value="agendada">{L({ pt: "Agendada", en: "Scheduled" })}</option>
-            <option value="realizada">{L({ pt: "Realizada", en: "Completed" })}</option>
-            <option value="nao_realizada">{L({ pt: "Não Realizada", en: "Not Completed" })}</option>
+            <option value="todos">Todos os status</option>
+            <option value="agendada">Agendada</option>
+            <option value="realizada">Realizada</option>
+            <option value="nao_realizada">Não Realizada</option>
           </select>
           <select value={filterPlat} onChange={e => setFilterPlat(e.target.value)}
             style={{ padding: "8px 12px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, cursor: "pointer" }}>
-            <option value="todas">{L({ pt: "Todas as plataformas", en: "All platforms" })}</option>
+            <option value="todas">Todas as plataformas</option>
             {["Twitch","YouTube","Instagram","TikTok","Kick"].map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
@@ -303,7 +298,7 @@ export default function Agenda() {
       <div style={card}>
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
-            {L({ pt: "Carregando...", en: "Loading..." })}
+            Carregando...
           </div>
         ) : (
           view === "mes" ? <ViewMes /> : view === "semana" ? <ViewSemana /> : <ViewDia />
