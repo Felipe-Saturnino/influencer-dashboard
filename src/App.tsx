@@ -36,10 +36,13 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}
-        onLogout={onLogout}
       />
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <Header activePage={activePage} />
+        <Header
+          activePage={activePage}
+          onNavigate={setActivePage}
+          onLogout={onLogout}
+        />
         <div style={{ flex: 1, overflowY: "auto" }}>
           <PageComponent />
         </div>
