@@ -74,4 +74,3 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
     </aside>
   );
 }
-
