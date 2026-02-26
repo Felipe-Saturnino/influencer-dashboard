@@ -42,23 +42,23 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   async function handleSave() {
     setError("");
-    if (!form.titulo)  return setError("Informe o título.");
-    if (!form.data)    return setError("Informe a data.");
-    if (!form.horario) return setError("Informe o horário.");
-    if (isAdmin && !form.influencer_id)
-                       return setError("Selecione um influencer.");
+    if (!form.titulo)                    return setError("Informe o título.");
+    if (!form.data)                      return setError("Informe a data.");
+    if (!form.horario)                   return setError("Informe o horário.");
+    if (isAdmin && !form.influencer_id)  return setError("Selecione um influencer.");
+    if (!form.link.trim())               return setError("Informe o link da live na plataforma selecionada.");
 
     setSaving(true);
 
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
     const payload: Record<string, any> = {
-      titulo:       form.titulo,
-      data:         form.data,
-      horario:      form.horario,
-      plataforma:   form.plataforma,
-      status:       form.status,
-      link:         form.link || null,
+      titulo:        form.titulo,
+      data:          form.data,
+      horario:       form.horario,
+      plataforma:    form.plataforma,
+      status:        form.status,
+      link:          form.link.trim(),
       influencer_id: isAdmin ? form.influencer_id : undefined,
     };
     if (!isAdmin) delete payload.influencer_id;
@@ -149,8 +149,16 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         </div>
 
         <div style={row}>
-          <label style={labelStyle}>Link</label>
-          <input value={form.link} onChange={e => set("link", e.target.value)} style={inputStyle} placeholder="https://..." />
+          <label style={labelStyle}>Link {form.plataforma} <span style={{ color: "#e94025" }}>*</span></label>
+          <input
+            value={form.link}
+            onChange={e => { set("link", e.target.value); setError(""); }}
+            style={{ ...inputStyle, borderColor: error.includes("link") ? "#e94025" : t.inputBorder }}
+            placeholder={`https://${form.plataforma.toLowerCase()}.com/...`}
+          />
+          <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body, marginTop: "4px", display: "block" }}>
+            Obrigatório para salvar a live.
+          </span>
         </div>
 
         <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
