@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { useApp } from "../../context/AppContext";
-import { BASE_COLORS, FONT } from "../../constants/theme";
-import { supabase } from "../../lib/supabase";
-import { Live } from "../../types";
+import { useApp } from "../../../context/AppContext";
+import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { supabase } from "../../../lib/supabase";
+import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
 
 type ViewMode = "mes" | "semana" | "dia";
@@ -469,7 +469,7 @@ export default function Agenda() {
                   {isAdmin && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{l.influencer_name}</div>}
                   <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "11px", background: `${PLAT_COLOR[l.plataforma]}33`, color: PLAT_COLOR[l.plataforma], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{l.plataforma}</span>
-                    <span style={{ fontSize: "11px", background: `${STATUS_COLOR[l.status]}22`, color: STATUS_COLOR[l.status], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{STATUS_LABEL[l.status][lang]}</span>
+                    <span style={{ fontSize: "11px", background: `${STATUS_COLOR[l.status]}22`, color: STATUS_COLOR[l.status], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{STATUS_LABEL[l.status]?.[lang as "pt" | "en"]}</span>
                     <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>🕐 {l.horario.slice(0, 5)}</span>
                   </div>
                   {l.link && (
@@ -580,7 +580,7 @@ export default function Agenda() {
                   }}>
                   <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: color, flexShrink: 0, display: "inline-block" }} />
                   <span style={{ fontSize: "11px", color: active ? color : t.textMuted, fontWeight: active ? 700 : 400, fontFamily: FONT.body }}>
-                    {STATUS_LABEL[status][lang]}
+                    {STATUS_LABEL[status]?.[lang as "pt" | "en"]}
                   </span>
                   {active && <span style={{ fontSize: "9px", color }}>✕</span>}
                 </button>
