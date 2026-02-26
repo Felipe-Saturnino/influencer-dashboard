@@ -9,15 +9,15 @@ const PLAT_COLOR: Record<string, string> = {
   TikTok: "#010101", Kick: "#53fc18",
 };
 
-const STATUS_OPTS: { value: LiveStatus; labelPt: string; labelEn: string; color: string }[] = [
-  { value: "realizada",     labelPt: "Realizada",     labelEn: "Completed",     color: "#27ae60" },
-  { value: "nao_realizada", labelPt: "Não Realizada", labelEn: "Not Completed", color: "#e94025" },
+const STATUS_OPTS: { value: LiveStatus; label: string; color: string }[] = [
+  { value: "realizada",     label: "Realizada",     color: "#27ae60" },
+  { value: "nao_realizada", label: "Não Realizada", color: "#e94025" },
 ];
 
 function toISO(d: Date) { return d.toISOString().split("T")[0]; }
 
 export default function Resultados() {
-  const { theme: t, lang, isDark, user } = useApp();
+  const { theme: t, user } = useApp();
   const isAdmin = user?.role === "admin";
 
   const [lives,      setLives]      = useState<Live[]>([]);
@@ -58,8 +58,6 @@ export default function Resultados() {
 
   useEffect(() => { loadData(); }, []);
 
-  const L = (pt: string, en: string) => lang === "en" ? en : pt;
-
   const card: React.CSSProperties = {
     background: t.cardBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: "16px", padding: "20px", marginBottom: "12px",
@@ -85,7 +83,7 @@ export default function Resultados() {
               </div>
               <div style={{ display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap" }}>
                 <span style={badge(PLAT_COLOR[live.plataforma])}>{live.plataforma}</span>
-                <span style={badge("#f39c12")}>⚠️ {L("Pendente validação", "Pending validation")}</span>
+                <span style={badge("#f39c12")}>⚠️ Pendente validação</span>
               </div>
             </div>
           </div>
@@ -93,7 +91,7 @@ export default function Resultados() {
           {isAdmin && (
             <button onClick={() => setModal(live)}
               style={{ padding: "8px 16px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
-              ✅ {L("Validar", "Validate")}
+              ✅ Validar
             </button>
           )}
         </div>
@@ -118,9 +116,9 @@ export default function Resultados() {
       setError("");
       if (showResultFields) {
         if (duracaoHoras === 0 && duracaoMin === 0)
-          return setError(L("Informe a duração da live.", "Enter live duration."));
+          return setError("Informe a duração da live.");
         if (maxViews < mediaViews)
-          return setError(L("Máximo não pode ser menor que a média.", "Peak views cannot be less than average."));
+          return setError("Máximo não pode ser menor que a média.");
       }
 
       setSaving(true);
@@ -165,7 +163,7 @@ export default function Resultados() {
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
             <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
-              ✅ {L("Validar Live", "Validate Live")}
+              ✅ Validar Live
             </h2>
             <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
           </div>
@@ -180,33 +178,33 @@ export default function Resultados() {
           )}
 
           <div style={row}>
-            <label style={labelStyle}>{L("Status da Live", "Live Status")}</label>
+            <label style={labelStyle}>Status da Live</label>
             <div style={{ display: "flex", gap: "10px" }}>
               {STATUS_OPTS.map(opt => (
                 <button key={opt.value} onClick={() => setStatus(opt.value)}
                   style={{ flex: 1, padding: "10px", borderRadius: "10px", border: `2px solid ${status === opt.value ? opt.color : t.cardBorder}`, background: status === opt.value ? `${opt.color}18` : t.inputBg, color: status === opt.value ? opt.color : t.textMuted, fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body, transition: "all 0.15s" }}>
-                  {lang === "en" ? opt.labelEn : opt.labelPt}
+                  {opt.label}
                 </button>
               ))}
             </div>
           </div>
 
           <div style={row}>
-            <label style={labelStyle}>{L("Observação", "Notes")}</label>
+            <label style={labelStyle}>Observação</label>
             <textarea value={observacao} onChange={e => setObservacao(e.target.value)}
-              rows={3} placeholder={L("Comentários sobre a live...", "Comments about the live...")}
+              rows={3} placeholder="Comentários sobre a live..."
               style={{ ...inputStyle, resize: "vertical", lineHeight: "1.5" }} />
           </div>
 
           {showResultFields && (
             <>
               <div style={row}>
-                <label style={labelStyle}>{L("Duração", "Duration")}</label>
+                <label style={labelStyle}>Duração</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
                     <input type="number" min={0} max={24} value={duracaoHoras}
                       onChange={e => setDuracaoHoras(Number(e.target.value))} style={inputStyle} placeholder="0" />
-                    <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{L("horas", "hours")}</span>
+                    <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>horas</span>
                   </div>
                   <div>
                     <input type="number" min={0} max={59} value={duracaoMin}
@@ -217,26 +215,26 @@ export default function Resultados() {
               </div>
 
               <div style={row}>
-                <label style={labelStyle}>{L("Média de Views", "Average Views")}</label>
+                <label style={labelStyle}>Média de Views</label>
                 <input type="number" min={0} value={mediaViews}
                   onChange={e => setMediaViews(Number(e.target.value))} style={inputStyle} placeholder="0" />
               </div>
 
               <div style={row}>
-                <label style={labelStyle}>{L("Máximo de Views", "Peak Views")}</label>
+                <label style={labelStyle}>Máximo de Views</label>
                 <input type="number" min={0} value={maxViews}
                   onChange={e => setMaxViews(Number(e.target.value))} style={inputStyle} placeholder="0" />
               </div>
 
               <div style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
-                ℹ️ {L("Salvar irá marcar a live como Realizada automaticamente.", "Saving will automatically mark the live as Completed.")}
+                ℹ️ Salvar irá marcar a live como Realizada automaticamente.
               </div>
             </>
           )}
 
           <button onClick={handleSave} disabled={saving}
             style={{ width: "100%", padding: "13px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            {saving ? "⏳" : L("Salvar Validação", "Save Validation")}
+            {saving ? "⏳" : "Salvar Validação"}
           </button>
         </div>
       </div>
@@ -247,25 +245,25 @@ export default function Resultados() {
     <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
       <div style={{ marginBottom: "24px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
-          📋 {L("Resultado de Lives", "Live Results")}
+          📋 Resultado de Lives
         </h1>
         <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
-          {L("Lives passadas com status pendente de validação.", "Past lives pending validation.")}
+          Lives passadas com status pendente de validação.
         </p>
       </div>
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
-          {L("Carregando...", "Loading...")}
+          Carregando...
         </div>
       ) : lives.length === 0 ? (
         <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-          ✅ {L("Nenhuma live pendente de validação.", "No lives pending validation.")}
+          ✅ Nenhuma live pendente de validação.
         </div>
       ) : (
         <>
           <div style={{ fontSize: "13px", color: "#f39c12", fontFamily: FONT.body, marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
-            ⚠️ {lives.length} {L("live(s) aguardando validação", "live(s) awaiting validation")}
+            ⚠️ {lives.length} live(s) aguardando validação
           </div>
           {lives.map(l => <LiveCard key={l.id} live={l} />)}
         </>
