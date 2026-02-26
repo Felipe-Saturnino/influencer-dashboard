@@ -16,13 +16,13 @@ import Ajuda          from "./pages/geral/Ajuda";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
-  dashboard:       Dashboard,
-  agenda:          Agenda,
-  resultado_lives: Resultados,
-  feedback:        Feedback,
-  influencers:     Influencers,
-  configuracoes:   Configuracoes,
-  ajuda:           Ajuda,
+  dashboard:    Dashboard,
+  agenda:       Agenda,
+  resultados:   Resultados,   // era resultado_lives
+  feedback:     Feedback,
+  influencers:  Influencers,
+  configuracoes: Configuracoes,
+  ajuda:        Ajuda,
 };
 
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
