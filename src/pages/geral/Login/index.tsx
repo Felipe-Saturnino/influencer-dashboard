@@ -79,8 +79,9 @@ export default function Login({ onLogin }: Props) {
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
                 style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(229,220,225,0.15)", borderRadius: "12px", color: "#fff", fontSize: "14px", padding: "14px 48px 14px 16px", outline: "none", fontFamily: FONT.body }}
               />
+              {/* CORREÇÃO: cor do ícone fixada em #1a1a2e para garantir contraste mesmo com autofill claro do browser */}
               <button onClick={() => setShowPass(!showPass)}
-                style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#e5dce1" }}>
+                style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#1a1a2e" }}>
                 {showPass ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <ellipse cx="12" cy="12" rx="10" ry="6"/><circle cx="12" cy="12" r="2.5"/>
