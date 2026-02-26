@@ -16,13 +16,13 @@ import Ajuda          from "./pages/geral/Ajuda";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
-  dashboard:    Dashboard,
-  agenda:       Agenda,
-  resultados:   Resultados,   // era resultado_lives
-  feedback:     Feedback,
-  influencers:  Influencers,
+  dashboard:     Dashboard,
+  agenda:        Agenda,
+  resultados:    Resultados,
+  feedback:      Feedback,
+  influencers:   Influencers,
   configuracoes: Configuracoes,
-  ajuda:        Ajuda,
+  ajuda:         Ajuda,
 };
 
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
@@ -34,10 +34,9 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: t.bg }}>
       <Sidebar
-        activePage={activePage as any}
+        activePage={activePage}
         onNavigate={setActivePage}
         onLogout={onLogout}
-        user={user}
       />
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Header activePage={activePage} />
