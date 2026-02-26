@@ -93,7 +93,7 @@ export default function Login({ onLogin }: Props) {
           </div>
 
           {error && (
-            <div style={{ background: `${BASE_COLORS.red}18`, border: `1px solid ${BASE_COLORS.red}44`, color: "#ff6b6b", borderRadius: "12px", padding: "12px 16px", fontSize: "13px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ background: `${BASE_COLORS.red}18`, border: `1px solid ${BASE_COLORS.red}44`, color: BASE_COLORS.red, borderRadius: "12px", padding: "12px 16px", fontSize: "13px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
               ⚠️ {error}
             </div>
           )}
