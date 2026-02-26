@@ -6,10 +6,9 @@ import { BASE_COLORS, FONT } from "../constants/theme";
 interface Props {
   activePage: string;
   onNavigate: (page: string) => void;
-  onLogout:   () => void;
 }
 
-export default function Sidebar({ activePage, onNavigate, onLogout }: Props) {
+export default function Sidebar({ activePage, onNavigate }: Props) {
   const { theme: t } = useApp();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Dashboards: true, Lives: true, "Operações": true,
@@ -25,7 +24,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout }: Props) {
   return (
     <aside style={{
       width: "240px", height: "100vh", flexShrink: 0, position: "sticky", top: 0,
-      background: t.sidebar, display: "flex", flexDirection: "column", justifyContent: "flex-start",
+      background: t.sidebar, display: "flex", flexDirection: "column",
       padding: "0px 16px 24px", borderRight: `1px solid ${t.sidebarBorder}`,
       boxSizing: "border-box",
     }}>
@@ -49,7 +48,9 @@ export default function Sidebar({ activePage, onNavigate, onLogout }: Props) {
                 onClick={() => setOpenSections(p => ({ ...p, [sec.section]: !p[sec.section] }))}
                 style={{ ...btnBase, justifyContent: "space-between", padding: "10px 14px", color: hasActive ? "white" : "#8888aa", fontWeight: 700, fontSize: "11px", letterSpacing: "1.5px", textTransform: "uppercase" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "10px", display: "inline-block", transition: "transform 0.25s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", color: "#6b6b8a" }}>▶</span>
+                  <span style={{ fontSize: "10px", display: "inline-block", transition: "transform 0.25s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", color: "#6b6b8a" }}>
+                    {">"}
+                  </span>
                   {sec.section}
                 </span>
               </button>
@@ -70,21 +71,6 @@ export default function Sidebar({ activePage, onNavigate, onLogout }: Props) {
           );
         })}
       </nav>
-
-      {/* RODAPÉ */}
-      <div style={{ borderTop: "2px solid #3a3a5c", paddingTop: "14px", marginTop: "16px", flexShrink: 0 }}>
-        <button onClick={() => onNavigate("configuracoes")}
-          style={{ ...btnBase, padding: "7px 14px", background: activePage === "configuracoes" ? `${BASE_COLORS.purple}44` : "transparent" }}>
-          ⚙️ Configurações
-        </button>
-        <button onClick={() => onNavigate("ajuda")}
-          style={{ ...btnBase, padding: "7px 14px", background: activePage === "ajuda" ? `${BASE_COLORS.purple}44` : "transparent" }}>
-          ❓ Ajuda
-        </button>
-        <button onClick={onLogout} style={{ ...btnBase, padding: "7px 14px" }}>
-          🚪 Sair
-        </button>
-      </div>
     </aside>
   );
 }
