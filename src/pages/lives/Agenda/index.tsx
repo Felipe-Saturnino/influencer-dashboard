@@ -54,9 +54,11 @@ export default function Agenda() {
   const [lives,   setLives]   = useState<Live[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal,   setModal]   = useState<{ open: boolean; live?: Live }>({ open: false });
-  const [search,  setSearch]  = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("todos");
-  const [filterPlat,   setFilterPlat]   = useState<string>("todas");
+
+  const [filterStatus,     setFilterStatus]     = useState<string>("todos");
+  const [filterPlat,       setFilterPlat]       = useState<string>("todas");
+  const [filterInfluencer, setFilterInfluencer] = useState<string>("todos");
+  const [influencers,      setInfluencers]      = useState<{ id: string; name: string }[]>([]);
 
   async function loadLives() {
     setLoading(true);
@@ -72,16 +74,25 @@ export default function Agenda() {
     setLoading(false);
   }
 
-  useEffect(() => { loadLives(); }, []);
+  useEffect(() => {
+    loadLives();
+    if (isAdmin) {
+      supabase
+        .from("profiles")
+        .select("id, name")
+        .eq("role", "influencer")
+        .order("name")
+        .then(({ data }) => { if (data) setInfluencers(data); });
+    }
+  }, []);
 
   function livesForDay(date: Date): Live[] {
     const iso = toISO(date);
     return lives.filter(l => {
       if (l.data !== iso) return false;
-      if (filterStatus !== "todos" && l.status !== filterStatus) return false;
-      if (filterPlat   !== "todas" && l.plataforma !== filterPlat) return false;
-      if (search && !l.titulo.toLowerCase().includes(search.toLowerCase()) &&
-          !(l.influencer_name ?? "").toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterStatus      !== "todos"  && l.status        !== filterStatus)      return false;
+      if (filterPlat        !== "todas"  && l.plataforma     !== filterPlat)        return false;
+      if (filterInfluencer  !== "todos"  && l.influencer_id  !== filterInfluencer)  return false;
       return true;
     });
   }
@@ -120,6 +131,12 @@ export default function Agenda() {
     background: active ? `${color}22` : t.inputBg, color: active ? color : t.textMuted,
     fontFamily: FONT.body, transition: "all 0.15s",
   });
+
+  const selectStyle: React.CSSProperties = {
+    padding: "6px 12px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`,
+    background: t.inputBg, color: t.inputText, fontSize: "13px",
+    fontFamily: FONT.body, cursor: "pointer", outline: "none",
+  };
 
   function LiveChip({ live }: { live: Live }) {
     return (
@@ -276,22 +293,24 @@ export default function Agenda() {
             ))}
           </div>
         </div>
+
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar live ou influencer..."
-            style={{ flex: 1, minWidth: "180px", padding: "8px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }} />
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            style={{ padding: "8px 12px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, cursor: "pointer" }}>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={selectStyle}>
             <option value="todos">Todos os status</option>
             <option value="agendada">Agendada</option>
             <option value="realizada">Realizada</option>
             <option value="nao_realizada">Não Realizada</option>
           </select>
-          <select value={filterPlat} onChange={e => setFilterPlat(e.target.value)}
-            style={{ padding: "8px 12px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, cursor: "pointer" }}>
+          <select value={filterPlat} onChange={e => setFilterPlat(e.target.value)} style={selectStyle}>
             <option value="todas">Todas as plataformas</option>
             {["Twitch","YouTube","Instagram","TikTok","Kick"].map(p => <option key={p} value={p}>{p}</option>)}
           </select>
+          {isAdmin && influencers.length > 0 && (
+            <select value={filterInfluencer} onChange={e => setFilterInfluencer(e.target.value)} style={selectStyle}>
+              <option value="todos">Todos os influencers</option>
+              {influencers.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </select>
+          )}
         </div>
       </div>
 
