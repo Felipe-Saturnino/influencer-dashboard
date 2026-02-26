@@ -36,18 +36,24 @@ function getRange(periodo: Periodo): { start: string; end: string } {
   return { start: "2000-01-01", end };
 }
 
-export default function Feedback() {
-  const { theme: t, lang, isDark, user } = useApp();
-  const isAdmin = user?.role === "admin";
-  const L = (pt: string, en: string) => lang === "en" ? en : pt;
+const PERIODOS: { value: Periodo; label: string }[] = [
+  { value: "semana",  label: "Semana"  },
+  { value: "mes",     label: "Mês"     },
+  { value: "30dias",  label: "30 dias" },
+  { value: "todos",   label: "Tudo"    },
+];
 
-  const [periodo,           setPeriodo]           = useState<Periodo>("semana");
-  const [statusFiltro,      setStatusFiltro]      = useState<LiveStatus | "todos">("todos");
-  const [influencerFiltro,  setInfluencerFiltro]  = useState<string>("todos");
-  const [lives,             setLives]             = useState<Live[]>([]);
-  const [resultados,        setResultados]        = useState<Record<string, LiveResultado>>({});
-  const [influencers,       setInfluencers]       = useState<{ id: string; name: string }[]>([]);
-  const [loading,           setLoading]           = useState(true);
+export default function Feedback() {
+  const { theme: t, user } = useApp();
+  const isAdmin = user?.role === "admin";
+
+  const [periodo,          setPeriodo]          = useState<Periodo>("semana");
+  const [statusFiltro,     setStatusFiltro]     = useState<LiveStatus | "todos">("todos");
+  const [influencerFiltro, setInfluencerFiltro] = useState<string>("todos");
+  const [lives,            setLives]            = useState<Live[]>([]);
+  const [resultados,       setResultados]       = useState<Record<string, LiveResultado>>({});
+  const [influencers,      setInfluencers]      = useState<{ id: string; name: string }[]>([]);
+  const [loading,          setLoading]          = useState(true);
 
   async function loadData() {
     setLoading(true);
@@ -103,7 +109,7 @@ export default function Feedback() {
 
   const statBox = (color: string): React.CSSProperties => ({
     flex: 1, textAlign: "center" as const, padding: "10px 8px", borderRadius: "10px",
-    background: isDark ? `${color}11` : `${color}09`, border: `1px solid ${color}33`, minWidth: 0,
+    background: t.isDark ? `${color}11` : `${color}09`, border: `1px solid ${color}33`, minWidth: 0,
   });
 
   const filterBtn = (active: boolean, color = BASE_COLORS.purple): React.CSSProperties => ({
@@ -124,7 +130,7 @@ export default function Feedback() {
     const res = resultados[live.id];
     const isRealizada = live.status === "realizada";
     const statusColor = isRealizada ? "#27ae60" : "#e94025";
-    const statusLabel = isRealizada ? L("Realizada", "Completed") : L("Não Realizada", "Not Completed");
+    const statusLabel = isRealizada ? "Realizada" : "Não Realizada";
 
     return (
       <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "20px", marginBottom: "10px", borderLeft: `4px solid ${statusColor}` }}>
@@ -151,23 +157,23 @@ export default function Feedback() {
           <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
             <div style={statBox("#8e44ad")}>
               <div style={{ fontSize: "16px", fontWeight: 800, color: "#8e44ad", fontFamily: FONT.body }}>{res.duracao_horas}h {res.duracao_min}m</div>
-              <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>{L("Duração", "Duration")}</div>
+              <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>Duração</div>
             </div>
             <div style={statBox("#2980b9")}>
               <div style={{ fontSize: "16px", fontWeight: 800, color: "#2980b9", fontFamily: FONT.body }}>{res.media_views.toLocaleString("pt-BR")}</div>
-              <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>{L("Média Views", "Avg Views")}</div>
+              <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>Média Views</div>
             </div>
             <div style={statBox("#27ae60")}>
               <div style={{ fontSize: "16px", fontWeight: 800, color: "#27ae60", fontFamily: FONT.body }}>{res.max_views.toLocaleString("pt-BR")}</div>
-              <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>{L("Pico Views", "Peak Views")}</div>
+              <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>Pico Views</div>
             </div>
           </div>
         )}
 
         {res?.observacao && (
-          <div style={{ marginTop: "12px", padding: "10px 14px", borderRadius: "10px", background: isDark ? "#ffffff08" : "#00000006", border: `1px solid ${t.cardBorder}` }}>
+          <div style={{ marginTop: "12px", padding: "10px 14px", borderRadius: "10px", background: t.isDark ? "#ffffff08" : "#00000006", border: `1px solid ${t.cardBorder}` }}>
             <span style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-              {L("Observação", "Notes")}:
+              Observação:
             </span>
             <p style={{ margin: "4px 0 0", fontSize: "12px", color: t.text, fontFamily: FONT.body, lineHeight: "1.5" }}>{res.observacao}</p>
           </div>
@@ -176,39 +182,32 @@ export default function Feedback() {
     );
   }
 
-  const periodos: { value: Periodo; labelPt: string; labelEn: string }[] = [
-    { value: "semana",  labelPt: "Semana",  labelEn: "Week"     },
-    { value: "mes",     labelPt: "Mês",     labelEn: "Month"    },
-    { value: "30dias",  labelPt: "30 dias", labelEn: "30 days"  },
-    { value: "todos",   labelPt: "Tudo",    labelEn: "All time" },
-  ];
-
   return (
     <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
       <div style={{ marginBottom: "20px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
-          💬 {L("Feedback de Lives", "Live Feedback")}
+          💬 Feedback de Lives
         </h1>
         <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
-          {L("Histórico de lives realizadas e não realizadas.", "History of completed and missed lives.")}
+          Histórico de lives realizadas e não realizadas.
         </p>
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
-        {periodos.map(p => (
+        {PERIODOS.map(p => (
           <button key={p.value} onClick={() => setPeriodo(p.value)} style={filterBtn(periodo === p.value)}>
-            {lang === "en" ? p.labelEn : p.labelPt}
+            {p.label}
           </button>
         ))}
         <div style={{ width: "1px", background: t.cardBorder, margin: "0 4px" }} />
-        <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", "#888")}>{L("Todos", "All")}</button>
-        <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", "#27ae60")}>✅ {L("Realizada", "Completed")}</button>
-        <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", "#e94025")}>❌ {L("Não Realizada", "Not Completed")}</button>
+        <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", "#888")}>Todos</button>
+        <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", "#27ae60")}>✅ Realizada</button>
+        <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", "#e94025")}>❌ Não Realizada</button>
         {isAdmin && (
           <>
             <div style={{ width: "1px", background: t.cardBorder, margin: "0 4px" }} />
             <select value={influencerFiltro} onChange={e => setInfluencerFiltro(e.target.value)} style={select}>
-              <option value="todos">{L("Todos influencers", "All influencers")}</option>
+              <option value="todos">Todos influencers</option>
               {influencers.map(inf => <option key={inf.id} value={inf.id}>{inf.name}</option>)}
             </select>
           </>
@@ -217,17 +216,17 @@ export default function Feedback() {
 
       {!loading && lives.length > 0 && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
-          {lives.length} {L("live(s) encontrada(s)", "live(s) found")}
+          {lives.length} live(s) encontrada(s)
         </div>
       )}
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
-          {L("Carregando...", "Loading...")}
+          Carregando...
         </div>
       ) : lives.length === 0 ? (
         <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-          💬 {L("Nenhuma live encontrada para o período selecionado.", "No lives found for the selected period.")}
+          💬 Nenhuma live encontrada para o período selecionado.
         </div>
       ) : (
         lives.map(l => <LiveCard key={l.id} live={l} />)
