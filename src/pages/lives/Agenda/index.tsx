@@ -21,11 +21,14 @@ const STATUS_COLOR: Record<string, string> = {
   nao_realizada: "#e94025",
 };
 
-const STATUS_LABEL: Record<string, { pt: string; en: string }> = {
-  agendada:      { pt: "Agendada",      en: "Scheduled"     },
-  realizada:     { pt: "Realizada",     en: "Completed"     },
-  nao_realizada: { pt: "Não Realizada", en: "Not Completed" },
+const STATUS_LABEL: Record<string, string> = {
+  agendada:      "Agendada",
+  realizada:     "Realizada",
+  nao_realizada: "Não Realizada",
 };
+
+const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const DAYS   = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 
 function getWeekDays(date: Date): Date[] {
   const day = date.getDay();
@@ -50,7 +53,7 @@ function toISO(d: Date) {
   return d.toISOString().split("T")[0];
 }
 
-// ── Dropdown single-select (Visualização) ──────────────────────────────────
+// ── Dropdown single-select (Visualização) ─────────────────────────────────
 interface SingleDropdownProps {
   value: string;
   options: { value: string; label: string }[];
@@ -81,7 +84,7 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
           padding: "6px 14px", borderRadius: "20px",
           border: `1.5px solid ${BASE_COLORS.purple}`,
           background: `${BASE_COLORS.purple}22`,
-          color: t.isDark ? "#c8b4f8" : BASE_COLORS.purple,
+          color: BASE_COLORS.purple,
           fontSize: "12px", fontWeight: 600, fontFamily: FONT.body,
           cursor: "pointer", outline: "none",
           display: "flex", alignItems: "center", gap: "6px",
@@ -136,16 +139,15 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
   );
 }
 
-// ── Dropdown multi-select (Influencers) ────────────────────────────────────
+// ── Dropdown multi-select (Influencers) ───────────────────────────────────
 interface InfluencerMultiSelectProps {
   selected: string[];
   onChange: (v: string[]) => void;
   influencers: { id: string; name: string }[];
   t: any;
-  lang: string;
 }
 
-function InfluencerMultiSelect({ selected, onChange, influencers, t, lang }: InfluencerMultiSelectProps) {
+function InfluencerMultiSelect({ selected, onChange, influencers, t }: InfluencerMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -163,12 +165,11 @@ function InfluencerMultiSelect({ selected, onChange, influencers, t, lang }: Inf
   }
 
   const active = selected.length > 0;
-  const labelDefault = lang === "en" ? "Influencers" : "Influencers";
   const label = selected.length === 0
-    ? labelDefault
+    ? "Influencers"
     : selected.length === 1
-      ? (influencers.find(i => i.id === selected[0])?.name ?? labelDefault)
-      : `${selected.length} ${lang === "en" ? "selected" : "selecionados"}`;
+      ? (influencers.find(i => i.id === selected[0])?.name ?? "Influencers")
+      : `${selected.length} selecionados`;
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -178,7 +179,7 @@ function InfluencerMultiSelect({ selected, onChange, influencers, t, lang }: Inf
           padding: "6px 14px", borderRadius: "20px",
           border: `1.5px solid ${active ? BASE_COLORS.purple : t.cardBorder}`,
           background: active ? `${BASE_COLORS.purple}22` : t.inputBg,
-          color: active ? (t.isDark ? "#c8b4f8" : BASE_COLORS.purple) : t.textMuted,
+          color: active ? BASE_COLORS.purple : t.textMuted,
           fontSize: "12px", fontWeight: 600, fontFamily: FONT.body,
           cursor: "pointer", outline: "none",
           display: "flex", alignItems: "center", gap: "6px",
@@ -193,28 +194,43 @@ function InfluencerMultiSelect({ selected, onChange, influencers, t, lang }: Inf
         <div style={{
           position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 200,
           background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-          borderRadius: "12px", padding: "8px", minWidth: "180px",
+          borderRadius: "12px", padding: "8px", minWidth: "190px",
           boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+          maxHeight: "240px", overflowY: "auto",
         }}>
           {selected.length > 0 && (
-            <button onClick={() => onChange([])}
-              style={{ width: "100%", padding: "6px 10px", borderRadius: "8px", border: "none", background: "transparent", color: BASE_COLORS.red, fontSize: "11px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body, textAlign: "left", marginBottom: "4px" }}>
-              ✕ {lang === "en" ? "Clear selection" : "Limpar seleção"}
+            <button
+              onClick={() => onChange([])}
+              style={{
+                width: "100%", padding: "7px 12px", borderRadius: "8px",
+                border: "none", background: `${BASE_COLORS.red}11`,
+                color: BASE_COLORS.red, fontSize: "11px", fontWeight: 600,
+                fontFamily: FONT.body, cursor: "pointer", textAlign: "left",
+                marginBottom: "4px",
+              }}
+            >
+              ✕ Limpar seleção
             </button>
           )}
           {influencers.map(inf => {
             const checked = selected.includes(inf.id);
             return (
-              <button key={inf.id} onClick={() => toggle(inf.id)}
+              <button
+                key={inf.id}
+                onClick={() => toggle(inf.id)}
                 style={{
-                  width: "100%", padding: "8px 10px", borderRadius: "8px", border: "none",
+                  width: "100%", padding: "8px 12px", borderRadius: "8px",
+                  border: "none",
                   background: checked ? `${BASE_COLORS.purple}22` : "transparent",
-                  color: checked ? (t.isDark ? "#c8b4f8" : BASE_COLORS.purple) : t.text,
-                  fontSize: "12px", fontFamily: FONT.body, cursor: "pointer", textAlign: "left",
+                  color: checked ? BASE_COLORS.purple : t.text,
+                  fontSize: "12px", fontFamily: FONT.body,
+                  cursor: "pointer", textAlign: "left",
                   display: "flex", alignItems: "center", gap: "8px",
-                }}>
+                  fontWeight: checked ? 700 : 400,
+                }}
+              >
                 <span style={{
-                  width: "14px", height: "14px", borderRadius: "4px", flexShrink: 0,
+                  width: "14px", height: "14px", borderRadius: "3px", flexShrink: 0,
                   border: `1.5px solid ${checked ? BASE_COLORS.purple : t.cardBorder}`,
                   background: checked ? BASE_COLORS.purple : "transparent",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -232,22 +248,23 @@ function InfluencerMultiSelect({ selected, onChange, influencers, t, lang }: Inf
   );
 }
 
-// ── Componente principal ───────────────────────────────────────────────────
+// ── Componente Principal ──────────────────────────────────────────────────
 export default function Agenda() {
   const { theme: t, user, isDark } = useApp();
-  const lang = "pt" as const;
   const isAdmin = user?.role === "admin";
-  const L = (obj: { pt: string; en: string }) => lang === "en" ? obj.en : obj.pt;
 
-  const [view,              setView]              = useState<ViewMode>("mes");
-  const [current,           setCurrent]           = useState(new Date());
-  const [lives,             setLives]             = useState<Live[]>([]);
-  const [loading,           setLoading]           = useState(true);
-  const [modal,             setModal]             = useState<{ open: boolean; live?: Live }>({ open: false });
+  const [view,    setView]    = useState<ViewMode>("mes");
+  const [current, setCurrent] = useState(new Date());
+  const [lives,   setLives]   = useState<Live[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modal,   setModal]   = useState<{ open: boolean; live?: Live }>({ open: false });
+
   const [filterStatus,      setFilterStatus]      = useState<string | null>(null);
   const [filterPlat,        setFilterPlat]        = useState<string | null>(null);
   const [filterInfluencers, setFilterInfluencers] = useState<string[]>([]);
   const [influencerList,    setInfluencerList]    = useState<{ id: string; name: string }[]>([]);
+
+  const hasActiveFilters = filterStatus !== null || filterPlat !== null || filterInfluencers.length > 0;
 
   async function loadLives() {
     setLoading(true);
@@ -258,20 +275,22 @@ export default function Agenda() {
       .order("horario", { ascending: true });
 
     if (!error && data) {
-      const mapped = data.map((l: any) => ({ ...l, influencer_name: l.profiles?.name }));
-      setLives(mapped);
-
-      if (isAdmin) {
-        const unique = Array.from(
-          new Map(mapped.map((l: Live) => [l.influencer_id, { id: l.influencer_id, name: l.influencer_name ?? l.influencer_id }])).values()
-        );
-        setInfluencerList(unique as { id: string; name: string }[]);
-      }
+      setLives(data.map((l: any) => ({ ...l, influencer_name: l.profiles?.name })));
     }
     setLoading(false);
   }
 
-  useEffect(() => { loadLives(); }, []);
+  useEffect(() => {
+    loadLives();
+    if (isAdmin) {
+      supabase
+        .from("profiles")
+        .select("id, name")
+        .eq("role", "influencer")
+        .order("name")
+        .then(({ data }) => { if (data) setInfluencerList(data); });
+    }
+  }, []);
 
   function livesForDay(date: Date): Live[] {
     const iso = toISO(date);
@@ -300,82 +319,58 @@ export default function Agenda() {
   }
   function goToday() { setCurrent(new Date()); }
 
-  const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-  const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const DAYS_PT   = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-  const DAYS_EN   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const months    = lang === "en" ? MONTHS_EN : MONTHS_PT;
-  const days      = lang === "en" ? DAYS_EN   : DAYS_PT;
-
   function headerTitle() {
-    if (view === "mes")    return `${months[current.getMonth()]} ${current.getFullYear()}`;
+    if (view === "mes")    return `${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
     if (view === "semana") {
       const w = getWeekDays(current);
-      return `${w[0].getDate()} – ${w[6].getDate()} ${months[w[6].getMonth()]} ${w[6].getFullYear()}`;
+      return `${w[0].getDate()} – ${w[6].getDate()} ${MONTHS[w[6].getMonth()]} ${w[6].getFullYear()}`;
     }
-    return `${current.getDate()} ${months[current.getMonth()]} ${current.getFullYear()}`;
+    return `${current.getDate()} ${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
   }
 
-  const todayISO = toISO(new Date());
-
-  const hasActiveFilters = filterStatus || filterPlat || filterInfluencers.length > 0;
-
-  // ── Estilos reutilizáveis ──
   const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: "16px", padding: "20px",
+    background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "20px",
   };
-
   const chip = (active: boolean, color = BASE_COLORS.purple): React.CSSProperties => ({
     padding: "6px 14px", borderRadius: "20px", fontSize: "12px", fontWeight: 600,
     cursor: "pointer", border: `1.5px solid ${active ? color : t.cardBorder}`,
-    background: active ? `${color}22` : t.inputBg,
-    color: active ? color : t.textMuted,
-    fontFamily: FONT.body, whiteSpace: "nowrap",
+    background: active ? `${color}22` : t.inputBg, color: active ? color : t.textMuted,
+    fontFamily: FONT.body, transition: "all 0.15s",
   });
 
-  function dayStyle(date: Date): React.CSSProperties {
-    const iso = toISO(date);
-    if (iso === todayISO) return { border: `1.5px solid ${BASE_COLORS.blue}`,       background: isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.85)" };
-    if (iso < todayISO)   return { border: "1.5px solid rgba(233,64,37,0.2)",        background: isDark ? "rgba(233,64,37,0.07)"   : "rgba(233,64,37,0.05)"   };
-    return                       { border: "1.5px solid rgba(39,174,96,0.2)",        background: isDark ? "rgba(39,174,96,0.07)"   : "rgba(39,174,96,0.05)"   };
+  function LiveChip({ live }: { live: Live }) {
+    return (
+      <div onClick={() => setModal({ open: true, live })}
+        style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 8px", borderRadius: "8px", cursor: "pointer", background: `${PLAT_COLOR[live.plataforma]}22`, border: `1px solid ${PLAT_COLOR[live.plataforma]}55`, marginBottom: "3px" }}>
+        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: STATUS_COLOR[live.status], flexShrink: 0 }} />
+        <span style={{ fontSize: "11px", color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {live.horario.slice(0, 5)} {isAdmin ? `· ${live.influencer_name}` : live.titulo}
+        </span>
+      </div>
+    );
   }
 
-  function dayNumberColor(date: Date) {
+  function dayStyle(date: Date, todayISO: string): React.CSSProperties {
+    const iso = toISO(date);
+    if (iso === todayISO) return { border: `1.5px solid ${BASE_COLORS.blue}`,      background: isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.85)" };
+    if (iso < todayISO)   return { border: `1.5px solid rgba(233,64,37,0.2)`,       background: isDark ? "rgba(233,64,37,0.07)"   : "rgba(233,64,37,0.05)"   };
+    return                       { border: `1.5px solid rgba(39,174,96,0.2)`,       background: isDark ? "rgba(39,174,96,0.07)"   : "rgba(39,174,96,0.05)"   };
+  }
+
+  function dayNumberColor(date: Date, todayISO: string) {
     const iso = toISO(date);
     if (iso === todayISO) return BASE_COLORS.blue;
     if (iso < todayISO)   return isDark ? "rgba(233,64,37,0.6)"  : "rgba(233,64,37,0.7)";
     return                       isDark ? "rgba(39,174,96,0.7)"  : "rgba(39,174,96,0.8)";
   }
 
-  // ── Chip de live no calendário ──
-  function LiveChip({ live }: { live: Live }) {
-    return (
-      <div
-        onClick={e => { e.stopPropagation(); setModal({ open: true, live }); }}
-        style={{
-          display: "flex", alignItems: "center", gap: "5px",
-          padding: "3px 6px", borderRadius: "6px", cursor: "pointer",
-          background: `${PLAT_COLOR[live.plataforma]}22`,
-          border: `1px solid ${PLAT_COLOR[live.plataforma]}44`,
-          marginBottom: "2px",
-        }}
-      >
-        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: STATUS_COLOR[live.status], flexShrink: 0 }} />
-        <span style={{ fontSize: "10px", color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {live.horario.slice(0, 5)} · {isAdmin ? live.influencer_name : live.titulo}
-        </span>
-      </div>
-    );
-  }
-
-  // ── VIEW MÊS ──────────────────────────────────────────────────────────────
   function ViewMes() {
-    const cells = getMonthDays(current.getFullYear(), current.getMonth());
+    const cells    = getMonthDays(current.getFullYear(), current.getMonth());
+    const todayISO = toISO(new Date());
     return (
       <div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", marginBottom: "4px" }}>
-          {days.map(d => (
+          {DAYS.map(d => (
             <div key={d} style={{ textAlign: "center", fontSize: "11px", fontWeight: 700, color: t.textMuted, padding: "8px 0", fontFamily: FONT.body }}>{d}</div>
           ))}
         </div>
@@ -386,21 +381,19 @@ export default function Agenda() {
             const count    = dayLives.length;
             return (
               <div key={i} onClick={() => { setCurrent(date); setView("dia"); }}
-                style={{ minHeight: "90px", padding: "6px", borderRadius: "10px", cursor: "pointer", transition: "background 0.15s", ...dayStyle(date) }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-                  <span style={{ fontSize: "13px", fontWeight: toISO(date) === todayISO ? 700 : 400, color: dayNumberColor(date), fontFamily: FONT.body }}>
-                    {date.getDate()}
-                  </span>
+                style={{ minHeight: "90px", padding: "6px", borderRadius: "10px", cursor: "pointer", transition: "background 0.15s", ...dayStyle(date, todayISO) }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "13px", fontWeight: toISO(date) === todayISO ? 700 : 400, color: dayNumberColor(date, todayISO), fontFamily: FONT.body }}>{date.getDate()}</span>
                   {count > 0 && (
-                    <span style={{ fontSize: "10px", fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
-                      {count} live{count !== 1 ? "s" : ""}
+                    <span style={{ fontSize: "10px", fontWeight: 700, color: "#fff", background: BASE_COLORS.blue, borderRadius: "10px", padding: "1px 6px", fontFamily: FONT.body }}>
+                      {count}
                     </span>
                   )}
                 </div>
-                {dayLives.slice(0, 3).map(l => <LiveChip key={l.id} live={l} />)}
-                {count > 3 && (
-                  <span style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body }}>+{count - 3}</span>
-                )}
+                <div style={{ marginTop: "4px" }}>
+                  {dayLives.slice(0, 3).map(l => <LiveChip key={l.id} live={l} />)}
+                  {dayLives.length > 3 && <span style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 3}</span>}
+                </div>
               </div>
             );
           })}
@@ -409,27 +402,27 @@ export default function Agenda() {
     );
   }
 
-  // ── VIEW SEMANA ───────────────────────────────────────────────────────────
   function ViewSemana() {
-    const week = getWeekDays(current);
+    const week     = getWeekDays(current);
+    const todayISO = toISO(new Date());
     return (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px" }}>
         {week.map((date, i) => {
           const dayLives = livesForDay(date);
           const count    = dayLives.length;
           return (
-            <div key={i} style={{ borderRadius: "12px", padding: "10px 8px", minHeight: "200px", ...dayStyle(date) }}>
-              <div style={{ textAlign: "center", marginBottom: "10px" }}>
-                <div style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{days[date.getDay()]}</div>
-                <div style={{ fontSize: "20px", fontWeight: 700, color: dayNumberColor(date), fontFamily: FONT.title, lineHeight: "1" }}>{date.getDate()}</div>
-                <div style={{ fontSize: "10px", fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginTop: "3px", minHeight: "14px" }}>
-                  {count > 0 ? `${count} live${count !== 1 ? "s" : ""}` : ""}
-                </div>
+            <div key={i} style={{ borderRadius: "12px", padding: "10px 8px", minHeight: "200px", ...dayStyle(date, todayISO) }}>
+              <div style={{ textAlign: "center", marginBottom: "8px" }}>
+                <div style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{DAYS[date.getDay()]}</div>
+                <div style={{ fontSize: "20px", fontWeight: 700, color: dayNumberColor(date, todayISO), fontFamily: FONT.title }}>{date.getDate()}</div>
+                {count > 0 && (
+                  <div style={{ fontSize: "10px", fontWeight: 700, color: "#fff", background: BASE_COLORS.blue, borderRadius: "10px", padding: "1px 8px", display: "inline-block", fontFamily: FONT.body, marginTop: "2px" }}>
+                    {count} live{count > 1 ? "s" : ""}
+                  </div>
+                )}
               </div>
               {dayLives.map(l => <LiveChip key={l.id} live={l} />)}
-              {dayLives.length === 0 && (
-                <div style={{ fontSize: "11px", color: t.textMuted, textAlign: "center", marginTop: "12px", fontFamily: FONT.body }}>—</div>
-              )}
+              {dayLives.length === 0 && <div style={{ fontSize: "11px", color: t.textMuted, textAlign: "center", marginTop: "12px", fontFamily: FONT.body }}>—</div>}
             </div>
           );
         })}
@@ -437,25 +430,25 @@ export default function Agenda() {
     );
   }
 
-  // ── VIEW DIA ──────────────────────────────────────────────────────────────
   function ViewDia() {
     const dayLives = livesForDay(current);
-    const count    = dayLives.length;
+    const todayISO = toISO(new Date());
     const isToday  = toISO(current) === todayISO;
+    const count    = dayLives.length;
     return (
       <div>
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
           <span style={{ fontSize: "32px", fontWeight: 900, color: isToday ? BASE_COLORS.blue : t.text, fontFamily: FONT.title }}>{current.getDate()}</span>
-          <span style={{ fontSize: "16px", color: t.textMuted, marginLeft: "8px", fontFamily: FONT.body }}>{days[current.getDay()]}</span>
+          <span style={{ fontSize: "16px", color: t.textMuted, marginLeft: "8px", fontFamily: FONT.body }}>{DAYS[current.getDay()]}</span>
           {count > 0 && (
-            <div style={{ fontSize: "12px", fontWeight: 600, color: t.textMuted, fontFamily: FONT.body, marginTop: "4px" }}>
-              {count} live{count !== 1 ? "s" : ""}
-            </div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#fff", background: BASE_COLORS.blue, borderRadius: "12px", padding: "2px 10px", marginLeft: "10px", fontFamily: FONT.body }}>
+              {count} live{count > 1 ? "s" : ""}
+            </span>
           )}
         </div>
         {dayLives.length === 0 ? (
           <div style={{ textAlign: "center", color: t.textMuted, fontSize: "14px", padding: "40px 0", fontFamily: FONT.body }}>
-            {L({ pt: "Nenhuma live agendada para este dia.", en: "No lives scheduled for this day." })}
+            Nenhuma live agendada para este dia.
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -470,7 +463,7 @@ export default function Agenda() {
                   {isAdmin && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{l.influencer_name}</div>}
                   <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "11px", background: `${PLAT_COLOR[l.plataforma]}33`, color: PLAT_COLOR[l.plataforma], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{l.plataforma}</span>
-                    <span style={{ fontSize: "11px", background: `${STATUS_COLOR[l.status]}22`, color: STATUS_COLOR[l.status], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{STATUS_LABEL[l.status]?.[lang as "pt" | "en"]}</span>
+                    <span style={{ fontSize: "11px", background: `${STATUS_COLOR[l.status]}22`, color: STATUS_COLOR[l.status], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{STATUS_LABEL[l.status]}</span>
                     <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>🕐 {l.horario.slice(0, 5)}</span>
                   </div>
                   {l.link && (
@@ -491,9 +484,9 @@ export default function Agenda() {
   }
 
   const VIEW_OPTIONS = [
-    { value: "mes",    label: L({ pt: "Mês",    en: "Month" }) },
-    { value: "semana", label: L({ pt: "Semana", en: "Week"  }) },
-    { value: "dia",    label: L({ pt: "Dia",    en: "Day"   }) },
+    { value: "mes",    label: "Mês"    },
+    { value: "semana", label: "Semana" },
+    { value: "dia",    label: "Dia"    },
   ];
 
   return (
@@ -502,12 +495,12 @@ export default function Agenda() {
       {/* ── HEADER ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: 0 }}>
-          {L({ pt: "Agenda de Lives", en: "Live Schedule" })}
+          🎥 Agenda de Lives
         </h1>
         {isAdmin && (
           <button onClick={() => setModal({ open: true })}
             style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            + {L({ pt: "Nova Live", en: "New Live" })}
+            + Nova Live
           </button>
         )}
       </div>
@@ -517,7 +510,6 @@ export default function Agenda() {
 
         {/* LINHA DE NAVEGAÇÃO */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-          {/* Carrossel */}
           <button onClick={prev} style={{ ...chip(false), padding: "6px 12px" }}>‹</button>
           <span style={{ fontSize: "15px", fontWeight: 700, color: t.text, fontFamily: FONT.title, minWidth: "180px", textAlign: "center" }}>
             {headerTitle()}
@@ -526,14 +518,10 @@ export default function Agenda() {
 
           <div style={{ width: "1px", height: "22px", background: t.divider, flexShrink: 0, margin: "0 2px" }} />
 
-          {/* Hoje */}
-          <button onClick={goToday} style={chip(false)}>
-            {L({ pt: "Hoje", en: "Today" })}
-          </button>
+          <button onClick={goToday} style={chip(false)}>Hoje</button>
 
           <div style={{ width: "1px", height: "22px", background: t.divider, flexShrink: 0, margin: "0 2px" }} />
 
-          {/* Drilldown de visualização — single select */}
           <SingleDropdown
             value={view}
             options={VIEW_OPTIONS}
@@ -542,8 +530,7 @@ export default function Agenda() {
             t={t}
           />
 
-          {/* Drilldown de influencers — só admin */}
-          {isAdmin && (
+          {isAdmin && influencerList.length > 0 && (
             <>
               <div style={{ width: "1px", height: "22px", background: t.divider, flexShrink: 0, margin: "0 2px" }} />
               <InfluencerMultiSelect
@@ -551,7 +538,6 @@ export default function Agenda() {
                 onChange={setFilterInfluencers}
                 influencers={influencerList}
                 t={t}
-                lang={lang as "pt" | "en"}
               />
             </>
           )}
@@ -566,7 +552,7 @@ export default function Agenda() {
           {/* STATUS */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
             <span style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-              {L({ pt: "Status", en: "Status" })}
+              Status
             </span>
             {Object.entries(STATUS_COLOR).map(([status, color]) => {
               const active = filterStatus === status;
@@ -581,7 +567,7 @@ export default function Agenda() {
                   }}>
                   <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: color, flexShrink: 0, display: "inline-block" }} />
                   <span style={{ fontSize: "11px", color: active ? color : t.textMuted, fontWeight: active ? 700 : 400, fontFamily: FONT.body }}>
-                    {STATUS_LABEL[status]?.[lang as "pt" | "en"]}
+                    {STATUS_LABEL[status]}
                   </span>
                   {active && <span style={{ fontSize: "9px", color }}>✕</span>}
                 </button>
@@ -592,7 +578,7 @@ export default function Agenda() {
           {/* PLATAFORMA */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
             <span style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-              {L({ pt: "Plataforma", en: "Platform" })}
+              Plataforma
             </span>
             {Object.entries(PLAT_COLOR).map(([plat, color]) => {
               const active = filterPlat === plat;
@@ -627,7 +613,7 @@ export default function Agenda() {
                 fontSize: "11px", fontWeight: 600,
                 fontFamily: FONT.body, cursor: "pointer",
               }}>
-              ✕ {L({ pt: "Limpar filtros", en: "Clear filters" })}
+              ✕ Limpar filtros
             </button>
           )}
         </div>
@@ -637,7 +623,7 @@ export default function Agenda() {
       <div style={card}>
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
-            {L({ pt: "Carregando...", en: "Loading..." })}
+            Carregando...
           </div>
         ) : (
           view === "mes" ? <ViewMes /> : view === "semana" ? <ViewSemana /> : <ViewDia />
