@@ -72,3 +72,4 @@ export type PagamentoStatus =
   | 'a_pagar'
   | 'pago'
   | 'perfil_incompleto';
+
