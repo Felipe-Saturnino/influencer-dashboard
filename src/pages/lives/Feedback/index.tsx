@@ -43,7 +43,7 @@ const PERIODOS: { value: Periodo; label: string }[] = [
   { value: "todos",  label: "Tudo"   },
 ];
 
-// ─── Utilitário: formata data ISO → DD/MM/AA ──────────────────────────────────
+// ─── Utilitários ──────────────────────────────────────────────────────────────
 
 function fmtData(iso: string): string {
   if (!iso) return "";
@@ -87,7 +87,6 @@ function InfluencerDropdown({ items, selected, onChange }: InfluencerDropdownPro
 
   return (
     <div ref={ref} style={{ position: "relative", minWidth: "210px" }}>
-      {/* Trigger */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -108,7 +107,6 @@ function InfluencerDropdown({ items, selected, onChange }: InfluencerDropdownPro
         }}>▼</span>
       </button>
 
-      {/* Painel */}
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 6px)",
@@ -118,7 +116,6 @@ function InfluencerDropdown({ items, selected, onChange }: InfluencerDropdownPro
           boxShadow: t.isDark ? "0 12px 32px rgba(0,0,0,0.6)" : "0 8px 24px rgba(0,0,0,0.12)",
           zIndex: 100, overflow: "hidden",
         }}>
-          {/* Header do painel */}
           <div style={{
             padding: "10px 14px 8px",
             borderBottom: `1px solid ${t.isDark ? "#3a3a5c" : "#e0e0ee"}`,
@@ -140,7 +137,6 @@ function InfluencerDropdown({ items, selected, onChange }: InfluencerDropdownPro
             )}
           </div>
 
-          {/* Lista */}
           <div style={{ maxHeight: "220px", overflowY: "auto", padding: "6px 0" }}>
             {items.map(inf => {
               const ativo = selected.includes(inf.id);
@@ -183,25 +179,35 @@ function InfluencerDropdown({ items, selected, onChange }: InfluencerDropdownPro
   );
 }
 
+// ─── Live estendida com observação da tabela lives ────────────────────────────
+
+interface LiveComObs extends Live {
+  observacao?: string | null;
+}
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function Feedback() {
-  const { theme: t, user } = useApp();
-  const isAdmin = user?.role === "admin";
+  const { theme: t, isDark } = useApp();
 
   const [periodo,           setPeriodo]           = useState<Periodo>("semana");
   const [statusFiltro,      setStatusFiltro]      = useState<LiveStatus | "todos">("todos");
   const [influencerFiltros, setInfluencerFiltros] = useState<string[]>([]);
-  const [lives,             setLives]             = useState<Live[]>([]);
-  const [resultados,        setResultados]        = useState<Record<string, LiveResultado>>({});
-  const [influencers,       setInfluencers]       = useState<{ id: string; name: string }[]>([]);
-  const [loading,           setLoading]           = useState(true);
+
+  const [lives,         setLives]         = useState<LiveComObs[]>([]);
+  const [resultados,    setResultados]    = useState<Record<string, LiveResultado>>({});
+  const [influencers,   setInfluencers]   = useState<{ id: string; name: string }[]>([]);
+  const [loading,       setLoading]       = useState(true);
+
+  // Dados para os quadros (sem filtro de status)
+  const [livesAll,      setLivesAll]      = useState<LiveComObs[]>([]);
+  const [resultadosAll, setResultadosAll] = useState<Record<string, LiveResultado>>({});
 
   async function loadData() {
     setLoading(true);
     const { start, end } = getRange(periodo);
 
-    let query = supabase
+    let baseQuery = supabase
       .from("lives")
       .select("*, profiles!lives_influencer_id_fkey(name)")
       .gte("data", start)
@@ -210,63 +216,78 @@ export default function Feedback() {
       .order("data", { ascending: false })
       .order("horario", { ascending: true });
 
-    if (!isAdmin && user?.id) query = query.eq("influencer_id", user.id);
-    if (statusFiltro !== "todos") query = query.eq("status", statusFiltro);
-    if (isAdmin && influencerFiltros.length > 0) query = query.in("influencer_id", influencerFiltros);
+    if (influencerFiltros.length > 0) baseQuery = baseQuery.in("influencer_id", influencerFiltros);
 
-    const { data: livesData } = await query;
+    const { data: allData } = await baseQuery;
 
-    if (livesData) {
-      const mapped: Live[] = livesData.map((l: any) => ({
+    if (allData) {
+      const mappedAll: LiveComObs[] = allData.map((l: any) => ({
         ...l,
         influencer_name: l.profiles?.name,
       }));
-      setLives(mapped);
+      setLivesAll(mappedAll);
 
-      if (isAdmin) {
-        const unique = Array.from(
-          new Map(
-            mapped.map(l => [
-              l.influencer_id,
-              { id: l.influencer_id, name: l.influencer_name ?? l.influencer_id },
-            ])
-          ).values()
-        );
-        setInfluencers(unique);
-      }
+      // Lista de influencers para o dropdown
+      const unique = Array.from(
+        new Map(
+          mappedAll.map(l => [l.influencer_id, { id: l.influencer_id, name: l.influencer_name ?? l.influencer_id }])
+        ).values()
+      );
+      setInfluencers(unique);
 
-      const ids = mapped.map(l => l.id);
-      if (ids.length > 0) {
-        const { data: resData } = await supabase
-          .from("live_resultados").select("*").in("live_id", ids);
-        if (resData) {
-          const map: Record<string, LiveResultado> = {};
-          resData.forEach((r: LiveResultado) => { map[r.live_id] = r; });
-          setResultados(map);
-        }
-      } else {
-        setResultados({});
+      // Resultados para os quadros (todos, sem filtro de status)
+      const allIds = mappedAll.map(l => l.id);
+      let resMapAll: Record<string, LiveResultado> = {};
+      if (allIds.length > 0) {
+        const { data: resAll } = await supabase.from("live_resultados").select("*").in("live_id", allIds);
+        if (resAll) resAll.forEach((r: LiveResultado) => { resMapAll[r.live_id] = r; });
       }
+      setResultadosAll(resMapAll);
+
+      // Aplica filtro de status para os cards
+      const filtered = statusFiltro === "todos"
+        ? mappedAll
+        : mappedAll.filter(l => l.status === statusFiltro);
+      setLives(filtered);
+
+      // Resultados para os cards filtrados
+      const filteredIds = filtered.map(l => l.id);
+      let resMap: Record<string, LiveResultado> = {};
+      if (filteredIds.length > 0) {
+        const { data: resData } = await supabase.from("live_resultados").select("*").in("live_id", filteredIds);
+        if (resData) resData.forEach((r: LiveResultado) => { resMap[r.live_id] = r; });
+      }
+      setResultados(resMap);
     }
+
     setLoading(false);
   }
 
   useEffect(() => { loadData(); }, [periodo, statusFiltro, influencerFiltros]);
 
-  // ── Style helpers ──────────────────────────────────────────────────────────
+  // ── Cálculos dos quadros ──────────────────────────────────────────────────
 
-  const badge = (color: string): React.CSSProperties => ({
-    fontSize: "11px", padding: "3px 10px", borderRadius: "20px",
-    background: `${color}22`, color, fontWeight: 600,
-    fontFamily: FONT.body, whiteSpace: "nowrap",
-  });
+  const totalLives         = livesAll.length;
+  const totalRealizadas    = livesAll.filter(l => l.status === "realizada").length;
+  const totalNaoRealizadas = livesAll.filter(l => l.status === "nao_realizada").length;
 
-  const statBox = (color: string): React.CSSProperties => ({
-    flex: 1, textAlign: "center" as const, padding: "10px 8px",
-    borderRadius: "10px",
-    background: t.isDark ? `${color}11` : `${color}09`,
-    border: `1px solid ${color}33`, minWidth: 0,
-  });
+  const realizadasComRes = livesAll.filter(l => l.status === "realizada" && resultadosAll[l.id]);
+
+  const totalHoras = realizadasComRes.reduce((acc, l) => {
+    const r = resultadosAll[l.id];
+    return acc + (r.duracao_horas ?? 0) + (r.duracao_min ?? 0) / 60;
+  }, 0);
+  const horasInt    = Math.floor(totalHoras);
+  const minutosRest = Math.round((totalHoras - horasInt) * 60);
+
+  const mediaViews = realizadasComRes.length > 0
+    ? Math.round(
+        realizadasComRes.reduce((acc, l) => acc + (resultadosAll[l.id]?.media_views ?? 0), 0) /
+        realizadasComRes.length
+      )
+    : 0;
+
+  // ── Estilos reutilizáveis ─────────────────────────────────────────────────
 
   const filterBtn = (active: boolean, color = BASE_COLORS.purple): React.CSSProperties => ({
     padding: "7px 16px", borderRadius: "20px",
@@ -278,24 +299,35 @@ export default function Feedback() {
     transition: "all 0.15s",
   });
 
-  // ── Card de Live ───────────────────────────────────────────────────────────
+  const badge = (color: string): React.CSSProperties => ({
+    fontSize: "11px", padding: "3px 10px", borderRadius: "20px",
+    background: `${color}22`, color, fontWeight: 600,
+    fontFamily: FONT.body, whiteSpace: "nowrap",
+  });
 
-  function LiveCard({ live }: { live: Live }) {
+  const statBox = (color: string): React.CSSProperties => ({
+    flex: 1, textAlign: "center" as const, padding: "10px 8px",
+    borderRadius: "10px",
+    background: isDark ? `${color}11` : `${color}09`,
+    border: `1px solid ${color}33`, minWidth: 0,
+  });
+
+  // ── LiveCard ──────────────────────────────────────────────────────────────
+
+  function LiveCard({ live }: { live: LiveComObs }) {
     const res         = resultados[live.id];
     const isRealizada = live.status === "realizada";
     const statusColor = isRealizada ? "#27ae60" : "#e94025";
-    const statusLabel = isRealizada ? "Realizada" : "Não Realizada";
     const platColor   = PLAT_COLOR[live.plataforma];
 
     return (
       <div style={{
         background: t.cardBg, border: `1px solid ${t.cardBorder}`,
         borderRadius: "16px", padding: "20px", marginBottom: "10px",
-        borderLeft: `4px solid ${statusColor}`,
+        borderLeft: `8px solid ${statusColor}`,
       }}>
         {/* Linha principal */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
-          {/* Ícone plataforma */}
           <div style={{
             width: "44px", height: "44px", borderRadius: "10px",
             background: platColor,
@@ -306,37 +338,30 @@ export default function Feedback() {
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            {/* Data e hora */}
             <div style={{
-              fontSize: "15px", fontWeight: 700, color: t.text,
-              fontFamily: FONT.body, marginBottom: "3px",
+              fontSize: "14px", fontWeight: 700, color: t.text,
+              fontFamily: FONT.body, marginBottom: "4px",
             }}>
               📅 {fmtData(live.data)} às {live.horario?.slice(0, 5)}
             </div>
 
-            {/* Influencer */}
-            {isAdmin && (
-              <div style={{
-                fontSize: "13px", color: t.textMuted,
-                fontFamily: FONT.body, marginBottom: "8px",
-              }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>
                 👤 {live.influencer_name}
-              </div>
-            )}
-
-            {/* Badges */}
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-              <span style={badge(platColor)}>{PLAT_ICON[live.plataforma]} {live.plataforma}</span>
-              <span style={badge(statusColor)}>{isRealizada ? "✅" : "❌"} {statusLabel}</span>
+              </span>
+              <span style={{ fontSize: "11px", color: t.textMuted }}>·</span>
+              <span style={badge(platColor)}>
+                {PLAT_ICON[live.plataforma]} {live.plataforma}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Observação — exibe se campo preenchido, independente do status */}
-        {res?.observacao && (
+        {/* Observação — lida de live.observacao (tabela lives) */}
+        {live.observacao && (
           <div style={{
             marginTop: "14px", padding: "10px 14px", borderRadius: "10px",
-            background: t.isDark ? "#ffffff08" : "#00000006",
+            background: isDark ? "#ffffff08" : "#00000006",
             border: `1px solid ${t.cardBorder}`,
           }}>
             <span style={{
@@ -349,12 +374,12 @@ export default function Feedback() {
               margin: "4px 0 0", fontSize: "12px", color: t.text,
               fontFamily: FONT.body, lineHeight: "1.5",
             }}>
-              {res.observacao}
+              {live.observacao}
             </p>
           </div>
         )}
 
-        {/* Stats — só se realizada e com registro em live_resultados */}
+        {/* Stats — só se realizada e com resultado */}
         {isRealizada && res && (
           <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
             <div style={statBox("#8e44ad")}>
@@ -387,13 +412,13 @@ export default function Feedback() {
     );
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
 
       {/* Header */}
-      <div style={{ marginBottom: "24px" }}>
+      <div style={{ marginBottom: "20px" }}>
         <h1 style={{
           fontSize: "22px", fontWeight: 900, color: t.text,
           fontFamily: FONT.title, margin: "0 0 6px",
@@ -405,27 +430,112 @@ export default function Feedback() {
         </p>
       </div>
 
-      {/* Linha 1: Período + Status — centralizados */}
+      {/* ── Quadros de resumo ─────────────────────────────────────────────────── */}
+      {!loading && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: "12px",
+          marginBottom: "24px",
+        }}>
+          {/* Total de lives */}
+          <div style={{
+            background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+            borderRadius: "14px", padding: "16px 18px",
+          }}>
+            <div style={{
+              fontSize: "28px", fontWeight: 900, color: t.text,
+              fontFamily: FONT.title, lineHeight: 1,
+            }}>
+              {totalLives}
+            </div>
+            <div style={{
+              fontSize: "11px", fontWeight: 700, color: t.textMuted,
+              fontFamily: FONT.body, textTransform: "uppercase",
+              letterSpacing: "0.8px", marginTop: "4px",
+            }}>
+              Total de Lives
+            </div>
+            <div style={{ display: "flex", gap: "6px", marginTop: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "11px", fontWeight: 600, fontFamily: FONT.body, color: "#27ae60" }}>
+                ✅ {totalRealizadas} realizadas
+              </span>
+              <span style={{ fontSize: "11px", fontWeight: 600, fontFamily: FONT.body, color: "#e94025" }}>
+                ❌ {totalNaoRealizadas} não realizadas
+              </span>
+            </div>
+          </div>
+
+          {/* Horas realizadas */}
+          <div style={{
+            background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+            borderRadius: "14px", padding: "16px 18px",
+          }}>
+            <div style={{
+              fontSize: "28px", fontWeight: 900, color: "#8e44ad",
+              fontFamily: FONT.title, lineHeight: 1,
+            }}>
+              {horasInt}h{minutosRest > 0 ? ` ${minutosRest}m` : ""}
+            </div>
+            <div style={{
+              fontSize: "11px", fontWeight: 700, color: t.textMuted,
+              fontFamily: FONT.body, textTransform: "uppercase",
+              letterSpacing: "0.8px", marginTop: "4px",
+            }}>
+              Horas Realizadas
+            </div>
+            <div style={{ marginTop: "10px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 600, fontFamily: FONT.body, color: t.textMuted }}>
+                em {realizadasComRes.length} live{realizadasComRes.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
+
+          {/* Média de views */}
+          <div style={{
+            background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+            borderRadius: "14px", padding: "16px 18px",
+          }}>
+            <div style={{
+              fontSize: "28px", fontWeight: 900, color: "#2980b9",
+              fontFamily: FONT.title, lineHeight: 1,
+            }}>
+              {mediaViews > 0 ? mediaViews.toLocaleString("pt-BR") : "—"}
+            </div>
+            <div style={{
+              fontSize: "11px", fontWeight: 700, color: t.textMuted,
+              fontFamily: FONT.body, textTransform: "uppercase",
+              letterSpacing: "0.8px", marginTop: "4px",
+            }}>
+              Média de Views
+            </div>
+            <div style={{ marginTop: "10px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 600, fontFamily: FONT.body, color: t.textMuted }}>
+                média das médias por live
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filtros ───────────────────────────────────────────────────────────── */}
       <div style={{
         display: "flex", justifyContent: "center",
         flexWrap: "wrap", gap: "8px",
         marginBottom: "10px", alignItems: "center",
       }}>
-        {/* Grupo Período */}
         {PERIODOS.map(p => (
           <button key={p.value} onClick={() => setPeriodo(p.value)} style={filterBtn(periodo === p.value)}>
             {p.label}
           </button>
         ))}
 
-        {/* Divisor nítido */}
         <div style={{
           width: "1.5px", alignSelf: "stretch", minHeight: "28px",
-          background: t.isDark ? "#4a4a6e" : "#b0b0cc",
+          background: isDark ? "#4a4a6e" : "#b0b0cc",
           borderRadius: "2px", margin: "0 4px", flexShrink: 0,
         }} />
 
-        {/* Grupo Status — ordem: Realizada, Não Realizada, Todos */}
         <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", "#27ae60")}>
           ✅ Realizada
         </button>
@@ -437,16 +547,13 @@ export default function Feedback() {
         </button>
       </div>
 
-      {/* Linha 2: Influencer dropdown — centralizado */}
-      {isAdmin && (
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
-          <InfluencerDropdown
-            items={influencers}
-            selected={influencerFiltros}
-            onChange={setInfluencerFiltros}
-          />
-        </div>
-      )}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
+        <InfluencerDropdown
+          items={influencers}
+          selected={influencerFiltros}
+          onChange={setInfluencerFiltros}
+        />
+      </div>
 
       {/* Contador */}
       {!loading && lives.length > 0 && (
