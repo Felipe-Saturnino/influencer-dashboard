@@ -11,6 +11,7 @@ import Agenda         from "./pages/lives/Agenda";
 import Resultados     from "./pages/lives/Resultados";
 import Feedback       from "./pages/lives/Feedback";
 import Influencers    from "./pages/operacoes/Influencers";
+import Financeiro     from "./pages/operacoes/Financeiro";
 import Configuracoes  from "./pages/geral/Configuracoes";
 import Ajuda          from "./pages/geral/Ajuda";
 
@@ -21,6 +22,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   resultados:    Resultados,
   feedback:      Feedback,
   influencers:   Influencers,
+  financeiro:    Financeiro,
   configuracoes: Configuracoes,
   ajuda:         Ajuda,
 };
