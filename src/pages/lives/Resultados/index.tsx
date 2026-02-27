@@ -123,9 +123,16 @@ export default function Resultados() {
 
       setSaving(true);
 
-      await supabase.from("lives")
+      const { error: updateError } = await supabase
+        .from("lives")
         .update({ status, observacao: observacao || null })
         .eq("id", live.id);
+
+      if (updateError) {
+        setError("Erro ao salvar. Tente novamente.");
+        setSaving(false);
+        return;
+      }
 
       if (showResultFields) {
         const payload = {
@@ -135,14 +142,20 @@ export default function Resultados() {
           media_views:   mediaViews,
           max_views:     maxViews,
         };
-        existing
+        const { error: resultError } = existing
           ? await supabase.from("live_resultados").update(payload).eq("live_id", live.id)
           : await supabase.from("live_resultados").insert(payload);
+
+        if (resultError) {
+          setError("Erro ao salvar resultado. Tente novamente.");
+          setSaving(false);
+          return;
+        }
       }
 
       setSaving(false);
       setModal(null);
-      loadData();
+      await loadData();
     }
 
     const inputStyle: React.CSSProperties = {
