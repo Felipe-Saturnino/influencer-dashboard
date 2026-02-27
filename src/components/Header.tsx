@@ -18,7 +18,8 @@ function getSectionForPage(pageKey: string): string | null {
 
 export default function Header({ activePage, onNavigate, onLogout }: Props) {
   const { theme: t, user } = useApp();
-  const [open, setOpen] = useState(false);
+  const [open,   setOpen]   = useState(false);
+  const [hover,  setHover]  = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,11 +53,14 @@ export default function Header({ activePage, onNavigate, onLogout }: Props) {
       <div ref={ref} style={{ position: "relative" }}>
         <div
           onClick={() => setOpen(o => !o)}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
           style={{
             display: "flex", alignItems: "center", gap: "10px",
             cursor: "pointer", padding: "6px 10px", borderRadius: "12px",
-            background: open ? `${BASE_COLORS.purple}14` : "transparent",
+            background: open || hover ? `${BASE_COLORS.purple}14` : "transparent",
             transition: "background 0.15s",
+            boxShadow: open || hover ? `0 0 0 1px ${BASE_COLORS.purple}22` : "none",
           }}
         >
           <p style={{
