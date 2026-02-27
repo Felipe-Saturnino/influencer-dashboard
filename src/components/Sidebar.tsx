@@ -23,10 +23,14 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
 
   return (
     <aside style={{
-      width: "240px", height: "100vh", flexShrink: 0, position: "sticky", top: 0,
-      background: t.sidebar, display: "flex", flexDirection: "column",
-      padding: "0px 16px 24px", borderRight: `1px solid ${t.sidebarBorder}`,
+      width: "240px", height: "100vh", flexShrink: 0,
+      position: "fixed", top: 0, left: 0,
+      background: t.sidebar,
+      display: "flex", flexDirection: "column",
+      padding: "0px 16px 24px",
+      borderRight: `1px solid ${t.sidebarBorder}`,
       boxSizing: "border-box",
+      zIndex: 100,
     }}>
       {/* LOGO */}
       <div style={{ marginBottom: "4px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
