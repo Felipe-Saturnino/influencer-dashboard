@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { useApp } from "../../context/AppContext";
-import { BASE_COLORS, FONT } from "../../constants/theme";
-import { supabase } from "../../lib/supabase";
+import { useApp } from "../../../context/AppContext";
+import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { supabase } from "../../../lib/supabase";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
