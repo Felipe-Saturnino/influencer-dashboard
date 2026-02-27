@@ -13,6 +13,7 @@ export type PageKey =
   | "resultados"
   | "feedback"
   | "influencers"
+  | "financeiro"
   | "configuracoes"
   | "ajuda";
 
