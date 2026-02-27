@@ -973,5 +973,3 @@ function ModalPerfil({
     </div>
   );
 }
-EOSX
-echo "done"
