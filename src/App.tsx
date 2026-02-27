@@ -37,7 +37,13 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
         activePage={activePage}
         onNavigate={setActivePage}
       />
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <main style={{
+        flex: 1,
+        marginLeft: "240px",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        minHeight: "100vh",
+      }}>
         <Header
           activePage={activePage}
           onNavigate={setActivePage}
