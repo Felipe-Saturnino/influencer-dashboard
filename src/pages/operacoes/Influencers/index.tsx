@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -192,100 +192,6 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
   );
 }
 
-// ─── RangeSlider duplo ────────────────────────────────────────────────────────
-function DualRangeSlider({
-  min, max, low, high, onChange, t,
-}: {
-  min: number; max: number;
-  low: number; high: number;
-  onChange: (low: number, high: number) => void;
-  t: any;
-}) {
-  const trackRef = useRef<HTMLDivElement>(null);
-
-  const pct = (v: number) => max === min ? 0 : ((v - min) / (max - min)) * 100;
-
-  function handleLow(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = Math.min(Number(e.target.value), high);
-    onChange(v, high);
-  }
-  function handleHigh(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = Math.max(Number(e.target.value), low);
-    onChange(low, v);
-  }
-
-  const leftPct  = pct(low);
-  const rightPct = pct(high);
-
-  return (
-    <div style={{ padding: "4px 0 0" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-        <span style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>
-          {formatBRL(low)}<span style={{ opacity: 0.5 }}>/h</span>
-        </span>
-        <span style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>
-          {formatBRL(high)}<span style={{ opacity: 0.5 }}>/h</span>
-        </span>
-      </div>
-      <div ref={trackRef} style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
-        {/* Track base */}
-        <div style={{
-          position: "absolute", left: 0, right: 0, height: "4px",
-          borderRadius: "2px", background: t.cardBorder,
-        }} />
-        {/* Track selecionado */}
-        <div style={{
-          position: "absolute",
-          left: `${leftPct}%`,
-          width: `${rightPct - leftPct}%`,
-          height: "4px", borderRadius: "2px",
-          background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-        }} />
-        {/* Input low */}
-        <input
-          type="range" min={min} max={max} step={50} value={low}
-          onChange={handleLow}
-          style={{
-            position: "absolute", width: "100%", height: "4px",
-            opacity: 0, cursor: "pointer", pointerEvents: "auto",
-            zIndex: low > max - (max - min) * 0.1 ? 5 : 3,
-          }}
-        />
-        {/* Input high */}
-        <input
-          type="range" min={min} max={max} step={50} value={high}
-          onChange={handleHigh}
-          style={{
-            position: "absolute", width: "100%", height: "4px",
-            opacity: 0, cursor: "pointer", pointerEvents: "auto",
-            zIndex: 4,
-          }}
-        />
-        {/* Thumb low (visual) */}
-        <div style={{
-          position: "absolute",
-          left: `calc(${leftPct}% - 8px)`,
-          width: "16px", height: "16px", borderRadius: "50%",
-          background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-          border: "2px solid white",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-          pointerEvents: "none", zIndex: 6,
-        }} />
-        {/* Thumb high (visual) */}
-        <div style={{
-          position: "absolute",
-          left: `calc(${rightPct}% - 8px)`,
-          width: "16px", height: "16px", borderRadius: "50%",
-          background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-          border: "2px solid white",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-          pointerEvents: "none", zIndex: 6,
-        }} />
-      </div>
-    </div>
-  );
-}
-
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
   const { theme: t, user } = useApp();
@@ -300,10 +206,8 @@ export default function Influencers() {
   const [filterStatus,  setFilterStatus]  = useState<string>("todos");
   const [filterPlat,    setFilterPlat]    = useState<string>("todas");
   const [filterOp,      setFilterOp]      = useState<string>("todas");
-  const [cacheMin,      setCacheMin]      = useState(0);
-  const [cacheMax,      setCacheMax]      = useState(0);
-  const [cacheRangeMin, setCacheRangeMin] = useState(0);
-  const [cacheRangeMax, setCacheRangeMax] = useState(0);
+const [cacheMax,   setCacheMax]   = useState(0);
+const [cacheLimit, setCacheLimit] = useState(0);
 
   async function loadData() {
     setLoading(true);
@@ -327,15 +231,14 @@ export default function Influencers() {
         const caches = mapped
           .map((i: Influencer) => i.perfil?.cache_hora ?? 0)
           .filter((v: number) => v > 0);
-        if (caches.length > 0) {
-          const mn = Math.min(...caches);
-          const mx = Math.max(...caches);
-          setCacheMin(mn); setCacheMax(mx);
-          setCacheRangeMin(mn); setCacheRangeMax(mx);
-        } else {
-          setCacheMin(0); setCacheMax(5000);
-          setCacheRangeMin(0); setCacheRangeMax(5000);
-        }
+if (caches.length > 0) {
+  const mx = Math.max(...caches);
+  setCacheMax(mx);
+  setCacheLimit(mx);
+} else {
+  setCacheMax(5000);
+  setCacheLimit(5000);
+}
       }
     } else {
       if (!user) return;
@@ -375,9 +278,9 @@ export default function Influencers() {
     }
     // Slider de cache — só aplica se há caches reais
     const cache = p?.cache_hora ?? 0;
-    if (cacheMin !== cacheMax) {
-      if (cache < cacheRangeMin || cache > cacheRangeMax) return false;
-    }
+if (cacheLimit < cacheMax) {
+  if (cache > cacheLimit) return false;
+}
     return true;
   });
 
@@ -525,22 +428,57 @@ export default function Influencers() {
           </div>
 
           {/* Slider de cachê */}
-          {cacheMin !== cacheMax && (
-            <div style={{
-              background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-              borderRadius: "12px", padding: "14px 18px", marginBottom: "16px",
-            }}>
-              <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body, marginBottom: "10px" }}>
-                💰 Faixa de Cachê por Hora
-              </div>
-              <DualRangeSlider
-                min={cacheMin} max={cacheMax}
-                low={cacheRangeMin} high={cacheRangeMax}
-                onChange={(l, h) => { setCacheRangeMin(l); setCacheRangeMax(h); }}
-                t={t}
-              />
-            </div>
-          )}
+          {cacheMax > 0 && (
+  <div style={{
+    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+    borderRadius: "12px", padding: "14px 18px", marginBottom: "16px",
+  }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+      <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body }}>
+        💰 Cachê por Hora — até
+      </span>
+      <span style={{ fontSize: "13px", fontWeight: 700, color: BASE_COLORS.purple, fontFamily: FONT.body }}>
+        {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
+      </span>
+    </div>
+    <div style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
+      {/* Track base */}
+      <div style={{ position: "absolute", left: 0, right: 0, height: "4px", borderRadius: "2px", background: t.cardBorder }} />
+      {/* Track preenchido */}
+      <div style={{
+        position: "absolute", left: 0,
+        width: `${(cacheLimit / cacheMax) * 100}%`,
+        height: "4px", borderRadius: "2px",
+        background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+      }} />
+      {/* Input range */}
+      <input
+        type="range"
+        min={0} max={cacheMax} step={50}
+        value={cacheLimit}
+        onChange={(e) => setCacheLimit(Number(e.target.value))}
+        style={{
+          position: "absolute", width: "100%",
+          opacity: 0, cursor: "pointer", height: "20px", zIndex: 2,
+        }}
+      />
+      {/* Thumb visual */}
+      <div style={{
+        position: "absolute",
+        left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`,
+        width: "16px", height: "16px", borderRadius: "50%",
+        background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+        border: "2px solid white",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+        pointerEvents: "none", zIndex: 3,
+      }} />
+    </div>
+    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+      <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
+      <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax)}/h</span>
+    </div>
+  </div>
+)}
         </>
       )}
 
