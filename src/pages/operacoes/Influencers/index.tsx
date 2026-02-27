@@ -6,7 +6,8 @@ import { supabase } from "../../../lib/supabase";
 type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
 const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok"];
 const PLAT_COLOR: Record<Plataforma, string> = {
-  Twitch: "#9146ff", YouTube: "#ff0000", Kick: "#53fc18", Instagram: "#e1306c", TikTok: "#010101",
+  Twitch: "#9146ff", YouTube: "#ff0000", Kick: "#53fc18",
+  Instagram: "#e1306c", TikTok: "#010101",
 };
 const PLAT_ICON: Record<Plataforma, string> = {
   Twitch: "🟣", YouTube: "▶️", Kick: "🟢", Instagram: "📸", TikTok: "🎵",
@@ -82,7 +83,7 @@ function isPerfilIncompleto(perfil: Perfil | null): boolean {
 }
 
 interface StatusBadgeProps {
-  value: StatusInfluencer;
+  value:    StatusInfluencer;
   onChange: (v: StatusInfluencer) => void;
   readonly?: boolean;
 }
@@ -90,7 +91,6 @@ interface StatusBadgeProps {
 function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
   const [open, setOpen] = useState(false);
   const color = STATUS_COLOR[value] ?? "#888";
-
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <button
@@ -114,12 +114,10 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
           zIndex: 200, minWidth: "140px", overflow: "hidden",
         }}>
           {STATUS_OPTS.map((s) => (
-            <button
-              key={s}
-              onClick={() => { onChange(s); setOpen(false); }}
+            <button key={s} onClick={() => { onChange(s); setOpen(false); }}
               style={{
-                display: "block", width: "100%", padding: "9px 14px",
-                border: "none", background: s === value ? `${STATUS_COLOR[s]}18` : "transparent",
+                display: "block", width: "100%", padding: "9px 14px", border: "none",
+                background: s === value ? `${STATUS_COLOR[s]}18` : "transparent",
                 color: STATUS_COLOR[s], fontSize: "12px", fontWeight: 700,
                 cursor: "pointer", textAlign: "left", fontFamily: FONT.body,
               }}
@@ -136,11 +134,10 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 export default function Influencers() {
   const { theme: t, user } = useApp();
   const isAdmin = user?.role === "admin";
-
-  const [list, setList] = useState<Influencer[]>([]);
+  const [list,    setList]    = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<{ mode: "visualizar" | "editar" | "novo"; inf?: Influencer } | null>(null);
-  const [search, setSearch] = useState("");
+  const [modal,   setModal]   = useState<{ mode: "visualizar" | "editar" | "novo"; inf?: Influencer } | null>(null);
+  const [search,  setSearch]  = useState("");
 
   async function loadData() {
     setLoading(true);
@@ -171,17 +168,18 @@ export default function Influencers() {
   useEffect(() => { loadData(); }, []);
 
   function handleStatusChange(infId: string, newStatus: StatusInfluencer) {
-    setList((prev) => prev.map((i) =>
-      i.id === infId
-        ? { ...i, perfil: { ...(i.perfil ?? emptyPerfil(i.id)), status: newStatus } }
-        : i
-    ));
+    setList((prev) =>
+      prev.map((i) =>
+        i.id === infId
+          ? { ...i, perfil: { ...(i.perfil ?? emptyPerfil(i.id)), status: newStatus } }
+          : i
+      )
+    );
     supabase.from("influencer_perfil").update({ status: newStatus }).eq("id", infId);
   }
 
   const incompletos = list.filter((i) => isPerfilIncompleto(i.perfil));
-
-  const filtered = list.filter((i) =>
+  const filtered    = list.filter((i) =>
     (i.perfil?.nome_artistico ?? i.name)?.toLowerCase().includes(search.toLowerCase()) ||
     i.email?.toLowerCase().includes(search.toLowerCase())
   );
@@ -221,10 +219,8 @@ export default function Influencers() {
           </p>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => setModal({ mode: "novo" })}
-            style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
-          >
+          <button onClick={() => setModal({ mode: "novo" })}
+            style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
             + Adicionar
           </button>
         )}
@@ -233,7 +229,6 @@ export default function Influencers() {
       {/* Quadros resumo (admin) */}
       {isAdmin && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-
           {/* Total */}
           <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "20px" }}>
             <div style={{ fontSize: "12px", fontWeight: 700, color: t.label, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: "6px" }}>
@@ -282,11 +277,8 @@ export default function Influencers() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 {incompletos.map((inf) => (
-                  <button
-                    key={inf.id}
-                    onClick={() => setModal({ mode: "editar", inf })}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontSize: "13px", color: BASE_COLORS.blue, fontFamily: FONT.body, textDecoration: "underline", fontWeight: 500 }}
-                  >
+                  <button key={inf.id} onClick={() => setModal({ mode: "editar", inf })}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontSize: "13px", color: BASE_COLORS.blue, fontFamily: FONT.body, textDecoration: "underline", fontWeight: 500 }}>
                     {inf.perfil?.nome_artistico?.trim() || inf.name}
                   </button>
                 ))}
@@ -298,9 +290,7 @@ export default function Influencers() {
 
       {/* Busca */}
       {isAdmin && (
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+        <input value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar por nome artístico ou e-mail..."
           style={{ width: "100%", boxSizing: "border-box", padding: "10px 16px", borderRadius: "12px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none", marginBottom: "16px" }}
         />
@@ -323,12 +313,11 @@ export default function Influencers() {
         </div>
       ) : (
         filtered.map((inf) => {
-          const p = inf.perfil;
-          const canais = p?.canais ?? [];
+          const p         = inf.perfil;
+          const canais    = p?.canais ?? [];
           const opsAtivas = OPERADORAS.filter((o) => p?.[`op_${o.key}` as keyof Perfil]);
           const incompleto = isPerfilIncompleto(p);
           const status: StatusInfluencer = p?.status ?? "ativo";
-
           return (
             <div key={inf.id} style={cardStyle}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
@@ -353,11 +342,9 @@ export default function Influencers() {
                       {canais.map((c) => {
                         const link = p?.[`link_${c.toLowerCase()}` as keyof Perfil] as string;
                         return link ? (
-                          <a
-                            key={c}
+                          <a key={c}
                             href={link.startsWith("http") ? link : `https://${link}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            target="_blank" rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", color: PLAT_COLOR[c], fontFamily: FONT.body, textDecoration: "none" }}
                           >
@@ -381,16 +368,12 @@ export default function Influencers() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                <button
-                  onClick={() => setModal({ mode: "visualizar", inf })}
-                  style={{ padding: "8px 14px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.label, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
-                >
+                <button onClick={() => setModal({ mode: "visualizar", inf })}
+                  style={{ padding: "8px 14px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.label, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
                   👁️ Ver
                 </button>
-                <button
-                  onClick={() => setModal({ mode: "editar", inf })}
-                  style={{ padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}
-                >
+                <button onClick={() => setModal({ mode: "editar", inf })}
+                  style={{ padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
                   ✏️ Editar
                 </button>
               </div>
@@ -415,7 +398,7 @@ export default function Influencers() {
 // ── Modal Visualizar ──────────────────────────────────────────────────────────
 interface ModalVisualizarProps {
   influencer: Influencer;
-  onClose: () => void;
+  onClose:    () => void;
 }
 
 function ModalVisualizar({ influencer, onClose }: ModalVisualizarProps) {
@@ -429,6 +412,7 @@ function ModalVisualizar({ influencer, onClose }: ModalVisualizarProps) {
     { key: "financeiro" as const, label: "Financeiro" },
     { key: "operadoras" as const, label: "Operadoras" },
   ];
+
   const labelStyle: React.CSSProperties = {
     display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px",
     textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
@@ -441,11 +425,10 @@ function ModalVisualizar({ influencer, onClose }: ModalVisualizarProps) {
   );
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
@@ -492,7 +475,9 @@ function ModalVisualizar({ influencer, onClose }: ModalVisualizarProps) {
                 (p?.canais ?? []).map((c) => {
                   const link = p?.[`link_${c.toLowerCase()}` as keyof Perfil] as string;
                   return link ? (
-                    <a key={c} href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer"
+                    <a key={c}
+                      href={link.startsWith("http") ? link : `https://${link}`}
+                      target="_blank" rel="noopener noreferrer"
                       style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "20px", border: `2px solid ${PLAT_COLOR[c]}`, background: `${PLAT_COLOR[c]}18`, color: PLAT_COLOR[c], fontSize: "12px", fontWeight: 700, fontFamily: FONT.body, textDecoration: "none" }}>
                       {PLAT_ICON[c]} {c} <span style={{ fontSize: "10px", opacity: 0.7 }}>↗</span>
                     </a>
@@ -523,7 +508,7 @@ function ModalVisualizar({ influencer, onClose }: ModalVisualizarProps) {
           <>
             {OPERADORAS.map((op) => {
               const ativo = !!p?.[`op_${op.key}` as keyof Perfil];
-              const id = p?.[`id_${op.key}` as keyof Perfil] as string;
+              const id    = p?.[`id_${op.key}` as keyof Perfil] as string;
               return (
                 <div key={op.key} style={{ marginBottom: "14px", padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -538,6 +523,7 @@ function ModalVisualizar({ influencer, onClose }: ModalVisualizarProps) {
             })}
           </>
         )}
+
       </div>
     </div>
   );
@@ -551,21 +537,25 @@ interface ModalNovoProps {
 
 function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
   const { theme: t } = useApp();
-
-  const [newName, setNewName] = useState("");
+  const [newName,  setNewName]  = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [form, setForm] = useState<Omit<Perfil, "id">>({
+
+  // FIX: use Perfil (not Omit<Perfil, "id">) so keyof Perfil indexing works correctly
+  const [form, setForm] = useState<Perfil>({
+    id: "",
     nome_artistico: "", status: "ativo", telefone: "", cpf: "",
     canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
     cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
     op_blaze: false, id_blaze: "", op_bet_nacional: false, id_bet_nacional: "",
     op_casa_apostas: false, id_casa_apostas: "",
   });
+
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
+  const [error,  setError]  = useState("");
+  const [tab,    setTab]    = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
   const set = (key: keyof Perfil, val: any) => setForm((f) => ({ ...f, [key]: val }));
+
   const toggleCanal = (c: Plataforma) => {
     const cur = form.canais ?? [];
     set("canais", cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]);
@@ -573,17 +563,19 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
 
   async function handleSave() {
     setError("");
-    if (!newEmail.trim())             return setError("E-mail é obrigatório.");
+    if (!newEmail.trim())            return setError("E-mail é obrigatório.");
     if (!form.nome_artistico?.trim()) return setError("Nome Artístico é obrigatório.");
     if ((form.canais ?? []).length === 0) return setError("Selecione ao menos 1 canal com link.");
+
     const temCanalSemLink = (form.canais ?? []).some((c) => {
-      const link = form[`link_${c.toLowerCase()}` as keyof typeof form] as string;
+      const link = form[`link_${c.toLowerCase()}` as keyof Perfil] as string;
       return !link?.trim();
     });
     if (temCanalSemLink) return setError("Preencha o link de cada canal selecionado.");
+
     const temOp = OPERADORAS.some((o) => {
-      const ativo = form[`op_${o.key}` as keyof typeof form];
-      const id = form[`id_${o.key}` as keyof typeof form] as string;
+      const ativo = form[`op_${o.key}` as keyof Perfil];
+      const id    = form[`id_${o.key}` as keyof Perfil] as string;
       return ativo && id?.trim();
     });
     if (!temOp) return setError("Ative ao menos 1 operadora com ID preenchido.");
@@ -591,14 +583,13 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
     setSaving(true);
     const { data: profile, error: profileErr } = await supabase
       .from("profiles").select("id").eq("email", newEmail.toLowerCase().trim()).single();
-
     if (profileErr || !profile) {
       setError("Usuário não encontrado. Verifique o e-mail.");
       setSaving(false);
       return;
     }
 
-    const payload: Perfil = { ...(form as Perfil), id: profile.id };
+    const payload: Perfil = { ...form, id: profile.id };
     const { error: err } = await supabase.from("influencer_perfil").insert(payload);
     setSaving(false);
     if (err) { setError(err.message); return; }
@@ -608,13 +599,14 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
   const inputStyle: React.CSSProperties = {
     width: "100%", boxSizing: "border-box", padding: "10px 14px",
     borderRadius: "10px", border: `1px solid ${t.inputBorder}`,
-    background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none",
+    background: t.inputBg, color: t.inputText,
+    fontSize: "13px", fontFamily: FONT.body, outline: "none",
   };
   const labelStyle: React.CSSProperties = {
     display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px",
     textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
   };
-  const req = <span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>;
+  const req  = <span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>;
   const row: React.CSSProperties = { marginBottom: "14px" };
   const tabs = [
     { key: "cadastral"  as const, label: "Cadastral"  },
@@ -624,11 +616,10 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
   ];
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
           <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>➕ Novo Influencer</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
@@ -777,26 +768,28 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
 // ── Modal Editar ──────────────────────────────────────────────────────────────
 interface ModalPerfilProps {
   influencer: Influencer;
-  onClose: () => void;
-  onSaved: () => void;
+  onClose:    () => void;
+  onSaved:    () => void;
 }
 
 function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
   const { theme: t } = useApp();
   const existing = influencer.perfil;
-  const [form, setForm] = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
+  const [form,   setForm]   = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
+  const [error,  setError]  = useState("");
+  const [tab,    setTab]    = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
   const set = (key: keyof Perfil, val: any) => setForm((f) => ({ ...f, [key]: val }));
+
   const toggleCanal = (c: Plataforma) => {
     const cur = form.canais ?? [];
     set("canais", cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]);
   };
 
   async function handleSave() {
-    setError(""); setSaving(true);
+    setError("");
+    setSaving(true);
     const payload = { ...form, updated_at: new Date().toISOString() };
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
@@ -809,13 +802,14 @@ function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
   const inputStyle: React.CSSProperties = {
     width: "100%", boxSizing: "border-box", padding: "10px 14px",
     borderRadius: "10px", border: `1px solid ${t.inputBorder}`,
-    background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none",
+    background: t.inputBg, color: t.inputText,
+    fontSize: "13px", fontFamily: FONT.body, outline: "none",
   };
   const labelStyle: React.CSSProperties = {
     display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px",
     textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
   };
-  const row: React.CSSProperties = { marginBottom: "14px" };
+  const row: React.CSSProperties  = { marginBottom: "14px" };
   const tabs = [
     { key: "cadastral"  as const, label: "Cadastral"  },
     { key: "canais"     as const, label: "Canais"     },
@@ -824,11 +818,10 @@ function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
   ];
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
