@@ -87,8 +87,8 @@ interface StatusBadgeProps {
   readonly?: boolean;
 }
 
-function StatusBadge(props: StatusBadgeProps) {
-  const open = props.open ?? false;
+function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
+  const [open, setOpen] = useState(false);
   const color = STATUS_COLOR[value] ?? "#888";
 
   return (
@@ -353,7 +353,7 @@ export default function Influencers() {
                       {canais.map((c) => {
                         const link = p?.[`link_${c.toLowerCase()}` as keyof Perfil] as string;
                         return link ? (
-                          
+                          <a
                             key={c}
                             href={link.startsWith("http") ? link : `https://${link}`}
                             target="_blank"
