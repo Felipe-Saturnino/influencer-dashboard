@@ -42,3 +42,32 @@ export interface Live {
   link?:            string;
   created_at?:      string;
 }
+
+// ── Financeiro ─────────────────────────────────────────────────────
+export interface CicloPagamento {
+  id:          string;
+  data_inicio: string; // ISO date
+  data_fim:    string;
+  fechado_em:  string | null;
+  criado_em?:  string;
+}
+
+export interface Pagamento {
+  id:               string;
+  ciclo_id:         string;
+  influencer_id:    string;
+  influencer_name?: string; // join com profiles
+  horas_realizadas: number;
+  cache_hora:       number;
+  total:            number;
+  status:           PagamentoStatus;
+  aprovado_por:     string | null;
+  pago_em:          string | null;
+  criado_em?:       string;
+}
+
+export type PagamentoStatus =
+  | 'em_analise'
+  | 'a_pagar'
+  | 'pago'
+  | 'perfil_incompleto';
