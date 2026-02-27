@@ -87,8 +87,8 @@ interface StatusBadgeProps {
   readonly?: boolean;
 }
 
-function StatusBadge({ value, onChange, readonly = false }: StatusBadgeProps) {
-  const [open, setOpen] = useState(false);
+function StatusBadge(props: StatusBadgeProps) {
+  const open = props.open ?? false;
   const color = STATUS_COLOR[value] ?? "#888";
 
   return (
