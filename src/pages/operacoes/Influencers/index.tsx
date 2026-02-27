@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
 const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok"];
 const PLAT_COLOR: Record<Plataforma, string> = {
@@ -15,9 +16,9 @@ const PLAT_ICON: Record<Plataforma, string> = {
 
 type Operadora = "blaze" | "bet_nacional" | "casa_apostas";
 const OPERADORAS: { key: Operadora; label: string }[] = [
-  { key: "blaze",        label: "Blaze"          },
-  { key: "bet_nacional", label: "Bet Nacional"    },
-  { key: "casa_apostas", label: "Casa de Apostas" },
+  { key: "blaze",        label: "Blaze"           },
+  { key: "bet_nacional", label: "Bet Nacional"     },
+  { key: "casa_apostas", label: "Casa de Apostas"  },
 ];
 
 type StatusInfluencer = "ativo" | "inativo" | "cancelado";
@@ -55,9 +56,9 @@ interface Perfil {
 }
 
 interface Influencer {
-  id:     string;
-  name:   string;
-  email:  string;
+  id:    string;
+  name:  string;
+  email: string;
   perfil: Perfil | null;
 }
 
@@ -69,22 +70,82 @@ const emptyPerfil = (id: string): Perfil => ({
   op_casa_apostas: false, id_casa_apostas: "",
 });
 
-function isPerfilIncompleto(perfil: Perfil | null): boolean {
+// ─── Moeda BRL ────────────────────────────────────────────────────────────────
+function formatBRL(value: number): string {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function parseBRL(raw: string): number {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return 0;
+  return parseInt(digits, 10) / 100;
+}
+
+function maskBRL(raw: string): string {
+  const digits = raw.replace(/\D/g, "").replace(/^0+/, "") || "0";
+  const num    = parseInt(digits, 10) / 100;
+  return formatBRL(num);
+}
+
+// Input de moeda controlado
+function CurrencyInput({
+  value, onChange, style, placeholder,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  style?: React.CSSProperties;
+  placeholder?: string;
+}) {
+  const [display, setDisplay] = useState(value > 0 ? formatBRL(value) : "");
+
+  useEffect(() => {
+    setDisplay(value > 0 ? formatBRL(value) : "");
+  }, [value]);
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={display}
+      placeholder={placeholder ?? "R$ 0,00"}
+      onChange={(e) => {
+        const masked = maskBRL(e.target.value);
+        setDisplay(masked);
+        onChange(parseBRL(masked));
+      }}
+      onFocus={(e) => {
+        if (!display) setDisplay(formatBRL(0));
+        e.target.select();
+      }}
+      onBlur={() => {
+        if (value === 0) setDisplay("");
+      }}
+      style={style}
+    />
+  );
+}
+
+// ─── isPerfilIncompleto ───────────────────────────────────────────────────────
+function isPerfilIncompleto(perfil: Perfil | null, name: string): boolean {
   if (!perfil) return true;
-  if (!perfil.nome_artistico?.trim()) return true;
-  if ((perfil.canais ?? []).length === 0) return true;
-  const temOp = OPERADORAS.some((o) => {
-    const ativo = perfil[`op_${o.key}` as keyof Perfil];
-    const id = perfil[`id_${o.key}` as keyof Perfil] as string;
-    return ativo && id?.trim();
-  });
-  if (!temOp) return true;
+  // Cadastral
+  if (!name?.trim())                   return true;
+  if (!perfil.nome_artistico?.trim())  return true;
+  if (!perfil.telefone?.trim())        return true;
+  if (!perfil.cpf?.trim())             return true;
+  // Financeiro
+  if (!perfil.cache_hora || perfil.cache_hora <= 0) return true;
+  if (!perfil.chave_pix?.trim())       return true;
+  if (!perfil.banco?.trim())           return true;
+  if (!perfil.agencia?.trim())         return true;
+  if (!perfil.conta?.trim())           return true;
   return false;
 }
 
+// ─── StatusBadge ─────────────────────────────────────────────────────────────
 interface StatusBadgeProps {
-  value:    StatusInfluencer;
-  onChange: (v: StatusInfluencer) => void;
+  value:     StatusInfluencer;
+  onChange:  (v: StatusInfluencer) => void;
   readonly?: boolean;
 }
 
@@ -131,13 +192,118 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
   );
 }
 
+// ─── RangeSlider duplo ────────────────────────────────────────────────────────
+function DualRangeSlider({
+  min, max, low, high, onChange, t,
+}: {
+  min: number; max: number;
+  low: number; high: number;
+  onChange: (low: number, high: number) => void;
+  t: any;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  const pct = (v: number) => max === min ? 0 : ((v - min) / (max - min)) * 100;
+
+  function handleLow(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = Math.min(Number(e.target.value), high);
+    onChange(v, high);
+  }
+  function handleHigh(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = Math.max(Number(e.target.value), low);
+    onChange(low, v);
+  }
+
+  const leftPct  = pct(low);
+  const rightPct = pct(high);
+
+  return (
+    <div style={{ padding: "4px 0 0" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+        <span style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>
+          {formatBRL(low)}<span style={{ opacity: 0.5 }}>/h</span>
+        </span>
+        <span style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>
+          {formatBRL(high)}<span style={{ opacity: 0.5 }}>/h</span>
+        </span>
+      </div>
+      <div ref={trackRef} style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
+        {/* Track base */}
+        <div style={{
+          position: "absolute", left: 0, right: 0, height: "4px",
+          borderRadius: "2px", background: t.cardBorder,
+        }} />
+        {/* Track selecionado */}
+        <div style={{
+          position: "absolute",
+          left: `${leftPct}%`,
+          width: `${rightPct - leftPct}%`,
+          height: "4px", borderRadius: "2px",
+          background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+        }} />
+        {/* Input low */}
+        <input
+          type="range" min={min} max={max} step={50} value={low}
+          onChange={handleLow}
+          style={{
+            position: "absolute", width: "100%", height: "4px",
+            opacity: 0, cursor: "pointer", pointerEvents: "auto",
+            zIndex: low > max - (max - min) * 0.1 ? 5 : 3,
+          }}
+        />
+        {/* Input high */}
+        <input
+          type="range" min={min} max={max} step={50} value={high}
+          onChange={handleHigh}
+          style={{
+            position: "absolute", width: "100%", height: "4px",
+            opacity: 0, cursor: "pointer", pointerEvents: "auto",
+            zIndex: 4,
+          }}
+        />
+        {/* Thumb low (visual) */}
+        <div style={{
+          position: "absolute",
+          left: `calc(${leftPct}% - 8px)`,
+          width: "16px", height: "16px", borderRadius: "50%",
+          background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+          border: "2px solid white",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+          pointerEvents: "none", zIndex: 6,
+        }} />
+        {/* Thumb high (visual) */}
+        <div style={{
+          position: "absolute",
+          left: `calc(${rightPct}% - 8px)`,
+          width: "16px", height: "16px", borderRadius: "50%",
+          background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+          border: "2px solid white",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+          pointerEvents: "none", zIndex: 6,
+        }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
   const { theme: t, user } = useApp();
   const isAdmin = user?.role === "admin";
+
   const [list,    setList]    = useState<Influencer[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal,   setModal]   = useState<{ mode: "visualizar" | "editar" | "novo"; inf?: Influencer } | null>(null);
-  const [search,  setSearch]  = useState("");
+
+  // Filtros
+  const [search,        setSearch]        = useState("");
+  const [filterStatus,  setFilterStatus]  = useState<string>("todos");
+  const [filterPlat,    setFilterPlat]    = useState<string>("todas");
+  const [filterOp,      setFilterOp]      = useState<string>("todas");
+  const [cacheMin,      setCacheMin]      = useState(0);
+  const [cacheMax,      setCacheMax]      = useState(0);
+  const [cacheRangeMin, setCacheRangeMin] = useState(0);
+  const [cacheRangeMax, setCacheRangeMax] = useState(0);
 
   async function loadData() {
     setLoading(true);
@@ -151,10 +317,25 @@ export default function Influencers() {
           : { data: [] };
         const perfisMap: Record<string, Perfil> = {};
         (perfis ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
-        setList(profiles.map((p: any) => ({
+        const mapped = profiles.map((p: any) => ({
           id: p.id, name: p.name ?? p.email, email: p.email,
           perfil: perfisMap[p.id] ?? null,
-        })));
+        }));
+        setList(mapped);
+
+        // Calcular range de cache
+        const caches = mapped
+          .map((i: Influencer) => i.perfil?.cache_hora ?? 0)
+          .filter((v: number) => v > 0);
+        if (caches.length > 0) {
+          const mn = Math.min(...caches);
+          const mx = Math.max(...caches);
+          setCacheMin(mn); setCacheMax(mx);
+          setCacheRangeMin(mn); setCacheRangeMax(mx);
+        } else {
+          setCacheMin(0); setCacheMax(5000);
+          setCacheRangeMin(0); setCacheRangeMax(5000);
+        }
       }
     } else {
       if (!user) return;
@@ -178,11 +359,29 @@ export default function Influencers() {
     supabase.from("influencer_perfil").update({ status: newStatus }).eq("id", infId);
   }
 
-  const incompletos = list.filter((i) => isPerfilIncompleto(i.perfil));
-  const filtered    = list.filter((i) =>
-    (i.perfil?.nome_artistico ?? i.name)?.toLowerCase().includes(search.toLowerCase()) ||
-    i.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filtro composto
+  const filtered = list.filter((inf) => {
+    const p = inf.perfil;
+    const searchLower = search.toLowerCase();
+    if (search && !(
+      (p?.nome_artistico ?? inf.name)?.toLowerCase().includes(searchLower) ||
+      inf.email?.toLowerCase().includes(searchLower)
+    )) return false;
+    if (filterStatus !== "todos" && (p?.status ?? "ativo") !== filterStatus) return false;
+    if (filterPlat !== "todas" && !(p?.canais ?? []).includes(filterPlat as Plataforma)) return false;
+    if (filterOp !== "todas") {
+      const opKey = `op_${filterOp}` as keyof Perfil;
+      if (!p?.[opKey]) return false;
+    }
+    // Slider de cache — só aplica se há caches reais
+    const cache = p?.cache_hora ?? 0;
+    if (cacheMin !== cacheMax) {
+      if (cache < cacheRangeMin || cache > cacheRangeMax) return false;
+    }
+    return true;
+  });
+
+  const incompletos = list.filter((i) => isPerfilIncompleto(i.perfil, i.name));
 
   const porStatus: Record<StatusInfluencer, number> = { ativo: 0, inativo: 0, cancelado: 0 };
   const porPlat: Record<string, number> = {};
@@ -192,6 +391,7 @@ export default function Influencers() {
     (inf.perfil?.canais ?? []).forEach((c) => { porPlat[c] = (porPlat[c] ?? 0) + 1; });
   });
 
+  // ── Styles ──
   const cardStyle: React.CSSProperties = {
     background: t.cardBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: "16px", padding: "18px 20px", marginBottom: "10px",
@@ -202,6 +402,12 @@ export default function Influencers() {
     fontSize: "11px", padding: "3px 9px", borderRadius: "20px",
     background: `${color}22`, color, fontWeight: 600, fontFamily: FONT.body,
   });
+  const selectStyle: React.CSSProperties = {
+    flex: 1, padding: "8px 12px", borderRadius: "10px",
+    border: `1px solid ${t.inputBorder}`, background: t.inputBg,
+    color: t.inputText, fontSize: "12px", fontFamily: FONT.body,
+    cursor: "pointer", outline: "none",
+  };
 
   return (
     <div style={{ padding: "24px", maxWidth: "900px", margin: "0 auto" }}>
@@ -229,7 +435,6 @@ export default function Influencers() {
       {/* Quadros resumo (admin) */}
       {isAdmin && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-          {/* Total */}
           <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "20px" }}>
             <div style={{ fontSize: "12px", fontWeight: 700, color: t.label, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: "6px" }}>
               📊 Total de Influencers
@@ -262,7 +467,6 @@ export default function Influencers() {
             )}
           </div>
 
-          {/* Perfil Incompleto */}
           <div style={{ background: t.cardBg, border: `1px solid #e9402533`, borderRadius: "16px", padding: "20px" }}>
             <div style={{ fontSize: "12px", fontWeight: 700, color: "#e94025", letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: "6px" }}>
               ⚠️ Perfil Incompleto
@@ -290,12 +494,57 @@ export default function Influencers() {
 
       {/* Busca */}
       {isAdmin && (
-        <input value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome artístico ou e-mail..."
-          style={{ width: "100%", boxSizing: "border-box", padding: "10px 16px", borderRadius: "12px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none", marginBottom: "16px" }}
-        />
+        <>
+          <input
+            value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome artístico ou e-mail..."
+            style={{
+              width: "100%", boxSizing: "border-box", padding: "10px 16px",
+              borderRadius: "12px", border: `1px solid ${t.inputBorder}`,
+              background: t.inputBg, color: t.inputText, fontSize: "13px",
+              fontFamily: FONT.body, outline: "none", marginBottom: "10px",
+            }}
+          />
+
+          {/* Filtros de seleção: Status, Plataforma, Operadora */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
+              <option value="todos">Todos os status</option>
+              {STATUS_OPTS.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              ))}
+            </select>
+            <select value={filterPlat} onChange={(e) => setFilterPlat(e.target.value)} style={selectStyle}>
+              <option value="todas">Todas as plataformas</option>
+              {PLATAFORMAS.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)} style={selectStyle}>
+              <option value="todas">Todas as operadoras</option>
+              {OPERADORAS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Slider de cachê */}
+          {cacheMin !== cacheMax && (
+            <div style={{
+              background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+              borderRadius: "12px", padding: "14px 18px", marginBottom: "16px",
+            }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body, marginBottom: "10px" }}>
+                💰 Faixa de Cachê por Hora
+              </div>
+              <DualRangeSlider
+                min={cacheMin} max={cacheMax}
+                low={cacheRangeMin} high={cacheRangeMax}
+                onChange={(l, h) => { setCacheRangeMin(l); setCacheRangeMax(h); }}
+                t={t}
+              />
+            </div>
+          )}
+        </>
       )}
 
+      {/* Contador */}
       {!loading && isAdmin && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
           {filtered.length} influencer(s)
@@ -313,28 +562,40 @@ export default function Influencers() {
         </div>
       ) : (
         filtered.map((inf) => {
-          const p         = inf.perfil;
-          const canais    = p?.canais ?? [];
-          const opsAtivas = OPERADORAS.filter((o) => p?.[`op_${o.key}` as keyof Perfil]);
-          const incompleto = isPerfilIncompleto(p);
+          const p          = inf.perfil;
+          const canais     = p?.canais ?? [];
+          const opsAtivas  = OPERADORAS.filter((o) => p?.[`op_${o.key}` as keyof Perfil]);
+          const incompleto = isPerfilIncompleto(p, inf.name);
           const status: StatusInfluencer = p?.status ?? "ativo";
           return (
             <div key={inf.id} style={cardStyle}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
-                <div style={{ width: "44px", height: "44px", borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: "16px", fontFamily: FONT.body }}>
+                <div style={{
+                  width: "44px", height: "44px", borderRadius: "50%", flexShrink: 0,
+                  background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontWeight: 800, fontSize: "16px", fontFamily: FONT.body,
+                }}>
                   {(p?.nome_artistico || inf.name || inf.email)[0]?.toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "6px" }}>
+                  {/* Nome + Status + Incompleto — com espaçamento generoso */}
+                  <div style={{
+                    display: "flex", alignItems: "center",
+                    gap: "16px", rowGap: "8px",
+                    flexWrap: "wrap", marginBottom: "10px",
+                  }}>
                     <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
                       {p?.nome_artistico?.trim() || inf.name}
                     </span>
                     <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} />
-                    {incompleto && <span style={badge("#e94025")}>⚠️ Perfil incompleto</span>}
+                    {incompleto && (
+                      <span style={badge("#e94025")}>⚠️ Perfil incompleto</span>
+                    )}
                   </div>
                   {p?.cache_hora && p.cache_hora > 0 ? (
                     <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "6px" }}>
-                      💰 R$ {p.cache_hora}/h
+                      💰 {formatBRL(p.cache_hora)}/h
                     </div>
                   ) : null}
                   {canais.length > 0 && (
@@ -386,7 +647,11 @@ export default function Influencers() {
         <ModalVisualizar influencer={modal.inf} onClose={() => setModal(null)} />
       )}
       {modal?.mode === "editar" && modal.inf && (
-        <ModalPerfil influencer={modal.inf} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
+        <ModalPerfil
+          influencer={modal.inf}
+          onClose={() => setModal(null)}
+          onSaved={() => { setModal(null); loadData(); }}
+        />
       )}
       {modal?.mode === "novo" && (
         <ModalNovo onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
@@ -395,22 +660,17 @@ export default function Influencers() {
   );
 }
 
-// ── Modal Visualizar ──────────────────────────────────────────────────────────
-interface ModalVisualizarProps {
-  influencer: Influencer;
-  onClose:    () => void;
-}
-
-function ModalVisualizar({ influencer, onClose }: ModalVisualizarProps) {
+// ─── Modal Visualizar ─────────────────────────────────────────────────────────
+function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onClose: () => void }) {
   const { theme: t } = useApp();
   const p = influencer.perfil;
   const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
   const tabs = [
-    { key: "cadastral"  as const, label: "Cadastral"  },
-    { key: "canais"     as const, label: "Canais"     },
-    { key: "financeiro" as const, label: "Financeiro" },
-    { key: "operadoras" as const, label: "Operadoras" },
+    { key: "cadastral"   as const, label: "Cadastral"  },
+    { key: "canais"      as const, label: "Canais"     },
+    { key: "financeiro"  as const, label: "Financeiro" },
+    { key: "operadoras"  as const, label: "Operadoras" },
   ];
 
   const labelStyle: React.CSSProperties = {
@@ -494,7 +754,7 @@ function ModalVisualizar({ influencer, onClose }: ModalVisualizarProps) {
 
         {tab === "financeiro" && (
           <>
-            <div style={row}><label style={labelStyle}>Cachê por Hora</label>{val(p?.cache_hora ? `R$ ${p.cache_hora}` : "")}</div>
+            <div style={row}><label style={labelStyle}>Cachê por Hora</label>{val(p?.cache_hora ? formatBRL(p.cache_hora) : "")}</div>
             <div style={row}><label style={labelStyle}>Chave PIX</label>{val(p?.chave_pix)}</div>
             <div style={row}><label style={labelStyle}>Banco</label>{val(p?.banco)}</div>
             <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -523,33 +783,23 @@ function ModalVisualizar({ influencer, onClose }: ModalVisualizarProps) {
             })}
           </>
         )}
-
       </div>
     </div>
   );
 }
 
-// ── Modal Novo ────────────────────────────────────────────────────────────────
-interface ModalNovoProps {
-  onClose: () => void;
-  onSaved: () => void;
-}
-
-function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
+// ─── Modal Novo ───────────────────────────────────────────────────────────────
+function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { theme: t } = useApp();
   const [newName,  setNewName]  = useState("");
   const [newEmail, setNewEmail] = useState("");
-
-  // FIX: use Perfil (not Omit<Perfil, "id">) so keyof Perfil indexing works correctly
   const [form, setForm] = useState<Perfil>({
-    id: "",
-    nome_artistico: "", status: "ativo", telefone: "", cpf: "",
+    id: "", nome_artistico: "", status: "ativo", telefone: "", cpf: "",
     canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
     cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
     op_blaze: false, id_blaze: "", op_bet_nacional: false, id_bet_nacional: "",
     op_casa_apostas: false, id_casa_apostas: "",
   });
-
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
   const [tab,    setTab]    = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
@@ -563,10 +813,12 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
 
   async function handleSave() {
     setError("");
-    if (!newEmail.trim())            return setError("E-mail é obrigatório.");
+    if (!newEmail.trim())             return setError("E-mail é obrigatório.");
+    if (!newName.trim())              return setError("Nome Completo é obrigatório.");
     if (!form.nome_artistico?.trim()) return setError("Nome Artístico é obrigatório.");
-    if ((form.canais ?? []).length === 0) return setError("Selecione ao menos 1 canal com link.");
+    if (!form.cache_hora || form.cache_hora <= 0) return setError("Cachê por Hora é obrigatório.");
 
+    if ((form.canais ?? []).length === 0) return setError("Selecione ao menos 1 canal com link.");
     const temCanalSemLink = (form.canais ?? []).some((c) => {
       const link = form[`link_${c.toLowerCase()}` as keyof Perfil] as string;
       return !link?.trim();
@@ -589,6 +841,11 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
       return;
     }
 
+    // Atualiza name em profiles se preenchido
+    if (newName.trim()) {
+      await supabase.from("profiles").update({ name: newName.trim() }).eq("id", profile.id);
+    }
+
     const payload: Perfil = { ...form, id: profile.id };
     const { error: err } = await supabase.from("influencer_perfil").insert(payload);
     setSaving(false);
@@ -609,10 +866,10 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
   const req  = <span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>;
   const row: React.CSSProperties = { marginBottom: "14px" };
   const tabs = [
-    { key: "cadastral"  as const, label: "Cadastral"  },
-    { key: "canais"     as const, label: "Canais"     },
-    { key: "financeiro" as const, label: "Financeiro" },
-    { key: "operadoras" as const, label: "Operadoras" },
+    { key: "cadastral"   as const, label: "Cadastral"  },
+    { key: "canais"      as const, label: "Canais"     },
+    { key: "financeiro"  as const, label: "Financeiro" },
+    { key: "operadoras"  as const, label: "Operadoras" },
   ];
 
   return (
@@ -646,7 +903,7 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
         {tab === "cadastral" && (
           <>
             <div style={row}>
-              <label style={labelStyle}>Nome Completo</label>
+              <label style={labelStyle}>Nome Completo{req}</label>
               <input value={newName} onChange={(e) => setNewName(e.target.value)} style={inputStyle} placeholder="Nome completo do influencer" />
             </div>
             <div style={row}>
@@ -702,8 +959,12 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
         {tab === "financeiro" && (
           <>
             <div style={row}>
-              <label style={labelStyle}>Cachê por Hora (R$)</label>
-              <input type="number" min={0} value={form.cache_hora ?? 0} onChange={(e) => set("cache_hora", Number(e.target.value))} style={inputStyle} />
+              <label style={labelStyle}>Cachê por Hora (R$){req}</label>
+              <CurrencyInput
+                value={form.cache_hora ?? 0}
+                onChange={(v) => set("cache_hora", v)}
+                style={inputStyle}
+              />
             </div>
             <div style={row}>
               <label style={labelStyle}>Chave PIX</label>
@@ -746,8 +1007,15 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
                   </div>
                   {ativo && (
                     <div>
-                      <label style={labelStyle}>ID {op.label}{req}</label>
-                      <input value={(form[idKey] as string) ?? ""} onChange={(e) => set(idKey, e.target.value)} style={inputStyle} placeholder={`ID do influencer na ${op.label}`} />
+                      <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body }}>
+                        ID {op.label}{<span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>}
+                      </label>
+                      <input
+                        value={(form[idKey] as string) ?? ""}
+                        onChange={(e) => set(idKey, e.target.value)}
+                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }}
+                        placeholder={`ID do influencer na ${op.label}`}
+                      />
                     </div>
                   )}
                 </div>
@@ -765,20 +1033,19 @@ function ModalNovo({ onClose, onSaved }: ModalNovoProps) {
   );
 }
 
-// ── Modal Editar ──────────────────────────────────────────────────────────────
-interface ModalPerfilProps {
-  influencer: Influencer;
-  onClose:    () => void;
-  onSaved:    () => void;
-}
-
-function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
+// ─── Modal Editar ─────────────────────────────────────────────────────────────
+function ModalPerfil({
+  influencer, onClose, onSaved,
+}: {
+  influencer: Influencer; onClose: () => void; onSaved: () => void;
+}) {
   const { theme: t } = useApp();
   const existing = influencer.perfil;
-  const [form,   setForm]   = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState("");
-  const [tab,    setTab]    = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
+  const [editName, setEditName] = useState(influencer.name);
+  const [form,     setForm]     = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
+  const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState("");
+  const [tab,      setTab]      = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
   const set = (key: keyof Perfil, val: any) => setForm((f) => ({ ...f, [key]: val }));
 
@@ -789,7 +1056,29 @@ function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
 
   async function handleSave() {
     setError("");
+
+    // Validação: links obrigatórios para cada canal selecionado
+    const temCanalSemLink = (form.canais ?? []).some((c) => {
+      const link = form[`link_${c.toLowerCase()}` as keyof Perfil] as string;
+      return !link?.trim();
+    });
+    if (temCanalSemLink) return setError("Preencha o link de cada canal selecionado.");
+
+    // Validação: ID obrigatório para cada operadora ativa
+    const temOpSemId = OPERADORAS.some((o) => {
+      const ativo = form[`op_${o.key}` as keyof Perfil];
+      const id    = form[`id_${o.key}` as keyof Perfil] as string;
+      return ativo && !id?.trim();
+    });
+    if (temOpSemId) return setError("Preencha o ID de cada operadora ativa.");
+
     setSaving(true);
+
+    // Atualiza nome em profiles se mudou
+    if (editName.trim() && editName.trim() !== influencer.name) {
+      await supabase.from("profiles").update({ name: editName.trim() }).eq("id", influencer.id);
+    }
+
     const payload = { ...form, updated_at: new Date().toISOString() };
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
@@ -809,12 +1098,12 @@ function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
     display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px",
     textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
   };
-  const row: React.CSSProperties  = { marginBottom: "14px" };
+  const row: React.CSSProperties = { marginBottom: "14px" };
   const tabs = [
-    { key: "cadastral"  as const, label: "Cadastral"  },
-    { key: "canais"     as const, label: "Canais"     },
-    { key: "financeiro" as const, label: "Financeiro" },
-    { key: "operadoras" as const, label: "Operadoras" },
+    { key: "cadastral"   as const, label: "Cadastral"  },
+    { key: "canais"      as const, label: "Canais"     },
+    { key: "financeiro"  as const, label: "Financeiro" },
+    { key: "operadoras"  as const, label: "Operadoras" },
   ];
 
   return (
@@ -826,7 +1115,7 @@ function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
               <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
-                {form.nome_artistico?.trim() || influencer.name}
+                {form.nome_artistico?.trim() || editName}
               </h2>
               <StatusBadge value={form.status ?? "ativo"} onChange={(v) => set("status", v)} />
             </div>
@@ -854,8 +1143,12 @@ function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
           <>
             <div style={row}>
               <label style={labelStyle}>Nome Completo</label>
-              <input value={influencer.name} disabled style={{ ...inputStyle, opacity: 0.6 }} />
-              <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>Gerenciado pelo sistema de autenticação.</span>
+              <input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                style={inputStyle}
+                placeholder="Nome completo"
+              />
             </div>
             <div style={row}>
               <label style={labelStyle}>Nome Artístico</label>
@@ -896,7 +1189,9 @@ function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
               const linkKey = `link_${c.toLowerCase()}` as keyof Perfil;
               return (
                 <div key={c} style={row}>
-                  <label style={labelStyle}>Link {c}</label>
+                  <label style={labelStyle}>
+                    Link {c} <span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>
+                  </label>
                   <input value={(form[linkKey] as string) ?? ""} onChange={(e) => set(linkKey, e.target.value)} style={inputStyle} placeholder={`https://${c.toLowerCase()}.com/seu-canal`} />
                 </div>
               );
@@ -911,7 +1206,11 @@ function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
           <>
             <div style={row}>
               <label style={labelStyle}>Cachê por Hora (R$)</label>
-              <input type="number" min={0} value={form.cache_hora ?? 0} onChange={(e) => set("cache_hora", Number(e.target.value))} style={inputStyle} />
+              <CurrencyInput
+                value={form.cache_hora ?? 0}
+                onChange={(v) => set("cache_hora", v)}
+                style={inputStyle}
+              />
             </div>
             <div style={row}>
               <label style={labelStyle}>Chave PIX</label>
@@ -951,8 +1250,15 @@ function ModalPerfil({ influencer, onClose, onSaved }: ModalPerfilProps) {
                   </div>
                   {ativo && (
                     <div>
-                      <label style={labelStyle}>ID {op.label}</label>
-                      <input value={(form[idKey] as string) ?? ""} onChange={(e) => set(idKey, e.target.value)} style={inputStyle} placeholder={`ID do influencer na ${op.label}`} />
+                      <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body }}>
+                        ID {op.label} <span style={{ color: "#e94025" }}>*</span>
+                      </label>
+                      <input
+                        value={(form[idKey] as string) ?? ""}
+                        onChange={(e) => set(idKey, e.target.value)}
+                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }}
+                        placeholder={`ID do influencer na ${op.label}`}
+                      />
                     </div>
                   )}
                 </div>
