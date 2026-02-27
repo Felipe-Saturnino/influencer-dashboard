@@ -29,6 +29,7 @@ export const MENU: MenuSection[] = [
     section: "Operações",
     items: [
       { key: "influencers", label: "Influencers", icon: "👥" },
+      { key: "financeiro",  label: "Financeiro",  icon: "💰" },
     ],
   },
 ];
