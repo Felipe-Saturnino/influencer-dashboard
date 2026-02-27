@@ -103,6 +103,7 @@ export default function Resultados() {
     const existing = resultados[live.id];
     const [status,       setStatus]       = useState<LiveStatus>("realizada");
     const [observacao,   setObservacao]   = useState("");
+    const [horarioReal,  setHorarioReal]  = useState(live.horario?.slice(0, 5) ?? "");
     const [duracaoHoras, setDuracaoHoras] = useState(existing?.duracao_horas ?? 0);
     const [duracaoMin,   setDuracaoMin]   = useState(existing?.duracao_min   ?? 0);
     const [mediaViews,   setMediaViews]   = useState(existing?.media_views   ?? 0);
@@ -123,9 +124,17 @@ export default function Resultados() {
 
       setSaving(true);
 
+      const liveUpdate: Record<string, any> = {
+        status,
+        observacao: observacao || null,
+      };
+      if (showResultFields && horarioReal) {
+        liveUpdate.horario = horarioReal;
+      }
+
       const { error: updateError } = await supabase
         .from("lives")
-        .update({ status, observacao: observacao || null })
+        .update(liveUpdate)
         .eq("id", live.id);
 
       if (updateError) {
@@ -190,6 +199,7 @@ export default function Resultados() {
             </div>
           )}
 
+          {/* Status */}
           <div style={row}>
             <label style={labelStyle}>Status da Live</label>
             <div style={{ display: "flex", gap: "10px" }}>
@@ -202,6 +212,7 @@ export default function Resultados() {
             </div>
           </div>
 
+          {/* Observação */}
           <div style={row}>
             <label style={labelStyle}>Observação</label>
             <textarea value={observacao} onChange={e => setObservacao(e.target.value)}
@@ -209,8 +220,24 @@ export default function Resultados() {
               style={{ ...inputStyle, resize: "vertical", lineHeight: "1.5" }} />
           </div>
 
+          {/* Campos de resultado — só se REALIZADA */}
           {showResultFields && (
             <>
+              {/* Horário Real */}
+              <div style={row}>
+                <label style={labelStyle}>Horário Real de Início</label>
+                <input
+                  type="time"
+                  value={horarioReal}
+                  onChange={e => setHorarioReal(e.target.value)}
+                  style={inputStyle}
+                />
+                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body, marginTop: "4px", display: "block" }}>
+                  Pré-preenchido com o horário agendado. Altere se a live começou em outro horário.
+                </span>
+              </div>
+
+              {/* Duração */}
               <div style={row}>
                 <label style={labelStyle}>Duração</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -227,12 +254,14 @@ export default function Resultados() {
                 </div>
               </div>
 
+              {/* Média de Views */}
               <div style={row}>
                 <label style={labelStyle}>Média de Views</label>
                 <input type="number" min={0} value={mediaViews}
                   onChange={e => setMediaViews(Number(e.target.value))} style={inputStyle} placeholder="0" />
               </div>
 
+              {/* Máximo de Views */}
               <div style={row}>
                 <label style={labelStyle}>Máximo de Views</label>
                 <input type="number" min={0} value={maxViews}
