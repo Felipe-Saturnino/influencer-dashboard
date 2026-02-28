@@ -32,14 +32,14 @@ export default function Resultados() {
 
     const { data: livesData } = await supabase
       .from("lives")
-      .select("*, profiles!lives_influencer_id_fkey(name)")
+      .select("*, profiles!lives_influencer_id_fkey(name), influencer_perfil(nome_artistico)")
       .lt("data", todayISO)
       .eq("status", "agendada")
       .order("data", { ascending: false })
       .order("horario", { ascending: true });
 
     if (livesData) {
-      const mapped = livesData.map((l: any) => ({ ...l, influencer_name: l.profiles?.name }));
+      const mapped = livesData.map((l: any) => ({   ...l,   influencer_name: l.influencer_perfil?.nome_artistico || l.profiles?.name, }));
       setLives(mapped);
 
       const ids = mapped.map((l: Live) => l.id);
