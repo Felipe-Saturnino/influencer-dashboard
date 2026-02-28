@@ -33,6 +33,7 @@ const STATUS_LABEL: Record<StatusInfluencer, string> = {
 interface Perfil {
   id:               string;
   nome_artistico?:  string;
+  nome_completo?:   string;  // ← NOVO: nome real do influencer
   status?:          StatusInfluencer;
   telefone?:        string;
   cpf?:             string;
@@ -63,7 +64,7 @@ interface Influencer {
 }
 
 const emptyPerfil = (id: string): Perfil => ({
-  id, nome_artistico: "", status: "ativo", telefone: "", cpf: "",
+  id, nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
   canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
   cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
   op_blaze: false, id_blaze: "", op_bet_nacional: false, id_bet_nacional: "",
@@ -206,8 +207,8 @@ export default function Influencers() {
   const [filterStatus,  setFilterStatus]  = useState<string>("todos");
   const [filterPlat,    setFilterPlat]    = useState<string>("todas");
   const [filterOp,      setFilterOp]      = useState<string>("todas");
-const [cacheMax,   setCacheMax]   = useState(0);
-const [cacheLimit, setCacheLimit] = useState(0);
+  const [cacheMax,      setCacheMax]      = useState(0);
+  const [cacheLimit,    setCacheLimit]    = useState(0);
 
   async function loadData() {
     setLoading(true);
@@ -231,14 +232,14 @@ const [cacheLimit, setCacheLimit] = useState(0);
         const caches = mapped
           .map((i: Influencer) => i.perfil?.cache_hora ?? 0)
           .filter((v: number) => v > 0);
-if (caches.length > 0) {
-  const mx = Math.max(...caches);
-  setCacheMax(mx);
-  setCacheLimit(mx);
-} else {
-  setCacheMax(5000);
-  setCacheLimit(5000);
-}
+        if (caches.length > 0) {
+          const mx = Math.max(...caches);
+          setCacheMax(mx);
+          setCacheLimit(mx);
+        } else {
+          setCacheMax(5000);
+          setCacheLimit(5000);
+        }
       }
     } else {
       if (!user) return;
@@ -278,9 +279,9 @@ if (caches.length > 0) {
     }
     // Slider de cache — só aplica se há caches reais
     const cache = p?.cache_hora ?? 0;
-if (cacheLimit < cacheMax) {
-  if (cache > cacheLimit) return false;
-}
+    if (cacheLimit < cacheMax) {
+      if (cache > cacheLimit) return false;
+    }
     return true;
   });
 
@@ -429,56 +430,52 @@ if (cacheLimit < cacheMax) {
 
           {/* Slider de cachê */}
           {cacheMax > 0 && (
-  <div style={{
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: "12px", padding: "14px 18px", marginBottom: "16px",
-  }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-      <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body }}>
-        💰 Cachê por Hora — até
-      </span>
-      <span style={{ fontSize: "13px", fontWeight: 700, color: BASE_COLORS.purple, fontFamily: FONT.body }}>
-        {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
-      </span>
-    </div>
-    <div style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
-      {/* Track base */}
-      <div style={{ position: "absolute", left: 0, right: 0, height: "4px", borderRadius: "2px", background: t.cardBorder }} />
-      {/* Track preenchido */}
-      <div style={{
-        position: "absolute", left: 0,
-        width: `${(cacheLimit / cacheMax) * 100}%`,
-        height: "4px", borderRadius: "2px",
-        background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-      }} />
-      {/* Input range */}
-      <input
-        type="range"
-        min={0} max={cacheMax} step={50}
-        value={cacheLimit}
-        onChange={(e) => setCacheLimit(Number(e.target.value))}
-        style={{
-          position: "absolute", width: "100%",
-          opacity: 0, cursor: "pointer", height: "20px", zIndex: 2,
-        }}
-      />
-      {/* Thumb visual */}
-      <div style={{
-        position: "absolute",
-        left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`,
-        width: "16px", height: "16px", borderRadius: "50%",
-        background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-        border: "2px solid white",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-        pointerEvents: "none", zIndex: 3,
-      }} />
-    </div>
-    <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
-      <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
-      <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax)}/h</span>
-    </div>
-  </div>
-)}
+            <div style={{
+              background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+              borderRadius: "12px", padding: "14px 18px", marginBottom: "16px",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body }}>
+                  💰 Cachê por Hora — até
+                </span>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: BASE_COLORS.purple, fontFamily: FONT.body }}>
+                  {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
+                </span>
+              </div>
+              <div style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
+                <div style={{ position: "absolute", left: 0, right: 0, height: "4px", borderRadius: "2px", background: t.cardBorder }} />
+                <div style={{
+                  position: "absolute", left: 0,
+                  width: `${(cacheLimit / cacheMax) * 100}%`,
+                  height: "4px", borderRadius: "2px",
+                  background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+                }} />
+                <input
+                  type="range"
+                  min={0} max={cacheMax} step={50}
+                  value={cacheLimit}
+                  onChange={(e) => setCacheLimit(Number(e.target.value))}
+                  style={{
+                    position: "absolute", width: "100%",
+                    opacity: 0, cursor: "pointer", height: "20px", zIndex: 2,
+                  }}
+                />
+                <div style={{
+                  position: "absolute",
+                  left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`,
+                  width: "16px", height: "16px", borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+                  border: "2px solid white",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                  pointerEvents: "none", zIndex: 3,
+                }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
+                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax)}/h</span>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -517,7 +514,6 @@ if (cacheLimit < cacheMax) {
                   {(p?.nome_artistico || inf.name || inf.email)[0]?.toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  {/* Nome + Status + Incompleto — com espaçamento generoso */}
                   <div style={{
                     display: "flex", alignItems: "center",
                     gap: "16px", rowGap: "8px",
@@ -655,7 +651,8 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
 
         {tab === "cadastral" && (
           <>
-            <div style={row}><label style={labelStyle}>Nome Completo</label>{val(influencer.name)}</div>
+            {/* ← MUDANÇA 5: exibe nome_completo (nome real) em vez de influencer.name (que agora é o artístico) */}
+            <div style={row}><label style={labelStyle}>Nome Completo</label>{val(p?.nome_completo || influencer.name)}</div>
             <div style={row}><label style={labelStyle}>Nome Artístico</label>{val(p?.nome_artistico)}</div>
             <div style={row}><label style={labelStyle}>E-mail</label>{val(influencer.email)}</div>
             <div style={row}><label style={labelStyle}>Telefone</label>{val(p?.telefone)}</div>
@@ -732,7 +729,7 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
   const [newName,  setNewName]  = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [form, setForm] = useState<Perfil>({
-    id: "", nome_artistico: "", status: "ativo", telefone: "", cpf: "",
+    id: "", nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
     canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
     cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
     op_blaze: false, id_blaze: "", op_bet_nacional: false, id_bet_nacional: "",
@@ -779,12 +776,13 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
       return;
     }
 
-    // Atualiza name em profiles se preenchido
-    if (newName.trim()) {
-      await supabase.from("profiles").update({ name: newName.trim() }).eq("id", profile.id);
+    // ← MUDANÇA 3: profiles.name recebe o nome artístico (identificador operacional da plataforma)
+    if (form.nome_artistico?.trim()) {
+      await supabase.from("profiles").update({ name: form.nome_artistico.trim() }).eq("id", profile.id);
     }
 
-    const payload: Perfil = { ...form, id: profile.id };
+    // nome_completo (nome real) salvo em influencer_perfil
+    const payload: Perfil = { ...form, id: profile.id, nome_completo: newName.trim() };
     const { error: err } = await supabase.from("influencer_perfil").insert(payload);
     setSaving(false);
     if (err) { setError(err.message); return; }
@@ -979,7 +977,7 @@ function ModalPerfil({
 }) {
   const { theme: t } = useApp();
   const existing = influencer.perfil;
-  const [editName, setEditName] = useState(influencer.name);
+  const [editName, setEditName] = useState(influencer.perfil?.nome_completo || influencer.name);
   const [form,     setForm]     = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
@@ -995,14 +993,12 @@ function ModalPerfil({
   async function handleSave() {
     setError("");
 
-    // Validação: links obrigatórios para cada canal selecionado
     const temCanalSemLink = (form.canais ?? []).some((c) => {
       const link = form[`link_${c.toLowerCase()}` as keyof Perfil] as string;
       return !link?.trim();
     });
     if (temCanalSemLink) return setError("Preencha o link de cada canal selecionado.");
 
-    // Validação: ID obrigatório para cada operadora ativa
     const temOpSemId = OPERADORAS.some((o) => {
       const ativo = form[`op_${o.key}` as keyof Perfil];
       const id    = form[`id_${o.key}` as keyof Perfil] as string;
@@ -1012,12 +1008,13 @@ function ModalPerfil({
 
     setSaving(true);
 
-    // Atualiza nome em profiles se mudou
-    if (editName.trim() && editName.trim() !== influencer.name) {
-      await supabase.from("profiles").update({ name: editName.trim() }).eq("id", influencer.id);
+    // ← MUDANÇA 4: profiles.name recebe o nome artístico (identificador operacional da plataforma)
+    if (form.nome_artistico?.trim()) {
+      await supabase.from("profiles").update({ name: form.nome_artistico.trim() }).eq("id", influencer.id);
     }
 
-    const payload = { ...form, updated_at: new Date().toISOString() };
+    // nome_completo (nome real) salvo em influencer_perfil
+    const payload = { ...form, nome_completo: editName.trim(), updated_at: new Date().toISOString() };
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
       : await supabase.from("influencer_perfil").insert(payload);
@@ -1144,11 +1141,7 @@ function ModalPerfil({
           <>
             <div style={row}>
               <label style={labelStyle}>Cachê por Hora (R$)</label>
-              <CurrencyInput
-                value={form.cache_hora ?? 0}
-                onChange={(v) => set("cache_hora", v)}
-                style={inputStyle}
-              />
+              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", v)} style={inputStyle} />
             </div>
             <div style={row}>
               <label style={labelStyle}>Chave PIX</label>
