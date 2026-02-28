@@ -22,6 +22,8 @@ export default function Resultados() {
 
   const [lives,      setLives]      = useState<Live[]>([]);
   const [resultados, setResultados] = useState<Record<string, LiveResultado>>({});
+  // FIX: mapa de influencer_id → nome_completo para o subtítulo do card
+  const [nomeCompletos, setNomeCompletos] = useState<Record<string, string>>({});
   const [loading,    setLoading]    = useState(true);
   const [modal,      setModal]      = useState<Live | null>(null);
 
@@ -55,6 +57,22 @@ export default function Resultados() {
           setResultados(map);
         }
       }
+
+      // FIX: buscar nome_completo de cada influencer para o subtítulo do card (admin only)
+      if (isAdmin) {
+        const influencerIds = [...new Set(mapped.map((l: any) => l.influencer_id).filter(Boolean))];
+        if (influencerIds.length > 0) {
+          const { data: perfisData } = await supabase
+            .from("influencer_perfil")
+            .select("id, nome_completo")
+            .in("id", influencerIds);
+          if (perfisData) {
+            const nomesMap: Record<string, string> = {};
+            perfisData.forEach((p: any) => { nomesMap[p.id] = p.nome_completo ?? ""; });
+            setNomeCompletos(nomesMap);
+          }
+        }
+      }
     }
     setLoading(false);
   }
@@ -71,6 +89,9 @@ export default function Resultados() {
   });
 
   function LiveCard({ live }: { live: Live }) {
+    // FIX: subtítulo exibe Nome Completo (nome real) · data · hora
+    const nomeCompleto = nomeCompletos[live.influencer_id] ?? "";
+
     return (
       <div style={card}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
@@ -79,9 +100,11 @@ export default function Resultados() {
               {live.plataforma === "Twitch" ? "🟣" : live.plataforma === "YouTube" ? "▶️" : live.plataforma === "Instagram" ? "📸" : live.plataforma === "TikTok" ? "🎵" : "🟢"}
             </div>
             <div>
+              {/* Linha 1: Nome Artístico em negrito */}
               <div style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{live.influencer_name}</div>
+              {/* FIX linha 2: Nome Completo · data · hora */}
               <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>
-                {isAdmin && <span>{live.influencer_name} · </span>}
+                {isAdmin && nomeCompleto && <span>{nomeCompleto} · </span>}
                 {live.data} · {live.horario?.slice(0, 5)}
               </div>
               <div style={{ display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap" }}>
@@ -192,6 +215,7 @@ export default function Resultados() {
             </h2>
             <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
           </div>
+          {/* Modal header: Nome Artístico · data · hora */}
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
             {live.influencer_name} · {live.data} {live.horario?.slice(0, 5)}
           </div>
