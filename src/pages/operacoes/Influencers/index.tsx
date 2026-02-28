@@ -33,7 +33,7 @@ const STATUS_LABEL: Record<StatusInfluencer, string> = {
 interface Perfil {
   id:               string;
   nome_artistico?:  string;
-  nome_completo?:   string;  // ← NOVO: nome real do influencer
+  nome_completo?:   string;
   status?:          StatusInfluencer;
   telefone?:        string;
   cpf?:             string;
@@ -58,7 +58,7 @@ interface Perfil {
 
 interface Influencer {
   id:    string;
-  name:  string;
+  name:  string; // Nome Artístico — profiles.name — identificador operacional
   email: string;
   perfil: Perfil | null;
 }
@@ -127,19 +127,20 @@ function CurrencyInput({
 }
 
 // ─── isPerfilIncompleto ───────────────────────────────────────────────────────
+// FIX: name = Nome Artístico (profiles.name), nome_completo = Nome Real
 function isPerfilIncompleto(perfil: Perfil | null, name: string): boolean {
   if (!perfil) return true;
   // Cadastral
-  if (!name?.trim())                   return true;
-  if (!perfil.nome_artistico?.trim())  return true;
-  if (!perfil.telefone?.trim())        return true;
-  if (!perfil.cpf?.trim())             return true;
+  if (!name?.trim())                    return true; // Nome Artístico (profiles.name)
+  if (!perfil.nome_completo?.trim())    return true; // Nome Completo (nome real)
+  if (!perfil.telefone?.trim())         return true;
+  if (!perfil.cpf?.trim())              return true;
   // Financeiro
   if (!perfil.cache_hora || perfil.cache_hora <= 0) return true;
-  if (!perfil.chave_pix?.trim())       return true;
-  if (!perfil.banco?.trim())           return true;
-  if (!perfil.agencia?.trim())         return true;
-  if (!perfil.conta?.trim())           return true;
+  if (!perfil.chave_pix?.trim())        return true;
+  if (!perfil.banco?.trim())            return true;
+  if (!perfil.agencia?.trim())          return true;
+  if (!perfil.conta?.trim())            return true;
   return false;
 }
 
@@ -263,12 +264,12 @@ export default function Influencers() {
     supabase.from("influencer_perfil").update({ status: newStatus }).eq("id", infId);
   }
 
-  // Filtro composto
+  // FIX: busca por inf.name (Nome Artístico = profiles.name)
   const filtered = list.filter((inf) => {
     const p = inf.perfil;
     const searchLower = search.toLowerCase();
     if (search && !(
-      (p?.nome_artistico ?? inf.name)?.toLowerCase().includes(searchLower) ||
+      inf.name?.toLowerCase().includes(searchLower) ||
       inf.email?.toLowerCase().includes(searchLower)
     )) return false;
     if (filterStatus !== "todos" && (p?.status ?? "ativo") !== filterStatus) return false;
@@ -277,7 +278,6 @@ export default function Influencers() {
       const opKey = `op_${filterOp}` as keyof Perfil;
       if (!p?.[opKey]) return false;
     }
-    // Slider de cache — só aplica se há caches reais
     const cache = p?.cache_hora ?? 0;
     if (cacheLimit < cacheMax) {
       if (cache > cacheLimit) return false;
@@ -384,10 +384,11 @@ export default function Influencers() {
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {/* FIX: usa inf.name (Nome Artístico = profiles.name) */}
                 {incompletos.map((inf) => (
                   <button key={inf.id} onClick={() => setModal({ mode: "editar", inf })}
                     style={{ background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontSize: "13px", color: BASE_COLORS.blue, fontFamily: FONT.body, textDecoration: "underline", fontWeight: 500 }}>
-                    {inf.perfil?.nome_artistico?.trim() || inf.name}
+                    {inf.name}
                   </button>
                 ))}
               </div>
@@ -505,13 +506,14 @@ export default function Influencers() {
           return (
             <div key={inf.id} style={cardStyle}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
+                {/* FIX: avatar usa inf.name (Nome Artístico = profiles.name) */}
                 <div style={{
                   width: "44px", height: "44px", borderRadius: "50%", flexShrink: 0,
                   background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontWeight: 800, fontSize: "16px", fontFamily: FONT.body,
                 }}>
-                  {(p?.nome_artistico || inf.name || inf.email)[0]?.toUpperCase()}
+                  {(inf.name || inf.email)[0]?.toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{
@@ -519,8 +521,9 @@ export default function Influencers() {
                     gap: "16px", rowGap: "8px",
                     flexWrap: "wrap", marginBottom: "10px",
                   }}>
+                    {/* FIX: título do card usa inf.name (Nome Artístico = profiles.name) */}
                     <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
-                      {p?.nome_artistico?.trim() || inf.name}
+                      {inf.name}
                     </span>
                     <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} />
                     {incompleto && (
@@ -626,8 +629,9 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
+              {/* FIX: título do modal usa influencer.name (Nome Artístico = profiles.name) */}
               <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
-                {p?.nome_artistico?.trim() || influencer.name}
+                {influencer.name}
               </h2>
               {p?.status && <StatusBadge value={p.status} onChange={() => {}} readonly />}
             </div>
@@ -651,9 +655,10 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
 
         {tab === "cadastral" && (
           <>
-            {/* ← MUDANÇA 5: exibe nome_completo (nome real) em vez de influencer.name (que agora é o artístico) */}
-            <div style={row}><label style={labelStyle}>Nome Completo</label>{val(p?.nome_completo || influencer.name)}</div>
-            <div style={row}><label style={labelStyle}>Nome Artístico</label>{val(p?.nome_artistico)}</div>
+            {/* Nome Completo = nome real = influencer_perfil.nome_completo */}
+            <div style={row}><label style={labelStyle}>Nome Completo</label>{val(p?.nome_completo)}</div>
+            {/* Nome Artístico = identificador operacional = profiles.name (= influencer.name) */}
+            <div style={row}><label style={labelStyle}>Nome Artístico</label>{val(influencer.name)}</div>
             <div style={row}><label style={labelStyle}>E-mail</label>{val(influencer.email)}</div>
             <div style={row}><label style={labelStyle}>Telefone</label>{val(p?.telefone)}</div>
             <div style={row}><label style={labelStyle}>CPF</label>{val(p?.cpf)}</div>
@@ -726,7 +731,8 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
 // ─── Modal Novo ───────────────────────────────────────────────────────────────
 function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { theme: t } = useApp();
-  const [newName,  setNewName]  = useState("");
+  const [newNomeCompleto,  setNewNomeCompleto]  = useState(""); // Nome real
+  const [newNomeArtistico, setNewNomeArtistico] = useState(""); // Nome artístico → profiles.name
   const [newEmail, setNewEmail] = useState("");
   const [form, setForm] = useState<Perfil>({
     id: "", nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
@@ -748,9 +754,9 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
 
   async function handleSave() {
     setError("");
-    if (!newEmail.trim())             return setError("E-mail é obrigatório.");
-    if (!newName.trim())              return setError("Nome Completo é obrigatório.");
-    if (!form.nome_artistico?.trim()) return setError("Nome Artístico é obrigatório.");
+    if (!newEmail.trim())          return setError("E-mail é obrigatório.");
+    if (!newNomeArtistico.trim())  return setError("Nome Artístico é obrigatório.");
+    if (!newNomeCompleto.trim())   return setError("Nome Completo é obrigatório.");
     if (!form.cache_hora || form.cache_hora <= 0) return setError("Cachê por Hora é obrigatório.");
 
     if ((form.canais ?? []).length === 0) return setError("Selecione ao menos 1 canal com link.");
@@ -776,13 +782,16 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
       return;
     }
 
-    // ← MUDANÇA 3: profiles.name recebe o nome artístico (identificador operacional da plataforma)
-    if (form.nome_artistico?.trim()) {
-      await supabase.from("profiles").update({ name: form.nome_artistico.trim() }).eq("id", profile.id);
-    }
+    // FIX: profiles.name recebe o Nome Artístico (identificador operacional)
+    await supabase.from("profiles").update({ name: newNomeArtistico.trim() }).eq("id", profile.id);
 
-    // nome_completo (nome real) salvo em influencer_perfil
-    const payload: Perfil = { ...form, id: profile.id, nome_completo: newName.trim() };
+    // Salva perfil completo: nome_completo = nome real, nome_artistico = cópia de referência
+    const payload: Perfil = {
+      ...form,
+      id: profile.id,
+      nome_artistico: newNomeArtistico.trim(),
+      nome_completo:  newNomeCompleto.trim(),
+    };
     const { error: err } = await supabase.from("influencer_perfil").insert(payload);
     setSaving(false);
     if (err) { setError(err.message); return; }
@@ -839,12 +848,12 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
         {tab === "cadastral" && (
           <>
             <div style={row}>
-              <label style={labelStyle}>Nome Completo{req}</label>
-              <input value={newName} onChange={(e) => setNewName(e.target.value)} style={inputStyle} placeholder="Nome completo do influencer" />
+              <label style={labelStyle}>Nome Artístico{req}</label>
+              <input value={newNomeArtistico} onChange={(e) => setNewNomeArtistico(e.target.value)} style={inputStyle} placeholder="Ex: NeryXLS" />
             </div>
             <div style={row}>
-              <label style={labelStyle}>Nome Artístico{req}</label>
-              <input value={form.nome_artistico ?? ""} onChange={(e) => set("nome_artistico", e.target.value)} style={inputStyle} placeholder="Ex: StreamerX" />
+              <label style={labelStyle}>Nome Completo{req}</label>
+              <input value={newNomeCompleto} onChange={(e) => setNewNomeCompleto(e.target.value)} style={inputStyle} placeholder="Nome completo do influencer" />
             </div>
             <div style={row}>
               <label style={labelStyle}>E-mail{req}</label>
@@ -977,7 +986,11 @@ function ModalPerfil({
 }) {
   const { theme: t } = useApp();
   const existing = influencer.perfil;
-  const [editName, setEditName] = useState(influencer.perfil?.nome_completo || influencer.name);
+
+  // FIX: editNomeCompleto = nome real (influencer_perfil.nome_completo)
+  //      editNomeArtistico = não precisa de state separado, fica em form.nome_artistico
+  //      O título do modal usa influencer.name (profiles.name = Nome Artístico atual)
+  const [editNomeCompleto, setEditNomeCompleto] = useState(influencer.perfil?.nome_completo ?? "");
   const [form,     setForm]     = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
@@ -1008,13 +1021,17 @@ function ModalPerfil({
 
     setSaving(true);
 
-    // ← MUDANÇA 4: profiles.name recebe o nome artístico (identificador operacional da plataforma)
+    // FIX: profiles.name recebe o Nome Artístico (form.nome_artistico)
     if (form.nome_artistico?.trim()) {
       await supabase.from("profiles").update({ name: form.nome_artistico.trim() }).eq("id", influencer.id);
     }
 
-    // nome_completo (nome real) salvo em influencer_perfil
-    const payload = { ...form, nome_completo: editName.trim(), updated_at: new Date().toISOString() };
+    // FIX: nome_completo (nome real) salvo separadamente via editNomeCompleto
+    const payload = {
+      ...form,
+      nome_completo: editNomeCompleto.trim(),
+      updated_at: new Date().toISOString(),
+    };
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
       : await supabase.from("influencer_perfil").insert(payload);
@@ -1049,8 +1066,9 @@ function ModalPerfil({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
+              {/* FIX: título do modal usa form.nome_artistico (digitado) ou influencer.name (atual) */}
               <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
-                {form.nome_artistico?.trim() || editName}
+                {form.nome_artistico?.trim() || influencer.name}
               </h2>
               <StatusBadge value={form.status ?? "ativo"} onChange={(v) => set("status", v)} />
             </div>
@@ -1077,17 +1095,22 @@ function ModalPerfil({
         {tab === "cadastral" && (
           <>
             <div style={row}>
-              <label style={labelStyle}>Nome Completo</label>
+              <label style={labelStyle}>Nome Artístico</label>
               <input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
+                value={form.nome_artistico ?? ""}
+                onChange={(e) => set("nome_artistico", e.target.value)}
                 style={inputStyle}
-                placeholder="Nome completo"
+                placeholder="Ex: NeryXLS"
               />
             </div>
             <div style={row}>
-              <label style={labelStyle}>Nome Artístico</label>
-              <input value={form.nome_artistico ?? ""} onChange={(e) => set("nome_artistico", e.target.value)} style={inputStyle} placeholder="Ex: StreamerX" />
+              <label style={labelStyle}>Nome Completo</label>
+              <input
+                value={editNomeCompleto}
+                onChange={(e) => setEditNomeCompleto(e.target.value)}
+                style={inputStyle}
+                placeholder="Nome completo (nome real)"
+              />
             </div>
             <div style={row}>
               <label style={labelStyle}>E-mail</label>
