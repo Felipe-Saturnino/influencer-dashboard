@@ -270,12 +270,15 @@ export default function Agenda() {
     setLoading(true);
     const { data, error } = await supabase
       .from("lives")
-      .select(`*, profiles!lives_influencer_id_fkey(name)`)
+      .select(`*, profiles!lives_influencer_id_fkey(name), influencer_perfil(nome_artistico)`)
       .order("data",    { ascending: true })
       .order("horario", { ascending: true });
 
     if (!error && data) {
-      setLives(data.map((l: any) => ({ ...l, influencer_name: l.profiles?.name })));
+      setLives(data.map((l: any) => ({
+  ...l,
+  influencer_name: l.influencer_perfil?.nome_artistico || l.profiles?.name,
+})));
     }
     setLoading(false);
   }
