@@ -32,14 +32,17 @@ export default function Resultados() {
 
     const { data: livesData } = await supabase
       .from("lives")
-      .select("*, profiles!lives_influencer_id_fkey(name), influencer_perfil(nome_artistico)")
+      .select("*, profiles!lives_influencer_id_fkey(name)")
       .lt("data", todayISO)
       .eq("status", "agendada")
       .order("data", { ascending: false })
       .order("horario", { ascending: true });
 
     if (livesData) {
-      const mapped = livesData.map((l: any) => ({   ...l,   influencer_name: l.influencer_perfil?.nome_artistico || l.profiles?.name, }));
+      const mapped = livesData.map((l: any) => ({
+        ...l,
+        influencer_name: l.profiles?.name,
+      }));
       setLives(mapped);
 
       const ids = mapped.map((l: Live) => l.id);
@@ -76,7 +79,7 @@ export default function Resultados() {
               {live.plataforma === "Twitch" ? "🟣" : live.plataforma === "YouTube" ? "▶️" : live.plataforma === "Instagram" ? "📸" : live.plataforma === "TikTok" ? "🎵" : "🟢"}
             </div>
             <div>
-              <div style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{live.titulo}</div>
+              <div style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{live.influencer_name}</div>
               <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>
                 {isAdmin && <span>{live.influencer_name} · </span>}
                 {live.data} · {live.horario?.slice(0, 5)}
@@ -190,7 +193,7 @@ export default function Resultados() {
             <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
-            {live.titulo} · {live.influencer_name} · {live.data} {live.horario?.slice(0, 5)}
+            {live.influencer_name} · {live.data} {live.horario?.slice(0, 5)}
           </div>
 
           {error && (
@@ -199,7 +202,6 @@ export default function Resultados() {
             </div>
           )}
 
-          {/* Status */}
           <div style={row}>
             <label style={labelStyle}>Status da Live</label>
             <div style={{ display: "flex", gap: "10px" }}>
@@ -212,7 +214,6 @@ export default function Resultados() {
             </div>
           </div>
 
-          {/* Observação */}
           <div style={row}>
             <label style={labelStyle}>Observação</label>
             <textarea value={observacao} onChange={e => setObservacao(e.target.value)}
@@ -220,52 +221,38 @@ export default function Resultados() {
               style={{ ...inputStyle, resize: "vertical", lineHeight: "1.5" }} />
           </div>
 
-          {/* Campos de resultado — só se REALIZADA */}
           {showResultFields && (
             <>
-              {/* Horário Real */}
               <div style={row}>
                 <label style={labelStyle}>Horário Real de Início</label>
-                <input
-                  type="time"
-                  value={horarioReal}
-                  onChange={e => setHorarioReal(e.target.value)}
-                  style={inputStyle}
-                />
+                <input type="time" value={horarioReal} onChange={e => setHorarioReal(e.target.value)} style={inputStyle} />
                 <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body, marginTop: "4px", display: "block" }}>
                   Pré-preenchido com o horário agendado. Altere se a live começou em outro horário.
                 </span>
               </div>
 
-              {/* Duração */}
               <div style={row}>
                 <label style={labelStyle}>Duração</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
-                    <input type="number" min={0} max={24} value={duracaoHoras}
-                      onChange={e => setDuracaoHoras(Number(e.target.value))} style={inputStyle} placeholder="0" />
+                    <input type="number" min={0} max={24} value={duracaoHoras} onChange={e => setDuracaoHoras(Number(e.target.value))} style={inputStyle} placeholder="0" />
                     <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>horas</span>
                   </div>
                   <div>
-                    <input type="number" min={0} max={59} value={duracaoMin}
-                      onChange={e => setDuracaoMin(Number(e.target.value))} style={inputStyle} placeholder="0" />
+                    <input type="number" min={0} max={59} value={duracaoMin} onChange={e => setDuracaoMin(Number(e.target.value))} style={inputStyle} placeholder="0" />
                     <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>min</span>
                   </div>
                 </div>
               </div>
 
-              {/* Média de Views */}
               <div style={row}>
                 <label style={labelStyle}>Média de Views</label>
-                <input type="number" min={0} value={mediaViews}
-                  onChange={e => setMediaViews(Number(e.target.value))} style={inputStyle} placeholder="0" />
+                <input type="number" min={0} value={mediaViews} onChange={e => setMediaViews(Number(e.target.value))} style={inputStyle} placeholder="0" />
               </div>
 
-              {/* Máximo de Views */}
               <div style={row}>
                 <label style={labelStyle}>Máximo de Views</label>
-                <input type="number" min={0} value={maxViews}
-                  onChange={e => setMaxViews(Number(e.target.value))} style={inputStyle} placeholder="0" />
+                <input type="number" min={0} value={maxViews} onChange={e => setMaxViews(Number(e.target.value))} style={inputStyle} placeholder="0" />
               </div>
 
               <div style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
