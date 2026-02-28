@@ -270,15 +270,15 @@ export default function Agenda() {
     setLoading(true);
     const { data, error } = await supabase
       .from("lives")
-      .select(`*, profiles!lives_influencer_id_fkey(name), influencer_perfil(nome_artistico)`)
+      .select("*, profiles!lives_influencer_id_fkey(name)")
       .order("data",    { ascending: true })
       .order("horario", { ascending: true });
 
     if (!error && data) {
       setLives(data.map((l: any) => ({
-  ...l,
-  influencer_name: l.influencer_perfil?.nome_artistico || l.profiles?.name,
-})));
+        ...l,
+        influencer_name: l.profiles?.name,
+      })));
     }
     setLoading(false);
   }
@@ -347,7 +347,7 @@ export default function Agenda() {
         style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 8px", borderRadius: "8px", cursor: "pointer", background: `${PLAT_COLOR[live.plataforma]}22`, border: `1px solid ${PLAT_COLOR[live.plataforma]}55`, marginBottom: "3px" }}>
         <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: STATUS_COLOR[live.status], flexShrink: 0 }} />
         <span style={{ fontSize: "11px", color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {live.horario.slice(0, 5)} {isAdmin ? `· ${live.influencer_name}` : live.titulo}
+          {live.horario.slice(0, 5)} {isAdmin ? `· ${live.influencer_name}` : ""}
         </span>
       </div>
     );
@@ -462,7 +462,6 @@ export default function Agenda() {
                   {l.plataforma === "Twitch" ? "🟣" : l.plataforma === "YouTube" ? "▶️" : l.plataforma === "Instagram" ? "📸" : l.plataforma === "TikTok" ? "🎵" : "🟢"}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{l.titulo}</div>
                   {isAdmin && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{l.influencer_name}</div>}
                   <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "11px", background: `${PLAT_COLOR[l.plataforma]}33`, color: PLAT_COLOR[l.plataforma], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{l.plataforma}</span>
