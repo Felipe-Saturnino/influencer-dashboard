@@ -20,7 +20,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
     influencer_id: live?.influencer_id ?? "",
-    titulo:        live?.titulo        ?? "",
     data:          live?.data          ?? "",
     horario:       live?.horario       ?? "",
     plataforma:    (live?.plataforma   ?? "Twitch") as Plataforma,
@@ -42,7 +41,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   async function handleSave() {
     setError("");
-    if (!form.titulo)                    return setError("Informe o título.");
     if (!form.data)                      return setError("Informe a data.");
     if (!form.horario)                   return setError("Informe o horário.");
     if (isAdmin && !form.influencer_id)  return setError("Selecione um influencer.");
@@ -53,7 +51,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
     const payload: Record<string, any> = {
-      titulo:        form.titulo,
       data:          form.data,
       horario:       form.horario,
       plataforma:    form.plataforma,
@@ -119,11 +116,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           </div>
         )}
 
-        <div style={row}>
-          <label style={labelStyle}>Título</label>
-          <input value={form.titulo} onChange={e => set("titulo", e.target.value)} style={inputStyle}
-            placeholder="Título da live..." />
-        </div>
 
         <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
           <div>
