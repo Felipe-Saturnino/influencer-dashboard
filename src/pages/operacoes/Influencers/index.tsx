@@ -127,15 +127,12 @@ function CurrencyInput({
 }
 
 // ─── isPerfilIncompleto ───────────────────────────────────────────────────────
-// FIX: name = Nome Artístico (profiles.name), nome_completo = Nome Real
 function isPerfilIncompleto(perfil: Perfil | null, name: string): boolean {
   if (!perfil) return true;
-  // Cadastral
-  if (!name?.trim())                    return true; // Nome Artístico (profiles.name)
-  if (!perfil.nome_completo?.trim())    return true; // Nome Completo (nome real)
+  if (!name?.trim())                    return true;
+  if (!perfil.nome_completo?.trim())    return true;
   if (!perfil.telefone?.trim())         return true;
   if (!perfil.cpf?.trim())              return true;
-  // Financeiro
   if (!perfil.cache_hora || perfil.cache_hora <= 0) return true;
   if (!perfil.chave_pix?.trim())        return true;
   if (!perfil.banco?.trim())            return true;
@@ -229,7 +226,6 @@ export default function Influencers() {
         }));
         setList(mapped);
 
-        // Calcular range de cache
         const caches = mapped
           .map((i: Influencer) => i.perfil?.cache_hora ?? 0)
           .filter((v: number) => v > 0);
@@ -253,7 +249,9 @@ export default function Influencers() {
 
   useEffect(() => { loadData(); }, []);
 
-  function handleStatusChange(infId: string, newStatus: StatusInfluencer) {
+  // ── CORREÇÃO 1: upsert com await para garantir persistência do status ──
+  async function handleStatusChange(infId: string, newStatus: StatusInfluencer) {
+    // Atualiza estado local imediatamente (UX responsiva)
     setList((prev) =>
       prev.map((i) =>
         i.id === infId
@@ -261,10 +259,17 @@ export default function Influencers() {
           : i
       )
     );
-    supabase.from("influencer_perfil").update({ status: newStatus }).eq("id", infId);
+
+    // Upsert garante que o registro seja criado caso ainda não exista
+    const { error } = await supabase
+      .from("influencer_perfil")
+      .upsert({ id: infId, status: newStatus }, { onConflict: "id" });
+
+    if (error) {
+      console.error("[Influencers] Erro ao salvar status:", error.message);
+    }
   }
 
-  // FIX: busca por inf.name (Nome Artístico = profiles.name)
   const filtered = list.filter((inf) => {
     const p = inf.perfil;
     const searchLower = search.toLowerCase();
@@ -285,7 +290,10 @@ export default function Influencers() {
     return true;
   });
 
-  const incompletos = list.filter((i) => isPerfilIncompleto(i.perfil, i.name));
+  // ── CORREÇÃO 2: apenas influencers ATIVOS entram no quadro de incompletos ──
+  const incompletos = list.filter((i) =>
+    (i.perfil?.status ?? "ativo") === "ativo" && isPerfilIncompleto(i.perfil, i.name)
+  );
 
   const porStatus: Record<StatusInfluencer, number> = { ativo: 0, inativo: 0, cancelado: 0 };
   const porPlat: Record<string, number> = {};
@@ -380,11 +388,10 @@ export default function Influencers() {
             </div>
             {incompletos.length === 0 ? (
               <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
-                ✅ Todos os perfis estão completos!
+                ✅ Todos os perfis ativos estão completos!
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                {/* FIX: usa inf.name (Nome Artístico = profiles.name) */}
                 {incompletos.map((inf) => (
                   <button key={inf.id} onClick={() => setModal({ mode: "editar", inf })}
                     style={{ background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontSize: "13px", color: BASE_COLORS.blue, fontFamily: FONT.body, textDecoration: "underline", fontWeight: 500 }}>
@@ -411,7 +418,6 @@ export default function Influencers() {
             }}
           />
 
-          {/* Filtros de seleção: Status, Plataforma, Operadora */}
           <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
               <option value="todos">Todos os status</option>
@@ -429,7 +435,6 @@ export default function Influencers() {
             </select>
           </div>
 
-          {/* Slider de cachê */}
           {cacheMax > 0 && (
             <div style={{
               background: t.cardBg, border: `1px solid ${t.cardBorder}`,
@@ -506,7 +511,6 @@ export default function Influencers() {
           return (
             <div key={inf.id} style={cardStyle}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
-                {/* FIX: avatar usa inf.name (Nome Artístico = profiles.name) */}
                 <div style={{
                   width: "44px", height: "44px", borderRadius: "50%", flexShrink: 0,
                   background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
@@ -521,12 +525,11 @@ export default function Influencers() {
                     gap: "16px", rowGap: "8px",
                     flexWrap: "wrap", marginBottom: "10px",
                   }}>
-                    {/* FIX: título do card usa inf.name (Nome Artístico = profiles.name) */}
                     <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
                       {inf.name}
                     </span>
                     <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} />
-                    {incompleto && (
+                    {incompleto && status === "ativo" && (
                       <span style={badge("#e94025")}>⚠️ Perfil incompleto</span>
                     )}
                   </div>
@@ -629,7 +632,6 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
-              {/* FIX: título do modal usa influencer.name (Nome Artístico = profiles.name) */}
               <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
                 {influencer.name}
               </h2>
@@ -655,9 +657,7 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
 
         {tab === "cadastral" && (
           <>
-            {/* Nome Completo = nome real = influencer_perfil.nome_completo */}
             <div style={row}><label style={labelStyle}>Nome Completo</label>{val(p?.nome_completo)}</div>
-            {/* Nome Artístico = identificador operacional = profiles.name (= influencer.name) */}
             <div style={row}><label style={labelStyle}>Nome Artístico</label>{val(influencer.name)}</div>
             <div style={row}><label style={labelStyle}>E-mail</label>{val(influencer.email)}</div>
             <div style={row}><label style={labelStyle}>Telefone</label>{val(p?.telefone)}</div>
@@ -731,8 +731,8 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
 // ─── Modal Novo ───────────────────────────────────────────────────────────────
 function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { theme: t } = useApp();
-  const [newNomeCompleto,  setNewNomeCompleto]  = useState(""); // Nome real
-  const [newNomeArtistico, setNewNomeArtistico] = useState(""); // Nome artístico → profiles.name
+  const [newNomeCompleto,  setNewNomeCompleto]  = useState("");
+  const [newNomeArtistico, setNewNomeArtistico] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [form, setForm] = useState<Perfil>({
     id: "", nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
@@ -782,10 +782,8 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
       return;
     }
 
-    // FIX: profiles.name recebe o Nome Artístico (identificador operacional)
     await supabase.from("profiles").update({ name: newNomeArtistico.trim() }).eq("id", profile.id);
 
-    // Salva perfil completo: nome_completo = nome real, nome_artistico = cópia de referência
     const payload: Perfil = {
       ...form,
       id: profile.id,
@@ -905,11 +903,7 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
           <>
             <div style={row}>
               <label style={labelStyle}>Cachê por Hora (R$){req}</label>
-              <CurrencyInput
-                value={form.cache_hora ?? 0}
-                onChange={(v) => set("cache_hora", v)}
-                style={inputStyle}
-              />
+              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", v)} style={inputStyle} />
             </div>
             <div style={row}>
               <label style={labelStyle}>Chave PIX</label>
@@ -987,9 +981,6 @@ function ModalPerfil({
   const { theme: t } = useApp();
   const existing = influencer.perfil;
 
-  // FIX: editNomeCompleto = nome real (influencer_perfil.nome_completo)
-  //      editNomeArtistico = não precisa de state separado, fica em form.nome_artistico
-  //      O título do modal usa influencer.name (profiles.name = Nome Artístico atual)
   const [editNomeCompleto, setEditNomeCompleto] = useState(influencer.perfil?.nome_completo ?? "");
   const [form,     setForm]     = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
   const [saving,   setSaving]   = useState(false);
@@ -1021,12 +1012,10 @@ function ModalPerfil({
 
     setSaving(true);
 
-    // FIX: profiles.name recebe o Nome Artístico (form.nome_artistico)
     if (form.nome_artistico?.trim()) {
       await supabase.from("profiles").update({ name: form.nome_artistico.trim() }).eq("id", influencer.id);
     }
 
-    // FIX: nome_completo (nome real) salvo separadamente via editNomeCompleto
     const payload = {
       ...form,
       nome_completo: editNomeCompleto.trim(),
@@ -1066,7 +1055,6 @@ function ModalPerfil({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
-              {/* FIX: título do modal usa form.nome_artistico (digitado) ou influencer.name (atual) */}
               <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
                 {form.nome_artistico?.trim() || influencer.name}
               </h2>
@@ -1096,21 +1084,11 @@ function ModalPerfil({
           <>
             <div style={row}>
               <label style={labelStyle}>Nome Artístico</label>
-              <input
-                value={form.nome_artistico ?? ""}
-                onChange={(e) => set("nome_artistico", e.target.value)}
-                style={inputStyle}
-                placeholder="Ex: NeryXLS"
-              />
+              <input value={form.nome_artistico ?? ""} onChange={(e) => set("nome_artistico", e.target.value)} style={inputStyle} placeholder="Ex: NeryXLS" />
             </div>
             <div style={row}>
               <label style={labelStyle}>Nome Completo</label>
-              <input
-                value={editNomeCompleto}
-                onChange={(e) => setEditNomeCompleto(e.target.value)}
-                style={inputStyle}
-                placeholder="Nome completo (nome real)"
-              />
+              <input value={editNomeCompleto} onChange={(e) => setEditNomeCompleto(e.target.value)} style={inputStyle} placeholder="Nome completo (nome real)" />
             </div>
             <div style={row}>
               <label style={labelStyle}>E-mail</label>
