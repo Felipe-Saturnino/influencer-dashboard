@@ -38,10 +38,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const [error,   setError]   = useState("");
   const [confirm, setConfirm] = useState(false);
 
-  const [perfilLinks,         setPerfilLinks]         = useState<Record<string, string>>({});
-  const [linkAutoPreenchido,  setLinkAutoPreenchido]  = useState(false);
+  const [perfilLinks,        setPerfilLinks]        = useState<Record<string, string>>({});
+  const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
 
-  // Carrega lista de influencers
+  // 1. Carrega lista de influencers
   useEffect(() => {
     if (isAdmin) {
       supabase.from("profiles").select("id, name").eq("role", "influencer")
@@ -49,10 +49,11 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     }
   }, []);
 
-  // Busca links do perfil e já auto-preenche no mesmo ciclo
+  // 2. Busca links do perfil quando o influencer selecionado muda
   useEffect(() => {
     if (!form.influencer_id) {
       setPerfilLinks({});
+      setForm(f => ({ ...f, link: "" }));
       setLinkAutoPreenchido(false);
       return;
     }
@@ -65,33 +66,20 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
       .then(({ data }) => {
         const links = (data as Record<string, string>) ?? {};
         setPerfilLinks(links);
-
-        const linkKey      = PLAT_LINK_KEY[form.plataforma];
-        const linkDoPerfil = (links[linkKey] ?? "").trim();
-
-        if (linkDoPerfil) {
-          setForm(f => ({ ...f, link: linkDoPerfil }));
-          setLinkAutoPreenchido(true);
-        } else {
-          setLinkAutoPreenchido(false);
-        }
       });
   }, [form.influencer_id]);
 
-  // Quando só a plataforma muda (influencer já selecionado)
+  // 3. Atualiza o link sempre que a plataforma ou os links do perfil mudam
   useEffect(() => {
     if (!form.influencer_id || Object.keys(perfilLinks).length === 0) return;
 
     const linkKey      = PLAT_LINK_KEY[form.plataforma];
     const linkDoPerfil = (perfilLinks[linkKey] ?? "").trim();
 
-    if (!form.link.trim() && linkDoPerfil) {
-      setForm(f => ({ ...f, link: linkDoPerfil }));
-      setLinkAutoPreenchido(true);
-    } else if (form.link.trim() !== linkDoPerfil) {
-      setLinkAutoPreenchido(false);
-    }
-  }, [form.plataforma]);
+    // Sempre atualiza — preenche com o link do perfil ou deixa vazio
+    setForm(f => ({ ...f, link: linkDoPerfil }));
+    setLinkAutoPreenchido(!!linkDoPerfil);
+  }, [form.plataforma, perfilLinks]);
 
   const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
