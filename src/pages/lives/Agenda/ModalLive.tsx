@@ -12,7 +12,6 @@ interface Props {
 
 const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Instagram", "TikTok", "Kick"];
 
-// Mapeamento plataforma → chave do campo em influencer_perfil
 const PLAT_LINK_KEY: Record<Plataforma, string> = {
   Twitch:    "link_twitch",
   YouTube:   "link_youtube",
@@ -39,11 +38,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const [error,   setError]   = useState("");
   const [confirm, setConfirm] = useState(false);
 
-  // Links do perfil do influencer selecionado
-  const [perfilLinks, setPerfilLinks] = useState<Record<string, string>>({});
-  const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
+  const [perfilLinks,         setPerfilLinks]         = useState<Record<string, string>>({});
+  const [linkAutoPreenchido,  setLinkAutoPreenchido]  = useState(false);
 
-  // Carrega lista de influencers (admin)
+  // Carrega lista de influencers
   useEffect(() => {
     if (isAdmin) {
       supabase.from("profiles").select("id, name").eq("role", "influencer")
@@ -51,42 +49,52 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     }
   }, []);
 
-  // Busca os links do perfil sempre que o influencer selecionado mudar
+  // Busca links do perfil e já auto-preenche no mesmo ciclo
   useEffect(() => {
     if (!form.influencer_id) {
       setPerfilLinks({});
+      setLinkAutoPreenchido(false);
       return;
     }
+
     supabase
       .from("influencer_perfil")
       .select("link_twitch, link_youtube, link_instagram, link_tiktok, link_kick")
       .eq("id", form.influencer_id)
       .single()
       .then(({ data }) => {
-        if (data) setPerfilLinks(data as Record<string, string>);
-        else      setPerfilLinks({});
+        const links = (data as Record<string, string>) ?? {};
+        setPerfilLinks(links);
+
+        const linkKey      = PLAT_LINK_KEY[form.plataforma];
+        const linkDoPerfil = (links[linkKey] ?? "").trim();
+
+        if (linkDoPerfil) {
+          setForm(f => ({ ...f, link: linkDoPerfil }));
+          setLinkAutoPreenchido(true);
+        } else {
+          setLinkAutoPreenchido(false);
+        }
       });
   }, [form.influencer_id]);
 
-  // Auto-preenche o link quando influencer ou plataforma mudam —
-  // apenas se o campo estiver vazio (não sobrescreve o que o usuário digitou)
+  // Quando só a plataforma muda (influencer já selecionado)
   useEffect(() => {
-    if (!form.influencer_id) return;
+    if (!form.influencer_id || Object.keys(perfilLinks).length === 0) return;
 
-    const linkKey     = PLAT_LINK_KEY[form.plataforma];
+    const linkKey      = PLAT_LINK_KEY[form.plataforma];
     const linkDoPerfil = (perfilLinks[linkKey] ?? "").trim();
 
     if (!form.link.trim() && linkDoPerfil) {
       setForm(f => ({ ...f, link: linkDoPerfil }));
       setLinkAutoPreenchido(true);
-    } else {
+    } else if (form.link.trim() !== linkDoPerfil) {
       setLinkAutoPreenchido(false);
     }
-  }, [form.plataforma, perfilLinks]);
+  }, [form.plataforma]);
 
   const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
-    // Se o usuário editar o link manualmente, remove o hint de auto-preenchido
     if (k === "link") setLinkAutoPreenchido(false);
   };
 
@@ -163,7 +171,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             <select
               value={form.influencer_id}
               onChange={e => {
-                // Ao trocar o influencer, limpa o link para permitir o auto-preenchimento
                 setForm(f => ({ ...f, influencer_id: e.target.value, link: "" }));
                 setLinkAutoPreenchido(false);
               }}
