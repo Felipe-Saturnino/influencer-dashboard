@@ -12,6 +12,15 @@ interface Props {
 
 const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Instagram", "TikTok", "Kick"];
 
+// Mapeamento plataforma → chave do campo em influencer_perfil
+const PLAT_LINK_KEY: Record<Plataforma, string> = {
+  Twitch:    "link_twitch",
+  YouTube:   "link_youtube",
+  Instagram: "link_instagram",
+  TikTok:    "link_tiktok",
+  Kick:      "link_kick",
+};
+
 export default function ModalLive({ live, onClose, onSave }: Props) {
   const { theme: t, user } = useApp();
   const isAdmin = user?.role === "admin";
@@ -30,6 +39,11 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const [error,   setError]   = useState("");
   const [confirm, setConfirm] = useState(false);
 
+  // Links do perfil do influencer selecionado
+  const [perfilLinks, setPerfilLinks] = useState<Record<string, string>>({});
+  const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
+
+  // Carrega lista de influencers (admin)
   useEffect(() => {
     if (isAdmin) {
       supabase.from("profiles").select("id, name").eq("role", "influencer")
@@ -37,7 +51,44 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     }
   }, []);
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  // Busca os links do perfil sempre que o influencer selecionado mudar
+  useEffect(() => {
+    if (!form.influencer_id) {
+      setPerfilLinks({});
+      return;
+    }
+    supabase
+      .from("influencer_perfil")
+      .select("link_twitch, link_youtube, link_instagram, link_tiktok, link_kick")
+      .eq("id", form.influencer_id)
+      .single()
+      .then(({ data }) => {
+        if (data) setPerfilLinks(data as Record<string, string>);
+        else      setPerfilLinks({});
+      });
+  }, [form.influencer_id]);
+
+  // Auto-preenche o link quando influencer ou plataforma mudam —
+  // apenas se o campo estiver vazio (não sobrescreve o que o usuário digitou)
+  useEffect(() => {
+    if (!form.influencer_id) return;
+
+    const linkKey     = PLAT_LINK_KEY[form.plataforma];
+    const linkDoPerfil = (perfilLinks[linkKey] ?? "").trim();
+
+    if (!form.link.trim() && linkDoPerfil) {
+      setForm(f => ({ ...f, link: linkDoPerfil }));
+      setLinkAutoPreenchido(true);
+    } else {
+      setLinkAutoPreenchido(false);
+    }
+  }, [form.plataforma, perfilLinks]);
+
+  const set = (k: string, v: string) => {
+    setForm(f => ({ ...f, [k]: v }));
+    // Se o usuário editar o link manualmente, remove o hint de auto-preenchido
+    if (k === "link") setLinkAutoPreenchido(false);
+  };
 
   async function handleSave() {
     setError("");
@@ -109,13 +160,20 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         {isAdmin && (
           <div style={row}>
             <label style={labelStyle}>Influencer</label>
-            <select value={form.influencer_id} onChange={e => set("influencer_id", e.target.value)} style={inputStyle}>
+            <select
+              value={form.influencer_id}
+              onChange={e => {
+                // Ao trocar o influencer, limpa o link para permitir o auto-preenchimento
+                setForm(f => ({ ...f, influencer_id: e.target.value, link: "" }));
+                setLinkAutoPreenchido(false);
+              }}
+              style={inputStyle}
+            >
               <option value="">Selecione...</option>
               {influencers.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
         )}
-
 
         <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
           <div>
@@ -141,16 +199,27 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         </div>
 
         <div style={row}>
-          <label style={labelStyle}>Link {form.plataforma} <span style={{ color: "#e94025" }}>*</span></label>
+          <label style={labelStyle}>
+            Link {form.plataforma} <span style={{ color: "#e94025" }}>*</span>
+          </label>
           <input
             value={form.link}
             onChange={e => { set("link", e.target.value); setError(""); }}
-            style={{ ...inputStyle, borderColor: error.includes("link") ? "#e94025" : t.inputBorder }}
+            style={{
+              ...inputStyle,
+              borderColor: error.includes("link") ? "#e94025" : linkAutoPreenchido ? BASE_COLORS.purple : t.inputBorder,
+            }}
             placeholder={`https://${form.plataforma.toLowerCase()}.com/...`}
           />
-          <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body, marginTop: "4px", display: "block" }}>
-            Obrigatório para salvar a live.
-          </span>
+          {linkAutoPreenchido ? (
+            <span style={{ fontSize: "11px", color: BASE_COLORS.purple, fontFamily: FONT.body, marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+              ✨ Pré-preenchido com o link do perfil do influencer.
+            </span>
+          ) : (
+            <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body, marginTop: "4px", display: "block" }}>
+              Obrigatório para salvar a live.
+            </span>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
