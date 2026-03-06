@@ -667,7 +667,7 @@ function BlockCiclo({ ciclos, cicloSelecionado, setCicloSelecionado, pagamentos,
 
         {isAberto && (
           <button onClick={onFecharCiclo} style={{
-            padding: "9px 18px", borderRadius: "10px", border: "none", cursor: "pointer",
+            padding: "9px 18px", borderRadius: "10px", cursor: "pointer",
             background: t.isDark ? "rgba(233,64,37,0.15)" : "rgba(233,64,37,0.1)",
             color: "#e94025", border: "1px solid rgba(233,64,37,0.3)",
             fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
