@@ -172,7 +172,7 @@ export default function GestaoLinks() {
     abas: {
       display: "flex",
       gap: "4px",
-      borderBottom: `1px solid ${theme.border}`,
+      borderBottom: `1px solid ${theme.cardBorder}`,
       marginBottom: "24px",
     } as React.CSSProperties,
 
@@ -180,8 +180,8 @@ export default function GestaoLinks() {
       padding: "8px 18px",
       fontSize: "13px",
       fontWeight: ativa ? 600 : 400,
-      color: ativa ? theme.accent : theme.textMuted,
-      borderBottom: ativa ? `2px solid ${theme.accent}` : "2px solid transparent",
+      color: ativa ? "#7c3aed" : theme.textMuted,
+      borderBottom: ativa ? `2px solid #7c3aed` : "2px solid transparent",
       cursor: "pointer",
       background: "none",
       border: "none",
@@ -214,28 +214,28 @@ export default function GestaoLinks() {
       fontWeight: 600,
       fontSize: "11px",
       textTransform: "uppercase" as const,
-      borderBottom: `1px solid ${theme.border}`,
+      borderBottom: `1px solid ${theme.cardBorder}`,
       letterSpacing: "0.05em",
     } as React.CSSProperties,
 
     td: {
       padding: "12px 14px",
       color: theme.text,
-      borderBottom: `1px solid ${theme.border}`,
+      borderBottom: `1px solid ${theme.cardBorder}`,
       verticalAlign: "middle" as const,
     } as React.CSSProperties,
 
     tdMuted: {
       padding: "12px 14px",
       color: theme.textMuted,
-      borderBottom: `1px solid ${theme.border}`,
+      borderBottom: `1px solid ${theme.cardBorder}`,
       verticalAlign: "middle" as const,
       fontSize: "12px",
     } as React.CSSProperties,
 
     btnMapear: {
       padding: "5px 14px",
-      background: theme.accent,
+      background: "#7c3aed",
       color: "#fff",
       border: "none",
       borderRadius: "6px",
@@ -249,7 +249,7 @@ export default function GestaoLinks() {
       padding: "5px 14px",
       background: "transparent",
       color: theme.textMuted,
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${theme.cardBorder}`,
       borderRadius: "6px",
       fontSize: "12px",
       cursor: "pointer",
@@ -259,7 +259,7 @@ export default function GestaoLinks() {
       padding: "5px 14px",
       background: "transparent",
       color: theme.textMuted,
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${theme.cardBorder}`,
       borderRadius: "6px",
       fontSize: "12px",
       cursor: "pointer",
@@ -288,7 +288,7 @@ export default function GestaoLinks() {
 
     modal: {
       background: theme.cardBg,
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${theme.cardBorder}`,
       borderRadius: "12px",
       padding: "28px 32px",
       width: "420px",
@@ -322,7 +322,7 @@ export default function GestaoLinks() {
       width: "100%",
       padding: "10px 12px",
       background: theme.inputBg,
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${theme.cardBorder}`,
       borderRadius: "8px",
       color: theme.text,
       fontSize: "14px",
@@ -339,7 +339,7 @@ export default function GestaoLinks() {
     btnCancelar: {
       padding: "9px 20px",
       background: "transparent",
-      border: `1px solid ${theme.border}`,
+      border: `1px solid ${theme.cardBorder}`,
       borderRadius: "8px",
       color: theme.textMuted,
       fontSize: "13px",
@@ -348,7 +348,7 @@ export default function GestaoLinks() {
 
     btnConfirmar: {
       padding: "9px 20px",
-      background: theme.accent,
+      background: "#7c3aed",
       border: "none",
       borderRadius: "8px",
       color: "#fff",
@@ -360,9 +360,9 @@ export default function GestaoLinks() {
 
     utmTag: {
       display: "inline-block",
-      background: theme.accent + "22",
-      color: theme.accent,
-      border: `1px solid ${theme.accent}44`,
+      background: "#7c3aed" + "22",
+      color: "#7c3aed",
+      border: `1px solid #7c3aed44`,
       borderRadius: "6px",
       padding: "2px 8px",
       fontSize: "12px",
@@ -481,7 +481,7 @@ export default function GestaoLinks() {
             {/* Info resumida do alias */}
             <div style={{
               background: theme.inputBg,
-              border: `1px solid ${theme.border}`,
+              border: `1px solid ${theme.cardBorder}`,
               borderRadius: "8px",
               padding: "12px 16px",
               marginBottom: "20px",
