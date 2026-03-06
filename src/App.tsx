@@ -4,27 +4,32 @@ import { supabase } from "./lib/supabase";
 // Layout
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
-// Páginas
-import Login          from "./pages/geral/Login";
-import Dashboard      from "./pages/dashboards/Dashboard";
-import Agenda         from "./pages/lives/Agenda";
-import Resultados     from "./pages/lives/Resultados";
-import Feedback       from "./pages/lives/Feedback";
-import Influencers    from "./pages/operacoes/Influencers";
-import Financeiro     from "./pages/operacoes/Financeiro";
-import Configuracoes  from "./pages/geral/Configuracoes";
-import Ajuda          from "./pages/geral/Ajuda";
+// Páginas — geral
+import Login         from "./pages/geral/Login";
+import Configuracoes from "./pages/geral/Configuracoes";
+import Ajuda         from "./pages/geral/Ajuda";
+// Páginas — dashboards
+import Dashboard     from "./pages/dashboards/Dashboard";
+// Páginas — lives
+import Agenda        from "./pages/lives/Agenda";
+import Resultados    from "./pages/lives/Resultados";
+import Feedback      from "./pages/lives/Feedback";
+// Páginas — operacoes
+import Influencers   from "./pages/operacoes/Influencers";
+import Financeiro    from "./pages/operacoes/Financeiro";
+import GestaoLinks   from "./pages/operacoes/GestaoLinks";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
-  dashboard:     Dashboard,
-  agenda:        Agenda,
-  resultados:    Resultados,
-  feedback:      Feedback,
-  influencers:   Influencers,
-  financeiro:    Financeiro,
+  dashboard:    Dashboard,
+  agenda:       Agenda,
+  resultados:   Resultados,
+  feedback:     Feedback,
+  influencers:  Influencers,
+  financeiro:   Financeiro,
+  gestao_links: GestaoLinks,
   configuracoes: Configuracoes,
-  ajuda:         Ajuda,
+  ajuda:        Ajuda,
 };
 
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
@@ -39,13 +44,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
         activePage={activePage}
         onNavigate={setActivePage}
       />
-      <main style={{
-        flex: 1,
-        marginLeft: "240px",
-        display: "flex", flexDirection: "column",
-        overflow: "hidden",
-        minHeight: "100vh",
-      }}>
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginLeft: "240px", minHeight: "100vh" }}>
         <Header
           activePage={activePage}
           onNavigate={setActivePage}
@@ -85,4 +84,3 @@ export default function App() {
     </AppProvider>
   );
 }
-
