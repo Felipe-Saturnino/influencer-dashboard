@@ -1006,10 +1006,13 @@ function BlocoConsolidado() {
     statusInfluencer: string;
   }
 
+  interface AgentesRow { totalPago: number; pendente: number; ultimoPagamento: string | null; }
+
   const [mes, setMes] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("");
   const [busca, setBusca] = useState("");
   const [rows, setRows] = useState<ConRow[]>([]);
+  const [agentesRow, setAgentesRow] = useState<AgentesRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [historico, setHistorico] = useState<Record<string, any[]>>({});
@@ -1046,14 +1049,28 @@ function BlocoConsolidado() {
     }
 
     let pagamentosData: any[] = [];
+    let agentesData: any[] = [];
     if (!periodo || cicloIds.length > 0) {
-      const q = periodo
-        ? supabase.from("pagamentos").select("*").in("ciclo_id", cicloIds)
-        : supabase.from("pagamentos").select("*");
-      const { data } = await q;
-      pagamentosData = data ?? [];
+      const [{ data: pags }, { data: agts }] = await Promise.all([
+        periodo
+          ? supabase.from("pagamentos").select("*").in("ciclo_id", cicloIds)
+          : supabase.from("pagamentos").select("*"),
+        periodo
+          ? supabase.from("pagamentos_agentes").select("*").in("ciclo_id", cicloIds)
+          : supabase.from("pagamentos_agentes").select("*"),
+      ]);
+      pagamentosData = pags ?? [];
+      agentesData = agts ?? [];
     }
 
+    // Linha de agentes
+    const agtPagos = agentesData.filter(a => a.status === "pago");
+    const agtPendentes = agentesData.filter(a => a.status === "em_analise" || a.status === "a_pagar");
+    const agtTotalPago = agtPagos.reduce((a, x) => a + x.total, 0);
+    const agtPendente = agtPendentes.reduce((a, x) => a + x.total, 0);
+    const agtUltimoPag = agtPagos.sort((a, b) => (b.pago_em ?? "").localeCompare(a.pago_em ?? ""))[0]?.pago_em ?? null;
+
+    // Influencers — filtrar os que têm pelo menos algum valor
     const resultado: ConRow[] = (perfis as any[]).map(perf => {
       const pags = pagamentosData.filter(p => p.influencer_id === perf.id);
       const pagos = pags.filter(p => p.status === "pago");
@@ -1070,7 +1087,14 @@ function BlocoConsolidado() {
         ultimoPagamento: ultimoPag,
         statusInfluencer: perf.status ?? "ativo",
       };
-    });
+    }).filter(r => r.totalPago > 0 || r.totalHoras > 0 || r.pendente > 0);
+
+    // Linha especial de agentes (só aparece se tiver algum dado)
+    setAgentesRow(
+      agtTotalPago > 0 || agtPendente > 0
+        ? { totalPago: agtTotalPago, pendente: agtPendente, ultimoPagamento: agtUltimoPag }
+        : null
+    );
 
     setRows(resultado);
     setLoading(false);
@@ -1140,7 +1164,7 @@ function BlocoConsolidado() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {filtered.length === 0 && !agentesRow ? (
                 <tr>
                   <td colSpan={7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "40px" }}>
                     Nenhum influencer encontrado.
@@ -1229,6 +1253,37 @@ function BlocoConsolidado() {
                   </>
                 );
               })}
+
+              {/* Linha de Agentes — sempre no fim */}
+              {agentesRow && (
+                <tr style={{ borderBottom: `1px solid ${t.cardBorder}`, background: t.isDark ? "rgba(245,158,11,0.04)" : "rgba(245,158,11,0.03)" }}>
+                  <td style={td}>
+                    <span style={{ fontSize: "10px", color: t.textMuted }}>—</span>
+                  </td>
+                  <td style={td}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Avatar name="A" />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "13px" }}>Agentes</div>
+                        <div style={{ fontSize: "11px", color: t.textMuted }}>Pagamentos de agência</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ ...td, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(agentesRow.totalPago)}</td>
+                  <td style={{ ...td, color: t.textMuted }}>—</td>
+                  <td style={{ ...td, color: agentesRow.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: agentesRow.pendente > 0 ? 600 : 400 }}>
+                    {fmtMoeda(agentesRow.pendente)}
+                  </td>
+                  <td style={{ ...td, color: t.textMuted }}>
+                    {agentesRow.ultimoPagamento ? new Date(agentesRow.ultimoPagamento).toLocaleDateString("pt-BR") : "—"}
+                  </td>
+                  <td style={td}>
+                    <span style={{ display: "inline-flex", alignItems: "center", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" }}>
+                      Agência
+                    </span>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
