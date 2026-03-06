@@ -541,40 +541,46 @@ function BlocoKpis() {
     setLoading(false);
   }
 
-  const card = (accent: string): React.CSSProperties => ({
-    background: t.cardBg,
+  const innerCard = (accent: string): React.CSSProperties => ({
+    background: t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.025)",
     border: `1px solid ${t.cardBorder}`,
-    borderRadius: "16px",
-    padding: "22px 24px",
+    borderRadius: "12px",
+    padding: "20px 22px",
     borderTop: `3px solid ${accent}`,
     flex: 1,
-    minWidth: "200px",
+    minWidth: "180px",
   });
 
   return (
-    <div style={{ marginBottom: "24px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+    <div style={{
+      background: t.cardBg,
+      border: `1px solid ${t.cardBorder}`,
+      borderRadius: "16px",
+      padding: "22px",
+      marginBottom: "24px",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
         <BlocoLabel label="📊 KPIs" />
         <SelectInput value={mes} onChange={setMes} options={OPCOES} />
       </div>
 
-      <div style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
-        <div style={card(`linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`)}>
-          <div style={{ fontFamily: FONT.title, fontSize: "28px", fontWeight: 900, color: "#c9b8f0", lineHeight: 1, marginBottom: "6px" }}>
+      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+        <div style={innerCard(BASE_COLORS.purple)}>
+          <div style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, color: "#c9b8f0", lineHeight: 1, marginBottom: "6px" }}>
             {loading ? "—" : fmtMoeda(totalPago)}
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total pago</div>
         </div>
 
-        <div style={card("#f59e0b")}>
-          <div style={{ fontFamily: FONT.title, fontSize: "28px", fontWeight: 900, color: "#f59e0b", lineHeight: 1, marginBottom: "6px" }}>
+        <div style={innerCard("#f59e0b")}>
+          <div style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, color: "#f59e0b", lineHeight: 1, marginBottom: "6px" }}>
             {loading ? "—" : fmtMoeda(pendente)}
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Pendente</div>
         </div>
 
-        <div style={card("#10b981")}>
-          <div style={{ fontFamily: FONT.title, fontSize: "28px", fontWeight: 900, color: "#10b981", lineHeight: 1, marginBottom: "6px" }}>
+        <div style={innerCard("#10b981")}>
+          <div style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, color: "#10b981", lineHeight: 1, marginBottom: "6px" }}>
             {loading ? "—" : fmtHoras(horas)}
           </div>
           <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total de horas realizadas</div>
@@ -716,7 +722,7 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
   async function carregarPagamentos(c: CicloPagamento) {
     const [{ data: pags }, { data: agentes }] = await Promise.all([
       supabase.from("pagamentos")
-        .select("*, influencer_perfil(nome_artistico), profiles!pagamentos_influencer_id_fkey(name)")
+        .select("*")
         .eq("ciclo_id", c.id)
         .order("total", { ascending: false }),
       supabase.from("pagamentos_agentes")
@@ -725,10 +731,24 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
         .order("criado_em", { ascending: true }),
     ]);
 
+    // Busca nomes separadamente para evitar falha silenciosa de FK
+    const influencerIds = [...new Set((pags ?? []).map((p: any) => p.influencer_id))];
+    const nomeMap: Record<string, string> = {};
+    if (influencerIds.length > 0) {
+      const [{ data: perfis }, { data: profiles }] = await Promise.all([
+        supabase.from("influencer_perfil").select("id, nome_artistico").in("id", influencerIds),
+        supabase.from("profiles").select("id, name").in("id", influencerIds),
+      ]);
+      for (const p of (profiles ?? []) as any[]) nomeMap[p.id] = p.name;
+      for (const p of (perfis ?? []) as any[]) {
+        if (p.nome_artistico) nomeMap[p.id] = p.nome_artistico;
+      }
+    }
+
     const linhasInf: PagamentoRow[] = (pags ?? []).map((p: any) => ({
       id: p.id,
       influencer_id: p.influencer_id,
-      influencer_name: p.influencer_perfil?.nome_artistico ?? p.profiles?.name ?? p.influencer_id,
+      influencer_name: nomeMap[p.influencer_id] ?? p.influencer_id,
       horas_realizadas: p.horas_realizadas,
       cache_hora: p.cache_hora,
       total: p.total,
