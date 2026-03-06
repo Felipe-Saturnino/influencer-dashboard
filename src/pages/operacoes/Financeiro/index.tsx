@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { CicloPagamento, Pagamento, PagamentoStatus } from "../../../types";
 
-// ── Tipos locais ──────────────────────────────────────────────────────────────
+// ── Tipos locais ───────────────────────────────────────────────────────────────
 
 interface PagamentoAgente {
   id: string;
@@ -16,58 +16,763 @@ interface PagamentoAgente {
   criado_em: string;
 }
 
-interface PreviewInfluencer {
+interface PagamentoRow {
+  id: string;
   influencer_id: string;
   influencer_name: string;
   horas_realizadas: number;
-  total_estimado: number;
   cache_hora: number;
-  qtd_lives: number;
+  total: number;
+  status: PagamentoStatus;
+  pago_em: string | null;
+  is_agente?: boolean;
+  descricao?: string;
+  qtd_lives?: number;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Constantes ─────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<PagamentoStatus, { label: string; color: string }> = {
-  em_analise:        { label: "Em análise",       color: "#f39c12" },
-  a_pagar:           { label: "Aguard. pagamento", color: "#6b7fff" },
-  pago:              { label: "Pago",              color: "#27ae60" },
-  perfil_incompleto: { label: "Perfil incompleto", color: "#e94025" },
+const MESES_NOMES = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+];
+
+const STATUS_PAG: Record<string, { label: string; color: string; icon: string }> = {
+  em_analise: { label: "Em análise",        color: "#f59e0b", icon: "⏳" },
+  a_pagar:    { label: "Aguard. pagamento",  color: "#6b7fff", icon: "💳" },
+  pago:       { label: "Pago",               color: "#10b981", icon: "✅" },
 };
 
-const STATUS_AGENTE_CONFIG: Record<string, { label: string; color: string }> = {
-  em_analise: { label: "Em análise",       color: "#f39c12" },
-  a_pagar:    { label: "Aguard. pagamento", color: "#6b7fff" },
-  pago:       { label: "Pago",              color: "#27ae60" },
+const STATUS_INFLUENCER: Record<string, { label: string; color: string }> = {
+  ativo:     { label: "Ativo",     color: "#10b981" },
+  inativo:   { label: "Inativo",   color: "#94a3b8" },
+  cancelado: { label: "Cancelado", color: "#ef4444" },
 };
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function fmtHoras(horas: number) {
-  const h = Math.floor(horas);
-  const m = Math.round((horas - h) * 60);
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+function fmtHoras(h: number) {
+  if (!h || h === 0) return "0h";
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return mm === 0 ? `${hh}h` : `${hh}h ${mm}m`;
 }
 
-function gerarOpcoesMeses() {
-  const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-  const opts: { value: string; label: string }[] = [];
-  const now = new Date();
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    opts.push({ value: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`, label: `${MESES[d.getMonth()]} ${d.getFullYear()}` });
+function gerarMeses(): { value: string; label: string }[] {
+  const lista: { value: string; label: string }[] = [{ value: "", label: "Total" }];
+  const agora = new Date();
+  const inicio = new Date(2025, 11, 1); // Dez/2025
+  const cur = new Date(agora.getFullYear(), agora.getMonth(), 1);
+  while (cur >= inicio) {
+    lista.push({
+      value: `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}`,
+      label: `${MESES_NOMES[cur.getMonth()]} ${cur.getFullYear()}`,
+    });
+    cur.setMonth(cur.getMonth() - 1);
   }
-  return opts;
+  return lista;
 }
 
-// ── Estilos compartilhados ────────────────────────────────────────────────────
+function periodoDoMes(mes: string): { inicio: string; fim: string } | null {
+  if (!mes) return null;
+  const [ano, m] = mes.split("-").map(Number);
+  const ultimo = new Date(ano, m, 0).getDate();
+  return { inicio: `${mes}-01`, fim: `${mes}-${String(ultimo).padStart(2, "0")}` };
+}
 
-function useStyles(t: any) {
-  const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: "16px", padding: "22px", marginBottom: "24px",
+function cicloAberto(ciclo: CicloPagamento): boolean {
+  if (ciclo.fechado_em) return false;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const fim = new Date(ciclo.data_fim + "T00:00:00");
+  return hoje <= fim;
+}
+
+// ── Componentes base ───────────────────────────────────────────────────────────
+
+function Avatar({ name, size = 28 }: { name: string; size?: number }) {
+  const letra = (name ?? "?")[0].toUpperCase();
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", flexShrink: 0,
+      background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      color: "#fff", fontWeight: 800, fontSize: size * 0.4,
+    }}>
+      {letra}
+    </div>
+  );
+}
+
+function Badge({ status, config }: {
+  status: string;
+  config: Record<string, { label: string; color: string; icon?: string }>;
+}) {
+  const cfg = config[status] ?? { label: status, color: "#94a3b8" };
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: "4px",
+      fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px",
+      background: `${cfg.color}22`, color: cfg.color,
+      border: `1px solid ${cfg.color}44`, whiteSpace: "nowrap",
+    }}>
+      {cfg.icon ?? ""} {cfg.label}
+    </span>
+  );
+}
+
+function SelectInput({ value, onChange, options, style }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  style?: React.CSSProperties;
+}) {
+  const { theme: t } = useApp();
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      style={{
+        padding: "7px 12px", borderRadius: "10px",
+        border: `1px solid ${t.cardBorder}`,
+        background: t.inputBg, color: t.inputText,
+        fontSize: "12px", fontFamily: FONT.body,
+        outline: "none", cursor: "pointer", ...style,
+      }}
+    >
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
+function BtnPrimary({ onClick, children, disabled, style }: {
+  onClick: () => void; children: React.ReactNode;
+  disabled?: boolean; style?: React.CSSProperties;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        padding: "8px 16px", borderRadius: "10px", border: "none",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.6 : 1,
+        background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+        color: "#fff", fontSize: "12px", fontWeight: 700,
+        fontFamily: FONT.body, ...style,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function BtnAcao({ onClick, children, color }: {
+  onClick: () => void; children: React.ReactNode; color: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "5px 12px", borderRadius: "8px",
+        border: `1px solid ${color}44`,
+        background: `${color}15`, color,
+        fontSize: "11px", fontWeight: 700,
+        fontFamily: FONT.body, cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ModalBase({ children, maxWidth = 440, onClose }: {
+  children: React.ReactNode; maxWidth?: number; onClose: () => void;
+}) {
+  const { theme: t } = useApp();
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "#00000090",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 1000, padding: "20px",
+    }}>
+      <div style={{
+        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+        borderRadius: "20px", padding: "28px",
+        width: "100%", maxWidth, maxHeight: "90vh", overflowY: "auto",
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
+  const { theme: t } = useApp();
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+      <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>{title}</h2>
+      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
+    </div>
+  );
+}
+
+function BlocoLabel({ label }: { label: string }) {
+  return (
+    <span style={{
+      fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px",
+      textTransform: "uppercase", color: BASE_COLORS.purple, fontFamily: FONT.body,
+    }}>
+      {label}
+    </span>
+  );
+}
+
+// ── MODAL ANALISAR ─────────────────────────────────────────────────────────────
+
+function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
+  row: PagamentoRow;
+  ciclo: CicloPagamento;
+  onClose: () => void;
+  onConfirm: (id: string, novoTotal: number, isAgente: boolean) => Promise<void>;
+}) {
+  const { theme: t } = useApp();
+  const [saving, setSaving] = useState(false);
+  const [valor, setValor] = useState(String(row.total));
+  const [lives, setLives] = useState<any[]>([]);
+
+  const valorNum = parseFloat(valor.replace(",", ".")) || 0;
+  const editado = valorNum !== row.total;
+
+  useEffect(() => {
+    if (!row.is_agente) carregarLives();
+  }, []);
+
+  async function carregarLives() {
+    const { data } = await supabase
+      .from("lives")
+      .select("id, titulo, data, plataforma, live_resultados(duracao_horas, duracao_min)")
+      .eq("influencer_id", row.influencer_id)
+      .eq("status", "realizada")
+      .gte("data", ciclo.data_inicio)
+      .lte("data", ciclo.data_fim)
+      .order("data", { ascending: false });
+    setLives(data ?? []);
+  }
+
+  async function handleConfirm() {
+    setSaving(true);
+    await onConfirm(row.id, valorNum, row.is_agente ?? false);
+    setSaving(false);
+  }
+
+  const rowStyle: React.CSSProperties = {
+    display: "flex", justifyContent: "space-between",
+    padding: "10px 0", borderBottom: `1px solid ${t.divider}`,
+    fontSize: "13px",
   };
+
+  return (
+    <ModalBase maxWidth={480} onClose={onClose}>
+      <ModalHeader
+        title={row.is_agente ? "⏳ Analisar — Agente" : `⏳ Analisar — ${row.influencer_name}`}
+        onClose={onClose}
+      />
+
+      {!row.is_agente && (
+        <div style={{ marginBottom: "16px" }}>
+          <div style={rowStyle}>
+            <span style={{ color: t.textMuted }}>Horas realizadas</span>
+            <span style={{ fontWeight: 700 }}>{fmtHoras(row.horas_realizadas)}</span>
+          </div>
+          <div style={{ ...rowStyle, borderBottom: "none" }}>
+            <span style={{ color: t.textMuted }}>Cachê/hora</span>
+            <span style={{ fontWeight: 700 }}>
+              {row.cache_hora > 0 ? fmtMoeda(row.cache_hora) : <span style={{ color: "#ef4444" }}>Não cadastrado</span>}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {row.is_agente && row.descricao && (
+        <div style={{ ...rowStyle, marginBottom: "16px", borderBottom: "none" }}>
+          <span style={{ color: t.textMuted }}>Descrição</span>
+          <span style={{ fontWeight: 600 }}>{row.descricao}</span>
+        </div>
+      )}
+
+      {!row.is_agente && lives.length > 0 && (
+        <div style={{
+          marginBottom: "20px", padding: "14px", borderRadius: "12px",
+          background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+          border: `1px solid ${t.cardBorder}`,
+        }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "10px", fontFamily: FONT.body }}>
+            Lives no período
+          </div>
+          {lives.map((l: any) => {
+            const r = l.live_resultados?.[0];
+            const h = r ? r.duracao_horas + r.duracao_min / 60 : 0;
+            return (
+              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${t.divider}`, fontSize: "12px" }}>
+                <span style={{ color: t.text }}>{l.data} · {l.plataforma}</span>
+                <span style={{ color: t.textMuted, fontFamily: FONT.body }}>{fmtHoras(h)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ marginBottom: "20px" }}>
+        <label style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", display: "block", marginBottom: "8px", fontFamily: FONT.body }}>
+          Valor a aprovar (R$)
+        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <input
+            type="number"
+            value={valor}
+            onChange={e => setValor(e.target.value)}
+            style={{
+              flex: 1, padding: "10px 14px", borderRadius: "10px",
+              border: `1px solid ${editado ? "#f59e0b" : t.cardBorder}`,
+              background: t.inputBg, color: t.inputText,
+              fontSize: "16px", fontWeight: 700, fontFamily: FONT.body, outline: "none",
+            }}
+          />
+          {editado && <span style={{ fontSize: "11px", color: "#f59e0b", whiteSpace: "nowrap" }}>era {fmtMoeda(row.total)}</span>}
+        </div>
+        {editado && (
+          <div style={{ marginTop: "8px", fontSize: "11px", color: "#f59e0b", fontFamily: FONT.body }}>
+            ⚠️ Valor editado manualmente.
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+          Cancelar
+        </button>
+        <button
+          onClick={handleConfirm}
+          disabled={saving || valorNum <= 0}
+          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || valorNum <= 0) ? "not-allowed" : "pointer", opacity: (saving || valorNum <= 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
+        >
+          {saving ? "⏳ Salvando..." : "✅ Aprovar valor"}
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
+
+// ── MODAL PAGAR ────────────────────────────────────────────────────────────────
+
+function ModalPagar({ row, onClose, onConfirm }: {
+  row: PagamentoRow;
+  onClose: () => void;
+  onConfirm: (id: string, isAgente: boolean) => Promise<void>;
+}) {
+  const { theme: t } = useApp();
+  const [saving, setSaving] = useState(false);
+
+  async function handleConfirm() {
+    setSaving(true);
+    await onConfirm(row.id, row.is_agente ?? false);
+    setSaving(false);
+  }
+
+  return (
+    <ModalBase maxWidth={380} onClose={onClose}>
+      <ModalHeader title="💰 Registrar Pagamento" onClose={onClose} />
+      <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
+        Confirmar pagamento para <strong style={{ color: t.text }}>{row.influencer_name}</strong>
+        {row.is_agente && row.descricao && <> — {row.descricao}</>}
+      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderTop: `1px solid ${t.divider}`, borderBottom: `1px solid ${t.divider}`, marginBottom: "20px" }}>
+        <span style={{ color: t.textMuted, fontSize: "14px" }}>Total</span>
+        <span style={{ fontWeight: 900, color: "#10b981", fontSize: "24px", fontFamily: FONT.title }}>{fmtMoeda(row.total)}</span>
+      </div>
+      <p style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px", lineHeight: 1.6 }}>
+        A data de pagamento será registrada como hoje.
+      </p>
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+          Cancelar
+        </button>
+        <button
+          onClick={handleConfirm}
+          disabled={saving}
+          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: "linear-gradient(135deg, #065f46, #10b981)", color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
+        >
+          {saving ? "⏳ Salvando..." : "💰 Confirmar pagamento"}
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
+
+// ── MODAL AGENTE ───────────────────────────────────────────────────────────────
+
+function ModalAgente({ cicloId, onClose, onSalvo }: {
+  cicloId: string;
+  onClose: () => void;
+  onSalvo: () => Promise<void>;
+}) {
+  const { theme: t } = useApp();
+  const [saving, setSaving] = useState(false);
+  const [descricao, setDescricao] = useState("");
+  const [valor, setValor] = useState("");
+
+  const valorNum = parseFloat(valor.replace(",", ".")) || 0;
+  const canSubmit = descricao.trim().length > 0 && valorNum > 0;
+
+  async function handleConfirm() {
+    if (!canSubmit) return;
+    setSaving(true);
+    await supabase.from("pagamentos_agentes").insert({
+      ciclo_id: cicloId,
+      descricao: descricao.trim(),
+      total: valorNum,
+      status: "em_analise",
+    });
+    await onSalvo();
+    setSaving(false);
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 14px", borderRadius: "10px",
+    border: `1px solid ${t.cardBorder}`, background: t.inputBg,
+    color: t.inputText, fontSize: "13px", fontFamily: FONT.body,
+    outline: "none", boxSizing: "border-box",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: "11px", fontWeight: 700, color: t.textMuted,
+    textTransform: "uppercase", letterSpacing: "1px",
+    display: "block", marginBottom: "6px", fontFamily: FONT.body,
+  };
+
+  return (
+    <ModalBase maxWidth={400} onClose={onClose}>
+      <ModalHeader title="➕ Pagamento de Agente" onClose={onClose} />
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div>
+          <label style={labelStyle}>Descrição *</label>
+          <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex: Comissão João" style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Valor (R$) *</label>
+          <input type="number" value={valor} onChange={e => setValor(e.target.value)} placeholder="0,00" style={inputStyle} />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
+        <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+          Cancelar
+        </button>
+        <button
+          onClick={handleConfirm}
+          disabled={saving || !canSubmit}
+          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || !canSubmit) ? "not-allowed" : "pointer", opacity: (saving || !canSubmit) ? 0.6 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
+        >
+          {saving ? "⏳ Salvando..." : "➕ Adicionar"}
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
+
+// ── BLOCO 1: KPIs ──────────────────────────────────────────────────────────────
+
+function BlocoKpis() {
+  const { theme: t } = useApp();
+  const OPCOES = useMemo(() => gerarMeses(), []);
+
+  const [mes, setMes] = useState("");
+  const [totalPago, setTotalPago] = useState(0);
+  const [pendente, setPendente] = useState(0);
+  const [horas, setHoras] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { carregar(); }, [mes]);
+
+  async function carregar() {
+    setLoading(true);
+    const periodo = periodoDoMes(mes);
+
+    let cicloIds: string[] = [];
+    if (periodo) {
+      const { data: ciclos } = await supabase
+        .from("ciclos_pagamento")
+        .select("id")
+        .gte("data_inicio", periodo.inicio)
+        .lte("data_fim", periodo.fim);
+      cicloIds = (ciclos ?? []).map((c: any) => c.id);
+      if (cicloIds.length === 0) {
+        setTotalPago(0); setPendente(0); setHoras(0);
+        setLoading(false); return;
+      }
+    }
+
+    const pQuery = periodo
+      ? supabase.from("pagamentos").select("total, horas_realizadas, status").in("ciclo_id", cicloIds)
+      : supabase.from("pagamentos").select("total, horas_realizadas, status");
+
+    const aQuery = periodo
+      ? supabase.from("pagamentos_agentes").select("total, status").in("ciclo_id", cicloIds)
+      : supabase.from("pagamentos_agentes").select("total, status");
+
+    const [{ data: pags }, { data: agentes }] = await Promise.all([pQuery, aQuery]);
+
+    const allPags = pags ?? [];
+    const allAgs = agentes ?? [];
+
+    setTotalPago(
+      [...allPags.filter(p => p.status === "pago"), ...allAgs.filter(a => a.status === "pago")]
+        .reduce((acc, x) => acc + x.total, 0)
+    );
+    setPendente(
+      [...allPags.filter(p => p.status === "em_analise" || p.status === "a_pagar"), ...allAgs.filter(a => a.status === "em_analise" || a.status === "a_pagar")]
+        .reduce((acc, x) => acc + x.total, 0)
+    );
+    setHoras(allPags.reduce((acc, p) => acc + p.horas_realizadas, 0));
+    setLoading(false);
+  }
+
+  const card = (accent: string): React.CSSProperties => ({
+    background: t.cardBg,
+    border: `1px solid ${t.cardBorder}`,
+    borderRadius: "16px",
+    padding: "22px 24px",
+    borderTop: `3px solid ${accent}`,
+    flex: 1,
+    minWidth: "200px",
+  });
+
+  return (
+    <div style={{ marginBottom: "24px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <BlocoLabel label="📊 KPIs" />
+        <SelectInput value={mes} onChange={setMes} options={OPCOES} />
+      </div>
+
+      <div style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
+        <div style={card(`linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`)}>
+          <div style={{ fontFamily: FONT.title, fontSize: "28px", fontWeight: 900, color: "#c9b8f0", lineHeight: 1, marginBottom: "6px" }}>
+            {loading ? "—" : fmtMoeda(totalPago)}
+          </div>
+          <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total pago</div>
+        </div>
+
+        <div style={card("#f59e0b")}>
+          <div style={{ fontFamily: FONT.title, fontSize: "28px", fontWeight: 900, color: "#f59e0b", lineHeight: 1, marginBottom: "6px" }}>
+            {loading ? "—" : fmtMoeda(pendente)}
+          </div>
+          <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Pendente</div>
+        </div>
+
+        <div style={card("#10b981")}>
+          <div style={{ fontFamily: FONT.title, fontSize: "28px", fontWeight: 900, color: "#10b981", lineHeight: 1, marginBottom: "6px" }}>
+            {loading ? "—" : fmtHoras(horas)}
+          </div>
+          <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Total de horas realizadas</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── BLOCO 2: CICLOS ────────────────────────────────────────────────────────────
+
+function BlocoCiclos({ ciclos, onRecarregar }: {
+  ciclos: CicloPagamento[];
+  onRecarregar: () => void;
+}) {
+  const { theme: t } = useApp();
+
+  const [cicloId, setCicloId] = useState<string>(ciclos[0]?.id ?? "");
+  const [rows, setRows] = useState<PagamentoRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [modalAnalisar, setModalAnalisar] = useState<PagamentoRow | null>(null);
+  const [modalPagar, setModalPagar] = useState<PagamentoRow | null>(null);
+  const [modalAgente, setModalAgente] = useState(false);
+
+  const ciclo = ciclos.find(c => c.id === cicloId) ?? ciclos[0] ?? null;
+  const isAberto = ciclo ? cicloAberto(ciclo) : false;
+
+  useEffect(() => {
+    if (ciclo) verificarFechamento(ciclo);
+  }, [cicloId]);
+
+  useEffect(() => {
+    if (ciclo) carregarDados(ciclo);
+  }, [cicloId]);
+
+  async function verificarFechamento(c: CicloPagamento) {
+    if (c.fechado_em) return;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const fim = new Date(c.data_fim + "T00:00:00");
+    if (hoje > fim) await fecharCiclo(c);
+  }
+
+  async function fecharCiclo(c: CicloPagamento) {
+    const { data: lives } = await supabase
+      .from("lives")
+      .select("id, influencer_id, live_resultados(duracao_horas, duracao_min)")
+      .eq("status", "realizada")
+      .gte("data", c.data_inicio)
+      .lte("data", c.data_fim);
+
+    const horasPorId: Record<string, number> = {};
+    for (const live of (lives ?? []) as any[]) {
+      const res = live.live_resultados?.[0];
+      if (res) {
+        horasPorId[live.influencer_id] = (horasPorId[live.influencer_id] ?? 0) + res.duracao_horas + res.duracao_min / 60;
+      }
+    }
+
+    for (const [influencer_id, horas] of Object.entries(horasPorId)) {
+      const { data: perfil } = await supabase.from("influencer_perfil").select("cache_hora").eq("id", influencer_id).single();
+      const cache_hora = perfil?.cache_hora ?? 0;
+      const total = Math.round(horas * cache_hora * 100) / 100;
+      await supabase.from("pagamentos").upsert({
+        ciclo_id: c.id, influencer_id,
+        horas_realizadas: Math.round(horas * 100) / 100,
+        cache_hora, total, status: "em_analise",
+      }, { onConflict: "ciclo_id,influencer_id" });
+    }
+
+    await supabase.from("ciclos_pagamento").update({ fechado_em: new Date().toISOString() }).eq("id", c.id);
+    onRecarregar();
+  }
+
+  async function carregarDados(c: CicloPagamento) {
+    setLoading(true);
+    if (cicloAberto(c)) {
+      await carregarPreview(c);
+    } else {
+      await carregarPagamentos(c);
+    }
+    setLoading(false);
+  }
+
+  async function carregarPreview(c: CicloPagamento) {
+    const { data: lives } = await supabase
+      .from("lives")
+      .select("id, influencer_id, live_resultados(duracao_horas, duracao_min)")
+      .eq("status", "realizada")
+      .gte("data", c.data_inicio)
+      .lte("data", c.data_fim);
+
+    if (!lives || lives.length === 0) { setRows([]); return; }
+
+    const horasPorId: Record<string, { horas: number; qtd: number }> = {};
+    for (const live of lives as any[]) {
+      const res = live.live_resultados?.[0];
+      if (res) {
+        if (!horasPorId[live.influencer_id]) horasPorId[live.influencer_id] = { horas: 0, qtd: 0 };
+        horasPorId[live.influencer_id].horas += res.duracao_horas + res.duracao_min / 60;
+        horasPorId[live.influencer_id].qtd += 1;
+      }
+    }
+
+    const ids = Object.keys(horasPorId);
+    const [{ data: profiles }, { data: perfis }] = await Promise.all([
+      supabase.from("profiles").select("id, name").in("id", ids),
+      supabase.from("influencer_perfil").select("id, cache_hora, nome_artistico").in("id", ids),
+    ]);
+
+    const nameMap: Record<string, string> = {};
+    for (const p of (profiles ?? []) as any[]) nameMap[p.id] = p.name;
+
+    const perfilMap: Record<string, { cache: number; artistico: string }> = {};
+    for (const p of (perfis ?? []) as any[]) {
+      perfilMap[p.id] = { cache: p.cache_hora ?? 0, artistico: p.nome_artistico ?? nameMap[p.id] ?? p.id };
+    }
+
+    const result: PagamentoRow[] = ids.map(id => {
+      const h = Math.round(horasPorId[id].horas * 100) / 100;
+      const cache = perfilMap[id]?.cache ?? 0;
+      return {
+        id: `preview_${id}`,
+        influencer_id: id,
+        influencer_name: perfilMap[id]?.artistico ?? nameMap[id] ?? id,
+        horas_realizadas: h,
+        cache_hora: cache,
+        total: Math.round(h * cache * 100) / 100,
+        status: "em_analise" as PagamentoStatus,
+        pago_em: null,
+        qtd_lives: horasPorId[id].qtd,
+      };
+    });
+
+    result.sort((a, b) => b.total - a.total);
+    setRows(result);
+  }
+
+  async function carregarPagamentos(c: CicloPagamento) {
+    const [{ data: pags }, { data: agentes }] = await Promise.all([
+      supabase.from("pagamentos")
+        .select("*, influencer_perfil(nome_artistico), profiles!pagamentos_influencer_id_fkey(name)")
+        .eq("ciclo_id", c.id)
+        .order("total", { ascending: false }),
+      supabase.from("pagamentos_agentes")
+        .select("*")
+        .eq("ciclo_id", c.id)
+        .order("criado_em", { ascending: true }),
+    ]);
+
+    const linhasInf: PagamentoRow[] = (pags ?? []).map((p: any) => ({
+      id: p.id,
+      influencer_id: p.influencer_id,
+      influencer_name: p.influencer_perfil?.nome_artistico ?? p.profiles?.name ?? p.influencer_id,
+      horas_realizadas: p.horas_realizadas,
+      cache_hora: p.cache_hora,
+      total: p.total,
+      status: p.status,
+      pago_em: p.pago_em,
+    }));
+
+    const linhasAg: PagamentoRow[] = (agentes ?? []).map((a: any) => ({
+      id: a.id,
+      influencer_id: "agente",
+      influencer_name: "Agentes",
+      horas_realizadas: 0,
+      cache_hora: 0,
+      total: a.total,
+      status: a.status,
+      pago_em: a.pago_em,
+      is_agente: true,
+      descricao: a.descricao,
+    }));
+
+    setRows([...linhasInf, ...linhasAg]);
+  }
+
+  async function handleAprovar(id: string, novoTotal: number, isAgente: boolean) {
+    const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
+    await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id);
+    setModalAnalisar(null);
+    if (ciclo) await carregarDados(ciclo);
+  }
+
+  async function handlePagar(id: string, isAgente: boolean) {
+    const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
+    await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id);
+    setModalPagar(null);
+    if (ciclo) await carregarDados(ciclo);
+  }
+
+  const kpi = useMemo(() => ({
+    em: rows.filter(r => r.status === "em_analise").length,
+    ap: rows.filter(r => r.status === "a_pagar").length,
+    pg: rows.filter(r => r.status === "pago").length,
+    total: rows.reduce((a, r) => a + r.total, 0),
+  }), [rows]);
+
   const th: React.CSSProperties = {
     padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
     letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted,
@@ -77,919 +782,384 @@ function useStyles(t: any) {
   const td: React.CSSProperties = {
     padding: "13px 14px", fontSize: "13px", color: t.text, fontFamily: FONT.body,
   };
-  const inputStyle: React.CSSProperties = {
-    padding: "7px 12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg, color: t.inputText, fontSize: "12px",
-    fontFamily: FONT.body, outline: "none", cursor: "pointer",
-  };
-  const tableWrap: React.CSSProperties = {
-    overflowX: "auto", borderRadius: "12px", border: `1px solid ${t.cardBorder}`,
-  };
-  const sectionLabel: React.CSSProperties = {
-    fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px",
-    textTransform: "uppercase", color: BASE_COLORS.purple, fontFamily: FONT.body,
-  };
-  const btnPrimary: React.CSSProperties = {
-    padding: "9px 18px", borderRadius: "10px", border: "none", cursor: "pointer",
-    background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-    color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
-  };
-  return { card, th, td, inputStyle, tableWrap, sectionLabel, btnPrimary };
-}
 
-// ── Badge de Status ───────────────────────────────────────────────────────────
-
-function StatusBadge({ status, config }: { status: string; config: Record<string, { label: string; color: string }> }) {
-  const cfg = config[status] ?? { label: status, color: "#aaa" };
-  const icons: Record<string, string> = { em_analise: "⏳", a_pagar: "💳", pago: "✅", perfil_incompleto: "⚠️" };
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: "4px",
-      fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px",
-      background: `${cfg.color}22`, color: cfg.color,
-      border: `1px solid ${cfg.color}44`, whiteSpace: "nowrap",
-    }}>
-      {icons[status] ?? ""} {cfg.label}
-    </span>
-  );
-}
-
-// ── Avatar ────────────────────────────────────────────────────────────────────
-
-function Avatar({ name }: { name: string }) {
-  return (
-    <div style={{
-      width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0,
-      background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      color: "#fff", fontWeight: 800, fontSize: "11px",
-    }}>
-      {name[0]?.toUpperCase() ?? "?"}
-    </div>
-  );
-}
-
-// ── KPIs ──────────────────────────────────────────────────────────────────────
-
-function KpiCards({ totalPago, qtdCiclos, valorPendente, totalHoras, t }: {
-  totalPago: number; qtdCiclos: number; valorPendente: number; totalHoras: number; t: any;
-}) {
-  const kpiCard = (accent: string): React.CSSProperties => ({
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: "16px", padding: "20px 22px",
-    borderTop: `3px solid ${accent}`, flex: 1,
-  });
-  const val: React.CSSProperties = { fontFamily: FONT.title, fontSize: "28px", fontWeight: 900, lineHeight: 1, marginBottom: "6px" };
-  const lbl: React.CSSProperties = { fontSize: "12px", color: t.textMuted, fontWeight: 500, fontFamily: FONT.body };
-  const sub: React.CSSProperties = { fontSize: "11px", color: t.textMuted, marginTop: "8px", paddingTop: "8px", borderTop: `1px solid ${t.divider}`, fontFamily: FONT.body };
+  const opcioesCiclo = ciclos.map(c => ({
+    value: c.id,
+    label: `${c.data_inicio} – ${c.data_fim}${cicloAberto(c) ? " (atual)" : ""}`,
+  }));
 
   return (
-    <div style={{ display: "flex", gap: "14px", marginBottom: "28px", flexWrap: "wrap" }}>
-      <div style={kpiCard(`linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`)}>
-        <div style={{ ...val, color: "#c9b8f0" }}>{fmtMoeda(totalPago)}</div>
-        <div style={lbl}>Total pago (histórico)</div>
-        <div style={sub}>{qtdCiclos} ciclos fechados</div>
-      </div>
-      <div style={kpiCard("#f39c12")}>
-        <div style={{ ...val, color: "#f39c12" }}>{fmtMoeda(valorPendente)}</div>
-        <div style={lbl}>Estimativa ciclo atual</div>
-        <div style={sub}>Baseado nas lives realizadas</div>
-      </div>
-      <div style={kpiCard("#27ae60")}>
-        <div style={{ ...val, color: "#27ae60" }}>{fmtHoras(totalHoras)}</div>
-        <div style={lbl}>Total de horas realizadas</div>
-        <div style={sub}>Histórico completo</div>
-      </div>
-    </div>
-  );
-}
+    <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
 
-// ── Modal Aprovar (com edição de valor) ───────────────────────────────────────
-
-function ModalAprovar({ pagamento, onClose, onConfirm, t }: {
-  pagamento: Pagamento;
-  onClose: () => void;
-  onConfirm: (novoTotal: number) => Promise<void>;
-  t: any;
-}) {
-  const [saving, setSaving] = useState(false);
-  const [valor, setValor] = useState(pagamento.total.toString());
-  const valorNum = parseFloat(valor.replace(",", ".")) || 0;
-  const editado = valorNum !== pagamento.total;
-
-  async function handleConfirm() {
-    setSaving(true);
-    await onConfirm(valorNum);
-    setSaving(false);
-  }
-
-  const row: React.CSSProperties = {
-    display: "flex", justifyContent: "space-between",
-    padding: "10px 0", borderBottom: `1px solid ${t.divider}`, fontSize: "13px",
-  };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "400px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-          <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>✅ Aprovar Pagamento</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
-        </div>
-        <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
-          Revisão de pagamento para <strong style={{ color: t.text }}>{pagamento.influencer_name}</strong>
-        </p>
-
-        <div style={row}>
-          <span style={{ color: t.textMuted }}>Horas realizadas</span>
-          <span style={{ fontWeight: 700 }}>{fmtHoras(pagamento.horas_realizadas)}</span>
-        </div>
-        <div style={row}>
-          <span style={{ color: t.textMuted }}>Cachê/hora</span>
-          <span style={{ fontWeight: 700 }}>{fmtMoeda(pagamento.cache_hora)}</span>
-        </div>
-        <div style={{ ...row, borderBottom: "none", alignItems: "center" }}>
-          <span style={{ color: t.textMuted }}>Valor a pagar</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {editado && (
-              <span style={{ fontSize: "11px", color: "#f39c12", textDecoration: "line-through" }}>{fmtMoeda(pagamento.total)}</span>
-            )}
-            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ fontSize: "13px", color: t.textMuted }}>R$</span>
-              <input
-                type="number"
-                value={valor}
-                onChange={e => setValor(e.target.value)}
-                style={{
-                  width: "110px", padding: "6px 10px", borderRadius: "8px",
-                  border: `1px solid ${editado ? "#f39c12" : t.cardBorder}`,
-                  background: t.inputBg, color: t.inputText, fontSize: "14px",
-                  fontWeight: 700, fontFamily: FONT.body, outline: "none", textAlign: "right",
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {editado && (
-          <div style={{
-            marginTop: "12px", padding: "10px 14px", borderRadius: "10px",
-            background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.3)",
-            fontSize: "12px", color: "#f39c12", fontFamily: FONT.body,
-          }}>
-            ⚠️ Valor editado manualmente. O cálculo automático era {fmtMoeda(pagamento.total)}.
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-          <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", cursor: "pointer", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            Cancelar
-          </button>
-          <button onClick={handleConfirm} disabled={saving || valorNum <= 0} style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || valorNum <= 0) ? "not-allowed" : "pointer", opacity: (saving || valorNum <= 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            {saving ? "⏳ Salvando..." : "✅ Aprovar valor"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Modal Pagar ───────────────────────────────────────────────────────────────
-
-function ModalPagar({ pagamento, onClose, onConfirm, t }: {
-  pagamento: Pagamento;
-  onClose: () => void;
-  onConfirm: () => Promise<void>;
-  t: any;
-}) {
-  const [saving, setSaving] = useState(false);
-
-  async function handleConfirm() {
-    setSaving(true);
-    await onConfirm();
-    setSaving(false);
-  }
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "380px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-          <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>💰 Registrar Pagamento</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
-        </div>
-        <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
-          Confirmar pagamento para <strong style={{ color: t.text }}>{pagamento.influencer_name}</strong>
-        </p>
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", fontSize: "15px" }}>
-          <span style={{ color: t.textMuted }}>Total</span>
-          <span style={{ fontWeight: 900, color: "#27ae60", fontSize: "20px" }}>{fmtMoeda(pagamento.total)}</span>
-        </div>
-        <p style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginTop: "8px", lineHeight: 1.5 }}>
-          A data de pagamento será registrada como hoje.
-        </p>
-        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-          <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", cursor: "pointer", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            Cancelar
-          </button>
-          <button onClick={handleConfirm} disabled={saving} style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: "linear-gradient(135deg, #1a6e3c, #27ae60)", color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            {saving ? "⏳ Salvando..." : "💰 Confirmar pagamento"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Modal Adicionar Agente ────────────────────────────────────────────────────
-
-function ModalAdicionarAgente({ ciclos, cicloAtualId, onClose, onConfirm, t }: {
-  ciclos: CicloPagamento[];
-  cicloAtualId: string;
-  onClose: () => void;
-  onConfirm: () => Promise<void>;
-  t: any;
-}) {
-  const [saving, setSaving] = useState(false);
-  const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
-  const [cicloId, setCicloId] = useState(cicloAtualId);
-
-  async function handleConfirm() {
-    const valorNum = parseFloat(valor.replace(",", "."));
-    if (!descricao.trim() || isNaN(valorNum) || valorNum <= 0 || !cicloId) return;
-
-    setSaving(true);
-    await supabase.from("pagamentos_agentes").insert({
-      ciclo_id: cicloId,
-      descricao: descricao.trim(),
-      total: valorNum,
-      status: "em_analise",
-    });
-    await onConfirm();
-    setSaving(false);
-  }
-
-  const valorNum = parseFloat(valor.replace(",", ".")) || 0;
-  const canSubmit = descricao.trim().length > 0 && valorNum > 0 && cicloId;
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "400px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>➕ Adicionar Agente</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <div>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", display: "block", marginBottom: "6px", fontFamily: FONT.body }}>
-              Descrição *
-            </label>
-            <input
-              value={descricao}
-              onChange={e => setDescricao(e.target.value)}
-              placeholder="Ex: Comissão agente João"
-              style={{ width: "100%", padding: "9px 12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none", boxSizing: "border-box" }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", display: "block", marginBottom: "6px", fontFamily: FONT.body }}>
-              Valor (R$) *
-            </label>
-            <input
-              type="number"
-              value={valor}
-              onChange={e => setValor(e.target.value)}
-              placeholder="0,00"
-              style={{ width: "100%", padding: "9px 12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none", boxSizing: "border-box" }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", display: "block", marginBottom: "6px", fontFamily: FONT.body }}>
-              Ciclo *
-            </label>
-            <select
-              value={cicloId}
-              onChange={e => setCicloId(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none", boxSizing: "border-box" }}
-            >
-              {ciclos.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.data_inicio} – {c.data_fim}{!c.fechado_em ? " (atual)" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
-          <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", cursor: "pointer", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            Cancelar
-          </button>
-          <button onClick={handleConfirm} disabled={saving || !canSubmit} style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || !canSubmit) ? "not-allowed" : "pointer", opacity: (saving || !canSubmit) ? 0.6 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            {saving ? "⏳ Salvando..." : "➕ Adicionar"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Tabela de Pagamentos (usada em ciclo aberto e fechado) ────────────────────
-
-function TabelaPagamentos({ pagamentos, cicloAberto, onAprovar, onPagar, t }: {
-  pagamentos: Pagamento[];
-  cicloAberto: boolean;
-  onAprovar: (p: Pagamento) => void;
-  onPagar: (p: Pagamento) => void;
-  t: any;
-}) {
-  const { th, td, tableWrap } = useStyles(t);
-
-  const totalCiclo = pagamentos
-    .filter(p => p.status !== "perfil_incompleto")
-    .reduce((a, p) => a + p.total, 0);
-
-  return (
-    <div style={tableWrap}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            {["Influencer", "Horas realizadas", "Total", "Status", "Ação"].map(h => (
-              <th key={h} style={th}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {pagamentos.length === 0 ? (
-            <tr>
-              <td colSpan={5} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
-                {cicloAberto
-                  ? "Nenhuma live realizada neste ciclo ainda."
-                  : "Nenhum pagamento neste ciclo."}
-              </td>
-            </tr>
-          ) : pagamentos.map((p, i) => (
-            <tr key={p.id} style={{ borderBottom: i < pagamentos.length - 1 ? `1px solid ${t.cardBorder}` : "none" }}>
-              <td style={td}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Avatar name={p.influencer_name ?? "?"} />
-                  <span style={{ fontWeight: 600 }}>{p.influencer_name ?? p.influencer_id}</span>
-                </div>
-              </td>
-              <td style={td}>{fmtHoras(p.horas_realizadas)}</td>
-              <td style={{ ...td, fontWeight: 700, color: p.status === "perfil_incompleto" ? "#e94025" : t.text }}>
-                {p.status === "perfil_incompleto" ? "—" : fmtMoeda(p.total)}
-              </td>
-              <td style={td}>
-                <StatusBadge status={p.status} config={STATUS_CONFIG} />
-              </td>
-              <td style={td}>
-                {p.status === "em_analise" && (
-                  <button
-                    onClick={() => onAprovar(p)}
-                    style={{ padding: "5px 12px", borderRadius: "8px", border: `1px solid rgba(107,127,255,0.4)`, background: "rgba(107,127,255,0.12)", color: "#6b7fff", fontSize: "11px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
-                  >
-                    ✅ Aprovar
-                  </button>
-                )}
-                {p.status === "a_pagar" && (
-                  <button
-                    onClick={() => onPagar(p)}
-                    style={{ padding: "5px 12px", borderRadius: "8px", border: `1px solid rgba(39,174,96,0.4)`, background: "rgba(39,174,96,0.12)", color: "#27ae60", fontSize: "11px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
-                  >
-                    💰 Pagar
-                  </button>
-                )}
-                {(p.status === "pago" || p.status === "perfil_incompleto") && (
-                  <span style={{ fontSize: "11px", color: t.textMuted }}>—</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        {pagamentos.length > 0 && (
-          <tfoot>
-            <tr style={{ background: t.isDark ? "rgba(74,48,130,0.1)" : "rgba(74,48,130,0.05)", borderTop: `2px solid rgba(74,48,130,0.4)` }}>
-              <td style={{ ...td, fontSize: "11px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>TOTAL DO CICLO</td>
-              <td style={{ ...td, fontWeight: 700 }}>
-                {fmtHoras(pagamentos.reduce((a, p) => a + p.horas_realizadas, 0))}
-              </td>
-              <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(totalCiclo)}</td>
-              <td colSpan={2}></td>
-            </tr>
-          </tfoot>
-        )}
-      </table>
-    </div>
-  );
-}
-
-// ── Preview do Ciclo Aberto ───────────────────────────────────────────────────
-
-function PreviewCicloAberto({ cicloId, dataInicio, dataFim, t }: {
-  cicloId: string; dataInicio: string; dataFim: string; t: any;
-}) {
-  const [preview, setPreview] = useState<PreviewInfluencer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { th, td, tableWrap } = useStyles(t);
-
-  useEffect(() => { carregarPreview(); }, [cicloId]);
-
-  async function carregarPreview() {
-    setLoading(true);
-
-    const { data: lives } = await supabase
-      .from("lives")
-      .select("id, influencer_id, live_resultados(duracao_horas, duracao_min)")
-      .eq("status", "realizada")
-      .gte("data", dataInicio)
-      .lte("data", dataFim);
-
-    if (!lives || lives.length === 0) { setLoading(false); return; }
-
-    // Agrupa horas por influencer
-    const horasPorInfluencer: Record<string, { horas: number; qtd: number }> = {};
-    for (const live of lives as any[]) {
-      const id = live.influencer_id;
-      const res = live.live_resultados?.[0];
-      if (res) {
-        if (!horasPorInfluencer[id]) horasPorInfluencer[id] = { horas: 0, qtd: 0 };
-        horasPorInfluencer[id].horas += res.duracao_horas + res.duracao_min / 60;
-        horasPorInfluencer[id].qtd += 1;
-      }
-    }
-
-    const influencerIds = Object.keys(horasPorInfluencer);
-    if (influencerIds.length === 0) { setLoading(false); return; }
-
-    // Busca nomes e cache_hora
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, name")
-      .in("id", influencerIds);
-
-    const { data: perfis } = await supabase
-      .from("influencer_perfil")
-      .select("id, cache_hora")
-      .in("id", influencerIds);
-
-    const profileMap: Record<string, string> = {};
-    for (const p of (profiles ?? []) as any[]) profileMap[p.id] = p.name;
-
-    const perfilMap: Record<string, number> = {};
-    for (const p of (perfis ?? []) as any[]) perfilMap[p.id] = p.cache_hora ?? 0;
-
-    const resultado: PreviewInfluencer[] = influencerIds.map(id => ({
-      influencer_id: id,
-      influencer_name: profileMap[id] ?? id,
-      horas_realizadas: Math.round(horasPorInfluencer[id].horas * 100) / 100,
-      cache_hora: perfilMap[id] ?? 0,
-      total_estimado: Math.round(horasPorInfluencer[id].horas * (perfilMap[id] ?? 0) * 100) / 100,
-      qtd_lives: horasPorInfluencer[id].qtd,
-    }));
-
-    resultado.sort((a, b) => b.total_estimado - a.total_estimado);
-    setPreview(resultado);
-    setLoading(false);
-  }
-
-  const totalEstimado = preview.reduce((a, p) => a + p.total_estimado, 0);
-
-  if (loading) return (
-    <div style={{ textAlign: "center", padding: "40px", color: t.textMuted, fontFamily: FONT.body }}>
-      Carregando lives do ciclo...
-    </div>
-  );
-
-  return (
-    <div>
-      {preview.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>
-          Nenhuma live realizada neste ciclo ainda.
-        </div>
-      ) : (
-        <div style={tableWrap}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {["Influencer", "Lives realizadas", "Horas", "Cachê/hora", "Estimativa"].map(h => (
-                  <th key={h} style={th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {preview.map((p, i) => (
-                <tr key={p.influencer_id} style={{ borderBottom: i < preview.length - 1 ? `1px solid ${t.cardBorder}` : "none" }}>
-                  <td style={td}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Avatar name={p.influencer_name} />
-                      <span style={{ fontWeight: 600 }}>{p.influencer_name}</span>
-                    </div>
-                  </td>
-                  <td style={{ ...td, color: t.textMuted }}>{p.qtd_lives} live{p.qtd_lives !== 1 ? "s" : ""}</td>
-                  <td style={td}>{fmtHoras(p.horas_realizadas)}</td>
-                  <td style={{ ...td, color: t.textMuted }}>
-                    {p.cache_hora > 0 ? fmtMoeda(p.cache_hora) : <span style={{ color: "#e94025" }}>⚠️ Sem cadastro</span>}
-                  </td>
-                  <td style={{ ...td, fontWeight: 700, color: p.cache_hora > 0 ? "#c9b8f0" : "#e94025" }}>
-                    {p.cache_hora > 0 ? fmtMoeda(p.total_estimado) : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr style={{ background: t.isDark ? "rgba(74,48,130,0.1)" : "rgba(74,48,130,0.05)", borderTop: `2px solid rgba(74,48,130,0.4)` }}>
-                <td style={{ ...td, fontSize: "11px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>ESTIMATIVA TOTAL</td>
-                <td colSpan={3}></td>
-                <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(totalEstimado)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Bloco Principal de Ciclo ──────────────────────────────────────────────────
-
-function BlockCiclo({ ciclos, cicloSelecionado, setCicloSelecionado, pagamentos, onAprovar, onPagar, onFecharCiclo, t }: {
-  ciclos: CicloPagamento[];
-  cicloSelecionado: CicloPagamento | null;
-  setCicloSelecionado: (c: CicloPagamento) => void;
-  pagamentos: Pagamento[];
-  onAprovar: (p: Pagamento) => void;
-  onPagar: (p: Pagamento) => void;
-  onFecharCiclo: () => void;
-  t: any;
-}) {
-  const { card, sectionLabel, inputStyle } = useStyles(t);
-  const isAberto = !cicloSelecionado?.fechado_em;
-
-  const resumo = {
-    em_analise: pagamentos.filter(p => p.status === "em_analise").length,
-    a_pagar:    pagamentos.filter(p => p.status === "a_pagar").length,
-    pago:       pagamentos.filter(p => p.status === "pago").length,
-    total:      pagamentos.filter(p => p.status !== "perfil_incompleto").reduce((a, p) => a + p.total, 0),
-  };
-
-  return (
-    <div style={card}>
       {/* Cabeçalho */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <span style={sectionLabel}>📅 CICLO DE PAGAMENTO</span>
-          <span style={{
-            fontSize: "12px", fontWeight: 700, padding: "4px 13px", borderRadius: "20px",
-            background: isAberto ? "rgba(243,156,18,0.15)" : "rgba(39,174,96,0.12)",
-            color:      isAberto ? "#f39c12" : "#27ae60",
-            border:     `1px solid ${isAberto ? "rgba(243,156,18,0.3)" : "rgba(39,174,96,0.3)"}`,
-          }}>
-            {isAberto ? "🔓 Atual" : "✅ Fechado"}
-          </span>
-          <select
-            value={cicloSelecionado?.id ?? ""}
-            onChange={e => {
-              const found = ciclos.find(c => c.id === e.target.value);
-              if (found) setCicloSelecionado(found);
-            }}
-            style={inputStyle}
-          >
-            {ciclos.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.data_inicio} – {c.data_fim}{!c.fechado_em ? " (atual)" : ""}
-              </option>
-            ))}
-          </select>
+          <BlocoLabel label="📅 CICLO DE PAGAMENTO" />
+
+          {ciclo && (
+            <span style={{
+              fontSize: "12px", fontWeight: 700, padding: "4px 12px", borderRadius: "20px",
+              background: isAberto ? "rgba(245,158,11,0.15)" : "rgba(16,185,129,0.12)",
+              color: isAberto ? "#f59e0b" : "#10b981",
+              border: `1px solid ${isAberto ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.3)"}`,
+            }}>
+              {isAberto ? "🔓 Atual" : "✅ Fechado"}
+            </span>
+          )}
+
+          <SelectInput
+            value={cicloId}
+            onChange={v => setCicloId(v)}
+            options={opcioesCiclo}
+          />
         </div>
 
-        {isAberto && (
-          <button onClick={onFecharCiclo} style={{
-            padding: "9px 18px", borderRadius: "10px", cursor: "pointer",
-            background: t.isDark ? "rgba(233,64,37,0.15)" : "rgba(233,64,37,0.1)",
-            color: "#e94025", border: "1px solid rgba(233,64,37,0.3)",
-            fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
-          }}>
-            🔒 Fechar Ciclo
-          </button>
+        {ciclo && (
+          <BtnPrimary onClick={() => setModalAgente(true)}>
+            ➕ Pagamento de Agente
+          </BtnPrimary>
         )}
       </div>
 
-      {/* Mini-resumo (apenas ciclos fechados) */}
-      {!isAberto && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "18px" }}>
+      {/* KPIs do ciclo (apenas fechado) */}
+      {!isAberto && rows.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "20px" }}>
           {[
-            { value: resumo.em_analise, label: "Em análise",  color: "#f39c12" },
-            { value: resumo.a_pagar,    label: "A pagar",     color: "#6b7fff" },
-            { value: resumo.pago,       label: "Pago",        color: "#27ae60" },
-            { value: fmtMoeda(resumo.total), label: "Total do ciclo", color: t.text },
+            { value: kpi.em,             label: "Em análise",   color: "#f59e0b" },
+            { value: kpi.ap,             label: "A pagar",      color: "#6b7fff" },
+            { value: kpi.pg,             label: "Pago",         color: "#10b981" },
+            { value: fmtMoeda(kpi.total), label: "Total do ciclo", color: t.text },
           ].map((item, i) => (
-            <div key={i} style={{
-              background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-              border: `1px solid ${t.cardBorder}`, borderRadius: "10px", padding: "12px 14px", textAlign: "center",
-            }}>
-              <div style={{ fontFamily: FONT.title, fontSize: "22px", fontWeight: 900, color: item.color, marginBottom: "3px" }}>{item.value}</div>
+            <div key={i} style={{ background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", border: `1px solid ${t.cardBorder}`, borderRadius: "10px", padding: "12px 14px", textAlign: "center" }}>
+              <div style={{ fontFamily: FONT.title, fontSize: "20px", fontWeight: 900, color: item.color, marginBottom: "3px" }}>{item.value}</div>
               <div style={{ fontSize: "10px", color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.8px", fontFamily: FONT.body }}>{item.label}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Conteúdo: preview ou tabela de pagamentos */}
-      {isAberto ? (
-        <PreviewCicloAberto
-          cicloId={cicloSelecionado!.id}
-          dataInicio={cicloSelecionado!.data_inicio}
-          dataFim={cicloSelecionado!.data_fim}
-          t={t}
-        />
-      ) : (
-        <TabelaPagamentos
-          pagamentos={pagamentos}
-          cicloAberto={false}
-          onAprovar={onAprovar}
-          onPagar={onPagar}
-          t={t}
-        />
+      {/* Badge preview */}
+      {isAberto && rows.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", borderRadius: "10px", marginBottom: "16px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", fontSize: "12px", color: "#f59e0b", fontFamily: FONT.body }}>
+          🔴 Prévia em tempo real — ciclo aberto. Os pagamentos serão gerados ao encerrar o período.
+        </div>
       )}
-    </div>
-  );
-}
 
-// ── Bloco Agentes ─────────────────────────────────────────────────────────────
-
-function BlockAgentes({ ciclos, cicloAtualId, t }: {
-  ciclos: CicloPagamento[];
-  cicloAtualId: string;
-  t: any;
-}) {
-  const { card, sectionLabel, th, td, tableWrap, inputStyle } = useStyles(t);
-  const [agentes, setAgentes] = useState<PagamentoAgente[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [filtroCiclo, setFiltroCiclo] = useState("");
-
-  useEffect(() => { carregarAgentes(); }, []);
-
-  async function carregarAgentes() {
-    setLoading(true);
-    const { data } = await supabase
-      .from("pagamentos_agentes")
-      .select("*, ciclos_pagamento(data_inicio, data_fim)")
-      .order("criado_em", { ascending: false });
-    setAgentes((data ?? []) as any);
-    setLoading(false);
-  }
-
-  async function handleAprovar(id: string) {
-    await supabase.from("pagamentos_agentes").update({ status: "a_pagar" }).eq("id", id);
-    carregarAgentes();
-  }
-
-  async function handlePagar(id: string) {
-    await supabase.from("pagamentos_agentes").update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id);
-    carregarAgentes();
-  }
-
-  const filtrados = filtroCiclo ? agentes.filter(a => a.ciclo_id === filtroCiclo) : agentes;
-
-  return (
-    <div style={card}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={sectionLabel}>🤝 PAGAMENTOS DE AGENTES</span>
-          {!loading && <span style={{ fontSize: "12px", color: t.textMuted }}>{filtrados.length} registro{filtrados.length !== 1 ? "s" : ""}</span>}
-        </div>
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-          <select value={filtroCiclo} onChange={e => setFiltroCiclo(e.target.value)} style={inputStyle}>
-            <option value="">Todos os ciclos</option>
-            {ciclos.map(c => (
-              <option key={c.id} value={c.id}>{c.data_inicio} – {c.data_fim}{!c.fechado_em ? " (atual)" : ""}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setModalAberto(true)}
-            style={{
-              padding: "8px 16px", borderRadius: "10px", border: "none", cursor: "pointer",
-              background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-              color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body,
-            }}
-          >
-            ➕ Adicionar Agente
-          </button>
-        </div>
-      </div>
-
+      {/* Tabela */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "40px", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
+        <div style={{ textAlign: "center", padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
       ) : (
-        <div style={tableWrap}>
+        <div style={{ overflowX: "auto", borderRadius: "12px", border: `1px solid ${t.cardBorder}` }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Descrição", "Ciclo", "Total", "Status", "Ação"].map(h => (
-                  <th key={h} style={th}>{h}</th>
-                ))}
+                {isAberto
+                  ? ["Influencer", "Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} style={th}>{h}</th>)
+                  : ["Influencer", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} style={th}>{h}</th>)
+                }
               </tr>
             </thead>
             <tbody>
-              {filtrados.length === 0 ? (
-                <tr><td colSpan={5} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "40px" }}>
-                  Nenhum pagamento de agente registrado.
-                </td></tr>
-              ) : filtrados.map((a: any, i) => (
-                <tr key={a.id} style={{ borderBottom: i < filtrados.length - 1 ? `1px solid ${t.cardBorder}` : "none" }}>
-                  <td style={{ ...td, fontWeight: 600 }}>{a.descricao}</td>
-                  <td style={{ ...td, color: t.textMuted, fontSize: "12px" }}>
-                    {a.ciclos_pagamento?.data_inicio} – {a.ciclos_pagamento?.data_fim}
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
+                    {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                   </td>
-                  <td style={{ ...td, fontWeight: 700 }}>{fmtMoeda(a.total)}</td>
-                  <td style={td}><StatusBadge status={a.status} config={STATUS_AGENTE_CONFIG} /></td>
+                </tr>
+              ) : rows.map((row, i) => (
+                <tr key={row.id} style={{ borderBottom: i < rows.length - 1 ? `1px solid ${t.cardBorder}` : "none" }}>
                   <td style={td}>
-                    {a.status === "em_analise" && (
-                      <button onClick={() => handleAprovar(a.id)} style={{ padding: "5px 12px", borderRadius: "8px", border: `1px solid rgba(107,127,255,0.4)`, background: "rgba(107,127,255,0.12)", color: "#6b7fff", fontSize: "11px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                        ✅ Aprovar
-                      </button>
-                    )}
-                    {a.status === "a_pagar" && (
-                      <button onClick={() => handlePagar(a.id)} style={{ padding: "5px 12px", borderRadius: "8px", border: `1px solid rgba(39,174,96,0.4)`, background: "rgba(39,174,96,0.12)", color: "#27ae60", fontSize: "11px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                        💰 Pagar
-                      </button>
-                    )}
-                    {a.status === "pago" && <span style={{ fontSize: "11px", color: t.textMuted }}>—</span>}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Avatar name={row.is_agente ? "A" : row.influencer_name} />
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{row.influencer_name}</div>
+                        {row.is_agente && row.descricao && (
+                          <div style={{ fontSize: "11px", color: t.textMuted }}>{row.descricao}</div>
+                        )}
+                      </div>
+                    </div>
                   </td>
+
+                  {isAberto ? (
+                    <>
+                      <td style={{ ...td, color: t.textMuted }}>{row.qtd_lives ?? 0} live{(row.qtd_lives ?? 0) !== 1 ? "s" : ""}</td>
+                      <td style={td}>{fmtHoras(row.horas_realizadas)}</td>
+                      <td style={{ ...td, color: t.textMuted }}>
+                        {row.cache_hora > 0
+                          ? fmtMoeda(row.cache_hora)
+                          : <span style={{ color: "#ef4444", fontSize: "11px" }}>Não cadastrado</span>}
+                      </td>
+                      <td style={{ ...td, fontWeight: 700, color: row.cache_hora > 0 ? "#c9b8f0" : t.textMuted }}>
+                        {row.cache_hora > 0 ? fmtMoeda(row.total) : "—"}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={td}>{row.is_agente ? "—" : fmtHoras(row.horas_realizadas)}</td>
+                      <td style={{ ...td, fontWeight: 700 }}>{fmtMoeda(row.total)}</td>
+                      <td style={td}><Badge status={row.status} config={STATUS_PAG} /></td>
+                      <td style={td}>
+                        {row.status === "em_analise" && (
+                          <BtnAcao onClick={() => setModalAnalisar(row)} color="#f59e0b">⏳ Analisar</BtnAcao>
+                        )}
+                        {row.status === "a_pagar" && (
+                          <BtnAcao onClick={() => setModalPagar(row)} color="#10b981">💰 Pagar</BtnAcao>
+                        )}
+                        {row.status === "pago" && (
+                          <span style={{ fontSize: "11px", color: t.textMuted }}>
+                            {row.pago_em ? new Date(row.pago_em).toLocaleDateString("pt-BR") : "—"}
+                          </span>
+                        )}
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
+
+            {rows.length > 0 && (
+              <tfoot>
+                <tr style={{ background: t.isDark ? "rgba(74,48,130,0.1)" : "rgba(74,48,130,0.05)", borderTop: `2px solid rgba(74,48,130,0.35)` }}>
+                  <td style={{ ...td, fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>
+                    {isAberto ? "ESTIMATIVA TOTAL" : "TOTAL"}
+                  </td>
+                  {isAberto ? (
+                    <>
+                      <td style={td}></td>
+                      <td style={{ ...td, fontWeight: 700 }}>{fmtHoras(rows.reduce((a, r) => a + r.horas_realizadas, 0))}</td>
+                      <td style={td}></td>
+                      <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(rows.reduce((a, r) => a + r.total, 0))}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ ...td, fontWeight: 700 }}>{fmtHoras(rows.filter(r => !r.is_agente).reduce((a, r) => a + r.horas_realizadas, 0))}</td>
+                      <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(rows.reduce((a, r) => a + r.total, 0))}</td>
+                      <td colSpan={2}></td>
+                    </>
+                  )}
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}
 
-      {modalAberto && (
-        <ModalAdicionarAgente
-          ciclos={ciclos}
-          cicloAtualId={cicloAtualId}
-          onClose={() => setModalAberto(false)}
-          onConfirm={async () => { setModalAberto(false); await carregarAgentes(); }}
-          t={t}
+      {/* Modais */}
+      {modalAnalisar && ciclo && (
+        <ModalAnalisar row={modalAnalisar} ciclo={ciclo} onClose={() => setModalAnalisar(null)} onConfirm={handleAprovar} />
+      )}
+      {modalPagar && (
+        <ModalPagar row={modalPagar} onClose={() => setModalPagar(null)} onConfirm={handlePagar} />
+      )}
+      {modalAgente && ciclo && (
+        <ModalAgente
+          cicloId={ciclo.id}
+          onClose={() => setModalAgente(false)}
+          onSalvo={async () => { setModalAgente(false); if (ciclo) await carregarDados(ciclo); }}
         />
       )}
     </div>
   );
 }
 
-// ── Bloco Consolidado ─────────────────────────────────────────────────────────
+// ── BLOCO 3: CONSOLIDADO ───────────────────────────────────────────────────────
 
-function BlockConsolidado({ t }: { t: any }) {
-  const { card, sectionLabel, tableWrap, th, td, inputStyle } = useStyles(t);
-  const OPCOES_MESES = useMemo(() => gerarOpcoesMeses(), []);
+function BlocoConsolidado() {
+  const { theme: t } = useApp();
 
-  interface ConsolidadoRow {
-    influencer_id: string; influencer_name: string; email: string;
-    totalPago: number; totalHoras: number; pendente: number;
-    ultimoPagamento: string | null; statusGeral: string;
+  const OPCOES_MESES = useMemo(() => [{ value: "", label: "Todos os meses" }, ...gerarMeses().slice(1)], []);
+  const OPCOES_STATUS = [
+    { value: "", label: "Todos os status" },
+    { value: "ativo",     label: "Ativo" },
+    { value: "inativo",   label: "Inativo" },
+    { value: "cancelado", label: "Cancelado" },
+  ];
+
+  interface ConRow {
+    influencer_id: string;
+    nome_artistico: string;
+    email: string;
+    totalPago: number;
+    totalHoras: number;
+    pendente: number;
+    ultimoPagamento: string | null;
+    statusInfluencer: string;
   }
 
-  const [mesFiltro, setMesFiltro] = useState("");
+  const [mes, setMes] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("");
   const [busca, setBusca] = useState("");
-  const [rows, setRows] = useState<ConsolidadoRow[]>([]);
+  const [rows, setRows] = useState<ConRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
-  const [historico, setHistorico] = useState<Record<string, Pagamento[]>>({});
+  const [historico, setHistorico] = useState<Record<string, any[]>>({});
   const [loadingHist, setLoadingHist] = useState<string | null>(null);
 
-  useEffect(() => { carregarConsolidado(); }, [mesFiltro]);
+  useEffect(() => { carregar(); }, [mes]);
 
-  async function carregarConsolidado() {
+  async function carregar() {
     setLoading(true);
-    const { data: profiles } = await supabase.from("profiles").select("id, name, email").eq("role", "influencer").order("name");
-    if (!profiles) { setLoading(false); return; }
 
-    let dataInicio = "2000-01-01";
-    let dataFim = new Date().toISOString().split("T")[0];
-    if (mesFiltro) {
-      const [ano, mes] = mesFiltro.split("-").map(Number);
-      dataInicio = `${mesFiltro}-01`;
-      const ultimo = new Date(ano, mes, 0).getDate();
-      dataFim = `${mesFiltro}-${String(ultimo).padStart(2, "0")}`;
+    const { data: perfis } = await supabase
+      .from("influencer_perfil")
+      .select("id, nome_artistico, status")
+      .order("nome_artistico");
+
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .eq("role", "influencer");
+
+    if (!perfis) { setLoading(false); return; }
+
+    const emailMap: Record<string, string> = {};
+    for (const p of (profiles ?? []) as any[]) emailMap[p.id] = p.email;
+
+    const periodo = periodoDoMes(mes);
+    let cicloIds: string[] = [];
+    if (periodo) {
+      const { data: ciclos } = await supabase
+        .from("ciclos_pagamento").select("id")
+        .gte("data_inicio", periodo.inicio)
+        .lte("data_fim", periodo.fim);
+      cicloIds = (ciclos ?? []).map((c: any) => c.id);
     }
 
-    const { data: ciclosPeriodo } = await supabase.from("ciclos_pagamento").select("id").gte("data_inicio", dataInicio).lte("data_fim", dataFim);
-    const cicloIds = (ciclosPeriodo ?? []).map((c: any) => c.id);
-
     let pagamentosData: any[] = [];
-    if (cicloIds.length > 0) {
-      const { data } = await supabase.from("pagamentos").select("*").in("ciclo_id", cicloIds);
+    if (!periodo || cicloIds.length > 0) {
+      const q = periodo
+        ? supabase.from("pagamentos").select("*").in("ciclo_id", cicloIds)
+        : supabase.from("pagamentos").select("*");
+      const { data } = await q;
       pagamentosData = data ?? [];
     }
 
-    const resultado: ConsolidadoRow[] = (profiles as any[]).map(prof => {
-      const pags = pagamentosData.filter(p => p.influencer_id === prof.id);
+    const resultado: ConRow[] = (perfis as any[]).map(perf => {
+      const pags = pagamentosData.filter(p => p.influencer_id === perf.id);
       const pagos = pags.filter(p => p.status === "pago");
-      const pendentes = pags.filter(p => p.status === "a_pagar" || p.status === "em_analise");
-      const incompleto = pags.some(p => p.status === "perfil_incompleto");
+      const pendentes = pags.filter(p => p.status === "em_analise" || p.status === "a_pagar");
       const totalPago = pagos.reduce((a, p) => a + p.total, 0);
-      const totalHoras = pags.filter(p => p.status !== "perfil_incompleto").reduce((a, p) => a + p.horas_realizadas, 0);
+      const totalHoras = pags.reduce((a, p) => a + p.horas_realizadas, 0);
       const pendente = pendentes.reduce((a, p) => a + p.total, 0);
       const ultimoPag = pagos.sort((a, b) => (b.pago_em ?? "").localeCompare(a.pago_em ?? ""))[0]?.pago_em ?? null;
-      const statusGeral = incompleto ? "perfil_incompleto" : pags.length > 0 ? "ativo" : "inativo";
-      return { influencer_id: prof.id, influencer_name: prof.name ?? prof.email, email: prof.email, totalPago, totalHoras, pendente, ultimoPagamento: ultimoPag, statusGeral };
+      return {
+        influencer_id: perf.id,
+        nome_artistico: perf.nome_artistico ?? emailMap[perf.id] ?? perf.id,
+        email: emailMap[perf.id] ?? "",
+        totalPago, totalHoras, pendente,
+        ultimoPagamento: ultimoPag,
+        statusInfluencer: perf.status ?? "ativo",
+      };
     });
 
     setRows(resultado);
     setLoading(false);
   }
 
-  async function toggleExpand(influencer_id: string) {
-    if (expandido === influencer_id) { setExpandido(null); return; }
-    setExpandido(influencer_id);
-    if (historico[influencer_id]) return;
-    setLoadingHist(influencer_id);
-    const { data } = await supabase.from("pagamentos").select("*, ciclos_pagamento(data_inicio, data_fim)").eq("influencer_id", influencer_id).order("criado_em", { ascending: false }).limit(12);
-    if (data) setHistorico(prev => ({ ...prev, [influencer_id]: data as any }));
+  async function toggleExpand(id: string) {
+    if (expandido === id) { setExpandido(null); return; }
+    setExpandido(id);
+    if (historico[id]) return;
+    setLoadingHist(id);
+    const { data } = await supabase
+      .from("pagamentos")
+      .select("*, ciclos_pagamento(data_inicio, data_fim)")
+      .eq("influencer_id", id)
+      .order("criado_em", { ascending: false })
+      .limit(12);
+    if (data) setHistorico(prev => ({ ...prev, [id]: data }));
     setLoadingHist(null);
   }
 
   const filtered = rows.filter(r => {
-    const nomeOk = !busca || r.influencer_name.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase());
-    const statusOk = !statusFiltro || r.statusGeral === statusFiltro;
-    return nomeOk && statusOk;
+    const nomeOk = !busca || r.nome_artistico.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase());
+    const stOk = !statusFiltro || r.statusInfluencer === statusFiltro;
+    return nomeOk && stOk;
   });
 
-  const statusLabel: Record<string, { label: string; color: string }> = {
-    ativo:             { label: "● Ativo",             color: "#27ae60" },
-    inativo:           { label: "○ Inativo",           color: "#aaaacc" },
-    perfil_incompleto: { label: "⚠️ Perfil incompleto", color: "#e94025" },
+  const th: React.CSSProperties = {
+    padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
+    letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted,
+    background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+    borderBottom: `1px solid ${t.cardBorder}`,
+  };
+  const td: React.CSSProperties = {
+    padding: "13px 14px", fontSize: "13px", color: t.text, fontFamily: FONT.body,
   };
 
   return (
-    <div style={card}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+    <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "18px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={sectionLabel}>👥 CONSOLIDADO POR INFLUENCER</span>
+          <BlocoLabel label="👥 CONSOLIDADO DE INFLUENCERS" />
           {!loading && <span style={{ fontSize: "12px", color: t.textMuted }}>{filtered.length} influencers</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="🔍 Buscar..." style={{ ...inputStyle, width: "180px" }} />
-          <select value={mesFiltro} onChange={e => setMesFiltro(e.target.value)} style={inputStyle}>
-            <option value="">Todos os meses</option>
-            {OPCOES_MESES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)} style={inputStyle}>
-            <option value="">Todos os status</option>
-            <option value="ativo">Ativo</option>
-            <option value="inativo">Inativo</option>
-            <option value="perfil_incompleto">Perfil incompleto</option>
-          </select>
+          <input
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="🔍 Buscar..."
+            style={{ padding: "7px 12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText, fontSize: "12px", fontFamily: FONT.body, outline: "none", width: "180px" }}
+          />
+          <SelectInput value={mes} onChange={setMes} options={OPCOES_MESES} />
+          <SelectInput value={statusFiltro} onChange={setStatusFiltro} options={OPCOES_STATUS} />
         </div>
       </div>
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "48px", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
       ) : (
-        <div style={tableWrap}>
+        <div style={{ overflowX: "auto", borderRadius: "12px", border: `1px solid ${t.cardBorder}` }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
                 <th style={{ ...th, width: "32px" }}></th>
-                {["Influencer", "Total pago", "Total horas", "Pendente", "Último pagamento", "Status"].map(h => <th key={h} style={th}>{h}</th>)}
+                {["Influencer", "Total pago", "Total horas", "Pendente", "Último pagamento", "Status"].map(h => (
+                  <th key={h} style={th}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "40px" }}>Nenhum influencer encontrado.</td></tr>
+                <tr>
+                  <td colSpan={7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "40px" }}>
+                    Nenhum influencer encontrado.
+                  </td>
+                </tr>
               ) : filtered.map(row => {
                 const isOpen = expandido === row.influencer_id;
                 const hist = historico[row.influencer_id] ?? [];
-                const sl = statusLabel[row.statusGeral] ?? { label: row.statusGeral, color: "#aaa" };
+                const sl = STATUS_INFLUENCER[row.statusInfluencer] ?? { label: row.statusInfluencer, color: "#94a3b8" };
+
                 return (
                   <>
-                    <tr key={row.influencer_id} style={{ cursor: "pointer", borderBottom: `1px solid ${t.cardBorder}` }} onClick={() => toggleExpand(row.influencer_id)}>
+                    <tr
+                      key={row.influencer_id}
+                      style={{ cursor: "pointer", borderBottom: `1px solid ${t.cardBorder}` }}
+                      onClick={() => toggleExpand(row.influencer_id)}
+                    >
                       <td style={td}>
                         <span style={{ fontSize: "10px", color: t.textMuted, display: "inline-block", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▶</span>
                       </td>
                       <td style={td}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <Avatar name={row.influencer_name} />
+                          <Avatar name={row.nome_artistico} />
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: "13px" }}>{row.influencer_name}</div>
+                            <div style={{ fontWeight: 600, fontSize: "13px" }}>{row.nome_artistico}</div>
                             <div style={{ fontSize: "11px", color: t.textMuted }}>{row.email}</div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ ...td, fontWeight: 700, color: "#27ae60" }}>{fmtMoeda(row.totalPago)}</td>
+                      <td style={{ ...td, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(row.totalPago)}</td>
                       <td style={td}>{fmtHoras(row.totalHoras)}</td>
-                      <td style={{ ...td, color: row.pendente > 0 ? "#f39c12" : t.textMuted, fontWeight: row.pendente > 0 ? 600 : 400 }}>
-                        {row.statusGeral === "perfil_incompleto" ? <span style={{ color: "#e94025" }}>⚠️ Incompleto</span> : fmtMoeda(row.pendente)}
+                      <td style={{ ...td, color: row.pendente > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.pendente > 0 ? 600 : 400 }}>
+                        {fmtMoeda(row.pendente)}
                       </td>
                       <td style={{ ...td, color: t.textMuted }}>
                         {row.ultimoPagamento ? new Date(row.ultimoPagamento).toLocaleDateString("pt-BR") : "—"}
                       </td>
                       <td style={td}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44` }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44` }}>
                           {sl.label}
                         </span>
                       </td>
@@ -998,8 +1168,8 @@ function BlockConsolidado({ t }: { t: any }) {
                     {isOpen && (
                       <tr key={`exp-${row.influencer_id}`} style={{ background: t.isDark ? "rgba(74,48,130,0.06)" : "rgba(74,48,130,0.03)" }}>
                         <td colSpan={7} style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
-                          <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted, marginBottom: "10px" }}>
-                            Histórico — {row.influencer_name}
+                          <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted, marginBottom: "10px", fontFamily: FONT.body }}>
+                            Histórico — {row.nome_artistico}
                           </div>
                           {loadingHist === row.influencer_id ? (
                             <div style={{ color: t.textMuted, fontSize: "12px" }}>Carregando...</div>
@@ -1015,13 +1185,19 @@ function BlockConsolidado({ t }: { t: any }) {
                                 </tr>
                               </thead>
                               <tbody>
-                                {(hist as any[]).map(h => (
+                                {hist.map((h: any) => (
                                   <tr key={h.id} style={{ borderBottom: `1px solid ${t.divider}` }}>
-                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>{h.ciclos_pagamento?.data_inicio} – {h.ciclos_pagamento?.data_fim}</td>
+                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>
+                                      {h.ciclos_pagamento?.data_inicio} – {h.ciclos_pagamento?.data_fim}
+                                    </td>
                                     <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>{fmtHoras(h.horas_realizadas)}</td>
-                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>{h.status === "perfil_incompleto" ? "—" : fmtMoeda(h.total)}</td>
-                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}><StatusBadge status={h.status} config={STATUS_CONFIG} /></td>
-                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px", color: t.textMuted }}>{h.pago_em ? new Date(h.pago_em).toLocaleDateString("pt-BR") : "—"}</td>
+                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>{fmtMoeda(h.total)}</td>
+                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>
+                                      <Badge status={h.status} config={STATUS_PAG} />
+                                    </td>
+                                    <td style={{ ...td, fontSize: "12px", padding: "8px 10px", color: t.textMuted }}>
+                                      {h.pago_em ? new Date(h.pago_em).toLocaleDateString("pt-BR") : "—"}
+                                    </td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -1041,187 +1217,58 @@ function BlockConsolidado({ t }: { t: any }) {
   );
 }
 
-// ── COMPONENTE PRINCIPAL ──────────────────────────────────────────────────────
+// ── COMPONENTE PRINCIPAL ───────────────────────────────────────────────────────
 
 export default function Financeiro() {
   const { theme: t } = useApp();
-
   const [ciclos, setCiclos] = useState<CicloPagamento[]>([]);
-  const [cicloSelecionado, setCicloSelecionado] = useState<CicloPagamento | null>(null);
-  const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [loading, setLoading] = useState(true);
-  const [kpi, setKpi] = useState({ totalPago: 0, qtdCiclos: 0, valorPendente: 0, totalHoras: 0 });
-  const [modalAprovar, setModalAprovar] = useState<Pagamento | null>(null);
-  const [modalPagar, setModalPagar] = useState<Pagamento | null>(null);
 
-  useEffect(() => { carregarTudo(); }, []);
+  useEffect(() => { carregarCiclos(); }, []);
 
-  async function carregarTudo() {
+  async function carregarCiclos() {
     setLoading(true);
-    await Promise.all([carregarCiclos(), carregarKpis()]);
+    const { data } = await supabase
+      .from("ciclos_pagamento")
+      .select("*")
+      .order("data_inicio", { ascending: false });
+    setCiclos(data ?? []);
     setLoading(false);
   }
 
-  async function carregarCiclos() {
-    const { data } = await supabase.from("ciclos_pagamento").select("*").order("data_inicio", { ascending: false });
-    if (data && data.length > 0) {
-      setCiclos(data);
-      setCicloSelecionado(data[0]);
-      if (data[0].fechado_em) await carregarPagamentos(data[0].id);
-    }
-  }
-
-  async function carregarPagamentos(cicloId: string) {
-    const { data } = await supabase
-      .from("pagamentos")
-      .select("*, profiles!pagamentos_influencer_id_fkey(name)")
-      .eq("ciclo_id", cicloId)
-      .order("criado_em", { ascending: true });
-    if (data) setPagamentos(data.map((p: any) => ({ ...p, influencer_name: p.profiles?.name })));
-  }
-
-  async function carregarKpis() {
-    const { data: pagsTodos } = await supabase.from("pagamentos").select("total, horas_realizadas, status");
-    const { data: ciclosFechados } = await supabase.from("ciclos_pagamento").select("id").not("fechado_em", "is", null);
-    if (!pagsTodos) return;
-    const pagos = pagsTodos.filter((p: any) => p.status === "pago");
-    setKpi({
-      totalPago: pagos.reduce((a: number, p: any) => a + p.total, 0),
-      qtdCiclos: ciclosFechados?.length ?? 0,
-      valorPendente: 0, // atualizado pelo preview
-      totalHoras: pagsTodos.reduce((a: number, p: any) => a + p.horas_realizadas, 0),
-    });
-  }
-
-  async function handleTrocarCiclo(ciclo: CicloPagamento) {
-    setCicloSelecionado(ciclo);
-    setPagamentos([]);
-    if (ciclo.fechado_em) await carregarPagamentos(ciclo.id);
-  }
-
-  async function handleFecharCiclo() {
-    if (!cicloSelecionado) return;
-
-    // Busca lives realizadas no período
-    const { data: lives } = await supabase
-      .from("lives")
-      .select("id, influencer_id, live_resultados(duracao_horas, duracao_min)")
-      .eq("status", "realizada")
-      .gte("data", cicloSelecionado.data_inicio)
-      .lte("data", cicloSelecionado.data_fim);
-
-    if (lives && lives.length > 0) {
-      const horasPorInfluencer: Record<string, number> = {};
-      for (const live of lives as any[]) {
-        const id = live.influencer_id;
-        const res = live.live_resultados?.[0];
-        if (res) horasPorInfluencer[id] = (horasPorInfluencer[id] ?? 0) + res.duracao_horas + res.duracao_min / 60;
-      }
-
-      for (const [influencer_id, horas] of Object.entries(horasPorInfluencer)) {
-        const { data: perfil } = await supabase.from("influencer_perfil").select("cache_hora").eq("id", influencer_id).single();
-        const cache_hora = perfil?.cache_hora ?? 0;
-        const status: PagamentoStatus = cache_hora > 0 ? "em_analise" : "perfil_incompleto";
-        const total = Math.round(horas * cache_hora * 100) / 100;
-        await supabase.from("pagamentos").upsert({
-          ciclo_id: cicloSelecionado.id, influencer_id,
-          horas_realizadas: Math.round(horas * 100) / 100,
-          cache_hora, total, status,
-        }, { onConflict: "ciclo_id,influencer_id" });
-      }
-    }
-
-    await supabase.from("ciclos_pagamento").update({ fechado_em: new Date().toISOString() }).eq("id", cicloSelecionado.id);
-    await carregarTudo();
-  }
-
-  async function handleAprovar(novoTotal: number) {
-    if (!modalAprovar) return;
-    await supabase.from("pagamentos").update({ status: "a_pagar", total: novoTotal }).eq("id", modalAprovar.id);
-    setModalAprovar(null);
-    if (cicloSelecionado) await carregarPagamentos(cicloSelecionado.id);
-    await carregarKpis();
-  }
-
-  async function handlePagar() {
-    if (!modalPagar) return;
-    await supabase.from("pagamentos").update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", modalPagar.id);
-    setModalPagar(null);
-    if (cicloSelecionado) await carregarPagamentos(cicloSelecionado.id);
-    await carregarKpis();
-  }
-
-  if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: "400px" }}>
-      <div style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        <div style={{ fontSize: "32px", marginBottom: "12px" }}>⏳</div>
-        Carregando financeiro...
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: "400px" }}>
+        <div style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+          <div style={{ fontSize: "32px", marginBottom: "12px" }}>⏳</div>
+          Carregando financeiro...
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
-  if (ciclos.length === 0) return (
-    <div style={{ padding: "28px 32px", maxWidth: "900px", margin: "0 auto" }}>
-      <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
-        <div style={{ fontSize: "40px", marginBottom: "16px" }}>📅</div>
-        <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>Nenhum ciclo cadastrado</p>
-        <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Crie o primeiro ciclo de pagamento diretamente no Supabase para começar.</p>
+  if (ciclos.length === 0) {
+    return (
+      <div style={{ padding: "28px 32px", maxWidth: "900px", margin: "0 auto" }}>
+        <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
+        <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
+        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
+          <div style={{ fontSize: "40px", marginBottom: "16px" }}>📅</div>
+          <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>Nenhum ciclo cadastrado</p>
+          <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Crie o primeiro ciclo de pagamento no Supabase para começar.</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
     <div style={{ padding: "28px 32px", maxWidth: "1100px", margin: "0 auto" }}>
       <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
       <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
 
-      <KpiCards
-        totalPago={kpi.totalPago}
-        qtdCiclos={kpi.qtdCiclos}
-        valorPendente={kpi.valorPendente}
-        totalHoras={kpi.totalHoras}
-        t={t}
-      />
-
-      {cicloSelecionado && (
-        <BlockCiclo
-          ciclos={ciclos}
-          cicloSelecionado={cicloSelecionado}
-          setCicloSelecionado={handleTrocarCiclo}
-          pagamentos={pagamentos}
-          onAprovar={p => setModalAprovar(p)}
-          onPagar={p => setModalPagar(p)}
-          onFecharCiclo={handleFecharCiclo}
-          t={t}
-        />
-      )}
-
-      <BlockAgentes
-        ciclos={ciclos}
-        cicloAtualId={ciclos[0]?.id ?? ""}
-        t={t}
-      />
-
-      <BlockConsolidado t={t} />
-
-      {modalAprovar && (
-        <ModalAprovar
-          pagamento={modalAprovar}
-          onClose={() => setModalAprovar(null)}
-          onConfirm={handleAprovar}
-          t={t}
-        />
-      )}
-
-      {modalPagar && (
-        <ModalPagar
-          pagamento={modalPagar}
-          onClose={() => setModalPagar(null)}
-          onConfirm={handlePagar}
-          t={t}
-        />
-      )}
+      <BlocoKpis />
+      <BlocoCiclos ciclos={ciclos} onRecarregar={carregarCiclos} />
+      <BlocoConsolidado />
     </div>
   );
 }
