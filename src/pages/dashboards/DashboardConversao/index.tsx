@@ -156,11 +156,14 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
   const maxFtdH = ranking[0].ftdPorHora;
 
-  // Dividir resto em duas colunas para exibição lado a lado
-  const ITENS_POR_PAG = 6; // por coluna
-  const col1 = resto.slice(pagResto * ITENS_POR_PAG * 2, pagResto * ITENS_POR_PAG * 2 + ITENS_POR_PAG);
-  const col2 = resto.slice(pagResto * ITENS_POR_PAG * 2 + ITENS_POR_PAG, pagResto * ITENS_POR_PAG * 2 + ITENS_POR_PAG * 2);
-  const totalPags = Math.ceil(resto.length / (ITENS_POR_PAG * 2));
+  // Pares lado a lado: #4/#5, #6/#7, #8/#9...
+  const PARES_POR_PAG = 6;
+  const pares: [ConversaoRow, ConversaoRow | null][] = [];
+  for (let i = 0; i < resto.length; i += 2) {
+    pares.push([resto[i], resto[i + 1] ?? null]);
+  }
+  const totalPags = Math.ceil(pares.length / PARES_POR_PAG);
+  const paresPag  = pares.slice(pagResto * PARES_POR_PAG, pagResto * PARES_POR_PAG + PARES_POR_PAG);
 
   function ItemLista({ row, pos }: { row: ConversaoRow; pos: number }) {
     const barPct = maxFtdH > 0 ? (row.ftdPorHora / maxFtdH) * 100 : 0;
@@ -197,20 +200,22 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
         })}
       </div>
 
-      {/* RESTO — 2 colunas lado a lado */}
+      {/* RESTO — pares lado a lado: #4/#5, #6/#7... */}
       {resto.length > 0 && (
         <div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {col1.map((row, i) => (
-                <ItemLista key={row.influencer_id} row={row} pos={pagResto * ITENS_POR_PAG * 2 + i + 4} />
-              ))}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {col2.map((row, i) => (
-                <ItemLista key={row.influencer_id} row={row} pos={pagResto * ITENS_POR_PAG * 2 + ITENS_POR_PAG + i + 4} />
-              ))}
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+            {paresPag.map(([rowEsq, rowDir], i) => {
+              const posEsq = pagResto * PARES_POR_PAG * 2 + i * 2 + 4;
+              const posDir = posEsq + 1;
+              return (
+                <div key={rowEsq.influencer_id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <ItemLista row={rowEsq} pos={posEsq} />
+                  {rowDir
+                    ? <ItemLista row={rowDir} pos={posDir} />
+                    : <div />}
+                </div>
+              );
+            })}
           </div>
           {/* Paginação */}
           {totalPags > 1 && (
