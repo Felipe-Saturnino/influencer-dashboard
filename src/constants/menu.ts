@@ -14,7 +14,9 @@ export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
     items: [
-      { key: "dashboard",  label: "Dashboard",  icon: "📊" },
+      { key: "dash_overview",    label: "Overview",    icon: "📊" },
+      { key: "dash_conversao",   label: "Conversão",   icon: "🎯" },
+      { key: "dash_financeiro",  label: "Financeiro",  icon: "💹" },
     ],
   },
   {
@@ -28,8 +30,8 @@ export const MENU: MenuSection[] = [
   {
     section: "Operações",
     items: [
-      { key: "influencers",  label: "Influencers",   icon: "👥" },
-      { key: "financeiro",   label: "Financeiro",    icon: "💰" },
+      { key: "influencers",  label: "Influencers",     icon: "👥" },
+      { key: "financeiro",   label: "Financeiro",      icon: "💰" },
       { key: "gestao_links", label: "Gestão de Links", icon: "🔗" },
     ],
   },
