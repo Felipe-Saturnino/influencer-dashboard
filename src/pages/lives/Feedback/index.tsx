@@ -181,7 +181,7 @@ function InfluencerDropdown({ items, selected, onChange }: InfluencerDropdownPro
 
 // ─── Live estendida com observação da tabela lives ────────────────────────────
 
-interface LiveComObs extends Live {
+interface LiveComObs extends Omit<Live, "observacao"> {
   observacao?: string | null;
 }
 
@@ -400,7 +400,7 @@ export default function Feedback() {
             </div>
             <div style={statBox("#27ae60")}>
               <div style={{ fontSize: "16px", fontWeight: 800, color: "#27ae60", fontFamily: FONT.body }}>
-                {res.max_views.toLocaleString("pt-BR")}
+                {(res.max_views ?? 0).toLocaleString("pt-BR")}
               </div>
               <div style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>
                 Pico Views
