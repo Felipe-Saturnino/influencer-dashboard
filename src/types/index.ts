@@ -29,19 +29,19 @@ export type LiveStatus = "agendada" | "realizada" | "nao_realizada";
 
 // ─── LIVE ────────────────────────────────────────────────────────────────────
 export interface Live {
-  id:            string;
-  influencer_id: string;
+  id:               string;
+  influencer_id:    string;
   influencer_name?: string;
-  titulo:        string;
-  data:          string;
-  horario:       string;
-  plataforma:    Plataforma;
-  status:        LiveStatus;
-  link?:         string;
-  observacao?:   string;
-  created_by:    string;
-  created_at?:   string;
-  updated_at?:   string;
+  titulo:           string;
+  data:             string;
+  horario:          string;
+  plataforma:       Plataforma;
+  status:           LiveStatus;
+  link?:            string;
+  observacao?:      string;
+  created_by:       string;
+  created_at?:      string;
+  updated_at?:      string;
 }
 
 // ─── LIVE RESULTADO ──────────────────────────────────────────────────────────
@@ -84,18 +84,22 @@ export interface Pagamento {
 }
 
 // ─── UTM ALIAS ───────────────────────────────────────────────────────────────
-export type UtmAliasStatus = "pendente" | "mapeado" | "descartado";
+// Atenção: status "ignorado" (não "descartado") — alinhado ao banco e ao GestaoLinks
+export type UtmAliasStatus = "pendente" | "mapeado" | "ignorado";
 
 export interface UtmAlias {
   id:               string;
   utm_source:       string;
-  influencer_id?:   string;
-  influencer_name?: string;
+  influencer_id:    string | null;
+  influencer_name?: string;        // enriquecido em runtime via lookup separado
   status:           UtmAliasStatus;
-  primeiro_visto?:  string;
-  ultimo_visto?:    string;
-  total_ftds?:      number;
-  total_deposit?:   number;
-  ggr?:             number;
+  primeiro_visto:   string;        // sempre presente no banco
+  ultimo_visto:     string;        // sempre presente no banco
+  total_ftds:       number;        // sempre presente no banco
+  total_deposit:    number;        // sempre presente no banco
+  ggr:              number;        // sempre presente no banco
+  mapeado_por:      string | null;
+  mapeado_em:       string | null;
+  atualizado_em?:   string;
   criado_em?:       string;
 }
