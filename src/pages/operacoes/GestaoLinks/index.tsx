@@ -51,28 +51,51 @@ export default function GestaoLinks() {
       ignorados: "ignorado",
     };
 
+    // FIX v1.1.0: Removido o JOIN via influencer_perfil:influencer_id.
+    // O join com coluna nullable causava filtro implícito que excluía
+    // todos os registros com influencer_id = null (UTMs órfãos pendentes).
+    // Solução: busca simples + lookup separado apenas quando necessário.
     const { data, error } = await supabase
       .from("utm_aliases")
-      .select(`
-        *,
-        influencer_perfil:influencer_id (
-          nome_artistico
-        )
-      `)
+      .select("*")
       .eq("status", statusFiltro[aba])
       .order("total_ftds", { ascending: false });
 
     if (error) {
       console.error("Erro ao carregar utm_aliases:", error.message);
       setAliases([]);
-    } else {
-      const mapped = (data ?? []).map((r: any) => ({
-        ...r,
-        influencer_name: r.influencer_perfil?.nome_artistico ?? null,
-      }));
-      setAliases(mapped);
+      setLoading(false);
+      return;
     }
 
+    const aliasData = data ?? [];
+
+    // Enriquece com nome do influencer via lookup separado (só para aba mapeados)
+    let infNomeMap = new Map<string, string>();
+    if (aba === "mapeados") {
+      const influencerIds = aliasData
+        .map((r: any) => r.influencer_id)
+        .filter(Boolean);
+
+      if (influencerIds.length > 0) {
+        const { data: infData } = await supabase
+          .from("influencer_perfil")
+          .select("id, nome_artistico")
+          .in("id", influencerIds);
+        infNomeMap = new Map(
+          (infData ?? []).map((i: any) => [i.id, i.nome_artistico])
+        );
+      }
+    }
+
+    const mapped = aliasData.map((r: any) => ({
+      ...r,
+      influencer_name: r.influencer_id
+        ? (infNomeMap.get(r.influencer_id) ?? "—")
+        : null,
+    }));
+
+    setAliases(mapped);
     setLoading(false);
   }, [aba]);
 
@@ -275,7 +298,6 @@ export default function GestaoLinks() {
     ggrPositivo: { color: "#22c55e", fontWeight: 600 } as React.CSSProperties,
     ggrNegativo: { color: "#ef4444", fontWeight: 600 } as React.CSSProperties,
 
-    // Modal
     overlay: {
       position: "fixed" as const,
       inset: 0,
@@ -381,7 +403,6 @@ export default function GestaoLinks() {
 
   return (
     <div style={s.page}>
-      {/* Cabeçalho */}
       <div style={s.title}>
         🔗 Gestão de Links
         {totalPendentes > 0 && (
@@ -394,7 +415,6 @@ export default function GestaoLinks() {
         Links de rastreio detectados na Casa de Apostas que não estão associados a nenhum influencer.
       </div>
 
-      {/* Abas */}
       <div style={s.abas}>
         <button style={s.aba(aba === "pendentes")} onClick={() => setAba("pendentes")}>
           Pendentes
@@ -408,7 +428,6 @@ export default function GestaoLinks() {
         </button>
       </div>
 
-      {/* Tabela */}
       {loading ? (
         <div style={s.empty}>Carregando...</div>
       ) : aliases.length === 0 ? (
@@ -468,7 +487,6 @@ export default function GestaoLinks() {
         </table>
       )}
 
-      {/* Modal de mapeamento */}
       {modalAberto && aliasSelecionado && (
         <div style={s.overlay} onClick={() => setModalAberto(false)}>
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
@@ -478,7 +496,6 @@ export default function GestaoLinks() {
               O sync automático passará a incluir os dados deste link no influencer selecionado.
             </div>
 
-            {/* Info resumida do alias */}
             <div style={{
               background: theme.inputBg,
               border: `1px solid ${theme.cardBorder}`,
