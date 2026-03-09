@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid, Legend, ReferenceLine,
 } from "recharts";
 
-// ─── TIPOS LOCAIS ────────────────────────────────────────────────────────────
+// ─── CONSTANTES ──────────────────────────────────────────────────────────────
+
+// Mês de início do projeto: Dezembro 2025
+const MES_INICIO = { ano: 2025, mes: 11 }; // mes = índice JS (0=jan, 11=dez)
+
+// ─── TIPOS LOCAIS ─────────────────────────────────────────────────────────────
 interface Metrica {
   influencer_id: string;
   registration_count: number;
@@ -26,7 +32,7 @@ interface InfluencerPerfil {
   cache_hora: number;
 }
 
-interface Live {
+interface LiveData {
   id: string;
   influencer_id: string;
   status: string;
@@ -52,36 +58,36 @@ interface RankingRow {
   ftds: number;
   ggr: number;
   investimento: number;
-  roi: number;
+  roi: number | null;    // null = sem investimento
   plataformas: string[];
 }
 
-// ─── HELPERS ────────────────────────────────────────────────────────────────
-function getPeriodDates(periodo: string): { inicio: string; fim: string } {
-  const hoje = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 
-  if (periodo === "mes_atual") {
-    const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
-    return { inicio: fmt(inicio), fim: fmt(fim) };
+const pad = (n: number) => String(n).padStart(2, "0");
+const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+                  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+/** Retorna todos os meses desde MES_INICIO até o mês atual */
+function getMesesDisponiveis(): { ano: number; mes: number; label: string }[] {
+  const hoje = new Date();
+  const lista = [];
+  let ano = MES_INICIO.ano;
+  let mes = MES_INICIO.mes;
+  while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
+    lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
+    mes++;
+    if (mes > 11) { mes = 0; ano++; }
   }
-  if (periodo === "semana_atual") {
-    const diaSemana = hoje.getDay();
-    const diff = diaSemana === 0 ? -6 : 1 - diaSemana;
-    const inicio = new Date(hoje);
-    inicio.setDate(hoje.getDate() + diff);
-    return { inicio: fmt(inicio), fim: fmt(hoje) };
-  }
-  if (periodo === "ultimos_30") {
-    const inicio = new Date(hoje);
-    inicio.setDate(hoje.getDate() - 29);
-    return { inicio: fmt(inicio), fim: fmt(hoje) };
-  }
-  // mes_passado
-  const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-  const fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+  return lista;
+}
+
+/** Datas de início e fim para um mês */
+function getDatasDoMes(ano: number, mes: number): { inicio: string; fim: string } {
+  const inicio = new Date(ano, mes, 1);
+  const fim = new Date(ano, mes + 1, 0);
   return { inicio: fmt(inicio), fim: fmt(fim) };
 }
 
@@ -94,30 +100,32 @@ function fmtHoras(h: number, m: number) {
   return `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.floor(m)).padStart(2, "0")}`;
 }
 
-function statusROI(roi: number): { label: string; cor: string; bg: string; border: string } {
-  if (roi >= 100) return { label: "Rentável", cor: "#22c55e", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.28)" };
-  if (roi >= 50)  return { label: "Atenção",  cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)" };
-  return               { label: "Não Rentável", cor: "#ef4444", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.28)" };
+/** Nova lógica de status ROI */
+function statusROI(roi: number | null, ggr: number, investimento: number): {
+  label: string; cor: string; bg: string; border: string; roiStr: string;
+} {
+  // Sem investimento no período
+  if (investimento === 0) {
+    if (ggr > 0)  return { label: "Bônus",     cor: "#a855f7", bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.28)", roiStr: "—" };
+    if (ggr < 0)  return { label: "Atenção",   cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr: "—" };
+    return              { label: "Sem dados",  cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", roiStr: "—" };
+  }
+  // Com investimento
+  const r = roi ?? 0;
+  const roiStr = `${r >= 0 ? "+" : ""}${r.toFixed(0)}%`;
+  if (r >= 100) return { label: "Rentável",     cor: "#22c55e", bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  roiStr };
+  if (r >= 0)   return { label: "Atenção",      cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr };
+  return              { label: "Prejuízo",     cor: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.28)",  roiStr };
 }
 
-// ─── COMPONENTES MENORES ─────────────────────────────────────────────────────
-function KpiCard({ label, value, delta, deltaPos }: { label: string; value: string; delta?: string; deltaPos?: boolean | null }) {
-  const { theme: t } = useApp();
-  const deltaColor = deltaPos === true ? "#22c55e" : deltaPos === false ? "#ef4444" : t.textMuted;
-  const deltaBg    = deltaPos === true ? "rgba(34,197,94,0.10)" : deltaPos === false ? "rgba(239,68,68,0.10)" : "rgba(255,255,255,0.04)";
-  const deltaBorder= deltaPos === true ? "rgba(34,197,94,0.25)" : deltaPos === false ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.08)";
+// ─── SUBCOMPONENTES ───────────────────────────────────────────────────────────
 
+function KpiCard({ label, value }: { label: string; value: string }) {
+  const { theme: t } = useApp();
   return (
-    <div style={{ padding: 14, borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.03)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <span style={{ color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>{label}</span>
-        {delta && (
-          <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, border: `1px solid ${deltaBorder}`, background: deltaBg, color: deltaColor, fontFamily: "monospace", whiteSpace: "nowrap" }}>
-            {delta}
-          </span>
-        )}
-      </div>
-      <div style={{ marginTop: 8, fontSize: 20, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{value}</div>
+    <div style={{ padding: "16px 18px", borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.03)" }}>
+      <div style={{ color: t.textMuted, fontSize: 12, fontFamily: FONT.body, marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{value}</div>
     </div>
   );
 }
@@ -150,11 +158,20 @@ function RateCard({ label, value, hint, highlight }: { label: string; value: str
   );
 }
 
-// ─── COMPONENTE PRINCIPAL ────────────────────────────────────────────────────
+// ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
   const { theme: t } = useApp();
 
-  const [periodo, setPeriodo] = useState("mes_atual");
+  const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
+  const hoje = new Date();
+  const idxInicial = mesesDisponiveis.findIndex(
+    (m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth()
+  );
+
+  // ── ESTADO DE FILTROS ────────────────────────────────────────────────────
+  // idxMes: índice no array mesesDisponiveis, ou -1 = "Histórico"
+  const [idxMes, setIdxMes] = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+  const [historico, setHistorico] = useState(false);
   const [influencerFiltro, setInfluencerFiltro] = useState<string>("todos");
   const [plataformaFiltro, setPlataformaFiltro] = useState<string>("todas");
   const [loading, setLoading] = useState(true);
@@ -167,53 +184,62 @@ export default function DashboardOverview() {
     custoPorFTD: 0, custoPorRegistro: 0,
   });
 
-  const periodoLabel: Record<string, string> = {
-    mes_atual: "Mês atual",
-    semana_atual: "Semana atual",
-    ultimos_30: "Últimos 30 dias",
-    mes_passado: "Mês passado",
-  };
+  const mesSelecionado = mesesDisponiveis[idxMes];
 
-  // ── BUSCA DE DADOS ────────────────────────────────────────────────────────
+  function irMesAnterior() {
+    setHistorico(false);
+    setIdxMes((i) => Math.max(0, i - 1));
+  }
+  function irMesProximo() {
+    setHistorico(false);
+    setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1));
+  }
+  function ativarHistorico() {
+    setHistorico(true);
+  }
+
+  // ── BUSCA DE DADOS ───────────────────────────────────────────────────────
   useEffect(() => {
     async function carregar() {
       setLoading(true);
-      const { inicio, fim } = getPeriodDates(periodo);
 
-      // 1. Perfis de influencers
+      // 1. Perfis
       const { data: perfisData } = await supabase
         .from("influencer_perfil")
         .select("id, nome_artistico, cache_hora")
         .order("nome_artistico");
-
       const perfisLista: InfluencerPerfil[] = perfisData || [];
       setPerfis(perfisLista);
 
-      // 2. Métricas no período
+      // 2. Métricas
       let qMetricas = supabase
         .from("influencer_metricas")
-        .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data")
-        .gte("data", inicio)
-        .lte("data", fim);
+        .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
 
+      if (!historico && mesSelecionado) {
+        const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
+        qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
+      }
       if (influencerFiltro !== "todos") qMetricas = qMetricas.eq("influencer_id", influencerFiltro);
 
       const { data: metricasData } = await qMetricas;
       const metricas: Metrica[] = metricasData || [];
 
-      // 3. Lives no período
+      // 3. Lives realizadas
       let qLives = supabase
         .from("lives")
         .select("id, influencer_id, status, plataforma, data")
-        .gte("data", inicio)
-        .lte("data", fim)
         .eq("status", "realizada");
 
+      if (!historico && mesSelecionado) {
+        const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
+        qLives = qLives.gte("data", inicio).lte("data", fim);
+      }
       if (influencerFiltro !== "todos") qLives = qLives.eq("influencer_id", influencerFiltro);
       if (plataformaFiltro !== "todas") qLives = qLives.eq("plataforma", plataformaFiltro);
 
       const { data: livesData } = await qLives;
-      const lives: Live[] = livesData || [];
+      const lives: LiveData[] = livesData || [];
 
       // 4. Resultados das lives
       const liveIds = lives.map((l) => l.id);
@@ -226,10 +252,9 @@ export default function DashboardOverview() {
         resultados = resData || [];
       }
 
-      // ── MONTAR RANKING ──────────────────────────────────────────────────
+      // ── MONTAR RANKING ─────────────────────────────────────────────────
       const mapa = new Map<string, RankingRow>();
 
-      // Inicializar com influencers que têm métricas
       metricas.forEach((m) => {
         if (!mapa.has(m.influencer_id)) {
           const perfil = perfisLista.find((p) => p.id === m.influencer_id);
@@ -239,18 +264,17 @@ export default function DashboardOverview() {
             nome: perfil.nome_artistico,
             lives: 0, horas: 0, views: 0,
             acessos: 0, registros: 0, ftds: 0,
-            ggr: 0, investimento: 0, roi: 0,
+            ggr: 0, investimento: 0, roi: null,
             plataformas: [],
           });
         }
         const row = mapa.get(m.influencer_id)!;
-        row.acessos    += m.visit_count || 0;
-        row.registros  += m.registration_count || 0;
-        row.ftds       += m.ftd_count || 0;
-        row.ggr        += m.ggr || 0;
+        row.acessos   += m.visit_count || 0;
+        row.registros += m.registration_count || 0;
+        row.ftds      += m.ftd_count || 0;
+        row.ggr       += m.ggr || 0;
       });
 
-      // Adicionar dados de lives
       lives.forEach((live) => {
         if (!mapa.has(live.influencer_id)) {
           const perfil = perfisLista.find((p) => p.id === live.influencer_id);
@@ -260,14 +284,13 @@ export default function DashboardOverview() {
             nome: perfil.nome_artistico,
             lives: 0, horas: 0, views: 0,
             acessos: 0, registros: 0, ftds: 0,
-            ggr: 0, investimento: 0, roi: 0,
+            ggr: 0, investimento: 0, roi: null,
             plataformas: [],
           });
         }
         const row = mapa.get(live.influencer_id)!;
         row.lives += 1;
         if (!row.plataformas.includes(live.plataforma)) row.plataformas.push(live.plataforma);
-
         const res = resultados.find((r) => r.live_id === live.id);
         if (res) {
           row.horas += (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
@@ -280,29 +303,32 @@ export default function DashboardOverview() {
         const perfil = perfisLista.find((p) => p.id === row.influencer_id);
         const cacheHora = perfil?.cache_hora || 0;
         row.investimento = row.horas * cacheHora;
-        row.roi = row.investimento > 0 ? ((row.ggr - row.investimento) / row.investimento) * 100 : 0;
+        row.roi = row.investimento > 0
+          ? ((row.ggr - row.investimento) / row.investimento) * 100
+          : null;
       });
 
-      const rows = Array.from(mapa.values()).sort((a, b) => b.roi - a.roi);
+      const rows = Array.from(mapa.values()).sort((a, b) => {
+        // Ordenar: com investimento primeiro (por ROI desc), depois bônus (GGR desc), depois sem dados
+        if (a.investimento > 0 && b.investimento > 0) return (b.roi ?? 0) - (a.roi ?? 0);
+        if (a.investimento > 0) return -1;
+        if (b.investimento > 0) return 1;
+        return b.ggr - a.ggr;
+      });
       setRanking(rows);
 
       // ── TOTAIS ────────────────────────────────────────────────────────
-      const totalGGR        = rows.reduce((s, r) => s + r.ggr, 0);
-      const totalInvest     = rows.reduce((s, r) => s + r.investimento, 0);
-      const totalFTDs       = rows.reduce((s, r) => s + r.ftds, 0);
-      const totalRegistros  = rows.reduce((s, r) => s + r.registros, 0);
-      const totalAcessos    = rows.reduce((s, r) => s + r.acessos, 0);
-      const totalViews      = rows.reduce((s, r) => s + r.views, 0);
-      const roiGeral        = totalInvest > 0 ? ((totalGGR - totalInvest) / totalInvest) * 100 : 0;
+      const totalGGR       = rows.reduce((s, r) => s + r.ggr, 0);
+      const totalInvest    = rows.reduce((s, r) => s + r.investimento, 0);
+      const totalFTDs      = rows.reduce((s, r) => s + r.ftds, 0);
+      const totalRegistros = rows.reduce((s, r) => s + r.registros, 0);
+      const totalAcessos   = rows.reduce((s, r) => s + r.acessos, 0);
+      const totalViews     = rows.reduce((s, r) => s + r.views, 0);
+      const roiGeral       = totalInvest > 0 ? ((totalGGR - totalInvest) / totalInvest) * 100 : 0;
 
       setTotais({
-        ggr: totalGGR,
-        investimento: totalInvest,
-        roi: roiGeral,
-        ftds: totalFTDs,
-        registros: totalRegistros,
-        acessos: totalAcessos,
-        views: totalViews,
+        ggr: totalGGR, investimento: totalInvest, roi: roiGeral,
+        ftds: totalFTDs, registros: totalRegistros, acessos: totalAcessos, views: totalViews,
         custoPorFTD: totalFTDs > 0 ? totalInvest / totalFTDs : 0,
         custoPorRegistro: totalRegistros > 0 ? totalInvest / totalRegistros : 0,
       });
@@ -311,51 +337,37 @@ export default function DashboardOverview() {
     }
 
     carregar();
-  }, [periodo, influencerFiltro, plataformaFiltro]);
+  }, [historico, idxMes, influencerFiltro, plataformaFiltro]);
 
-  // ── FUNIL ──────────────────────────────────────────────────────────────────
-  const pctViewAcesso   = totais.views > 0 ? ((totais.acessos / totais.views) * 100).toFixed(1) + "%" : "—";
-  const pctAcessoReg    = totais.acessos > 0 ? ((totais.registros / totais.acessos) * 100).toFixed(1) + "%" : "—";
-  const pctRegFTD       = totais.registros > 0 ? ((totais.ftds / totais.registros) * 100).toFixed(1) + "%" : "—";
-  const pctViewFTD      = totais.views > 0 ? ((totais.ftds / totais.views) * 100).toFixed(1) + "%" : "—";
+  // ── FUNIL ────────────────────────────────────────────────────────────────
+  const pctViewAcesso = totais.views > 0 ? ((totais.acessos / totais.views) * 100).toFixed(1) + "%" : "—";
+  const pctAcessoReg  = totais.acessos > 0 ? ((totais.registros / totais.acessos) * 100).toFixed(1) + "%" : "—";
+  const pctRegFTD     = totais.registros > 0 ? ((totais.ftds / totais.registros) * 100).toFixed(1) + "%" : "—";
+  const pctViewFTD    = totais.views > 0 ? ((totais.ftds / totais.views) * 100).toFixed(1) + "%" : "—";
 
-  // ── CHART DATA ────────────────────────────────────────────────────────────
+  // ── CHART ────────────────────────────────────────────────────────────────
   const chartData = ranking.slice(0, 10).map((r) => ({
     nome: r.nome.split(" ")[0],
     GGR: parseFloat(r.ggr.toFixed(2)),
     Investimento: parseFloat(r.investimento.toFixed(2)),
   }));
 
-  const roiColor = totais.roi >= 0 ? "#22c55e" : "#ef4444";
-
-  // ── ESTILOS COMUNS ────────────────────────────────────────────────────────
+  // ── ESTILOS ───────────────────────────────────────────────────────────────
   const card = {
     background: t.cardBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
-    padding: 16,
+    padding: 20,
     boxShadow: "0 6px 24px rgba(0,0,0,0.25)",
   } as React.CSSProperties;
 
   const cardTitle = {
-    margin: "0 0 14px",
+    margin: "0 0 16px",
     fontSize: 13,
     fontWeight: 700,
     letterSpacing: "0.02em",
     color: t.text,
     fontFamily: FONT.body,
-  } as React.CSSProperties;
-
-  const selectStyle = {
-    background: t.inputBg,
-    border: `1px solid ${t.inputBorder}`,
-    color: t.text,
-    padding: "9px 12px",
-    borderRadius: 12,
-    fontSize: 13,
-    fontFamily: FONT.body,
-    outline: "none",
-    cursor: "pointer",
   } as React.CSSProperties;
 
   const thStyle = {
@@ -380,6 +392,46 @@ export default function DashboardOverview() {
     whiteSpace: "nowrap" as const,
   };
 
+  const btnNav = {
+    width: 30, height: 30,
+    borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent",
+    color: t.text,
+    cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: 14,
+    transition: "background 0.15s",
+  } as React.CSSProperties;
+
+  const btnHistorico = {
+    padding: "6px 16px",
+    borderRadius: 999,
+    border: historico ? "1px solid #7c3aed" : `1px solid ${t.cardBorder}`,
+    background: historico ? "rgba(124,58,237,0.15)" : "transparent",
+    color: historico ? "#7c3aed" : t.textMuted,
+    fontSize: 13,
+    fontWeight: historico ? 700 : 400,
+    cursor: "pointer",
+    fontFamily: FONT.body,
+    transition: "all 0.15s",
+  } as React.CSSProperties;
+
+  const selectStyle = {
+    background: t.inputBg,
+    border: `1px solid ${t.inputBorder ?? t.cardBorder}`,
+    color: t.text,
+    padding: "7px 12px",
+    borderRadius: 10,
+    fontSize: 13,
+    fontFamily: FONT.body,
+    outline: "none",
+    cursor: "pointer",
+  } as React.CSSProperties;
+
+  const isPrimeiro = idxMes === 0;
+  const isUltimo   = idxMes === mesesDisponiveis.length - 1;
+
   return (
     <div style={{ padding: "20px 24px 40px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
@@ -394,54 +446,77 @@ export default function DashboardOverview() {
       </div>
 
       {/* ── FILTROS ── */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20, alignItems: "center" }}>
-        <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} style={selectStyle}>
-          <option value="mes_atual">Mês atual</option>
-          <option value="semana_atual">Semana atual</option>
-          <option value="ultimos_30">Últimos 30 dias</option>
-          <option value="mes_passado">Mês passado</option>
-        </select>
+      <div style={{ ...card, marginBottom: 14, padding: "14px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
 
-        <select value={influencerFiltro} onChange={(e) => setInfluencerFiltro(e.target.value)} style={selectStyle}>
-          <option value="todos">Influencer: Todos</option>
-          {perfis.map((p) => (
-            <option key={p.id} value={p.id}>{p.nome_artistico}</option>
-          ))}
-        </select>
+          {/* Carrossel de meses + botão Histórico */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              onClick={irMesAnterior}
+              disabled={historico || isPrimeiro}
+            >‹</button>
 
-        <select value={plataformaFiltro} onChange={(e) => setPlataformaFiltro(e.target.value)} style={selectStyle}>
-          <option value="todas">Plataforma: Todas</option>
-          {["Twitch", "YouTube", "Instagram", "TikTok", "Kick"].map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 160, textAlign: "center" }}>
+              {historico ? "Todo o período" : mesSelecionado?.label}
+            </span>
 
-        {loading && (
-          <span style={{ fontSize: 12, color: t.textMuted, marginLeft: 4 }}>⏳ Carregando...</span>
-        )}
-        {!loading && (
-          <span style={{ fontSize: 12, color: t.textMuted, marginLeft: 4 }}>
-            {periodoLabel[periodo]} · {ranking.length} influencer{ranking.length !== 1 ? "s" : ""}
-          </span>
-        )}
+            <button
+              style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              onClick={irMesProximo}
+              disabled={historico || isUltimo}
+            >›</button>
+
+            <button style={btnHistorico} onClick={ativarHistorico}>
+              Histórico
+            </button>
+          </div>
+
+          {/* Filtros de influencer e plataforma */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <select value={influencerFiltro} onChange={(e) => setInfluencerFiltro(e.target.value)} style={selectStyle}>
+              <option value="todos">Influencer: Todos</option>
+              {perfis.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome_artistico}</option>
+              ))}
+            </select>
+
+            <select value={plataformaFiltro} onChange={(e) => setPlataformaFiltro(e.target.value)} style={selectStyle}>
+              <option value="todas">Plataforma: Todas</option>
+              {["Twitch", "YouTube", "Instagram", "TikTok", "Kick"].map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            {loading
+              ? <span style={{ fontSize: 12, color: t.textMuted }}>⏳ Carregando...</span>
+              : <span style={{ fontSize: 12, color: t.textMuted }}>{ranking.length} influencer{ranking.length !== 1 ? "s" : ""}</span>
+            }
+          </div>
+        </div>
       </div>
 
       {/* ── KPIs ── */}
       <div style={{ ...card, marginBottom: 14 }}>
         <h3 style={cardTitle}>KPIs Executivos</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          <KpiCard label="GGR Total" value={fmtBRL(totais.ggr)} delta={totais.roi >= 0 ? `ROI +${totais.roi.toFixed(1)}%` : `ROI ${totais.roi.toFixed(1)}%`} deltaPos={totais.roi >= 0} />
+
+        {/* Linha 1: GGR / Investimento / ROI */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
+          <KpiCard label="GGR Total"    value={fmtBRL(totais.ggr)} />
           <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} />
-          <KpiCard label="ROI Geral" value={`${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%`} delta="meta: 100%" deltaPos={totais.roi >= 100 ? true : totais.roi >= 50 ? null : false} />
-          <KpiCard label="Total FTDs" value={totais.ftds.toLocaleString("pt-BR")} />
-          <KpiCard label="Custo por FTD" value={totais.ftds > 0 ? fmtBRL(totais.custoPorFTD) : "—"} />
-          <KpiCard label="Total Registros" value={totais.registros.toLocaleString("pt-BR")} />
+          <KpiCard label="ROI Geral"    value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"} />
+        </div>
+
+        {/* Linha 2: Registros / Custo Registro / FTDs / Custo FTD */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          <KpiCard label="Total Registros"    value={totais.registros.toLocaleString("pt-BR")} />
           <KpiCard label="Custo por Registro" value={totais.registros > 0 ? fmtBRL(totais.custoPorRegistro) : "—"} />
-          <KpiCard label="Total Acessos" value={totais.acessos.toLocaleString("pt-BR")} />
+          <KpiCard label="Total FTDs"         value={totais.ftds.toLocaleString("pt-BR")} />
+          <KpiCard label="Custo por FTD"      value={totais.ftds > 0 ? fmtBRL(totais.custoPorFTD) : "—"} />
         </div>
       </div>
 
-      {/* ── FUNIL + CHART ── */}
+      {/* ── FUNIL + GRÁFICO ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
 
         {/* Funil */}
@@ -450,15 +525,15 @@ export default function DashboardOverview() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <FunnelStep label="Views (média)" value={totais.views} />
-              <FunnelStep label="Acessos" value={totais.acessos} pct={pctViewAcesso} />
-              <FunnelStep label="Registros" value={totais.registros} pct={pctAcessoReg} />
-              <FunnelStep label="FTDs" value={totais.ftds} pct={pctRegFTD} />
+              <FunnelStep label="Acessos"       value={totais.acessos} pct={pctViewAcesso} />
+              <FunnelStep label="Registros"     value={totais.registros} pct={pctAcessoReg} />
+              <FunnelStep label="FTDs"          value={totais.ftds} pct={pctRegFTD} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignContent: "start" }}>
-              <RateCard label="View → Acesso"    value={pctViewAcesso} hint="CTA / link track" />
-              <RateCard label="Acesso → Registro" value={pctAcessoReg} hint="UX de cadastro" />
-              <RateCard label="Registro → FTD"   value={pctRegFTD}    hint="Incentivo + intenção" />
-              <RateCard label="View → FTD total" value={pctViewFTD}   hint="Eficiência geral" highlight />
+              <RateCard label="View → Acesso"     value={pctViewAcesso} hint="CTA / link track" />
+              <RateCard label="Acesso → Registro" value={pctAcessoReg}  hint="UX de cadastro" />
+              <RateCard label="Registro → FTD"    value={pctRegFTD}     hint="Incentivo + intenção" />
+              <RateCard label="View → FTD total"  value={pctViewFTD}    hint="Eficiência geral" highlight />
             </div>
           </div>
         </div>
@@ -475,14 +550,17 @@ export default function DashboardOverview() {
               <BarChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
                 <XAxis dataKey="nome" tick={{ fill: t.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} />
+                <YAxis tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
                   contentStyle={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 12, fontSize: 12, color: t.text }}
                   formatter={(value: number) => [fmtBRL(value), ""]}
                 />
                 <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted }} />
-                <Bar dataKey="GGR" fill={roiColor} radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Investimento" fill="rgba(109,40,217,0.7)" radius={[6, 6, 0, 0]} />
+                {/* Linha de referência R$ 0 — divisor lucro/prejuízo */}
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={1.5} strokeDasharray="0" />
+                {/* Cores padrão Spin: roxo para GGR, roxo claro para Investimento */}
+                <Bar dataKey="GGR"         fill="#7c3aed"              radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Investimento" fill="rgba(167,139,250,0.55)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -491,13 +569,15 @@ export default function DashboardOverview() {
 
       {/* ── RANKING ── */}
       <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ ...cardTitle, margin: 0 }}>Ranking de Influencers</h3>
           <div style={{ display: "flex", gap: 8, fontSize: 11, flexWrap: "wrap" }}>
             {[
-              { label: "Rentável ≥ 100%", cor: "#22c55e", bg: "rgba(34,197,94,0.10)", border: "rgba(34,197,94,0.28)" },
-              { label: "Atenção 50–99%",  cor: "#f59e0b", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.28)" },
-              { label: "Não Rentável < 50%", cor: "#ef4444", bg: "rgba(239,68,68,0.10)", border: "rgba(239,68,68,0.28)" },
+              { label: "Rentável ≥ 100%",  cor: "#22c55e", bg: "rgba(34,197,94,0.10)",   border: "rgba(34,197,94,0.28)"   },
+              { label: "Atenção 0–99%",    cor: "#f59e0b", bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.28)"  },
+              { label: "Prejuízo",         cor: "#ef4444", bg: "rgba(239,68,68,0.10)",   border: "rgba(239,68,68,0.28)"   },
+              { label: "Bônus (sem invest.)", cor: "#a855f7", bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" },
+              { label: "Sem dados",        cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)" },
             ].map((s) => (
               <span key={s.label} style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${s.border}`, background: s.bg, color: s.cor, fontFamily: FONT.body }}>
                 {s.label}
@@ -522,7 +602,7 @@ export default function DashboardOverview() {
               </thead>
               <tbody>
                 {ranking.map((r, i) => {
-                  const st = statusROI(r.roi);
+                  const st = statusROI(r.roi, r.ggr, r.investimento);
                   const hTotal = Math.floor(r.horas);
                   const mTotal = Math.round((r.horas - hTotal) * 60);
                   return (
@@ -538,7 +618,7 @@ export default function DashboardOverview() {
                       <td style={tdStyle}>{r.investimento > 0 ? fmtBRL(r.investimento) : "—"}</td>
                       <td style={tdStyle}>
                         <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body }}>
-                          {r.roi >= 0 ? "+" : ""}{r.roi.toFixed(0)}%
+                          {st.roiStr}
                         </span>
                       </td>
                       <td style={tdStyle}>
