@@ -9,7 +9,9 @@ import Login         from "./pages/geral/Login";
 import Configuracoes from "./pages/geral/Configuracoes";
 import Ajuda         from "./pages/geral/Ajuda";
 // Páginas — dashboards
-import Dashboard     from "./pages/dashboards/Dashboard";
+import DashboardOverview   from "./pages/dashboards/DashboardOverview";
+import DashboardConversao  from "./pages/dashboards/DashboardConversao";
+import DashboardFinanceiro from "./pages/dashboards/DashboardFinanceiro";
 // Páginas — lives
 import Agenda        from "./pages/lives/Agenda";
 import Resultados    from "./pages/lives/Resultados";
@@ -21,23 +23,25 @@ import GestaoLinks   from "./pages/operacoes/GestaoLinks";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
-  dashboard:    Dashboard,
-  agenda:       Agenda,
-  resultados:   Resultados,
-  feedback:     Feedback,
-  influencers:  Influencers,
-  financeiro:   Financeiro,
-  gestao_links: GestaoLinks,
-  configuracoes: Configuracoes,
-  ajuda:        Ajuda,
+  dash_overview:    DashboardOverview,
+  dash_conversao:   DashboardConversao,
+  dash_financeiro:  DashboardFinanceiro,
+  agenda:           Agenda,
+  resultados:       Resultados,
+  feedback:         Feedback,
+  influencers:      Influencers,
+  financeiro:       Financeiro,
+  gestao_links:     GestaoLinks,
+  configuracoes:    Configuracoes,
+  ajuda:            Ajuda,
 };
 
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
 function AppLayout({ onLogout }: { onLogout: () => void }) {
   const { user, theme: t } = useApp();
-  const [activePage, setActivePage] = useState("dashboard");
+  const [activePage, setActivePage] = useState("dash_overview");
   if (!user) return null;
-  const PageComponent = PAGE_MAP[activePage] ?? Dashboard;
+  const PageComponent = PAGE_MAP[activePage] ?? DashboardOverview;
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: t.bg }}>
       <Sidebar
@@ -84,4 +88,3 @@ export default function App() {
     </AppProvider>
   );
 }
-
