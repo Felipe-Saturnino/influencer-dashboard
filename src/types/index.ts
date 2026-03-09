@@ -87,9 +87,15 @@ export interface Pagamento {
 export type UtmAliasStatus = "pendente" | "mapeado" | "descartado";
 
 export interface UtmAlias {
-  id:             string;
-  utm_source:     string;
-  influencer_id?: string;
-  status:         UtmAliasStatus;
-  criado_em?:     string;
+  id:               string;
+  utm_source:       string;
+  influencer_id?:   string;
+  influencer_name?: string;
+  status:           UtmAliasStatus;
+  primeiro_visto?:  string;
+  ultimo_visto?:    string;
+  total_ftds?:      number;
+  total_deposit?:   number;
+  ggr?:             number;
+  criado_em?:       string;
 }
