@@ -2,10 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Cell,
-} from "recharts";
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };
@@ -42,85 +38,45 @@ function getDatasDoMes(ano: number, mes: number) {
 }
 
 function pct(num: number, den: number): number | null { return den === 0 ? null : (num / den) * 100; }
-function fmtPct(v: number | null): string { return v === null ? "—" : v.toFixed(1) + "%" }
+function fmtPct(v: number | null): string { return v === null ? "—" : v.toFixed(1) + "%"; }
 
-// ─── PERFIL (Tipo de influencer: alcance vs conversão) ────────────────────────
-// Duplo Impacto  ⭐  Views > 5.000 E View→FTD ≥ 3%
-// Conversor      🚀  View→FTD ≥ 3% (qualquer volume)
-// Alto Alcance   👁️  Views > 5.000 E View→FTD < 3%
-// Baixa Conv.    ⚠️  Views > 0 E View→FTD < 1%
-// Equilibrado    ⚖️  Demais (sem views ou 1%–3% com views ≤ 5.000)
-
+// ─── PERFIL ───────────────────────────────────────────────────────────────────
 type PerfilInfo = { label: string; cor: string; bg: string; border: string; icon: string };
 
 function getPerfilConversao(row: ConversaoRow): PerfilInfo {
   const p = row.pctViewFTD;
-  const altoAlcance = row.views > 5000;
+  const altoAlcance  = row.views > 5000;
   const boaConversao = p !== null && p >= 3;
-  const baixaConversao = p !== null && p < 1 && row.views > 0;
-
-  if (altoAlcance && boaConversao)
-    return { label: "Duplo Impacto",   cor: "#f59e0b", bg: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.30)",  icon: "⭐" };
-  if (boaConversao)
-    return { label: "Conversor",       cor: "#22c55e", bg: "rgba(34,197,94,0.12)",   border: "rgba(34,197,94,0.28)",   icon: "🚀" };
-  if (altoAlcance)
-    return { label: "Alto Alcance",    cor: "#3b82f6", bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.28)",  icon: "👁️" };
-  if (baixaConversao)
-    return { label: "Baixa Conv.",     cor: "#ef4444", bg: "rgba(239,68,68,0.12)",   border: "rgba(239,68,68,0.28)",   icon: "⚠️" };
-  return                               { label: "Equilibrado",    cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", icon: "⚖️" };
+  const baixaConv    = p !== null && p < 1 && row.views > 0;
+  if (altoAlcance && boaConversao) return { label: "Duplo Impacto", cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", icon: "⭐" };
+  if (boaConversao)                return { label: "Conversor",     cor: "#22c55e", bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  icon: "🚀" };
+  if (altoAlcance)                 return { label: "Alto Alcance",  cor: "#3b82f6", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.28)", icon: "👁️" };
+  if (baixaConv)                   return { label: "Baixa Conv.",   cor: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.28)",  icon: "⚠️" };
+  return                                  { label: "Equilibrado",   cor: "#6b7280", bg: "rgba(107,114,128,0.10)",border: "rgba(107,114,128,0.22)",icon: "⚖️" };
 }
 
-// ─── TOOLTIP BARCHART HORIZONTAL ──────────────────────────────────────────────
-function HBarTooltip({ active, payload, cardBg, cardBorder, text }: any) {
-  if (!active || !payload?.length) return null;
-  const d = payload[0];
-  return (
-    <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 12, padding: "10px 14px", fontSize: 12, color: text, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
-      <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 13 }}>{payload[0]?.payload?.nome}</div>
-      <div style={{ color: "#9ca3af" }}>FTD/Hora: <span style={{ color: "#7c3aed", fontWeight: 700 }}>{d.value.toFixed(2)}</span></div>
-    </div>
-  );
-}
-
-// ─── PAINEL DO FUNIL (reutilizado para os dois slots do comparativo) ───────────
-function PainelFunil({
-  row, label, isEmpty, theme: t,
-}: {
-  row: ConversaoRow | null; label: string; isEmpty: boolean;
-  theme: any;
-}) {
+// ─── PAINEL FUNIL (slot A ou B) ───────────────────────────────────────────────
+function PainelFunil({ row, isEmpty, theme: t }: { row: ConversaoRow | null; isEmpty: boolean; theme: any }) {
   if (isEmpty || !row) {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 14, border: `1px dashed ${t.cardBorder}`, minHeight: 280, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-        {label}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 14, border: `1px dashed ${t.cardBorder}`, minHeight: 160, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+        Selecione um influencer
       </div>
     );
   }
-
-  const taxa1 = fmtPct(pct(row.acessos, row.views));
-  const taxa2 = fmtPct(pct(row.registros, row.acessos));
-  const taxa3 = fmtPct(pct(row.ftds, row.registros));
   const taxa4 = fmtPct(pct(row.ftds, row.views));
   const ftdH  = row.horas > 0 ? (row.ftds / row.horas).toFixed(2) : "—";
 
   const steps = [
     { label: "Views",     val: row.views,     taxa: undefined },
-    { label: "Acessos",   val: row.acessos,   taxa: taxa1 },
-    { label: "Registros", val: row.registros, taxa: taxa2 },
-    { label: "FTDs",      val: row.ftds,      taxa: taxa3 },
-  ];
-
-  const taxas = [
-    { label: "View→Acesso",  val: taxa1, hl: false },
-    { label: "Acesso→Reg",   val: taxa2, hl: false },
-    { label: "Reg→FTD",      val: taxa3, hl: false },
-    { label: "View→FTD",     val: taxa4, hl: true  },
-    { label: "FTD/Hora ⚡",  val: ftdH,  hl: false },
+    { label: "Acessos",   val: row.acessos,   taxa: fmtPct(pct(row.acessos, row.views)) },
+    { label: "Registros", val: row.registros, taxa: fmtPct(pct(row.registros, row.acessos)) },
+    { label: "FTDs",      val: row.ftds,      taxa: fmtPct(pct(row.ftds, row.registros)) },
   ];
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-      {/* Steps */}
+      {/* Steps funil */}
       {steps.map((s) => (
         <div key={s.label} style={{ padding: "9px 12px", borderRadius: 12, border: `1px solid ${t.cardBorder}`, background: "rgba(124,58,237,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -130,15 +86,105 @@ function PainelFunil({
           <div style={{ fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{s.val.toLocaleString("pt-BR")}</div>
         </div>
       ))}
-      {/* Taxas em grid 2x3 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 4 }}>
-        {taxas.map((tx) => (
-          <div key={tx.label} style={{ padding: "8px 10px", borderRadius: 10, border: tx.hl ? "1px solid rgba(124,58,237,0.4)" : `1px solid ${t.cardBorder}`, background: tx.hl ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.02)" }}>
-            <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{tx.label}</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: tx.hl ? "#a78bfa" : t.text, fontFamily: FONT.body }}>{tx.val}</div>
-          </div>
-        ))}
+      {/* Apenas View→FTD e FTD/Hora */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 4 }}>
+        <div style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(124,58,237,0.4)", background: "rgba(124,58,237,0.12)" }}>
+          <div style={{ fontSize: 9, color: "#a78bfa", fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>View→FTD</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "#a78bfa", fontFamily: FONT.body }}>{taxa4}</div>
+        </div>
+        <div style={{ padding: "10px 12px", borderRadius: 12, border: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.02)" }}>
+          <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>⚡ FTD/Hora</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{ftdH}</div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+// ─── PÓDIO FTD/HORA ───────────────────────────────────────────────────────────
+const MEDALHAS = ["🥇", "🥈", "🥉"];
+const PODIO_ALTURAS = [130, 90, 70]; // px da coluna do pódio
+const PODIO_CORES   = [
+  { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.4)", text: "#f59e0b" },  // ouro
+  { bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.35)", text: "#94a3b8" }, // prata
+  { bg: "rgba(180,120,70,0.12)",  border: "rgba(180,120,70,0.35)",  text: "#b47846" }, // bronze
+];
+
+function PodioFTDHora({ ranking, theme: t }: { ranking: ConversaoRow[]; theme: any }) {
+  if (ranking.length === 0) {
+    return <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem dados no período</div>;
+  }
+
+  const top3  = ranking.slice(0, 3);
+  const resto = ranking.slice(3);
+
+  // Reordenar pódio: 2º | 1º | 3º (visual clássico)
+  const podioOrdem = top3.length >= 2
+    ? [top3[1], top3[0], top3[2]].filter(Boolean)
+    : top3;
+  const podioIdx   = top3.length >= 2 ? [1, 0, 2] : [0]; // índices originais no ranking
+
+  return (
+    <div>
+      {/* ── PÓDIO VISUAL ── */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 12, marginBottom: 28 }}>
+        {podioOrdem.map((row, i) => {
+          const rankIdx = podioIdx[i]; // posição real (0=1º, 1=2º, 2=3º)
+          const cor     = PODIO_CORES[rankIdx];
+          const altura  = PODIO_ALTURAS[rankIdx];
+          const medalha = MEDALHAS[rankIdx];
+          const maxFtdH = top3[0].ftdPorHora;
+          const barPct  = maxFtdH > 0 ? (row.ftdPorHora / maxFtdH) * 100 : 0;
+
+          return (
+            <div key={row.influencer_id} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 140 }}>
+              {/* Nome */}
+              <div style={{ fontSize: 12, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginBottom: 6, textAlign: "center", maxWidth: 130 }}>{row.nome.split(" ")[0]}</div>
+              {/* Valor */}
+              <div style={{ fontSize: 20, fontWeight: 900, color: cor.text, fontFamily: FONT.body, marginBottom: 8 }}>{row.ftdPorHora.toFixed(2)}</div>
+              {/* Barra de pódio */}
+              <div style={{
+                width: "100%", height: altura,
+                background: cor.bg, border: `1px solid ${cor.border}`,
+                borderRadius: "12px 12px 0 0",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
+                paddingTop: 12,
+                position: "relative",
+              }}>
+                <span style={{ fontSize: 28 }}>{medalha}</span>
+                <span style={{ fontSize: 11, color: cor.text, fontWeight: 700, marginTop: 6, fontFamily: FONT.body }}>#{rankIdx + 1}</span>
+                {/* Mini barra de progresso interna */}
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 4, borderRadius: "0 0 0 0", background: cor.border }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── LISTA DO RESTO ── */}
+      {resto.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {resto.map((row, i) => {
+            const pos     = i + 4;
+            const maxFtdH = ranking[0].ftdPorHora;
+            const barPct  = maxFtdH > 0 ? (row.ftdPorHora / maxFtdH) * 100 : 0;
+            return (
+              <div key={row.influencer_id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.02)" }}>
+                {/* Posição */}
+                <div style={{ width: 24, fontSize: 12, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textAlign: "right", flexShrink: 0 }}>#{pos}</div>
+                {/* Nome */}
+                <div style={{ fontSize: 13, fontWeight: 600, color: t.text, fontFamily: FONT.body, width: 110, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.nome.split(" ")[0]}</div>
+                {/* Barra proporcional */}
+                <div style={{ flex: 1, height: 6, background: t.cardBorder, borderRadius: 999, overflow: "hidden" }}>
+                  <div style={{ width: `${barPct}%`, height: "100%", background: "rgba(124,58,237,0.55)", borderRadius: 999, transition: "width 0.4s" }} />
+                </div>
+                {/* Valor */}
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", fontFamily: FONT.body, flexShrink: 0, width: 40, textAlign: "right" }}>{row.ftdPorHora.toFixed(2)}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -151,17 +197,15 @@ export default function DashboardConversao() {
   const hoje = new Date();
   const idxInicial = mesesDisponiveis.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
 
-  const [idxMes, setIdxMes]           = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
-  const [historico, setHistorico]     = useState(false);
-  const [influencerFiltro, setInfluencerFiltro] = useState("todos");
-  const [plataformaFiltro, setPlataformaFiltro] = useState("todas");
-  const [loading, setLoading]         = useState(true);
-  const [perfis, setPerfis]           = useState<InfluencerPerfil[]>([]);
-  const [rows, setRows]               = useState<ConversaoRow[]>([]);
+  const [idxMes, setIdxMes]       = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+  const [historico, setHistorico] = useState(false);
+  const [loading, setLoading]     = useState(true);
+  const [perfis, setPerfis]       = useState<InfluencerPerfil[]>([]);
+  const [rows, setRows]           = useState<ConversaoRow[]>([]);
 
-  // Comparativo — dois slots independentes
-  const [compA, setCompA] = useState<string>("placeholder_a");
-  const [compB, setCompB] = useState<string>("placeholder_b");
+  // Comparativo — inicializa em placeholder, preenchido após carga
+  const [compA, setCompA] = useState<string>("");
+  const [compB, setCompB] = useState<string>("");
 
   // Filtro de perfil na tabela
   const [perfilFiltro, setPerfilFiltro] = useState<string | null>(null);
@@ -191,7 +235,6 @@ export default function DashboardConversao() {
         const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
         qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
       }
-      if (influencerFiltro !== "todos") qMetricas = qMetricas.eq("influencer_id", influencerFiltro);
       const { data: metricasData } = await qMetricas;
       const metricas = metricasData || [];
 
@@ -200,8 +243,6 @@ export default function DashboardConversao() {
         const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
         qLives = qLives.gte("data", inicio).lte("data", fim);
       }
-      if (influencerFiltro !== "todos") qLives = qLives.eq("influencer_id", influencerFiltro);
-      if (plataformaFiltro !== "todas") qLives = qLives.eq("plataforma", plataformaFiltro);
       const { data: livesData } = await qLives;
       const lives = livesData || [];
 
@@ -244,26 +285,28 @@ export default function DashboardConversao() {
 
       resultado.sort((a, b) => b.ftds - a.ftds);
       setRows(resultado);
+
+      // Pré-preencher A e B com os dois primeiros com dados
+      if (resultado.length >= 1) setCompA((prev) => prev || resultado[0].influencer_id);
+      if (resultado.length >= 2) setCompB((prev) => prev || resultado[1].influencer_id);
+
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, influencerFiltro, plataformaFiltro]);
+  }, [historico, idxMes]);
 
   // ── DADOS DERIVADOS ────────────────────────────────────────────────────────
   const rowA = rows.find((r) => r.influencer_id === compA) || null;
   const rowB = rows.find((r) => r.influencer_id === compB) || null;
 
-  // Ranking FTD/Hora — todos, ordenado desc
-  const ftdHoraData = rows
-    .filter((r) => r.ftdPorHora > 0)
-    .sort((a, b) => b.ftdPorHora - a.ftdPorHora)
-    .map((r) => ({ nome: r.nome.split(" ")[0], valor: parseFloat(r.ftdPorHora.toFixed(2)), id: r.influencer_id }));
+  // Ranking FTD/Hora — todos com horas > 0, ordenado desc
+  const rankingFtdHora = rows.filter((r) => r.ftdPorHora > 0).sort((a, b) => b.ftdPorHora - a.ftdPorHora);
 
   const perfisDisponiveis: PerfilInfo[] = [
     { label: "Duplo Impacto", cor: "#f59e0b", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)", icon: "⭐" },
     { label: "Conversor",     cor: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)",  icon: "🚀" },
     { label: "Alto Alcance",  cor: "#3b82f6", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.28)", icon: "👁️" },
-    { label: "Equilibrado",   cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", icon: "⚖️" },
+    { label: "Equilibrado",   cor: "#6b7280", bg: "rgba(107,114,128,0.10)",border: "rgba(107,114,128,0.22)",icon: "⚖️" },
     { label: "Baixa Conv.",   cor: "#ef4444", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.28)",  icon: "⚠️" },
   ];
   const rowsFiltrados = perfilFiltro ? rows.filter((r) => r.perfilLabel === perfilFiltro) : rows;
@@ -277,8 +320,6 @@ export default function DashboardConversao() {
   const btnNav = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 } as React.CSSProperties;
   const btnHistorico = { padding: "6px 16px", borderRadius: 999, border: historico ? "1px solid #7c3aed" : `1px solid ${t.cardBorder}`, background: historico ? "rgba(124,58,237,0.15)" : "transparent", color: historico ? "#7c3aed" : t.textMuted, fontSize: 13, fontWeight: historico ? 700 : 400, cursor: "pointer", fontFamily: FONT.body } as React.CSSProperties;
 
-  const isPlaceholder = (id: string) => id === "placeholder_a" || id === "placeholder_b";
-
   return (
     <div style={{ padding: "20px 24px 40px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
@@ -288,34 +329,17 @@ export default function DashboardConversao() {
         <p style={{ margin: "6px 0 0", color: t.textMuted, fontSize: 13 }}>Análise do funil de conversão por influencer — taxas, eficiência e perfil de audiência.</p>
       </div>
 
-      {/* ── BLOCO 1: FILTROS (padrão Overview) ── */}
-      <div style={{ ...card, marginBottom: 14, padding: "14px 20px", background: `linear-gradient(135deg, ${t.cardBg} 0%, rgba(124,58,237,0.04) 100%)` }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-
-          {/* Carrossel centralizado */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {/* ── BLOCO 1: FILTROS — idêntico ao Overview ── */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ ...card, padding: "14px 20px", background: `linear-gradient(135deg, ${t.cardBg} 0%, rgba(124,58,237,0.04) 100%)` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
             <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>‹</button>
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 160, textAlign: "center" }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>›</button>
             <button style={btnHistorico} onClick={toggleHistorico}>Histórico</button>
-          </div>
-
-          {/* Filtros contextuais */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <select value={influencerFiltro} onChange={(e) => setInfluencerFiltro(e.target.value)} style={selectStyle}>
-              <option value="todos">Influencer: Todos</option>
-              {perfis.map((p) => <option key={p.id} value={p.id}>{p.nome_artistico}</option>)}
-            </select>
-            <select value={plataformaFiltro} onChange={(e) => setPlataformaFiltro(e.target.value)} style={selectStyle}>
-              <option value="todas">Plataforma: Todas</option>
-              {["Twitch","YouTube","Instagram","TikTok","Kick"].map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-            {loading
-              ? <span style={{ fontSize: 12, color: t.textMuted }}>⏳ Carregando...</span>
-              : <span style={{ fontSize: 12, color: t.textMuted }}>{rows.length} influencer{rows.length !== 1 ? "s" : ""}</span>
-            }
+            {loading && <span style={{ fontSize: 12, color: t.textMuted, marginLeft: 8 }}>⏳ Carregando...</span>}
           </div>
         </div>
       </div>
@@ -326,32 +350,24 @@ export default function DashboardConversao() {
 
         {/* Selects dos dois influencers */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 8, alignItems: "center", marginBottom: 16 }}>
-          <select
-            value={compA}
-            onChange={(e) => setCompA(e.target.value)}
-            style={{ ...selectStyle, width: "100%", borderColor: compA && !isPlaceholder(compA) ? "rgba(124,58,237,0.5)" : undefined }}
-          >
-            <option value="placeholder_a">— Selecione o influencer A —</option>
-            {rows.filter((r) => r.influencer_id !== compB || isPlaceholder(compB)).map((r) => (
+          <select value={compA} onChange={(e) => setCompA(e.target.value)} style={{ ...selectStyle, width: "100%", borderColor: compA ? "rgba(124,58,237,0.5)" : undefined }}>
+            <option value="">— Selecione —</option>
+            {rows.filter((r) => r.influencer_id !== compB).map((r) => (
               <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
             ))}
           </select>
           <div style={{ textAlign: "center", fontSize: 16, color: t.textMuted, fontWeight: 700 }}>vs</div>
-          <select
-            value={compB}
-            onChange={(e) => setCompB(e.target.value)}
-            style={{ ...selectStyle, width: "100%", borderColor: compB && !isPlaceholder(compB) ? "rgba(37,99,235,0.5)" : undefined }}
-          >
-            <option value="placeholder_b">— Selecione o influencer B —</option>
-            {rows.filter((r) => r.influencer_id !== compA || isPlaceholder(compA)).map((r) => (
+          <select value={compB} onChange={(e) => setCompB(e.target.value)} style={{ ...selectStyle, width: "100%", borderColor: compB ? "rgba(37,99,235,0.5)" : undefined }}>
+            <option value="">— Selecione —</option>
+            {rows.filter((r) => r.influencer_id !== compA).map((r) => (
               <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
             ))}
           </select>
         </div>
 
-        {/* Cabeçalhos coloridos */}
-        {(!isPlaceholder(compA) || !isPlaceholder(compB)) && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 10 }}>
+        {/* Cabeçalhos coloridos com nome */}
+        {(rowA || rowB) && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 12 }}>
             <div style={{ padding: "6px 12px", borderRadius: 10, background: "rgba(124,58,237,0.10)", border: "1px solid rgba(124,58,237,0.3)", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#a78bfa", fontFamily: FONT.body }}>
               {rowA?.nome ?? "—"}
             </div>
@@ -361,47 +377,25 @@ export default function DashboardConversao() {
           </div>
         )}
 
-        {/* Os dois painéis */}
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando dados...</div>
         ) : (
           <div style={{ display: "flex", gap: 16 }}>
-            <PainelFunil row={rowA} label="Selecione o influencer A" isEmpty={isPlaceholder(compA)} theme={t} />
+            <PainelFunil row={rowA} isEmpty={!compA} theme={t} />
             <div style={{ width: 1, background: t.cardBorder, flexShrink: 0 }} />
-            <PainelFunil row={rowB} label="Selecione o influencer B" isEmpty={isPlaceholder(compB)} theme={t} />
+            <PainelFunil row={rowB} isEmpty={!compB} theme={t} />
           </div>
         )}
       </div>
 
-      {/* ── BLOCO 3: RANKING FTD/HORA ── */}
+      {/* ── BLOCO 3: PÓDIO FTD/HORA ── */}
       <div style={{ ...card, marginBottom: 14 }}>
         <h3 style={cardTitle}><span style={{ fontSize: 16 }}>⚡</span> Ranking FTD/Hora — Eficiência por Influencer</h3>
-        <p style={{ margin: "-8px 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>FTDs gerados por hora de live ao vivo — influencers com 0 FTDs omitidos.</p>
+        <p style={{ margin: "-8px 0 20px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>FTDs gerados por hora de live — influencers sem horas registradas omitidos.</p>
         {loading ? (
-          <div style={{ height: Math.max(180, ftdHoraData.length * 36), display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>Carregando...</div>
-        ) : ftdHoraData.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem dados no período</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando...</div>
         ) : (
-          <ResponsiveContainer width="100%" height={Math.max(180, ftdHoraData.length * 38)}>
-            <BarChart
-              data={ftdHoraData}
-              layout="vertical"
-              margin={{ top: 0, right: 40, left: 8, bottom: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" horizontal={false} />
-              <XAxis type="number" tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1)} />
-              <YAxis type="category" dataKey="nome" width={90} tick={{ fill: t.text, fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<HBarTooltip cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} cursor={{ fill: "rgba(124,58,237,0.08)" }} />
-              <Bar dataKey="valor" radius={[0, 6, 6, 0]} maxBarSize={22}>
-                {ftdHoraData.map((_, i) => (
-                  <Cell
-                    key={i}
-                    fill={`rgba(124,58,237,${Math.max(0.35, 1 - i * (0.55 / Math.max(ftdHoraData.length - 1, 1)))})`}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <PodioFTDHora ranking={rankingFtdHora} theme={t} />
         )}
       </div>
 
@@ -409,8 +403,6 @@ export default function DashboardConversao() {
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
           <h3 style={{ ...cardTitle, margin: 0 }}><span style={{ fontSize: 16 }}>📋</span> Comparativo de Taxas</h3>
-
-          {/* Filtros de perfil clicáveis */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {perfisDisponiveis.map((p) => {
               const ativo = perfilFiltro === p.label;
@@ -421,9 +413,7 @@ export default function DashboardConversao() {
                 </button>
               );
             })}
-            {perfilFiltro && (
-              <button onClick={() => setPerfilFiltro(null)} style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 11 }}>✕ Limpar</button>
-            )}
+            {perfilFiltro && <button onClick={() => setPerfilFiltro(null)} style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 11 }}>✕ Limpar</button>}
           </div>
         </div>
 
@@ -442,14 +432,9 @@ export default function DashboardConversao() {
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
               <thead>
                 <tr>
-                  {[
-                    "Influencer",
-                    "Views", "View→Acesso",
-                    "Acessos", "Acesso→Reg",
-                    "Registros", "Reg→FTD",
-                    "FTDs",
-                    "Perfil",
-                  ].map((h) => <th key={h} style={thStyle}>{h}</th>)}
+                  {["Influencer","Views","View→Acesso","Acessos","Acesso→Reg","Registros","Reg→FTD","FTDs","Perfil"].map((h) => (
+                    <th key={h} style={thStyle}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -458,21 +443,13 @@ export default function DashboardConversao() {
                   return (
                     <tr key={r.influencer_id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(124,58,237,0.03)" }}>
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
-                      {/* Views */}
                       <td style={tdStyle}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
-                      {/* View→Acesso */}
                       <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>{fmtPct(r.pctViewAcesso)}</td>
-                      {/* Acessos */}
                       <td style={tdStyle}>{r.acessos.toLocaleString("pt-BR")}</td>
-                      {/* Acesso→Reg */}
                       <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>{fmtPct(r.pctAcessoReg)}</td>
-                      {/* Registros */}
                       <td style={tdStyle}>{r.registros.toLocaleString("pt-BR")}</td>
-                      {/* Reg→FTD */}
                       <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>{fmtPct(r.pctRegFTD)}</td>
-                      {/* FTDs */}
                       <td style={{ ...tdStyle, fontWeight: 700, color: r.ftds > 0 ? "#22c55e" : t.text }}>{r.ftds.toLocaleString("pt-BR")}</td>
-                      {/* Perfil */}
                       <td style={tdStyle}>
                         <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${pf.border}`, background: pf.bg, color: pf.cor, fontSize: 11, fontFamily: FONT.body, whiteSpace: "nowrap" }}>
                           {pf.icon} {pf.label}
