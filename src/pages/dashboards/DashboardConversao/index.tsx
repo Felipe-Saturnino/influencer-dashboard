@@ -6,6 +6,24 @@ import { supabase } from "../../../lib/supabase";
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };
 
+// Paleta A (roxo) e B (azul)
+const COR_A = {
+  accent:  "#a78bfa",
+  bg:      "rgba(124,58,237,0.10)",
+  border:  "rgba(124,58,237,0.35)",
+  step:    "rgba(124,58,237,0.07)",
+  taxa:    "rgba(124,58,237,0.14)",
+  taxaBorder: "rgba(124,58,237,0.45)",
+};
+const COR_B = {
+  accent:  "#60a5fa",
+  bg:      "rgba(37,99,235,0.10)",
+  border:  "rgba(37,99,235,0.35)",
+  step:    "rgba(37,99,235,0.07)",
+  taxa:    "rgba(37,99,235,0.14)",
+  taxaBorder: "rgba(37,99,235,0.45)",
+};
+
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface InfluencerPerfil { id: string; nome_artistico: string; cache_hora: number; }
 
@@ -14,7 +32,7 @@ interface ConversaoRow {
   views: number; acessos: number; registros: number; ftds: number; horas: number;
   pctViewAcesso: number | null; pctAcessoReg: number | null;
   pctRegFTD: number | null; pctViewFTD: number | null;
-  ftdPorHora: number; perfilLabel: string;
+  ftdPorHora: number; acaoLabel: string;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -40,23 +58,34 @@ function getDatasDoMes(ano: number, mes: number) {
 function pct(num: number, den: number): number | null { return den === 0 ? null : (num / den) * 100; }
 function fmtPct(v: number | null): string { return v === null ? "—" : v.toFixed(1) + "%"; }
 
-// ─── PERFIL ───────────────────────────────────────────────────────────────────
-type PerfilInfo = { label: string; cor: string; bg: string; border: string; icon: string };
+// ─── COLUNA AÇÃO (em ordem de prioridade) ─────────────────────────────────────
+// 1. View→Acesso < 10%  → "Divulgar o link"    🔗
+// 2. Acesso→Reg  < 10%  → "Converter visita"   🎮
+// 3. Reg→FTD     < 60%  → "Ativar cadastro"    🎯
+// Sem pendências        → "Em dia"             ✅
 
-function getPerfilConversao(row: ConversaoRow): PerfilInfo {
-  const p = row.pctViewFTD;
-  const altoAlcance  = row.views > 5000;
-  const boaConversao = p !== null && p >= 3;
-  const baixaConv    = p !== null && p < 1 && row.views > 0;
-  if (altoAlcance && boaConversao) return { label: "Duplo Impacto", cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.30)", icon: "⭐" };
-  if (boaConversao)                return { label: "Conversor",     cor: "#22c55e", bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  icon: "🚀" };
-  if (altoAlcance)                 return { label: "Alto Alcance",  cor: "#3b82f6", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.28)", icon: "👁️" };
-  if (baixaConv)                   return { label: "Baixa Conv.",   cor: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.28)",  icon: "⚠️" };
-  return                                  { label: "Equilibrado",   cor: "#6b7280", bg: "rgba(107,114,128,0.10)",border: "rgba(107,114,128,0.22)",icon: "⚖️" };
+type AcaoInfo = { label: string; icon: string; cor: string; bg: string; border: string };
+
+function getAcao(row: ConversaoRow): AcaoInfo {
+  if (row.pctViewAcesso !== null && row.pctViewAcesso < 10)
+    return { label: "Divulgar o link",  icon: "🔗", cor: "#f59e0b", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" };
+  if (row.pctAcessoReg !== null && row.pctAcessoReg < 10)
+    return { label: "Converter visita", icon: "🎮", cor: "#a855f7", bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" };
+  if (row.pctRegFTD !== null && row.pctRegFTD < 60)
+    return { label: "Ativar cadastro",  icon: "🎯", cor: "#3b82f6", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.28)" };
+  return { label: "Em dia",            icon: "✅", cor: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  };
 }
 
-// ─── PAINEL FUNIL (slot A ou B) ───────────────────────────────────────────────
-function PainelFunil({ row, isEmpty, theme: t }: { row: ConversaoRow | null; isEmpty: boolean; theme: any }) {
+// ─── PAINEL FUNIL ─────────────────────────────────────────────────────────────
+function PainelFunil({
+  row, isEmpty, cor,
+}: {
+  row: ConversaoRow | null;
+  isEmpty: boolean;
+  cor: typeof COR_A;
+}) {
+  const { theme: t } = useApp();
+
   if (isEmpty || !row) {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 14, border: `1px dashed ${t.cardBorder}`, minHeight: 160, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -64,6 +93,7 @@ function PainelFunil({ row, isEmpty, theme: t }: { row: ConversaoRow | null; isE
       </div>
     );
   }
+
   const taxa4 = fmtPct(pct(row.ftds, row.views));
   const ftdH  = row.horas > 0 ? (row.ftds / row.horas).toFixed(2) : "—";
 
@@ -76,25 +106,24 @@ function PainelFunil({ row, isEmpty, theme: t }: { row: ConversaoRow | null; isE
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-      {/* Steps funil */}
       {steps.map((s) => (
-        <div key={s.label} style={{ padding: "9px 12px", borderRadius: 12, border: `1px solid ${t.cardBorder}`, background: "rgba(124,58,237,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div key={s.label} style={{ padding: "9px 12px", borderRadius: 12, border: `1px solid ${cor.border}`, background: cor.step, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: 10, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>{s.label}</div>
-            {s.taxa && <div style={{ fontSize: 10, color: BASE_COLORS.purple, marginTop: 1, fontFamily: "monospace" }}>↓ {s.taxa}</div>}
+            <div style={{ fontSize: 10, color: cor.accent, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, fontWeight: 600 }}>{s.label}</div>
+            {s.taxa && <div style={{ fontSize: 10, color: cor.accent, marginTop: 1, fontFamily: "monospace", opacity: 0.8 }}>↓ {s.taxa}</div>}
           </div>
           <div style={{ fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{s.val.toLocaleString("pt-BR")}</div>
         </div>
       ))}
-      {/* Apenas View→FTD e FTD/Hora */}
+      {/* View→FTD e FTD/Hora — mesma cor */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 4 }}>
-        <div style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(124,58,237,0.4)", background: "rgba(124,58,237,0.12)" }}>
-          <div style={{ fontSize: 9, color: "#a78bfa", fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>View→FTD</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#a78bfa", fontFamily: FONT.body }}>{taxa4}</div>
+        <div style={{ padding: "10px 12px", borderRadius: 12, border: `1px solid ${cor.taxaBorder}`, background: cor.taxa }}>
+          <div style={{ fontSize: 9, color: cor.accent, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, fontWeight: 600 }}>View→FTD</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: cor.accent, fontFamily: FONT.body }}>{taxa4}</div>
         </div>
-        <div style={{ padding: "10px 12px", borderRadius: 12, border: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.02)" }}>
-          <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>⚡ FTD/Hora</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{ftdH}</div>
+        <div style={{ padding: "10px 12px", borderRadius: 12, border: `1px solid ${cor.taxaBorder}`, background: cor.taxa }}>
+          <div style={{ fontSize: 9, color: cor.accent, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, fontWeight: 600 }}>⚡ FTD/Hora</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: cor.accent, fontFamily: FONT.body }}>{ftdH}</div>
         </div>
       </div>
     </div>
@@ -102,15 +131,18 @@ function PainelFunil({ row, isEmpty, theme: t }: { row: ConversaoRow | null; isE
 }
 
 // ─── PÓDIO FTD/HORA ───────────────────────────────────────────────────────────
-const MEDALHAS = ["🥇", "🥈", "🥉"];
-const PODIO_ALTURAS = [130, 90, 70]; // px da coluna do pódio
-const PODIO_CORES   = [
-  { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.4)", text: "#f59e0b" },  // ouro
-  { bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.35)", text: "#94a3b8" }, // prata
-  { bg: "rgba(180,120,70,0.12)",  border: "rgba(180,120,70,0.35)",  text: "#b47846" }, // bronze
+const MEDALHAS   = ["🥇","🥈","🥉"];
+const PODIO_H    = [130, 90, 70];
+const PODIO_CORES = [
+  { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.4)", text: "#f59e0b" },
+  { bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.35)", text: "#94a3b8" },
+  { bg: "rgba(180,120,70,0.12)",  border: "rgba(180,120,70,0.35)",  text: "#b47846" },
 ];
 
-function PodioFTDHora({ ranking, theme: t }: { ranking: ConversaoRow[]; theme: any }) {
+function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
+  const { theme: t } = useApp();
+  const [pagResto, setPagResto] = useState<0 | 1>(0);
+
   if (ranking.length === 0) {
     return <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem dados no período</div>;
   }
@@ -118,71 +150,78 @@ function PodioFTDHora({ ranking, theme: t }: { ranking: ConversaoRow[]; theme: a
   const top3  = ranking.slice(0, 3);
   const resto = ranking.slice(3);
 
-  // Reordenar pódio: 2º | 1º | 3º (visual clássico)
-  const podioOrdem = top3.length >= 2
-    ? [top3[1], top3[0], top3[2]].filter(Boolean)
-    : top3;
-  const podioIdx   = top3.length >= 2 ? [1, 0, 2] : [0]; // índices originais no ranking
+  // ordem visual clássica: 2º | 1º | 3º
+  const podioOrdem = top3.length >= 2 ? [top3[1], top3[0], top3[2]].filter(Boolean) : top3;
+  const podioIdx   = top3.length >= 2 ? [1, 0, 2] : [0];
+
+  const maxFtdH = ranking[0].ftdPorHora;
+
+  // Dividir resto em duas colunas para exibição lado a lado
+  const ITENS_POR_PAG = 6; // por coluna
+  const col1 = resto.slice(pagResto * ITENS_POR_PAG * 2, pagResto * ITENS_POR_PAG * 2 + ITENS_POR_PAG);
+  const col2 = resto.slice(pagResto * ITENS_POR_PAG * 2 + ITENS_POR_PAG, pagResto * ITENS_POR_PAG * 2 + ITENS_POR_PAG * 2);
+  const totalPags = Math.ceil(resto.length / (ITENS_POR_PAG * 2));
+
+  function ItemLista({ row, pos }: { row: ConversaoRow; pos: number }) {
+    const barPct = maxFtdH > 0 ? (row.ftdPorHora / maxFtdH) * 100 : 0;
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.02)" }}>
+        <div style={{ width: 22, fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textAlign: "right", flexShrink: 0 }}>#{pos}</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: t.text, fontFamily: FONT.body, width: 80, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.nome.split(" ")[0]}</div>
+        <div style={{ flex: 1, height: 5, background: t.cardBorder, borderRadius: 999, overflow: "hidden" }}>
+          <div style={{ width: `${barPct}%`, height: "100%", background: "rgba(124,58,237,0.55)", borderRadius: 999 }} />
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontFamily: FONT.body, flexShrink: 0, width: 36, textAlign: "right" }}>{row.ftdPorHora.toFixed(2)}</div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* ── PÓDIO VISUAL ── */}
+      {/* PÓDIO */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 12, marginBottom: 28 }}>
         {podioOrdem.map((row, i) => {
-          const rankIdx = podioIdx[i]; // posição real (0=1º, 1=2º, 2=3º)
+          const rankIdx = podioIdx[i];
           const cor     = PODIO_CORES[rankIdx];
-          const altura  = PODIO_ALTURAS[rankIdx];
-          const medalha = MEDALHAS[rankIdx];
-          const maxFtdH = top3[0].ftdPorHora;
-          const barPct  = maxFtdH > 0 ? (row.ftdPorHora / maxFtdH) * 100 : 0;
-
+          const altura  = PODIO_H[rankIdx];
           return (
             <div key={row.influencer_id} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 140 }}>
-              {/* Nome */}
-              <div style={{ fontSize: 12, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginBottom: 6, textAlign: "center", maxWidth: 130 }}>{row.nome.split(" ")[0]}</div>
-              {/* Valor */}
+              <div style={{ fontSize: 12, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginBottom: 4, textAlign: "center" }}>{row.nome.split(" ")[0]}</div>
               <div style={{ fontSize: 20, fontWeight: 900, color: cor.text, fontFamily: FONT.body, marginBottom: 8 }}>{row.ftdPorHora.toFixed(2)}</div>
-              {/* Barra de pódio */}
-              <div style={{
-                width: "100%", height: altura,
-                background: cor.bg, border: `1px solid ${cor.border}`,
-                borderRadius: "12px 12px 0 0",
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
-                paddingTop: 12,
-                position: "relative",
-              }}>
-                <span style={{ fontSize: 28 }}>{medalha}</span>
+              <div style={{ width: "100%", height: altura, background: cor.bg, border: `1px solid ${cor.border}`, borderRadius: "12px 12px 0 0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", paddingTop: 12 }}>
+                <span style={{ fontSize: 26 }}>{MEDALHAS[rankIdx]}</span>
                 <span style={{ fontSize: 11, color: cor.text, fontWeight: 700, marginTop: 6, fontFamily: FONT.body }}>#{rankIdx + 1}</span>
-                {/* Mini barra de progresso interna */}
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 4, borderRadius: "0 0 0 0", background: cor.border }} />
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* ── LISTA DO RESTO ── */}
+      {/* RESTO — 2 colunas lado a lado */}
       {resto.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {resto.map((row, i) => {
-            const pos     = i + 4;
-            const maxFtdH = ranking[0].ftdPorHora;
-            const barPct  = maxFtdH > 0 ? (row.ftdPorHora / maxFtdH) * 100 : 0;
-            return (
-              <div key={row.influencer_id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.02)" }}>
-                {/* Posição */}
-                <div style={{ width: 24, fontSize: 12, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textAlign: "right", flexShrink: 0 }}>#{pos}</div>
-                {/* Nome */}
-                <div style={{ fontSize: 13, fontWeight: 600, color: t.text, fontFamily: FONT.body, width: 110, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.nome.split(" ")[0]}</div>
-                {/* Barra proporcional */}
-                <div style={{ flex: 1, height: 6, background: t.cardBorder, borderRadius: 999, overflow: "hidden" }}>
-                  <div style={{ width: `${barPct}%`, height: "100%", background: "rgba(124,58,237,0.55)", borderRadius: 999, transition: "width 0.4s" }} />
-                </div>
-                {/* Valor */}
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", fontFamily: FONT.body, flexShrink: 0, width: 40, textAlign: "right" }}>{row.ftdPorHora.toFixed(2)}</div>
-              </div>
-            );
-          })}
+        <div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {col1.map((row, i) => (
+                <ItemLista key={row.influencer_id} row={row} pos={pagResto * ITENS_POR_PAG * 2 + i + 4} />
+              ))}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {col2.map((row, i) => (
+                <ItemLista key={row.influencer_id} row={row} pos={pagResto * ITENS_POR_PAG * 2 + ITENS_POR_PAG + i + 4} />
+              ))}
+            </div>
+          </div>
+          {/* Paginação */}
+          {totalPags > 1 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 8 }}>
+              {Array.from({ length: totalPags }).map((_, i) => (
+                <button key={i} onClick={() => setPagResto(i as 0 | 1)} style={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${pagResto === i ? "#7c3aed" : t.cardBorder}`, background: pagResto === i ? "rgba(124,58,237,0.15)" : "transparent", color: pagResto === i ? "#a78bfa" : t.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -202,13 +241,9 @@ export default function DashboardConversao() {
   const [loading, setLoading]     = useState(true);
   const [perfis, setPerfis]       = useState<InfluencerPerfil[]>([]);
   const [rows, setRows]           = useState<ConversaoRow[]>([]);
-
-  // Comparativo — inicializa em placeholder, preenchido após carga
-  const [compA, setCompA] = useState<string>("");
-  const [compB, setCompB] = useState<string>("");
-
-  // Filtro de perfil na tabela
-  const [perfilFiltro, setPerfilFiltro] = useState<string | null>(null);
+  const [compA, setCompA]         = useState<string>("");
+  const [compB, setCompB]         = useState<string>("");
+  const [acaoFiltro, setAcaoFiltro] = useState<string | null>(null);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
   const isPrimeiro = idxMes === 0;
@@ -221,7 +256,6 @@ export default function DashboardConversao() {
     else setHistorico(true);
   }
 
-  // ── BUSCA DE DADOS ────────────────────────────────────────────────────────
   useEffect(() => {
     async function carregar() {
       setLoading(true);
@@ -253,65 +287,62 @@ export default function DashboardConversao() {
         resultados = resData || [];
       }
 
-      const mapa = new Map<string, { acessos: number; registros: number; ftds: number; views: number; horas: number }>();
-
+      // views = média de media_views entre as lives do influencer (não somatória)
+      const mapa = new Map<string, { acessos: number; registros: number; ftds: number; viewsTotal: number; liveComViews: number; horas: number }>();
       metricas.forEach((m: any) => {
-        if (!mapa.has(m.influencer_id)) mapa.set(m.influencer_id, { acessos: 0, registros: 0, ftds: 0, views: 0, horas: 0 });
+        if (!mapa.has(m.influencer_id)) mapa.set(m.influencer_id, { acessos: 0, registros: 0, ftds: 0, viewsTotal: 0, liveComViews: 0, horas: 0 });
         const r = mapa.get(m.influencer_id)!;
         r.acessos += m.visit_count || 0; r.registros += m.registration_count || 0; r.ftds += m.ftd_count || 0;
       });
-
       lives.forEach((live: any) => {
-        if (!mapa.has(live.influencer_id)) mapa.set(live.influencer_id, { acessos: 0, registros: 0, ftds: 0, views: 0, horas: 0 });
+        if (!mapa.has(live.influencer_id)) mapa.set(live.influencer_id, { acessos: 0, registros: 0, ftds: 0, viewsTotal: 0, liveComViews: 0, horas: 0 });
         const r = mapa.get(live.influencer_id)!;
         const res = resultados.find((x: any) => x.live_id === live.id);
-        if (res) { r.views += res.media_views || 0; r.horas += (res.duracao_horas || 0) + (res.duracao_min || 0) / 60; }
+        if (res) {
+          if (res.media_views) { r.viewsTotal += res.media_views; r.liveComViews += 1; }
+          r.horas += (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
+        }
       });
 
       const resultado: ConversaoRow[] = [];
       mapa.forEach((data, id) => {
         const perfil = perfisLista.find((p) => p.id === id);
         if (!perfil) return;
+        const avgViews = data.liveComViews > 0 ? Math.round(data.viewsTotal / data.liveComViews) : 0;
         const row: ConversaoRow = {
           influencer_id: id, nome: perfil.nome_artistico,
-          views: data.views, acessos: data.acessos, registros: data.registros, ftds: data.ftds, horas: data.horas,
-          pctViewAcesso: pct(data.acessos, data.views), pctAcessoReg: pct(data.registros, data.acessos),
-          pctRegFTD: pct(data.ftds, data.registros), pctViewFTD: pct(data.ftds, data.views),
-          ftdPorHora: data.horas > 0 ? data.ftds / data.horas : 0, perfilLabel: "",
+          views: avgViews, acessos: data.acessos, registros: data.registros, ftds: data.ftds, horas: data.horas,
+          pctViewAcesso: pct(data.acessos, avgViews), pctAcessoReg: pct(data.registros, data.acessos),
+          pctRegFTD: pct(data.ftds, data.registros), pctViewFTD: pct(data.ftds, avgViews),
+          ftdPorHora: data.horas > 0 ? data.ftds / data.horas : 0, acaoLabel: "",
         };
-        row.perfilLabel = getPerfilConversao(row).label;
+        row.acaoLabel = getAcao(row).label;
         resultado.push(row);
       });
 
       resultado.sort((a, b) => b.ftds - a.ftds);
       setRows(resultado);
-
-      // Pré-preencher A e B com os dois primeiros com dados
       if (resultado.length >= 1) setCompA((prev) => prev || resultado[0].influencer_id);
       if (resultado.length >= 2) setCompB((prev) => prev || resultado[1].influencer_id);
-
       setLoading(false);
     }
     carregar();
   }, [historico, idxMes]);
 
-  // ── DADOS DERIVADOS ────────────────────────────────────────────────────────
   const rowA = rows.find((r) => r.influencer_id === compA) || null;
   const rowB = rows.find((r) => r.influencer_id === compB) || null;
-
-  // Ranking FTD/Hora — todos com horas > 0, ordenado desc
   const rankingFtdHora = rows.filter((r) => r.ftdPorHora > 0).sort((a, b) => b.ftdPorHora - a.ftdPorHora);
 
-  const perfisDisponiveis: PerfilInfo[] = [
-    { label: "Duplo Impacto", cor: "#f59e0b", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)", icon: "⭐" },
-    { label: "Conversor",     cor: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)",  icon: "🚀" },
-    { label: "Alto Alcance",  cor: "#3b82f6", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.28)", icon: "👁️" },
-    { label: "Equilibrado",   cor: "#6b7280", bg: "rgba(107,114,128,0.10)",border: "rgba(107,114,128,0.22)",icon: "⚖️" },
-    { label: "Baixa Conv.",   cor: "#ef4444", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.28)",  icon: "⚠️" },
+  // Ações disponíveis para filtro
+  const acoesDisponiveis = [
+    { label: "Divulgar o link",  icon: "🔗", cor: "#f59e0b", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" },
+    { label: "Converter visita", icon: "🎮", cor: "#a855f7", bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" },
+    { label: "Ativar cadastro",  icon: "🎯", cor: "#3b82f6", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.28)" },
+    { label: "Em dia",           icon: "✅", cor: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
   ];
-  const rowsFiltrados = perfilFiltro ? rows.filter((r) => r.perfilLabel === perfilFiltro) : rows;
+  const rowsFiltrados = acaoFiltro ? rows.filter((r) => r.acaoLabel === acaoFiltro) : rows;
 
-  // ── ESTILOS ────────────────────────────────────────────────────────────────
+  // Estilos
   const card = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 6px 24px rgba(0,0,0,0.25)" } as React.CSSProperties;
   const cardTitle = { margin: "0 0 16px", fontSize: 13, fontWeight: 700, letterSpacing: "0.02em", color: t.text, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 8 } as React.CSSProperties;
   const selectStyle = { background: t.inputBg, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, color: t.text, padding: "7px 12px", borderRadius: 10, fontSize: 13, fontFamily: FONT.body, outline: "none", cursor: "pointer" } as React.CSSProperties;
@@ -329,7 +360,7 @@ export default function DashboardConversao() {
         <p style={{ margin: "6px 0 0", color: t.textMuted, fontSize: 13 }}>Análise do funil de conversão por influencer — taxas, eficiência e perfil de audiência.</p>
       </div>
 
-      {/* ── BLOCO 1: FILTROS — idêntico ao Overview ── */}
+      {/* ── BLOCO 1: FILTROS ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ ...card, padding: "14px 20px", background: `linear-gradient(135deg, ${t.cardBg} 0%, rgba(124,58,237,0.04) 100%)` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
@@ -348,16 +379,16 @@ export default function DashboardConversao() {
       <div style={{ ...card, marginBottom: 14 }}>
         <h3 style={cardTitle}><span style={{ fontSize: 16 }}>🔽</span> Comparativo de Funil</h3>
 
-        {/* Selects dos dois influencers */}
+        {/* Selects */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 8, alignItems: "center", marginBottom: 16 }}>
-          <select value={compA} onChange={(e) => setCompA(e.target.value)} style={{ ...selectStyle, width: "100%", borderColor: compA ? "rgba(124,58,237,0.5)" : undefined }}>
+          <select value={compA} onChange={(e) => setCompA(e.target.value)} style={{ ...selectStyle, width: "100%", borderColor: compA ? COR_A.border : undefined }}>
             <option value="">— Selecione —</option>
             {rows.filter((r) => r.influencer_id !== compB).map((r) => (
               <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
             ))}
           </select>
           <div style={{ textAlign: "center", fontSize: 16, color: t.textMuted, fontWeight: 700 }}>vs</div>
-          <select value={compB} onChange={(e) => setCompB(e.target.value)} style={{ ...selectStyle, width: "100%", borderColor: compB ? "rgba(37,99,235,0.5)" : undefined }}>
+          <select value={compB} onChange={(e) => setCompB(e.target.value)} style={{ ...selectStyle, width: "100%", borderColor: compB ? COR_B.border : undefined }}>
             <option value="">— Selecione —</option>
             {rows.filter((r) => r.influencer_id !== compA).map((r) => (
               <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
@@ -365,13 +396,13 @@ export default function DashboardConversao() {
           </select>
         </div>
 
-        {/* Cabeçalhos coloridos com nome */}
+        {/* Cabeçalhos coloridos */}
         {(rowA || rowB) && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 12 }}>
-            <div style={{ padding: "6px 12px", borderRadius: 10, background: "rgba(124,58,237,0.10)", border: "1px solid rgba(124,58,237,0.3)", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#a78bfa", fontFamily: FONT.body }}>
+            <div style={{ padding: "6px 12px", borderRadius: 10, background: COR_A.bg, border: `1px solid ${COR_A.border}`, textAlign: "center", fontSize: 13, fontWeight: 700, color: COR_A.accent, fontFamily: FONT.body }}>
               {rowA?.nome ?? "—"}
             </div>
-            <div style={{ padding: "6px 12px", borderRadius: 10, background: "rgba(37,99,235,0.10)", border: "1px solid rgba(37,99,235,0.3)", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#60a5fa", fontFamily: FONT.body }}>
+            <div style={{ padding: "6px 12px", borderRadius: 10, background: COR_B.bg, border: `1px solid ${COR_B.border}`, textAlign: "center", fontSize: 13, fontWeight: 700, color: COR_B.accent, fontFamily: FONT.body }}>
               {rowB?.nome ?? "—"}
             </div>
           </div>
@@ -381,9 +412,9 @@ export default function DashboardConversao() {
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando dados...</div>
         ) : (
           <div style={{ display: "flex", gap: 16 }}>
-            <PainelFunil row={rowA} isEmpty={!compA} theme={t} />
+            <PainelFunil row={rowA} isEmpty={!compA} cor={COR_A} />
             <div style={{ width: 1, background: t.cardBorder, flexShrink: 0 }} />
-            <PainelFunil row={rowB} isEmpty={!compB} theme={t} />
+            <PainelFunil row={rowB} isEmpty={!compB} cor={COR_B} />
           </div>
         )}
       </div>
@@ -395,31 +426,31 @@ export default function DashboardConversao() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando...</div>
         ) : (
-          <PodioFTDHora ranking={rankingFtdHora} theme={t} />
+          <PodioFTDHora ranking={rankingFtdHora} />
         )}
       </div>
 
-      {/* ── BLOCO 4: TABELA COMPARATIVA ── */}
+      {/* ── BLOCO 4: TABELA ── */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
           <h3 style={{ ...cardTitle, margin: 0 }}><span style={{ fontSize: 16 }}>📋</span> Comparativo de Taxas</h3>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-            {perfisDisponiveis.map((p) => {
-              const ativo = perfilFiltro === p.label;
-              const qtd   = rows.filter((r) => r.perfilLabel === p.label).length;
+            {acoesDisponiveis.map((a) => {
+              const ativo = acaoFiltro === a.label;
+              const qtd   = rows.filter((r) => r.acaoLabel === a.label).length;
               return (
-                <button key={p.label} onClick={() => setPerfilFiltro(ativo ? null : p.label)} style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${ativo ? p.cor : p.border}`, background: ativo ? p.bg : "transparent", color: ativo ? p.cor : t.textMuted, fontSize: 11, fontWeight: ativo ? 700 : 400, opacity: qtd === 0 ? 0.35 : 1 }}>
-                  {p.icon} {p.label} {qtd > 0 && <span style={{ opacity: 0.7 }}>({qtd})</span>}
+                <button key={a.label} onClick={() => setAcaoFiltro(ativo ? null : a.label)} style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${ativo ? a.cor : a.border}`, background: ativo ? a.bg : "transparent", color: ativo ? a.cor : t.textMuted, fontSize: 11, fontWeight: ativo ? 700 : 400, opacity: qtd === 0 ? 0.35 : 1 }}>
+                  {a.icon} {a.label} {qtd > 0 && <span style={{ opacity: 0.7 }}>({qtd})</span>}
                 </button>
               );
             })}
-            {perfilFiltro && <button onClick={() => setPerfilFiltro(null)} style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 11 }}>✕ Limpar</button>}
+            {acaoFiltro && <button onClick={() => setAcaoFiltro(null)} style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 11 }}>✕ Limpar</button>}
           </div>
         </div>
 
-        {perfilFiltro && (
+        {acaoFiltro && (
           <div style={{ marginBottom: 12, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-            Exibindo <strong style={{ color: t.text }}>{rowsFiltrados.length}</strong> influencer{rowsFiltrados.length !== 1 ? "s" : ""} com perfil <strong style={{ color: t.text }}>{perfilFiltro}</strong>
+            Exibindo <strong style={{ color: t.text }}>{rowsFiltrados.length}</strong> influencer{rowsFiltrados.length !== 1 ? "s" : ""} com ação <strong style={{ color: t.text }}>{acaoFiltro}</strong>
           </div>
         )}
 
@@ -432,27 +463,35 @@ export default function DashboardConversao() {
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
               <thead>
                 <tr>
-                  {["Influencer","Views","View→Acesso","Acessos","Acesso→Reg","Registros","Reg→FTD","FTDs","Perfil"].map((h) => (
+                  {["Influencer","Views","View→Acesso","Acessos","Acesso→Reg","Registros","Reg→FTD","FTDs","Ação"].map((h) => (
                     <th key={h} style={thStyle}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {rowsFiltrados.map((r, i) => {
-                  const pf = getPerfilConversao(r);
+                  const ac = getAcao(r);
+                  // Destacar a coluna de taxa que disparou a ação
+                  const hl1 = r.pctViewAcesso !== null && r.pctViewAcesso < 10;
+                  const hl2 = !hl1 && r.pctAcessoReg !== null && r.pctAcessoReg < 10;
+                  const hl3 = !hl1 && !hl2 && r.pctRegFTD !== null && r.pctRegFTD < 60;
                   return (
                     <tr key={r.influencer_id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(124,58,237,0.03)" }}>
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
                       <td style={tdStyle}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>{fmtPct(r.pctViewAcesso)}</td>
+                      {/* View→Acesso */}
+                      <td style={{ ...tdStyle, fontSize: 12, fontWeight: hl1 ? 700 : 400, color: hl1 ? "#f59e0b" : t.textMuted, background: hl1 ? "rgba(245,158,11,0.06)" : undefined }}>{fmtPct(r.pctViewAcesso)}</td>
                       <td style={tdStyle}>{r.acessos.toLocaleString("pt-BR")}</td>
-                      <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>{fmtPct(r.pctAcessoReg)}</td>
+                      {/* Acesso→Reg */}
+                      <td style={{ ...tdStyle, fontSize: 12, fontWeight: hl2 ? 700 : 400, color: hl2 ? "#a855f7" : t.textMuted, background: hl2 ? "rgba(168,85,247,0.06)" : undefined }}>{fmtPct(r.pctAcessoReg)}</td>
                       <td style={tdStyle}>{r.registros.toLocaleString("pt-BR")}</td>
-                      <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>{fmtPct(r.pctRegFTD)}</td>
+                      {/* Reg→FTD */}
+                      <td style={{ ...tdStyle, fontSize: 12, fontWeight: hl3 ? 700 : 400, color: hl3 ? "#3b82f6" : t.textMuted, background: hl3 ? "rgba(59,130,246,0.06)" : undefined }}>{fmtPct(r.pctRegFTD)}</td>
                       <td style={{ ...tdStyle, fontWeight: 700, color: r.ftds > 0 ? "#22c55e" : t.text }}>{r.ftds.toLocaleString("pt-BR")}</td>
+                      {/* Ação */}
                       <td style={tdStyle}>
-                        <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${pf.border}`, background: pf.bg, color: pf.cor, fontSize: 11, fontFamily: FONT.body, whiteSpace: "nowrap" }}>
-                          {pf.icon} {pf.label}
+                        <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${ac.border}`, background: ac.bg, color: ac.cor, fontSize: 11, fontFamily: FONT.body, whiteSpace: "nowrap" }}>
+                          {ac.icon} {ac.label}
                         </span>
                       </td>
                     </tr>
