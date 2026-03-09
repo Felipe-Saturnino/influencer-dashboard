@@ -3,8 +3,8 @@ import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import {
-  ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Cell, BarChart, Bar, Legend,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid, Cell,
 } from "recharts";
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
@@ -42,55 +42,103 @@ function getDatasDoMes(ano: number, mes: number) {
 }
 
 function pct(num: number, den: number): number | null { return den === 0 ? null : (num / den) * 100; }
-function fmtPct(v: number | null): string { return v === null ? "—" : v.toFixed(1) + "%"; }
+function fmtPct(v: number | null): string { return v === null ? "—" : v.toFixed(1) + "%" }
+
+// ─── PERFIL (Tipo de influencer: alcance vs conversão) ────────────────────────
+// Duplo Impacto  ⭐  Views > 5.000 E View→FTD ≥ 3%
+// Conversor      🚀  View→FTD ≥ 3% (qualquer volume)
+// Alto Alcance   👁️  Views > 5.000 E View→FTD < 3%
+// Baixa Conv.    ⚠️  Views > 0 E View→FTD < 1%
+// Equilibrado    ⚖️  Demais (sem views ou 1%–3% com views ≤ 5.000)
 
 type PerfilInfo = { label: string; cor: string; bg: string; border: string; icon: string };
 
 function getPerfilConversao(row: ConversaoRow): PerfilInfo {
   const p = row.pctViewFTD;
-  if (p !== null && p >= 5)  return { label: "Conversor",       cor: "#22c55e", bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  icon: "🚀" };
-  if (row.views > 5000)      return { label: "Audiência",       cor: "#3b82f6", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.28)", icon: "👁️" };
-  if (p !== null && p < 2)   return { label: "Baixa qualidade", cor: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.28)",  icon: "⚠️" };
-  return                            { label: "Equilibrado",     cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", icon: "⚖️" };
+  const altoAlcance = row.views > 5000;
+  const boaConversao = p !== null && p >= 3;
+  const baixaConversao = p !== null && p < 1 && row.views > 0;
+
+  if (altoAlcance && boaConversao)
+    return { label: "Duplo Impacto",   cor: "#f59e0b", bg: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.30)",  icon: "⭐" };
+  if (boaConversao)
+    return { label: "Conversor",       cor: "#22c55e", bg: "rgba(34,197,94,0.12)",   border: "rgba(34,197,94,0.28)",   icon: "🚀" };
+  if (altoAlcance)
+    return { label: "Alto Alcance",    cor: "#3b82f6", bg: "rgba(59,130,246,0.12)",  border: "rgba(59,130,246,0.28)",  icon: "👁️" };
+  if (baixaConversao)
+    return { label: "Baixa Conv.",     cor: "#ef4444", bg: "rgba(239,68,68,0.12)",   border: "rgba(239,68,68,0.28)",   icon: "⚠️" };
+  return                               { label: "Equilibrado",    cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", icon: "⚖️" };
 }
 
-// ─── TOOLTIPS CUSTOMIZADOS ────────────────────────────────────────────────────
-function ScatterTooltip({ active, payload, cardBg, cardBorder, text }: any) {
+// ─── TOOLTIP BARCHART HORIZONTAL ──────────────────────────────────────────────
+function HBarTooltip({ active, payload, cardBg, cardBorder, text }: any) {
   if (!active || !payload?.length) return null;
-  const d = payload[0].payload;
+  const d = payload[0];
   return (
     <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 12, padding: "10px 14px", fontSize: 12, color: text, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
-      <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 13 }}>{d.nome}</div>
-      <div style={{ color: "#9ca3af" }}>Views: <span style={{ color: text, fontWeight: 700 }}>{d.views.toLocaleString("pt-BR")}</span></div>
-      <div style={{ color: "#9ca3af" }}>FTDs: <span style={{ color: "#22c55e", fontWeight: 700 }}>{d.ftds}</span></div>
+      <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 13 }}>{payload[0]?.payload?.nome}</div>
+      <div style={{ color: "#9ca3af" }}>FTD/Hora: <span style={{ color: "#7c3aed", fontWeight: 700 }}>{d.value.toFixed(2)}</span></div>
     </div>
   );
 }
 
-function BarTooltip({ active, payload, label, cardBg, cardBorder, text }: any) {
-  if (!active || !payload?.length) return null;
+// ─── PAINEL DO FUNIL (reutilizado para os dois slots do comparativo) ───────────
+function PainelFunil({
+  row, label, isEmpty, theme: t,
+}: {
+  row: ConversaoRow | null; label: string; isEmpty: boolean;
+  theme: any;
+}) {
+  if (isEmpty || !row) {
+    return (
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 14, border: `1px dashed ${t.cardBorder}`, minHeight: 280, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+        {label}
+      </div>
+    );
+  }
+
+  const taxa1 = fmtPct(pct(row.acessos, row.views));
+  const taxa2 = fmtPct(pct(row.registros, row.acessos));
+  const taxa3 = fmtPct(pct(row.ftds, row.registros));
+  const taxa4 = fmtPct(pct(row.ftds, row.views));
+  const ftdH  = row.horas > 0 ? (row.ftds / row.horas).toFixed(2) : "—";
+
+  const steps = [
+    { label: "Views",     val: row.views,     taxa: undefined },
+    { label: "Acessos",   val: row.acessos,   taxa: taxa1 },
+    { label: "Registros", val: row.registros, taxa: taxa2 },
+    { label: "FTDs",      val: row.ftds,      taxa: taxa3 },
+  ];
+
+  const taxas = [
+    { label: "View→Acesso",  val: taxa1, hl: false },
+    { label: "Acesso→Reg",   val: taxa2, hl: false },
+    { label: "Reg→FTD",      val: taxa3, hl: false },
+    { label: "View→FTD",     val: taxa4, hl: true  },
+    { label: "FTD/Hora ⚡",  val: ftdH,  hl: false },
+  ];
+
   return (
-    <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 12, padding: "10px 14px", fontSize: 12, color: text, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
-      <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 13 }}>{label}</div>
-      {payload.map((p: any) => (
-        <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 3, background: p.fill, display: "inline-block" }} />
-          <span style={{ color: "#9ca3af" }}>{p.name}:</span>
-          <span style={{ fontWeight: 700 }}>{p.value}</span>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Steps */}
+      {steps.map((s) => (
+        <div key={s.label} style={{ padding: "9px 12px", borderRadius: 12, border: `1px solid ${t.cardBorder}`, background: "rgba(124,58,237,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 10, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>{s.label}</div>
+            {s.taxa && <div style={{ fontSize: 10, color: BASE_COLORS.purple, marginTop: 1, fontFamily: "monospace" }}>↓ {s.taxa}</div>}
+          </div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{s.val.toLocaleString("pt-BR")}</div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function MiniKpi({ label, value, highlight, icon }: { label: string; value: string; highlight?: boolean; icon?: string }) {
-  const { theme: t } = useApp();
-  return (
-    <div style={{ padding: "10px 12px", borderRadius: 12, border: highlight ? "1px solid rgba(124,58,237,0.4)" : `1px solid ${t.cardBorder}`, background: highlight ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.02)" }}>
-      <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
-        {icon && <span style={{ marginRight: 4 }}>{icon}</span>}{label}
+      {/* Taxas em grid 2x3 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 4 }}>
+        {taxas.map((tx) => (
+          <div key={tx.label} style={{ padding: "8px 10px", borderRadius: 10, border: tx.hl ? "1px solid rgba(124,58,237,0.4)" : `1px solid ${t.cardBorder}`, background: tx.hl ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.02)" }}>
+            <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{tx.label}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: tx.hl ? "#a78bfa" : t.text, fontFamily: FONT.body }}>{tx.val}</div>
+          </div>
+        ))}
       </div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: highlight ? "#a78bfa" : t.text, fontFamily: FONT.body }}>{value}</div>
     </div>
   );
 }
@@ -110,10 +158,17 @@ export default function DashboardConversao() {
   const [loading, setLoading]         = useState(true);
   const [perfis, setPerfis]           = useState<InfluencerPerfil[]>([]);
   const [rows, setRows]               = useState<ConversaoRow[]>([]);
-  const [detalheId, setDetalheId]     = useState<string>("todos");
+
+  // Comparativo — dois slots independentes
+  const [compA, setCompA] = useState<string>("placeholder_a");
+  const [compB, setCompB] = useState<string>("placeholder_b");
+
+  // Filtro de perfil na tabela
   const [perfilFiltro, setPerfilFiltro] = useState<string | null>(null);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
+  const isPrimeiro = idxMes === 0;
+  const isUltimo   = idxMes === mesesDisponiveis.length - 1;
 
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
   function irMesProximo()  { setHistorico(false); setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1)); }
@@ -122,6 +177,7 @@ export default function DashboardConversao() {
     else setHistorico(true);
   }
 
+  // ── BUSCA DE DADOS ────────────────────────────────────────────────────────
   useEffect(() => {
     async function carregar() {
       setLoading(true);
@@ -193,27 +249,26 @@ export default function DashboardConversao() {
     carregar();
   }, [historico, idxMes, influencerFiltro, plataformaFiltro]);
 
-  const detalhe = detalheId !== "todos" ? rows.find((r) => r.influencer_id === detalheId) || null : null;
-  const consolidado = { views: rows.reduce((s,r)=>s+r.views,0), acessos: rows.reduce((s,r)=>s+r.acessos,0), registros: rows.reduce((s,r)=>s+r.registros,0), ftds: rows.reduce((s,r)=>s+r.ftds,0), horas: rows.reduce((s,r)=>s+r.horas,0) };
-  const d = detalhe || consolidado;
-  const taxa1 = fmtPct(pct(d.acessos, d.views));
-  const taxa2 = fmtPct(pct(d.registros, d.acessos));
-  const taxa3 = fmtPct(pct(d.ftds, d.registros));
-  const taxa4 = fmtPct(pct(d.ftds, d.views));
-  const ftdH  = d.horas > 0 ? (d.ftds / d.horas).toFixed(2) : "—";
+  // ── DADOS DERIVADOS ────────────────────────────────────────────────────────
+  const rowA = rows.find((r) => r.influencer_id === compA) || null;
+  const rowB = rows.find((r) => r.influencer_id === compB) || null;
 
-  const scatterData = rows.map((r) => ({ nome: r.nome, views: r.views, ftds: r.ftds }));
-  const eficienciaData = rows.slice(0, 10).map((r) => ({ nome: r.nome.split(" ")[0], "FTD/Hora": parseFloat(r.ftdPorHora.toFixed(2)), "Reg→FTD%": parseFloat((r.pctRegFTD ?? 0).toFixed(1)) }));
+  // Ranking FTD/Hora — todos, ordenado desc
+  const ftdHoraData = rows
+    .filter((r) => r.ftdPorHora > 0)
+    .sort((a, b) => b.ftdPorHora - a.ftdPorHora)
+    .map((r) => ({ nome: r.nome.split(" ")[0], valor: parseFloat(r.ftdPorHora.toFixed(2)), id: r.influencer_id }));
 
   const perfisDisponiveis: PerfilInfo[] = [
-    { label: "Conversor",       cor: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)",  icon: "🚀" },
-    { label: "Audiência",       cor: "#3b82f6", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.28)", icon: "👁️" },
-    { label: "Equilibrado",     cor: "#f59e0b", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.28)", icon: "⚖️" },
-    { label: "Baixa qualidade", cor: "#ef4444", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.28)",  icon: "⚠️" },
+    { label: "Duplo Impacto", cor: "#f59e0b", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)", icon: "⭐" },
+    { label: "Conversor",     cor: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)",  icon: "🚀" },
+    { label: "Alto Alcance",  cor: "#3b82f6", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.28)", icon: "👁️" },
+    { label: "Equilibrado",   cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", icon: "⚖️" },
+    { label: "Baixa Conv.",   cor: "#ef4444", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.28)",  icon: "⚠️" },
   ];
   const rowsFiltrados = perfilFiltro ? rows.filter((r) => r.perfilLabel === perfilFiltro) : rows;
 
-  // Estilos
+  // ── ESTILOS ────────────────────────────────────────────────────────────────
   const card = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 6px 24px rgba(0,0,0,0.25)" } as React.CSSProperties;
   const cardTitle = { margin: "0 0 16px", fontSize: 13, fontWeight: 700, letterSpacing: "0.02em", color: t.text, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 8 } as React.CSSProperties;
   const selectStyle = { background: t.inputBg, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, color: t.text, padding: "7px 12px", borderRadius: 10, fontSize: 13, fontFamily: FONT.body, outline: "none", cursor: "pointer" } as React.CSSProperties;
@@ -221,8 +276,8 @@ export default function DashboardConversao() {
   const tdStyle = { padding: "10px 12px", fontSize: 13, borderBottom: `1px solid rgba(255,255,255,0.05)`, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap" as const };
   const btnNav = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 } as React.CSSProperties;
   const btnHistorico = { padding: "6px 16px", borderRadius: 999, border: historico ? "1px solid #7c3aed" : `1px solid ${t.cardBorder}`, background: historico ? "rgba(124,58,237,0.15)" : "transparent", color: historico ? "#7c3aed" : t.textMuted, fontSize: 13, fontWeight: historico ? 700 : 400, cursor: "pointer", fontFamily: FONT.body } as React.CSSProperties;
-  const isPrimeiro = idxMes === 0;
-  const isUltimo   = idxMes === mesesDisponiveis.length - 1;
+
+  const isPlaceholder = (id: string) => id === "placeholder_a" || id === "placeholder_b";
 
   return (
     <div style={{ padding: "20px 24px 40px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
@@ -233,15 +288,21 @@ export default function DashboardConversao() {
         <p style={{ margin: "6px 0 0", color: t.textMuted, fontSize: 13 }}>Análise do funil de conversão por influencer — taxas, eficiência e perfil de audiência.</p>
       </div>
 
-      {/* BLOCO 1: FILTROS */}
+      {/* ── BLOCO 1: FILTROS (padrão Overview) ── */}
       <div style={{ ...card, marginBottom: 14, padding: "14px 20px", background: `linear-gradient(135deg, ${t.cardBg} 0%, rgba(124,58,237,0.04) 100%)` }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+
+          {/* Carrossel centralizado */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>‹</button>
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 160, textAlign: "center" }}>{historico ? "Todo o período" : mesSelecionado?.label}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 160, textAlign: "center" }}>
+              {historico ? "Todo o período" : mesSelecionado?.label}
+            </span>
             <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>›</button>
             <button style={btnHistorico} onClick={toggleHistorico}>Histórico</button>
           </div>
+
+          {/* Filtros contextuais */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <select value={influencerFiltro} onChange={(e) => setInfluencerFiltro(e.target.value)} style={selectStyle}>
               <option value="todos">Influencer: Todos</option>
@@ -251,104 +312,105 @@ export default function DashboardConversao() {
               <option value="todas">Plataforma: Todas</option>
               {["Twitch","YouTube","Instagram","TikTok","Kick"].map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
-            {loading ? <span style={{ fontSize: 12, color: t.textMuted }}>⏳ Carregando...</span> : <span style={{ fontSize: 12, color: t.textMuted }}>{rows.length} influencer{rows.length !== 1 ? "s" : ""}</span>}
+            {loading
+              ? <span style={{ fontSize: 12, color: t.textMuted }}>⏳ Carregando...</span>
+              : <span style={{ fontSize: 12, color: t.textMuted }}>{rows.length} influencer{rows.length !== 1 ? "s" : ""}</span>
+            }
           </div>
         </div>
       </div>
 
-      {/* BLOCO 2: FUNIL + SCATTER */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-
-        {/* Funil */}
-        <div style={card}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={{ ...cardTitle, margin: 0 }}><span style={{ fontSize: 16 }}>🔽</span> Funil por Influencer</h3>
-            <select value={detalheId} onChange={(e) => setDetalheId(e.target.value)} style={{ ...selectStyle, fontSize: 12 }}>
-              <option value="todos">Consolidado (todos)</option>
-              {rows.map((r) => <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>)}
-            </select>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              {[
-                { label: "Views",     val: d.views,     pctStr: undefined },
-                { label: "Acessos",   val: d.acessos,   pctStr: taxa1 },
-                { label: "Registros", val: d.registros, pctStr: taxa2 },
-                { label: "FTDs",      val: d.ftds,      pctStr: taxa3 },
-              ].map((step) => (
-                <div key={step.label} style={{ padding: "10px 12px", borderRadius: 12, border: `1px solid ${t.cardBorder}`, background: "rgba(124,58,237,0.05)", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>{step.label}</div>
-                    {step.pctStr && <div style={{ fontSize: 11, color: BASE_COLORS.purple, marginTop: 2, fontFamily: "monospace" }}>↓ {step.pctStr}</div>}
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{step.val.toLocaleString("pt-BR")}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, alignContent: "start" }}>
-              <MiniKpi label="View→Acesso" value={taxa1} />
-              <MiniKpi label="Acesso→Reg"  value={taxa2} />
-              <MiniKpi label="Reg→FTD"     value={taxa3} />
-              <MiniKpi label="View→FTD"    value={taxa4} highlight />
-              <MiniKpi label="FTD/Hora"    value={ftdH}  icon="⚡" />
-            </div>
-          </div>
-        </div>
-
-        {/* Scatter */}
-        <div style={card}>
-          <h3 style={cardTitle}><span style={{ fontSize: 16 }}>🎯</span> Mapa: Volume vs Conversão</h3>
-          <p style={{ margin: "-8px 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Cada ponto é um influencer — X = Views, Y = FTDs gerados.</p>
-          {loading || rows.length === 0 ? (
-            <div style={{ height: 240, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>{loading ? "Carregando..." : "Sem dados no período"}</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <ScatterChart margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
-                <XAxis dataKey="views" name="Views" tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => v > 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
-                <YAxis dataKey="ftds" name="FTDs" tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ScatterTooltip cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} cursor={{ strokeDasharray: "3 3" }} />
-                <Scatter data={scatterData} fill="#7c3aed">
-                  {scatterData.map((_, i) => <Cell key={i} fill={`rgba(124,58,237,${0.45 + (i % 5) * 0.1})`} />)}
-                </Scatter>
-              </ScatterChart>
-            </ResponsiveContainer>
-          )}
-          <div style={{ display: "flex", gap: 16, marginTop: 10, flexWrap: "wrap" }}>
-            {[{ label: "Alto alcance", hint: "views altos", cor: "#3b82f6" }, { label: "Alta conversão", hint: "FTDs altos", cor: "#22c55e" }].map((q) => (
-              <div key={q.label} style={{ fontSize: 11, color: t.textMuted, display: "flex", alignItems: "center", gap: 6, fontFamily: FONT.body }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: q.cor, display: "inline-block" }} />
-                <span style={{ color: q.cor, fontWeight: 600 }}>{q.label}</span> — {q.hint}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* BLOCO 3: GRÁFICO EFICIÊNCIA */}
+      {/* ── BLOCO 2: COMPARATIVO DE FUNIL ── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <h3 style={cardTitle}><span style={{ fontSize: 16 }}>⚡</span> Eficiência por Influencer — FTD/Hora e Taxa Reg→FTD (%)</h3>
-        {loading || eficienciaData.length === 0 ? (
-          <div style={{ height: 220, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>{loading ? "Carregando..." : "Sem dados"}</div>
+        <h3 style={cardTitle}><span style={{ fontSize: 16 }}>🔽</span> Comparativo de Funil</h3>
+
+        {/* Selects dos dois influencers */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 8, alignItems: "center", marginBottom: 16 }}>
+          <select
+            value={compA}
+            onChange={(e) => setCompA(e.target.value)}
+            style={{ ...selectStyle, width: "100%", borderColor: compA && !isPlaceholder(compA) ? "rgba(124,58,237,0.5)" : undefined }}
+          >
+            <option value="placeholder_a">— Selecione o influencer A —</option>
+            {rows.filter((r) => r.influencer_id !== compB || isPlaceholder(compB)).map((r) => (
+              <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+            ))}
+          </select>
+          <div style={{ textAlign: "center", fontSize: 16, color: t.textMuted, fontWeight: 700 }}>vs</div>
+          <select
+            value={compB}
+            onChange={(e) => setCompB(e.target.value)}
+            style={{ ...selectStyle, width: "100%", borderColor: compB && !isPlaceholder(compB) ? "rgba(37,99,235,0.5)" : undefined }}
+          >
+            <option value="placeholder_b">— Selecione o influencer B —</option>
+            {rows.filter((r) => r.influencer_id !== compA || isPlaceholder(compA)).map((r) => (
+              <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Cabeçalhos coloridos */}
+        {(!isPlaceholder(compA) || !isPlaceholder(compB)) && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 10 }}>
+            <div style={{ padding: "6px 12px", borderRadius: 10, background: "rgba(124,58,237,0.10)", border: "1px solid rgba(124,58,237,0.3)", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#a78bfa", fontFamily: FONT.body }}>
+              {rowA?.nome ?? "—"}
+            </div>
+            <div style={{ padding: "6px 12px", borderRadius: 10, background: "rgba(37,99,235,0.10)", border: "1px solid rgba(37,99,235,0.3)", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#60a5fa", fontFamily: FONT.body }}>
+              {rowB?.nome ?? "—"}
+            </div>
+          </div>
+        )}
+
+        {/* Os dois painéis */}
+        {loading ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando dados...</div>
         ) : (
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={eficienciaData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
-              <XAxis dataKey="nome" tick={{ fill: t.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<BarTooltip cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} />
-              <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted }} />
-              <Bar dataKey="FTD/Hora"  fill="#7c3aed" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="Reg→FTD%" fill="#22c55e"  radius={[6, 6, 0, 0]} />
+          <div style={{ display: "flex", gap: 16 }}>
+            <PainelFunil row={rowA} label="Selecione o influencer A" isEmpty={isPlaceholder(compA)} theme={t} />
+            <div style={{ width: 1, background: t.cardBorder, flexShrink: 0 }} />
+            <PainelFunil row={rowB} label="Selecione o influencer B" isEmpty={isPlaceholder(compB)} theme={t} />
+          </div>
+        )}
+      </div>
+
+      {/* ── BLOCO 3: RANKING FTD/HORA ── */}
+      <div style={{ ...card, marginBottom: 14 }}>
+        <h3 style={cardTitle}><span style={{ fontSize: 16 }}>⚡</span> Ranking FTD/Hora — Eficiência por Influencer</h3>
+        <p style={{ margin: "-8px 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>FTDs gerados por hora de live ao vivo — influencers com 0 FTDs omitidos.</p>
+        {loading ? (
+          <div style={{ height: Math.max(180, ftdHoraData.length * 36), display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>Carregando...</div>
+        ) : ftdHoraData.length === 0 ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem dados no período</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(180, ftdHoraData.length * 38)}>
+            <BarChart
+              data={ftdHoraData}
+              layout="vertical"
+              margin={{ top: 0, right: 40, left: 8, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" horizontal={false} />
+              <XAxis type="number" tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1)} />
+              <YAxis type="category" dataKey="nome" width={90} tick={{ fill: t.text, fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+              <Tooltip content={<HBarTooltip cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} cursor={{ fill: "rgba(124,58,237,0.08)" }} />
+              <Bar dataKey="valor" radius={[0, 6, 6, 0]} maxBarSize={22}>
+                {ftdHoraData.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={`rgba(124,58,237,${Math.max(0.35, 1 - i * (0.55 / Math.max(ftdHoraData.length - 1, 1)))})`}
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      {/* BLOCO 4: TABELA COMPARATIVA */}
+      {/* ── BLOCO 4: TABELA COMPARATIVA ── */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
           <h3 style={{ ...cardTitle, margin: 0 }}><span style={{ fontSize: 16 }}>📋</span> Comparativo de Taxas</h3>
+
+          {/* Filtros de perfil clicáveis */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {perfisDisponiveis.map((p) => {
               const ativo = perfilFiltro === p.label;
@@ -359,11 +421,17 @@ export default function DashboardConversao() {
                 </button>
               );
             })}
-            {perfilFiltro && <button onClick={() => setPerfilFiltro(null)} style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 11 }}>✕ Limpar</button>}
+            {perfilFiltro && (
+              <button onClick={() => setPerfilFiltro(null)} style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 11 }}>✕ Limpar</button>
+            )}
           </div>
         </div>
 
-        {perfilFiltro && <div style={{ marginBottom: 12, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Exibindo <strong style={{ color: t.text }}>{rowsFiltrados.length}</strong> influencer{rowsFiltrados.length !== 1 ? "s" : ""} com perfil <strong style={{ color: t.text }}>{perfilFiltro}</strong></div>}
+        {perfilFiltro && (
+          <div style={{ marginBottom: 12, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+            Exibindo <strong style={{ color: t.text }}>{rowsFiltrados.length}</strong> influencer{rowsFiltrados.length !== 1 ? "s" : ""} com perfil <strong style={{ color: t.text }}>{perfilFiltro}</strong>
+          </div>
+        )}
 
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando dados...</div>
@@ -373,7 +441,16 @@ export default function DashboardConversao() {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
               <thead>
-                <tr>{["Influencer","Views","Acessos","Registros","FTDs","View→Acesso","Acesso→Reg","Reg→FTD","View→FTD","FTD/Hora","Perfil"].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                <tr>
+                  {[
+                    "Influencer",
+                    "Views", "View→Acesso",
+                    "Acessos", "Acesso→Reg",
+                    "Registros", "Reg→FTD",
+                    "FTDs",
+                    "Perfil",
+                  ].map((h) => <th key={h} style={thStyle}>{h}</th>)}
+                </tr>
               </thead>
               <tbody>
                 {rowsFiltrados.map((r, i) => {
@@ -381,16 +458,26 @@ export default function DashboardConversao() {
                   return (
                     <tr key={r.influencer_id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(124,58,237,0.03)" }}>
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
+                      {/* Views */}
                       <td style={tdStyle}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
+                      {/* View→Acesso */}
+                      <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>{fmtPct(r.pctViewAcesso)}</td>
+                      {/* Acessos */}
                       <td style={tdStyle}>{r.acessos.toLocaleString("pt-BR")}</td>
+                      {/* Acesso→Reg */}
+                      <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>{fmtPct(r.pctAcessoReg)}</td>
+                      {/* Registros */}
                       <td style={tdStyle}>{r.registros.toLocaleString("pt-BR")}</td>
+                      {/* Reg→FTD */}
+                      <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>{fmtPct(r.pctRegFTD)}</td>
+                      {/* FTDs */}
                       <td style={{ ...tdStyle, fontWeight: 700, color: r.ftds > 0 ? "#22c55e" : t.text }}>{r.ftds.toLocaleString("pt-BR")}</td>
-                      <td style={tdStyle}>{fmtPct(r.pctViewAcesso)}</td>
-                      <td style={tdStyle}>{fmtPct(r.pctAcessoReg)}</td>
-                      <td style={tdStyle}>{fmtPct(r.pctRegFTD)}</td>
-                      <td style={{ ...tdStyle, fontWeight: 700, color: r.pctViewFTD !== null && r.pctViewFTD >= 5 ? "#22c55e" : t.text }}>{fmtPct(r.pctViewFTD)}</td>
-                      <td style={tdStyle}>{r.ftdPorHora > 0 ? r.ftdPorHora.toFixed(2) : "—"}</td>
-                      <td style={tdStyle}><span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${pf.border}`, background: pf.bg, color: pf.cor, fontSize: 11, fontFamily: FONT.body }}>{pf.icon} {pf.label}</span></td>
+                      {/* Perfil */}
+                      <td style={tdStyle}>
+                        <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${pf.border}`, background: pf.bg, color: pf.cor, fontSize: 11, fontFamily: FONT.body, whiteSpace: "nowrap" }}>
+                          {pf.icon} {pf.label}
+                        </span>
+                      </td>
                     </tr>
                   );
                 })}
