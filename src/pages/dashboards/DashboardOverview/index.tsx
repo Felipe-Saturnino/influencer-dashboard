@@ -55,6 +55,8 @@ interface RankingRow {
   lives: number;
   horas: number;
   views: number;
+  viewsTotal: number;    // acumulador interno — não exibir
+  liveComViews: number;  // acumulador interno — não exibir
   acessos: number;
   registros: number;
   ftds: number;
@@ -370,7 +372,7 @@ export default function DashboardOverview() {
           if (!mapa.has(met.influencer_id)) {
             const p = perfisLista.find((x) => x.id === met.influencer_id);
             if (!p) return;
-            mapa.set(met.influencer_id, { influencer_id: met.influencer_id, nome: p.nome_artistico, lives: 0, horas: 0, views: 0, acessos: 0, registros: 0, ftds: 0, depositos_qtd: 0, depositos_valor: 0, ggr: 0, investimento: 0, roi: null, plataformas: [], statusLabel: "Sem dados" });
+            mapa.set(met.influencer_id, { influencer_id: met.influencer_id, nome: p.nome_artistico, lives: 0, horas: 0, views: 0, viewsTotal: 0, liveComViews: 0, acessos: 0, registros: 0, ftds: 0, depositos_qtd: 0, depositos_valor: 0, ggr: 0, investimento: 0, roi: null, plataformas: [], statusLabel: "Sem dados" });
           }
           const row = mapa.get(met.influencer_id)!;
           row.acessos        += met.visit_count || 0;
@@ -385,13 +387,16 @@ export default function DashboardOverview() {
           if (!mapa.has(live.influencer_id)) {
             const p = perfisLista.find((x) => x.id === live.influencer_id);
             if (!p) return;
-            mapa.set(live.influencer_id, { influencer_id: live.influencer_id, nome: p.nome_artistico, lives: 0, horas: 0, views: 0, acessos: 0, registros: 0, ftds: 0, depositos_qtd: 0, depositos_valor: 0, ggr: 0, investimento: 0, roi: null, plataformas: [], statusLabel: "Sem dados" });
+            mapa.set(live.influencer_id, { influencer_id: live.influencer_id, nome: p.nome_artistico, lives: 0, horas: 0, views: 0, viewsTotal: 0, liveComViews: 0, acessos: 0, registros: 0, ftds: 0, depositos_qtd: 0, depositos_valor: 0, ggr: 0, investimento: 0, roi: null, plataformas: [], statusLabel: "Sem dados" });
           }
           const row = mapa.get(live.influencer_id)!;
           row.lives += 1;
           if (!row.plataformas.includes(live.plataforma)) row.plataformas.push(live.plataforma);
           const res = r.find((x) => x.live_id === live.id);
-          if (res) { row.horas += (res.duracao_horas || 0) + (res.duracao_min || 0) / 60; row.views += res.media_views || 0; }
+          if (res) {
+            row.horas += (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
+            if (res.media_views) { row.viewsTotal += res.media_views; row.liveComViews += 1; }
+          }
         });
 
         mapa.forEach((row) => {
@@ -399,6 +404,8 @@ export default function DashboardOverview() {
           row.investimento = row.horas * (p?.cache_hora || 0);
           row.roi = row.investimento > 0 ? ((row.ggr - row.investimento) / row.investimento) * 100 : null;
           row.statusLabel = getStatusROI(row.roi, row.ggr, row.investimento).label;
+          // views = média de media_views por live (nunca somatória)
+          row.views = row.liveComViews > 0 ? Math.round(row.viewsTotal / row.liveComViews) : 0;
         });
 
         // Ordenar por STATUS_ORDEM depois por ROI desc dentro de cada grupo
