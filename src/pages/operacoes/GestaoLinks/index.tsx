@@ -20,6 +20,7 @@ function fmtData(iso: string): string {
 interface InfluencerOpcao {
   id:            string;
   nome_artistico: string;
+  status:        string;
 }
 
 type Aba = "pendentes" | "mapeados" | "ignorados";
@@ -39,6 +40,7 @@ export default function GestaoLinks() {
   const [aliasSelecionado, setAliasSelecionado] = useState<UtmAlias | null>(null);
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [erroModal, setErroModal] = useState<string | null>(null);
 
   // ── Carrega dados ──────────────────────────────────────────────────────────
 
@@ -54,7 +56,6 @@ export default function GestaoLinks() {
     // FIX v1.1.0: Removido o JOIN via influencer_perfil:influencer_id.
     // O join com coluna nullable causava filtro implícito que excluía
     // todos os registros com influencer_id = null (UTMs órfãos pendentes).
-    // Solução: busca simples + lookup separado apenas quando necessário.
     const { data, error } = await supabase
       .from("utm_aliases")
       .select("*")
@@ -101,12 +102,12 @@ export default function GestaoLinks() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // Carrega lista de influencers para o modal
+  // FIX v1.2.0: Carrega TODOS os influencers (ativo, inativo, cancelado)
+  // pois UTMs de influencers desativados ainda geram recorrência
   useEffect(() => {
     supabase
       .from("influencer_perfil")
-      .select("id, nome_artistico")
-      .eq("status", "ativo")
+      .select("id, nome_artistico, status")
       .order("nome_artistico")
       .then(({ data }) => setInfluencers(data ?? []));
   }, []);
@@ -127,34 +128,47 @@ export default function GestaoLinks() {
   function abrirModal(alias: UtmAlias) {
     setAliasSelecionado(alias);
     setInfluencerSelecionado("");
+    setErroModal(null);
     setModalAberto(true);
   }
 
+  // FIX v1.2.0: confirmarMapeamento agora fecha o modal SOMENTE após sucesso
+  // e exibe erro inline caso o update falhe
   async function confirmarMapeamento() {
     if (!aliasSelecionado || !influencerSelecionado) return;
     setSalvando(true);
+    setErroModal(null);
 
     const { error } = await supabase
       .from("utm_aliases")
       .update({
-        influencer_id: influencerSelecionado,
-        status:        "mapeado",
-        mapeado_por:   user?.id ?? null,
-        mapeado_em:    new Date().toISOString(),
+        influencer_id:  influencerSelecionado,
+        status:         "mapeado",
+        mapeado_por:    user?.id ?? null,
+        mapeado_em:     new Date().toISOString(),
+        atualizado_em:  new Date().toISOString(),
       })
       .eq("id", aliasSelecionado.id);
 
     setSalvando(false);
-    setModalAberto(false);
 
-    if (!error) carregar();
-    else console.error("Erro ao mapear:", error.message);
+    if (error) {
+      console.error("Erro ao mapear:", error.message);
+      setErroModal(`Erro ao salvar: ${error.message}`);
+      return; // NÃO fecha o modal em caso de erro
+    }
+
+    // Só fecha se sucesso
+    setModalAberto(false);
+    setAliasSelecionado(null);
+    setInfluencerSelecionado("");
+    carregar();
   }
 
   async function ignorar(alias: UtmAlias) {
     const { error } = await supabase
       .from("utm_aliases")
-      .update({ status: "ignorado" })
+      .update({ status: "ignorado", atualizado_em: new Date().toISOString() })
       .eq("id", alias.id);
 
     if (!error) carregar();
@@ -164,7 +178,13 @@ export default function GestaoLinks() {
   async function reativar(alias: UtmAlias) {
     const { error } = await supabase
       .from("utm_aliases")
-      .update({ status: "pendente", influencer_id: null, mapeado_por: null, mapeado_em: null })
+      .update({
+        status:        "pendente",
+        influencer_id: null,
+        mapeado_por:   null,
+        mapeado_em:    null,
+        atualizado_em: new Date().toISOString(),
+      })
       .eq("id", alias.id);
 
     if (!error) carregar();
@@ -348,8 +368,18 @@ export default function GestaoLinks() {
       borderRadius: "8px",
       color: theme.text,
       fontSize: "14px",
-      marginBottom: "22px",
+      marginBottom: "16px",
       outline: "none",
+    } as React.CSSProperties,
+
+    erroBox: {
+      background: "#fee2e2",
+      border: "1px solid #fca5a5",
+      borderRadius: "6px",
+      padding: "10px 14px",
+      fontSize: "12px",
+      color: "#b91c1c",
+      marginBottom: "16px",
     } as React.CSSProperties,
 
     modalBtns: {
@@ -391,6 +421,15 @@ export default function GestaoLinks() {
       fontWeight: 600,
       fontFamily: "monospace",
     } as React.CSSProperties,
+
+    statusBadge: (status: string): React.CSSProperties => ({
+      fontSize: "10px",
+      padding: "1px 6px",
+      borderRadius: "4px",
+      marginLeft: "6px",
+      background: status === "ativo" ? "#dcfce7" : "#f3f4f6",
+      color: status === "ativo" ? "#166534" : "#6b7280",
+    }),
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -488,7 +527,7 @@ export default function GestaoLinks() {
       )}
 
       {modalAberto && aliasSelecionado && (
-        <div style={s.overlay} onClick={() => setModalAberto(false)}>
+        <div style={s.overlay} onClick={() => { if (!salvando) setModalAberto(false); }}>
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalTitle}>Mapear link órfão</div>
             <div style={s.modalSub}>
@@ -527,13 +566,20 @@ export default function GestaoLinks() {
               <option value="">Selecione o influencer...</option>
               {influencers.map((inf) => (
                 <option key={inf.id} value={inf.id}>
-                  {inf.nome_artistico}
+                  {inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}
                 </option>
               ))}
             </select>
 
+            {erroModal && (
+              <div style={s.erroBox}>{erroModal}</div>
+            )}
+
             <div style={s.modalBtns}>
-              <button style={s.btnCancelar} onClick={() => setModalAberto(false)}>
+              <button
+                style={s.btnCancelar}
+                onClick={() => { if (!salvando) setModalAberto(false); }}
+              >
                 Cancelar
               </button>
               <button
