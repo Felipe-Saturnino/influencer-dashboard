@@ -100,22 +100,22 @@ function fmtHoras(h: number, m: number) {
   return `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.floor(m)).padStart(2, "0")}`;
 }
 
-/** Nova lógica de status ROI */
+/** Lógica de status ROI */
 function statusROI(roi: number | null, ggr: number, investimento: number): {
   label: string; cor: string; bg: string; border: string; roiStr: string;
 } {
   // Sem investimento no período
   if (investimento === 0) {
-    if (ggr > 0)  return { label: "Bônus",     cor: "#a855f7", bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.28)", roiStr: "—" };
-    if (ggr < 0)  return { label: "Atenção",   cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr: "—" };
-    return              { label: "Sem dados",  cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", roiStr: "—" };
+    if (ggr > 0)  return { label: "Bônus",    cor: "#a855f7", bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.28)", roiStr: "—" };
+    if (ggr < 0)  return { label: "Atenção",  cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr: "—" };
+    return              { label: "Sem dados", cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", roiStr: "—" };
   }
   // Com investimento
   const r = roi ?? 0;
   const roiStr = `${r >= 0 ? "+" : ""}${r.toFixed(0)}%`;
-  if (r >= 100) return { label: "Rentável",     cor: "#22c55e", bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  roiStr };
-  if (r >= 0)   return { label: "Atenção",      cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr };
-  return              { label: "Prejuízo",     cor: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.28)",  roiStr };
+  if (r >= 0)   return { label: "Rentável",      cor: "#22c55e", bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  roiStr };
+  if (r >= -30) return { label: "Atenção",       cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr };
+  return              { label: "Não Rentável",   cor: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.28)",  roiStr };
 }
 
 // ─── SUBCOMPONENTES ───────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ function FunnelStep({ label, value, pct }: { label: string; value: number; pct?:
   );
 }
 
-function RateCard({ label, value, hint, highlight }: { label: string; value: string; hint: string; highlight?: boolean }) {
+function RateCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   const { theme: t } = useApp();
   return (
     <div style={{
@@ -152,8 +152,7 @@ function RateCard({ label, value, hint, highlight }: { label: string; value: str
       background: highlight ? "rgba(109,40,217,0.14)" : "rgba(255,255,255,0.03)",
     }}>
       <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{label}</div>
-      <div style={{ fontSize: 17, fontWeight: 800, color: t.text, margin: "6px 0 4px", fontFamily: FONT.body }}>{value}</div>
-      <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{hint}</div>
+      <div style={{ fontSize: 17, fontWeight: 800, color: t.text, margin: "6px 0 0", fontFamily: FONT.body }}>{value}</div>
     </div>
   );
 }
@@ -194,8 +193,14 @@ export default function DashboardOverview() {
     setHistorico(false);
     setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1));
   }
-  function ativarHistorico() {
-    setHistorico(true);
+  function toggleHistorico() {
+    if (historico) {
+      // Desativa: volta ao mês atual
+      setHistorico(false);
+      setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+    } else {
+      setHistorico(true);
+    }
   }
 
   // ── BUSCA DE DADOS ───────────────────────────────────────────────────────
@@ -467,7 +472,7 @@ export default function DashboardOverview() {
               disabled={historico || isUltimo}
             >›</button>
 
-            <button style={btnHistorico} onClick={ativarHistorico}>
+            <button style={btnHistorico} onClick={toggleHistorico}>
               Histórico
             </button>
           </div>
@@ -530,10 +535,10 @@ export default function DashboardOverview() {
               <FunnelStep label="FTDs"          value={totais.ftds} pct={pctRegFTD} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignContent: "start" }}>
-              <RateCard label="View → Acesso"     value={pctViewAcesso} hint="CTA / link track" />
-              <RateCard label="Acesso → Registro" value={pctAcessoReg}  hint="UX de cadastro" />
-              <RateCard label="Registro → FTD"    value={pctRegFTD}     hint="Incentivo + intenção" />
-              <RateCard label="View → FTD total"  value={pctViewFTD}    hint="Eficiência geral" highlight />
+              <RateCard label="View → Acesso"     value={pctViewAcesso} />
+              <RateCard label="Acesso → Registro" value={pctAcessoReg}  />
+              <RateCard label="Registro → FTD"    value={pctRegFTD}     />
+              <RateCard label="View → FTD total"  value={pctViewFTD}    highlight />
             </div>
           </div>
         </div>
@@ -558,9 +563,9 @@ export default function DashboardOverview() {
                 <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted }} />
                 {/* Linha de referência R$ 0 — divisor lucro/prejuízo */}
                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={1.5} strokeDasharray="0" />
-                {/* Cores padrão Spin: roxo para GGR, roxo claro para Investimento */}
-                <Bar dataKey="GGR"         fill="#7c3aed"              radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Investimento" fill="rgba(167,139,250,0.55)" radius={[6, 6, 0, 0]} />
+                {/* Roxo Spin para GGR, Azul Spin para Investimento */}
+                <Bar dataKey="GGR"          fill="#7c3aed" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Investimento" fill="#2563eb" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -573,11 +578,11 @@ export default function DashboardOverview() {
           <h3 style={{ ...cardTitle, margin: 0 }}>Ranking de Influencers</h3>
           <div style={{ display: "flex", gap: 8, fontSize: 11, flexWrap: "wrap" }}>
             {[
-              { label: "Rentável ≥ 100%",  cor: "#22c55e", bg: "rgba(34,197,94,0.10)",   border: "rgba(34,197,94,0.28)"   },
-              { label: "Atenção 0–99%",    cor: "#f59e0b", bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.28)"  },
-              { label: "Prejuízo",         cor: "#ef4444", bg: "rgba(239,68,68,0.10)",   border: "rgba(239,68,68,0.28)"   },
-              { label: "Bônus (sem invest.)", cor: "#a855f7", bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" },
-              { label: "Sem dados",        cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)" },
+              { label: "Rentável (ROI ≥ 0%)",      cor: "#22c55e", bg: "rgba(34,197,94,0.10)",   border: "rgba(34,197,94,0.28)"   },
+              { label: "Atenção (-30% a -1%)",      cor: "#f59e0b", bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.28)"  },
+              { label: "Não Rentável (≤ -31%)",     cor: "#ef4444", bg: "rgba(239,68,68,0.10)",   border: "rgba(239,68,68,0.28)"   },
+              { label: "Bônus (sem invest.)",        cor: "#a855f7", bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)"  },
+              { label: "Sem dados",                  cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)" },
             ].map((s) => (
               <span key={s.label} style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${s.border}`, background: s.bg, color: s.cor, fontFamily: FONT.body }}>
                 {s.label}
