@@ -82,3 +82,14 @@ export interface Pagamento {
   pago_em?:         string;
   criado_em?:       string;
 }
+
+// ─── UTM ALIAS ───────────────────────────────────────────────────────────────
+export type UtmAliasStatus = "pendente" | "mapeado" | "descartado";
+
+export interface UtmAlias {
+  id:             string;
+  utm_source:     string;
+  influencer_id?: string;
+  status:         UtmAliasStatus;
+  criado_em?:     string;
+}
