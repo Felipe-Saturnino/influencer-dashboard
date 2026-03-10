@@ -4,7 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import {
   Role, PageKey, PermissaoValor, RolePermission,
-  UsuarioCompleto, UserScope, ScopeType,
+  UsuarioCompleto, UserScope, ScopeType, Operadora,
 } from "../../../types";
 
 // ─── CONSTANTES ──────────────────────────────────────────────────────────────
@@ -15,13 +15,7 @@ const ROLES: { value: Role; label: string }[] = [
   { value: "executivo",  label: "Executivo" },
   { value: "influencer", label: "Influencer" },
   { value: "operador",   label: "Operador" },
-  { value: "agencia",    label: "Agência" },           // ✅ adicionado
-];
-
-const OPERADORAS = [
-  { value: "blaze",        label: "Blaze" },
-  { value: "bet_nacional", label: "Bet Nacional" },
-  { value: "casa_apostas", label: "Casa de Apostas" },
+  { value: "agencia",    label: "Agência" },
 ];
 
 const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; hasEditar: boolean; hasExcluir: boolean }[] = [
@@ -38,7 +32,7 @@ const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; ha
   { key: "ajuda",           label: "Ajuda",           secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
-const ROLES_EDITAVEIS: Role[] = ["gestor", "executivo", "influencer", "operador", "agencia"]; // ✅ adicionado
+const ROLES_EDITAVEIS: Role[] = ["gestor", "executivo", "influencer", "operador", "agencia"];
 
 const PERM_OPCOES: { value: PermissaoValor; label: string }[] = [
   { value: "sim",      label: "Sim" },
@@ -59,9 +53,19 @@ function roleBadgeColor(role: Role): string {
     executivo:  "#0891b2",
     influencer: "#059669",
     operador:   "#d97706",
-    agencia:    "#db2777",                               // ✅ adicionado
+    agencia:    "#db2777",
   };
   return map[role] ?? "#6b7280";
+}
+
+// Roles que têm escopo bloqueado em "Todos"
+function escopoBloqueado(role: Role) {
+  return role === "admin" || role === "gestor";
+}
+
+// Roles que exigem escopo obrigatório
+function escopoObrigatorio(role: Role) {
+  return role === "influencer" || role === "operador" || role === "agencia";
 }
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
@@ -112,24 +116,19 @@ export default function GestaoUsuarios() {
 
 function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   const [usuarios, setUsuarios] = useState<UsuarioCompleto[]>([]);
+  const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<UsuarioCompleto | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, name, email, role, created_at")
-      .order("created_at", { ascending: true });
 
-    const { data: authUsers } = await supabase.auth.admin
-      ? { data: null } : { data: null };
-    void authUsers;
-
-    const { data: scopes } = await supabase
-      .from("user_scopes")
-      .select("*");
+    const [{ data: profiles }, { data: scopes }, { data: ops }] = await Promise.all([
+      supabase.from("profiles").select("id, name, email, role, created_at").order("created_at", { ascending: true }),
+      supabase.from("user_scopes").select("*"),
+      supabase.from("operadoras").select("*").order("nome"),
+    ]);
 
     const lista: UsuarioCompleto[] = (profiles ?? []).map(p => ({
       ...p,
@@ -137,6 +136,7 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
     }));
 
     setUsuarios(lista);
+    setOperadoras(ops ?? []);
     setLoading(false);
   }, []);
 
@@ -144,6 +144,21 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
 
   const abrirNovo = () => { setEditando(null); setModalOpen(true); };
   const abrirEditar = (u: UsuarioCompleto) => { setEditando(u); setModalOpen(true); };
+
+  // Formata escopo para exibição na tabela
+  const formatarEscopo = (scopes: UserScope[]) => {
+    if (!scopes || scopes.length === 0) return null;
+    return scopes.map(s => {
+      if (s.scope_type === "operadora") {
+        return operadoras.find(o => o.slug === s.scope_ref)?.nome ?? s.scope_ref;
+      }
+      if (s.scope_type === "agencia_par") {
+        const [, slug] = s.scope_ref.split(":");
+        return operadoras.find(o => o.slug === slug)?.nome ?? slug;
+      }
+      return s.scope_ref.slice(0, 8) + "…"; // UUID truncado para influencer
+    }).join(", ");
+  };
 
   const thMuted: React.CSSProperties = {
     fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
@@ -184,42 +199,42 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
               </tr>
             </thead>
             <tbody>
-              {usuarios.map(u => (
-                <tr key={u.id}>
-                  <td style={td}><strong>{u.name}</strong></td>
-                  <td style={{ ...td, color: t.textMuted }}>{u.email}</td>
-                  <td style={td}>
-                    <span style={{
-                      background: roleBadgeColor(u.role as Role) + "22",
-                      color: roleBadgeColor(u.role as Role),
-                      borderRadius: 6, padding: "3px 10px",
-                      fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                    }}>
-                      {roleLabel(u.role as Role)}
-                    </span>
-                  </td>
-                  <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>
-                    {u.scopes && u.scopes.length > 0
-                      ? u.scopes.map(s => {
-                          if (s.scope_type === "operadora") {
-                            return OPERADORAS.find(o => o.value === s.scope_ref)?.label ?? s.scope_ref;
-                          }
-                          return s.scope_ref;
-                        }).join(", ")
-                      : <span style={{ color: t.textMuted, opacity: 0.5 }}>—</span>
-                    }
-                  </td>
-                  <td style={td}>
-                    <button onClick={() => abrirEditar(u)} style={{
-                      background: "none", border: `1px solid ${t.cardBorder}`,
-                      borderRadius: 7, padding: "5px 12px", cursor: "pointer",
-                      fontFamily: FONT.body, fontSize: 12, color: t.text,
-                    }}>
-                      Editar
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {usuarios.map(u => {
+                const escopoTexto = formatarEscopo(u.scopes ?? []);
+                return (
+                  <tr key={u.id}>
+                    <td style={td}><strong>{u.name}</strong></td>
+                    <td style={{ ...td, color: t.textMuted }}>{u.email}</td>
+                    <td style={td}>
+                      <span style={{
+                        background: roleBadgeColor(u.role as Role) + "22",
+                        color: roleBadgeColor(u.role as Role),
+                        borderRadius: 6, padding: "3px 10px",
+                        fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
+                      }}>
+                        {roleLabel(u.role as Role)}
+                      </span>
+                    </td>
+                    <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>
+                      {escopoBloqueado(u.role as Role)
+                        ? <span style={{ color: t.textMuted, opacity: 0.4, fontStyle: "italic" }}>Todos</span>
+                        : escopoTexto
+                          ? escopoTexto
+                          : <span style={{ color: t.textMuted, opacity: 0.4 }}>—</span>
+                      }
+                    </td>
+                    <td style={td}>
+                      <button onClick={() => abrirEditar(u)} style={{
+                        background: "none", border: `1px solid ${t.cardBorder}`,
+                        borderRadius: 7, padding: "5px 12px", cursor: "pointer",
+                        fontFamily: FONT.body, fontSize: 12, color: t.text,
+                      }}>
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -229,6 +244,7 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
         <ModalUsuario
           t={t}
           editando={editando}
+          operadoras={operadoras}
           onClose={() => setModalOpen(false)}
           onSalvo={carregar}
         />
@@ -242,11 +258,12 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
 interface ModalUsuarioProps {
   t: ReturnType<typeof useApp>["theme"];
   editando: UsuarioCompleto | null;
+  operadoras: Operadora[];
   onClose: () => void;
   onSalvo: () => void;
 }
 
-function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
+function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuarioProps) {
   const [nome, setNome] = useState(editando?.name ?? "");
   const [email, setEmail] = useState(editando?.email ?? "");
   const [role, setRole] = useState<Role>(editando?.role ?? "gestor");
@@ -255,9 +272,6 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
   const [influencers, setInfluencers] = useState<{ id: string; nome: string }[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
-
-  const precisaEscopo = role === "influencer" || role === "operador";
-  const escopoOpcional = role === "gestor" || role === "executivo" || role === "agencia"; // ✅ agencia adicionado
 
   useEffect(() => {
     supabase
@@ -270,13 +284,18 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
       });
   }, []);
 
+  // Pré-preenche ao editar
   useEffect(() => {
     if (editando?.scopes && editando.scopes.length > 0) {
       setScopeType(editando.scopes[0].scope_type);
       setScopeRefs(editando.scopes.map(s => s.scope_ref));
+    } else {
+      setScopeType("");
+      setScopeRefs([]);
     }
   }, [editando]);
 
+  // Reset ao trocar role
   useEffect(() => {
     setScopeType("");
     setScopeRefs([]);
@@ -290,21 +309,18 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
 
   const salvar = async () => {
     setErro("");
-    if (!nome.trim() || !email.trim()) { setErro("Nome e e-mail são obrigatórios."); return; }
-    if (precisaEscopo && (!scopeType || scopeRefs.length === 0)) {
-      setErro("Selecione o tipo e pelo menos um escopo para este perfil."); return;
+    if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
+    if (!editando && !email.trim()) { setErro("E-mail é obrigatório."); return; }
+    if (escopoObrigatorio(role) && (!scopeType || scopeRefs.length === 0)) {
+      setErro("Selecione pelo menos um escopo para este perfil."); return;
     }
 
     setSalvando(true);
     try {
+      let uid = editando?.id ?? "";
+
       if (editando) {
-        await supabase.from("profiles").update({ name: nome, role }).eq("id", editando.id);
-        await supabase.from("user_scopes").delete().eq("user_id", editando.id);
-        if (scopeType && scopeRefs.length > 0) {
-          await supabase.from("user_scopes").insert(
-            scopeRefs.map(ref => ({ user_id: editando.id, scope_type: scopeType, scope_ref: ref }))
-          );
-        }
+        await supabase.from("profiles").update({ name: nome, role }).eq("id", uid);
       } else {
         const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
           email,
@@ -312,15 +328,32 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
           user_metadata: { name: nome },
         });
         if (authErr || !authData?.user) throw new Error(authErr?.message ?? "Erro ao criar usuário");
-
-        const uid = authData.user.id;
+        uid = authData.user.id;
         await supabase.from("profiles").insert({ id: uid, name: nome, email, role });
-        if (scopeType && scopeRefs.length > 0) {
-          await supabase.from("user_scopes").insert(
-            scopeRefs.map(ref => ({ user_id: uid, scope_type: scopeType, scope_ref: ref }))
-          );
+      }
+
+      // Reset e reinsert dos escopos
+      await supabase.from("user_scopes").delete().eq("user_id", uid);
+
+      if (!escopoBloqueado(role) && scopeType && scopeRefs.length > 0) {
+        await supabase.from("user_scopes").insert(
+          scopeRefs.map(ref => ({ user_id: uid, scope_type: scopeType, scope_ref: ref }))
+        );
+
+        // Se influencer com operadoras: sincroniza influencer_operadoras
+        if (role === "influencer" && scopeType === "operadora") {
+          // Garante que o vínculo existe (sem sobrescrever id_operadora existente)
+          for (const slug of scopeRefs) {
+            await supabase
+              .from("influencer_operadoras")
+              .upsert(
+                { influencer_id: uid, operadora_slug: slug, ativo: true },
+                { onConflict: "influencer_id,operadora_slug", ignoreDuplicates: true }
+              );
+          }
         }
       }
+
       onSalvo();
       onClose();
     } catch (e: unknown) {
@@ -337,7 +370,7 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
   };
   const modal: React.CSSProperties = {
     background: t.cardBg, borderRadius: 16, padding: 32,
-    width: "100%", maxWidth: 480, border: `1px solid ${t.cardBorder}`,
+    width: "100%", maxWidth: 520, border: `1px solid ${t.cardBorder}`,
     maxHeight: "90vh", overflowY: "auto",
   };
   const label: React.CSSProperties = {
@@ -352,10 +385,37 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
   };
   const select: React.CSSProperties = { ...input, cursor: "pointer" };
   const field: React.CSSProperties = { marginBottom: 18 };
+  const bloqueado = escopoBloqueado(role);
+  const obrigatorio = escopoObrigatorio(role);
 
-  const opcoesScopeRef = scopeType === "operadora"
-    ? OPERADORAS
-    : influencers.map(i => ({ value: i.id, label: i.nome }));
+  // Opções de tipo de escopo por role
+  const tiposEscopo = (): { value: ScopeType; label: string }[] => {
+    if (role === "influencer") return [{ value: "operadora", label: "Operadoras" }];
+    if (role === "operador")   return [{ value: "operadora", label: "Operadora" }, { value: "influencer", label: "Influencers" }];
+    if (role === "agencia")    return [{ value: "agencia_par", label: "Par Influencer + Operadora" }];
+    // executivo: ambos independentes
+    return [
+      { value: "influencer", label: "Influencers" },
+      { value: "operadora",  label: "Operadoras" },
+    ];
+  };
+
+  // Opções de valores de escopo
+  const opcoesRef = (): { value: string; label: string }[] => {
+    if (scopeType === "operadora")   return operadoras.map(o => ({ value: o.slug, label: o.nome }));
+    if (scopeType === "influencer")  return influencers.map(i => ({ value: i.id, label: i.nome }));
+    if (scopeType === "agencia_par") {
+      return influencers.flatMap(inf =>
+        operadoras.map(op => ({
+          value: `${inf.id}:${op.slug}`,
+          label: `${inf.nome} × ${op.nome}`,
+        }))
+      );
+    }
+    return [];
+  };
+
+  const corEscopo = role === "agencia" ? "#db2777" : "#7c3aed";
 
   return (
     <div style={overlay} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -385,81 +445,69 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
           </select>
         </div>
 
-        {(precisaEscopo || escopoOpcional) && (
-          <>
-            <div style={field}>
-              <label style={label}>
-                Tipo de Escopo {escopoOpcional && <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span>}
-              </label>
+        {/* Escopo — visível para todos, bloqueado para admin/gestor */}
+        <div style={field}>
+          <label style={label}>
+            Escopo de acesso
+            {bloqueado && <span style={{ opacity: 0.4, fontWeight: 400, marginLeft: 6 }}>(irrestrito — fixo)</span>}
+            {!bloqueado && !obrigatorio && <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6 }}>(opcional)</span>}
+            {obrigatorio && <span style={{ color: "#ef4444", marginLeft: 4 }}>*</span>}
+          </label>
+
+          {bloqueado ? (
+            <div style={{
+              background: t.bg, border: `1px solid ${t.cardBorder}`,
+              borderRadius: 8, padding: "10px 14px",
+              fontFamily: FONT.body, fontSize: 14, color: t.textMuted,
+              fontStyle: "italic",
+            }}>
+              Todos os influencers e operadoras
+            </div>
+          ) : (
+            <>
               <select style={select} value={scopeType} onChange={e => { setScopeType(e.target.value as ScopeType | ""); setScopeRefs([]); }}>
-                <option value="">Sem restrição</option>
-                {(role === "influencer"
-                  ? [{ value: "influencer", label: "Influencer" }]
-                  : role === "operador"
-                  ? [{ value: "operadora", label: "Operadora" }]
-                  : role === "agencia"                                    // ✅ agencia: só par
-                  ? [{ value: "agencia_par", label: "Par Influencer + Operadora" }]
-                  : [
-                    { value: "influencer", label: "Influencer" },
-                    { value: "operadora",  label: "Operadora" },
-                  ]
-                ).map(o => (
+                {!obrigatorio && <option value="">Sem restrição (todos)</option>}
+                {tiposEscopo().map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-            </div>
 
-            {scopeType && (
-              <div style={field}>
-                <label style={label}>
-                  {scopeType === "operadora" ? "Operadoras" :
-                   scopeType === "agencia_par" ? "Pares Influencer + Operadora" :
-                   "Influencers"}
-                  <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 4 }}>(multi-seleção)</span>
-                </label>
-                <div style={{
-                  border: `1px solid ${t.cardBorder}`, borderRadius: 8,
-                  padding: 10, display: "flex", flexWrap: "wrap", gap: 8,
-                }}>
-                  {scopeType === "agencia_par"
-                    // Pares: cada influencer × cada operadora
-                    ? influencers.flatMap(inf =>
-                        OPERADORAS.map(op => {
-                          const pairVal = `${inf.id}:${op.value}`;
-                          const sel = scopeRefs.includes(pairVal);
-                          return (
-                            <button key={pairVal} onClick={() => toggleScopeRef(pairVal)} style={{
-                              border: `1px solid ${sel ? "#db2777" : t.cardBorder}`,
-                              background: sel ? "#db277722" : "transparent",
-                              color: sel ? "#db2777" : t.text,
-                              borderRadius: 6, padding: "5px 12px", cursor: "pointer",
-                              fontFamily: FONT.body, fontSize: 12, fontWeight: sel ? 600 : 400,
-                            }}>
-                              {inf.nome} × {op.label}
-                            </button>
-                          );
-                        })
-                      )
-                    : opcoesScopeRef.map(op => {
-                        const sel = scopeRefs.includes(op.value);
-                        return (
-                          <button key={op.value} onClick={() => toggleScopeRef(op.value)} style={{
-                            border: `1px solid ${sel ? "#7c3aed" : t.cardBorder}`,
-                            background: sel ? "#7c3aed22" : "transparent",
-                            color: sel ? "#7c3aed" : t.text,
-                            borderRadius: 6, padding: "5px 12px", cursor: "pointer",
-                            fontFamily: FONT.body, fontSize: 13, fontWeight: sel ? 600 : 400,
-                          }}>
-                            {op.label}
-                          </button>
-                        );
-                      })
-                  }
+              {scopeType && (
+                <div style={{ marginTop: 12 }}>
+                  <label style={{ ...label, marginBottom: 8 }}>
+                    Selecionar
+                    <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 4 }}>(multi-seleção)</span>
+                  </label>
+                  <div style={{
+                    border: `1px solid ${t.cardBorder}`, borderRadius: 8,
+                    padding: 10, display: "flex", flexWrap: "wrap", gap: 8,
+                    maxHeight: 200, overflowY: "auto",
+                  }}>
+                    {opcoesRef().map(op => {
+                      const sel = scopeRefs.includes(op.value);
+                      return (
+                        <button key={op.value} onClick={() => toggleScopeRef(op.value)} style={{
+                          border: `1px solid ${sel ? corEscopo : t.cardBorder}`,
+                          background: sel ? corEscopo + "22" : "transparent",
+                          color: sel ? corEscopo : t.text,
+                          borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+                          fontFamily: FONT.body, fontSize: 12, fontWeight: sel ? 600 : 400,
+                        }}>
+                          {op.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {scopeRefs.length > 0 && (
+                    <p style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, marginTop: 6 }}>
+                      {scopeRefs.length} selecionado{scopeRefs.length !== 1 ? "s" : ""}
+                    </p>
+                  )}
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
+        </div>
 
         {erro && (
           <p style={{ color: "#ef4444", fontFamily: FONT.body, fontSize: 13, marginBottom: 16 }}>{erro}</p>
@@ -525,10 +573,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
       can_excluir: p.hasExcluir ? (perms[p.key]?.can_excluir ?? null) : null,
     }));
 
-    await supabase
-      .from("role_permissions")
-      .upsert(rows, { onConflict: "role,page_key" });
-
+    await supabase.from("role_permissions").upsert(rows, { onConflict: "role,page_key" });
     setSalvando(false);
     setSalvoOk(true);
     setTimeout(() => setSalvoOk(false), 2500);
@@ -597,11 +642,9 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                       campo === "can_editar"  ? page.hasEditar :
                       page.hasExcluir;
 
-                    if (!temAcao) {
-                      return (
-                        <td key={campo} style={{ ...tdStyle, textAlign: "center", color: t.textMuted, opacity: 0.3 }}>—</td>
-                      );
-                    }
+                    if (!temAcao) return (
+                      <td key={campo} style={{ ...tdStyle, textAlign: "center", color: t.textMuted, opacity: 0.3 }}>—</td>
+                    );
 
                     const val = (perms[page.key]?.[campo] as PermissaoValor) ?? null;
                     return (
@@ -612,8 +655,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                           style={{
                             background: t.bg, border: `1px solid ${t.cardBorder}`,
                             borderRadius: 6, padding: "4px 8px", color: t.text,
-                            fontFamily: FONT.body, fontSize: 12, cursor: "pointer",
-                            minWidth: 100,
+                            fontFamily: FONT.body, fontSize: 12, cursor: "pointer", minWidth: 100,
                           }}
                         >
                           <option value="">—</option>
@@ -641,8 +683,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
           background: "linear-gradient(135deg, #7c3aed, #2563eb)",
           color: "#fff", border: "none", borderRadius: 10,
           padding: "10px 22px", cursor: salvando ? "not-allowed" : "pointer",
-          fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
-          opacity: salvando ? 0.7 : 1,
+          fontFamily: FONT.body, fontSize: 13, fontWeight: 600, opacity: salvando ? 0.7 : 1,
         }}>
           {salvando ? "Salvando..." : `Salvar permissões — ${roleLabel(roleAtivo)}`}
         </button>
