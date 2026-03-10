@@ -4,7 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import {
   Role, PageKey, PermissaoValor, RolePermission,
-  UsuarioCompleto, UserScope, ScopeType, Operadora,
+  UsuarioCompleto, UserScope, Operadora,
 } from "../../../types";
 
 // ─── CONSTANTES ──────────────────────────────────────────────────────────────
@@ -58,14 +58,8 @@ function roleBadgeColor(role: Role): string {
   return map[role] ?? "#6b7280";
 }
 
-// Roles que têm escopo bloqueado em "Todos"
 function escopoBloqueado(role: Role) {
   return role === "admin" || role === "gestor";
-}
-
-// Roles que exigem escopo obrigatório
-function escopoObrigatorio(role: Role) {
-  return role === "influencer" || role === "operador" || role === "agencia";
 }
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
@@ -123,18 +117,15 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-
     const [{ data: profiles }, { data: scopes }, { data: ops }] = await Promise.all([
       supabase.from("profiles").select("id, name, email, role, created_at").order("created_at", { ascending: true }),
       supabase.from("user_scopes").select("*"),
       supabase.from("operadoras").select("*").order("nome"),
     ]);
-
     const lista: UsuarioCompleto[] = (profiles ?? []).map(p => ({
       ...p,
       scopes: (scopes ?? []).filter(s => s.user_id === p.id),
     }));
-
     setUsuarios(lista);
     setOperadoras(ops ?? []);
     setLoading(false);
@@ -145,19 +136,18 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   const abrirNovo = () => { setEditando(null); setModalOpen(true); };
   const abrirEditar = (u: UsuarioCompleto) => { setEditando(u); setModalOpen(true); };
 
-  // Formata escopo para exibição na tabela
-  const formatarEscopo = (scopes: UserScope[]) => {
+  const formatarEscopo = (scopes: UserScope[], ops: Operadora[]) => {
     if (!scopes || scopes.length === 0) return null;
-    return scopes.map(s => {
-      if (s.scope_type === "operadora") {
-        return operadoras.find(o => o.slug === s.scope_ref)?.nome ?? s.scope_ref;
-      }
+    const partes = scopes.map(s => {
+      if (s.scope_type === "operadora") return ops.find(o => o.slug === s.scope_ref)?.nome ?? s.scope_ref;
       if (s.scope_type === "agencia_par") {
         const [, slug] = s.scope_ref.split(":");
-        return operadoras.find(o => o.slug === slug)?.nome ?? slug;
+        return ops.find(o => o.slug === slug)?.nome ?? slug;
       }
-      return s.scope_ref.slice(0, 8) + "…"; // UUID truncado para influencer
-    }).join(", ");
+      return "Influencer";
+    });
+    // Remove duplicados e junta
+    return [...new Set(partes)].join(", ");
   };
 
   const thMuted: React.CSSProperties = {
@@ -200,7 +190,7 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
             </thead>
             <tbody>
               {usuarios.map(u => {
-                const escopoTexto = formatarEscopo(u.scopes ?? []);
+                const escopoTexto = formatarEscopo(u.scopes ?? [], operadoras);
                 return (
                   <tr key={u.id}>
                     <td style={td}><strong>{u.name}</strong></td>
@@ -217,10 +207,8 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                     </td>
                     <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>
                       {escopoBloqueado(u.role as Role)
-                        ? <span style={{ color: t.textMuted, opacity: 0.4, fontStyle: "italic" }}>Todos</span>
-                        : escopoTexto
-                          ? escopoTexto
-                          : <span style={{ color: t.textMuted, opacity: 0.4 }}>—</span>
+                        ? <span style={{ fontStyle: "italic", opacity: 0.4 }}>Todos</span>
+                        : escopoTexto || <span style={{ opacity: 0.4 }}>—</span>
                       }
                     </td>
                     <td style={td}>
@@ -267,8 +255,12 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
   const [nome, setNome] = useState(editando?.name ?? "");
   const [email, setEmail] = useState(editando?.email ?? "");
   const [role, setRole] = useState<Role>(editando?.role ?? "gestor");
-  const [scopeType, setScopeType] = useState<ScopeType | "">("");
-  const [scopeRefs, setScopeRefs] = useState<string[]>([]);
+
+  // Escopos independentes
+  const [scopeInfluencers, setScopeInfluencers] = useState<string[]>([]);  // UUIDs
+  const [scopeOperadoras, setScopeOperadoras] = useState<string[]>([]);    // slugs
+  const [scopePares, setScopePares] = useState<string[]>([]);              // "uuid:slug" só para agencia
+
   const [influencers, setInfluencers] = useState<{ id: string; nome: string }[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -286,33 +278,39 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
 
   // Pré-preenche ao editar
   useEffect(() => {
-    if (editando?.scopes && editando.scopes.length > 0) {
-      setScopeType(editando.scopes[0].scope_type);
-      setScopeRefs(editando.scopes.map(s => s.scope_ref));
-    } else {
-      setScopeType("");
-      setScopeRefs([]);
-    }
+    const scopes = editando?.scopes ?? [];
+    setScopeInfluencers(scopes.filter(s => s.scope_type === "influencer").map(s => s.scope_ref));
+    setScopeOperadoras(scopes.filter(s => s.scope_type === "operadora").map(s => s.scope_ref));
+    setScopePares(scopes.filter(s => s.scope_type === "agencia_par").map(s => s.scope_ref));
   }, [editando]);
 
   // Reset ao trocar role
   useEffect(() => {
-    setScopeType("");
-    setScopeRefs([]);
+    setScopeInfluencers([]);
+    setScopeOperadoras([]);
+    setScopePares([]);
   }, [role]);
 
-  const toggleScopeRef = (ref: string) => {
-    setScopeRefs(prev =>
-      prev.includes(ref) ? prev.filter(r => r !== ref) : [...prev, ref]
-    );
-  };
+  const toggleItem = (
+    list: string[],
+    setList: React.Dispatch<React.SetStateAction<string[]>>,
+    val: string
+  ) => setList(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
 
   const salvar = async () => {
     setErro("");
     if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
     if (!editando && !email.trim()) { setErro("E-mail é obrigatório."); return; }
-    if (escopoObrigatorio(role) && (!scopeType || scopeRefs.length === 0)) {
-      setErro("Selecione pelo menos um escopo para este perfil."); return;
+
+    // Validações por role
+    if (role === "influencer" && scopeOperadoras.length === 0) {
+      setErro("Selecione pelo menos uma operadora para o influencer."); return;
+    }
+    if (role === "operador" && scopeOperadoras.length === 0) {
+      setErro("Selecione pelo menos uma operadora para o operador."); return;
+    }
+    if (role === "agencia" && scopePares.length === 0) {
+      setErro("Selecione pelo menos um par influencer+operadora para a agência."); return;
     }
 
     setSalvando(true);
@@ -323,33 +321,38 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
         await supabase.from("profiles").update({ name: nome, role }).eq("id", uid);
       } else {
         const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-          email,
-          email_confirm: true,
-          user_metadata: { name: nome },
+          email, email_confirm: true, user_metadata: { name: nome },
         });
         if (authErr || !authData?.user) throw new Error(authErr?.message ?? "Erro ao criar usuário");
         uid = authData.user.id;
         await supabase.from("profiles").insert({ id: uid, name: nome, email, role });
       }
 
-      // Reset e reinsert dos escopos
+      // Reset e reinsert de escopos
       await supabase.from("user_scopes").delete().eq("user_id", uid);
 
-      if (!escopoBloqueado(role) && scopeType && scopeRefs.length > 0) {
-        await supabase.from("user_scopes").insert(
-          scopeRefs.map(ref => ({ user_id: uid, scope_type: scopeType, scope_ref: ref }))
-        );
+      if (!escopoBloqueado(role)) {
+        const novasLinhas: { user_id: string; scope_type: string; scope_ref: string }[] = [];
 
-        // Se influencer com operadoras: sincroniza influencer_operadoras
-        if (role === "influencer" && scopeType === "operadora") {
-          // Garante que o vínculo existe (sem sobrescrever id_operadora existente)
-          for (const slug of scopeRefs) {
-            await supabase
-              .from("influencer_operadoras")
-              .upsert(
-                { influencer_id: uid, operadora_slug: slug, ativo: true },
-                { onConflict: "influencer_id,operadora_slug", ignoreDuplicates: true }
-              );
+        if (role === "agencia") {
+          scopePares.forEach(par => novasLinhas.push({ user_id: uid, scope_type: "agencia_par", scope_ref: par }));
+        } else {
+          // influencer, operador, executivo
+          scopeInfluencers.forEach(ref => novasLinhas.push({ user_id: uid, scope_type: "influencer", scope_ref: ref }));
+          scopeOperadoras.forEach(ref => novasLinhas.push({ user_id: uid, scope_type: "operadora", scope_ref: ref }));
+        }
+
+        if (novasLinhas.length > 0) {
+          await supabase.from("user_scopes").insert(novasLinhas);
+        }
+
+        // Sincroniza influencer_operadoras se role=influencer
+        if (role === "influencer" && scopeOperadoras.length > 0) {
+          for (const slug of scopeOperadoras) {
+            await supabase.from("influencer_operadoras").upsert(
+              { influencer_id: uid, operadora_slug: slug, ativo: true },
+              { onConflict: "influencer_id,operadora_slug", ignoreDuplicates: true }
+            );
           }
         }
       }
@@ -363,6 +366,7 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     }
   };
 
+  // Estilos
   const overlay: React.CSSProperties = {
     position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
     display: "flex", alignItems: "center", justifyContent: "center",
@@ -370,10 +374,10 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
   };
   const modal: React.CSSProperties = {
     background: t.cardBg, borderRadius: 16, padding: 32,
-    width: "100%", maxWidth: 520, border: `1px solid ${t.cardBorder}`,
+    width: "100%", maxWidth: 560, border: `1px solid ${t.cardBorder}`,
     maxHeight: "90vh", overflowY: "auto",
   };
-  const label: React.CSSProperties = {
+  const labelStyle: React.CSSProperties = {
     display: "block", fontFamily: FONT.body, fontSize: 12,
     fontWeight: 600, color: t.textMuted, marginBottom: 6,
     textTransform: "uppercase", letterSpacing: "0.8px",
@@ -383,39 +387,54 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     borderRadius: 8, padding: "10px 12px", color: t.text,
     fontFamily: FONT.body, fontSize: 14, boxSizing: "border-box",
   };
-  const select: React.CSSProperties = { ...input, cursor: "pointer" };
+  const selectStyle: React.CSSProperties = { ...input, cursor: "pointer" };
   const field: React.CSSProperties = { marginBottom: 18 };
+
+  // Componente reutilizável de multi-seleção
+  const MultiSelect = ({
+    label, items, selected, onToggle, cor = "#7c3aed", obrigatorio = false,
+  }: {
+    label: string;
+    items: { value: string; label: string }[];
+    selected: string[];
+    onToggle: (v: string) => void;
+    cor?: string;
+    obrigatorio?: boolean;
+  }) => (
+    <div style={field}>
+      <label style={labelStyle}>
+        {label}
+        {obrigatorio && <span style={{ color: "#ef4444", marginLeft: 4 }}>*</span>}
+        <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6 }}>(multi-seleção)</span>
+      </label>
+      <div style={{
+        border: `1px solid ${t.cardBorder}`, borderRadius: 8, padding: 10,
+        display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 160, overflowY: "auto",
+      }}>
+        {items.map(op => {
+          const sel = selected.includes(op.value);
+          return (
+            <button key={op.value} onClick={() => onToggle(op.value)} style={{
+              border: `1px solid ${sel ? cor : t.cardBorder}`,
+              background: sel ? cor + "22" : "transparent",
+              color: sel ? cor : t.text,
+              borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+              fontFamily: FONT.body, fontSize: 12, fontWeight: sel ? 600 : 400,
+            }}>
+              {op.label}
+            </button>
+          );
+        })}
+      </div>
+      {selected.length > 0 && (
+        <p style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, marginTop: 4 }}>
+          {selected.length} selecionado{selected.length !== 1 ? "s" : ""}
+        </p>
+      )}
+    </div>
+  );
+
   const bloqueado = escopoBloqueado(role);
-  const obrigatorio = escopoObrigatorio(role);
-
-  // Opções de tipo de escopo por role
-  const tiposEscopo = (): { value: ScopeType; label: string }[] => {
-    if (role === "influencer") return [{ value: "operadora", label: "Operadoras" }];
-    if (role === "operador")   return [{ value: "operadora", label: "Operadora" }, { value: "influencer", label: "Influencers" }];
-    if (role === "agencia")    return [{ value: "agencia_par", label: "Par Influencer + Operadora" }];
-    // executivo: ambos independentes
-    return [
-      { value: "influencer", label: "Influencers" },
-      { value: "operadora",  label: "Operadoras" },
-    ];
-  };
-
-  // Opções de valores de escopo
-  const opcoesRef = (): { value: string; label: string }[] => {
-    if (scopeType === "operadora")   return operadoras.map(o => ({ value: o.slug, label: o.nome }));
-    if (scopeType === "influencer")  return influencers.map(i => ({ value: i.id, label: i.nome }));
-    if (scopeType === "agencia_par") {
-      return influencers.flatMap(inf =>
-        operadoras.map(op => ({
-          value: `${inf.id}:${op.slug}`,
-          label: `${inf.nome} × ${op.nome}`,
-        }))
-      );
-    }
-    return [];
-  };
-
-  const corEscopo = role === "agencia" ? "#db2777" : "#7c3aed";
 
   return (
     <div style={overlay} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -425,89 +444,82 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
         </h2>
 
         <div style={field}>
-          <label style={label}>Nome</label>
+          <label style={labelStyle}>Nome</label>
           <input style={input} value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo" />
         </div>
 
         {!editando && (
           <div style={field}>
-            <label style={label}>E-mail</label>
+            <label style={labelStyle}>E-mail</label>
             <input style={input} value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" type="email" />
           </div>
         )}
 
         <div style={field}>
-          <label style={label}>Perfil</label>
-          <select style={select} value={role} onChange={e => setRole(e.target.value as Role)}>
-            {ROLES.map(r => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
+          <label style={labelStyle}>Perfil</label>
+          <select style={selectStyle} value={role} onChange={e => setRole(e.target.value as Role)}>
+            {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>
 
-        {/* Escopo — visível para todos, bloqueado para admin/gestor */}
-        <div style={field}>
-          <label style={label}>
-            Escopo de acesso
-            {bloqueado && <span style={{ opacity: 0.4, fontWeight: 400, marginLeft: 6 }}>(irrestrito — fixo)</span>}
-            {!bloqueado && !obrigatorio && <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6 }}>(opcional)</span>}
-            {obrigatorio && <span style={{ color: "#ef4444", marginLeft: 4 }}>*</span>}
-          </label>
-
-          {bloqueado ? (
+        {/* ── ESCOPO ── */}
+        {bloqueado ? (
+          <div style={field}>
+            <label style={labelStyle}>Escopo de acesso</label>
             <div style={{
-              background: t.bg, border: `1px solid ${t.cardBorder}`,
-              borderRadius: 8, padding: "10px 14px",
-              fontFamily: FONT.body, fontSize: 14, color: t.textMuted,
-              fontStyle: "italic",
+              background: t.bg, border: `1px solid ${t.cardBorder}`, borderRadius: 8,
+              padding: "10px 14px", fontFamily: FONT.body, fontSize: 14,
+              color: t.textMuted, fontStyle: "italic",
             }}>
               Todos os influencers e operadoras
             </div>
-          ) : (
-            <>
-              <select style={select} value={scopeType} onChange={e => { setScopeType(e.target.value as ScopeType | ""); setScopeRefs([]); }}>
-                {!obrigatorio && <option value="">Sem restrição (todos)</option>}
-                {tiposEscopo().map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-
-              {scopeType && (
-                <div style={{ marginTop: 12 }}>
-                  <label style={{ ...label, marginBottom: 8 }}>
-                    Selecionar
-                    <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 4 }}>(multi-seleção)</span>
-                  </label>
-                  <div style={{
-                    border: `1px solid ${t.cardBorder}`, borderRadius: 8,
-                    padding: 10, display: "flex", flexWrap: "wrap", gap: 8,
-                    maxHeight: 200, overflowY: "auto",
-                  }}>
-                    {opcoesRef().map(op => {
-                      const sel = scopeRefs.includes(op.value);
-                      return (
-                        <button key={op.value} onClick={() => toggleScopeRef(op.value)} style={{
-                          border: `1px solid ${sel ? corEscopo : t.cardBorder}`,
-                          background: sel ? corEscopo + "22" : "transparent",
-                          color: sel ? corEscopo : t.text,
-                          borderRadius: 6, padding: "5px 12px", cursor: "pointer",
-                          fontFamily: FONT.body, fontSize: 12, fontWeight: sel ? 600 : 400,
-                        }}>
-                          {op.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {scopeRefs.length > 0 && (
-                    <p style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, marginTop: 6 }}>
-                      {scopeRefs.length} selecionado{scopeRefs.length !== 1 ? "s" : ""}
-                    </p>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+          </div>
+        ) : role === "agencia" ? (
+          // Agência: pares influencer × operadora
+          <MultiSelect
+            label="Pares Influencer + Operadora"
+            obrigatorio
+            cor="#db2777"
+            items={influencers.flatMap(inf =>
+              operadoras.map(op => ({
+                value: `${inf.id}:${op.slug}`,
+                label: `${inf.nome} × ${op.nome}`,
+              }))
+            )}
+            selected={scopePares}
+            onToggle={v => toggleItem(scopePares, setScopePares, v)}
+          />
+        ) : role === "influencer" ? (
+          // Influencer: só operadoras (ele mesmo é fixo como scope de influencer)
+          <MultiSelect
+            label="Operadoras atribuídas"
+            obrigatorio
+            cor="#059669"
+            items={operadoras.map(o => ({ value: o.slug, label: o.nome }))}
+            selected={scopeOperadoras}
+            onToggle={v => toggleItem(scopeOperadoras, setScopeOperadoras, v)}
+          />
+        ) : (
+          // operador, executivo: campos independentes
+          <>
+            <MultiSelect
+              label={`Influencers${role === "operador" ? "" : " (opcional)"}`}
+              obrigatorio={false}
+              cor="#7c3aed"
+              items={influencers.map(i => ({ value: i.id, label: i.nome }))}
+              selected={scopeInfluencers}
+              onToggle={v => toggleItem(scopeInfluencers, setScopeInfluencers, v)}
+            />
+            <MultiSelect
+              label={`Operadoras${role === "operador" ? "" : " (opcional)"}`}
+              obrigatorio={role === "operador"}
+              cor="#d97706"
+              items={operadoras.map(o => ({ value: o.slug, label: o.nome }))}
+              selected={scopeOperadoras}
+              onToggle={v => toggleItem(scopeOperadoras, setScopeOperadoras, v)}
+            />
+          </>
+        )}
 
         {erro && (
           <p style={{ color: "#ef4444", fontFamily: FONT.body, fontSize: 13, marginBottom: 16 }}>{erro}</p>
@@ -518,9 +530,7 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
             background: "none", border: `1px solid ${t.cardBorder}`,
             borderRadius: 8, padding: "9px 18px", cursor: "pointer",
             fontFamily: FONT.body, fontSize: 13, color: t.text,
-          }}>
-            Cancelar
-          </button>
+          }}>Cancelar</button>
           <button onClick={salvar} disabled={salvando} style={{
             background: "linear-gradient(135deg, #7c3aed, #2563eb)",
             color: "#fff", border: "none", borderRadius: 8,
@@ -544,15 +554,11 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   const [salvoOk, setSalvoOk] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("role_permissions")
-      .select("*")
-      .eq("role", roleAtivo)
-      .then(({ data }) => {
-        const mapa: Record<string, Partial<RolePermission>> = {};
-        (data ?? []).forEach(r => { mapa[r.page_key] = r; });
-        setPerms(mapa);
-      });
+    supabase.from("role_permissions").select("*").eq("role", roleAtivo).then(({ data }) => {
+      const mapa: Record<string, Partial<RolePermission>> = {};
+      (data ?? []).forEach(r => { mapa[r.page_key] = r; });
+      setPerms(mapa);
+    });
   }, [roleAtivo]);
 
   const setPerm = (pageKey: string, campo: keyof RolePermission, valor: PermissaoValor) => {
@@ -565,14 +571,12 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   const salvar = async () => {
     setSalvando(true);
     const rows = PAGES.map(p => ({
-      role: roleAtivo,
-      page_key: p.key,
+      role: roleAtivo, page_key: p.key,
       can_view:    perms[p.key]?.can_view    ?? null,
       can_criar:   p.hasCriar   ? (perms[p.key]?.can_criar   ?? null) : null,
       can_editar:  p.hasEditar  ? (perms[p.key]?.can_editar  ?? null) : null,
       can_excluir: p.hasExcluir ? (perms[p.key]?.can_excluir ?? null) : null,
     }));
-
     await supabase.from("role_permissions").upsert(rows, { onConflict: "role,page_key" });
     setSalvando(false);
     setSalvoOk(true);
@@ -588,7 +592,6 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
     fontFamily: FONT.body, fontSize: 13, color: t.text,
     padding: "10px 12px", borderTop: `1px solid ${t.cardBorder}`,
   };
-
   const secoes = [...new Set(PAGES.map(p => p.secao))];
 
   return (
@@ -674,11 +677,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
-        {salvoOk && (
-          <span style={{ color: "#22c55e", fontFamily: FONT.body, fontSize: 13 }}>
-            ✓ Permissões salvas com sucesso
-          </span>
-        )}
+        {salvoOk && <span style={{ color: "#22c55e", fontFamily: FONT.body, fontSize: 13 }}>✓ Permissões salvas com sucesso</span>}
         <button onClick={salvar} disabled={salvando} style={{
           background: "linear-gradient(135deg, #7c3aed, #2563eb)",
           color: "#fff", border: "none", borderRadius: 10,
