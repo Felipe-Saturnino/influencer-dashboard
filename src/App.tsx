@@ -13,13 +13,15 @@ import DashboardOverview   from "./pages/dashboards/DashboardOverview";
 import DashboardConversao  from "./pages/dashboards/DashboardConversao";
 import DashboardFinanceiro from "./pages/dashboards/DashboardFinanceiro";
 // Páginas — lives
-import Agenda        from "./pages/lives/Agenda";
-import Resultados    from "./pages/lives/Resultados";
-import Feedback      from "./pages/lives/Feedback";
+import Agenda     from "./pages/lives/Agenda";
+import Resultados from "./pages/lives/Resultados";
+import Feedback   from "./pages/lives/Feedback";
 // Páginas — operacoes
-import Influencers   from "./pages/operacoes/Influencers";
-import Financeiro    from "./pages/operacoes/Financeiro";
-import GestaoLinks   from "./pages/operacoes/GestaoLinks";
+import Influencers from "./pages/operacoes/Influencers";
+import Financeiro  from "./pages/operacoes/Financeiro";
+import GestaoLinks from "./pages/operacoes/GestaoLinks";
+// Páginas — plataforma
+import GestaoUsuarios from "./pages/plataforma/GestaoUsuarios";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
@@ -32,6 +34,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   influencers:      Influencers,
   financeiro:       Financeiro,
   gestao_links:     GestaoLinks,
+  gestao_usuarios:  GestaoUsuarios,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
 };
@@ -44,16 +47,9 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   const PageComponent = PAGE_MAP[activePage] ?? DashboardOverview;
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: t.bg }}>
-      <Sidebar
-        activePage={activePage}
-        onNavigate={setActivePage}
-      />
+      <Sidebar activePage={activePage} onNavigate={setActivePage} />
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginLeft: "240px", minHeight: "100vh" }}>
-        <Header
-          activePage={activePage}
-          onNavigate={setActivePage}
-          onLogout={onLogout}
-        />
+        <Header activePage={activePage} onNavigate={setActivePage} onLogout={onLogout} />
         <div style={{ flex: 1, overflowY: "auto" }}>
           <PageComponent />
         </div>
@@ -76,9 +72,7 @@ function Root() {
       </div>
     );
   }
-  return user
-    ? <AppLayout onLogout={handleLogout} />
-    : <Login onLogin={setUser} />;
+  return user ? <AppLayout onLogout={handleLogout} /> : <Login onLogin={setUser} />;
 }
 
 export default function App() {
