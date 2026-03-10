@@ -23,7 +23,7 @@ export function usePermission(pageKey: PageKey): Permissoes {
 
   useEffect(() => {
     if (!user) {
-      setPerm({ canView: "não", canCriar: null, canEditar: null, canExcluir: null, loading: false });
+      setPerm({ canView: "nao", canCriar: null, canEditar: null, canExcluir: null, loading: false });
       return;
     }
 
@@ -48,7 +48,7 @@ export function usePermission(pageKey: PageKey): Permissoes {
       .single()
       .then(({ data }) => {
         const result: Permissoes = {
-          canView:    (data?.can_view    as PermissaoValor) ?? "não",
+          canView:    (data?.can_view    as PermissaoValor) ?? "nao",
           canCriar:   (data?.can_criar   as PermissaoValor) ?? null,
           canEditar:  (data?.can_editar  as PermissaoValor) ?? null,
           canExcluir: (data?.can_excluir as PermissaoValor) ?? null,
