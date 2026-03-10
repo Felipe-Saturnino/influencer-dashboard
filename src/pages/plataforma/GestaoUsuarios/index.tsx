@@ -10,34 +10,36 @@ import {
 // ─── CONSTANTES ──────────────────────────────────────────────────────────────
 
 const ROLES: { value: Role; label: string }[] = [
-  { value: "admin",     label: "Administrador" },
-  { value: "gestor",    label: "Gestor" },
-  { value: "executivo", label: "Executivo" },
-  { value: "influencer",label: "Influencer" },
-  { value: "operador",  label: "Operador" },
+  { value: "admin",      label: "Administrador" },
+  { value: "gestor",     label: "Gestor" },
+  { value: "executivo",  label: "Executivo" },
+  { value: "influencer", label: "Influencer" },
+  { value: "operador",   label: "Operador" },
+  { value: "agencia",    label: "Agência" },           // ✅ adicionado
 ];
 
 const OPERADORAS = [
-  { value: "blaze",         label: "Blaze" },
-  { value: "bet_nacional",  label: "Bet Nacional" },
-  { value: "casa_apostas",  label: "Casa de Apostas" },
+  { value: "blaze",        label: "Blaze" },
+  { value: "bet_nacional", label: "Bet Nacional" },
+  { value: "casa_apostas", label: "Casa de Apostas" },
 ];
 
 const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; hasEditar: boolean; hasExcluir: boolean }[] = [
-  { key: "agenda",          label: "Agenda",            secao: "Lives",      hasCriar: true,  hasEditar: true,  hasExcluir: true  },
-  { key: "resultados",      label: "Resultados",        secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "feedback",        label: "Feedback",          secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "dash_overview",   label: "Overview",          secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_conversao",  label: "Conversão",         secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_financeiro", label: "Financeiro",        secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "influencers",     label: "Influencers",       secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
-  { key: "financeiro",      label: "Financeiro",        secao: "Operações",  hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "gestao_links",    label: "Gestão de Links",   secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "configuracoes",   label: "Configurações",     secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "ajuda",           label: "Ajuda",             secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "agenda",          label: "Agenda",          secao: "Lives",      hasCriar: true,  hasEditar: true,  hasExcluir: true  },
+  { key: "resultados",      label: "Resultados",      secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "feedback",        label: "Feedback",        secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "dash_overview",   label: "Overview",        secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_conversao",  label: "Conversão",       secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_financeiro", label: "Financeiro",      secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "influencers",     label: "Influencers",     secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
+  { key: "financeiro",      label: "Financeiro",      secao: "Operações",  hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "gestao_links",    label: "Gestão de Links", secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "configuracoes",   label: "Configurações",   secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "ajuda",           label: "Ajuda",           secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
-const ROLES_EDITAVEIS: Role[] = ["gestor", "executivo", "influencer", "operador"];
+const ROLES_EDITAVEIS: Role[] = ["gestor", "executivo", "influencer", "operador", "agencia"]; // ✅ adicionado
+
 const PERM_OPCOES: { value: PermissaoValor; label: string }[] = [
   { value: "sim",      label: "Sim" },
   { value: "nao",      label: "Não" },
@@ -57,6 +59,7 @@ function roleBadgeColor(role: Role): string {
     executivo:  "#0891b2",
     influencer: "#059669",
     operador:   "#d97706",
+    agencia:    "#db2777",                               // ✅ adicionado
   };
   return map[role] ?? "#6b7280";
 }
@@ -74,7 +77,6 @@ export default function GestaoUsuarios() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* Header */}
       <div>
         <h1 style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0 }}>
           🛡️ Gestão de Usuários
@@ -84,7 +86,6 @@ export default function GestaoUsuarios() {
         </p>
       </div>
 
-      {/* Abas */}
       <div style={{ display: "flex", gap: 8, borderBottom: `2px solid ${t.cardBorder}`, paddingBottom: 0 }}>
         {(["usuarios", "permissoes"] as const).map(a => (
           <button key={a} onClick={() => setAba(a)} style={{
@@ -256,9 +257,8 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
   const [erro, setErro] = useState("");
 
   const precisaEscopo = role === "influencer" || role === "operador";
-  const escopoOpcional = role === "gestor" || role === "executivo";
+  const escopoOpcional = role === "gestor" || role === "executivo" || role === "agencia"; // ✅ agencia adicionado
 
-  // Carrega influencers para o multi-select
   useEffect(() => {
     supabase
       .from("influencer_perfil")
@@ -270,7 +270,6 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
       });
   }, []);
 
-  // Pré-preenche escopos ao editar
   useEffect(() => {
     if (editando?.scopes && editando.scopes.length > 0) {
       setScopeType(editando.scopes[0].scope_type);
@@ -278,7 +277,6 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
     }
   }, [editando]);
 
-  // Reset escopo ao trocar role
   useEffect(() => {
     setScopeType("");
     setScopeRefs([]);
@@ -300,7 +298,6 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
     setSalvando(true);
     try {
       if (editando) {
-        // Edição: atualiza profile e escopos
         await supabase.from("profiles").update({ name: nome, role }).eq("id", editando.id);
         await supabase.from("user_scopes").delete().eq("user_id", editando.id);
         if (scopeType && scopeRefs.length > 0) {
@@ -309,7 +306,6 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
           );
         }
       } else {
-        // Criação: cria auth user + profile + escopos
         const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
           email,
           email_confirm: true,
@@ -397,13 +393,15 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
               </label>
               <select style={select} value={scopeType} onChange={e => { setScopeType(e.target.value as ScopeType | ""); setScopeRefs([]); }}>
                 <option value="">Sem restrição</option>
-                {(precisaEscopo && role === "influencer"
+                {(role === "influencer"
                   ? [{ value: "influencer", label: "Influencer" }]
-                  : precisaEscopo && role === "operador"
+                  : role === "operador"
                   ? [{ value: "operadora", label: "Operadora" }]
+                  : role === "agencia"                                    // ✅ agencia: só par
+                  ? [{ value: "agencia_par", label: "Par Influencer + Operadora" }]
                   : [
                     { value: "influencer", label: "Influencer" },
-                    { value: "operadora", label: "Operadora" },
+                    { value: "operadora",  label: "Operadora" },
                   ]
                 ).map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -414,27 +412,49 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
             {scopeType && (
               <div style={field}>
                 <label style={label}>
-                  {scopeType === "operadora" ? "Operadoras" : "Influencers"}
+                  {scopeType === "operadora" ? "Operadoras" :
+                   scopeType === "agencia_par" ? "Pares Influencer + Operadora" :
+                   "Influencers"}
                   <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 4 }}>(multi-seleção)</span>
                 </label>
                 <div style={{
                   border: `1px solid ${t.cardBorder}`, borderRadius: 8,
                   padding: 10, display: "flex", flexWrap: "wrap", gap: 8,
                 }}>
-                  {opcoesScopeRef.map(op => {
-                    const sel = scopeRefs.includes(op.value);
-                    return (
-                      <button key={op.value} onClick={() => toggleScopeRef(op.value)} style={{
-                        border: `1px solid ${sel ? "#7c3aed" : t.cardBorder}`,
-                        background: sel ? "#7c3aed22" : "transparent",
-                        color: sel ? "#7c3aed" : t.text,
-                        borderRadius: 6, padding: "5px 12px", cursor: "pointer",
-                        fontFamily: FONT.body, fontSize: 13, fontWeight: sel ? 600 : 400,
-                      }}>
-                        {op.label}
-                      </button>
-                    );
-                  })}
+                  {scopeType === "agencia_par"
+                    // Pares: cada influencer × cada operadora
+                    ? influencers.flatMap(inf =>
+                        OPERADORAS.map(op => {
+                          const pairVal = `${inf.id}:${op.value}`;
+                          const sel = scopeRefs.includes(pairVal);
+                          return (
+                            <button key={pairVal} onClick={() => toggleScopeRef(pairVal)} style={{
+                              border: `1px solid ${sel ? "#db2777" : t.cardBorder}`,
+                              background: sel ? "#db277722" : "transparent",
+                              color: sel ? "#db2777" : t.text,
+                              borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+                              fontFamily: FONT.body, fontSize: 12, fontWeight: sel ? 600 : 400,
+                            }}>
+                              {inf.nome} × {op.label}
+                            </button>
+                          );
+                        })
+                      )
+                    : opcoesScopeRef.map(op => {
+                        const sel = scopeRefs.includes(op.value);
+                        return (
+                          <button key={op.value} onClick={() => toggleScopeRef(op.value)} style={{
+                            border: `1px solid ${sel ? "#7c3aed" : t.cardBorder}`,
+                            background: sel ? "#7c3aed22" : "transparent",
+                            color: sel ? "#7c3aed" : t.text,
+                            borderRadius: 6, padding: "5px 12px", cursor: "pointer",
+                            fontFamily: FONT.body, fontSize: 13, fontWeight: sel ? 600 : 400,
+                          }}>
+                            {op.label}
+                          </button>
+                        );
+                      })
+                  }
                 </div>
               </div>
             )}
@@ -524,12 +544,10 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
     padding: "10px 12px", borderTop: `1px solid ${t.cardBorder}`,
   };
 
-  // Agrupa por seção
   const secoes = [...new Set(PAGES.map(p => p.secao))];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Seletor de role */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {ROLES_EDITAVEIS.map(r => (
           <button key={r} onClick={() => setRoleAtivo(r)} style={{
@@ -581,9 +599,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
 
                     if (!temAcao) {
                       return (
-                        <td key={campo} style={{ ...tdStyle, textAlign: "center", color: t.textMuted, opacity: 0.3 }}>
-                          —
-                        </td>
+                        <td key={campo} style={{ ...tdStyle, textAlign: "center", color: t.textMuted, opacity: 0.3 }}>—</td>
                       );
                     }
 
