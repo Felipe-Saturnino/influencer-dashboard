@@ -68,15 +68,15 @@ export default function GestaoUsuarios() {
   const [aba, setAba] = useState<"usuarios" | "permissoes">("usuarios");
 
   const card: React.CSSProperties = {
-    background: t.card, borderRadius: 16, padding: 28,
-    border: `1px solid ${t.border}`,
+    background: t.cardBg, borderRadius: 16, padding: 28,
+    border: `1px solid ${t.cardBorder}`,
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Header */}
       <div>
-        <h1 style={{ fontFamily: FONT.heading, fontSize: 28, color: t.text, margin: 0 }}>
+        <h1 style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0 }}>
           🛡️ Gestão de Usuários
         </h1>
         <p style={{ color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
@@ -85,7 +85,7 @@ export default function GestaoUsuarios() {
       </div>
 
       {/* Abas */}
-      <div style={{ display: "flex", gap: 8, borderBottom: `2px solid ${t.border}`, paddingBottom: 0 }}>
+      <div style={{ display: "flex", gap: 8, borderBottom: `2px solid ${t.cardBorder}`, paddingBottom: 0 }}>
         {(["usuarios", "permissoes"] as const).map(a => (
           <button key={a} onClick={() => setAba(a)} style={{
             background: "none", border: "none", cursor: "pointer",
@@ -151,7 +151,7 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   };
   const td: React.CSSProperties = {
     fontFamily: FONT.body, fontSize: 13, color: t.text,
-    padding: "12px 14px", borderTop: `1px solid ${t.border}`,
+    padding: "12px 14px", borderTop: `1px solid ${t.cardBorder}`,
   };
 
   return (
@@ -210,7 +210,7 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                   </td>
                   <td style={td}>
                     <button onClick={() => abrirEditar(u)} style={{
-                      background: "none", border: `1px solid ${t.border}`,
+                      background: "none", border: `1px solid ${t.cardBorder}`,
                       borderRadius: 7, padding: "5px 12px", cursor: "pointer",
                       fontFamily: FONT.body, fontSize: 12, color: t.text,
                     }}>
@@ -340,8 +340,8 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
     zIndex: 999, padding: 24,
   };
   const modal: React.CSSProperties = {
-    background: t.card, borderRadius: 16, padding: 32,
-    width: "100%", maxWidth: 480, border: `1px solid ${t.border}`,
+    background: t.cardBg, borderRadius: 16, padding: 32,
+    width: "100%", maxWidth: 480, border: `1px solid ${t.cardBorder}`,
     maxHeight: "90vh", overflowY: "auto",
   };
   const label: React.CSSProperties = {
@@ -350,7 +350,7 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
     textTransform: "uppercase", letterSpacing: "0.8px",
   };
   const input: React.CSSProperties = {
-    width: "100%", background: t.bg, border: `1px solid ${t.border}`,
+    width: "100%", background: t.bg, border: `1px solid ${t.cardBorder}`,
     borderRadius: 8, padding: "10px 12px", color: t.text,
     fontFamily: FONT.body, fontSize: 14, boxSizing: "border-box",
   };
@@ -364,7 +364,7 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
   return (
     <div style={overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={modal}>
-        <h2 style={{ fontFamily: FONT.heading, fontSize: 20, color: t.text, margin: "0 0 24px" }}>
+        <h2 style={{ fontFamily: FONT.title, fontSize: 20, color: t.text, margin: "0 0 24px" }}>
           {editando ? "Editar Usuário" : "Novo Usuário"}
         </h2>
 
@@ -418,14 +418,14 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
                   <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 4 }}>(multi-seleção)</span>
                 </label>
                 <div style={{
-                  border: `1px solid ${t.border}`, borderRadius: 8,
+                  border: `1px solid ${t.cardBorder}`, borderRadius: 8,
                   padding: 10, display: "flex", flexWrap: "wrap", gap: 8,
                 }}>
                   {opcoesScopeRef.map(op => {
                     const sel = scopeRefs.includes(op.value);
                     return (
                       <button key={op.value} onClick={() => toggleScopeRef(op.value)} style={{
-                        border: `1px solid ${sel ? "#7c3aed" : t.border}`,
+                        border: `1px solid ${sel ? "#7c3aed" : t.cardBorder}`,
                         background: sel ? "#7c3aed22" : "transparent",
                         color: sel ? "#7c3aed" : t.text,
                         borderRadius: 6, padding: "5px 12px", cursor: "pointer",
@@ -447,7 +447,7 @@ function ModalUsuario({ t, editando, onClose, onSalvo }: ModalUsuarioProps) {
 
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button onClick={onClose} style={{
-            background: "none", border: `1px solid ${t.border}`,
+            background: "none", border: `1px solid ${t.cardBorder}`,
             borderRadius: 8, padding: "9px 18px", cursor: "pointer",
             fontFamily: FONT.body, fontSize: 13, color: t.text,
           }}>
@@ -521,7 +521,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   };
   const tdStyle: React.CSSProperties = {
     fontFamily: FONT.body, fontSize: 13, color: t.text,
-    padding: "10px 12px", borderTop: `1px solid ${t.border}`,
+    padding: "10px 12px", borderTop: `1px solid ${t.cardBorder}`,
   };
 
   // Agrupa por seção
@@ -533,7 +533,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {ROLES_EDITAVEIS.map(r => (
           <button key={r} onClick={() => setRoleAtivo(r)} style={{
-            border: `1px solid ${roleAtivo === r ? roleBadgeColor(r) : t.border}`,
+            border: `1px solid ${roleAtivo === r ? roleBadgeColor(r) : t.cardBorder}`,
             background: roleAtivo === r ? roleBadgeColor(r) + "22" : "transparent",
             color: roleAtivo === r ? roleBadgeColor(r) : t.textMuted,
             borderRadius: 8, padding: "7px 16px", cursor: "pointer",
@@ -566,7 +566,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                       ...tdStyle, fontWeight: 700, fontSize: 11,
                       color: t.textMuted, textTransform: "uppercase",
                       letterSpacing: "1px", verticalAlign: "middle",
-                      borderRight: `1px solid ${t.border}`,
+                      borderRight: `1px solid ${t.cardBorder}`,
                     }}>
                       {secao}
                     </td>
@@ -594,7 +594,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                           value={val ?? ""}
                           onChange={e => setPerm(page.key, campo, (e.target.value as PermissaoValor) || null)}
                           style={{
-                            background: t.bg, border: `1px solid ${t.border}`,
+                            background: t.bg, border: `1px solid ${t.cardBorder}`,
                             borderRadius: 6, padding: "4px 8px", color: t.text,
                             fontFamily: FONT.body, fontSize: 12, cursor: "pointer",
                             minWidth: 100,
