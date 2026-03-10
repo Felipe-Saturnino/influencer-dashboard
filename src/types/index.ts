@@ -166,3 +166,5 @@ export interface UsuarioCompleto {
   last_sign_in_at?: string | null;
   scopes?:          UserScope[];
 }
+
+
