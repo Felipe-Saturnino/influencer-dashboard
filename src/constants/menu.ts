@@ -39,6 +39,7 @@ export const MENU: MenuSection[] = [
     section: "Plataforma",
     items: [
       { key: "gestao_usuarios", label: "Gestão de Usuários", icon: "🛡️" },
+      { key: "gestao_operadoras", label: "Gestão de Operadoras", icon: "🏢"},
     ],
   },
 ];
