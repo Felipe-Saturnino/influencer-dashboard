@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 
@@ -236,6 +238,8 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
   const { theme: t } = useApp();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const perm = usePermission("dash_conversao");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
   const hoje = new Date();
@@ -249,6 +253,10 @@ export default function DashboardConversao() {
   const [compA, setCompA]         = useState<string>("");
   const [compB, setCompB]         = useState<string>("");
   const [acaoFiltro, setAcaoFiltro] = useState<string | null>(null);
+  const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
+  const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
+  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
 
   const mesSelecionado = mesesDisponiveis[idxMes];
   const isPrimeiro = idxMes === 0;
@@ -265,9 +273,20 @@ export default function DashboardConversao() {
     async function carregar() {
       setLoading(true);
 
-      const { data: perfisData } = await supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico");
+      const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
+        supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
+        supabase.from("operadoras").select("slug, nome").order("nome"),
+        supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
+      ]);
       const perfisLista: InfluencerPerfil[] = perfisData || [];
       setPerfis(perfisLista);
+      setOperadorasList(opsData || []);
+      const map: Record<string, string[]> = {};
+      (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
+        if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
+        map[o.operadora_slug].push(o.influencer_id);
+      });
+      setOperadoraInfMap(map);
 
       let qMetricas = supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, visit_count, data");
       if (!historico && mesSelecionado) {
@@ -326,17 +345,28 @@ export default function DashboardConversao() {
       });
 
       resultado.sort((a, b) => b.ftds - a.ftds);
-      setRows(resultado);
-      if (resultado.length >= 1) setCompA((prev) => prev || resultado[0].influencer_id);
-      if (resultado.length >= 2) setCompB((prev) => prev || resultado[1].influencer_id);
+      const rowsVisiveis = resultado.filter((r) => podeVerInfluencer(r.influencer_id));
+      setRows(rowsVisiveis);
+      if (rowsVisiveis.length >= 1) setCompA((prev) => prev || rowsVisiveis[0].influencer_id);
+      if (rowsVisiveis.length >= 2) setCompB((prev) => prev || rowsVisiveis[1].influencer_id);
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes]);
+  }, [historico, idxMes, podeVerInfluencer]);
 
-  const rowA = rows.find((r) => r.influencer_id === compA) || null;
-  const rowB = rows.find((r) => r.influencer_id === compB) || null;
-  const rankingFtdHora = rows.filter((r) => r.ftdPorHora > 0).sort((a, b) => b.ftdPorHora - a.ftdPorHora);
+  const rowsFiltradosEscopo = useMemo(() => {
+    let r = rows;
+    if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
+    if (filtroOperadora !== "todas") {
+      const ids = operadoraInfMap[filtroOperadora] ?? [];
+      r = r.filter((row) => ids.includes(row.influencer_id));
+    }
+    return r;
+  }, [rows, filtroInfluencer, filtroOperadora, operadoraInfMap]);
+
+  const rowA = rowsFiltradosEscopo.find((r) => r.influencer_id === compA) || null;
+  const rowB = rowsFiltradosEscopo.find((r) => r.influencer_id === compB) || null;
+  const rankingFtdHora = rowsFiltradosEscopo.filter((r) => r.ftdPorHora > 0).sort((a, b) => b.ftdPorHora - a.ftdPorHora);
 
   // Ações disponíveis para filtro
   const acoesDisponiveis = [
@@ -345,7 +375,7 @@ export default function DashboardConversao() {
     { label: "Ativar cadastro",  icon: "🎯", cor: "#3b82f6", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.28)" },
     { label: "Em dia",           icon: "✅", cor: "#22c55e", bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
   ];
-  const rowsFiltrados = acaoFiltro ? rows.filter((r) => r.acaoLabel === acaoFiltro) : rows;
+  const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
 
   // Estilos
   const card = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 6px 24px rgba(0,0,0,0.25)" } as React.CSSProperties;
@@ -355,6 +385,14 @@ export default function DashboardConversao() {
   const tdStyle = { padding: "10px 12px", fontSize: 13, borderBottom: `1px solid rgba(255,255,255,0.05)`, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap" as const };
   const btnNav = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 } as React.CSSProperties;
   const btnHistorico = { padding: "6px 16px", borderRadius: 999, border: historico ? "1px solid #7c3aed" : `1px solid ${t.cardBorder}`, background: historico ? "rgba(124,58,237,0.15)" : "transparent", color: historico ? "#7c3aed" : t.textMuted, fontSize: 13, fontWeight: historico ? 700 : 400, cursor: "pointer", fontFamily: FONT.body } as React.CSSProperties;
+
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar este dashboard.
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "20px 24px 40px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
@@ -368,13 +406,29 @@ export default function DashboardConversao() {
       {/* ── BLOCO 1: FILTROS ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ ...card, padding: "14px 20px", background: `linear-gradient(135deg, ${t.cardBg} 0%, rgba(124,58,237,0.04) 100%)` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
             <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>‹</button>
             <span style={{ fontSize: 16, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>›</button>
             <button style={btnHistorico} onClick={toggleHistorico}>Histórico</button>
+            {showFiltroInfluencer && (
+              <select value={filtroInfluencer} onChange={(e) => setFiltroInfluencer(e.target.value)} style={{ ...selectStyle, padding: "6px 12px" }}>
+                <option value="todos">Todos os influencers</option>
+                {rows.map((r) => (
+                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+                ))}
+              </select>
+            )}
+            {showFiltroOperadora && (
+              <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={{ ...selectStyle, padding: "6px 12px" }}>
+                <option value="todas">Todas as operadoras</option>
+                {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+                  <option key={o.slug} value={o.slug}>{o.nome}</option>
+                ))}
+              </select>
+            )}
             {loading && <span style={{ fontSize: 12, color: t.textMuted, marginLeft: 8 }}>⏳ Carregando...</span>}
           </div>
         </div>
@@ -388,14 +442,14 @@ export default function DashboardConversao() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: 8, alignItems: "center", marginBottom: 16 }}>
           <select value={compA} onChange={(e) => setCompA(e.target.value)} style={{ ...selectStyle, width: "100%", borderColor: compA ? COR_A.border : undefined }}>
             <option value="">— Selecione —</option>
-            {rows.filter((r) => r.influencer_id !== compB).map((r) => (
+            {rowsFiltradosEscopo.filter((r) => r.influencer_id !== compB).map((r) => (
               <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
             ))}
           </select>
           <div style={{ textAlign: "center", fontSize: 16, color: t.textMuted, fontWeight: 700 }}>vs</div>
           <select value={compB} onChange={(e) => setCompB(e.target.value)} style={{ ...selectStyle, width: "100%", borderColor: compB ? COR_B.border : undefined }}>
             <option value="">— Selecione —</option>
-            {rows.filter((r) => r.influencer_id !== compA).map((r) => (
+            {rowsFiltradosEscopo.filter((r) => r.influencer_id !== compA).map((r) => (
               <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
             ))}
           </select>
@@ -442,7 +496,7 @@ export default function DashboardConversao() {
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {acoesDisponiveis.map((a) => {
               const ativo = acaoFiltro === a.label;
-              const qtd   = rows.filter((r) => r.acaoLabel === a.label).length;
+              const qtd   = rowsFiltradosEscopo.filter((r) => r.acaoLabel === a.label).length;
               return (
                 <button key={a.label} onClick={() => setAcaoFiltro(ativo ? null : a.label)} style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${ativo ? a.cor : a.border}`, background: ativo ? a.bg : "transparent", color: ativo ? a.cor : t.textMuted, fontSize: 11, fontWeight: ativo ? 700 : 400, opacity: qtd === 0 ? 0.35 : 1 }}>
                   {a.icon} {a.label} {qtd > 0 && <span style={{ opacity: 0.7 }}>({qtd})</span>}

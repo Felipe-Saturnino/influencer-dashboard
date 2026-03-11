@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import {
@@ -308,6 +310,8 @@ function RateCard({ label, value, highlight }: { label: string; value: string; h
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
   const { theme: t } = useApp();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const perm = usePermission("dash_overview");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
   const hoje = new Date();
@@ -316,6 +320,12 @@ export default function DashboardOverview() {
   const [idxMes, setIdxMes]     = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
   const [historico, setHistorico] = useState(false);
   const [loading, setLoading]   = useState(true);
+
+  // Filtros por escopo (Etapa 8)
+  const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
+  const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
+  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
 
   // Filtro de status no ranking (null = todos)
   const [statusFiltro, setStatusFiltro] = useState<StatusLabel | null>(null);
@@ -339,9 +349,20 @@ export default function DashboardOverview() {
     async function carregar() {
       setLoading(true);
 
-      const { data: perfisData } = await supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico");
+      const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
+        supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
+        supabase.from("operadoras").select("slug, nome").order("nome"),
+        supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
+      ]);
       const perfisLista: InfluencerPerfil[] = perfisData || [];
       setPerfis(perfisLista);
+      setOperadorasList(opsData || []);
+      const map: Record<string, string[]> = {};
+      (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
+        if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
+        map[o.operadora_slug].push(o.influencer_id);
+      });
+      setOperadoraInfMap(map);
 
       async function buscaMetricas(ini: string, fim: string): Promise<Metrica[]> {
         const { data } = await supabase.from("influencer_metricas")
@@ -433,8 +454,9 @@ export default function DashboardOverview() {
       }
 
       const rows = montaRanking(metricas, lives, resultados);
-      setRanking(rows);
-      setTotais(calculaTotais(rows));
+      const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
+      setRanking(rowsVisiveis);
+      setTotais(calculaTotais(rowsVisiveis));
 
       // Período anterior MTD
       if (!historico && mesSelecionado) {
@@ -442,7 +464,8 @@ export default function DashboardOverview() {
         const mA = await buscaMetricas(iA, fA);
         const lA = await buscaLives(iA, fA);
         const rA = await buscaResultados(lA);
-        setTotaisAnt(calculaTotais(montaRanking(mA, lA, rA)));
+        const rowsAnt = montaRanking(mA, lA, rA).filter((r) => podeVerInfluencer(r.influencer_id));
+        setTotaisAnt(calculaTotais(rowsAnt));
       } else {
         setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
       }
@@ -450,7 +473,7 @@ export default function DashboardOverview() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes]);
+  }, [historico, idxMes, podeVerInfluencer]);
 
   // ── FUNIL ────────────────────────────────────────────────────────────────────
   const pctViewAcesso = totais.views > 0 ? ((totais.acessos / totais.views) * 100).toFixed(1) + "%" : "—";
@@ -458,17 +481,33 @@ export default function DashboardOverview() {
   const pctRegFTD     = totais.registros > 0 ? ((totais.ftds / totais.registros) * 100).toFixed(1) + "%" : "—";
   const pctViewFTD    = totais.views > 0 ? ((totais.ftds / totais.views) * 100).toFixed(1) + "%" : "—";
 
-  // ── CHART ────────────────────────────────────────────────────────────────────
-  const chartData = ranking.slice(0, 10).map((r) => ({
+  // ── CHART (respeita filtros influencer/operadora) ─────────────────────────────
+  const rankingParaChart = useMemo(() => {
+    let r = ranking;
+    if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
+    if (filtroOperadora !== "todas") {
+      const ids = operadoraInfMap[filtroOperadora] ?? [];
+      r = r.filter((row) => ids.includes(row.influencer_id));
+    }
+    return r;
+  }, [ranking, filtroInfluencer, filtroOperadora, operadoraInfMap]);
+  const chartData = rankingParaChart.slice(0, 10).map((r) => ({
     nome: r.nome.split(" ")[0],
     GGR: parseFloat(r.ggr.toFixed(2)),
     Investimento: parseFloat(r.investimento.toFixed(2)),
   }));
 
   // ── RANKING FILTRADO ──────────────────────────────────────────────────────────
-  const rankingFiltrado = statusFiltro
-    ? ranking.filter((r) => r.statusLabel === statusFiltro)
-    : ranking;
+  const rankingFiltrado = useMemo(() => {
+    let r = ranking;
+    if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
+    if (filtroOperadora !== "todas") {
+      const ids = operadoraInfMap[filtroOperadora] ?? [];
+      r = r.filter((row) => ids.includes(row.influencer_id));
+    }
+    if (statusFiltro) r = r.filter((row) => row.statusLabel === statusFiltro);
+    return r;
+  }, [ranking, filtroInfluencer, filtroOperadora, statusFiltro, operadoraInfMap]);
 
   // ── ESTILOS ───────────────────────────────────────────────────────────────────
   const card = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 6px 24px rgba(0,0,0,0.25)" } as React.CSSProperties;
@@ -503,19 +542,43 @@ export default function DashboardOverview() {
     { label: "Sem dados",    cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)" },
   ];
 
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar este dashboard.
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "20px 24px 40px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {/* ── BLOCO 1: FILTROS (centralizado) ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ ...card, padding: "14px 20px", background: `linear-gradient(135deg, ${t.cardBg} 0%, rgba(124,58,237,0.04) 100%)` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
             <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>‹</button>
             <span style={{ fontSize: 16, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>›</button>
             <button style={btnHistorico} onClick={toggleHistorico}>Histórico</button>
+            {showFiltroInfluencer && (
+              <select value={filtroInfluencer} onChange={(e) => setFiltroInfluencer(e.target.value)} style={{ padding: "6px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.text, fontSize: 13, fontFamily: FONT.body, cursor: "pointer" }}>
+                <option value="todos">Todos os influencers</option>
+                {ranking.map((r) => (
+                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+                ))}
+              </select>
+            )}
+            {showFiltroOperadora && (
+              <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={{ padding: "6px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.text, fontSize: 13, fontFamily: FONT.body, cursor: "pointer" }}>
+                <option value="todas">Todas as operadoras</option>
+                {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+                  <option key={o.slug} value={o.slug}>{o.nome}</option>
+                ))}
+              </select>
+            )}
             {loading && <span style={{ fontSize: 12, color: t.textMuted, marginLeft: 8 }}>⏳ Carregando...</span>}
           </div>
         </div>
@@ -607,7 +670,7 @@ export default function DashboardOverview() {
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {statusBadges.map((s) => {
               const ativo = statusFiltro === s.label;
-              const qtd = ranking.filter((r) => r.statusLabel === s.label).length;
+              const qtd = rankingParaChart.filter((r) => r.statusLabel === s.label).length;
               return (
                 <button
                   key={s.label}

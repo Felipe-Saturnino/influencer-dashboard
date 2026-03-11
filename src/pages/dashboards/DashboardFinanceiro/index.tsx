@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import {
@@ -67,22 +69,39 @@ function KpiCard({ label, value, delta, deltaPos }: { label: string; value: stri
 
 export default function DashboardFinanceiro() {
   const { theme: t } = useApp();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const perm = usePermission("dash_financeiro");
+
   const [periodo, setPeriodo]             = useState("mes_atual");
   const [influencerFiltro, setInfluencerFiltro] = useState("todos");
   const [plataformaFiltro, setPlataformaFiltro] = useState("todas");
+  const [operadoraFiltro, setOperadoraFiltro] = useState("todas");
   const [loading, setLoading]             = useState(true);
   const [perfis, setPerfis]               = useState<InfluencerPerfil[]>([]);
   const [rows, setRows]                   = useState<FinanceiroRow[]>([]);
   const [totais, setTotais]               = useState({ ggr: 0, investimento: 0, roi: 0, ftds: 0, depositos: 0, saques: 0, custoPorFTD: 0, ticketMedio: 0 });
+  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     async function carregar() {
       setLoading(true);
       const { inicio, fim } = getPeriodDates(periodo);
 
-      const { data: perfisData } = await supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico");
+      const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
+        supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
+        supabase.from("operadoras").select("slug, nome").order("nome"),
+        supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
+      ]);
       const perfisLista: InfluencerPerfil[] = perfisData || [];
       setPerfis(perfisLista);
+      setOperadorasList(opsData || []);
+      const map: Record<string, string[]> = {};
+      (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
+        if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
+        map[o.operadora_slug].push(o.influencer_id);
+      });
+      setOperadoraInfMap(map);
 
       let qMetricas = supabase.from("influencer_metricas")
         .select("influencer_id, ftd_count, deposit_total, withdrawal_total, ggr, data")
@@ -147,13 +166,14 @@ export default function DashboardFinanceiro() {
       });
 
       resultado.sort((a, b) => b.roi - a.roi);
-      setRows(resultado);
+      const rowsVisiveis = resultado.filter((r) => podeVerInfluencer(r.influencer_id));
+      setRows(rowsVisiveis);
 
-      const tGGR    = resultado.reduce((s, r) => s + r.ggr, 0);
-      const tInvest = resultado.reduce((s, r) => s + r.investimento, 0);
-      const tFTDs   = resultado.reduce((s, r) => s + r.ftds, 0);
-      const tDep    = resultado.reduce((s, r) => s + r.depositos, 0);
-      const tSaq    = resultado.reduce((s, r) => s + r.saques, 0);
+      const tGGR    = rowsVisiveis.reduce((s, r) => s + r.ggr, 0);
+      const tInvest = rowsVisiveis.reduce((s, r) => s + r.investimento, 0);
+      const tFTDs   = rowsVisiveis.reduce((s, r) => s + r.ftds, 0);
+      const tDep    = rowsVisiveis.reduce((s, r) => s + r.depositos, 0);
+      const tSaq    = rowsVisiveis.reduce((s, r) => s + r.saques, 0);
       const roiG    = tInvest > 0 ? ((tGGR - tInvest) / tInvest) * 100 : 0;
 
       setTotais({
@@ -166,10 +186,33 @@ export default function DashboardFinanceiro() {
       setLoading(false);
     }
     carregar();
-  }, [periodo, influencerFiltro, plataformaFiltro]);
+  }, [periodo, influencerFiltro, plataformaFiltro, podeVerInfluencer]);
+
+  const rowsParaExibir = useMemo(() => {
+    if (operadoraFiltro === "todas") return rows;
+    const ids = operadoraInfMap[operadoraFiltro] ?? [];
+    return rows.filter((r) => ids.includes(r.influencer_id));
+  }, [rows, operadoraFiltro, operadoraInfMap]);
+
+  const perfisVisiveis = useMemo(() => perfis.filter((p) => podeVerInfluencer(p.id)), [perfis, podeVerInfluencer]);
+
+  const totaisExibir = useMemo(() => {
+    const tGGR = rowsParaExibir.reduce((s, r) => s + r.ggr, 0);
+    const tInvest = rowsParaExibir.reduce((s, r) => s + r.investimento, 0);
+    const tFTDs = rowsParaExibir.reduce((s, r) => s + r.ftds, 0);
+    const tDep = rowsParaExibir.reduce((s, r) => s + r.depositos, 0);
+    const tSaq = rowsParaExibir.reduce((s, r) => s + r.saques, 0);
+    const roiG = tInvest > 0 ? ((tGGR - tInvest) / tInvest) * 100 : 0;
+    return {
+      ggr: tGGR, investimento: tInvest, roi: roiG,
+      ftds: tFTDs, depositos: tDep, saques: tSaq,
+      custoPorFTD: tFTDs > 0 ? tInvest / tFTDs : 0,
+      ticketMedio: tFTDs > 0 ? tDep / tFTDs : 0,
+    };
+  }, [rowsParaExibir]);
 
   // Chart data
-  const barData = rows.slice(0, 10).map((r) => ({
+  const barData = rowsParaExibir.slice(0, 10).map((r) => ({
     nome: r.nome.split(" ")[0],
     Investimento: parseFloat(r.investimento.toFixed(0)),
     GGR: parseFloat(r.ggr.toFixed(0)),
@@ -185,6 +228,14 @@ export default function DashboardFinanceiro() {
   const selectStyle = { background: t.inputBg, border: `1px solid ${t.inputBorder}`, color: t.text, padding: "9px 12px", borderRadius: 12, fontSize: 13, fontFamily: FONT.body, outline: "none", cursor: "pointer" } as React.CSSProperties;
   const thStyle = { textAlign: "left" as const, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: t.textMuted, padding: "10px 12px", borderBottom: `1px solid ${t.cardBorder}`, background: "rgba(255,255,255,0.03)", fontFamily: FONT.body, whiteSpace: "nowrap" as const };
   const tdStyle = { padding: "10px 12px", fontSize: 13, borderBottom: `1px solid rgba(255,255,255,0.05)`, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap" as const };
+
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar este dashboard.
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "20px 24px 40px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
@@ -207,10 +258,20 @@ export default function DashboardFinanceiro() {
           <option value="ultimos_30">Últimos 30 dias</option>
           <option value="mes_passado">Mês passado</option>
         </select>
-        <select value={influencerFiltro} onChange={(e) => setInfluencerFiltro(e.target.value)} style={selectStyle}>
-          <option value="todos">Influencer: Todos</option>
-          {perfis.map((p) => <option key={p.id} value={p.id}>{p.nome_artistico}</option>)}
-        </select>
+        {showFiltroInfluencer && (
+          <select value={influencerFiltro} onChange={(e) => setInfluencerFiltro(e.target.value)} style={selectStyle}>
+            <option value="todos">Influencer: Todos</option>
+            {perfisVisiveis.map((p) => <option key={p.id} value={p.id}>{p.nome_artistico}</option>)}
+          </select>
+        )}
+        {showFiltroOperadora && (
+          <select value={operadoraFiltro} onChange={(e) => setOperadoraFiltro(e.target.value)} style={selectStyle}>
+            <option value="todas">Operadora: Todas</option>
+            {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+              <option key={o.slug} value={o.slug}>{o.nome}</option>
+            ))}
+          </select>
+        )}
         <select value={plataformaFiltro} onChange={(e) => setPlataformaFiltro(e.target.value)} style={selectStyle}>
           <option value="todas">Plataforma: Todas</option>
           {["Twitch", "YouTube", "Instagram", "TikTok", "Kick"].map((p) => <option key={p} value={p}>{p}</option>)}
@@ -222,14 +283,14 @@ export default function DashboardFinanceiro() {
       <div style={{ ...card, marginBottom: 14 }}>
         <h3 style={cardTitle}>KPIs Financeiros</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          <KpiCard label="Investimento Total"    value={fmtBRL(totais.investimento)} />
-          <KpiCard label="GGR Total"             value={fmtBRL(totais.ggr)} delta={totais.ggr >= totais.investimento ? "Lucrativo" : "Negativo"} deltaPos={totais.ggr >= totais.investimento} />
-          <KpiCard label="ROI Médio"             value={`${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%`} delta="meta: 100%" deltaPos={totais.roi >= 100 ? true : totais.roi >= 50 ? null : false} />
-          <KpiCard label="Total FTDs"            value={totais.ftds.toLocaleString("pt-BR")} />
-          <KpiCard label="Custo por FTD"         value={totais.ftds > 0 ? fmtBRL(totais.custoPorFTD) : "—"} />
-          <KpiCard label="Depósitos (Total)"     value={fmtBRL(totais.depositos)} />
-          <KpiCard label="Saques (Total)"        value={fmtBRL(totais.saques)} />
-          <KpiCard label="Ticket Médio (FTD)"    value={totais.ftds > 0 ? fmtBRL(totais.ticketMedio) : "—"} />
+          <KpiCard label="Investimento Total"    value={fmtBRL(totaisExibir.investimento)} />
+          <KpiCard label="GGR Total"             value={fmtBRL(totaisExibir.ggr)} delta={totaisExibir.ggr >= totaisExibir.investimento ? "Lucrativo" : "Negativo"} deltaPos={totaisExibir.ggr >= totaisExibir.investimento} />
+          <KpiCard label="ROI Médio"             value={`${totaisExibir.roi >= 0 ? "+" : ""}${totaisExibir.roi.toFixed(1)}%`} delta="meta: 100%" deltaPos={totaisExibir.roi >= 100 ? true : totaisExibir.roi >= 50 ? null : false} />
+          <KpiCard label="Total FTDs"            value={totaisExibir.ftds.toLocaleString("pt-BR")} />
+          <KpiCard label="Custo por FTD"         value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.custoPorFTD) : "—"} />
+          <KpiCard label="Depósitos (Total)"     value={fmtBRL(totaisExibir.depositos)} />
+          <KpiCard label="Saques (Total)"        value={fmtBRL(totaisExibir.saques)} />
+          <KpiCard label="Ticket Médio (FTD)"    value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ticketMedio) : "—"} />
         </div>
       </div>
 
@@ -294,7 +355,7 @@ export default function DashboardFinanceiro() {
 
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando dados...</div>
-        ) : rows.length === 0 ? (
+        ) : rowsParaExibir.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Nenhum dado encontrado para o período selecionado.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
@@ -307,7 +368,7 @@ export default function DashboardFinanceiro() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => {
+                {rowsParaExibir.map((r, i) => {
                   const lr = leituraEstrategica(r.roi);
                   return (
                     <tr key={r.influencer_id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
