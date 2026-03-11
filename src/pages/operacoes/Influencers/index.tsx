@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import type { Operadora, InfluencerOperadora } from "../../../types";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
@@ -13,13 +14,6 @@ const PLAT_COLOR: Record<Plataforma, string> = {
 const PLAT_ICON: Record<Plataforma, string> = {
   Twitch: "🟣", YouTube: "▶️", Kick: "🟢", Instagram: "📸", TikTok: "🎵",
 };
-
-type Operadora = "blaze" | "bet_nacional" | "casa_apostas";
-const OPERADORAS: { key: Operadora; label: string }[] = [
-  { key: "blaze",        label: "Blaze"           },
-  { key: "bet_nacional", label: "Bet Nacional"     },
-  { key: "casa_apostas", label: "Casa de Apostas"  },
-];
 
 type StatusInfluencer = "ativo" | "inativo" | "cancelado";
 const STATUS_OPTS: StatusInfluencer[] = ["ativo", "inativo", "cancelado"];
@@ -48,27 +42,20 @@ interface Perfil {
   agencia?:         string;
   conta?:           string;
   chave_pix?:       string;
-  op_blaze?:        boolean;
-  id_blaze?:        string;
-  op_bet_nacional?: boolean;
-  id_bet_nacional?: string;
-  op_casa_apostas?: boolean;
-  id_casa_apostas?: string;
 }
 
 interface Influencer {
-  id:    string;
-  name:  string; // Nome Artístico — profiles.name — identificador operacional
-  email: string;
-  perfil: Perfil | null;
+  id:         string;
+  name:       string;
+  email:      string;
+  perfil:     Perfil | null;
+  operadoras: InfluencerOperadora[];
 }
 
 const emptyPerfil = (id: string): Perfil => ({
   id, nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
   canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
   cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
-  op_blaze: false, id_blaze: "", op_bet_nacional: false, id_bet_nacional: "",
-  op_casa_apostas: false, id_casa_apostas: "",
 });
 
 // ─── Moeda BRL ────────────────────────────────────────────────────────────────
@@ -196,9 +183,10 @@ export default function Influencers() {
   const { theme: t, user } = useApp();
   const isAdmin = user?.role === "admin";
 
-  const [list,    setList]    = useState<Influencer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modal,   setModal]   = useState<{ mode: "visualizar" | "editar" | "novo"; inf?: Influencer } | null>(null);
+  const [list,           setList]           = useState<Influencer[]>([]);
+  const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar" | "novo"; inf?: Influencer } | null>(null);
 
   // Filtros
   const [search,        setSearch]        = useState("");
@@ -210,19 +198,32 @@ export default function Influencers() {
 
   async function loadData() {
     setLoading(true);
+    const { data: opsList } = await supabase.from("operadoras").select("*").order("nome");
+    setOperadorasList(opsList ?? []);
+    const opsMap = Object.fromEntries((opsList ?? []).map((o: Operadora) => [o.slug, o.nome]));
+
     if (isAdmin) {
       const { data: profiles } = await supabase
         .from("profiles").select("id, name, email").eq("role", "influencer").order("name");
       if (profiles) {
         const ids = profiles.map((p: any) => p.id);
-        const { data: perfis } = ids.length > 0
-          ? await supabase.from("influencer_perfil").select("*").in("id", ids)
-          : { data: [] };
+        const [perfisRes, opsRes] = await Promise.all([
+          ids.length > 0 ? supabase.from("influencer_perfil").select("*").in("id", ids) : { data: [] },
+          ids.length > 0 ? supabase.from("influencer_operadoras").select("*").in("influencer_id", ids) : { data: [] },
+        ]);
         const perfisMap: Record<string, Perfil> = {};
-        (perfis ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
+        (perfisRes.data ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
+        const opsPorInf: Record<string, InfluencerOperadora[]> = {};
+        (opsRes.data ?? []).forEach((o: InfluencerOperadora) => {
+          if (!opsPorInf[o.influencer_id]) opsPorInf[o.influencer_id] = [];
+          opsPorInf[o.influencer_id].push({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome });
+        });
         const mapped = profiles.map((p: any) => ({
-          id: p.id, name: p.name ?? p.email, email: p.email,
+          id: p.id,
+          name: p.name ?? p.email,
+          email: p.email,
           perfil: perfisMap[p.id] ?? null,
+          operadoras: opsPorInf[p.id] ?? [],
         }));
         setList(mapped);
 
@@ -240,9 +241,22 @@ export default function Influencers() {
       }
     } else {
       if (!user) return;
-      const { data: perfil } = await supabase
-        .from("influencer_perfil").select("*").eq("id", user.id).single();
-      setList([{ id: user.id, name: user.name, email: user.email, perfil: perfil ?? null }]);
+      const [perfilRes, opsRes] = await Promise.all([
+        supabase.from("influencer_perfil").select("*").eq("id", user.id).single(),
+        supabase.from("influencer_operadoras").select("*").eq("influencer_id", user.id),
+      ]);
+      const perfil = perfilRes.data ?? null;
+      const operadoras = ((opsRes.data ?? []) as InfluencerOperadora[]).map((o) => ({
+        ...o,
+        operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome,
+      }));
+      setList([{
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        perfil,
+        operadoras,
+      }]);
     }
     setLoading(false);
   }
@@ -280,8 +294,8 @@ export default function Influencers() {
     if (filterStatus !== "todos" && (p?.status ?? "ativo") !== filterStatus) return false;
     if (filterPlat !== "todas" && !(p?.canais ?? []).includes(filterPlat as Plataforma)) return false;
     if (filterOp !== "todas") {
-      const opKey = `op_${filterOp}` as keyof Perfil;
-      if (!p?.[opKey]) return false;
+      const temOp = inf.operadoras?.some((o) => o.operadora_slug === filterOp);
+      if (!temOp) return false;
     }
     const cache = p?.cache_hora ?? 0;
     if (cacheLimit < cacheMax) {
@@ -431,7 +445,9 @@ export default function Influencers() {
             </select>
             <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)} style={selectStyle}>
               <option value="todas">Todas as operadoras</option>
-              {OPERADORAS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              {operadorasList.map((o) => (
+                <option key={o.slug} value={o.slug}>{o.nome}</option>
+              ))}
             </select>
           </div>
 
@@ -505,7 +521,7 @@ export default function Influencers() {
         filtered.map((inf) => {
           const p          = inf.perfil;
           const canais     = p?.canais ?? [];
-          const opsAtivas  = OPERADORAS.filter((o) => p?.[`op_${o.key}` as keyof Perfil]);
+          const opsAtivas  = (inf.operadoras ?? []).filter((o) => o.ativo);
           const incompleto = isPerfilIncompleto(p, inf.name);
           const status: StatusInfluencer = p?.status ?? "ativo";
           return (
@@ -562,7 +578,7 @@ export default function Influencers() {
                   {opsAtivas.length > 0 && (
                     <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
                       {opsAtivas.map((o) => (
-                        <span key={o.key} style={badge("#f39c12")}>🎰 {o.label}</span>
+                        <span key={o.operadora_slug} style={badge("#f39c12")}>🎰 {o.operadora_nome ?? o.operadora_slug}</span>
                       ))}
                     </div>
                   )}
@@ -584,24 +600,27 @@ export default function Influencers() {
       )}
 
       {modal?.mode === "visualizar" && modal.inf && (
-        <ModalVisualizar influencer={modal.inf} onClose={() => setModal(null)} />
+        <ModalVisualizar influencer={modal.inf} operadorasList={operadorasList} onClose={() => setModal(null)} />
       )}
       {modal?.mode === "editar" && modal.inf && (
         <ModalPerfil
           influencer={modal.inf}
+          operadorasList={operadorasList}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); loadData(); }}
         />
       )}
       {modal?.mode === "novo" && (
-        <ModalNovo onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
+        <ModalNovo operadorasList={operadorasList} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
       )}
     </div>
   );
 }
 
 // ─── Modal Visualizar ─────────────────────────────────────────────────────────
-function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onClose: () => void }) {
+function ModalVisualizar({
+  influencer, operadorasList, onClose,
+}: { influencer: Influencer; operadorasList: Operadora[]; onClose: () => void }) {
   const { theme: t } = useApp();
   const p = influencer.perfil;
   const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
@@ -706,21 +725,26 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
 
         {tab === "operadoras" && (
           <>
-            {OPERADORAS.map((op) => {
-              const ativo = !!p?.[`op_${op.key}` as keyof Perfil];
-              const id    = p?.[`id_${op.key}` as keyof Perfil] as string;
-              return (
-                <div key={op.key} style={{ marginBottom: "14px", padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.label}</span>
-                    <span style={{ padding: "4px 12px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, fontFamily: FONT.body }}>
-                      {ativo ? "Ativo" : "Inativo"}
-                    </span>
+            {operadorasList.length === 0 ? (
+              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma operadora cadastrada na plataforma.</p>
+            ) : (
+              operadorasList.map((op) => {
+                const vinculo = influencer.operadoras?.find((o) => o.operadora_slug === op.slug);
+                const ativo = !!vinculo?.ativo;
+                const id = vinculo?.id_operadora;
+                return (
+                  <div key={op.slug} style={{ marginBottom: "14px", padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.nome}</span>
+                      <span style={{ padding: "4px 12px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, fontFamily: FONT.body }}>
+                        {ativo ? "Ativo" : "Inativo"}
+                      </span>
+                    </div>
+                    {ativo && id && <div style={{ marginTop: "8px", fontSize: "13px", color: t.text, fontFamily: FONT.body }}>ID: {id}</div>}
                   </div>
-                  {ativo && id && <div style={{ marginTop: "8px", fontSize: "13px", color: t.text, fontFamily: FONT.body }}>ID: {id}</div>}
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </>
         )}
       </div>
@@ -729,7 +753,11 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
 }
 
 // ─── Modal Novo ───────────────────────────────────────────────────────────────
-function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+type OperadorasFormState = Record<string, { ativo: boolean; id_operadora: string }>;
+
+function ModalNovo({
+  operadorasList, onClose, onSaved,
+}: { operadorasList: Operadora[]; onClose: () => void; onSaved: () => void }) {
   const { theme: t } = useApp();
   const [newNomeCompleto,  setNewNomeCompleto]  = useState("");
   const [newNomeArtistico, setNewNomeArtistico] = useState("");
@@ -738,14 +766,20 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
     id: "", nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
     canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
     cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
-    op_blaze: false, id_blaze: "", op_bet_nacional: false, id_bet_nacional: "",
-    op_casa_apostas: false, id_casa_apostas: "",
   });
+  const [operadorasForm, setOperadorasForm] = useState<OperadorasFormState>({});
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
   const [tab,    setTab]    = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
   const set = (key: keyof Perfil, val: any) => setForm((f) => ({ ...f, [key]: val }));
+
+  const setOp = (slug: string, patch: Partial<{ ativo: boolean; id_operadora: string }>) => {
+    setOperadorasForm((prev) => {
+      const cur = prev[slug] ?? { ativo: false, id_operadora: "" };
+      return { ...prev, [slug]: { ...cur, ...patch } };
+    });
+  };
 
   const toggleCanal = (c: Plataforma) => {
     const cur = form.canais ?? [];
@@ -766,12 +800,11 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
     });
     if (temCanalSemLink) return setError("Preencha o link de cada canal selecionado.");
 
-    const temOp = OPERADORAS.some((o) => {
-      const ativo = form[`op_${o.key}` as keyof Perfil];
-      const id    = form[`id_${o.key}` as keyof Perfil] as string;
-      return ativo && id?.trim();
+    const opsComId = operadorasList.filter((op) => {
+      const st = operadorasForm[op.slug];
+      return st?.ativo && st?.id_operadora?.trim();
     });
-    if (!temOp) return setError("Ative ao menos 1 operadora com ID preenchido.");
+    if (opsComId.length === 0) return setError("Ative ao menos 1 operadora com ID preenchido.");
 
     setSaving(true);
     const { data: profile, error: profileErr } = await supabase
@@ -791,8 +824,18 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
       nome_completo:  newNomeCompleto.trim(),
     };
     const { error: err } = await supabase.from("influencer_perfil").insert(payload);
+    if (err) { setError(err.message); setSaving(false); return; }
+
+    for (const op of opsComId) {
+      const st = operadorasForm[op.slug];
+      if (st?.ativo && st?.id_operadora?.trim()) {
+        await supabase.from("influencer_operadoras").upsert(
+          { influencer_id: profile.id, operadora_slug: op.slug, id_operadora: st.id_operadora.trim(), ativo: true },
+          { onConflict: "influencer_id,operadora_slug", ignoreDuplicates: false }
+        );
+      }
+    }
     setSaving(false);
-    if (err) { setError(err.message); return; }
     onSaved();
   }
 
@@ -931,35 +974,38 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
             <p style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
               Ative ao menos <span style={{ color: "#e94025" }}>1 operadora</span> com ID preenchido.
             </p>
-            {OPERADORAS.map((op) => {
-              const opKey = `op_${op.key}` as keyof Perfil;
-              const idKey = `id_${op.key}` as keyof Perfil;
-              const ativo = !!form[opKey];
-              return (
-                <div key={op.key} style={{ ...row, padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? "12px" : 0 }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.label}</span>
-                    <button onClick={() => set(opKey, !ativo)}
-                      style={{ padding: "5px 14px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
-                      {ativo ? "Ativo" : "Inativo"}
-                    </button>
-                  </div>
-                  {ativo && (
-                    <div>
-                      <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body }}>
-                        ID {op.label}{<span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>}
-                      </label>
-                      <input
-                        value={(form[idKey] as string) ?? ""}
-                        onChange={(e) => set(idKey, e.target.value)}
-                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }}
-                        placeholder={`ID do influencer na ${op.label}`}
-                      />
+            {operadorasList.length === 0 ? (
+              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma operadora cadastrada. Acesse Gestão de Operadoras primeiro.</p>
+            ) : (
+              operadorasList.filter((o) => o.ativo).map((op) => {
+                const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
+                const ativo = st.ativo;
+                return (
+                  <div key={op.slug} style={{ ...row, padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? "12px" : 0 }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.nome}</span>
+                      <button onClick={() => setOp(op.slug, { ativo: !ativo })}
+                        style={{ padding: "5px 14px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
+                        {ativo ? "Ativo" : "Inativo"}
+                      </button>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                    {ativo && (
+                      <div>
+                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body }}>
+                          ID {op.nome} <span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>
+                        </label>
+                        <input
+                          value={st.id_operadora}
+                          onChange={(e) => setOp(op.slug, { id_operadora: e.target.value })}
+                          style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }}
+                          placeholder={`ID do influencer na ${op.nome}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </>
         )}
 
@@ -974,20 +1020,36 @@ function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
 
 // ─── Modal Editar ─────────────────────────────────────────────────────────────
 function ModalPerfil({
-  influencer, onClose, onSaved,
+  influencer, operadorasList, onClose, onSaved,
 }: {
-  influencer: Influencer; onClose: () => void; onSaved: () => void;
+  influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; onSaved: () => void;
 }) {
   const { theme: t } = useApp();
   const existing = influencer.perfil;
 
+  const inicialOperadoras: OperadorasFormState = {};
+  (influencer.operadoras ?? []).forEach((o) => {
+    inicialOperadoras[o.operadora_slug] = {
+      ativo: o.ativo,
+      id_operadora: o.id_operadora ?? "",
+    };
+  });
+
   const [editNomeCompleto, setEditNomeCompleto] = useState(influencer.perfil?.nome_completo ?? "");
-  const [form,     setForm]     = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState("");
-  const [tab,      setTab]      = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
+  const [form,           setForm]           = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
+  const [operadorasForm, setOperadorasForm] = useState<OperadorasFormState>(inicialOperadoras);
+  const [saving,         setSaving]         = useState(false);
+  const [error,          setError]          = useState("");
+  const [tab,            setTab]            = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
   const set = (key: keyof Perfil, val: any) => setForm((f) => ({ ...f, [key]: val }));
+
+  const setOp = (slug: string, patch: Partial<{ ativo: boolean; id_operadora: string }>) => {
+    setOperadorasForm((prev) => {
+      const cur = prev[slug] ?? { ativo: false, id_operadora: "" };
+      return { ...prev, [slug]: { ...cur, ...patch } };
+    });
+  };
 
   const toggleCanal = (c: Plataforma) => {
     const cur = form.canais ?? [];
@@ -1003,11 +1065,8 @@ function ModalPerfil({
     });
     if (temCanalSemLink) return setError("Preencha o link de cada canal selecionado.");
 
-    const temOpSemId = OPERADORAS.some((o) => {
-      const ativo = form[`op_${o.key}` as keyof Perfil];
-      const id    = form[`id_${o.key}` as keyof Perfil] as string;
-      return ativo && !id?.trim();
-    });
+    const opsAtivas = Object.entries(operadorasForm).filter(([_, st]) => st.ativo);
+    const temOpSemId = opsAtivas.some(([_, st]) => !st.id_operadora?.trim());
     if (temOpSemId) return setError("Preencha o ID de cada operadora ativa.");
 
     setSaving(true);
@@ -1025,6 +1084,20 @@ function ModalPerfil({
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
       : await supabase.from("influencer_perfil").insert(payload);
     if (err) { setError(err.message); setSaving(false); return; }
+
+    const slugsValidos = new Set(operadorasList.map((o) => o.slug));
+    await supabase.from("influencer_operadoras").delete().eq("influencer_id", influencer.id);
+    for (const [slug, st] of opsAtivas) {
+      if (slugsValidos.has(slug) && st.id_operadora?.trim()) {
+        await supabase.from("influencer_operadoras").insert({
+          influencer_id: influencer.id,
+          operadora_slug: slug,
+          id_operadora: st.id_operadora.trim(),
+          ativo: true,
+        });
+      }
+    }
+
     setSaving(false);
     onSaved();
   }
@@ -1167,35 +1240,38 @@ function ModalPerfil({
 
         {tab === "operadoras" && (
           <>
-            {OPERADORAS.map((op) => {
-              const opKey = `op_${op.key}` as keyof Perfil;
-              const idKey = `id_${op.key}` as keyof Perfil;
-              const ativo = !!form[opKey];
-              return (
-                <div key={op.key} style={{ ...row, padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? "12px" : 0 }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.label}</span>
-                    <button onClick={() => set(opKey, !ativo)}
-                      style={{ padding: "5px 14px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
-                      {ativo ? "Ativo" : "Inativo"}
-                    </button>
-                  </div>
-                  {ativo && (
-                    <div>
-                      <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body }}>
-                        ID {op.label} <span style={{ color: "#e94025" }}>*</span>
-                      </label>
-                      <input
-                        value={(form[idKey] as string) ?? ""}
-                        onChange={(e) => set(idKey, e.target.value)}
-                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }}
-                        placeholder={`ID do influencer na ${op.label}`}
-                      />
+            {operadorasList.length === 0 ? (
+              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma operadora cadastrada. Acesse Gestão de Operadoras primeiro.</p>
+            ) : (
+              operadorasList.map((op) => {
+                const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
+                const ativo = st.ativo;
+                return (
+                  <div key={op.slug} style={{ ...row, padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? "12px" : 0 }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.nome}</span>
+                      <button onClick={() => setOp(op.slug, { ativo: !ativo })}
+                        style={{ padding: "5px 14px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
+                        {ativo ? "Ativo" : "Inativo"}
+                      </button>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                    {ativo && (
+                      <div>
+                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body }}>
+                          ID {op.nome} <span style={{ color: "#e94025" }}>*</span>
+                        </label>
+                        <input
+                          value={st.id_operadora}
+                          onChange={(e) => setOp(op.slug, { id_operadora: e.target.value })}
+                          style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }}
+                          placeholder={`ID do influencer na ${op.nome}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </>
         )}
 
