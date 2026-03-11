@@ -109,13 +109,6 @@ async function carregarEscoposVisiveis(
 
 // ─── Carrega can_view de todas as páginas para o role do usuário ──────────────
 async function carregarPermissoes(role: User["role"]): Promise<PermissoesMapa> {
-  // Admin: libera tudo sem consultar o banco
-  if (role === "admin") {
-    return Object.fromEntries(
-      ALL_PAGE_KEYS.map((k) => [k, "sim" as PermissaoValor])
-    ) as PermissoesMapa;
-  }
-
   const { data } = await supabase
     .from("role_permissions")
     .select("page_key, can_view")

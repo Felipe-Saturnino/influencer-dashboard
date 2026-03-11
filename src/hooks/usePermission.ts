@@ -27,14 +27,6 @@ export function usePermission(pageKey: PageKey): Permissoes {
       return;
     }
 
-    // Admin tem tudo sempre
-    if (user.role === "admin") {
-      const full: Permissoes = { canView: "sim", canCriar: "sim", canEditar: "sim", canExcluir: "sim", loading: false };
-      CACHE[cacheKey] = full;
-      setPerm(full);
-      return;
-    }
-
     if (CACHE[cacheKey]) {
       setPerm(CACHE[cacheKey]);
       return;
