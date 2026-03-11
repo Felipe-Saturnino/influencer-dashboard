@@ -181,12 +181,16 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
-  const { theme: t, user } = useApp();
+  const { theme: t, user, escoposVisiveis } = useApp();
   const perm = usePermission("influencers");
   const showManagementUI = user?.role !== "influencer";
 
   const [list,           setList]           = useState<Influencer[]>([]);
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
+
+  const operadorasNoEscopo = escoposVisiveis.operadorasVisiveis.length === 0
+    ? operadorasList
+    : operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.includes(o.slug));
   const [loading,        setLoading]        = useState(true);
   const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar" | "novo"; inf?: Influencer } | null>(null);
 
@@ -455,7 +459,7 @@ export default function Influencers() {
             </select>
             <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)} style={selectStyle}>
               <option value="todas">Todas as operadoras</option>
-              {operadorasList.map((o) => (
+              {operadorasNoEscopo.map((o) => (
                 <option key={o.slug} value={o.slug}>{o.nome}</option>
               ))}
             </select>
@@ -610,18 +614,18 @@ export default function Influencers() {
       )}
 
       {modal?.mode === "visualizar" && modal.inf && (
-        <ModalVisualizar influencer={modal.inf} operadorasList={operadorasList} onClose={() => setModal(null)} />
+        <ModalVisualizar influencer={modal.inf} operadorasList={operadorasNoEscopo} onClose={() => setModal(null)} />
       )}
       {modal?.mode === "editar" && modal.inf && (
         <ModalPerfil
           influencer={modal.inf}
-          operadorasList={operadorasList}
+          operadorasList={operadorasNoEscopo}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); loadData(); }}
         />
       )}
       {modal?.mode === "novo" && (
-        <ModalNovo operadorasList={operadorasList} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
+        <ModalNovo operadorasList={operadorasNoEscopo} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
       )}
     </div>
   );

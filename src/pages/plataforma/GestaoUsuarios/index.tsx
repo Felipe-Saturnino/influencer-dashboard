@@ -35,7 +35,7 @@ const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; ha
   { key: "ajuda",              label: "Ajuda",              secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
-const ROLES_EDITAVEIS: Role[] = ["gestor", "executivo", "influencer", "operador", "agencia"];
+const ROLES_PERMISSOES: Role[] = ["admin", "gestor", "executivo", "influencer", "operador", "agencia"];
 
 const PERM_OPCOES: { value: PermissaoValor; label: string }[] = [
   { value: "sim",      label: "Sim" },
@@ -609,7 +609,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {ROLES_EDITAVEIS.map(r => (
+        {ROLES_PERMISSOES.map(r => (
           <button key={r} onClick={() => setRoleAtivo(r)} style={{
             border: `1px solid ${roleAtivo === r ? roleBadgeColor(r) : t.cardBorder}`,
             background: roleAtivo === r ? roleBadgeColor(r) + "22" : "transparent",
