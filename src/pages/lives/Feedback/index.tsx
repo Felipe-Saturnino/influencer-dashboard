@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
@@ -189,10 +191,15 @@ interface LiveComObs extends Omit<Live, "observacao"> {
 
 export default function Feedback() {
   const { theme: t, isDark } = useApp();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const perm = usePermission("feedback");
 
   const [periodo,           setPeriodo]           = useState<Periodo>("semana");
   const [statusFiltro,      setStatusFiltro]      = useState<LiveStatus | "todos">("todos");
   const [influencerFiltros, setInfluencerFiltros] = useState<string[]>([]);
+  const [filterOperadora,   setFilterOperadora]   = useState<string>("todas");
+  const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMap,   setOperadoraInfMap]   = useState<Record<string, string[]>>({});
 
   const [lives,         setLives]         = useState<LiveComObs[]>([]);
   const [resultados,    setResultados]    = useState<Record<string, LiveResultado>>({});
@@ -221,18 +228,20 @@ export default function Feedback() {
     const { data: allData } = await baseQuery;
 
     if (allData) {
-      const mappedAll: LiveComObs[] = allData.map((l: any) => ({
-        ...l,
-        influencer_name: l.profiles?.name,
-      }));
+      const mappedAll: LiveComObs[] = allData
+        .map((l: any) => ({
+          ...l,
+          influencer_name: l.profiles?.name,
+        }))
+        .filter((l: LiveComObs) => podeVerInfluencer(l.influencer_id));
       setLivesAll(mappedAll);
 
-      // Lista de influencers para o dropdown
+      // Lista de influencers para o dropdown (apenas visíveis)
       const unique = Array.from(
         new Map(
           mappedAll.map(l => [l.influencer_id, { id: l.influencer_id, name: l.influencer_name ?? l.influencer_id }])
         ).values()
-      );
+      ).filter((i) => podeVerInfluencer(i.id));
       setInfluencers(unique);
 
       // Resultados para os quadros (todos, sem filtro de status)
@@ -263,15 +272,45 @@ export default function Feedback() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [periodo, statusFiltro, influencerFiltros]);
+  useEffect(() => { loadData(); }, [periodo, statusFiltro, influencerFiltros, podeVerInfluencer]);
+
+  useEffect(() => {
+    supabase.from("operadoras").select("slug, nome").order("nome")
+      .then(({ data }) => { if (data) setOperadorasList(data); });
+  }, []);
+
+  useEffect(() => {
+    supabase.from("influencer_operadoras").select("influencer_id, operadora_slug")
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, string[]> = {};
+        data.forEach((row: { influencer_id: string; operadora_slug: string }) => {
+          if (!map[row.operadora_slug]) map[row.operadora_slug] = [];
+          map[row.operadora_slug].push(row.influencer_id);
+        });
+        setOperadoraInfMap(map);
+      });
+  }, []);
+
+  const livesAllFiltered = useMemo(() => {
+    if (!filterOperadora || filterOperadora === "todas") return livesAll;
+    const ids = operadoraInfMap[filterOperadora] ?? [];
+    return livesAll.filter((l) => ids.includes(l.influencer_id));
+  }, [livesAll, filterOperadora, operadoraInfMap]);
+
+  const livesFiltered = useMemo(() => {
+    if (!filterOperadora || filterOperadora === "todas") return lives;
+    const ids = operadoraInfMap[filterOperadora] ?? [];
+    return lives.filter((l) => ids.includes(l.influencer_id));
+  }, [lives, filterOperadora, operadoraInfMap]);
 
   // ── Cálculos dos quadros ──────────────────────────────────────────────────
 
-  const totalLives         = livesAll.length;
-  const totalRealizadas    = livesAll.filter(l => l.status === "realizada").length;
-  const totalNaoRealizadas = livesAll.filter(l => l.status === "nao_realizada").length;
+  const totalLives         = livesAllFiltered.length;
+  const totalRealizadas    = livesAllFiltered.filter(l => l.status === "realizada").length;
+  const totalNaoRealizadas = livesAllFiltered.filter(l => l.status === "nao_realizada").length;
 
-  const realizadasComRes = livesAll.filter(l => l.status === "realizada" && resultadosAll[l.id]);
+  const realizadasComRes = livesAllFiltered.filter(l => l.status === "realizada" && resultadosAll[l.id]);
 
   const totalHoras = realizadasComRes.reduce((acc, l) => {
     const r = resultadosAll[l.id];
@@ -414,6 +453,14 @@ export default function Feedback() {
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar o feedback de lives.
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
 
@@ -545,20 +592,49 @@ export default function Feedback() {
         <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", "#888")}>
           Todos
         </button>
+
+        {showFiltroOperadora && operadorasList.length > 0 && (
+          <>
+            <div style={{
+              width: "1.5px", alignSelf: "stretch", minHeight: "28px",
+              background: isDark ? "#4a4a6e" : "#b0b0cc",
+              borderRadius: "2px", margin: "0 4px", flexShrink: 0,
+            }} />
+            <select
+              value={filterOperadora}
+              onChange={(e) => setFilterOperadora(e.target.value)}
+              style={{
+                padding: "7px 14px", borderRadius: "20px",
+                border: `1.5px solid ${filterOperadora !== "todas" ? BASE_COLORS.purple : t.cardBorder}`,
+                background: filterOperadora !== "todas" ? `${BASE_COLORS.purple}22` : t.inputBg,
+                color: filterOperadora !== "todas" ? BASE_COLORS.purple : t.textMuted,
+                fontSize: "12px", fontWeight: 600, fontFamily: FONT.body,
+                cursor: "pointer", outline: "none",
+              }}
+            >
+              <option value="todas">Todas as operadoras</option>
+              {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+                <option key={o.slug} value={o.slug}>{o.nome}</option>
+              ))}
+            </select>
+          </>
+        )}
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
-        <InfluencerDropdown
-          items={influencers}
-          selected={influencerFiltros}
-          onChange={setInfluencerFiltros}
-        />
-      </div>
+      {showFiltroInfluencer && influencers.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "24px" }}>
+          <InfluencerDropdown
+            items={influencers}
+            selected={influencerFiltros}
+            onChange={setInfluencerFiltros}
+          />
+        </div>
+      )}
 
       {/* Contador */}
-      {!loading && lives.length > 0 && (
+      {!loading && livesFiltered.length > 0 && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
-          {lives.length} live(s) encontrada(s)
+          {livesFiltered.length} live(s) encontrada(s)
           {influencerFiltros.length > 0 && (
             <span style={{ marginLeft: "8px", color: BASE_COLORS.blue, fontWeight: 600 }}>
               · {influencerFiltros.length} influencer(s) selecionado(s)
@@ -572,7 +648,7 @@ export default function Feedback() {
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
           Carregando...
         </div>
-      ) : lives.length === 0 ? (
+      ) : livesFiltered.length === 0 ? (
         <div style={{
           background: t.cardBg, border: `1px solid ${t.cardBorder}`,
           borderRadius: "16px", padding: "48px",
@@ -581,7 +657,7 @@ export default function Feedback() {
           💬 Nenhuma live encontrada para o período selecionado.
         </div>
       ) : (
-        lives.map(l => <LiveCard key={l.id} live={l} />)
+        livesFiltered.map(l => <LiveCard key={l.id} live={l} />)
       )}
     </div>
   );

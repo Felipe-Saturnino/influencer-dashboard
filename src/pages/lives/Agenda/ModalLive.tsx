@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { Live, Plataforma, LiveStatus } from "../../../types";
@@ -22,12 +23,13 @@ const PLAT_LINK_KEY: Record<Plataforma, string> = {
 
 export default function ModalLive({ live, onClose, onSave }: Props) {
   const { theme: t, user } = useApp();
-  const isAdmin = user?.role === "admin";
+  const { podeVerInfluencer } = useDashboardFiltros();
+  const isInfluencer = user?.role === "influencer";
   const isEdit  = !!live;
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
-    influencer_id: live?.influencer_id ?? "",
+    influencer_id: live?.influencer_id ?? (user?.role === "influencer" ? user?.id ?? "" : ""),
     data:          live?.data          ?? "",
     horario:       live?.horario       ?? "",
     plataforma:    (live?.plataforma   ?? "Twitch") as Plataforma,
@@ -41,13 +43,18 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const [perfilLinks,        setPerfilLinks]        = useState<Record<string, string>>({});
   const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
 
-  // 1. Carrega lista de influencers
+  // 1. Carrega lista de influencers (para roles que podem selecionar)
   useEffect(() => {
-    if (isAdmin) {
+    if (!isInfluencer) {
       supabase.from("profiles").select("id, name").eq("role", "influencer")
-        .then(({ data }) => { if (data) setInfluencers(data); });
+        .then(({ data }) => {
+          if (data) {
+            const visiveis = data.filter((i: { id: string }) => podeVerInfluencer(i.id));
+            setInfluencers(visiveis);
+          }
+        });
     }
-  }, []);
+  }, [isInfluencer, podeVerInfluencer]);
 
   // 2. Busca links do perfil quando o influencer selecionado muda
   useEffect(() => {
@@ -90,7 +97,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     setError("");
     if (!form.data)                      return setError("Informe a data.");
     if (!form.horario)                   return setError("Informe o horário.");
-    if (isAdmin && !form.influencer_id)  return setError("Selecione um influencer.");
+    if (!isInfluencer && influencers.length > 0 && !form.influencer_id) return setError("Selecione um influencer.");
     if (!form.link.trim())               return setError("Informe o link da live na plataforma selecionada.");
 
     setSaving(true);
@@ -103,9 +110,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
       plataforma:    form.plataforma,
       status:        form.status,
       link:          form.link.trim(),
-      influencer_id: isAdmin ? form.influencer_id : undefined,
+      influencer_id: isInfluencer ? user?.id : form.influencer_id || undefined,
     };
-    if (!isAdmin) delete payload.influencer_id;
     if (!isEdit)  payload.created_by = authUser?.id ?? null;
 
     const { error: err } = isEdit
@@ -153,7 +159,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           </div>
         )}
 
-        {isAdmin && (
+        {!isInfluencer && influencers.length > 0 && (
           <div style={row}>
             <label style={labelStyle}>Influencer</label>
             <select

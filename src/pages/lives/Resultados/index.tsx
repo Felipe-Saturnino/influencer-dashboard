@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
+import InfluencerMultiSelect from "../../operacoes/Influencers/InfluencerMultiSelect";
 
 const PLAT_COLOR: Record<string, string> = {
   Twitch: "#9146ff", YouTube: "#ff0000", Instagram: "#e1306c",
@@ -17,17 +20,28 @@ const STATUS_OPTS: { value: LiveStatus; label: string; color: string }[] = [
 function toISO(d: Date) { return d.toISOString().split("T")[0]; }
 
 export default function Resultados() {
-  const { theme: t, user } = useApp();
-  const isAdmin = user?.role === "admin";
+  const { theme: t } = useApp();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const perm = usePermission("resultados");
 
-  const [lives,      setLives]      = useState<Live[]>([]);
-  const [resultados, setResultados] = useState<Record<string, LiveResultado>>({});
-  // FIX: mapa de influencer_id → nome_completo para o subtítulo do card
+  const [lives,        setLives]        = useState<Live[]>([]);
+  const [resultados,   setResultados]   = useState<Record<string, LiveResultado>>({});
   const [nomeCompletos, setNomeCompletos] = useState<Record<string, string>>({});
-  const [loading,    setLoading]    = useState(true);
-  const [modal,      setModal]      = useState<Live | null>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [modal,        setModal]        = useState<Live | null>(null);
+  const [filterInfluencers, setFilterInfluencers] = useState<string[]>([]);
+  const [filterOperadora,   setFilterOperadora]   = useState<string>("todas");
+  const [influencerList,    setInfluencerList]    = useState<{ id: string; name: string }[]>([]);
+  const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMap,   setOperadoraInfMap]   = useState<Record<string, string[]>>({});
 
   const todayISO = toISO(new Date());
+
+  const influencerListVisiveis = useMemo(() =>
+    influencerList.filter((i) => podeVerInfluencer(i.id)),
+    [influencerList, podeVerInfluencer]
+  );
+  const showInfluencerName = influencerListVisiveis.length > 1;
 
   async function loadData() {
     setLoading(true);
@@ -45,9 +59,10 @@ export default function Resultados() {
         ...l,
         influencer_name: l.profiles?.name,
       }));
-      setLives(mapped);
+      const visiveis = mapped.filter((l: Live) => podeVerInfluencer(l.influencer_id));
+      setLives(visiveis);
 
-      const ids = mapped.map((l: Live) => l.id);
+      const ids = visiveis.map((l: Live) => l.id);
       if (ids.length > 0) {
         const { data: resData } = await supabase
           .from("live_resultados").select("*").in("live_id", ids);
@@ -58,9 +73,9 @@ export default function Resultados() {
         }
       }
 
-      // FIX: buscar nome_completo de cada influencer para o subtítulo do card (admin only)
-      if (isAdmin) {
-        const influencerIds = [...new Set(mapped.map((l: any) => l.influencer_id).filter(Boolean))];
+      // Buscar nome_completo quando há múltiplos influencers nas lives
+      const influencerIds = [...new Set(visiveis.map((l: any) => l.influencer_id).filter(Boolean))];
+      if (influencerIds.length > 1) {
         if (influencerIds.length > 0) {
           const { data: perfisData } = await supabase
             .from("influencer_perfil")
@@ -77,7 +92,41 @@ export default function Resultados() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [podeVerInfluencer]);
+
+  useEffect(() => {
+    supabase.from("profiles").select("id, name").eq("role", "influencer")
+      .then(({ data }) => { if (data) setInfluencerList(data); });
+  }, []);
+
+  useEffect(() => {
+    supabase.from("operadoras").select("slug, nome").order("nome")
+      .then(({ data }) => { if (data) setOperadorasList(data); });
+  }, []);
+
+  useEffect(() => {
+    supabase.from("influencer_operadoras").select("influencer_id, operadora_slug")
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, string[]> = {};
+        data.forEach((row: { influencer_id: string; operadora_slug: string }) => {
+          if (!map[row.operadora_slug]) map[row.operadora_slug] = [];
+          map[row.operadora_slug].push(row.influencer_id);
+        });
+        setOperadoraInfMap(map);
+      });
+  }, []);
+
+  const livesFiltered = useMemo(() => {
+    let out = lives;
+    if (filterInfluencers.length > 0)
+      out = out.filter((l) => filterInfluencers.includes(l.influencer_id));
+    if (filterOperadora && filterOperadora !== "todas") {
+      const ids = operadoraInfMap[filterOperadora] ?? [];
+      out = out.filter((l) => ids.includes(l.influencer_id));
+    }
+    return out;
+  }, [lives, filterInfluencers, filterOperadora, operadoraInfMap]);
 
   const card: React.CSSProperties = {
     background: t.cardBg, border: `1px solid ${t.cardBorder}`,
@@ -104,7 +153,7 @@ export default function Resultados() {
               <div style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{live.influencer_name}</div>
               {/* FIX linha 2: Nome Completo · data · hora */}
               <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginTop: "2px" }}>
-                {isAdmin && nomeCompleto && <span>{nomeCompleto} · </span>}
+                {showInfluencerName && nomeCompleto && <span>{nomeCompleto} · </span>}
                 {live.data} · {live.horario?.slice(0, 5)}
               </div>
               <div style={{ display: "flex", gap: "6px", marginTop: "6px", flexWrap: "wrap" }}>
@@ -114,7 +163,7 @@ export default function Resultados() {
             </div>
           </div>
 
-          {isAdmin && (
+          {perm.canEditar && (
             <button onClick={() => setModal(live)}
               style={{ padding: "8px 16px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
               ✅ Validar
@@ -294,6 +343,14 @@ export default function Resultados() {
     );
   }
 
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar os resultados de lives.
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
       <div style={{ marginBottom: "24px" }}>
@@ -305,20 +362,52 @@ export default function Resultados() {
         </p>
       </div>
 
+      {(showFiltroInfluencer || showFiltroOperadora) && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center", marginBottom: "16px" }}>
+          {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
+            <InfluencerMultiSelect
+              selected={filterInfluencers}
+              onChange={setFilterInfluencers}
+              influencers={influencerListVisiveis}
+              t={t}
+            />
+          )}
+          {showFiltroOperadora && operadorasList.length > 0 && (
+            <select
+              value={filterOperadora}
+              onChange={(e) => setFilterOperadora(e.target.value)}
+              style={{
+                padding: "6px 14px", borderRadius: "20px",
+                border: `1.5px solid ${filterOperadora !== "todas" ? BASE_COLORS.purple : t.cardBorder}`,
+                background: filterOperadora !== "todas" ? `${BASE_COLORS.purple}22` : t.inputBg,
+                color: filterOperadora !== "todas" ? BASE_COLORS.purple : t.textMuted,
+                fontSize: "12px", fontWeight: 600, fontFamily: FONT.body,
+                cursor: "pointer", outline: "none",
+              }}
+            >
+              <option value="todas">Todas as operadoras</option>
+              {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+                <option key={o.slug} value={o.slug}>{o.nome}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
           Carregando...
         </div>
-      ) : lives.length === 0 ? (
+      ) : livesFiltered.length === 0 ? (
         <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
           ✅ Nenhuma live pendente de validação.
         </div>
       ) : (
         <>
           <div style={{ fontSize: "13px", color: "#f39c12", fontFamily: FONT.body, marginBottom: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
-            ⚠️ {lives.length} live(s) aguardando validação
+            ⚠️ {livesFiltered.length} live(s) aguardando validação
           </div>
-          {lives.map(l => <LiveCard key={l.id} live={l} />)}
+          {livesFiltered.map(l => <LiveCard key={l.id} live={l} />)}
         </>
       )}
 

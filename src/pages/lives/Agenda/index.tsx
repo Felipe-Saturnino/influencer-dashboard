@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
@@ -251,7 +253,8 @@ function InfluencerMultiSelect({ selected, onChange, influencers, t }: Influence
 // ── Componente Principal ──────────────────────────────────────────────────
 export default function Agenda() {
   const { theme: t, user, isDark } = useApp();
-  const isAdmin = user?.role === "admin";
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const perm = usePermission("agenda");
 
   const [view,    setView]    = useState<ViewMode>("mes");
   const [current, setCurrent] = useState(new Date());
@@ -262,9 +265,18 @@ export default function Agenda() {
   const [filterStatus,      setFilterStatus]      = useState<string | null>(null);
   const [filterPlat,        setFilterPlat]        = useState<string | null>(null);
   const [filterInfluencers, setFilterInfluencers] = useState<string[]>([]);
+  const [filterOperadora,    setFilterOperadora]   = useState<string>("todas");
   const [influencerList,    setInfluencerList]    = useState<{ id: string; name: string }[]>([]);
+  const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMap,   setOperadoraInfMap]   = useState<Record<string, string[]>>({});
 
-  const hasActiveFilters = filterStatus !== null || filterPlat !== null || filterInfluencers.length > 0;
+  const hasActiveFilters = filterStatus !== null || filterPlat !== null || filterInfluencers.length > 0 || filterOperadora !== "todas";
+
+  const influencerListVisiveis = useMemo(() =>
+    influencerList.filter((i) => podeVerInfluencer(i.id)),
+    [influencerList, podeVerInfluencer]
+  );
+  const showInfluencerName = influencerListVisiveis.length > 1;
 
   async function loadLives() {
     setLoading(true);
@@ -275,25 +287,40 @@ export default function Agenda() {
       .order("horario", { ascending: true });
 
     if (!error && data) {
-      setLives(data.map((l: any) => ({
+      const mapped = data.map((l: any) => ({
         ...l,
         influencer_name: l.profiles?.name,
-      })));
+      }));
+      const visiveis = mapped.filter((l: Live) => podeVerInfluencer(l.influencer_id));
+      setLives(visiveis);
     }
     setLoading(false);
   }
 
   useEffect(() => {
     loadLives();
-    if (isAdmin) {
-      supabase
-        .from("profiles")
-        .select("id, name")
-        .eq("role", "influencer")
-        .order("name")
-        .then(({ data }) => { if (data) setInfluencerList(data); });
+  }, [podeVerInfluencer]);
+
+  useEffect(() => {
+    if (showFiltroInfluencer || showFiltroOperadora) {
+      Promise.all([
+        showFiltroInfluencer ? supabase.from("profiles").select("id, name").eq("role", "influencer").order("name") : Promise.resolve({ data: [] }),
+        showFiltroOperadora ? supabase.from("operadoras").select("slug, nome").order("nome") : Promise.resolve({ data: [] }),
+        showFiltroOperadora ? supabase.from("influencer_operadoras").select("influencer_id, operadora_slug") : Promise.resolve({ data: [] }),
+      ]).then(([profRes, opsRes, infOpsRes]) => {
+        if (showFiltroInfluencer && profRes.data) setInfluencerList(profRes.data);
+        if (showFiltroOperadora) {
+          setOperadorasList((opsRes.data ?? []) as { slug: string; nome: string }[]);
+          const map: Record<string, string[]> = {};
+          ((infOpsRes as any)?.data ?? []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
+            if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
+            map[o.operadora_slug].push(o.influencer_id);
+          });
+          setOperadoraInfMap(map);
+        }
+      });
     }
-  }, []);
+  }, [showFiltroInfluencer, showFiltroOperadora]);
 
   function livesForDay(date: Date): Live[] {
     const iso = toISO(date);
@@ -302,6 +329,10 @@ export default function Agenda() {
       if (filterStatus && l.status !== filterStatus) return false;
       if (filterPlat   && l.plataforma !== filterPlat) return false;
       if (filterInfluencers.length > 0 && !filterInfluencers.includes(l.influencer_id)) return false;
+      if (filterOperadora !== "todas") {
+        const ids = operadoraInfMap[filterOperadora] ?? [];
+        if (!ids.includes(l.influencer_id)) return false;
+      }
       return true;
     });
   }
@@ -347,7 +378,7 @@ export default function Agenda() {
         style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 8px", borderRadius: "8px", cursor: "pointer", background: `${PLAT_COLOR[live.plataforma]}22`, border: `1px solid ${PLAT_COLOR[live.plataforma]}55`, marginBottom: "3px" }}>
         <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: STATUS_COLOR[live.status], flexShrink: 0 }} />
         <span style={{ fontSize: "11px", color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {live.horario.slice(0, 5)} {isAdmin ? `· ${live.influencer_name}` : ""}
+          {live.horario.slice(0, 5)} {showInfluencerName ? `· ${live.influencer_name}` : ""}
         </span>
       </div>
     );
@@ -462,7 +493,7 @@ export default function Agenda() {
                   {l.plataforma === "Twitch" ? "🟣" : l.plataforma === "YouTube" ? "▶️" : l.plataforma === "Instagram" ? "📸" : l.plataforma === "TikTok" ? "🎵" : "🟢"}
                 </div>
                 <div style={{ flex: 1 }}>
-                  {isAdmin && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{l.influencer_name}</div>}
+                  {showInfluencerName && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{l.influencer_name}</div>}
                   <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "11px", background: `${PLAT_COLOR[l.plataforma]}33`, color: PLAT_COLOR[l.plataforma], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{l.plataforma}</span>
                     <span style={{ fontSize: "11px", background: `${STATUS_COLOR[l.status]}22`, color: STATUS_COLOR[l.status], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{STATUS_LABEL[l.status]}</span>
@@ -491,6 +522,14 @@ export default function Agenda() {
     { value: "dia",    label: "Dia"    },
   ];
 
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar a agenda de lives.
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "24px", maxWidth: "1100px", margin: "0 auto" }}>
 
@@ -499,7 +538,7 @@ export default function Agenda() {
         <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: 0 }}>
           🎥 Agenda de Lives
         </h1>
-        {isAdmin && (
+        {perm.canCriar && (
           <button onClick={() => setModal({ open: true })}
             style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
             + Nova Live
@@ -532,15 +571,37 @@ export default function Agenda() {
             t={t}
           />
 
-          {isAdmin && influencerList.length > 0 && (
+          {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
             <>
               <div style={{ width: "1px", height: "22px", background: t.divider, flexShrink: 0, margin: "0 2px" }} />
               <InfluencerMultiSelect
                 selected={filterInfluencers}
                 onChange={setFilterInfluencers}
-                influencers={influencerList}
+                influencers={influencerListVisiveis}
                 t={t}
               />
+            </>
+          )}
+          {showFiltroOperadora && operadorasList.length > 0 && (
+            <>
+              <div style={{ width: "1px", height: "22px", background: t.divider, flexShrink: 0, margin: "0 2px" }} />
+              <select
+                value={filterOperadora}
+                onChange={(e) => setFilterOperadora(e.target.value)}
+                style={{
+                  padding: "6px 14px", borderRadius: "20px",
+                  border: `1.5px solid ${filterOperadora !== "todas" ? BASE_COLORS.purple : t.cardBorder}`,
+                  background: filterOperadora !== "todas" ? `${BASE_COLORS.purple}22` : t.inputBg,
+                  color: filterOperadora !== "todas" ? BASE_COLORS.purple : t.textMuted,
+                  fontSize: "12px", fontWeight: 600, fontFamily: FONT.body,
+                  cursor: "pointer", outline: "none",
+                }}
+              >
+                <option value="todas">Todas as operadoras</option>
+                {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+                  <option key={o.slug} value={o.slug}>{o.nome}</option>
+                ))}
+              </select>
             </>
           )}
         </div>
@@ -606,7 +667,7 @@ export default function Agenda() {
           {/* LIMPAR FILTROS */}
           {hasActiveFilters && (
             <button
-              onClick={() => { setFilterStatus(null); setFilterPlat(null); setFilterInfluencers([]); }}
+              onClick={() => { setFilterStatus(null); setFilterPlat(null); setFilterInfluencers([]); setFilterOperadora("todas"); }}
               style={{
                 padding: "5px 16px", borderRadius: "20px",
                 border: `1px solid ${BASE_COLORS.red}44`,
