@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { CicloPagamento, Pagamento, PagamentoStatus } from "../../../types";
+import InfluencerMultiSelect from "../../operacoes/Influencers/InfluencerMultiSelect";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
 
@@ -486,8 +489,16 @@ function ModalAgente({ cicloId, onClose, onSalvo }: {
 
 // ── BLOCO 1: KPIs ──────────────────────────────────────────────────────────────
 
-function BlocoKpis() {
-  const { theme: t } = useApp();
+interface BlocoFiltros {
+  podeVerInfluencer: (id: string) => boolean;
+  filterInfluencers: string[];
+  filterOperadora: string;
+  operadoraInfMap: Record<string, string[]>;
+}
+
+function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
+  const { theme: t, user } = useApp();
+  const { podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap } = filtros;
   const OPCOES = useMemo(() => gerarMeses(), []);
 
   const [mes, setMes] = useState("");
@@ -496,7 +507,7 @@ function BlocoKpis() {
   const [horas, setHoras] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { carregar(); }, [mes]);
+  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora]);
 
   async function carregar() {
     setLoading(true);
@@ -526,18 +537,23 @@ function BlocoKpis() {
 
     const [{ data: pags }, { data: agentes }] = await Promise.all([pQuery, aQuery]);
 
-    const allPags = pags ?? [];
-    const allAgs = agentes ?? [];
+    let allPags = (pags ?? []).filter((p: any) => podeVerInfluencer(p.influencer_id));
+    if (filterInfluencers.length > 0) allPags = allPags.filter((p: any) => filterInfluencers.includes(p.influencer_id));
+    if (filterOperadora && filterOperadora !== "todas") {
+      const ids = operadoraInfMap[filterOperadora] ?? [];
+      allPags = allPags.filter((p: any) => ids.includes(p.influencer_id));
+    }
+    const allAgs = user?.role === "influencer" ? [] : (agentes ?? []);
 
     setTotalPago(
-      [...allPags.filter(p => p.status === "pago"), ...allAgs.filter(a => a.status === "pago")]
-        .reduce((acc, x) => acc + x.total, 0)
+      [...allPags.filter((p: any) => p.status === "pago"), ...allAgs.filter((a: any) => a.status === "pago")]
+        .reduce((acc: number, x: any) => acc + x.total, 0)
     );
     setPendente(
-      [...allPags.filter(p => p.status === "em_analise" || p.status === "a_pagar"), ...allAgs.filter(a => a.status === "em_analise" || a.status === "a_pagar")]
-        .reduce((acc, x) => acc + x.total, 0)
+      [...allPags.filter((p: any) => p.status === "em_analise" || p.status === "a_pagar"), ...allAgs.filter((a: any) => a.status === "em_analise" || a.status === "a_pagar")]
+        .reduce((acc: number, x: any) => acc + x.total, 0)
     );
-    setHoras(allPags.reduce((acc, p) => acc + p.horas_realizadas, 0));
+    setHoras(allPags.reduce((acc: number, p: any) => acc + p.horas_realizadas, 0));
     setLoading(false);
   }
 
@@ -592,11 +608,14 @@ function BlocoKpis() {
 
 // ── BLOCO 2: CICLOS ────────────────────────────────────────────────────────────
 
-function BlocoCiclos({ ciclos, onRecarregar }: {
+function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   ciclos: CicloPagamento[];
   onRecarregar: () => void;
+  filtros: BlocoFiltros;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
+  const perm = usePermission("financeiro");
+  const { podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap } = filtros;
 
   const [cicloId, setCicloId] = useState<string>(ciclos[0]?.id ?? "");
   const [rows, setRows] = useState<PagamentoRow[]>([]);
@@ -614,7 +633,7 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
 
   useEffect(() => {
     if (ciclo) carregarDados(ciclo);
-  }, [cicloId]);
+  }, [cicloId, podeVerInfluencer, filterInfluencers, filterOperadora]);
 
   async function verificarFechamento(c: CicloPagamento) {
     if (c.fechado_em) return;
@@ -633,7 +652,7 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
       .lte("data", c.data_fim);
 
     const horasPorId: Record<string, number> = {};
-    for (const live of (lives ?? []) as any[]) {
+    for (const live of ((lives ?? []) as any[]).filter((l: any) => podeVerInfluencer(l.influencer_id))) {
       const res = live.live_resultados?.[0];
       if (res) {
         horasPorId[live.influencer_id] = (horasPorId[live.influencer_id] ?? 0) + res.duracao_horas + res.duracao_min / 60;
@@ -673,10 +692,11 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
       .gte("data", c.data_inicio)
       .lte("data", c.data_fim);
 
-    if (!lives || lives.length === 0) { setRows([]); return; }
+    const livesFiltradas = (lives ?? []).filter((l: any) => podeVerInfluencer(l.influencer_id));
+    if (livesFiltradas.length === 0) { setRows([]); return; }
 
     const horasPorId: Record<string, { horas: number; qtd: number }> = {};
-    for (const live of lives as any[]) {
+    for (const live of livesFiltradas as any[]) {
       const res = live.live_resultados?.[0];
       if (res) {
         if (!horasPorId[live.influencer_id]) horasPorId[live.influencer_id] = { horas: 0, qtd: 0 };
@@ -685,7 +705,12 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
       }
     }
 
-    const ids = Object.keys(horasPorId);
+    let ids = Object.keys(horasPorId);
+    if (filterInfluencers.length > 0) ids = ids.filter((id) => filterInfluencers.includes(id));
+    if (filterOperadora && filterOperadora !== "todas") {
+      const opIds = operadoraInfMap[filterOperadora] ?? [];
+      ids = ids.filter((id) => opIds.includes(id));
+    }
     const [{ data: profiles }, { data: perfis }] = await Promise.all([
       supabase.from("profiles").select("id, name").in("id", ids),
       supabase.from("influencer_perfil").select("id, cache_hora, nome_artistico").in("id", ids),
@@ -745,7 +770,14 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
       }
     }
 
-    const linhasInf: PagamentoRow[] = (pags ?? []).map((p: any) => ({
+    let pagsFiltrados = (pags ?? []).filter((p: any) => podeVerInfluencer(p.influencer_id));
+    if (filterInfluencers.length > 0) pagsFiltrados = pagsFiltrados.filter((p: any) => filterInfluencers.includes(p.influencer_id));
+    if (filterOperadora && filterOperadora !== "todas") {
+      const opIds = operadoraInfMap[filterOperadora] ?? [];
+      pagsFiltrados = pagsFiltrados.filter((p: any) => opIds.includes(p.influencer_id));
+    }
+
+    const linhasInf: PagamentoRow[] = pagsFiltrados.map((p: any) => ({
       id: p.id,
       influencer_id: p.influencer_id,
       influencer_name: nomeMap[p.influencer_id] ?? p.influencer_id,
@@ -756,7 +788,7 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
       pago_em: p.pago_em,
     }));
 
-    const linhasAg: PagamentoRow[] = (agentes ?? []).map((a: any) => ({
+    const linhasAg: PagamentoRow[] = (user?.role === "influencer" ? [] : (agentes ?? [])).map((a: any) => ({
       id: a.id,
       influencer_id: "agente",
       influencer_name: "Agentes",
@@ -834,7 +866,7 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
           />
         </div>
 
-        {ciclo && (
+        {ciclo && perm.canEditar && (
           <BtnPrimary onClick={() => setModalAgente(true)}>
             ➕ Pagamento de Agente
           </BtnPrimary>
@@ -919,10 +951,10 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
                       <td style={{ ...td, fontWeight: 700 }}>{fmtMoeda(row.total)}</td>
                       <td style={td}><Badge status={row.status} config={STATUS_PAG} /></td>
                       <td style={td}>
-                        {row.status === "em_analise" && (
+                        {row.status === "em_analise" && perm.canEditar && (
                           <BtnAcao onClick={() => setModalAnalisar(row)} color="#f59e0b">⏳ Analisar</BtnAcao>
                         )}
-                        {row.status === "a_pagar" && (
+                        {row.status === "a_pagar" && perm.canEditar && (
                           <BtnAcao onClick={() => setModalPagar(row)} color="#10b981">💰 Pagar</BtnAcao>
                         )}
                         {row.status === "pago" && (
@@ -984,8 +1016,9 @@ function BlocoCiclos({ ciclos, onRecarregar }: {
 
 // ── BLOCO 3: CONSOLIDADO ───────────────────────────────────────────────────────
 
-function BlocoConsolidado() {
-  const { theme: t } = useApp();
+function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
+  const { theme: t, user } = useApp();
+  const { podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap } = filtros;
 
   const OPCOES_MESES = useMemo(() => [{ value: "", label: "Todos os meses" }, ...gerarMeses().slice(1)], []);
   const OPCOES_STATUS = [
@@ -1018,7 +1051,7 @@ function BlocoConsolidado() {
   const [historico, setHistorico] = useState<Record<string, any[]>>({});
   const [loadingHist, setLoadingHist] = useState<string | null>(null);
 
-  useEffect(() => { carregar(); }, [mes]);
+  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora]);
 
   async function carregar() {
     setLoading(true);
@@ -1037,6 +1070,13 @@ function BlocoConsolidado() {
 
     const emailMap: Record<string, string> = {};
     for (const p of (profiles ?? []) as any[]) emailMap[p.id] = p.email;
+
+    let perfisFiltrados = (perfis as any[]).filter((p) => podeVerInfluencer(p.id));
+    if (filterInfluencers.length > 0) perfisFiltrados = perfisFiltrados.filter((p) => filterInfluencers.includes(p.id));
+    if (filterOperadora && filterOperadora !== "todas") {
+      const opIds = operadoraInfMap[filterOperadora] ?? [];
+      perfisFiltrados = perfisFiltrados.filter((p) => opIds.includes(p.id));
+    }
 
     const periodo = periodoDoMes(mes);
     let cicloIds: string[] = [];
@@ -1071,7 +1111,7 @@ function BlocoConsolidado() {
     const agtUltimoPag = agtPagos.sort((a, b) => (b.pago_em ?? "").localeCompare(a.pago_em ?? ""))[0]?.pago_em ?? null;
 
     // Influencers — filtrar os que têm pelo menos algum valor
-    const resultado: ConRow[] = (perfis as any[]).map(perf => {
+    const resultado: ConRow[] = perfisFiltrados.map((perf) => {
       const pags = pagamentosData.filter(p => p.influencer_id === perf.id);
       const pagos = pags.filter(p => p.status === "pago");
       const pendentes = pags.filter(p => p.status === "em_analise" || p.status === "a_pagar");
@@ -1089,9 +1129,9 @@ function BlocoConsolidado() {
       };
     }).filter(r => r.totalPago > 0 || r.totalHoras > 0 || r.pendente > 0);
 
-    // Linha especial de agentes (só aparece se tiver algum dado)
+    // Linha especial de agentes (só aparece se tiver algum dado; influencer não vê)
     setAgentesRow(
-      agtTotalPago > 0 || agtPendente > 0
+      user?.role !== "influencer" && (agtTotalPago > 0 || agtPendente > 0)
         ? { totalPago: agtTotalPago, pendente: agtPendente, ultimoPagamento: agtUltimoPag }
         : null
     );
@@ -1296,10 +1336,53 @@ function BlocoConsolidado() {
 
 export default function Financeiro() {
   const { theme: t } = useApp();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const perm = usePermission("financeiro");
+
   const [ciclos, setCiclos] = useState<CicloPagamento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterInfluencers, setFilterInfluencers] = useState<string[]>([]);
+  const [filterOperadora, setFilterOperadora] = useState<string>("todas");
+  const [influencerList, setInfluencerList] = useState<{ id: string; name: string }[]>([]);
+  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
+
+  const influencerListVisiveis = useMemo(() =>
+    influencerList.filter((i) => podeVerInfluencer(i.id)),
+    [influencerList, podeVerInfluencer]
+  );
+
+  const filtros: BlocoFiltros = useMemo(() => ({
+    podeVerInfluencer,
+    filterInfluencers,
+    filterOperadora,
+    operadoraInfMap,
+  }), [podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap]);
 
   useEffect(() => { carregarCiclos(); }, []);
+
+  useEffect(() => {
+    supabase.from("profiles").select("id, name").eq("role", "influencer")
+      .then(({ data }) => { if (data) setInfluencerList(data); });
+  }, []);
+
+  useEffect(() => {
+    supabase.from("operadoras").select("slug, nome").order("nome")
+      .then(({ data }) => { if (data) setOperadorasList(data); });
+  }, []);
+
+  useEffect(() => {
+    supabase.from("influencer_operadoras").select("influencer_id, operadora_slug")
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, string[]> = {};
+        data.forEach((row: { influencer_id: string; operadora_slug: string }) => {
+          if (!map[row.operadora_slug]) map[row.operadora_slug] = [];
+          map[row.operadora_slug].push(row.influencer_id);
+        });
+        setOperadoraInfMap(map);
+      });
+  }, []);
 
   async function carregarCiclos() {
     setLoading(true);
@@ -1309,6 +1392,14 @@ export default function Financeiro() {
       .order("data_inicio", { ascending: false });
     setCiclos(data ?? []);
     setLoading(false);
+  }
+
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar o financeiro.
+      </div>
+    );
   }
 
   if (loading) {
@@ -1341,9 +1432,41 @@ export default function Financeiro() {
       <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
       <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
 
-      <BlocoKpis />
-      <BlocoCiclos ciclos={ciclos} onRecarregar={carregarCiclos} />
-      <BlocoConsolidado />
+      {(showFiltroInfluencer || showFiltroOperadora) && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center", marginBottom: "20px" }}>
+          {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
+            <InfluencerMultiSelect
+              selected={filterInfluencers}
+              onChange={setFilterInfluencers}
+              influencers={influencerListVisiveis}
+              t={t}
+            />
+          )}
+          {showFiltroOperadora && operadorasList.length > 0 && (
+            <select
+              value={filterOperadora}
+              onChange={(e) => setFilterOperadora(e.target.value)}
+              style={{
+                padding: "6px 14px", borderRadius: "20px",
+                border: `1.5px solid ${filterOperadora !== "todas" ? BASE_COLORS.purple : t.cardBorder}`,
+                background: filterOperadora !== "todas" ? `${BASE_COLORS.purple}22` : t.inputBg,
+                color: filterOperadora !== "todas" ? BASE_COLORS.purple : t.textMuted,
+                fontSize: "12px", fontWeight: 600, fontFamily: FONT.body,
+                cursor: "pointer", outline: "none",
+              }}
+            >
+              <option value="todas">Todas as operadoras</option>
+              {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+                <option key={o.slug} value={o.slug}>{o.nome}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      <BlocoKpis filtros={filtros} />
+      <BlocoCiclos ciclos={ciclos} onRecarregar={carregarCiclos} filtros={filtros} />
+      <BlocoConsolidado filtros={filtros} />
     </div>
   );
 }
