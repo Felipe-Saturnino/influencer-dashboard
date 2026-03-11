@@ -123,7 +123,7 @@ export default function GestaoOperadoras() {
                       </span>
                     </td>
                     <td style={{ ...tdStyle, color: t.textMuted, fontSize: 12 }}>
-                      {new Date(op.criado_em).toLocaleDateString("pt-BR")}
+                      {op.criado_em ? new Date(op.criado_em).toLocaleDateString("pt-BR") : "—"}
                     </td>
                     <td style={tdStyle}>
                       <button
