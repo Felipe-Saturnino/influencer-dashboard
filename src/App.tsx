@@ -22,6 +22,7 @@ import Financeiro  from "./pages/operacoes/Financeiro";
 import GestaoLinks from "./pages/operacoes/GestaoLinks";
 // Páginas — plataforma
 import GestaoUsuarios from "./pages/plataforma/GestaoUsuarios";
+import GestaoOperadoras from "./pages/plataforma/GestaoOperadoras";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
@@ -35,6 +36,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   financeiro:       Financeiro,
   gestao_links:     GestaoLinks,
   gestao_usuarios:  GestaoUsuarios,
+  gestao_operadoras: GestaoOperadoras,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
 };
