@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
-import { supabase } from "./lib/supabase";
+import { supabase, supabaseConfigOk } from "./lib/supabase";
 // Layout
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
@@ -77,7 +77,29 @@ function Root() {
   return user ? <AppLayout onLogout={handleLogout} /> : <Login onLogin={setUser} />;
 }
 
+function ConfigError() {
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 24, fontFamily: "Inter, sans-serif", color: "#e5dce1", textAlign: "center",
+    }}>
+      <div>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+        <h1 style={{ fontSize: 20, marginBottom: 12, color: "#fff" }}>Configuração incompleta</h1>
+        <p style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 400 }}>
+          As variáveis <strong>VITE_SUPABASE_URL</strong> e <strong>VITE_SUPABASE_ANON_KEY</strong> não estão configuradas.
+        </p>
+        <p style={{ fontSize: 13, marginTop: 16, color: "#888" }}>
+          No Cloudflare Pages, vá em <strong>Settings → Environment variables</strong> e adicione ambas.<br />
+          Para o branch <em>Staging</em>, configure em <strong>Preview</strong>.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  if (!supabaseConfigOk) return <ConfigError />;
   return (
     <AppProvider>
       <Root />
