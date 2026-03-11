@@ -150,12 +150,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function setUser(u: User | null) {
     setUserState(u);
     if (u) {
-      const [perms, escopos] = await Promise.all([
-        carregarPermissoes(u.role),
-        carregarEscoposVisiveis(u.id, u.role),
-      ]);
-      setPermissions(perms);
-      setEscoposVisiveis(escopos);
+      try {
+        const [perms, escopos] = await Promise.all([
+          carregarPermissoes(u.role),
+          carregarEscoposVisiveis(u.id, u.role),
+        ]);
+        setPermissions(perms);
+        setEscoposVisiveis(escopos);
+      } catch (err) {
+        console.error("Erro ao carregar permissões/escopos após login:", err);
+        setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
+        setEscoposVisiveis(ESCOPOS_VAZIOS);
+      }
     } else {
       setPermissions(
         Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa
@@ -173,24 +179,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Restaura sessão ativa
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id, name, role, email")
-          .eq("id", session.user.id)
-          .single();
-        if (profile) {
-          const u = profile as User;
-          setUserState(u);
-          const [perms, escopos] = await Promise.all([
-            carregarPermissoes(u.role),
-            carregarEscoposVisiveis(u.id, u.role),
-          ]);
-          setPermissions(perms);
-          setEscoposVisiveis(escopos);
+      try {
+        if (session) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id, name, role, email")
+            .eq("id", session.user.id)
+            .single();
+          if (profile) {
+            const u = profile as User;
+            setUserState(u);
+            try {
+              const [perms, escopos] = await Promise.all([
+                carregarPermissoes(u.role),
+                carregarEscoposVisiveis(u.id, u.role),
+              ]);
+              setPermissions(perms);
+              setEscoposVisiveis(escopos);
+            } catch (err) {
+              console.error("Erro ao carregar permissões/escopos:", err);
+              setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
+              setEscoposVisiveis(ESCOPOS_VAZIOS);
+            }
+          }
         }
+      } catch (err) {
+        console.error("Erro ao restaurar sessão:", err);
+      } finally {
+        setChecking(false);
       }
-      setChecking(false);
     });
   }, []);
 

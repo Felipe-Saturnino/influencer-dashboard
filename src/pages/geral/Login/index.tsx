@@ -24,7 +24,17 @@ export default function Login({ onLogin }: Props) {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email.toLowerCase().trim(), password,
     });
-    if (authError) { setError("E-mail ou senha incorretos."); setLoading(false); return; }
+    if (authError) {
+      const msg = authError.message?.toLowerCase() || "";
+      if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
+        setError("Falha de conexão. Verifique sua internet e tente novamente.");
+      } else if (msg.includes("email not confirmed")) {
+        setError("E-mail ainda não confirmado. Verifique sua caixa de entrada.");
+      } else {
+        setError("E-mail ou senha incorretos.");
+      }
+      setLoading(false); return;
+    }
 
     // MELHORIA 4: id incluído no select para evitar bug silencioso com user.id
     const { data: profile, error: profileError } = await supabase

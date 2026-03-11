@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
+import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 
@@ -26,6 +27,7 @@ function EyeIcon({ open }: { open: boolean }) {
 
 export default function Configuracoes() {
   const { theme: t, isDark, setIsDark } = useApp();
+  const perm = usePermission("configuracoes");
 
   const [curPass,  setCurPass]  = useState("");
   const [newPass,  setNewPass]  = useState("");
@@ -40,6 +42,14 @@ export default function Configuracoes() {
   const strength = passwordStrength(newPass);
   const strengthColor = ["#e94025","#e94025","#f5a623","#27ae60","#27ae60"][strength];
   const strengthLabel = strength <= 1 ? "Fraca" : strength <= 2 ? "Média" : "Forte";
+
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar as Configurações.
+      </div>
+    );
+  }
 
   const reqs = [
     { ok: newPass.length >= 8,                             label: "Mínimo 8 caracteres" },

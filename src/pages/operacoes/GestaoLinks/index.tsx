@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
+import { usePermission } from "../../../hooks/usePermission";
+import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
 
@@ -29,6 +31,7 @@ type Aba = "pendentes" | "mapeados" | "ignorados";
 
 export default function GestaoLinks() {
   const { theme, user } = useApp();
+  const perm = usePermission("gestao_links");
 
   const [aba, setAba] = useState<Aba>("pendentes");
   const [aliases, setAliases] = useState<UtmAlias[]>([]);
@@ -439,6 +442,14 @@ export default function GestaoLinks() {
     mapeados:  "Nenhum link mapeado ainda.",
     ignorados: "Nenhum link ignorado.",
   };
+
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: theme.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar a Gestão de Links.
+      </div>
+    );
+  }
 
   return (
     <div style={s.page}>

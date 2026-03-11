@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
+import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora } from "../../../types";
@@ -181,7 +182,8 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
   const { theme: t, user } = useApp();
-  const isAdmin = user?.role === "admin";
+  const perm = usePermission("influencers");
+  const showManagementUI = user?.role !== "influencer";
 
   const [list,           setList]           = useState<Influencer[]>([]);
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
@@ -202,7 +204,7 @@ export default function Influencers() {
     setOperadorasList(opsList ?? []);
     const opsMap = Object.fromEntries((opsList ?? []).map((o: Operadora) => [o.slug, o.nome]));
 
-    if (isAdmin) {
+    if (showManagementUI) {
       const { data: profiles } = await supabase
         .from("profiles").select("id, name, email").eq("role", "influencer").order("name");
       if (profiles) {
@@ -335,6 +337,14 @@ export default function Influencers() {
     cursor: "pointer", outline: "none",
   };
 
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar a página de Influencers.
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "24px", maxWidth: "900px", margin: "0 auto" }}>
 
@@ -345,12 +355,12 @@ export default function Influencers() {
             👥 Influencers
           </h1>
           <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
-            {isAdmin
+            {showManagementUI
               ? "Gerencie o cadastro completo dos influencers parceiros."
               : "Seu perfil completo na plataforma."}
           </p>
         </div>
-        {isAdmin && (
+        {perm.canCriar && (
           <button onClick={() => setModal({ mode: "novo" })}
             style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
             + Adicionar
@@ -358,8 +368,8 @@ export default function Influencers() {
         )}
       </div>
 
-      {/* Quadros resumo (admin) */}
-      {isAdmin && (
+      {/* Quadros resumo (quem gerencia múltiplos) */}
+      {showManagementUI && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
           <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "20px" }}>
             <div style={{ fontSize: "12px", fontWeight: 700, color: t.label, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: "6px" }}>
@@ -418,8 +428,8 @@ export default function Influencers() {
         </div>
       )}
 
-      {/* Busca */}
-      {isAdmin && (
+      {/* Busca e filtros */}
+      {showManagementUI && (
         <>
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
@@ -502,7 +512,7 @@ export default function Influencers() {
       )}
 
       {/* Contador */}
-      {!loading && isAdmin && (
+      {!loading && showManagementUI && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
           {filtered.length} influencer(s)
         </div>

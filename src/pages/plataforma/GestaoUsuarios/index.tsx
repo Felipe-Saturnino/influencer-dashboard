@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
+import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import {
   Role, PageKey, PermissaoValor, RolePermission,
@@ -19,17 +20,19 @@ const ROLES: { value: Role; label: string }[] = [
 ];
 
 const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; hasEditar: boolean; hasExcluir: boolean }[] = [
-  { key: "agenda",          label: "Agenda",          secao: "Lives",      hasCriar: true,  hasEditar: true,  hasExcluir: true  },
-  { key: "resultados",      label: "Resultados",      secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "feedback",        label: "Feedback",        secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "dash_overview",   label: "Overview",        secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_conversao",  label: "Conversão",       secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_financeiro", label: "Financeiro",      secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "influencers",     label: "Influencers",     secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
-  { key: "financeiro",      label: "Financeiro",      secao: "Operações",  hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "gestao_links",    label: "Gestão de Links", secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "configuracoes",   label: "Configurações",   secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "ajuda",           label: "Ajuda",           secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "agenda",             label: "Agenda",             secao: "Lives",      hasCriar: true,  hasEditar: true,  hasExcluir: true  },
+  { key: "resultados",         label: "Resultados",         secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "feedback",           label: "Feedback",           secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "dash_overview",      label: "Overview",           secao: "Dashboards",  hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_conversao",     label: "Conversão",          secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_financeiro",    label: "Financeiro",         secao: "Dashboards",  hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "influencers",        label: "Influencers",        secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
+  { key: "financeiro",         label: "Financeiro",          secao: "Operações",  hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "gestao_links",       label: "Gestão de Links",     secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "gestao_usuarios",    label: "Gestão de Usuários", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "gestao_operadoras",  label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "configuracoes",      label: "Configurações",      secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "ajuda",              label: "Ajuda",              secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
 const ROLES_EDITAVEIS: Role[] = ["gestor", "executivo", "influencer", "operador", "agencia"];
@@ -66,7 +69,16 @@ function escopoBloqueado(role: Role) {
 
 export default function GestaoUsuarios() {
   const { theme: t } = useApp();
+  const perm = usePermission("gestao_usuarios");
   const [aba, setAba] = useState<"usuarios" | "permissoes">("usuarios");
+
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar a Gestão de Usuários.
+      </div>
+    );
+  }
 
   const card: React.CSSProperties = {
     background: t.cardBg, borderRadius: 16, padding: 28,
