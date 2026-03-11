@@ -245,7 +245,6 @@ export default function DashboardFinanceiro() {
   const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
 
   const mesSelecionado = mesesDisponiveis[idxMes];
-  const hoje = new Date();
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
@@ -693,7 +692,10 @@ export default function DashboardFinanceiro() {
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number, name: string, props: { payload: { roi: number } }) => [`${props.payload.roi >= 0 ? "+" : ""}${props.payload.roi.toFixed(1)}%`, name]} />
+                <Tooltip formatter={(v: number, name: string, item: { payload?: { roi?: number } }) => {
+                  const roi = item?.payload?.roi ?? 0;
+                  return [`${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%`, name] as [string, string];
+                }} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
