@@ -364,7 +364,7 @@ export default function Influencers() {
               : "Seu perfil completo na plataforma."}
           </p>
         </div>
-        {perm.canCriar && (
+        {perm.canCriarOk && (
           <button onClick={() => setModal({ mode: "novo" })}
             style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
             + Adicionar

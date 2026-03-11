@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { Live, Plataforma, LiveStatus } from "../../../types";
@@ -24,8 +25,13 @@ const PLAT_LINK_KEY: Record<Plataforma, string> = {
 export default function ModalLive({ live, onClose, onSave }: Props) {
   const { theme: t, user } = useApp();
   const { podeVerInfluencer } = useDashboardFiltros();
+  const perm = usePermission("agenda");
   const isInfluencer = user?.role === "influencer";
   const isEdit  = !!live;
+  const podeCriar = !isEdit && perm.canCriarOk;
+  const podeEditar = isEdit && perm.canEditarOk;
+  const podeExcluir = isEdit && perm.canExcluirOk;
+  const somenteLeitura = isEdit && !podeEditar;
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
@@ -165,9 +171,12 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             <select
               value={form.influencer_id}
               onChange={e => {
-                setForm(f => ({ ...f, influencer_id: e.target.value, link: "" }));
-                setLinkAutoPreenchido(false);
+                if (!somenteLeitura) {
+                  setForm(f => ({ ...f, influencer_id: e.target.value, link: "" }));
+                  setLinkAutoPreenchido(false);
+                }
               }}
+              disabled={somenteLeitura}
               style={inputStyle}
             >
               <option value="">Selecione...</option>
@@ -179,11 +188,11 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
           <div>
             <label style={labelStyle}>Data</label>
-            <input type="date" value={form.data} onChange={e => set("data", e.target.value)} style={inputStyle} />
+            <input type="date" value={form.data} onChange={e => !somenteLeitura && set("data", e.target.value)} readOnly={somenteLeitura} style={inputStyle} />
           </div>
           <div>
             <label style={labelStyle}>Horário</label>
-            <input type="time" value={form.horario} onChange={e => set("horario", e.target.value)} style={inputStyle} />
+            <input type="time" value={form.horario} onChange={e => !somenteLeitura && set("horario", e.target.value)} readOnly={somenteLeitura} style={inputStyle} />
           </div>
         </div>
 
@@ -191,8 +200,9 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           <label style={labelStyle}>Plataforma</label>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             {PLATAFORMAS.map(p => (
-              <button key={p} onClick={() => set("plataforma", p)}
-                style={{ padding: "7px 14px", borderRadius: "20px", border: `1.5px solid ${form.plataforma === p ? BASE_COLORS.purple : t.cardBorder}`, background: form.plataforma === p ? `${BASE_COLORS.purple}22` : t.inputBg, color: form.plataforma === p ? BASE_COLORS.purple : t.textMuted, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              <button key={p} type="button" onClick={() => !somenteLeitura && set("plataforma", p)}
+                disabled={somenteLeitura}
+                style={{ padding: "7px 14px", borderRadius: "20px", border: `1.5px solid ${form.plataforma === p ? BASE_COLORS.purple : t.cardBorder}`, background: form.plataforma === p ? `${BASE_COLORS.purple}22` : t.inputBg, color: form.plataforma === p ? BASE_COLORS.purple : t.textMuted, fontSize: "12px", fontWeight: 600, cursor: somenteLeitura ? "default" : "pointer", fontFamily: FONT.body, opacity: somenteLeitura ? 0.8 : 1 }}>
                 {p}
               </button>
             ))}
@@ -205,7 +215,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           </label>
           <input
             value={form.link}
-            onChange={e => { set("link", e.target.value); setError(""); }}
+            onChange={e => { if (!somenteLeitura) { set("link", e.target.value); setError(""); } }}
+            readOnly={somenteLeitura}
             style={{
               ...inputStyle,
               borderColor: error.includes("link") ? "#e94025" : linkAutoPreenchido ? BASE_COLORS.purple : t.inputBorder,
@@ -224,22 +235,30 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         </div>
 
         <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
-          {isEdit && !confirm && (
+          {podeExcluir && !confirm && (
             <button onClick={() => setConfirm(true)}
               style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid #e94025`, background: "#e9402511", color: "#e94025", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
               🗑 Excluir
             </button>
           )}
-          {isEdit && confirm && (
+          {podeExcluir && confirm && (
             <button onClick={handleDelete} disabled={saving}
               style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "none", background: "#e94025", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
               Confirmar exclusão?
             </button>
           )}
-          <button onClick={handleSave} disabled={saving}
-            style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: FONT.body }}>
-            {saving ? "⏳" : isEdit ? "Salvar Alterações" : "Criar Live"}
-          </button>
+          {(podeCriar || podeEditar) && (
+            <button onClick={handleSave} disabled={saving}
+              style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: FONT.body }}>
+              {saving ? "⏳" : isEdit ? "Salvar Alterações" : "Criar Live"}
+            </button>
+          )}
+          {!podeCriar && !podeEditar && !podeExcluir && (
+            <button onClick={onClose}
+              style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.text, fontSize: "13px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              Fechar
+            </button>
+          )}
         </div>
       </div>
     </div>

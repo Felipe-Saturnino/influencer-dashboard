@@ -163,7 +163,7 @@ export default function Resultados() {
             </div>
           </div>
 
-          {perm.canEditar && (
+          {perm.canEditarOk && (
             <button onClick={() => setModal(live)}
               style={{ padding: "8px 16px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
               ✅ Validar

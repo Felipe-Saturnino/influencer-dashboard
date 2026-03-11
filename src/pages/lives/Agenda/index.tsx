@@ -430,7 +430,7 @@ export default function Agenda() {
         <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: 0 }}>
           🎥 Agenda de Lives
         </h1>
-        {perm.canCriar && (
+        {perm.canCriarOk && (
           <button onClick={() => setModal({ open: true })}
             style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
             + Nova Live
