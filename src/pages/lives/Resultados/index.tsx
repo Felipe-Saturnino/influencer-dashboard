@@ -5,7 +5,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
-import InfluencerMultiSelect from "../../components/InfluencerMultiSelect";
+import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 
 const PLAT_COLOR: Record<string, string> = {
   Twitch: "#9146ff", YouTube: "#ff0000", Instagram: "#e1306c",

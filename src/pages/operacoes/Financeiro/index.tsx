@@ -5,7 +5,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { CicloPagamento, Pagamento, PagamentoStatus } from "../../../types";
-import InfluencerMultiSelect from "../../components/InfluencerMultiSelect";
+import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
 
