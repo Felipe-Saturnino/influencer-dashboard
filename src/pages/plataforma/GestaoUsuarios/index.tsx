@@ -172,13 +172,41 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
     padding: "12px 14px", borderTop: `1px solid ${t.cardBorder}`,
   };
 
+  const usuariosFiltrados = busca.trim()
+    ? usuarios.filter(
+        (u) =>
+          (u.name ?? "").toLowerCase().includes(busca.toLowerCase()) ||
+          (u.email ?? "").toLowerCase().includes(busca.toLowerCase())
+      )
+    : usuarios;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
-          {usuarios.length} usuário{usuarios.length !== 1 ? "s" : ""} cadastrado{usuarios.length !== 1 ? "s" : ""}
-        </span>
-        <button onClick={abrirNovo} style={{
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <input
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou e-mail..."
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            padding: "10px 16px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg ?? t.bg,
+            color: t.text,
+            fontSize: 14,
+            fontFamily: FONT.body,
+            outline: "none",
+          }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
+            {busca.trim()
+              ? `${usuariosFiltrados.length} de ${usuarios.length} usuário${usuarios.length !== 1 ? "s" : ""}`
+              : `${usuarios.length} usuário${usuarios.length !== 1 ? "s" : ""} cadastrado${usuarios.length !== 1 ? "s" : ""}`}
+          </span>
+          <button onClick={abrirNovo} style={{
           background: "linear-gradient(135deg, #7c3aed, #2563eb)",
           color: "#fff", border: "none", borderRadius: 10,
           padding: "9px 18px", cursor: "pointer",
@@ -201,7 +229,7 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
               </tr>
             </thead>
             <tbody>
-              {usuarios.map(u => {
+              {usuariosFiltrados.map(u => {
                 const escopoTexto = formatarEscopo(u.scopes ?? [], operadoras);
                 return (
                   <tr key={u.id}>
@@ -582,6 +610,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
 
   const salvar = async () => {
     setSalvando(true);
+    setSalvoOk(false);
     const rows = PAGES.map(p => ({
       role: roleAtivo, page_key: p.key,
       can_view:    perms[p.key]?.can_view    ?? null,
@@ -589,10 +618,24 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
       can_editar:  p.hasEditar  ? (perms[p.key]?.can_editar  ?? null) : null,
       can_excluir: p.hasExcluir ? (perms[p.key]?.can_excluir ?? null) : null,
     }));
-    await supabase.from("role_permissions").upsert(rows, { onConflict: "role,page_key" });
+    const { error } = await supabase.from("role_permissions").upsert(rows, {
+      onConflict: "role,page_key",
+      ignoreDuplicates: false,
+    });
     setSalvando(false);
+    if (error) {
+      console.error("[GestaoUsuarios] Erro ao salvar permissões:", error);
+      alert(`Erro ao salvar permissões: ${error.message}`);
+      return;
+    }
     setSalvoOk(true);
     setTimeout(() => setSalvoOk(false), 2500);
+    // Recarrega dados para garantir consistência
+    supabase.from("role_permissions").select("*").eq("role", roleAtivo).then(({ data }) => {
+      const mapa: Record<string, Partial<RolePermission>> = {};
+      (data ?? []).forEach(r => { mapa[r.page_key] = r; });
+      setPerms(mapa);
+    });
   };
 
   const thStyle: React.CSSProperties = {

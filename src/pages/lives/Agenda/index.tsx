@@ -300,16 +300,17 @@ export default function Agenda() {
             <div key={d} style={{ textAlign: "center", fontSize: "11px", fontWeight: 700, color: t.textMuted, padding: "8px 0", fontFamily: FONT.body }}>{d}</div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "118px", gap: "4px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "110px", gap: "4px" }}>
           {cells.map((date, i) => {
-            if (!date) return <div key={i} />;
+            if (!date) return <div key={i} style={{ minHeight: 0 }} />;
             const dayLives = livesForDay(date);
             const count    = dayLives.length;
             return (
               <div key={i} onClick={() => { setCurrent(date); setView("dia"); }}
                 style={{
-                  height: "100%", minHeight: 0, padding: "6px", borderRadius: "10px", cursor: "pointer", transition: "background 0.15s",
-                  display: "flex", flexDirection: "column", overflow: "hidden",
+                  height: "110px", maxHeight: "110px",
+                  padding: "6px", borderRadius: "10px", cursor: "pointer", transition: "background 0.15s",
+                  display: "flex", flexDirection: "column", overflow: "hidden", boxSizing: "border-box",
                   ...dayStyle(date, todayISO),
                 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
@@ -320,7 +321,7 @@ export default function Agenda() {
                     </span>
                   )}
                 </div>
-                <div style={{ marginTop: "4px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
+                <div style={{ marginTop: "4px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch" }}>
                   {dayLives.slice(0, 3).map(l => <LiveChip key={l.id} live={l} />)}
                   {dayLives.length > 3 && <span style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 3}</span>}
                 </div>

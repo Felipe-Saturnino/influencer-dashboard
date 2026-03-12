@@ -614,12 +614,20 @@ export default function Influencers() {
       )}
 
       {modal?.mode === "visualizar" && modal.inf && (
-        <ModalVisualizar influencer={modal.inf} operadorasList={operadorasNoEscopo} onClose={() => setModal(null)} />
+        <ModalVisualizar
+          influencer={modal.inf}
+          operadorasList={operadorasNoEscopo.filter((o) =>
+            (modal.inf!.operadoras ?? []).some((op) => op.operadora_slug === o.slug)
+          )}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.mode === "editar" && modal.inf && (
         <ModalPerfil
           influencer={modal.inf}
-          operadorasList={operadorasNoEscopo}
+          operadorasList={operadorasNoEscopo.filter((o) =>
+            (modal.inf!.operadoras ?? []).some((op) => op.operadora_slug === o.slug)
+          )}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); loadData(); }}
         />
