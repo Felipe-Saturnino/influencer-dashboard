@@ -12,6 +12,7 @@ import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 interface PagamentoAgente {
   id: string;
   ciclo_id: string;
+  operadora_slug: string;
   descricao: string;
   total: number;
   status: "em_analise" | "a_pagar" | "pago";
@@ -419,8 +420,11 @@ function ModalPagar({ row, onClose, onConfirm }: {
 
 // ── MODAL AGENTE ───────────────────────────────────────────────────────────────
 
-function ModalAgente({ cicloId, onClose, onSalvo }: {
+function ModalAgente({ cicloId, filterOperadora, operadorasList, operadorasVisiveis, onClose, onSalvo }: {
   cicloId: string;
+  filterOperadora: string;
+  operadorasList: { slug: string; nome: string }[];
+  operadorasVisiveis: string[];
   onClose: () => void;
   onSalvo: () => Promise<void>;
 }) {
@@ -428,15 +432,21 @@ function ModalAgente({ cicloId, onClose, onSalvo }: {
   const [saving, setSaving] = useState(false);
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
+  const [operadoraSlug, setOperadoraSlug] = useState(filterOperadora !== "todas" ? filterOperadora : "");
+
+  const opcoes = operadorasList.filter((o) => operadorasVisiveis.length === 0 || operadorasVisiveis.includes(o.slug));
+  const precisaSelecionarOp = filterOperadora === "todas" && opcoes.length > 1;
+  const opFinal = filterOperadora !== "todas" ? filterOperadora : operadoraSlug;
 
   const valorNum = parseFloat(valor.replace(",", ".")) || 0;
-  const canSubmit = descricao.trim().length > 0 && valorNum > 0;
+  const canSubmit = descricao.trim().length > 0 && valorNum > 0 && (!precisaSelecionarOp || opFinal);
 
   async function handleConfirm() {
-    if (!canSubmit) return;
+    if (!canSubmit || !opFinal) return;
     setSaving(true);
     await supabase.from("pagamentos_agentes").insert({
       ciclo_id: cicloId,
+      operadora_slug: opFinal,
       descricao: descricao.trim(),
       total: valorNum,
       status: "em_analise",
@@ -462,6 +472,15 @@ function ModalAgente({ cicloId, onClose, onSalvo }: {
     <ModalBase maxWidth={400} onClose={onClose}>
       <ModalHeader title="➕ Pagamento de Agente" onClose={onClose} />
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {precisaSelecionarOp && (
+          <div>
+            <label style={labelStyle}>Operadora *</label>
+            <select value={operadoraSlug} onChange={e => setOperadoraSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+              <option value="">Selecione...</option>
+              {opcoes.map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+            </select>
+          </div>
+        )}
         <div>
           <label style={labelStyle}>Descrição *</label>
           <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex: Comissão João" style={inputStyle} />
@@ -494,6 +513,8 @@ interface BlocoFiltros {
   filterInfluencers: string[];
   filterOperadora: string;
   operadoraInfMap: Record<string, string[]>;
+  operadorasList: { slug: string; nome: string }[];
+  operadorasVisiveis: string[];
 }
 
 function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
@@ -528,22 +549,24 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     }
 
     const pQuery = periodo
-      ? supabase.from("pagamentos").select("total, horas_realizadas, status").in("ciclo_id", cicloIds)
-      : supabase.from("pagamentos").select("total, horas_realizadas, status");
+      ? supabase.from("pagamentos").select("total, horas_realizadas, status, operadora_slug").in("ciclo_id", cicloIds)
+      : supabase.from("pagamentos").select("total, horas_realizadas, status, operadora_slug");
 
     const aQuery = periodo
-      ? supabase.from("pagamentos_agentes").select("total, status").in("ciclo_id", cicloIds)
-      : supabase.from("pagamentos_agentes").select("total, status");
+      ? supabase.from("pagamentos_agentes").select("total, status, operadora_slug").in("ciclo_id", cicloIds)
+      : supabase.from("pagamentos_agentes").select("total, status, operadora_slug");
 
     const [{ data: pags }, { data: agentes }] = await Promise.all([pQuery, aQuery]);
 
     let allPags = (pags ?? []).filter((p: any) => podeVerInfluencer(p.influencer_id));
     if (filterInfluencers.length > 0) allPags = allPags.filter((p: any) => filterInfluencers.includes(p.influencer_id));
     if (filterOperadora && filterOperadora !== "todas") {
-      const ids = operadoraInfMap[filterOperadora] ?? [];
-      allPags = allPags.filter((p: any) => ids.includes(p.influencer_id));
+      allPags = allPags.filter((p: any) => p.operadora_slug === filterOperadora);
     }
-    const allAgs = user?.role === "influencer" ? [] : (agentes ?? []);
+    let allAgs = user?.role === "influencer" ? [] : (agentes ?? []);
+    if (filterOperadora && filterOperadora !== "todas") {
+      allAgs = allAgs.filter((a: any) => a.operadora_slug === filterOperadora);
+    }
 
     setTotalPago(
       [...allPags.filter((p: any) => p.status === "pago"), ...allAgs.filter((a: any) => a.status === "pago")]
@@ -615,7 +638,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 }) {
   const { theme: t, user } = useApp();
   const perm = usePermission("financeiro");
-  const { podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap } = filtros;
+  const { podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList, operadorasVisiveis } = filtros;
 
   const [cicloId, setCicloId] = useState<string>(ciclos[0]?.id ?? "");
   const [rows, setRows] = useState<PagamentoRow[]>([]);
@@ -646,28 +669,31 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   async function fecharCiclo(c: CicloPagamento) {
     const { data: lives } = await supabase
       .from("lives")
-      .select("id, influencer_id, live_resultados(duracao_horas, duracao_min)")
+      .select("id, influencer_id, operadora_slug, live_resultados(duracao_horas, duracao_min)")
       .eq("status", "realizada")
       .gte("data", c.data_inicio)
       .lte("data", c.data_fim);
 
-    const horasPorId: Record<string, number> = {};
-    for (const live of ((lives ?? []) as any[]).filter((l: any) => podeVerInfluencer(l.influencer_id))) {
+    const horasPorPar: Record<string, number> = {};
+    const key = (inf: string, op: string) => `${inf}::${op}`;
+    for (const live of ((lives ?? []) as any[]).filter((l: any) => podeVerInfluencer(l.influencer_id) && l.operadora_slug)) {
       const res = live.live_resultados?.[0];
       if (res) {
-        horasPorId[live.influencer_id] = (horasPorId[live.influencer_id] ?? 0) + res.duracao_horas + res.duracao_min / 60;
+        const k = key(live.influencer_id, live.operadora_slug);
+        horasPorPar[k] = (horasPorPar[k] ?? 0) + res.duracao_horas + res.duracao_min / 60;
       }
     }
 
-    for (const [influencer_id, horas] of Object.entries(horasPorId)) {
+    for (const [parKey, horas] of Object.entries(horasPorPar)) {
+      const [influencer_id, operadora_slug] = parKey.split("::");
       const { data: perfil } = await supabase.from("influencer_perfil").select("cache_hora").eq("id", influencer_id).single();
       const cache_hora = perfil?.cache_hora ?? 0;
       const total = Math.round(horas * cache_hora * 100) / 100;
       await supabase.from("pagamentos").upsert({
-        ciclo_id: c.id, influencer_id,
+        ciclo_id: c.id, influencer_id, operadora_slug,
         horas_realizadas: Math.round(horas * 100) / 100,
         cache_hora, total, status: "em_analise",
-      }, { onConflict: "ciclo_id,influencer_id" });
+      }, { onConflict: "ciclo_id,influencer_id,operadora_slug" });
     }
 
     await supabase.from("ciclos_pagamento").update({ fechado_em: new Date().toISOString() }).eq("id", c.id);
@@ -687,30 +713,32 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   async function carregarPreview(c: CicloPagamento) {
     const { data: lives } = await supabase
       .from("lives")
-      .select("id, influencer_id, live_resultados(duracao_horas, duracao_min)")
+      .select("id, influencer_id, operadora_slug, live_resultados(duracao_horas, duracao_min)")
       .eq("status", "realizada")
       .gte("data", c.data_inicio)
       .lte("data", c.data_fim);
 
-    const livesFiltradas = (lives ?? []).filter((l: any) => podeVerInfluencer(l.influencer_id));
+    const livesFiltradas = (lives ?? []).filter((l: any) => podeVerInfluencer(l.influencer_id) && l.operadora_slug);
     if (livesFiltradas.length === 0) { setRows([]); return; }
 
-    const horasPorId: Record<string, { horas: number; qtd: number }> = {};
+    const horasPorPar: Record<string, { horas: number; qtd: number }> = {};
+    const key = (inf: string, op: string) => `${inf}::${op}`;
     for (const live of livesFiltradas as any[]) {
       const res = live.live_resultados?.[0];
       if (res) {
-        if (!horasPorId[live.influencer_id]) horasPorId[live.influencer_id] = { horas: 0, qtd: 0 };
-        horasPorId[live.influencer_id].horas += res.duracao_horas + res.duracao_min / 60;
-        horasPorId[live.influencer_id].qtd += 1;
+        const k = key(live.influencer_id, live.operadora_slug);
+        if (!horasPorPar[k]) horasPorPar[k] = { horas: 0, qtd: 0 };
+        horasPorPar[k].horas += res.duracao_horas + res.duracao_min / 60;
+        horasPorPar[k].qtd += 1;
       }
     }
 
-    let ids = Object.keys(horasPorId);
-    if (filterInfluencers.length > 0) ids = ids.filter((id) => filterInfluencers.includes(id));
+    let parKeys = Object.keys(horasPorPar);
+    if (filterInfluencers.length > 0) parKeys = parKeys.filter((k) => filterInfluencers.includes(k.split("::")[0]));
     if (filterOperadora && filterOperadora !== "todas") {
-      const opIds = operadoraInfMap[filterOperadora] ?? [];
-      ids = ids.filter((id) => opIds.includes(id));
+      parKeys = parKeys.filter((k) => k.endsWith(`::${filterOperadora}`));
     }
+    const ids = [...new Set(parKeys.map((k) => k.split("::")[0]))];
     const [{ data: profiles }, { data: perfis }] = await Promise.all([
       supabase.from("profiles").select("id, name").in("id", ids),
       supabase.from("influencer_perfil").select("id, cache_hora, nome_artistico").in("id", ids),
@@ -724,11 +752,13 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       perfilMap[p.id] = { cache: p.cache_hora ?? 0, artistico: p.nome_artistico ?? nameMap[p.id] ?? p.id };
     }
 
-    const result: PagamentoRow[] = ids.map(id => {
-      const h = Math.round(horasPorId[id].horas * 100) / 100;
+    const result: PagamentoRow[] = parKeys.map(parKey => {
+      const [id] = parKey.split("::");
+      const { horas, qtd } = horasPorPar[parKey];
+      const h = Math.round(horas * 100) / 100;
       const cache = perfilMap[id]?.cache ?? 0;
       return {
-        id: `preview_${id}`,
+        id: `preview_${parKey}`,
         influencer_id: id,
         influencer_name: perfilMap[id]?.artistico ?? nameMap[id] ?? id,
         horas_realizadas: h,
@@ -736,7 +766,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         total: Math.round(h * cache * 100) / 100,
         status: "em_analise" as PagamentoStatus,
         pago_em: null,
-        qtd_lives: horasPorId[id].qtd,
+        qtd_lives: qtd,
       };
     });
 
@@ -773,8 +803,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     let pagsFiltrados = (pags ?? []).filter((p: any) => podeVerInfluencer(p.influencer_id));
     if (filterInfluencers.length > 0) pagsFiltrados = pagsFiltrados.filter((p: any) => filterInfluencers.includes(p.influencer_id));
     if (filterOperadora && filterOperadora !== "todas") {
-      const opIds = operadoraInfMap[filterOperadora] ?? [];
-      pagsFiltrados = pagsFiltrados.filter((p: any) => opIds.includes(p.influencer_id));
+      pagsFiltrados = pagsFiltrados.filter((p: any) => p.operadora_slug === filterOperadora);
     }
 
     const linhasInf: PagamentoRow[] = pagsFiltrados.map((p: any) => ({
@@ -788,7 +817,11 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       pago_em: p.pago_em,
     }));
 
-    const linhasAg: PagamentoRow[] = (user?.role === "influencer" ? [] : (agentes ?? [])).map((a: any) => ({
+    let agentesFiltrados = user?.role === "influencer" ? [] : (agentes ?? []);
+    if (filterOperadora && filterOperadora !== "todas") {
+      agentesFiltrados = agentesFiltrados.filter((a: any) => a.operadora_slug === filterOperadora);
+    }
+    const linhasAg: PagamentoRow[] = agentesFiltrados.map((a: any) => ({
       id: a.id,
       influencer_id: "agente",
       influencer_name: "Agentes",
@@ -1006,6 +1039,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       {modalAgente && ciclo && (
         <ModalAgente
           cicloId={ciclo.id}
+          filterOperadora={filterOperadora}
+          operadorasList={operadorasList}
+          operadorasVisiveis={operadorasVisiveis}
           onClose={() => setModalAgente(false)}
           onSalvo={async () => { setModalAgente(false); if (ciclo) await carregarDados(ciclo); }}
         />
@@ -1018,7 +1054,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
 function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
-  const { podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap } = filtros;
+  const { podeVerInfluencer, filterInfluencers, filterOperadora } = filtros;
 
   const OPCOES_MESES = useMemo(() => [{ value: "", label: "Todos os meses" }, ...gerarMeses().slice(1)], []);
   const OPCOES_STATUS = [
@@ -1073,10 +1109,6 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
     let perfisFiltrados = (perfis as any[]).filter((p) => podeVerInfluencer(p.id));
     if (filterInfluencers.length > 0) perfisFiltrados = perfisFiltrados.filter((p) => filterInfluencers.includes(p.id));
-    if (filterOperadora && filterOperadora !== "todas") {
-      const opIds = operadoraInfMap[filterOperadora] ?? [];
-      perfisFiltrados = perfisFiltrados.filter((p) => opIds.includes(p.id));
-    }
 
     const periodo = periodoDoMes(mes);
     let cicloIds: string[] = [];
@@ -1101,6 +1133,12 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
       ]);
       pagamentosData = pags ?? [];
       agentesData = agts ?? [];
+    }
+    if (filterOperadora && filterOperadora !== "todas") {
+      pagamentosData = pagamentosData.filter((p: any) => p.operadora_slug === filterOperadora);
+      agentesData = agentesData.filter((a: any) => a.operadora_slug === filterOperadora);
+      const infIdsComPag = [...new Set(pagamentosData.map((p: any) => p.influencer_id))];
+      perfisFiltrados = perfisFiltrados.filter((p) => infIdsComPag.includes(p.id));
     }
 
     // Linha de agentes
@@ -1357,7 +1395,9 @@ export default function Financeiro() {
     filterInfluencers,
     filterOperadora,
     operadoraInfMap,
-  }), [podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap]);
+    operadorasList,
+    operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
+  }), [podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList, escoposVisiveis.operadorasVisiveis]);
 
   useEffect(() => { carregarCiclos(); }, []);
 

@@ -199,7 +199,6 @@ export default function Feedback() {
   const [influencerFiltros, setInfluencerFiltros] = useState<string[]>([]);
   const [filterOperadora,   setFilterOperadora]   = useState<string>("todas");
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap,   setOperadoraInfMap]   = useState<Record<string, string[]>>({});
 
   const [lives,         setLives]         = useState<LiveComObs[]>([]);
   const [resultados,    setResultados]    = useState<Record<string, LiveResultado>>({});
@@ -281,30 +280,15 @@ export default function Feedback() {
       .then(({ data }) => { if (data) setOperadorasList(data); });
   }, []);
 
-  useEffect(() => {
-    supabase.from("influencer_operadoras").select("influencer_id, operadora_slug")
-      .then(({ data }) => {
-        if (!data) return;
-        const map: Record<string, string[]> = {};
-        data.forEach((row: { influencer_id: string; operadora_slug: string }) => {
-          if (!map[row.operadora_slug]) map[row.operadora_slug] = [];
-          map[row.operadora_slug].push(row.influencer_id);
-        });
-        setOperadoraInfMap(map);
-      });
-  }, []);
-
   const livesAllFiltered = useMemo(() => {
     if (!filterOperadora || filterOperadora === "todas") return livesAll;
-    const ids = operadoraInfMap[filterOperadora] ?? [];
-    return livesAll.filter((l) => ids.includes(l.influencer_id));
-  }, [livesAll, filterOperadora, operadoraInfMap]);
+    return livesAll.filter((l) => l.operadora_slug === filterOperadora);
+  }, [livesAll, filterOperadora]);
 
   const livesFiltered = useMemo(() => {
     if (!filterOperadora || filterOperadora === "todas") return lives;
-    const ids = operadoraInfMap[filterOperadora] ?? [];
-    return lives.filter((l) => ids.includes(l.influencer_id));
-  }, [lives, filterOperadora, operadoraInfMap]);
+    return lives.filter((l) => l.operadora_slug === filterOperadora);
+  }, [lives, filterOperadora]);
 
   // ── Cálculos dos quadros ──────────────────────────────────────────────────
 

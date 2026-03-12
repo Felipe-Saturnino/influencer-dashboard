@@ -34,13 +34,15 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const somenteLeitura = isEdit && !podeEditar;
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
+  const [operadorasInfluencer, setOperadorasInfluencer] = useState<{ slug: string; nome: string }[]>([]);
   const [form, setForm] = useState({
-    influencer_id: live?.influencer_id ?? (user?.role === "influencer" ? user?.id ?? "" : ""),
-    data:          live?.data          ?? "",
-    horario:       live?.horario       ?? "",
-    plataforma:    (live?.plataforma   ?? "Twitch") as Plataforma,
-    status:        (live?.status       ?? "agendada") as LiveStatus,
-    link:          live?.link          ?? "",
+    influencer_id:   live?.influencer_id   ?? (user?.role === "influencer" ? user?.id ?? "" : ""),
+    operadora_slug:  live?.operadora_slug  ?? "",
+    data:            live?.data            ?? "",
+    horario:         live?.horario         ?? "",
+    plataforma:      (live?.plataforma     ?? "Twitch") as Plataforma,
+    status:          (live?.status         ?? "agendada") as LiveStatus,
+    link:            live?.link            ?? "",
   });
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState("");
@@ -48,6 +50,9 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   const [perfilLinks,        setPerfilLinks]        = useState<Record<string, string>>({});
   const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
+
+  const showOperadoraField = operadorasInfluencer.length > 1;
+  const operadoraObrigatoria = operadorasInfluencer.length > 1;
 
   // 1. Carrega lista de influencers (para roles que podem selecionar)
   useEffect(() => {
@@ -62,24 +67,32 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     }
   }, [isInfluencer, podeVerInfluencer]);
 
-  // 2. Busca links do perfil quando o influencer selecionado muda
+  // 2. Busca operadoras do influencer e links do perfil quando o influencer muda
   useEffect(() => {
     if (!form.influencer_id) {
+      setOperadorasInfluencer([]);
       setPerfilLinks({});
-      setForm(f => ({ ...f, link: "" }));
+      setForm(f => ({ ...f, link: "", operadora_slug: "" }));
       setLinkAutoPreenchido(false);
       return;
     }
 
-    supabase
-      .from("influencer_perfil")
-      .select("link_twitch, link_youtube, link_instagram, link_tiktok, link_kick")
-      .eq("id", form.influencer_id)
-      .single()
-      .then(({ data }) => {
-        const links = (data as Record<string, string>) ?? {};
-        setPerfilLinks(links);
-      });
+    Promise.all([
+      supabase.from("influencer_operadoras").select("operadora_slug").eq("influencer_id", form.influencer_id).eq("ativo", true),
+      supabase.from("influencer_perfil").select("link_twitch, link_youtube, link_instagram, link_tiktok, link_kick").eq("id", form.influencer_id).single(),
+    ]).then(([opsRes, perfRes]) => {
+      const slugs = (opsRes.data ?? []).map((o: any) => o.operadora_slug).filter(Boolean);
+      if (slugs.length > 0) {
+        supabase.from("operadoras").select("slug, nome").in("slug", slugs).order("nome").then(({ data: ops }) => {
+          const lista = (ops ?? []).map((o: any) => ({ slug: o.slug, nome: o.nome }));
+          setOperadorasInfluencer(lista);
+          const novaOp = lista.length === 1 ? lista[0].slug : (isEdit && live?.operadora_slug ? live.operadora_slug : "");
+          setForm(f => ({ ...f, operadora_slug: novaOp }));
+        });
+      } else setOperadorasInfluencer([]);
+      const links = (perfRes.data as Record<string, string>) ?? {};
+      setPerfilLinks(links);
+    });
   }, [form.influencer_id]);
 
   // 3. Atualiza o link sempre que a plataforma ou os links do perfil mudam
@@ -104,21 +117,29 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     if (!form.data)                      return setError("Informe a data.");
     if (!form.horario)                   return setError("Informe o horário.");
     if (!isInfluencer && influencers.length > 0 && !form.influencer_id) return setError("Selecione um influencer.");
+    if (operadoraObrigatoria && !form.operadora_slug?.trim()) return setError("Selecione a operadora.");
     if (!form.link.trim())               return setError("Informe o link da live na plataforma selecionada.");
+
+    const opSlug = operadorasInfluencer.length === 1 ? operadorasInfluencer[0].slug : form.operadora_slug?.trim();
+    if (!opSlug) {
+      if (operadorasInfluencer.length === 0) return setError("Influencer sem operadoras cadastradas. Cadastre em Influencers → Operadoras.");
+      return setError("Selecione a operadora.");
+    }
 
     setSaving(true);
 
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
     const payload: Record<string, any> = {
-      data:          form.data,
-      horario:       form.horario,
-      plataforma:    form.plataforma,
-      status:        form.status,
-      link:          form.link.trim(),
-      influencer_id: isInfluencer ? user?.id : form.influencer_id || undefined,
+      data:            form.data,
+      horario:         form.horario,
+      plataforma:      form.plataforma,
+      status:          form.status,
+      link:            form.link.trim(),
+      operadora_slug:  opSlug,
+      influencer_id:   isInfluencer ? user?.id : form.influencer_id || undefined,
     };
-    if (!isEdit)  payload.created_by = authUser?.id ?? null;
+    if (!isEdit) payload.created_by = authUser?.id ?? null;
 
     const { error: err } = isEdit
       ? await supabase.from("lives").update(payload).eq("id", live!.id)
@@ -172,7 +193,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               value={form.influencer_id}
               onChange={e => {
                 if (!somenteLeitura) {
-                  setForm(f => ({ ...f, influencer_id: e.target.value, link: "" }));
+                  setForm(f => ({ ...f, influencer_id: e.target.value, link: "", operadora_slug: "" }));
                   setLinkAutoPreenchido(false);
                 }
               }}
@@ -181,6 +202,23 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             >
               <option value="">Selecione...</option>
               {influencers.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </select>
+          </div>
+        )}
+
+        {showOperadoraField && (
+          <div style={row}>
+            <label style={labelStyle}>Operadora {operadoraObrigatoria && <span style={{ color: "#e94025" }}>*</span>}</label>
+            <select
+              value={form.operadora_slug}
+              onChange={e => !somenteLeitura && setForm(f => ({ ...f, operadora_slug: e.target.value }))}
+              disabled={somenteLeitura}
+              style={inputStyle}
+            >
+              <option value="">Selecione...</option>
+              {operadorasInfluencer.map(o => (
+                <option key={o.slug} value={o.slug}>{o.nome}</option>
+              ))}
             </select>
           </div>
         )}

@@ -33,7 +33,6 @@ export default function Resultados() {
   const [filterOperadora,   setFilterOperadora]   = useState<string>("todas");
   const [influencerList,    setInfluencerList]    = useState<{ id: string; name: string }[]>([]);
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap,   setOperadoraInfMap]   = useState<Record<string, string[]>>({});
 
   const todayISO = toISO(new Date());
 
@@ -104,29 +103,15 @@ export default function Resultados() {
       .then(({ data }) => { if (data) setOperadorasList(data); });
   }, []);
 
-  useEffect(() => {
-    supabase.from("influencer_operadoras").select("influencer_id, operadora_slug")
-      .then(({ data }) => {
-        if (!data) return;
-        const map: Record<string, string[]> = {};
-        data.forEach((row: { influencer_id: string; operadora_slug: string }) => {
-          if (!map[row.operadora_slug]) map[row.operadora_slug] = [];
-          map[row.operadora_slug].push(row.influencer_id);
-        });
-        setOperadoraInfMap(map);
-      });
-  }, []);
-
   const livesFiltered = useMemo(() => {
     let out = lives;
     if (filterInfluencers.length > 0)
       out = out.filter((l) => filterInfluencers.includes(l.influencer_id));
     if (filterOperadora && filterOperadora !== "todas") {
-      const ids = operadoraInfMap[filterOperadora] ?? [];
-      out = out.filter((l) => ids.includes(l.influencer_id));
+      out = out.filter((l) => l.operadora_slug === filterOperadora);
     }
     return out;
-  }, [lives, filterInfluencers, filterOperadora, operadoraInfMap]);
+  }, [lives, filterInfluencers, filterOperadora]);
 
   const card: React.CSSProperties = {
     background: t.cardBg, border: `1px solid ${t.cardBorder}`,
@@ -177,7 +162,7 @@ export default function Resultados() {
   function ModalValidacao({ live }: { live: Live }) {
     const existing = resultados[live.id];
     const [status,       setStatus]       = useState<LiveStatus>("realizada");
-    const [observacao,   setObservacao]   = useState("");
+    const [observacao,   setObservacao]   = useState(live.observacao ?? "");
     const [horarioReal,  setHorarioReal]  = useState(live.horario?.slice(0, 5) ?? "");
     const [duracaoHoras, setDuracaoHoras] = useState(existing?.duracao_horas ?? 0);
     const [duracaoMin,   setDuracaoMin]   = useState(existing?.duracao_min   ?? 0);

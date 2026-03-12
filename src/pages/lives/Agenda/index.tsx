@@ -160,7 +160,6 @@ export default function Agenda() {
   const [filterOperadora,    setFilterOperadora]   = useState<string>("todas");
   const [influencerList,    setInfluencerList]    = useState<{ id: string; name: string }[]>([]);
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap,   setOperadoraInfMap]   = useState<Record<string, string[]>>({});
 
   const hasActiveFilters = filterStatus !== null || filterPlat !== null || filterInfluencers.length > 0 || filterOperadora !== "todas";
 
@@ -198,18 +197,9 @@ export default function Agenda() {
       Promise.all([
         showFiltroInfluencer ? supabase.from("profiles").select("id, name").eq("role", "influencer").order("name") : Promise.resolve({ data: [] }),
         showFiltroOperadora ? supabase.from("operadoras").select("slug, nome").order("nome") : Promise.resolve({ data: [] }),
-        showFiltroOperadora ? supabase.from("influencer_operadoras").select("influencer_id, operadora_slug") : Promise.resolve({ data: [] }),
-      ]).then(([profRes, opsRes, infOpsRes]) => {
+      ]).then(([profRes, opsRes]) => {
         if (showFiltroInfluencer && profRes.data) setInfluencerList(profRes.data);
-        if (showFiltroOperadora) {
-          setOperadorasList((opsRes.data ?? []) as { slug: string; nome: string }[]);
-          const map: Record<string, string[]> = {};
-          ((infOpsRes as any)?.data ?? []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
-            if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
-            map[o.operadora_slug].push(o.influencer_id);
-          });
-          setOperadoraInfMap(map);
-        }
+        if (showFiltroOperadora) setOperadorasList((opsRes.data ?? []) as { slug: string; nome: string }[]);
       });
     }
   }, [showFiltroInfluencer, showFiltroOperadora]);
@@ -222,8 +212,7 @@ export default function Agenda() {
       if (filterPlat   && l.plataforma !== filterPlat) return false;
       if (filterInfluencers.length > 0 && !filterInfluencers.includes(l.influencer_id)) return false;
       if (filterOperadora !== "todas") {
-        const ids = operadoraInfMap[filterOperadora] ?? [];
-        if (!ids.includes(l.influencer_id)) return false;
+        if (l.operadora_slug !== filterOperadora) return false;
       }
       return true;
     });

@@ -36,6 +36,7 @@ export interface Live {
   id:               string;
   influencer_id:    string;
   influencer_name?: string;
+  operadora_slug?:  string;
   titulo:           string;
   data:             string;
   horario:          string;
@@ -77,6 +78,7 @@ export interface Pagamento {
   id:               string;
   ciclo_id:         string;
   influencer_id:    string;
+  operadora_slug:   string;
   influencer_name?: string;
   horas_realizadas: number;
   cache_hora:       number;
