@@ -187,6 +187,22 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
       )
     : usuarios;
 
+  const usuariosPorStatus = usuariosFiltrados.filter((u: UsuarioCompleto) => {
+    const ativo = u.ativo !== false;
+    if (filtroStatus === "todos") return true;
+    if (filtroStatus === "ativos") return ativo;
+    return !ativo;
+  });
+
+  const desativarOuReativar = async (u: UsuarioCompleto) => {
+    const novoAtivo = u.ativo === false;
+    const { error } = await supabase.from("profiles").update({ ativo: novoAtivo }).eq("id", u.id);
+    if (!error) {
+      setModalDesativar(null);
+      carregar();
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -248,7 +264,7 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
         <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
-          {usuariosPorStatus.map(u => {
+          {usuariosPorStatus.map((u: UsuarioCompleto) => {
             const escopoTexto = formatarEscopo(u.scopes ?? [], operadoras);
             const ativo = u.ativo !== false;
             return (
