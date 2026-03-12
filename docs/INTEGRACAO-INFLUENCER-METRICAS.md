@@ -1,6 +1,22 @@
-# Integração: influencer_metricas
+# Integração: influencer_metricas e utm_aliases
 
-A tabela `influencer_metricas` **não é preenchida pelo app** (influencer-dashboard). Os dados vêm de integrações externas (APIs das operadoras, Edge Functions, jobs, etc.).
+As tabelas `influencer_metricas` e `utm_aliases` **não são preenchidas pelo app** (influencer-dashboard). Os dados vêm de integrações externas (APIs das operadoras, Edge Functions, jobs, etc.).
+
+---
+
+## utm_aliases
+
+Ao inserir/atualizar UTMs vindos da API de uma operadora, incluir `operadora_slug` e **não enviar** `ggr` (coluna removida; o app calcula total_deposit - total_withdrawal):
+
+```json
+{ "utm_source": "Zvelo234", "operadora_slug": "casa_apostas", "total_ftds": 5, "total_deposit": 1250, "total_withdrawal": 800, ... }
+```
+
+Migração: `docs/migration-utm-aliases-operadora.sql`. Para remover ggr: `docs/migration-utm-aliases-drop-ggr.sql` (executar após a integração parar de enviar ggr).
+
+---
+
+## influencer_metricas
 
 ---
 

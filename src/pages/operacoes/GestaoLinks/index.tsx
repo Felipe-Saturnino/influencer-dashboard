@@ -1,9 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
+
+function calcGgr(alias: { total_deposit?: number; total_withdrawal?: number; ggr?: number }): number {
+  if (alias.ggr != null) return alias.ggr;
+  const dep = alias.total_deposit ?? 0;
+  const wd = alias.total_withdrawal ?? 0;
+  return dep - wd;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -32,8 +40,11 @@ type Aba = "pendentes" | "mapeados" | "ignorados";
 export default function GestaoLinks() {
   const { theme, user } = useApp();
   const perm = usePermission("gestao_links");
+  const { showFiltroOperadora } = useDashboardFiltros();
 
   const [aba, setAba] = useState<Aba>("pendentes");
+  const [operadoraFiltro, setOperadoraFiltro] = useState("todas");
+  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
   const [aliases, setAliases] = useState<UtmAlias[]>([]);
   const [loading, setLoading] = useState(true);
   const [influencers, setInfluencers] = useState<InfluencerOpcao[]>([]);
@@ -59,11 +70,9 @@ export default function GestaoLinks() {
     // FIX v1.1.0: Removido o JOIN via influencer_perfil:influencer_id.
     // O join com coluna nullable causava filtro implícito que excluía
     // todos os registros com influencer_id = null (UTMs órfãos pendentes).
-    const { data, error } = await supabase
-      .from("utm_aliases")
-      .select("*")
-      .eq("status", statusFiltro[aba])
-      .order("total_ftds", { ascending: false });
+    let query = supabase.from("utm_aliases").select("*").eq("status", statusFiltro[aba]).order("total_ftds", { ascending: false });
+    if (operadoraFiltro !== "todas") query = query.eq("operadora_slug", operadoraFiltro);
+    const { data, error } = await query;
 
     if (error) {
       console.error("Erro ao carregar utm_aliases:", error.message);
@@ -101,9 +110,13 @@ export default function GestaoLinks() {
 
     setAliases(mapped);
     setLoading(false);
-  }, [aba]);
+  }, [aba, operadoraFiltro]);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  useEffect(() => {
+    supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => setOperadorasList(data ?? []));
+  }, []);
 
   // FIX v1.2.0: Carrega TODOS os influencers (ativo, inativo, cancelado)
   // pois UTMs de influencers desativados ainda geram recorrência
@@ -119,12 +132,10 @@ export default function GestaoLinks() {
 
   const [totalPendentes, setTotalPendentes] = useState(0);
   useEffect(() => {
-    supabase
-      .from("utm_aliases")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pendente")
-      .then(({ count }) => setTotalPendentes(count ?? 0));
-  }, [aliases]);
+    let q = supabase.from("utm_aliases").select("id", { count: "exact", head: true }).eq("status", "pendente");
+    if (operadoraFiltro !== "todas") q = q.eq("operadora_slug", operadoraFiltro);
+    q.then(({ count }) => setTotalPendentes(count ?? 0));
+  }, [aliases, operadoraFiltro]);
 
   // ── Ações ──────────────────────────────────────────────────────────────────
 
@@ -462,8 +473,18 @@ export default function GestaoLinks() {
         )}
       </div>
       <div style={s.subtitle}>
-        Links de rastreio detectados na Casa de Apostas que não estão associados a nenhum influencer.
+        Links de rastreio detectados nas operadoras que não estão associados a nenhum influencer.
       </div>
+
+      {showFiltroOperadora && operadorasList.length > 0 && (
+        <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Operadora</span>
+          <select value={operadoraFiltro} onChange={(e) => setOperadoraFiltro(e.target.value)} style={{ padding: "8px 14px", background: theme.inputBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, color: theme.text, fontSize: 13, cursor: "pointer", minWidth: 180 }}>
+            <option value="todas">Todas</option>
+            {operadorasList.map((op) => <option key={op.slug} value={op.slug}>{op.nome}</option>)}
+          </select>
+        </div>
+      )}
 
       <div style={s.abas}>
         <button style={s.aba(aba === "pendentes")} onClick={() => setAba("pendentes")}>
@@ -487,6 +508,7 @@ export default function GestaoLinks() {
           <thead>
             <tr>
               <th style={s.th}>UTM Source</th>
+              {operadoraFiltro === "todas" && operadorasList.length > 1 && <th style={s.th}>Operadora</th>}
               <th style={s.th}>Primeiro visto</th>
               <th style={s.th}>Último visto</th>
               <th style={{ ...s.th, textAlign: "right" }}>FTDs</th>
@@ -497,19 +519,22 @@ export default function GestaoLinks() {
             </tr>
           </thead>
           <tbody>
-            {aliases.map((alias) => (
+            {aliases.map((alias) => {
+              const ggr = calcGgr(alias);
+              return (
               <tr key={alias.id}>
                 <td style={s.td}>
                   <span style={s.utmTag}>{alias.utm_source}</span>
                 </td>
+                {operadoraFiltro === "todas" && operadorasList.length > 1 && (
+                  <td style={s.td}>{operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—"}</td>
+                )}
                 <td style={s.tdMuted}>{fmtData(alias.primeiro_visto)}</td>
                 <td style={s.tdMuted}>{fmtData(alias.ultimo_visto)}</td>
                 <td style={{ ...s.td, textAlign: "right" }}>{alias.total_ftds}</td>
                 <td style={{ ...s.td, textAlign: "right" }}>{fmt(alias.total_deposit)}</td>
                 <td style={{ ...s.td, textAlign: "right" }}>
-                  <span style={alias.ggr >= 0 ? s.ggrPositivo : s.ggrNegativo}>
-                    {fmt(alias.ggr)}
-                  </span>
+                  <span style={ggr >= 0 ? s.ggrPositivo : s.ggrNegativo}>{fmt(ggr)}</span>
                 </td>
                 {aba === "mapeados" && (
                   <td style={s.td}>{alias.influencer_name ?? "—"}</td>
@@ -559,7 +584,7 @@ export default function GestaoLinks() {
               {[
                 { label: "FTDs", value: aliasSelecionado.total_ftds },
                 { label: "Depósitos", value: fmt(aliasSelecionado.total_deposit) },
-                { label: "GGR", value: fmt(aliasSelecionado.ggr) },
+                { label: "GGR", value: fmt(calcGgr(aliasSelecionado)) },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <div style={{ fontSize: "10px", color: theme.textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>

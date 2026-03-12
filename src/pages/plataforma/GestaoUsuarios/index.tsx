@@ -122,6 +122,8 @@ export default function GestaoUsuarios() {
 
 // ─── ABA USUÁRIOS ─────────────────────────────────────────────────────────────
 
+type FiltroStatus = "todos" | "ativos" | "desativados";
+
 function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   const [usuarios, setUsuarios] = useState<UsuarioCompleto[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -129,11 +131,13 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<UsuarioCompleto | null>(null);
   const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todos");
+  const [modalDesativar, setModalDesativar] = useState<UsuarioCompleto | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
     const [{ data: profiles }, { data: scopes }, { data: ops }] = await Promise.all([
-      supabase.from("profiles").select("id, name, email, role, created_at").order("created_at", { ascending: true }),
+      supabase.from("profiles").select("id, name, email, role, ativo, created_at").order("created_at", { ascending: true }),
       supabase.from("user_scopes").select("*"),
       supabase.from("operadoras").select("*").order("nome"),
     ]);
@@ -203,12 +207,32 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
             outline: "none",
           }}
         />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            {(["todos", "ativos", "desativados"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFiltroStatus(f)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 8,
+                  border: `1px solid ${filtroStatus === f ? "#7c3aed" : t.cardBorder}`,
+                  background: filtroStatus === f ? "rgba(124,58,237,0.15)" : "transparent",
+                  color: filtroStatus === f ? "#7c3aed" : t.textMuted,
+                  fontSize: 13,
+                  fontWeight: filtroStatus === f ? 600 : 400,
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                }}
+              >
+                {f === "todos" ? "Todos" : f === "ativos" ? "Ativos" : "Desativados"}
+              </button>
+            ))}
+          </div>
           <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
-            {busca.trim()
-              ? `${usuariosFiltrados.length} de ${usuarios.length} usuário${usuarios.length !== 1 ? "s" : ""}`
-              : `${usuarios.length} usuário${usuarios.length !== 1 ? "s" : ""} cadastrado${usuarios.length !== 1 ? "s" : ""}`}
+            {usuariosPorStatus.length} usuário{usuariosPorStatus.length !== 1 ? "s" : ""}
           </span>
+          <div style={{ flex: 1 }} />
           <button onClick={abrirNovo} style={{
           background: "linear-gradient(135deg, #7c3aed, #2563eb)",
           color: "#fff", border: "none", borderRadius: 10,
@@ -223,52 +247,114 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
       {loading ? (
         <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {["Nome", "E-mail", "Perfil", "Escopo", "Ações"].map(h => (
-                  <th key={h} style={thMuted}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosFiltrados.map(u => {
-                const escopoTexto = formatarEscopo(u.scopes ?? [], operadoras);
-                return (
-                  <tr key={u.id}>
-                    <td style={td}><strong>{u.name}</strong></td>
-                    <td style={{ ...td, color: t.textMuted }}>{u.email}</td>
-                    <td style={td}>
-                      <span style={{
-                        background: roleBadgeColor(u.role as Role) + "22",
-                        color: roleBadgeColor(u.role as Role),
-                        borderRadius: 6, padding: "3px 10px",
-                        fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                      }}>
-                        {roleLabel(u.role as Role)}
-                      </span>
-                    </td>
-                    <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>
-                      {escopoBloqueado(u.role as Role)
-                        ? <span style={{ fontStyle: "italic", opacity: 0.4 }}>Todos</span>
-                        : escopoTexto || <span style={{ opacity: 0.4 }}>—</span>
-                      }
-                    </td>
-                    <td style={td}>
-                      <button onClick={() => abrirEditar(u)} style={{
-                        background: "none", border: `1px solid ${t.cardBorder}`,
-                        borderRadius: 7, padding: "5px 12px", cursor: "pointer",
-                        fontFamily: FONT.body, fontSize: 12, color: t.text,
-                      }}>
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+          {usuariosPorStatus.map(u => {
+            const escopoTexto = formatarEscopo(u.scopes ?? [], operadoras);
+            const ativo = u.ativo !== false;
+            return (
+              <div
+                key={u.id}
+                style={{
+                  background: t.cardBg,
+                  border: `1px solid ${t.cardBorder}`,
+                  borderRadius: 14,
+                  padding: 18,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                  opacity: ativo ? 1 : 0.85,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <div>
+                    <strong style={{ fontFamily: FONT.body, fontSize: 15, color: t.text }}>{u.name}</strong>
+                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 2 }}>{u.email}</div>
+                  </div>
+                  <span style={{
+                    background: ativo ? "#dcfce7" : "#f3f4f6",
+                    color: ativo ? "#166534" : "#6b7280",
+                    borderRadius: 6,
+                    padding: "3px 10px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    fontFamily: FONT.body,
+                  }}>
+                    {ativo ? "Ativo" : "Desativado"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{
+                    background: roleBadgeColor(u.role as Role) + "22",
+                    color: roleBadgeColor(u.role as Role),
+                    borderRadius: 6, padding: "3px 10px",
+                    fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
+                  }}>
+                    {roleLabel(u.role as Role)}
+                  </span>
+                  {escopoTexto && (
+                    <span style={{ fontSize: 12, color: t.textMuted }}>{escopoTexto}</span>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+                  <button onClick={() => abrirEditar(u)} style={{
+                    background: "none", border: `1px solid ${t.cardBorder}`,
+                    borderRadius: 7, padding: "6px 14px", cursor: "pointer",
+                    fontFamily: FONT.body, fontSize: 12, color: t.text,
+                  }}>
+                    Editar
+                  </button>
+                  {ativo ? (
+                    <button onClick={() => setModalDesativar(u)} style={{
+                      background: "none", border: "1px solid #ef4444",
+                      borderRadius: 7, padding: "6px 14px", cursor: "pointer",
+                      fontFamily: FONT.body, fontSize: 12, color: "#ef4444",
+                    }}>
+                      Desativar
+                    </button>
+                  ) : (
+                    <button onClick={() => desativarOuReativar(u)} style={{
+                      background: "#22c55e22", border: "1px solid #22c55e",
+                      borderRadius: 7, padding: "6px 14px", cursor: "pointer",
+                      fontFamily: FONT.body, fontSize: 12, color: "#22c55e", fontWeight: 600,
+                    }}>
+                      Reativar
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {modalDesativar && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          onClick={() => setModalDesativar(null)}
+        >
+          <div
+            style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: 24, maxWidth: 400, width: "90%" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontFamily: FONT.body, fontSize: 16, fontWeight: 700, color: t.text, marginBottom: 8 }}>Desativar usuário</div>
+            <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, marginBottom: 20 }}>
+              O usuário <strong>{modalDesativar.name}</strong> perderá acesso imediato à plataforma. Deseja continuar?
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setModalDesativar(null)} style={{
+                padding: "8px 18px", borderRadius: 8, border: `1px solid ${t.cardBorder}`,
+                background: "transparent", color: t.text, fontSize: 13, cursor: "pointer", fontFamily: FONT.body,
+              }}>
+                Cancelar
+              </button>
+              <button onClick={() => desativarOuReativar(modalDesativar)} style={{
+                padding: "8px 18px", borderRadius: 8, border: "none",
+                background: "#ef4444", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
+              }}>
+                Desativar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
