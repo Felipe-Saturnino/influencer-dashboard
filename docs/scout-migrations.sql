@@ -86,10 +86,8 @@ CREATE TRIGGER scout_influencer_updated
   FOR EACH ROW EXECUTE FUNCTION scout_updated_at();
 
 -- Permissões: adicionar página Scout para Gestor e Admin
--- Execute se a constraint UNIQUE (role, page_key) existir. Caso contrário, use INSERT simples.
+DELETE FROM role_permissions WHERE page_key = 'scout' AND role IN ('gestor', 'admin');
 INSERT INTO role_permissions (role, page_key, can_view, can_criar, can_editar, can_excluir)
-VALUES ('gestor', 'scout', 'sim', 'sim', 'sim', 'nao')
-ON CONFLICT (role, page_key) DO UPDATE SET can_view = 'sim', can_criar = 'sim', can_editar = 'sim';
-INSERT INTO role_permissions (role, page_key, can_view, can_criar, can_editar, can_excluir)
-VALUES ('admin', 'scout', 'sim', 'sim', 'sim', 'nao')
-ON CONFLICT (role, page_key) DO UPDATE SET can_view = 'sim', can_criar = 'sim', can_editar = 'sim';
+VALUES
+  ('gestor', 'scout', 'sim', 'sim', 'sim', 'sim'),
+  ('admin', 'scout', 'sim', 'sim', 'sim', 'sim');

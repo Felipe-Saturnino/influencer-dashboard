@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
-import { usePermission } from "../../../hooks/usePermission";
+import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 
@@ -95,6 +95,51 @@ function getLiveCassinoLabel(v: string | null | undefined): string {
   return v === "sim" ? "Sim" : "Não";
 }
 
+// ─── StatusBadge (editável no card) ───────────────────────────────────────────
+function StatusScoutBadge({ value, onChange, readonly }: { value: StatusScout; onChange: (v: StatusScout) => void; readonly?: boolean }) {
+  const { theme: t } = useApp();
+  const [open, setOpen] = useState(false);
+  const color = STATUS_SCOUT_COLOR[value] ?? "#888";
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <button
+        onClick={() => { if (!readonly) setOpen((o) => !o); }}
+        style={{
+          padding: "4px 12px", borderRadius: "20px",
+          border: `1.5px solid ${color}`, background: `${color}18`, color,
+          fontSize: "12px", fontWeight: 700, fontFamily: FONT.body,
+          cursor: readonly ? "default" : "pointer",
+          display: "flex", alignItems: "center", gap: "5px",
+        }}
+      >
+        {STATUS_SCOUT_LABEL[value]}
+        {!readonly && <span style={{ fontSize: "9px", opacity: 0.7 }}>▼</span>}
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0,
+          background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+          borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+          zIndex: 200, minWidth: "140px", overflow: "hidden",
+        }}>
+          {STATUS_SCOUT_OPTS.map((s) => (
+            <button key={s} onClick={() => { onChange(s); setOpen(false); }}
+              style={{
+                display: "block", width: "100%", padding: "9px 14px", border: "none",
+                background: s === value ? `${STATUS_SCOUT_COLOR[s]}18` : "transparent",
+                color: STATUS_SCOUT_COLOR[s], fontSize: "12px", fontWeight: 700,
+                cursor: "pointer", textAlign: "left", fontFamily: FONT.body,
+              }}
+            >
+              {STATUS_SCOUT_LABEL[s]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Scout() {
   const { theme: t, user } = useApp();
@@ -107,12 +152,10 @@ export default function Scout() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [filterPlat, setFilterPlat] = useState<string>("todas");
-  const [cacheMin, setCacheMin] = useState(0);
-  const [cacheMax, setCacheMax] = useState(10000);
-  const [cacheRange, setCacheRange] = useState<[number, number]>([0, 10000]);
-  const [viewsMin, setViewsMin] = useState(0);
-  const [viewsMax, setViewsMax] = useState(1000000);
-  const [viewsRange, setViewsRange] = useState<[number, number]>([0, 1000000]);
+  const [cacheMax, setCacheMax] = useState(5000);
+  const [cacheLimit, setCacheLimit] = useState(5000);
+  const [viewsMax, setViewsMax] = useState(100000);
+  const [viewsLimit, setViewsLimit] = useState(100000);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -128,14 +171,16 @@ export default function Scout() {
       const caches = (data ?? [])
         .map((s: ScoutInfluencer) => s.cache_negociado ?? 0)
         .filter((v: number) => v > 0);
-      const views = (data ?? []).map((s: ScoutInfluencer) => getViewsTotal(s)).filter((v: number) => v > 0);
+      const viewsAll = (data ?? []).map((s: ScoutInfluencer) => getViewsTotal(s)).filter((v: number) => v > 0);
       if (caches.length > 0) {
-        setCacheMax(Math.max(...caches, 5000));
-        setCacheRange([0, Math.max(...caches, 5000)]);
+        const cm = Math.max(...caches, 5000);
+        setCacheMax(cm);
+        setCacheLimit(cm);
       }
-      if (views.length > 0) {
-        setViewsMax(Math.max(...views, 100000));
-        setViewsRange([0, Math.max(...views, 100000)]);
+      if (viewsAll.length > 0) {
+        const vm = Math.max(...viewsAll, 100000);
+        setViewsMax(vm);
+        setViewsLimit(vm);
       }
     }
     setLoading(false);
@@ -153,9 +198,9 @@ export default function Scout() {
       if (!plats.includes(filterPlat)) return false;
     }
     const cache = s.cache_negociado ?? 0;
-    if (cache < cacheRange[0] || cache > cacheRange[1]) return false;
+    if (cacheMax > 0 && cache > cacheLimit) return false;
     const views = getViewsTotal(s);
-    if (views < viewsRange[0] || views > viewsRange[1]) return false;
+    if (viewsMax > 0 && views > viewsLimit) return false;
     return true;
   });
 
@@ -165,6 +210,44 @@ export default function Scout() {
     if (s.status !== "fechado") porStatus[s.status] = (porStatus[s.status] ?? 0) + 1;
     (s.plataformas ?? []).forEach((p) => { porPlat[p] = (porPlat[p] ?? 0) + 1; });
   });
+
+  const podeAlterarStatus = user?.role === "admin" || user?.role === "gestor";
+
+  async function handleStatusChange(scout: ScoutInfluencer, newStatus: StatusScout) {
+    if (newStatus === "fechado" && !(scout.email ?? "").trim()) {
+      alert("Para definir status Fechado, o e-mail é obrigatório. Abra o modal de editar e preencha o e-mail.");
+      return;
+    }
+    setList((prev) =>
+      prev.map((s) => (s.id === scout.id ? { ...s, status: newStatus } : s))
+    );
+    const { error } = await supabase.from("scout_influencer").update({ status: newStatus }).eq("id", scout.id);
+    if (error) { console.error("[Scout] Erro ao salvar status:", error.message); return; }
+    if (newStatus === "fechado" && !scout.user_id) {
+      try {
+        const em = (scout.email ?? "").trim();
+        const nome = (scout.nome_artistico ?? "").trim();
+        const { data: authData, error: authErr } = await supabase.auth.admin.createUser({ email: em, email_confirm: true, user_metadata: { name: nome } });
+        if (authErr || !authData?.user) throw new Error(authErr?.message ?? "Erro ao criar usuário");
+        const uid = authData.user.id;
+        await supabase.from("profiles").insert({ id: uid, name: nome, email: em, role: "influencer" });
+        const plat = scout.plataformas ?? [];
+        await supabase.from("influencer_perfil").upsert({
+          id: uid, nome_artistico: nome, nome_completo: nome, status: "ativo",
+          telefone: (scout.telefone ?? "").trim() || undefined, cache_hora: scout.cache_negociado ?? 0,
+          link_twitch: plat.includes("Twitch") ? (scout.link_twitch ?? "") : undefined,
+          link_youtube: plat.includes("YouTube") ? (scout.link_youtube ?? "") : undefined,
+          link_kick: plat.includes("Kick") ? (scout.link_kick ?? "") : undefined,
+          link_instagram: plat.includes("Instagram") ? (scout.link_instagram ?? "") : undefined,
+          link_tiktok: plat.includes("TikTok") ? (scout.link_tiktok ?? "") : undefined,
+        }, { onConflict: "id", ignoreDuplicates: false });
+        await supabase.from("scout_influencer").update({ user_id: uid }).eq("id", scout.id);
+        loadData();
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "Erro ao criar usuário. Verifique permissões.");
+      }
+    }
+  }
 
   const cardStyle: React.CSSProperties = {
     background: t.cardBg, border: `1px solid ${t.cardBorder}`,
@@ -188,7 +271,7 @@ export default function Scout() {
   }
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1100px", margin: "0 auto" }}>
+    <div style={{ padding: "24px", maxWidth: "900px", margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "20px", gap: "12px", flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
@@ -206,11 +289,29 @@ export default function Scout() {
             color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
           }}
         >
-          + Adicionar Prospecto
+          + Adicionar
         </button>
       </div>
 
-      {/* Bloco 1: Filtros */}
+      {/* Bloco 1: Cards Consolidados (centralizados) */}
+      {!loading && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center", marginBottom: "24px" }}>
+          {(["visualizado", "contato", "negociacao"] as const).map((s) => (
+            <div key={s} style={{ background: t.cardBg, border: `1px solid ${STATUS_SCOUT_COLOR[s]}44`, borderRadius: "14px", padding: "16px 18px", minWidth: "140px" }}>
+              <div style={{ fontSize: "28px", fontWeight: 900, color: t.text, fontFamily: FONT.title, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: "4px" }}>{STATUS_SCOUT_LABEL[s]}</div>
+            </div>
+          ))}
+          {PLATAFORMAS.map((plat) => (
+            <div key={plat} style={{ background: t.cardBg, border: `1px solid ${(PLAT_COLOR[plat] ?? t.cardBorder)}44`, borderRadius: "14px", padding: "16px 18px", minWidth: "120px" }}>
+              <div style={{ fontSize: "28px", fontWeight: 900, color: t.text, fontFamily: FONT.title, lineHeight: 1 }}>{porPlat[plat] ?? 0}</div>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: PLAT_COLOR[plat], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: "4px" }}>{PLAT_ICON[plat]} {plat}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Bloco 2: Filtros */}
       <div style={{ marginBottom: "20px" }}>
         <input
           value={search}
@@ -237,101 +338,88 @@ export default function Scout() {
             ))}
           </select>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "12px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "12px", padding: "14px 18px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body, marginBottom: "8px" }}>💰 Faixa Cachê (R$)</div>
-            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <input type="number" value={cacheRange[0]} onChange={(e) => setCacheRange(([, m]) => [Number(e.target.value), m])} placeholder="Min" style={{ ...selectStyle, flex: 1, minWidth: 0 }} />
-              <span style={{ color: t.textMuted, fontSize: "12px" }}>até</span>
-              <input type="number" value={cacheRange[1]} onChange={(e) => setCacheRange(([mi]) => [mi, Number(e.target.value)])} placeholder="Max" style={{ ...selectStyle, flex: 1, minWidth: 0 }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body }}>💰 Cachê por Hora — até</span>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: BASE_COLORS.purple, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : formatBRL(cacheLimit) + "/h"}</span>
+            </div>
+            <div style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
+              <div style={{ position: "absolute", left: 0, right: 0, height: "4px", borderRadius: "2px", background: t.cardBorder }} />
+              <div style={{ position: "absolute", left: 0, width: `${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}%`, height: "4px", borderRadius: "2px", background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})` }} />
+              <input type="range" min={0} max={cacheMax || 1} step={50} value={cacheLimit} onChange={(e) => setCacheLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: "20px", zIndex: 2 }} />
+              <div style={{ position: "absolute", left: `calc(${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}% - 8px)`, width: "16px", height: "16px", borderRadius: "50%", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+              <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
+              <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax || 5000)}/h</span>
             </div>
           </div>
           <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "12px", padding: "14px 18px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body, marginBottom: "8px" }}>👁️ Faixa Views</div>
-            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <input type="number" value={viewsRange[0]} onChange={(e) => setViewsRange(([, m]) => [Number(e.target.value), m])} placeholder="Min" style={{ ...selectStyle, flex: 1, minWidth: 0 }} />
-              <span style={{ color: t.textMuted, fontSize: "12px" }}>até</span>
-              <input type="number" value={viewsRange[1]} onChange={(e) => setViewsRange(([mi]) => [mi, Number(e.target.value)])} placeholder="Max" style={{ ...selectStyle, flex: 1, minWidth: 0 }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body }}>👁️ Views — até</span>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: BASE_COLORS.blue, fontFamily: FONT.body }}>{viewsMax <= 0 || viewsLimit >= viewsMax ? "Todos" : viewsLimit.toLocaleString("pt-BR")}</span>
+            </div>
+            <div style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
+              <div style={{ position: "absolute", left: 0, right: 0, height: "4px", borderRadius: "2px", background: t.cardBorder }} />
+              <div style={{ position: "absolute", left: 0, width: `${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}%`, height: "4px", borderRadius: "2px", background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})` }} />
+              <input type="range" min={0} max={viewsMax || 1} step={1000} value={viewsLimit} onChange={(e) => setViewsLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: "20px", zIndex: 2 }} />
+              <div style={{ position: "absolute", left: `calc(${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}% - 8px)`, width: "16px", height: "16px", borderRadius: "50%", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+              <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>0</span>
+              <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{(viewsMax || 100000).toLocaleString("pt-BR")}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bloco 2: Consolidado */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
-        {(["visualizado", "contato", "negociacao"] as const).map((s) => (
-          <div key={s} style={{ background: t.cardBg, border: `1px solid ${STATUS_SCOUT_COLOR[s]}44`, borderRadius: "16px", padding: "20px" }}>
-            <div style={{ fontSize: "12px", fontWeight: 700, color: STATUS_SCOUT_COLOR[s], letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: "6px" }}>
-              {STATUS_SCOUT_LABEL[s]}
-            </div>
-            <div style={{ fontSize: "32px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>{porStatus[s] ?? 0}</div>
-          </div>
-        ))}
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "20px", gridColumn: "1 / -1" }}>
-          <div style={{ fontSize: "12px", fontWeight: 700, color: t.label, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: "10px" }}>Por Plataforma</div>
-          <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-            {Object.entries(porPlat)
-              .sort((a, b) => b[1] - a[1])
-              .map(([plat, n]) => (
-                <div key={plat} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "13px", color: PLAT_COLOR[plat as Plataforma], fontFamily: FONT.body }}>
-                    {PLAT_ICON[plat as Plataforma]} {plat}
-                  </span>
-                  <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{n}</span>
-                </div>
-              ))}
-            {Object.keys(porPlat).length === 0 && (
-              <span style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma plataforma cadastrada</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Bloco 3: Cards */}
+      {/* Bloco 3: Cards (largura total, estilo Influencers) */}
       {!loading && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>{filtered.length} prospecto(s)</div>}
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-          Nenhum prospecto encontrado.
-        </div>
+        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum prospecto encontrado.</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
-          {filtered.map((s) => (
-            <div key={s.id} style={{ ...cardStyle, flexDirection: "column", alignItems: "flex-start" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%", marginBottom: "12px" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "6px" }}>
-                    <span style={{ fontSize: "15px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{s.nome_artistico}</span>
-                    <span style={{ padding: "3px 10px", borderRadius: "20px", background: `${STATUS_SCOUT_COLOR[s.status]}22`, color: STATUS_SCOUT_COLOR[s.status], fontSize: "11px", fontWeight: 700, fontFamily: FONT.body }}>
-                      {STATUS_SCOUT_LABEL[s.status]}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>
-                    {(s.cache_negociado && s.cache_negociado > 0) ? formatBRL(s.cache_negociado) : "—"} / Live Cassino: {getLiveCassinoLabel(s.live_cassino)}
-                  </div>
-                  <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginTop: "4px" }}>
-                    {getPrimaryPlataforma(s)} / {getViewsTotal(s) > 0 ? getViewsTotal(s).toLocaleString("pt-BR") + " views" : "—"}
-                  </div>
+        filtered.map((s) => (
+          <div key={s.id} style={cardStyle}>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
+              <div style={{ width: "44px", height: "44px", borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: "16px", fontFamily: FONT.body }}>
+                {(s.nome_artistico || "?")[0]?.toUpperCase()}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", rowGap: "8px", flexWrap: "wrap", marginBottom: "10px" }}>
+                  <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{s.nome_artistico}</span>
+                  <StatusScoutBadge value={s.status} onChange={(v) => handleStatusChange(s, v)} readonly={!podeAlterarStatus} />
                 </div>
-                <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                  <button onClick={() => setModal({ mode: "visualizar", scout: s })} style={{ padding: "6px 12px", borderRadius: "8px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.label, fontSize: "11px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>👁️ Ver</button>
-                  <button onClick={() => setModal({ mode: "editar", scout: s })} style={{ padding: "6px 12px", borderRadius: "8px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "11px", fontWeight: 700, fontFamily: FONT.body }}>✏️ Editar</button>
-                </div>
+                {((s.cache_negociado ?? 0) > 0) && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "6px" }}>💰 {formatBRL(s.cache_negociado!)}</div>}
+                <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "6px" }}>Live Cassino: {getLiveCassinoLabel(s.live_cassino)}</div>
+                {(s.plataformas ?? []).length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "3px", marginBottom: "6px" }}>
+                    {(s.plataformas ?? []).map((c) => (
+                      <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", color: PLAT_COLOR[c as Plataforma], fontFamily: FONT.body }}>{PLAT_ICON[c as Plataforma]} {c}</span>
+                    ))}
+                  </div>
+                )}
+                {getViewsTotal(s) > 0 && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{getViewsTotal(s).toLocaleString("pt-BR")} views</div>}
               </div>
             </div>
-          ))}
-        </div>
+            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+              <button onClick={() => setModal({ mode: "visualizar", scout: s })} style={{ padding: "8px 14px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.label, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>👁️ Ver</button>
+              <button onClick={() => setModal({ mode: "editar", scout: s })} style={{ padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>✏️ Editar</button>
+            </div>
+          </div>
+        ))
       )}
 
       {modal?.mode === "visualizar" && modal.scout && (
         <ModalVisualizar scout={modal.scout} onClose={() => setModal(null)} />
       )}
       {modal?.mode === "editar" && modal.scout && (
-        <ModalEditar scout={modal.scout} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
+        <ModalEditar scout={modal.scout} perm={perm} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
       )}
       {modalNovo && (
-        <ModalEditar scout={null} onClose={() => setModalNovo(false)} onSaved={() => { setModalNovo(false); loadData(); }} />
+        <ModalEditar scout={null} perm={perm} onClose={() => setModalNovo(false)} onSaved={() => { setModalNovo(false); loadData(); }} />
       )}
     </div>
   );
@@ -431,7 +519,7 @@ function ModalVisualizar({ scout, onClose }: { scout: ScoutInfluencer; onClose: 
 }
 
 // ─── Modal Editar ─────────────────────────────────────────────────────────────
-function ModalEditar({ scout, onClose, onSaved }: { scout: ScoutInfluencer | null; onClose: () => void; onSaved: () => void }) {
+function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer | null; perm: Permissoes; onClose: () => void; onSaved: () => void }) {
   const { theme: t, user } = useApp();
   const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
   const [nomeArtistico, setNomeArtistico] = useState(scout?.nome_artistico ?? "");
@@ -625,6 +713,15 @@ function ModalEditar({ scout, onClose, onSaved }: { scout: ScoutInfluencer | nul
     }
   }
 
+  async function handleExcluir() {
+    if (!scout?.id || !perm.canExcluirOk || !confirm("Tem certeza que deseja excluir este prospecto?")) return;
+    const { error } = await supabase.from("scout_anotacoes").delete().eq("scout_id", scout.id);
+    if (error) { setError(error.message); return; }
+    const { error: err2 } = await supabase.from("scout_influencer").delete().eq("id", scout.id);
+    if (err2) { setError(err2.message); return; }
+    onSaved();
+  }
+
   async function handleAddAnotacao() {
     if (!novoTextoAnotacao.trim() || !scout?.id) return;
     const texto = novoTextoAnotacao.trim();
@@ -799,10 +896,20 @@ function ModalEditar({ scout, onClose, onSaved }: { scout: ScoutInfluencer | nul
           </>
         )}
 
-        <button onClick={handleSave} disabled={saving}
-          style={{ width: "100%", marginTop: "16px", padding: "13px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-          {saving ? "⏳ Salvando..." : "Salvar"}
-        </button>
+        <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
+          {scout && perm.canExcluirOk && (
+            <button onClick={handleExcluir} disabled={saving}
+              style={{ padding: "10px 18px", borderRadius: "10px", border: "1px solid rgba(233,64,37,0.5)", background: "rgba(233,64,37,0.1)", color: "#e94025", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
+              🗑️ Excluir
+            </button>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }} />
+          <button onClick={onClose} style={{ padding: "10px 18px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: "13px", fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
+          <button onClick={handleSave} disabled={saving}
+            style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
+            {saving ? "⏳ Salvando..." : "Salvar"}
+          </button>
+        </div>
       </div>
     </div>
   );
