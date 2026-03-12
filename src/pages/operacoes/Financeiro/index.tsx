@@ -338,8 +338,17 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <input
             type="number"
+            min={0}
+            step="0.01"
             value={valor}
-            onChange={e => setValor(e.target.value)}
+            onChange={e => {
+              const v = e.target.value;
+              if (v === "") { setValor(v); return; }
+              if (v === "-") return;
+              const num = parseFloat(v.replace(",", "."));
+              if (!isNaN(num) && num < 0) return;
+              setValor(v);
+            }}
             style={{
               flex: 1, padding: "10px 14px", borderRadius: "10px",
               border: `1px solid ${editado ? "#f59e0b" : t.cardBorder}`,
@@ -487,7 +496,22 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, operadorasVisiv
         </div>
         <div>
           <label style={labelStyle}>Valor (R$) *</label>
-          <input type="number" value={valor} onChange={e => setValor(e.target.value)} placeholder="0,00" style={inputStyle} />
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={valor}
+            onChange={e => {
+              const v = e.target.value;
+              if (v === "") { setValor(v); return; }
+              if (v === "-") return;
+              const num = parseFloat(v.replace(",", "."));
+              if (!isNaN(num) && num < 0) return;
+              setValor(v);
+            }}
+            placeholder="0,00"
+            style={inputStyle}
+          />
         </div>
       </div>
       <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
