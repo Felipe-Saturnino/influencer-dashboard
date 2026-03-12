@@ -557,7 +557,8 @@ export default function GestaoLinks() {
                   )}
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       )}
