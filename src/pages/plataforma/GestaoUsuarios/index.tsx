@@ -126,6 +126,7 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<UsuarioCompleto | null>(null);
+  const [busca, setBusca] = useState("");
 
   const carregar = useCallback(async () => {
     setLoading(true);
