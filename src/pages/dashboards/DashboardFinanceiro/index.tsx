@@ -5,7 +5,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import {
-  ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
+  ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
 } from "recharts";
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
@@ -150,8 +150,8 @@ function calculaPVI(
 function getPerfilJogador(pvi: number): PerfilJogador {
   if (pvi >= 80) return "Whales";
   if (pvi >= 60) return "Core";
-  if (pvi >= 40) return "Recreativos";
-  return "Caçadores de Bônus";
+  if (pvi >= 15) return "Recreativos";
+  return "Caçadores de Bônus"; // PVI abaixo de 15%
 }
 
 const PERFIL_CORES: Record<PerfilJogador, { cor: string; bg: string; border: string }> = {
@@ -566,16 +566,10 @@ export default function DashboardFinanceiro() {
 
   const pieInvestimento = rowsParaExibir.map((r, i) => ({
     name: r.nome.split(" ")[0],
+    nomeCompleto: r.nome,
     value: Math.round(r.investimento),
     color: PIE_COLORS[i % PIE_COLORS.length],
   })).filter((d) => d.value > 0);
-
-  const pieROI = rowsParaExibir.map((r, i) => ({
-    name: r.nome.split(" ")[0],
-    value: Math.abs(r.roi),
-    roi: r.roi,
-    color: PIE_COLORS[i % PIE_COLORS.length],
-  })).filter((d) => d.value > 0 || d.roi !== 0);
 
   const card = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 6px 24px rgba(0,0,0,0.25)" } as React.CSSProperties;
   const cardTitle = { margin: "0 0 16px", fontSize: 13, fontWeight: 700, letterSpacing: "0.02em", color: t.text, fontFamily: FONT.body } as React.CSSProperties;
@@ -659,48 +653,38 @@ export default function DashboardFinanceiro() {
         </div>
       </div>
 
-      {/* BLOCOS 3 e 4: Gráficos de Pizza */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-        <div style={card}>
-          <h3 style={cardTitle}>Investimento por Influencer</h3>
-          {loading || pieInvestimento.length === 0 ? (
-            <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>{loading ? "Carregando..." : "Sem dados"}</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={pieInvestimento} cx="50%" cy="50%" outerRadius={100} label={({ name, value }) => `${name} ${fmtBRL(value)}`} dataKey="value">
-                  {pieInvestimento.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v: number) => fmtBRL(v)} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        <div style={card}>
-          <h3 style={cardTitle}>ROI por Influencer (%)</h3>
-          {loading || pieROI.length === 0 ? (
-            <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>{loading ? "Carregando..." : "Sem dados"}</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={pieROI} cx="50%" cy="50%" outerRadius={100} label={({ name, payload }: any) => `${name} ${(payload?.roi ?? 0) >= 0 ? "+" : ""}${((payload?.roi ?? 0)).toFixed(1)}%`} dataKey="value">
-                  {pieROI.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v: number, name: string, item: { payload?: { roi?: number } }) => {
-                  const roi = item?.payload?.roi ?? 0;
-                  return [`${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%`, name] as [string, string];
-                }} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+      {/* BLOCO: Investimento por Influencer (gráfico + lista) */}
+      <div style={{ ...card, marginBottom: 14 }}>
+        <h3 style={cardTitle}>Investimento por Influencer</h3>
+        {loading || pieInvestimento.length === 0 ? (
+          <div style={{ minHeight: 280, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>{loading ? "Carregando..." : "Sem dados"}</div>
+        ) : (
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
+            <div style={{ flex: "0 0 280px" }}>
+              <ResponsiveContainer width={280} height={280}>
+                <PieChart>
+                  <Pie data={pieInvestimento} cx="50%" cy="50%" outerRadius={100} dataKey="value">
+                    {pieInvestimento.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {pieInvestimento.map((entry, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: i < pieInvestimento.length - 1 ? `1px solid ${t.cardBorder}` : "none" }}>
+                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: entry.color, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: 13, color: t.text, fontFamily: FONT.body }}>{entry.nomeCompleto}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: t.text, fontFamily: FONT.body }}>{fmtBRL(entry.value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* BLOCO 5: RANKING FINANCEIRO */}
@@ -724,7 +708,7 @@ export default function DashboardFinanceiro() {
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
               <thead>
                 <tr>
-                  {["Influencer", "R$ Total FTDs", "Ticket médio FTD", "R$ Total Depósito", "Ticket médio Dep.", "R$ Total Saques", "Ticket médio Saq.", "R$ Total GGR", "GGR/Jogador", "WD Ratio", "PVI", "Perfil Jogador"].map((h) => (
+                  {["Influencer", "R$ FTD", "Ticket Médio", "R$ Depósito", "Ticket Médio", "R$ Saques", "Ticket Médio", "R$ GGR", "GGR/Jogador", "WD Ratio", "PVI", "Perfil Jogador"].map((h) => (
                     <th key={h} style={thStyle}>{h}</th>
                   ))}
                 </tr>
