@@ -658,8 +658,8 @@ export default function DashboardOverview() {
                 <Tooltip content={<CustomTooltip cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} />
                 <Legend content={() => null} wrapperStyle={{ visibility: "hidden", height: 0 }} />
                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={1.5} />
-                <Bar dataKey="GGR"          fill="#7c3aed" radius={[6, 6, 0, 0]} legendType={false} />
-                <Bar dataKey="Investimento" fill="#2563eb" radius={[6, 6, 0, 0]} legendType={false} />
+                <Bar dataKey="GGR"          fill="#7c3aed" radius={[6, 6, 0, 0]} legendType="none" />
+                <Bar dataKey="Investimento" fill="#2563eb" radius={[6, 6, 0, 0]} legendType="none" />
               </BarChart>
             </ResponsiveContainer>
           )}
