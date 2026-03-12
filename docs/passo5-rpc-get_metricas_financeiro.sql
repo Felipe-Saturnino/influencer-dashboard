@@ -1,45 +1,4 @@
--- =============================================================================
--- MIGRAÇÕES PARA DASHBOARD FINANCEIRO — ARQUITETURA ESCALÁVEL
--- Execute estes SQLs no Supabase (SQL Editor) na ordem indicada
--- =============================================================================
-
--- 1. Coluna withdrawal_count (se não existir)
-ALTER TABLE influencer_metricas
-ADD COLUMN IF NOT EXISTS withdrawal_count integer DEFAULT 0;
-
--- 2. Índices para acelerar agregações (recomendado para crescimento futuro)
-CREATE INDEX IF NOT EXISTS idx_influencer_metricas_influencer_data
-  ON influencer_metricas (influencer_id, data);
-
-CREATE INDEX IF NOT EXISTS idx_influencer_metricas_data
-  ON influencer_metricas (data);
-
--- 3. VIEW: Agregado mensal por influencer
--- Reduz N linhas diárias para 1 linha por influencer por mês
--- Ex: 50 influencers × 365 dias = 18.250 rows → 50 × 12 = 600 rows/ano
-
-CREATE OR REPLACE VIEW v_influencer_metricas_mensal AS
-SELECT
-  influencer_id,
-  EXTRACT(YEAR FROM data)::int AS ano,
-  EXTRACT(MONTH FROM data)::int AS mes,
-  SUM(COALESCE(ftd_count, 0))::bigint AS ftd_count,
-  SUM(COALESCE(ftd_total, 0))::numeric AS ftd_total,
-  SUM(COALESCE(deposit_count, 0))::bigint AS deposit_count,
-  SUM(COALESCE(deposit_total, 0))::numeric AS deposit_total,
-  SUM(COALESCE(withdrawal_count, 0))::bigint AS withdrawal_count,
-  SUM(COALESCE(withdrawal_total, 0))::numeric AS withdrawal_total,
-  SUM(COALESCE(ggr, 0))::numeric AS ggr
-FROM influencer_metricas
-GROUP BY influencer_id, EXTRACT(YEAR FROM data), EXTRACT(MONTH FROM data);
-
-COMMENT ON VIEW v_influencer_metricas_mensal IS 'Métricas financeiras agregadas por influencer e mês. Usar no Dashboard Financeiro para reduzir carga.';
-
--- 4. RPC: Retorna métricas agregadas + colunas calculadas (tickets, GGR/jogador, WD Ratio, PVI, perfil)
--- O frontend usa diretamente os valores; cálculos centralizados no banco
--- Nota: p_mes no frontend é 0-11 (Jan=0); a view usa 1-12, então usamos p_mes + 1 na condição.
--- Uso: select * from get_metricas_financeiro(2025, 2, null, false);  -- março 2025 (mes=2)
---      select * from get_metricas_financeiro(null, null, null, true); -- histórico completo
+-- Passo 5: Cole este SQL inteiro no Supabase SQL Editor e execute
 
 DROP FUNCTION IF EXISTS get_metricas_financeiro(int, int, uuid, boolean);
 
@@ -158,22 +117,3 @@ BEGIN
   END IF;
 END;
 $$;
-
--- 5. Habilitar RPC para acesso via Supabase client
-GRANT EXECUTE ON FUNCTION get_metricas_financeiro(int, int, uuid, boolean) TO anon;
-GRANT EXECUTE ON FUNCTION get_metricas_financeiro(int, int, uuid, boolean) TO authenticated;
-
--- =============================================================================
--- RESUMO DA ARQUITETURA
---
--- influencer_metricas (dados brutos diários)
---        ↓
--- v_influencer_metricas_mensal (VIEW - agrega por mês)
---        ↓
--- get_metricas_financeiro() (RPC - filtra, agrega e calcula tickets/PVI/perfil)
---        ↓
--- Frontend (recebe rows prontas; investimento/ROI continuam calculados no client)
---
--- Colunas calculadas no banco: ftd_ticket_medio, deposito_ticket_medio,
--- saque_ticket_medio, ggr_por_jogador, wd_ratio, pvi, perfil_jogador
--- =============================================================================

@@ -55,69 +55,14 @@ GROUP BY influencer_id, EXTRACT(YEAR FROM data), EXTRACT(MONTH FROM data);
 
 ---
 
-## Passo 5 — Função RPC
+## Passo 5 — Função RPC (com colunas calculadas no banco)
 
-```sql
-CREATE OR REPLACE FUNCTION get_metricas_financeiro(
-  p_ano int DEFAULT NULL,
-  p_mes int DEFAULT NULL,
-  p_influencer_id uuid DEFAULT NULL,
-  p_historico boolean DEFAULT false
-)
-RETURNS TABLE (
-  influencer_id uuid,
-  ano int,
-  mes int,
-  ftd_count bigint,
-  ftd_total numeric,
-  deposit_count bigint,
-  deposit_total numeric,
-  withdrawal_count bigint,
-  withdrawal_total numeric,
-  ggr numeric
-)
-LANGUAGE plpgsql
-STABLE
-AS $$
-BEGIN
-  IF p_historico THEN
-    RETURN QUERY
-    SELECT
-      v.influencer_id,
-      NULL::int AS ano,
-      NULL::int AS mes,
-      SUM(v.ftd_count)::bigint,
-      SUM(v.ftd_total)::numeric,
-      SUM(v.deposit_count)::bigint,
-      SUM(v.deposit_total)::numeric,
-      SUM(v.withdrawal_count)::bigint,
-      SUM(v.withdrawal_total)::numeric,
-      SUM(v.ggr)::numeric
-    FROM v_influencer_metricas_mensal v
-    WHERE (p_influencer_id IS NULL OR v.influencer_id = p_influencer_id)
-    GROUP BY v.influencer_id
-    ORDER BY v.influencer_id;
-  ELSE
-    RETURN QUERY
-    SELECT
-      v.influencer_id,
-      v.ano,
-      v.mes,
-      v.ftd_count,
-      v.ftd_total,
-      v.deposit_count,
-      v.deposit_total,
-      v.withdrawal_count,
-      v.withdrawal_total,
-      v.ggr
-    FROM v_influencer_metricas_mensal v
-    WHERE v.ano = p_ano AND v.mes = p_mes
-      AND (p_influencer_id IS NULL OR v.influencer_id = p_influencer_id)
-    ORDER BY v.influencer_id;
-  END IF;
-END;
-$$;
-```
+1. Abra o arquivo **`docs/passo5-rpc-get_metricas_financeiro.sql`** no VS Code/Cursor.
+2. Selecione todo o conteúdo (Ctrl+A).
+3. Copie e cole no SQL Editor do Supabase.
+4. Execute.
+
+Importante: copie do arquivo `.sql`, não de diff/comparação do Git.
 
 ---
 

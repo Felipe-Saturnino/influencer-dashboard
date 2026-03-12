@@ -357,10 +357,10 @@ export default function DashboardFinanceiro() {
         }
       });
 
-      const mapa = new Map<string, MetricaRow>();
+      const mapa = new Map<string, any>();
       metricas.forEach((m: any) => {
         mapa.set(m.influencer_id, {
-          influencer_id: m.influencer_id,
+          ...m,
           ftd_count: Number(m.ftd_count) || 0,
           ftd_total: Number(m.ftd_total) || 0,
           deposit_count: Number(m.deposit_count) || 0,
@@ -379,13 +379,13 @@ export default function DashboardFinanceiro() {
         const investimento = horas * (perfil.cache_hora || 0);
         const roi = investimento > 0 ? ((data.ggr - investimento) / investimento) * 100 : 0;
 
-        const ftd_ticket_medio = data.ftd_count > 0 ? data.ftd_total / data.ftd_count : 0;
-        const deposito_ticket_medio = data.deposit_count > 0 ? data.deposit_total / data.deposit_count : 0;
-        const saque_ticket_medio = (data.withdrawal_count || 0) > 0 ? data.withdrawal_total / (data.withdrawal_count || 1) : 0;
-        const ggr_por_jogador = data.ftd_count > 0 ? data.ggr / data.ftd_count : 0;
-        const wd_ratio_pct = data.deposit_total > 0 ? (data.withdrawal_total / data.deposit_total) * 100 : 0;
-        const pvi = calculaPVI(deposito_ticket_medio, ggr_por_jogador, wd_ratio_pct);
-        const perfil_jogador = getPerfilJogador(pvi);
+        const ftd_ticket_medio = data.ftd_ticket_medio ?? (data.ftd_count > 0 ? data.ftd_total / data.ftd_count : 0);
+        const deposito_ticket_medio = data.deposito_ticket_medio ?? (data.deposit_count > 0 ? data.deposit_total / data.deposit_count : 0);
+        const saque_ticket_medio = data.saque_ticket_medio ?? ((data.withdrawal_count || 0) > 0 ? data.withdrawal_total / (data.withdrawal_count || 1) : 0);
+        const ggr_por_jogador = data.ggr_por_jogador ?? (data.ftd_count > 0 ? data.ggr / data.ftd_count : 0);
+        const wd_ratio_pct = data.wd_ratio ?? (data.deposit_total > 0 ? (data.withdrawal_total / data.deposit_total) * 100 : 0);
+        const pvi = data.pvi ?? calculaPVI(deposito_ticket_medio, ggr_por_jogador, wd_ratio_pct);
+        const perfil_jogador = (data.perfil_jogador as PerfilJogador) ?? getPerfilJogador(pvi);
 
         resultado.push({
           influencer_id: id,
