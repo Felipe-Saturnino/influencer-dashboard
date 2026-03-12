@@ -507,7 +507,7 @@ function ModalEditar({ scout, onClose, onSaved }: { scout: ScoutInfluencer | nul
   function getScoutData(): ScoutInfluencer & { id?: string } {
     return {
       id: scout?.id,
-      nome_artistico: nomeArtistico.trim(),
+      nome_artistico: (nomeArtistico ?? "").trim(),
       status,
       tipo_contato: tipoContato || null,
       nome_agente: tipoContato === "agente" ? nomeAgente.trim() || null : null,
