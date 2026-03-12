@@ -564,24 +564,28 @@ export default function DashboardFinanceiro() {
     };
   }, [rowsParaExibir, totais]);
 
-  const pieInvestimentoRaw = rowsParaExibir.map((r, i) => ({
-    name: r.nome.split(" ")[0],
-    nomeCompleto: r.nome,
-    value: Math.round(r.investimento),
-    color: PIE_COLORS[i % PIE_COLORS.length],
-  })).filter((d) => d.value > 0);
-
-  const MAX_PIE_ITENS = 10;
   const pieInvestimento = useMemo(() => {
-    if (pieInvestimentoRaw.length <= MAX_PIE_ITENS) return pieInvestimentoRaw;
-    const top9 = pieInvestimentoRaw.slice(0, 9);
-    const outros = pieInvestimentoRaw.slice(9);
+    const raw = rowsParaExibir
+      .filter((r) => Math.round(r.investimento) > 0)
+      .map((r, i) => ({
+        name: r.nome.split(" ")[0],
+        nomeCompleto: r.nome,
+        value: Math.round(r.investimento),
+        color: PIE_COLORS[i % PIE_COLORS.length],
+      }))
+      .sort((a, b) => b.value - a.value); // maior valor primeiro
+
+    if (raw.length <= 10) {
+      return raw.map((d, i) => ({ ...d, color: PIE_COLORS[i % PIE_COLORS.length] }));
+    }
+    const top9 = raw.slice(0, 9).map((d, i) => ({ ...d, color: PIE_COLORS[i % PIE_COLORS.length] }));
+    const outros = raw.slice(9);
     const somaOutros = outros.reduce((s, o) => s + o.value, 0);
     return [
       ...top9,
       { name: "Outros", nomeCompleto: `Outros (${outros.length} influencers)`, value: somaOutros, color: "#94a3b8" },
     ];
-  }, [pieInvestimentoRaw]);
+  }, [rowsParaExibir]);
 
   const card = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 6px 24px rgba(0,0,0,0.25)" } as React.CSSProperties;
   const cardTitle = { margin: "0 0 16px", fontSize: 13, fontWeight: 700, letterSpacing: "0.02em", color: t.text, fontFamily: FONT.body } as React.CSSProperties;
