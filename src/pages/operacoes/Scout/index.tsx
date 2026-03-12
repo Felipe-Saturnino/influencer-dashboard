@@ -504,9 +504,9 @@ function ModalEditar({ scout, onClose, onSaved }: { scout: ScoutInfluencer | nul
     setCategorias((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
   };
 
-  function getScoutData(): ScoutInfluencer & { id?: string } {
+  function getScoutData(): Omit<ScoutInfluencer, "id"> & { id?: string } {
     return {
-      id: scout?.id,
+      ...(scout?.id ? { id: scout.id } : {}),
       nome_artistico: (nomeArtistico ?? "").trim(),
       status,
       tipo_contato: tipoContato || null,
