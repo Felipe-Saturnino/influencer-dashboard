@@ -9,9 +9,10 @@ import Login         from "./pages/geral/Login";
 import Configuracoes from "./pages/geral/Configuracoes";
 import Ajuda         from "./pages/geral/Ajuda";
 // Páginas — dashboards
-import DashboardOverview   from "./pages/dashboards/DashboardOverview";
-import DashboardConversao  from "./pages/dashboards/DashboardConversao";
-import DashboardFinanceiro from "./pages/dashboards/DashboardFinanceiro";
+import DashboardOverview          from "./pages/dashboards/DashboardOverview";
+import DashboardOverviewInfluencer from "./pages/dashboards/DashboardOverviewInfluencer";
+import DashboardConversao         from "./pages/dashboards/DashboardConversao";
+import DashboardFinanceiro        from "./pages/dashboards/DashboardFinanceiro";
 // Páginas — lives
 import Agenda     from "./pages/lives/Agenda";
 import Resultados from "./pages/lives/Resultados";
@@ -26,9 +27,10 @@ import GestaoOperadoras from "./pages/plataforma/GestaoOperadoras";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
-  dash_overview:    DashboardOverview,
-  dash_conversao:   DashboardConversao,
-  dash_financeiro:  DashboardFinanceiro,
+  dash_overview:             DashboardOverview,
+  dash_overview_influencer:  DashboardOverviewInfluencer,
+  dash_conversao:            DashboardConversao,
+  dash_financeiro:           DashboardFinanceiro,
   agenda:           Agenda,
   resultados:       Resultados,
   feedback:         Feedback,

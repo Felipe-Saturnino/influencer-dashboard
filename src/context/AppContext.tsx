@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
-  "dash_overview", "dash_conversao", "dash_financeiro",
+  "dash_overview", "dash_overview_influencer", "dash_conversao", "dash_financeiro",
   "agenda", "resultados", "feedback",
   "influencers", "financeiro", "gestao_links",
   "gestao_usuarios", "gestao_operadoras",
@@ -124,6 +124,14 @@ async function carregarPermissoes(role: User["role"]): Promise<PermissoesMapa> {
       mapa[r.page_key as PageKey] = r.can_view as PermissaoValor;
     }
   });
+
+  // Overview Influencer: padrão "proprios" para influencer e agencia (único dash para eles)
+  if (mapa.dash_overview_influencer === null && ["influencer", "agencia"].includes(role)) {
+    mapa.dash_overview_influencer = "proprios";
+  }
+  if (mapa.dash_overview_influencer === null && ["admin", "gestor", "executivo"].includes(role)) {
+    mapa.dash_overview_influencer = "sim";
+  }
 
   return mapa;
 }

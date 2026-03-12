@@ -14,9 +14,10 @@ export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
     items: [
-      { key: "dash_overview",   label: "Overview",   icon: "📊" },
-      { key: "dash_conversao",  label: "Conversão",  icon: "🎯" },
-      { key: "dash_financeiro", label: "Financeiro", icon: "💹" },
+      { key: "dash_overview",          label: "Overview",          icon: "📊" },
+      { key: "dash_overview_influencer", label: "Overview Influencer", icon: "🎙️" },
+      { key: "dash_conversao",         label: "Conversão",         icon: "🎯" },
+      { key: "dash_financeiro",        label: "Financeiro",        icon: "💹" },
     ],
   },
   {
