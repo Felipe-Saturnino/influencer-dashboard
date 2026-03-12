@@ -19,6 +19,7 @@ export type PageKey =
   | "resultados"
   | "feedback"
   | "influencers"
+  | "scout"
   | "financeiro"
   | "gestao_links"
   | "gestao_usuarios"

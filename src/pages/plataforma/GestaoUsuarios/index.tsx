@@ -28,6 +28,7 @@ const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; ha
   { key: "dash_conversao",          label: "Conversão",          secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_financeiro",    label: "Financeiro",         secao: "Dashboards",  hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "influencers",        label: "Influencers",        secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
+  { key: "scout",              label: "Scout",              secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
   { key: "financeiro",         label: "Financeiro",          secao: "Operações",  hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "gestao_links",       label: "Gestão de Links",     secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
   { key: "gestao_usuarios",    label: "Gestão de Usuários", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },

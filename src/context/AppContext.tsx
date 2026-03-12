@@ -7,7 +7,7 @@ import { supabase } from "../lib/supabase";
 const ALL_PAGE_KEYS: PageKey[] = [
   "dash_overview", "dash_overview_influencer", "dash_conversao", "dash_financeiro",
   "agenda", "resultados", "feedback",
-  "influencers", "financeiro", "gestao_links",
+  "influencers", "scout", "financeiro", "gestao_links",
   "gestao_usuarios", "gestao_operadoras",
   "configuracoes", "ajuda",
 ];

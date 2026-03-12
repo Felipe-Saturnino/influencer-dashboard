@@ -19,6 +19,7 @@ import Resultados from "./pages/lives/Resultados";
 import Feedback   from "./pages/lives/Feedback";
 // Páginas — operacoes
 import Influencers from "./pages/operacoes/Influencers";
+import Scout from "./pages/operacoes/Scout";
 import Financeiro  from "./pages/operacoes/Financeiro";
 import GestaoLinks from "./pages/operacoes/GestaoLinks";
 // Páginas — plataforma
@@ -35,6 +36,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   resultados:       Resultados,
   feedback:         Feedback,
   influencers:      Influencers,
+  scout:            Scout,
   financeiro:       Financeiro,
   gestao_links:     GestaoLinks,
   gestao_usuarios:  GestaoUsuarios,
