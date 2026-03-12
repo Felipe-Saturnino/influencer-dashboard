@@ -286,6 +286,7 @@ export default function DashboardFinanceiro() {
           p_mes: historico ? null : mesSelecionado?.mes ?? null,
           p_influencer_id: filtroInfluencer === "todos" ? null : filtroInfluencer,
           p_historico: historico,
+          p_operadora_slug: operadoraFiltro === "todas" ? null : operadoraFiltro,
         });
         if (!rpcErr && rpcData?.length) {
           metricas = rpcData;
@@ -295,12 +296,13 @@ export default function DashboardFinanceiro() {
       } catch {
         // Fallback: consulta direta na tabela (legado)
         let qMetricas = supabase.from("influencer_metricas")
-          .select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data");
+          .select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug");
         if (!historico && mesSelecionado) {
           const { inicio, fim } = getDatasDoMesOuMtd(mesSelecionado.ano, mesSelecionado.mes);
           qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
         }
         if (filtroInfluencer !== "todos") qMetricas = qMetricas.eq("influencer_id", filtroInfluencer);
+        if (operadoraFiltro !== "todas") qMetricas = qMetricas.eq("operadora_slug", operadoraFiltro);
         const { data: metricasData } = await qMetricas;
         const raw: any[] = metricasData || [];
         const mapaAgreg = new Map<string, MetricaRow>();
@@ -332,12 +334,13 @@ export default function DashboardFinanceiro() {
         }));
       }
 
-      let qLives = supabase.from("lives").select("id, influencer_id, status, data").eq("status", "realizada");
+      let qLives = supabase.from("lives").select("id, influencer_id, status, data, operadora_slug").eq("status", "realizada");
       if (!historico && mesSelecionado) {
         const { inicio, fim } = getDatasDoMesOuMtd(mesSelecionado.ano, mesSelecionado.mes);
         qLives = qLives.gte("data", inicio).lte("data", fim);
       }
       if (filtroInfluencer !== "todos") qLives = qLives.eq("influencer_id", filtroInfluencer);
+      if (operadoraFiltro !== "todas") qLives = qLives.eq("operadora_slug", operadoraFiltro);
       const { data: livesData } = await qLives;
       const lives = livesData || [];
 
@@ -436,14 +439,16 @@ export default function DashboardFinanceiro() {
       if (!historico && mesSelecionado) {
         const { inicio: iA, fim: fA } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
         let qA = supabase.from("influencer_metricas")
-          .select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data")
+          .select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug")
           .gte("data", iA).lte("data", fA);
         if (filtroInfluencer !== "todos") qA = qA.eq("influencer_id", filtroInfluencer);
+        if (operadoraFiltro !== "todas") qA = qA.eq("operadora_slug", operadoraFiltro);
         const { data: mA } = await qA;
         const metricasAnt: any[] = mA || [];
 
-        let qLA = supabase.from("lives").select("id, influencer_id, data").eq("status", "realizada").gte("data", iA).lte("data", fA);
+        let qLA = supabase.from("lives").select("id, influencer_id, data, operadora_slug").eq("status", "realizada").gte("data", iA).lte("data", fA);
         if (filtroInfluencer !== "todos") qLA = qLA.eq("influencer_id", filtroInfluencer);
+        if (operadoraFiltro !== "todas") qLA = qLA.eq("operadora_slug", operadoraFiltro);
         const { data: lA } = await qLA;
         const livesAnt = lA || [];
         const idsLA = livesAnt.map((l: any) => l.id);
@@ -533,7 +538,7 @@ export default function DashboardFinanceiro() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, filtroInfluencer, mesSelecionado, podeVerInfluencer]);
+  }, [historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer]);
 
   const rowsParaExibir = useMemo(() => {
     if (operadoraFiltro === "todas") return rows;

@@ -53,7 +53,7 @@ Configure no `.env` conforme `docs/SETUP.md`.
 
 | Tabela | Descrição | Relacionamentos |
 |--------|-----------|-----------------|
-| `influencer_metricas` | Métricas diárias (FTD, depósito, saque, GGR) | influencer_id |
+| `influencer_metricas` | Métricas diárias (FTD, depósito, saque, GGR) por operadora | influencer_id, operadora_slug → operadoras |
 | `ciclos_pagamento` | Períodos de pagamento (início, fim, fechado) | — |
 | `pagamentos` | Pagamentos de influencers (por ciclo, live) | ciclo_id, influencer_id |
 | `pagamentos_agentes` | Pagamentos de agentes | ciclo_id |
@@ -88,9 +88,10 @@ Configure no `.env` conforme `docs/SETUP.md`.
 - Agrega `influencer_metricas` por mês
 - Usada pelo Dashboard Financeiro para reduzir carga
 
-### Função `get_metricas_financeiro(p_ano, p_mes, p_influencer_id, p_historico)`
+### Função `get_metricas_financeiro(p_ano, p_mes, p_influencer_id, p_historico, p_operadora_slug)`
 - Retorna métricas agregadas com colunas calculadas (tickets médios, GGR/jogador, WD ratio, PVI, perfil)
-- Migração: `docs/passo5-rpc-get_metricas_financeiro.sql` ou `docs/dashboard-financeiro-migrations.sql`
+- `p_operadora_slug` NULL = agrega todas as operadoras; preenchido = filtra por operadora
+- Migração: `docs/dashboard-financeiro-operadora.sql` (após `migration-influencer-metricas-operadora.sql`)
 
 ---
 
@@ -153,6 +154,8 @@ ciclos_pagamento
 | Arquivo | Propósito |
 |---------|-----------|
 | `docs/dashboard-financeiro-migrations.sql` | View mensal, RPC, índices, withdrawal_count |
+| `docs/migration-influencer-metricas-operadora.sql` | Coluna operadora_slug em influencer_metricas, backfill |
+| `docs/dashboard-financeiro-operadora.sql` | View e RPC com suporte a operadora |
 | `docs/scout-migrations.sql` | Scout + anotações |
 | `docs/fix-role-permissions-agencia.sql` | Adicionar role "agencia" em role_permissions |
 | `docs/passo5-rpc-get_metricas_financeiro.sql` | Apenas a função RPC |
