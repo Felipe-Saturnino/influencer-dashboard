@@ -219,7 +219,10 @@ export default function DashboardOverviewInfluencer() {
         supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
       ]);
       setPerfis(perfisData || []);
-      setOperadorasList((opsData || []).filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))));
+      const opsFiltradas = (opsData || []).filter(
+        (o: { slug: string }) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)
+      );
+      setOperadorasList(opsFiltradas);
       const map: Record<string, string[]> = {};
       (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
         if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
