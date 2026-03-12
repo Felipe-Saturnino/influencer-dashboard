@@ -6,7 +6,7 @@ import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Legend, ReferenceLine,
+  CartesianGrid, ReferenceLine,
 } from "recharts";
 
 // ─── CONSTANTES ──────────────────────────────────────────────────────────────
@@ -480,6 +480,8 @@ export default function DashboardOverview() {
   const pctAcessoReg  = totais.acessos > 0 ? ((totais.registros / totais.acessos) * 100).toFixed(1) + "%" : "—";
   const pctRegFTD     = totais.registros > 0 ? ((totais.ftds / totais.registros) * 100).toFixed(1) + "%" : "—";
   const pctViewFTD    = totais.views > 0 ? ((totais.ftds / totais.views) * 100).toFixed(1) + "%" : "—";
+  const pctAcessoFTD  = totais.acessos > 0 ? ((totais.ftds / totais.acessos) * 100).toFixed(1) + "%" : "—";
+  const pctRegFTDTotal = totais.registros > 0 ? ((totais.ftds / totais.registros) * 100).toFixed(1) + "%" : "—"; // Registro → FTD total
 
   // ── CHART (respeita filtros influencer/operadora) ─────────────────────────────
   const rankingParaChart = useMemo(() => {
@@ -520,7 +522,7 @@ export default function DashboardOverview() {
   const isPrimeiro = idxMes === 0;
   const isUltimo   = idxMes === mesesDisponiveis.length - 1;
 
-  // Configs KPI
+  // Configs KPI — Roxo: GGR/Registros/FTDs | Azul: Invest/Lives/Horas/Influencers | Verde: ROI | Amarelo: Depósito/Custo Reg/Custo FTD
   const kpiL1 = [
     { label: "GGR Total",    value: fmtBRL(totais.ggr),         icon: "📈", accentColor: "#7c3aed", atual: totais.ggr,         anterior: totaisAnt.ggr,         isBRL: true  },
     { label: "Investimento", value: fmtBRL(totais.investimento), icon: "💰", accentColor: "#2563eb", atual: totais.investimento, anterior: totaisAnt.investimento, isBRL: true  },
@@ -529,8 +531,8 @@ export default function DashboardOverview() {
   const kpiL3 = [
     { label: "Total Registros",    value: totais.registros.toLocaleString("pt-BR"),                     icon: "👤", accentColor: "#7c3aed", atual: totais.registros,       anterior: totaisAnt.registros,       isBRL: false },
     { label: "Custo por Registro", value: totais.registros > 0 ? fmtBRL(totais.custoPorRegistro) : "—", icon: "💸", accentColor: "#f59e0b", atual: totais.custoPorRegistro, anterior: totaisAnt.custoPorRegistro, isBRL: true  },
-    { label: "Total FTDs",         value: totais.ftds.toLocaleString("pt-BR"),                          icon: "🏆", accentColor: "#059669", atual: totais.ftds,            anterior: totaisAnt.ftds,            isBRL: false },
-    { label: "Custo por FTD",      value: totais.ftds > 0 ? fmtBRL(totais.custoPorFTD) : "—",          icon: "💸", accentColor: "#ef4444", atual: totais.custoPorFTD,     anterior: totaisAnt.custoPorFTD,     isBRL: true  },
+    { label: "Total FTDs",         value: totais.ftds.toLocaleString("pt-BR"),                          icon: "🏆", accentColor: "#7c3aed", atual: totais.ftds,            anterior: totaisAnt.ftds,            isBRL: false },
+    { label: "Custo por FTD",      value: totais.ftds > 0 ? fmtBRL(totais.custoPorFTD) : "—",          icon: "💸", accentColor: "#f59e0b", atual: totais.custoPorFTD,     anterior: totaisAnt.custoPorFTD,     isBRL: true  },
   ];
 
   // Badges de status para o ranking
@@ -588,7 +590,7 @@ export default function DashboardOverview() {
       <div style={{ ...card, marginBottom: 14 }}>
         <h3 style={cardTitle}>
           <span style={{ fontSize: 16 }}>📊</span> KPIs Executivos
-          {!historico && <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, marginLeft: 4 }}>· comparativo MTD vs mês anterior</span>}
+          {!historico && <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, marginLeft: 4 }}>· comparativo MTD vs mesmo período do mês anterior</span>}
         </h3>
 
         {/* Linha 1: GGR / Investimento / ROI */}
@@ -598,14 +600,14 @@ export default function DashboardOverview() {
 
         {/* Linha 2: Lives / Horas / Influencers / Depósitos */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard label="Qtd. Lives" value={totais.lives.toLocaleString("pt-BR")} icon="🎥" accentColor="#7c3aed" atual={totais.lives} anterior={totaisAnt.lives} isBRL={false} isHistorico={historico} />
+          <KpiCard label="Qtd. Lives" value={totais.lives.toLocaleString("pt-BR")} icon="🎥" accentColor="#2563eb" atual={totais.lives} anterior={totaisAnt.lives} isBRL={false} isHistorico={historico} />
           <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totais.horas)} icon="⏱️" accentColor="#2563eb" atual={totais.horas} anterior={totaisAnt.horas} isBRL={false} isHistorico={historico} />
-          <KpiCard label="Influencers Ativos" value={totais.influencers.toLocaleString("pt-BR")} icon="🎙️" accentColor="#a855f7" atual={totais.influencers} anterior={totaisAnt.influencers} isBRL={false} isHistorico={historico} />
+          <KpiCard label="Influencers Ativos" value={totais.influencers.toLocaleString("pt-BR")} icon="🎙️" accentColor="#2563eb" atual={totais.influencers} anterior={totaisAnt.influencers} isBRL={false} isHistorico={historico} />
           <KpiCardDepositos
             atual={{ qtd: totais.depositos_qtd, valor: totais.depositos_valor }}
             anterior={{ qtd: totaisAnt.depositos_qtd, valor: totaisAnt.depositos_valor }}
             isHistorico={historico}
-            accentColor="#059669"
+            accentColor="#f59e0b"
           />
         </div>
 
@@ -629,10 +631,9 @@ export default function DashboardOverview() {
               <FunnelStep label="FTDs"          value={totais.ftds} pct={pctRegFTD} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignContent: "start" }}>
-              <RateCard label="View → Acesso"     value={pctViewAcesso} />
-              <RateCard label="Acesso → Registro" value={pctAcessoReg}  />
-              <RateCard label="Registro → FTD"    value={pctRegFTD}     />
-              <RateCard label="View → FTD total"  value={pctViewFTD}    highlight />
+              <RateCard label="Acesso → FTD total"  value={pctAcessoFTD} />
+              <RateCard label="Registro → FTD total" value={pctRegFTDTotal} />
+              <RateCard label="View → FTD total"     value={pctViewFTD} highlight />
             </div>
           </div>
         </div>
@@ -651,7 +652,6 @@ export default function DashboardOverview() {
                 <XAxis dataKey="nome" tick={{ fill: t.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} />
-                <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted }} />
                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={1.5} />
                 <Bar dataKey="GGR"          fill="#7c3aed" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="Investimento" fill="#2563eb" radius={[6, 6, 0, 0]} />
