@@ -3,6 +3,12 @@
 -- Execute no SQL Editor do Supabase se as permissões do role Agência não estiverem salvando
 -- =============================================================================
 
+-- 0. OBRIGATÓRIO: Atualizar a check constraint para permitir "agencia"
+--    (O erro "violates check constraint role_permissions_role_check" ocorre porque "agencia" não estava na lista)
+ALTER TABLE role_permissions DROP CONSTRAINT IF EXISTS role_permissions_role_check;
+ALTER TABLE role_permissions ADD CONSTRAINT role_permissions_role_check
+  CHECK (role IN ('admin', 'gestor', 'executivo', 'influencer', 'operador', 'agencia'));
+
 -- 1. Verificar se a constraint única existe (role, page_key)
 -- Se o upsert falhar com "duplicate key" ou "conflict", a constraint pode ter nome diferente
 
