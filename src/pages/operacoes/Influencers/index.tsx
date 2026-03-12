@@ -78,18 +78,31 @@ function maskBRL(raw: string): string {
 
 // Input de moeda controlado
 function CurrencyInput({
-  value, onChange, style, placeholder,
+  value, onChange, style, placeholder, disabled,
 }: {
   value: number;
   onChange: (v: number) => void;
   style?: React.CSSProperties;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   const [display, setDisplay] = useState(value > 0 ? formatBRL(value) : "");
 
   useEffect(() => {
     setDisplay(value > 0 ? formatBRL(value) : "");
   }, [value]);
+
+  if (disabled) {
+    return (
+      <input
+        type="text"
+        value={value > 0 ? formatBRL(value) : ""}
+        readOnly
+        disabled
+        style={{ ...style, opacity: 0.8, cursor: "not-allowed" }}
+      />
+    );
+  }
 
   return (
     <input
@@ -192,7 +205,7 @@ export default function Influencers() {
     ? operadorasList
     : operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.includes(o.slug));
   const [loading,        setLoading]        = useState(true);
-  const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar" | "novo"; inf?: Influencer } | null>(null);
+  const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar"; inf?: Influencer } | null>(null);
 
   // Filtros
   const [search,        setSearch]        = useState("");
@@ -364,12 +377,6 @@ export default function Influencers() {
               : "Seu perfil completo na plataforma."}
           </p>
         </div>
-        {perm.canCriarOk && (
-          <button onClick={() => setModal({ mode: "novo" })}
-            style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            + Adicionar
-          </button>
-        )}
       </div>
 
       {/* Quadros resumo (quem gerencia múltiplos) */}
@@ -632,9 +639,6 @@ export default function Influencers() {
           onSaved={() => { setModal(null); loadData(); }}
         />
       )}
-      {modal?.mode === "novo" && (
-        <ModalNovo operadorasList={operadorasNoEscopo} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
-      )}
     </div>
   );
 }
@@ -774,280 +778,18 @@ function ModalVisualizar({
   );
 }
 
-// ─── Modal Novo ───────────────────────────────────────────────────────────────
+// ─── Modal Editar ─────────────────────────────────────────────────────────────
 type OperadorasFormState = Record<string, { ativo: boolean; id_operadora: string }>;
 
-function ModalNovo({
-  operadorasList, onClose, onSaved,
-}: { operadorasList: Operadora[]; onClose: () => void; onSaved: () => void }) {
-  const { theme: t } = useApp();
-  const [newNomeCompleto,  setNewNomeCompleto]  = useState("");
-  const [newNomeArtistico, setNewNomeArtistico] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [form, setForm] = useState<Perfil>({
-    id: "", nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
-    canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
-    cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
-  });
-  const [operadorasForm, setOperadorasForm] = useState<OperadorasFormState>({});
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState("");
-  const [tab,    setTab]    = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
-
-  const set = (key: keyof Perfil, val: any) => setForm((f) => ({ ...f, [key]: val }));
-
-  const setOp = (slug: string, patch: Partial<{ ativo: boolean; id_operadora: string }>) => {
-    setOperadorasForm((prev) => {
-      const cur = prev[slug] ?? { ativo: false, id_operadora: "" };
-      return { ...prev, [slug]: { ...cur, ...patch } };
-    });
-  };
-
-  const toggleCanal = (c: Plataforma) => {
-    const cur = form.canais ?? [];
-    set("canais", cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]);
-  };
-
-  async function handleSave() {
-    setError("");
-    if (!newEmail.trim())          return setError("E-mail é obrigatório.");
-    if (!newNomeArtistico.trim())  return setError("Nome Artístico é obrigatório.");
-    if (!newNomeCompleto.trim())   return setError("Nome Completo é obrigatório.");
-    if (!form.cache_hora || form.cache_hora <= 0) return setError("Cachê por Hora é obrigatório.");
-
-    if ((form.canais ?? []).length === 0) return setError("Selecione ao menos 1 canal com link.");
-    const temCanalSemLink = (form.canais ?? []).some((c) => {
-      const link = form[`link_${c.toLowerCase()}` as keyof Perfil] as string;
-      return !link?.trim();
-    });
-    if (temCanalSemLink) return setError("Preencha o link de cada canal selecionado.");
-
-    const opsComId = operadorasList.filter((op) => {
-      const st = operadorasForm[op.slug];
-      return st?.ativo && st?.id_operadora?.trim();
-    });
-    if (opsComId.length === 0) return setError("Ative ao menos 1 operadora com ID preenchido.");
-
-    setSaving(true);
-    const { data: profile, error: profileErr } = await supabase
-      .from("profiles").select("id").eq("email", newEmail.toLowerCase().trim()).single();
-    if (profileErr || !profile) {
-      setError("Usuário não encontrado. Verifique o e-mail.");
-      setSaving(false);
-      return;
-    }
-
-    await supabase.from("profiles").update({ name: newNomeArtistico.trim() }).eq("id", profile.id);
-
-    const payload: Perfil = {
-      ...form,
-      id: profile.id,
-      nome_artistico: newNomeArtistico.trim(),
-      nome_completo:  newNomeCompleto.trim(),
-    };
-    const { error: err } = await supabase.from("influencer_perfil").insert(payload);
-    if (err) { setError(err.message); setSaving(false); return; }
-
-    for (const op of opsComId) {
-      const st = operadorasForm[op.slug];
-      if (st?.ativo && st?.id_operadora?.trim()) {
-        await supabase.from("influencer_operadoras").upsert(
-          { influencer_id: profile.id, operadora_slug: op.slug, id_operadora: st.id_operadora.trim(), ativo: true },
-          { onConflict: "influencer_id,operadora_slug", ignoreDuplicates: false }
-        );
-      }
-    }
-    setSaving(false);
-    onSaved();
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", boxSizing: "border-box", padding: "10px 14px",
-    borderRadius: "10px", border: `1px solid ${t.inputBorder}`,
-    background: t.inputBg, color: t.inputText,
-    fontSize: "13px", fontFamily: FONT.body, outline: "none",
-  };
-  const labelStyle: React.CSSProperties = {
-    display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px",
-    textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
-  };
-  const req  = <span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>;
-  const row: React.CSSProperties = { marginBottom: "14px" };
-  const tabs = [
-    { key: "cadastral"   as const, label: "Cadastral"  },
-    { key: "canais"      as const, label: "Canais"     },
-    { key: "financeiro"  as const, label: "Financeiro" },
-    { key: "operadoras"  as const, label: "Operadoras" },
-  ];
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-          <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>➕ Novo Influencer</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
-        </div>
-        <p style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "18px", marginTop: "4px" }}>
-          Campos com <span style={{ color: "#e94025" }}>*</span> são obrigatórios.
-        </p>
-
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px", flexWrap: "wrap" }}>
-          {tabs.map((tb) => (
-            <button key={tb.key} onClick={() => setTab(tb.key)}
-              style={{ padding: "7px 14px", borderRadius: "20px", border: `1px solid ${tab === tb.key ? BASE_COLORS.purple : t.cardBorder}`, background: tab === tb.key ? `${BASE_COLORS.purple}22` : t.inputBg, color: tab === tb.key ? BASE_COLORS.purple : t.textMuted, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
-              {tb.label}
-            </button>
-          ))}
-        </div>
-
-        {error && (
-          <div style={{ background: "#e9402518", border: "1px solid #e9402544", color: "#e94025", borderRadius: "10px", padding: "10px 14px", fontSize: "13px", marginBottom: "14px" }}>
-            ⚠️ {error}
-          </div>
-        )}
-
-        {tab === "cadastral" && (
-          <>
-            <div style={row}>
-              <label style={labelStyle}>Nome Artístico{req}</label>
-              <input value={newNomeArtistico} onChange={(e) => setNewNomeArtistico(e.target.value)} style={inputStyle} placeholder="Ex: NeryXLS" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>Nome Completo{req}</label>
-              <input value={newNomeCompleto} onChange={(e) => setNewNomeCompleto(e.target.value)} style={inputStyle} placeholder="Nome completo do influencer" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>E-mail{req}</label>
-              <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} style={inputStyle} placeholder="email@dominio.com" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>Telefone</label>
-              <input value={form.telefone ?? ""} onChange={(e) => set("telefone", e.target.value)} style={inputStyle} placeholder="(11) 99999-9999" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>CPF</label>
-              <input value={form.cpf ?? ""} onChange={(e) => set("cpf", e.target.value)} style={inputStyle} placeholder="000.000.000-00" />
-            </div>
-          </>
-        )}
-
-        {tab === "canais" && (
-          <>
-            <div style={row}>
-              <label style={labelStyle}>Plataformas Ativas{req}</label>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                {PLATAFORMAS.map((p) => {
-                  const ativo = (form.canais ?? []).includes(p);
-                  return (
-                    <button key={p} onClick={() => toggleCanal(p)}
-                      style={{ padding: "8px 14px", borderRadius: "20px", cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : t.inputBg, color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
-                      {PLAT_ICON[p]} {p}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {(form.canais ?? []).map((c) => {
-              const linkKey = `link_${c.toLowerCase()}` as keyof Perfil;
-              return (
-                <div key={c} style={row}>
-                  <label style={labelStyle}>Link {c}{req}</label>
-                  <input value={(form[linkKey] as string) ?? ""} onChange={(e) => set(linkKey, e.target.value)} style={inputStyle} placeholder={`https://${c.toLowerCase()}.com/seu-canal`} />
-                </div>
-              );
-            })}
-            {(form.canais ?? []).length === 0 && (
-              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Selecione ao menos uma plataforma acima.</p>
-            )}
-          </>
-        )}
-
-        {tab === "financeiro" && (
-          <>
-            <div style={row}>
-              <label style={labelStyle}>Cachê por Hora (R$){req}</label>
-              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", v)} style={inputStyle} />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>Chave PIX</label>
-              <input value={form.chave_pix ?? ""} onChange={(e) => set("chave_pix", e.target.value)} style={inputStyle} placeholder="CPF, e-mail, telefone ou chave aleatória" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>Banco</label>
-              <input value={form.banco ?? ""} onChange={(e) => set("banco", e.target.value)} style={inputStyle} placeholder="Ex: Nubank, Itaú, Bradesco" />
-            </div>
-            <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <div>
-                <label style={labelStyle}>Agência</label>
-                <input value={form.agencia ?? ""} onChange={(e) => set("agencia", e.target.value)} style={inputStyle} placeholder="0000" />
-              </div>
-              <div>
-                <label style={labelStyle}>Conta</label>
-                <input value={form.conta ?? ""} onChange={(e) => set("conta", e.target.value)} style={inputStyle} placeholder="00000-0" />
-              </div>
-            </div>
-          </>
-        )}
-
-        {tab === "operadoras" && (
-          <>
-            <p style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
-              Ative ao menos <span style={{ color: "#e94025" }}>1 operadora</span> com ID preenchido.
-            </p>
-            {operadorasList.length === 0 ? (
-              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma operadora cadastrada. Acesse Gestão de Operadoras primeiro.</p>
-            ) : (
-              operadorasList.filter((o) => o.ativo).map((op) => {
-                const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
-                const ativo = st.ativo;
-                return (
-                  <div key={op.slug} style={{ ...row, padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? "12px" : 0 }}>
-                      <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.nome}</span>
-                      <button onClick={() => setOp(op.slug, { ativo: !ativo })}
-                        style={{ padding: "5px 14px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
-                        {ativo ? "Ativo" : "Inativo"}
-                      </button>
-                    </div>
-                    {ativo && (
-                      <div>
-                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body }}>
-                          ID {op.nome} <span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>
-                        </label>
-                        <input
-                          value={st.id_operadora}
-                          onChange={(e) => setOp(op.slug, { id_operadora: e.target.value })}
-                          style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }}
-                          placeholder={`ID do influencer na ${op.nome}`}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </>
-        )}
-
-        <button onClick={handleSave} disabled={saving}
-          style={{ width: "100%", marginTop: "8px", padding: "13px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-          {saving ? "⏳ Salvando..." : "Criar Influencer"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Modal Editar ─────────────────────────────────────────────────────────────
 function ModalPerfil({
   influencer, operadorasList, onClose, onSaved,
 }: {
   influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; onSaved: () => void;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const existing = influencer.perfil;
+  // Status e Cachê somente Gestores e Admin podem alterar
+  const podeAlterarStatusCache = user?.role === "admin" || user?.role === "gestor";
 
   const inicialOperadoras: OperadorasFormState = {};
   (influencer.operadoras ?? []).forEach((o) => {
@@ -1102,6 +844,11 @@ function ModalPerfil({
       nome_completo: editNomeCompleto.trim(),
       updated_at: new Date().toISOString(),
     };
+    // Impede alteração de status e cache por usuários sem permissão (backend defense)
+    if (!podeAlterarStatusCache && existing) {
+      payload.status = existing.status ?? "ativo";
+      payload.cache_hora = existing.cache_hora ?? 0;
+    }
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
       : await supabase.from("influencer_perfil").insert(payload);
@@ -1153,7 +900,7 @@ function ModalPerfil({
               <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
                 {form.nome_artistico?.trim() || influencer.name}
               </h2>
-              <StatusBadge value={form.status ?? "ativo"} onChange={(v) => set("status", v)} />
+              <StatusBadge value={form.status ?? "ativo"} onChange={(v) => set("status", v)} readonly={!podeAlterarStatusCache} />
             </div>
             <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{influencer.email}</div>
           </div>
@@ -1236,8 +983,8 @@ function ModalPerfil({
         {tab === "financeiro" && (
           <>
             <div style={row}>
-              <label style={labelStyle}>Cachê por Hora (R$)</label>
-              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", v)} style={inputStyle} />
+              <label style={labelStyle}>Cachê por Hora (R$) {!podeAlterarStatusCache && <span style={{ fontSize: 10, color: t.textMuted, fontWeight: 400 }}>(somente Gestor/Admin)</span>}</label>
+              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", v)} style={inputStyle} disabled={!podeAlterarStatusCache} />
             </div>
             <div style={row}>
               <label style={labelStyle}>Chave PIX</label>

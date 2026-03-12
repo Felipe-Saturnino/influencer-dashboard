@@ -389,13 +389,40 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
         }
 
         // Sincroniza influencer_operadoras se role=influencer
-        if (role === "influencer" && scopeOperadoras.length > 0) {
-          for (const slug of scopeOperadoras) {
-            await supabase.from("influencer_operadoras").upsert(
-              { influencer_id: uid, operadora_slug: slug, ativo: true },
-              { onConflict: "influencer_id,operadora_slug", ignoreDuplicates: true }
-            );
+        if (role === "influencer") {
+          // Cria registro em influencer_perfil para futura edição pelos agentes
+          await supabase.from("influencer_perfil").upsert(
+            {
+              id: uid,
+              nome_artistico: nome,
+              nome_completo: nome,
+              status: "ativo",
+              cache_hora: 0,
+            },
+            { onConflict: "id", ignoreDuplicates: false }
+          );
+          if (scopeOperadoras.length > 0) {
+            for (const slug of scopeOperadoras) {
+              await supabase.from("influencer_operadoras").upsert(
+                { influencer_id: uid, operadora_slug: slug, ativo: true },
+                { onConflict: "influencer_id,operadora_slug", ignoreDuplicates: true }
+              );
+            }
           }
+        }
+      }
+
+      // Se editando e role mudou para influencer, garantir que influencer_perfil existe
+      if (editando && role === "influencer") {
+        const { data: existe } = await supabase.from("influencer_perfil").select("id").eq("id", uid).single();
+        if (!existe) {
+          await supabase.from("influencer_perfil").insert({
+            id: uid,
+            nome_artistico: nome,
+            nome_completo: nome,
+            status: "ativo",
+            cache_hora: 0,
+          });
         }
       }
 
