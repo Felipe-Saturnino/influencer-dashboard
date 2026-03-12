@@ -22,7 +22,7 @@ const ROLES: { value: Role; label: string }[] = [
 const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; hasEditar: boolean; hasExcluir: boolean }[] = [
   { key: "agenda",             label: "Agenda",             secao: "Lives",      hasCriar: true,  hasEditar: true,  hasExcluir: true  },
   { key: "resultados",         label: "Resultados",         secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "feedback",           label: "Feedback",           secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "feedback",           label: "Feedback",           secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: true  },
   { key: "dash_overview",      label: "Overview",           secao: "Dashboards",  hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_conversao",     label: "Conversão",          secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_financeiro",    label: "Financeiro",         secao: "Dashboards",  hasCriar: false, hasEditar: false, hasExcluir: false },

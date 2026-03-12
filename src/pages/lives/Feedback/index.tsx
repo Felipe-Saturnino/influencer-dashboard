@@ -205,6 +205,8 @@ export default function Feedback() {
   const [resultados,    setResultados]    = useState<Record<string, LiveResultado>>({});
   const [influencers,   setInfluencers]   = useState<{ id: string; name: string }[]>([]);
   const [loading,       setLoading]       = useState(true);
+  const [editando,      setEditando]      = useState<LiveComObs | null>(null);
+  const [excluindo,     setExcluindo]     = useState<LiveComObs | null>(null);
 
   // Dados para os quadros (sem filtro de status)
   const [livesAll,      setLivesAll]      = useState<LiveComObs[]>([]);
@@ -351,6 +353,15 @@ export default function Feedback() {
     border: `1px solid ${color}33`, minWidth: 0,
   });
 
+  async function handleExcluir(live: LiveComObs) {
+    if (!perm.canExcluirOk || !confirm("Tem certeza que deseja excluir esta live?")) return;
+    setExcluindo(live);
+    await supabase.from("live_resultados").delete().eq("live_id", live.id);
+    const { error } = await supabase.from("lives").delete().eq("id", live.id);
+    setExcluindo(null);
+    if (!error) loadData();
+  }
+
   // ── LiveCard ──────────────────────────────────────────────────────────────
 
   function LiveCard({ live }: { live: LiveComObs }) {
@@ -358,6 +369,9 @@ export default function Feedback() {
     const isRealizada = live.status === "realizada";
     const statusColor = isRealizada ? "#27ae60" : "#e94025";
     const platColor   = PLAT_COLOR[live.plataforma];
+    const podeEditar  = perm.canEditarOk;
+    const podeExcluir = perm.canExcluirOk;
+    const isExcluindo = excluindo?.id === live.id;
 
     return (
       <div style={{
@@ -365,7 +379,7 @@ export default function Feedback() {
         borderRadius: "16px", padding: "20px", marginBottom: "10px",
         borderLeft: `8px solid ${statusColor}`,
       }}>
-        {/* Linha principal */}
+        {/* Linha principal + ações */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
           <div style={{
             width: "44px", height: "44px", borderRadius: "10px",
@@ -394,6 +408,35 @@ export default function Feedback() {
               </span>
             </div>
           </div>
+          {(podeEditar || podeExcluir) && (
+            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+              {podeEditar && (
+                <button
+                  onClick={() => setEditando(live)}
+                  style={{
+                    padding: "6px 12px", borderRadius: "8px", border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg, color: t.text, fontSize: "11px", fontWeight: 600,
+                    cursor: "pointer", fontFamily: FONT.body,
+                  }}
+                >
+                  ✏️ Editar
+                </button>
+              )}
+              {podeExcluir && (
+                <button
+                  onClick={() => handleExcluir(live)}
+                  disabled={isExcluindo}
+                  style={{
+                    padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(233,64,37,0.5)",
+                    background: "rgba(233,64,37,0.1)", color: "#e94025", fontSize: "11px", fontWeight: 600,
+                    cursor: isExcluindo ? "not-allowed" : "pointer", fontFamily: FONT.body, opacity: isExcluindo ? 0.6 : 1,
+                  }}
+                >
+                  {isExcluindo ? "..." : "🗑️ Excluir"}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Observação — lida de live.observacao (tabela lives) */}
@@ -659,6 +702,172 @@ export default function Feedback() {
       ) : (
         livesFiltered.map(l => <LiveCard key={l.id} live={l} />)
       )}
+
+      {/* Modal Editar Feedback */}
+      {editando && (
+        <ModalFeedbackEdit
+          live={editando}
+          res={resultadosAll[editando.id]}
+          t={t}
+          isDark={isDark}
+          onClose={() => setEditando(null)}
+          onSalvo={() => { setEditando(null); loadData(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Modal Editar Feedback ────────────────────────────────────────────────────
+
+function ModalFeedbackEdit({
+  live,
+  res,
+  t,
+  isDark,
+  onClose,
+  onSalvo,
+}: {
+  live: LiveComObs;
+  res?: LiveResultado;
+  t: ReturnType<typeof useApp>["theme"];
+  isDark: boolean;
+  onClose: () => void;
+  onSalvo: () => void;
+}) {
+  const [observacao, setObservacao] = useState(live.observacao ?? "");
+  const [status, setStatus] = useState<LiveStatus>(live.status as LiveStatus);
+  const [duracaoHoras, setDuracaoHoras] = useState(res?.duracao_horas ?? 0);
+  const [duracaoMin, setDuracaoMin] = useState(res?.duracao_min ?? 0);
+  const [mediaViews, setMediaViews] = useState(res?.media_views ?? 0);
+  const [maxViews, setMaxViews] = useState(res?.max_views ?? 0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const showResultFields = status === "realizada";
+
+  async function handleSave() {
+    setError("");
+    if (showResultFields && (duracaoHoras > 0 || duracaoMin > 0) && maxViews < mediaViews) {
+      setError("Pico de views não pode ser menor que a média.");
+      return;
+    }
+    setSaving(true);
+
+    const { error: upErr } = await supabase
+      .from("lives")
+      .update({ observacao: observacao.trim() || null, status })
+      .eq("id", live.id);
+
+    if (upErr) {
+      setError("Erro ao salvar. Tente novamente.");
+      setSaving(false);
+      return;
+    }
+
+    if (showResultFields) {
+      const payload = {
+        live_id: live.id,
+        duracao_horas: duracaoHoras,
+        duracao_min: duracaoMin,
+        media_views: mediaViews,
+        max_views: maxViews,
+      };
+      const { error: resErr } = res
+        ? await supabase.from("live_resultados").update(payload).eq("live_id", live.id)
+        : await supabase.from("live_resultados").insert(payload);
+      if (resErr) {
+        setError("Erro ao salvar resultado. Tente novamente.");
+        setSaving(false);
+        return;
+      }
+    }
+
+    setSaving(false);
+    onSalvo();
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", boxSizing: "border-box", padding: "10px 14px",
+    borderRadius: "10px", border: `1px solid ${t.inputBorder}`,
+    background: t.inputBg, color: t.inputText,
+    fontSize: "13px", fontFamily: FONT.body, outline: "none",
+  };
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px",
+    textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "480px", maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+          <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
+            ✏️ Editar Feedback
+          </h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
+        </div>
+        <div style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
+          {live.influencer_name} · {fmtData(live.data)} {live.horario?.slice(0, 5)}
+        </div>
+
+        {error && (
+          <div style={{ background: "#e9402518", border: "1px solid #e9402544", color: "#e94025", borderRadius: "10px", padding: "10px 14px", fontSize: "13px", marginBottom: "14px" }}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        <div style={{ marginBottom: "14px" }}>
+          <label style={labelStyle}>Status</label>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button onClick={() => setStatus("realizada")} style={{ flex: 1, padding: "10px", borderRadius: "10px", border: `2px solid ${status === "realizada" ? "#27ae60" : t.cardBorder}`, background: status === "realizada" ? "#27ae6018" : t.inputBg, color: status === "realizada" ? "#27ae60" : t.textMuted, fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
+              ✅ Realizada
+            </button>
+            <button onClick={() => setStatus("nao_realizada")} style={{ flex: 1, padding: "10px", borderRadius: "10px", border: `2px solid ${status === "nao_realizada" ? "#e94025" : t.cardBorder}`, background: status === "nao_realizada" ? "#e9402518" : t.inputBg, color: status === "nao_realizada" ? "#e94025" : t.textMuted, fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
+              ❌ Não realizada
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: "14px" }}>
+          <label style={labelStyle}>Observação</label>
+          <textarea value={observacao} onChange={e => setObservacao(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} placeholder="Feedback ou observação sobre a live..." />
+        </div>
+
+        {showResultFields && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+              <div>
+                <label style={labelStyle}>Duração (horas)</label>
+                <input type="number" min={0} value={duracaoHoras} onChange={e => setDuracaoHoras(parseInt(e.target.value, 10) || 0)} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Duração (min)</label>
+                <input type="number" min={0} max={59} value={duracaoMin} onChange={e => setDuracaoMin(parseInt(e.target.value, 10) || 0)} style={inputStyle} />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+              <div>
+                <label style={labelStyle}>Média de views</label>
+                <input type="number" min={0} value={mediaViews} onChange={e => setMediaViews(parseInt(e.target.value, 10) || 0)} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Pico de views</label>
+                <input type="number" min={0} value={maxViews} onChange={e => setMaxViews(parseInt(e.target.value, 10) || 0)} style={inputStyle} />
+              </div>
+            </div>
+          </>
+        )}
+
+        <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" }}>
+          <button onClick={onClose} style={{ padding: "10px 20px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: "none", color: t.text, cursor: "pointer", fontFamily: FONT.body, fontSize: "13px" }}>
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={saving} style={{ padding: "10px 20px", borderRadius: "10px", border: "none", background: "linear-gradient(135deg, #7c3aed, #2563eb)", color: "#fff", cursor: saving ? "not-allowed" : "pointer", fontFamily: FONT.body, fontSize: "13px", fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
+            {saving ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

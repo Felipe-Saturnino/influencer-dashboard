@@ -300,15 +300,19 @@ export default function Agenda() {
             <div key={d} style={{ textAlign: "center", fontSize: "11px", fontWeight: 700, color: t.textMuted, padding: "8px 0", fontFamily: FONT.body }}>{d}</div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "118px", gap: "4px" }}>
           {cells.map((date, i) => {
             if (!date) return <div key={i} />;
             const dayLives = livesForDay(date);
             const count    = dayLives.length;
             return (
               <div key={i} onClick={() => { setCurrent(date); setView("dia"); }}
-                style={{ minHeight: "90px", padding: "6px", borderRadius: "10px", cursor: "pointer", transition: "background 0.15s", ...dayStyle(date, todayISO) }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                style={{
+                  height: "100%", minHeight: 0, padding: "6px", borderRadius: "10px", cursor: "pointer", transition: "background 0.15s",
+                  display: "flex", flexDirection: "column", overflow: "hidden",
+                  ...dayStyle(date, todayISO),
+                }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
                   <span style={{ fontSize: "13px", fontWeight: toISO(date) === todayISO ? 700 : 400, color: dayNumberColor(date, todayISO), fontFamily: FONT.body }}>{date.getDate()}</span>
                   {count > 0 && (
                     <span style={{ fontSize: "10px", fontWeight: 700, color: "#fff", background: BASE_COLORS.blue, borderRadius: "10px", padding: "1px 6px", fontFamily: FONT.body }}>
@@ -316,7 +320,7 @@ export default function Agenda() {
                     </span>
                   )}
                 </div>
-                <div style={{ marginTop: "4px" }}>
+                <div style={{ marginTop: "4px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
                   {dayLives.slice(0, 3).map(l => <LiveChip key={l.id} live={l} />)}
                   {dayLives.length > 3 && <span style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 3}</span>}
                 </div>
