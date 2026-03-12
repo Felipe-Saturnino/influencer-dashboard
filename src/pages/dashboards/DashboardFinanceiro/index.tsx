@@ -650,7 +650,7 @@ export default function DashboardFinanceiro() {
       <div style={{ ...card, marginBottom: 14 }}>
         <h3 style={cardTitle}>
           <span style={{ fontSize: 16 }}>📊</span> KPIs Financeiros
-          {!historico && <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, marginLeft: 4 }}>· comparativo MTD vs mês anterior</span>}
+          {!historico && <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, marginLeft: 4 }}>· comparativo MTD vs mesmo período do mês anterior</span>}
         </h3>
 
         {/* Linha 1: FTD, Depósitos, Saques */}

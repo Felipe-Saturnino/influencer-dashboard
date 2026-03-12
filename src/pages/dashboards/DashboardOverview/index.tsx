@@ -6,7 +6,7 @@ import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, ReferenceLine,
+  CartesianGrid, Legend, ReferenceLine,
 } from "recharts";
 
 // ─── CONSTANTES ──────────────────────────────────────────────────────────────
@@ -493,11 +493,15 @@ export default function DashboardOverview() {
     }
     return r;
   }, [ranking, filtroInfluencer, filtroOperadora, operadoraInfMap]);
-  const chartData = rankingParaChart.slice(0, 10).map((r) => ({
-    nome: r.nome.split(" ")[0],
-    GGR: parseFloat(r.ggr.toFixed(2)),
-    Investimento: parseFloat(r.investimento.toFixed(2)),
-  }));
+  const chartData = rankingParaChart
+    .filter((r) => r.investimento > 0)
+    .sort((a, b) => b.investimento - a.investimento)
+    .slice(0, 10)
+    .map((r) => ({
+      nome: r.nome.split(" ")[0],
+      GGR: parseFloat(r.ggr.toFixed(2)),
+      Investimento: parseFloat(r.investimento.toFixed(2)),
+    }));
 
   // ── RANKING FILTRADO ──────────────────────────────────────────────────────────
   const rankingFiltrado = useMemo(() => {
@@ -652,9 +656,10 @@ export default function DashboardOverview() {
                 <XAxis dataKey="nome" tick={{ fill: t.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} />
+                <Legend content={() => null} wrapperStyle={{ visibility: "hidden", height: 0 }} />
                 <ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={1.5} />
-                <Bar dataKey="GGR"          fill="#7c3aed" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Investimento" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="GGR"          fill="#7c3aed" radius={[6, 6, 0, 0]} legendType={false} />
+                <Bar dataKey="Investimento" fill="#2563eb" radius={[6, 6, 0, 0]} legendType={false} />
               </BarChart>
             </ResponsiveContainer>
           )}
