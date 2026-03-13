@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../../../lib/supabase";
+import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
@@ -469,18 +469,30 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
         await supabase.from("profiles").update({ name: nome, role }).eq("id", uid);
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
-        const { data: fnData, error: fnErr } = await supabase.functions.invoke("criar-usuario", {
-          body: {
-            email: email.trim().toLowerCase(),
-            nome: nome.trim(),
-            role,
-            scopeInfluencers,
-            scopeOperadoras,
-            scopePares,
-            loginUrl,
+        const body = {
+          email: email.trim().toLowerCase(),
+          nome: nome.trim(),
+          role,
+          scopeInfluencers,
+          scopeOperadoras,
+          scopePares,
+          loginUrl,
+        };
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`${supabaseUrl}/functions/v1/criar-usuario`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token ?? supabaseAnonKey}`,
+            "Apikey": supabaseAnonKey,
           },
+          body: JSON.stringify(body),
         });
-        if (fnErr) throw new Error(fnErr.message ?? "Erro ao chamar serviço de criação");
+        const fnData = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const errMsg = (fnData as { error?: string })?.error ?? `Erro ${res.status}: ${res.statusText}`;
+          throw new Error(errMsg);
+        }
         const errMsg = (fnData as { error?: string })?.error;
         if (errMsg) throw new Error(errMsg);
         uid = (fnData as { userId?: string })?.userId ?? "";

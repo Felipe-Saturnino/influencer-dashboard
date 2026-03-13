@@ -1,0 +1,6 @@
+# Configuração do Supabase (projeto local)
+# Para deploy via CLI: supabase functions deploy criar-usuario
+
+[functions.criar-usuario]
+verify_jwt = false
+# Evita 401 do gateway quando o browser envia o JWT — a função usa service_role internamente
