@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
-import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import {
   Role, PageKey, PermissaoValor, RolePermission,
@@ -72,14 +71,13 @@ function escopoBloqueado(role: Role) {
 
 export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
-  const perm = usePermission("gestao_usuarios");
   const [aba, setAba] = useState<"usuarios" | "permissoes">("usuarios");
 
-  // Gestão de Usuários: sempre acessível para Admin
-  if (perm.canView === "nao" && user?.role !== "admin") {
+  // Gestão de Usuários: apenas admin tem acesso
+  if (user?.role !== "admin") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar a Gestão de Usuários.
+        Apenas administradores podem acessar a Gestão de Usuários.
       </div>
     );
   }
@@ -466,8 +464,14 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
       let uid = editando?.id ?? "";
 
       if (editando) {
-        const { error: errProfile } = await supabase.from("profiles").update({ name: nome, role }).eq("id", uid);
+        const { data: updated, error: errProfile } = await supabase
+          .from("profiles")
+          .update({ name: nome, role })
+          .eq("id", uid)
+          .select("id")
+          .single();
         if (errProfile) throw new Error(errProfile.message);
+        if (!updated) throw new Error("Não foi possível atualizar o perfil. Verifique se a política RLS permite (apenas admin).");
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
         const body = {

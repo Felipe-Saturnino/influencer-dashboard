@@ -125,10 +125,8 @@ async function carregarPermissoes(role: User["role"]): Promise<PermissoesMapa> {
     }
   });
 
-  // Gestão de Usuários: sempre habilitada para Admin (única exceção)
-  if (role === "admin") {
-    mapa.gestao_usuarios = "sim";
-  }
+  // Gestão de Usuários: APENAS admin tem acesso (gestores não podem alterar perfis)
+  mapa.gestao_usuarios = role === "admin" ? "sim" : "nao";
 
   // Overview Influencer: padrão "proprios" para influencer e agencia (único dash para eles)
   if (mapa.dash_overview_influencer === null && ["influencer", "agencia"].includes(role)) {
