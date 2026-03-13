@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
@@ -479,12 +479,12 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
           loginUrl,
         };
         const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch(`${supabaseUrl}/functions/v1/criar-usuario`, {
+        // Usa proxy /api/criar-usuario para evitar CORS (mesma origem)
+        const res = await fetch("/api/criar-usuario", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${session?.access_token ?? supabaseAnonKey}`,
-            "Apikey": supabaseAnonKey,
+            "Authorization": `Bearer ${session?.access_token ?? ""}`,
           },
           body: JSON.stringify(body),
         });
