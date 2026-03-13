@@ -847,7 +847,7 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
                   <label style={labelStyle}>{p} — Link e Views</label>
                   <div style={{ display: "flex", gap: "10px" }}>
                     <input value={links[key] ?? ""} onChange={(e) => setLinks((l) => ({ ...l, [key]: e.target.value }))} style={{ ...inputStyle, flex: 2 }} placeholder={`Link ${p}`} />
-                    <input type="number" value={views[key] || ""} onChange={(e) => setViews((v) => ({ ...v, [key]: Number(e.target.value) || 0 }))} style={{ ...inputStyle, flex: 1, minWidth: 80 }} placeholder="Views" min={0} />
+                    <input type="number" value={views[key] || ""} onChange={(e) => setViews((v) => ({ ...v, [key]: Math.max(0, Number(e.target.value) || 0) }))} style={{ ...inputStyle, flex: 1, minWidth: 80 }} placeholder="Views" min={0} />
                   </div>
                 </div>
               );
