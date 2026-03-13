@@ -16,6 +16,7 @@
 //   v1.3.0: Compatibilidade com schema pós-migração operadora_slug:
 //           - influencer_metricas: inclui operadora_slug + onConflict correto
 //           - utm_aliases: inclui operadora_slug nos órfãos
+//   v1.4.0: Grava execução em sync_logs para Status Técnico
 //
 // ============================================================
 
@@ -387,6 +388,54 @@ async function upsertMetricas(
   return { inseridos: rows.length, erros: [] }
 }
 
+// ── Grava sync_log para Status Técnico ─────────────────────────
+
+async function gravarTechLog(
+  supabase: ReturnType<typeof createClient>,
+  tipo: string,
+  descricao: string
+): Promise<void> {
+  try {
+    await supabase.from('tech_logs').insert({
+      integracao_slug: 'casa_apostas',
+      tipo,
+      descricao,
+    })
+  } catch (e) {
+    console.error('[sync-metricas] Falha ao gravar tech_log:', e)
+  }
+}
+
+async function gravarSyncLog(
+  supabase: ReturnType<typeof createClient>,
+  opts: {
+    status: 'ok' | 'falha'
+    registros_inseridos: number
+    registros_atualizados?: number
+    erros_count: number
+    mensagem_erro?: string
+    duracao_ms: number
+    periodo_inicio: string
+    periodo_fim: string
+  }
+): Promise<void> {
+  try {
+    await supabase.from('sync_logs').insert({
+      integracao_slug:       'casa_apostas',
+      status:                opts.status,
+      registros_inseridos:   opts.registros_inseridos,
+      registros_atualizados: opts.registros_atualizados ?? 0,
+      erros_count:           opts.erros_count,
+      mensagem_erro:         opts.mensagem_erro ?? null,
+      duracao_ms:            opts.duracao_ms,
+      periodo_inicio:       opts.periodo_inicio,
+      periodo_fim:          opts.periodo_fim,
+    })
+  } catch (e) {
+    console.error('[sync-metricas] Falha ao gravar sync_log:', e)
+  }
+}
+
 // ── Handler principal ─────────────────────────────────────────
 
 serve(async (req: Request) => {
@@ -409,7 +458,8 @@ serve(async (req: Request) => {
     const dataFim    = params.data_fim    ?? hoje.toISOString().split('T')[0]
     const dataInicio = params.data_inicio ?? doisDiasAtras.toISOString().split('T')[0]
 
-    console.log(`[sync-metricas] v1.3.0 | Período: ${dataInicio} → ${dataFim}`)
+    const inicioMs = Date.now()
+    console.log(`[sync-metricas] v1.4.0 | Período: ${dataInicio} → ${dataFim}`)
 
     const smaticoToken = Deno.env.get('SMARTICO_TOKEN')
     const labelId      = Deno.env.get('SMARTICO_LABEL_ID') ?? '573703'
@@ -446,6 +496,17 @@ serve(async (req: Request) => {
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           await enviarAlertaTokenExpirado()
+          await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403). Renovar SMARTICO_TOKEN.')
+          const duracaoMs = Date.now() - inicioMs
+          await gravarSyncLog(supabase, {
+            status: 'falha',
+            registros_inseridos: totalInseridos,
+            erros_count: 1,
+            mensagem_erro: `Token CDA expirado (403) — falhou em ${influencer.utm_source}`,
+            duracao_ms: duracaoMs,
+            periodo_inicio: dataInicio,
+            periodo_fim: dataFim,
+          })
           return new Response(JSON.stringify({
             ok: false,
             erro: 'Token CDA expirado (403). Alerta enviado para felipe.saturnino@spingaming.com.br.',
@@ -477,6 +538,22 @@ serve(async (req: Request) => {
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           await enviarAlertaTokenExpirado()
+          await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403) na varredura de UTMs.')
+          const duracaoMs = Date.now() - inicioMs
+          await gravarSyncLog(supabase, {
+            status: 'falha',
+            registros_inseridos: totalInseridos,
+            erros_count: todosErros.length + 1,
+            mensagem_erro: `Token CDA expirado (403) na varredura de UTMs`,
+            duracao_ms: duracaoMs,
+            periodo_inicio: dataInicio,
+            periodo_fim: dataFim,
+          })
+          return new Response(JSON.stringify({
+            ok: false,
+            erro: 'Token CDA expirado (403). Alerta enviado.',
+            total_sincronizados_antes_da_falha: totalInseridos,
+          }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
         } else {
           const msg = `Erro na varredura: ${err instanceof Error ? err.message : String(err)}`
           todosErros.push(msg)
@@ -484,9 +561,21 @@ serve(async (req: Request) => {
       }
     }
 
+    const duracaoMs = Date.now() - inicioMs
+    await gravarSyncLog(supabase, {
+      status: 'ok',
+      registros_inseridos: totalInseridos,
+      registros_atualizados: 0,
+      erros_count: todosErros.length,
+      mensagem_erro: todosErros.length > 0 ? todosErros.slice(0, 3).join('; ') : undefined,
+      duracao_ms: duracaoMs,
+      periodo_inicio: dataInicio,
+      periodo_fim: dataFim,
+    })
+
     const resposta = {
       ok: true,
-      versao: 'v1.3.0',
+      versao: 'v1.4.0',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       fase1_influencers: {
         total: influencers?.length ?? 0,

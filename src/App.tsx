@@ -25,6 +25,7 @@ import GestaoLinks from "./pages/operacoes/GestaoLinks";
 // Páginas — plataforma
 import GestaoUsuarios from "./pages/plataforma/GestaoUsuarios";
 import GestaoOperadoras from "./pages/plataforma/GestaoOperadoras";
+import StatusTecnico from "./pages/plataforma/StatusTecnico";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
@@ -41,6 +42,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   gestao_links:     GestaoLinks,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
+  status_tecnico:   StatusTecnico,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
 };
