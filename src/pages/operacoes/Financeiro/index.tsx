@@ -1008,10 +1008,10 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       <td style={{ ...td, fontWeight: 700 }}>{fmtMoeda(row.total)}</td>
                       <td style={td}><Badge status={row.status} config={STATUS_PAG} /></td>
                       <td style={td}>
-                        {row.status === "em_analise" && perm.canEditarOk && (
+                        {row.status === "em_analise" && perm.canEditarOk && (perm.canEditar !== "proprios" || row.is_agente || (row.influencer_id && podeVerInfluencer(row.influencer_id))) && (
                           <BtnAcao onClick={() => setModalAnalisar(row)} color="#f59e0b">⏳ Analisar</BtnAcao>
                         )}
-                        {row.status === "a_pagar" && perm.canEditarOk && (
+                        {row.status === "a_pagar" && perm.canEditarOk && (perm.canEditar !== "proprios" || row.is_agente || (row.influencer_id && podeVerInfluencer(row.influencer_id))) && (
                           <BtnAcao onClick={() => setModalPagar(row)} color="#10b981">💰 Pagar</BtnAcao>
                         )}
                         {row.status === "pago" && (

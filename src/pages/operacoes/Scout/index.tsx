@@ -211,7 +211,10 @@ export default function Scout() {
     (s.plataformas ?? []).forEach((p) => { porPlat[p] = (porPlat[p] ?? 0) + 1; });
   });
 
-  const podeAlterarStatus = user?.role === "admin" || user?.role === "gestor";
+  // "proprios": editar/excluir apenas prospects criados pelo usuário (created_by)
+  const podeEditarScout  = (s: ScoutInfluencer) => perm.canEditarOk && (perm.canEditar !== "proprios" || s.created_by === user?.id);
+  const podeExcluirScout = (s: ScoutInfluencer) => perm.canExcluirOk && (perm.canExcluir !== "proprios" || s.created_by === user?.id);
+  const podeAlterarStatus = (s: ScoutInfluencer) => podeEditarScout(s);
 
   async function handleStatusChange(scout: ScoutInfluencer, newStatus: StatusScout) {
     if (newStatus === "fechado" && !(scout.email ?? "").trim()) {
@@ -281,16 +284,18 @@ export default function Scout() {
             Prospecte e registre informações de influencers para parcerias.
           </p>
         </div>
-        <button
-          onClick={() => setModalNovo(true)}
-          style={{
-            padding: "10px 18px", borderRadius: "10px", border: "none", cursor: "pointer",
-            background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-            color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
-          }}
-        >
-          + Adicionar
-        </button>
+        {perm.canCriarOk && (
+          <button
+            onClick={() => setModalNovo(true)}
+            style={{
+              padding: "10px 18px", borderRadius: "10px", border: "none", cursor: "pointer",
+              background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+              color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
+            }}
+          >
+            + Adicionar
+          </button>
+        )}
       </div>
 
       {/* Bloco 1: Cards Consolidados (centralizados) */}
@@ -390,7 +395,7 @@ export default function Scout() {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", rowGap: "8px", flexWrap: "wrap", marginBottom: "10px" }}>
                   <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{s.nome_artistico}</span>
-                  <StatusScoutBadge value={s.status} onChange={(v) => handleStatusChange(s, v)} readonly={!podeAlterarStatus} />
+                  <StatusScoutBadge value={s.status} onChange={(v) => handleStatusChange(s, v)} readonly={!podeAlterarStatus(s)} />
                 </div>
                 {((s.cache_negociado ?? 0) > 0) && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "6px" }}>💰 {formatBRL(s.cache_negociado!)}</div>}
                 <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "6px" }}>Live Cassino: {getLiveCassinoLabel(s.live_cassino)}</div>
@@ -406,7 +411,9 @@ export default function Scout() {
             </div>
             <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
               <button onClick={() => setModal({ mode: "visualizar", scout: s })} style={{ padding: "8px 14px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.label, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>👁️ Ver</button>
-              <button onClick={() => setModal({ mode: "editar", scout: s })} style={{ padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>✏️ Editar</button>
+              {podeEditarScout(s) && (
+                <button onClick={() => setModal({ mode: "editar", scout: s })} style={{ padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>✏️ Editar</button>
+              )}
             </div>
           </div>
         ))
@@ -714,7 +721,7 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
   }
 
   async function handleExcluir() {
-    if (!scout?.id || !perm.canExcluirOk || !confirm("Tem certeza que deseja excluir este prospecto?")) return;
+    if (!scout?.id || !perm.canExcluirOk || (perm.canExcluir === "proprios" && scout.created_by !== user?.id) || !confirm("Tem certeza que deseja excluir este prospecto?")) return;
     const { error } = await supabase.from("scout_anotacoes").delete().eq("scout_id", scout.id);
     if (error) { setError(error.message); return; }
     const { error: err2 } = await supabase.from("scout_influencer").delete().eq("id", scout.id);
@@ -897,7 +904,7 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
         )}
 
         <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
-          {scout && perm.canExcluirOk && (
+          {scout && perm.canExcluirOk && (perm.canExcluir !== "proprios" || scout.created_by === user?.id) && (
             <button onClick={handleExcluir} disabled={saving}
               style={{ padding: "10px 18px", borderRadius: "10px", border: "1px solid rgba(233,64,37,0.5)", background: "rgba(233,64,37,0.1)", color: "#e94025", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
               🗑️ Excluir

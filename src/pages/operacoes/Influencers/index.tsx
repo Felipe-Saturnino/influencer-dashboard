@@ -194,9 +194,12 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
-  const { theme: t, user, escoposVisiveis } = useApp();
+  const { theme: t, user, escoposVisiveis, podeVerInfluencer } = useApp();
   const perm = usePermission("influencers");
   const showManagementUI = user?.role !== "influencer";
+  // "proprios": ações apenas em registros do escopo do usuário
+  const podeEditarInf = (infId: string) =>
+    perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(infId));
 
   const [list,           setList]           = useState<Influencer[]>([]);
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
@@ -304,6 +307,7 @@ export default function Influencers() {
   }
 
   const filtered = list.filter((inf) => {
+    if (!podeVerInfluencer(inf.id)) return false;
     const p = inf.perfil;
     const searchLower = search.toLowerCase();
     if (search && !(
@@ -323,14 +327,17 @@ export default function Influencers() {
     return true;
   });
 
-  // ── CORREÇÃO 2: apenas influencers ATIVOS entram no quadro de incompletos ──
+  // ── CORREÇÃO 2: apenas influencers ATIVOS no escopo entram no quadro de incompletos ──
   const incompletos = list.filter((i) =>
-    (i.perfil?.status ?? "ativo") === "ativo" && isPerfilIncompleto(i.perfil, i.name)
+    podeVerInfluencer(i.id) &&
+    (i.perfil?.status ?? "ativo") === "ativo" &&
+    isPerfilIncompleto(i.perfil, i.name)
   );
 
+  const listNoEscopo = list.filter((i) => podeVerInfluencer(i.id));
   const porStatus: Record<StatusInfluencer, number> = { ativo: 0, inativo: 0, cancelado: 0 };
   const porPlat: Record<string, number> = {};
-  list.forEach((inf) => {
+  listNoEscopo.forEach((inf) => {
     const s = inf.perfil?.status ?? "ativo";
     porStatus[s]++;
     (inf.perfil?.canais ?? []).forEach((c) => { porPlat[c] = (porPlat[c] ?? 0) + 1; });
@@ -387,7 +394,7 @@ export default function Influencers() {
               📊 Total de Influencers
             </div>
             <div style={{ fontSize: "36px", fontWeight: 900, color: t.text, fontFamily: FONT.title, marginBottom: "12px" }}>
-              {list.length}
+              {listNoEscopo.length}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "12px" }}>
               {STATUS_OPTS.map((s) => (
@@ -427,12 +434,16 @@ export default function Influencers() {
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                {incompletos.map((inf) => (
-                  <button key={inf.id} onClick={() => setModal({ mode: "editar", inf })}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontSize: "13px", color: BASE_COLORS.blue, fontFamily: FONT.body, textDecoration: "underline", fontWeight: 500 }}>
-                    {inf.name}
-                  </button>
-                ))}
+                {incompletos.map((inf) =>
+                  podeEditarInf(inf.id) ? (
+                    <button key={inf.id} onClick={() => setModal({ mode: "editar", inf })}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontSize: "13px", color: BASE_COLORS.blue, fontFamily: FONT.body, textDecoration: "underline", fontWeight: 500 }}>
+                      {inf.name}
+                    </button>
+                  ) : (
+                    <span key={inf.id} style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>{inf.name}</span>
+                  )
+                )}
               </div>
             )}
           </div>
@@ -565,7 +576,7 @@ export default function Influencers() {
                     <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
                       {inf.name}
                     </span>
-                    <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} />
+                    <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} readonly={!podeEditarInf(inf.id)} />
                     {incompleto && status === "ativo" && (
                       <span style={badge("#e94025")}>⚠️ Perfil incompleto</span>
                     )}
@@ -610,10 +621,12 @@ export default function Influencers() {
                   style={{ padding: "8px 14px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.label, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
                   👁️ Ver
                 </button>
-                <button onClick={() => setModal({ mode: "editar", inf })}
-                  style={{ padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
-                  ✏️ Editar
-                </button>
+                {podeEditarInf(inf.id) && (
+                  <button onClick={() => setModal({ mode: "editar", inf })}
+                    style={{ padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
+                    ✏️ Editar
+                  </button>
+                )}
               </div>
             </div>
           );

@@ -84,17 +84,19 @@ export default function GestaoOperadoras() {
           <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
             {operadoras.length} operadora{operadoras.length !== 1 ? "s" : ""} cadastrada{operadoras.length !== 1 ? "s" : ""}
           </span>
-          <button
-            onClick={() => { setEditando(null); setModalOpen(true); }}
-            style={{
-              background: "linear-gradient(135deg, #7c3aed, #2563eb)",
-              color: "#fff", border: "none", borderRadius: 10,
-              padding: "9px 18px", cursor: "pointer",
-              fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
-            }}
-          >
-            + Nova Operadora
-          </button>
+          {perm.canCriarOk && (
+            <button
+              onClick={() => { setEditando(null); setModalOpen(true); }}
+              style={{
+                background: "linear-gradient(135deg, #7c3aed, #2563eb)",
+                color: "#fff", border: "none", borderRadius: 10,
+                padding: "9px 18px", cursor: "pointer",
+                fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
+              }}
+            >
+              + Nova Operadora
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -136,16 +138,18 @@ export default function GestaoOperadoras() {
                       {op.criado_em ? new Date(op.criado_em).toLocaleDateString("pt-BR") : "—"}
                     </td>
                     <td style={tdStyle}>
-                      <button
-                        onClick={() => { setEditando(op); setModalOpen(true); }}
-                        style={{
-                          background: "none", border: `1px solid ${t.cardBorder}`,
-                          borderRadius: 7, padding: "5px 12px", cursor: "pointer",
-                          fontFamily: FONT.body, fontSize: 12, color: t.text,
-                        }}
-                      >
-                        Editar
-                      </button>
+                      {perm.canEditarOk && (
+                        <button
+                          onClick={() => { setEditando(op); setModalOpen(true); }}
+                          style={{
+                            background: "none", border: `1px solid ${t.cardBorder}`,
+                            borderRadius: 7, padding: "5px 12px", cursor: "pointer",
+                            fontFamily: FONT.body, fontSize: 12, color: t.text,
+                          }}
+                        >
+                          Editar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

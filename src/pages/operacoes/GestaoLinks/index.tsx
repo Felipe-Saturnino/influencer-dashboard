@@ -38,9 +38,14 @@ type Aba = "pendentes" | "mapeados" | "ignorados";
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function GestaoLinks() {
-  const { theme, user } = useApp();
+  const { theme, user, podeVerInfluencer } = useApp();
   const perm = usePermission("gestao_links");
   const { showFiltroOperadora } = useDashboardFiltros();
+  // "proprios": Mapear só para influencers no escopo; Reabrir só em UTMs mapeados a influencers no escopo
+  const podeMapearAlias  = () => perm.canEditarOk; // Mapear: dropdown já filtrado por escopo
+  const podeIgnorarAlias = () => perm.canEditarOk; // Ignorar: pode em qualquer pendente
+  const podeReativarAlias = (alias: UtmAlias) =>
+    perm.canEditarOk && (perm.canEditar !== "proprios" || !alias.influencer_id || podeVerInfluencer(alias.influencer_id));
 
   const [aba, setAba] = useState<Aba>("pendentes");
   const [operadoraFiltro, setOperadoraFiltro] = useState("todas");
@@ -150,6 +155,7 @@ export default function GestaoLinks() {
   // e exibe erro inline caso o update falhe
   async function confirmarMapeamento() {
     if (!aliasSelecionado || !influencerSelecionado) return;
+    if (perm.canEditar === "proprios" && !podeVerInfluencer(influencerSelecionado)) return; // "proprios": só mapear para escopo
     setSalvando(true);
     setErroModal(null);
 
@@ -540,7 +546,7 @@ export default function GestaoLinks() {
                   <td style={s.td}>{alias.influencer_name ?? "—"}</td>
                 )}
                 <td style={s.td}>
-                  {aba === "pendentes" && (
+                  {aba === "pendentes" && podeMapearAlias() && (
                     <>
                       <button style={s.btnMapear} onClick={() => abrirModal(alias)}>
                         Mapear
@@ -550,7 +556,7 @@ export default function GestaoLinks() {
                       </button>
                     </>
                   )}
-                  {(aba === "mapeados" || aba === "ignorados") && (
+                  {(aba === "mapeados" || aba === "ignorados") && podeReativarAlias(alias) && (
                     <button style={s.btnReativar} onClick={() => reativar(alias)}>
                       Reabrir
                     </button>
@@ -601,7 +607,7 @@ export default function GestaoLinks() {
               onChange={(e) => setInfluencerSelecionado(e.target.value)}
             >
               <option value="">Selecione o influencer...</option>
-              {influencers.map((inf) => (
+              {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers).map((inf) => (
                 <option key={inf.id} value={inf.id}>
                   {inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}
                 </option>

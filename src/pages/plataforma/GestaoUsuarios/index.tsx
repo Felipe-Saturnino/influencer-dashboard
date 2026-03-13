@@ -29,10 +29,10 @@ const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; ha
   { key: "dash_financeiro",    label: "Financeiro",         secao: "Dashboards",  hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "influencers",        label: "Influencers",        secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
   { key: "scout",              label: "Scout",              secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: true },
-  { key: "financeiro",         label: "Financeiro",          secao: "Operações",  hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "financeiro",         label: "Financeiro",          secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
   { key: "gestao_links",       label: "Gestão de Links",     secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
   { key: "gestao_usuarios",    label: "Gestão de Usuários", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "gestao_operadoras",  label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "gestao_operadoras",  label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true,  hasEditar: true,  hasExcluir: false },
   { key: "status_tecnico",     label: "Status Técnico",     secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "configuracoes",      label: "Configurações",      secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "ajuda",              label: "Ajuda",              secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
@@ -71,11 +71,12 @@ function escopoBloqueado(role: Role) {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
 export default function GestaoUsuarios() {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const perm = usePermission("gestao_usuarios");
   const [aba, setAba] = useState<"usuarios" | "permissoes">("usuarios");
 
-  if (perm.canView === "nao") {
+  // Gestão de Usuários: sempre acessível para Admin
+  if (perm.canView === "nao" && user?.role !== "admin") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
         Você não tem permissão para visualizar a Gestão de Usuários.

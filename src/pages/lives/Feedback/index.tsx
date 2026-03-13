@@ -353,8 +353,9 @@ export default function Feedback() {
     const isRealizada = live.status === "realizada";
     const statusColor = isRealizada ? "#27ae60" : "#e94025";
     const platColor   = PLAT_COLOR[live.plataforma];
-    const podeEditar  = perm.canEditarOk;
-    const podeExcluir = perm.canExcluirOk;
+    // "proprios": editar/excluir apenas lives de influencers no escopo
+    const podeEditar  = perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(live.influencer_id));
+    const podeExcluir = perm.canExcluirOk && (perm.canExcluir !== "proprios" || podeVerInfluencer(live.influencer_id));
     const isExcluindo = excluindo?.id === live.id;
 
     return (
