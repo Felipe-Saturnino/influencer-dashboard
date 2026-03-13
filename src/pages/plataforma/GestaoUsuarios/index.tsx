@@ -464,14 +464,11 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
       let uid = editando?.id ?? "";
 
       if (editando) {
-        const { data: updated, error: errProfile } = await supabase
+        const { error: errProfile } = await supabase
           .from("profiles")
           .update({ name: nome, role })
-          .eq("id", uid)
-          .select("id")
-          .single();
+          .eq("id", uid);
         if (errProfile) throw new Error(errProfile.message);
-        if (!updated) throw new Error("Não foi possível atualizar o perfil. Verifique se a política RLS permite (apenas admin).");
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
         const body = {
@@ -553,8 +550,8 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
 
       // Se editando e role mudou para influencer, garantir que influencer_perfil existe
       if (editando && role === "influencer") {
-        const { data: existe, error: errExiste } = await supabase.from("influencer_perfil").select("id").eq("id", uid).single();
-        if (errExiste && errExiste.code !== "PGRST116") throw new Error(`Erro ao verificar perfil: ${errExiste.message}`);
+        const { data: existe, error: errExiste } = await supabase.from("influencer_perfil").select("id").eq("id", uid).maybeSingle();
+        if (errExiste) throw new Error(`Erro ao verificar perfil: ${errExiste.message}`);
         if (!existe) {
           const { error: errInsert } = await supabase.from("influencer_perfil").insert({
             id: uid,
