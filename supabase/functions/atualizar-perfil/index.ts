@@ -1,0 +1,190 @@
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+// Edge Function: atualizar-perfil — usa service_role para garantir que o update persista
+// Apenas admins podem chamar (verificado via JWT)
+
+interface AtualizarPerfilRequest {
+  userId: string
+  name: string
+  role: string
+  scopeInfluencers?: string[]
+  scopeOperadoras?: string[]
+  scopePares?: string[]
+}
+
+const ROLES_BLOQUEADOS = ['admin', 'gestor']
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '*'
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, content-type, apikey',
+    'Access-Control-Max-Age': '86400',
+  }
+}
+
+serve(async (req) => {
+  const cors = corsHeaders(req)
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: cors })
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Método não permitido' }), {
+      status: 405,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+  if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+    return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), {
+      status: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Token de autorização ausente' }), {
+      status: 401,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const token = authHeader.replace('Bearer ', '')
+  const supabaseAnon = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  })
+
+  const { data: { user: caller } } = await supabaseAnon.auth.getUser(token)
+  if (!caller) {
+    return new Response(JSON.stringify({ error: 'Sessão inválida ou expirada' }), {
+      status: 401,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const { data: callerProfile } = await supabaseAnon
+    .from('profiles')
+    .select('role')
+    .eq('id', caller.id)
+    .single()
+
+  if (callerProfile?.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Apenas administradores podem alterar perfis' }), {
+      status: 403,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey)
+
+  let body: AtualizarPerfilRequest
+  try {
+    body = await req.json()
+  } catch {
+    return new Response(JSON.stringify({ error: 'Body inválido' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const { userId, name, role, scopeInfluencers = [], scopeOperadoras = [], scopePares = [] } = body
+
+  if (!userId?.trim() || !name?.trim() || !role?.trim()) {
+    return new Response(JSON.stringify({ error: 'userId, name e role são obrigatórios' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const bloqueado = ROLES_BLOQUEADOS.includes(role)
+
+  if (role === 'influencer' && scopeOperadoras.length === 0) {
+    return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o influencer' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+  if (role === 'operador' && scopeOperadoras.length === 0) {
+    return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o operador' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+  if (role === 'agencia' && scopePares.length === 0) {
+    return new Response(JSON.stringify({ error: 'Selecione pelo menos um par influencer+operadora para a agência' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  try {
+    const { error: profileErr } = await supabase
+      .from('profiles')
+      .update({ name: name.trim(), role })
+      .eq('id', userId)
+
+    if (profileErr) {
+      return new Response(JSON.stringify({ error: `Erro ao atualizar perfil: ${profileErr.message}` }), {
+        status: 500,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+
+    await supabase.from('user_scopes').delete().eq('user_id', userId)
+
+    if (!bloqueado) {
+      const novasLinhas: { user_id: string; scope_type: string; scope_ref: string }[] = []
+      if (role === 'agencia') {
+        scopePares.forEach((par) => novasLinhas.push({ user_id: userId, scope_type: 'agencia_par', scope_ref: par }))
+      } else {
+        scopeInfluencers.forEach((ref) => novasLinhas.push({ user_id: userId, scope_type: 'influencer', scope_ref: ref }))
+        scopeOperadoras.forEach((ref) => novasLinhas.push({ user_id: userId, scope_type: 'operadora', scope_ref: ref }))
+      }
+      if (novasLinhas.length > 0) {
+        await supabase.from('user_scopes').insert(novasLinhas)
+      }
+
+      if (role === 'influencer') {
+        await supabase.from('influencer_perfil').upsert(
+          {
+            id: userId,
+            nome_artistico: name.trim(),
+            nome_completo: name.trim(),
+            status: 'ativo',
+            cache_hora: 0,
+          },
+          { onConflict: 'id', ignoreDuplicates: false }
+        )
+        await supabase.from('influencer_operadoras').delete().eq('influencer_id', userId)
+        for (const slug of scopeOperadoras) {
+          await supabase.from('influencer_operadoras').insert({
+            influencer_id: userId,
+            operadora_slug: slug,
+            ativo: true,
+          })
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  } catch (e) {
+    console.error('[atualizar-perfil] Erro:', e)
+    return new Response(JSON.stringify({
+      error: e instanceof Error ? e.message : 'Erro interno ao atualizar perfil',
+    }), {
+      status: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+})

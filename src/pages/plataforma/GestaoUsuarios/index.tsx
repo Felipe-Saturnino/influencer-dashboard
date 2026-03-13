@@ -464,11 +464,30 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
       let uid = editando?.id ?? "";
 
       if (editando) {
-        const { error: errProfile } = await supabase
-          .from("profiles")
-          .update({ name: nome, role })
-          .eq("id", uid);
-        if (errProfile) throw new Error(errProfile.message);
+        const { data: { session } } = await supabase.auth.getSession();
+        const body = {
+          userId: uid,
+          name: nome.trim(),
+          role,
+          scopeInfluencers,
+          scopeOperadoras,
+          scopePares,
+        };
+        const res = await fetch("/api/atualizar-perfil", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token ?? ""}`,
+          },
+          body: JSON.stringify(body),
+        });
+        const fnData = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const errMsg = (fnData as { error?: string })?.error ?? `Erro ${res.status}: ${res.statusText}`;
+          throw new Error(errMsg);
+        }
+        const errMsg = (fnData as { error?: string })?.error;
+        if (errMsg) throw new Error(errMsg);
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
         const body = {
@@ -501,68 +520,8 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
         if (!uid) throw new Error("Usuário criado mas ID não retornado");
       }
 
-      // Escopos: novos usuários já foram configurados pela Edge Function
-      if (editando) {
-        const { error: errScopesDel } = await supabase.from("user_scopes").delete().eq("user_id", uid);
-        if (errScopesDel) throw new Error(`Erro ao limpar escopos: ${errScopesDel.message}`);
-      }
-
-      if (editando && !escopoBloqueado(role)) {
-        const novasLinhas: { user_id: string; scope_type: string; scope_ref: string }[] = [];
-
-        if (role === "agencia") {
-          scopePares.forEach(par => novasLinhas.push({ user_id: uid, scope_type: "agencia_par", scope_ref: par }));
-        } else {
-          // influencer, operador, executivo
-          scopeInfluencers.forEach(ref => novasLinhas.push({ user_id: uid, scope_type: "influencer", scope_ref: ref }));
-          scopeOperadoras.forEach(ref => novasLinhas.push({ user_id: uid, scope_type: "operadora", scope_ref: ref }));
-        }
-
-        if (novasLinhas.length > 0) {
-          const { error: errScopes } = await supabase.from("user_scopes").insert(novasLinhas);
-          if (errScopes) throw new Error(`Erro ao salvar escopos: ${errScopes.message}`);
-        }
-
-        // Sincroniza influencer_operadoras se role=influencer
-        if (role === "influencer") {
-          const { error: errPerfil } = await supabase.from("influencer_perfil").upsert(
-            {
-              id: uid,
-              nome_artistico: nome,
-              nome_completo: nome,
-              status: "ativo",
-              cache_hora: 0,
-            },
-            { onConflict: "id", ignoreDuplicates: false }
-          );
-          if (errPerfil) throw new Error(`Erro ao criar perfil de influencer: ${errPerfil.message}`);
-          if (scopeOperadoras.length > 0) {
-            for (const slug of scopeOperadoras) {
-              const { error: errIO } = await supabase.from("influencer_operadoras").upsert(
-                { influencer_id: uid, operadora_slug: slug, ativo: true },
-                { onConflict: "influencer_id,operadora_slug", ignoreDuplicates: true }
-              );
-              if (errIO) throw new Error(`Erro ao vincular operadora: ${errIO.message}`);
-            }
-          }
-        }
-      }
-
-      // Se editando e role mudou para influencer, garantir que influencer_perfil existe
-      if (editando && role === "influencer") {
-        const { data: existe, error: errExiste } = await supabase.from("influencer_perfil").select("id").eq("id", uid).maybeSingle();
-        if (errExiste) throw new Error(`Erro ao verificar perfil: ${errExiste.message}`);
-        if (!existe) {
-          const { error: errInsert } = await supabase.from("influencer_perfil").insert({
-            id: uid,
-            nome_artistico: nome,
-            nome_completo: nome,
-            status: "ativo",
-            cache_hora: 0,
-          });
-          if (errInsert) throw new Error(`Erro ao criar influencer_perfil: ${errInsert.message}`);
-        }
-      }
+      // Escopos: novos usuários já foram configurados pela Edge Function criar-usuario
+      // Edição: toda a lógica (profiles, user_scopes, influencer_perfil, influencer_operadoras) é feita pela Edge Function atualizar-perfil
 
       onSalvo();
       onClose();
