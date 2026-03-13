@@ -17,10 +17,14 @@ interface CriarUsuarioRequest {
 
 const ROLES_BLOQUEADOS = ['admin', 'gestor']  // Escopo fixo = todos
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+function corsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '*'
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, content-type, apikey',
+    'Access-Control-Max-Age': '86400',
+  }
 }
 
 // ── Enviar e-mail de boas-vindas via Resend ───────────────────────────────
@@ -87,15 +91,15 @@ async function enviarEmailBoasVindas(
 // ── Handler ───────────────────────────────────────────────────────────────
 
 serve(async (req) => {
-  // CORS preflight
+  const cors = corsHeaders(req)
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS_HEADERS })
+    return new Response(null, { status: 204, headers: cors })
   }
 
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Método não permitido' }), {
       status: 405,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
@@ -106,7 +110,7 @@ serve(async (req) => {
   if (!supabaseUrl || !serviceRoleKey) {
     return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), {
       status: 500,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
@@ -115,7 +119,7 @@ serve(async (req) => {
       error: 'SENHA_PADRAO deve ter no mínimo 8 caracteres. Configure no Supabase → Settings → Edge Functions → Secrets.',
     }), {
       status: 500,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
@@ -127,7 +131,7 @@ serve(async (req) => {
   } catch {
     return new Response(JSON.stringify({ error: 'Body inválido' }), {
       status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
@@ -137,7 +141,7 @@ serve(async (req) => {
   if (!email?.trim() || !nome?.trim() || !role?.trim()) {
     return new Response(JSON.stringify({ error: 'E-mail, nome e perfil são obrigatórios' }), {
       status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
@@ -147,19 +151,19 @@ serve(async (req) => {
   if (role === 'influencer' && (!scopeOperadoras || scopeOperadoras.length === 0)) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o influencer' }), {
       status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
   if (role === 'operador' && (!scopeOperadoras || scopeOperadoras.length === 0)) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o operador' }), {
       status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
   if (role === 'agencia' && (!scopePares || scopePares.length === 0)) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos um par influencer+operadora para a agência' }), {
       status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
@@ -175,7 +179,7 @@ serve(async (req) => {
     if (authErr || !authData?.user) {
       return new Response(JSON.stringify({ error: authErr?.message ?? 'Erro ao criar usuário' }), {
         status: 400,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
 
@@ -195,7 +199,7 @@ serve(async (req) => {
       await supabase.auth.admin.deleteUser(uid)
       return new Response(JSON.stringify({ error: profileErr.message }), {
         status: 500,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
 
@@ -251,7 +255,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ success: true, userId: uid }), {
       status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   } catch (e) {
     console.error('[criar-usuario] Erro:', e)
@@ -259,7 +263,7 @@ serve(async (req) => {
       error: e instanceof Error ? e.message : 'Erro interno ao criar usuário',
     }), {
       status: 500,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 })
