@@ -293,11 +293,11 @@ export default function Resultados() {
                 <label style={labelStyle}>Duração</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
-                    <input type="number" min={0} max={24} value={duracaoHoras} onChange={e => setDuracaoHoras(Number(e.target.value))} style={inputStyle} placeholder="0" />
+                    <input type="number" min={0} max={24} value={duracaoHoras} onChange={e => setDuracaoHoras(Math.max(0, Math.min(24, Number(e.target.value) || 0)))} style={inputStyle} placeholder="0" />
                     <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>horas</span>
                   </div>
                   <div>
-                    <input type="number" min={0} max={59} value={duracaoMin} onChange={e => setDuracaoMin(Number(e.target.value))} style={inputStyle} placeholder="0" />
+                    <input type="number" min={0} max={59} value={duracaoMin} onChange={e => setDuracaoMin(Math.max(0, Math.min(59, Number(e.target.value) || 0)))} style={inputStyle} placeholder="0" />
                     <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>min</span>
                   </div>
                 </div>
@@ -310,7 +310,7 @@ export default function Resultados() {
 
               <div style={row}>
                 <label style={labelStyle}>Máximo de Views</label>
-                <input type="number" min={0} value={maxViews} onChange={e => setMaxViews(Number(e.target.value))} style={inputStyle} placeholder="0" />
+                <input type="number" min={0} value={maxViews} onChange={e => setMaxViews(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} placeholder="0" />
               </div>
 
               <div style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>

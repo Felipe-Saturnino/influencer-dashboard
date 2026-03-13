@@ -44,18 +44,22 @@ Desde a migração de operadoras, toda linha em `influencer_metricas` deve inclu
 
 ## Exemplo de payload (INSERT / UPSERT)
 
+**Importante:** Não enviar `ggr`. É coluna calculada (GENERATED = deposit_total - withdrawal_total).
+
+Use **UPSERT** com conflito em `(influencer_id, data, operadora_slug)` para evitar duplicatas ao rodar a integração múltiplas vezes no mesmo dia.
+
 ```json
 {
   "influencer_id": "uuid-do-influencer",
   "data": "2025-03-12",
   "operadora_slug": "casa_apostas",
+  "fonte": "api",
   "ftd_count": 5,
   "ftd_total": 1250.00,
   "deposit_count": 12,
   "deposit_total": 3500.00,
   "withdrawal_count": 3,
-  "withdrawal_total": 800.00,
-  "ggr": 450.00
+  "withdrawal_total": 800.00
 }
 ```
 
@@ -66,13 +70,14 @@ Desde a migração de operadoras, toda linha em `influencer_metricas` deve inclu
 | influencer_id | uuid | sim | ID do influencer |
 | data | date | sim | Data da métrica |
 | operadora_slug | text | sim* | Slug da operadora (FK para operadoras) |
+| fonte | text | sim | Origem: `api` (sync automático) ou `manual` |
 | ftd_count | integer | - | Quantidade de FTDs |
 | ftd_total | numeric | - | Valor total FTD |
 | deposit_count | integer | - | Quantidade de depósitos |
 | deposit_total | numeric | - | Valor total depósitos |
 | withdrawal_count | integer | - | Quantidade de saques |
 | withdrawal_total | numeric | - | Valor total saques |
-| ggr | numeric | - | GGR |
+| ggr | numeric | — | **Não inserir.** Calculado automaticamente (deposit_total - withdrawal_total). |
 
 *Após migração e backfill; antes pode ser nullable para compatibilidade.
 
@@ -87,7 +92,11 @@ O código da integração com Casa de Apostas **não está neste repositório**.
 - Cron job ou pipeline de dados
 - Outro projeto no Acquisition Hub
 
-Ao localizar o código que faz INSERT/UPDATE em `influencer_metricas`, adicione `operadora_slug` em todo insert/upsert conforme a origem dos dados.
+Ao localizar o código que faz INSERT/UPDATE em `influencer_metricas`:
+
+1. Adicione `operadora_slug` em todo insert/upsert conforme a origem dos dados.
+2. **Não envie** a coluna `ggr` (ela é gerada automaticamente pelo banco).
+3. Use **UPSERT** com `onConflict: "influencer_id, data, operadora_slug"` para evitar duplicatas. A constraint UNIQUE está em `docs/migration-influencer-metricas-unique.sql`.
 
 ---
 

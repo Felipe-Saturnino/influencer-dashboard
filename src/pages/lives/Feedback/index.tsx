@@ -823,21 +823,21 @@ function ModalFeedbackEdit({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
               <div>
                 <label style={labelStyle}>Duração (horas)</label>
-                <input type="number" min={0} value={duracaoHoras} onChange={e => setDuracaoHoras(parseInt(e.target.value, 10) || 0)} style={inputStyle} />
+                <input type="number" min={0} value={duracaoHoras} onChange={e => setDuracaoHoras(Math.max(0, parseInt(e.target.value, 10) || 0))} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>Duração (min)</label>
-                <input type="number" min={0} max={59} value={duracaoMin} onChange={e => setDuracaoMin(parseInt(e.target.value, 10) || 0)} style={inputStyle} />
+                <input type="number" min={0} max={59} value={duracaoMin} onChange={e => setDuracaoMin(Math.max(0, Math.min(59, parseInt(e.target.value, 10) || 0)))} style={inputStyle} />
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
               <div>
                 <label style={labelStyle}>Média de views</label>
-                <input type="number" min={0} value={mediaViews} onChange={e => setMediaViews(parseInt(e.target.value, 10) || 0)} style={inputStyle} />
+                <input type="number" min={0} value={mediaViews} onChange={e => setMediaViews(Math.max(0, parseInt(e.target.value, 10) || 0))} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>Pico de views</label>
-                <input type="number" min={0} value={maxViews} onChange={e => setMaxViews(parseInt(e.target.value, 10) || 0)} style={inputStyle} />
+                <input type="number" min={0} value={maxViews} onChange={e => setMaxViews(Math.max(0, parseInt(e.target.value, 10) || 0))} style={inputStyle} />
               </div>
             </div>
           </>
