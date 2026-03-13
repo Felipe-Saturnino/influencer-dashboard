@@ -2,17 +2,51 @@ import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Legend, ReferenceLine,
-} from "recharts";
+  GiPokerHand,      // GGR Total — chip de cassino
+  GiCoins,          // Investimento — moedas
+  GiTrophy,         // ROI Geral + FTDs — troféu
+  GiFilmProjector,  // Lives — transmissão
+  GiSandsOfTime,    // Horas Realizadas — ampulheta
+  GiMicrophone,     // Influencers Ativos — microfone
+  GiCardPlay,       // Depósitos — carta/jogo
+  GiPlayerNext,     // Registros — novo jogador
+  GiReceiveMoney,   // Custo por Registro
+  GiPayMoney,       // Custo por FTD
+  GiCalendar,       // Histórico
+  GiStarMedal,      // Filtro Influencer
+  GiShield,         // Filtro Operadora
+} from "react-icons/gi";
+import ScatterQuadrant from "./ScatterQuadrant";
+
+// Fonte NHD Bold para títulos
+const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+
+// ─── BRAND COLORS (Brand Guide Spin Gaming) ───────────────────────────────────
+const BRAND = {
+  // Cores principais
+  roxo:     "#4a2082",
+  roxoVivo: "#7c3aed",    // variante mais viva para accent/glow
+  azul:     "#1e36f8",
+  vermelho: "#e84025",
+  ciano:    "#70cae4",
+  preto:    "#000000",
+  // Semântica de status (mantida por ser sinalização financeira)
+  verde:    "#22c55e",
+  amarelo:  "#f59e0b",
+  // Categorias de KPI
+  receita:     "#4a2082",   // Roxo  → GGR
+  operacao:    "#1e36f8",   // Azul  → Lives, Horas, Influencers
+  transacao:   "#70cae4",   // Ciano → Depósitos, FTDs, Registros
+  custo:       "#e84025",   // Vermelho → Investimento, Custo/FTD, Custo/Reg
+} as const;
 
 // ─── CONSTANTES ──────────────────────────────────────────────────────────────
-const MES_INICIO = { ano: 2025, mes: 11 }; // Dezembro 2025
+const MES_INICIO = { ano: 2025, mes: 11 };
 
-// Status do ranking — ordem fixa de exibição
 const STATUS_ORDEM = ["Rentável", "Atenção", "Não Rentável", "Bônus", "Sem dados"] as const;
 type StatusLabel = typeof STATUS_ORDEM[number];
 
@@ -57,8 +91,8 @@ interface RankingRow {
   lives: number;
   horas: number;
   views: number;
-  viewsTotal: number;    // acumulador interno — não exibir
-  liveComViews: number;  // acumulador interno — não exibir
+  viewsTotal: number;
+  liveComViews: number;
   acessos: number;
   registros: number;
   ftds: number;
@@ -125,15 +159,15 @@ function getStatusROI(roi: number | null, ggr: number, investimento: number): {
   label: StatusLabel; cor: string; bg: string; border: string; roiStr: string;
 } {
   if (investimento === 0) {
-    if (ggr > 0)  return { label: "Bônus",       cor: "#a855f7", bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.28)", roiStr: "—" };
-    if (ggr < 0)  return { label: "Atenção",     cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr: "—" };
-    return              { label: "Sem dados",    cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", roiStr: "—" };
+    if (ggr > 0)  return { label: "Bônus",      cor: "#a855f7", bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.28)", roiStr: "—" };
+    if (ggr < 0)  return { label: "Atenção",    cor: BRAND.amarelo, bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr: "—" };
+    return              { label: "Sem dados",   cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", roiStr: "—" };
   }
   const r = roi ?? 0;
   const roiStr = `${r >= 0 ? "+" : ""}${r.toFixed(0)}%`;
-  if (r >= 0)   return { label: "Rentável",     cor: "#22c55e", bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  roiStr };
-  if (r >= -30) return { label: "Atenção",      cor: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr };
-  return              { label: "Não Rentável",  cor: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.28)",  roiStr };
+  if (r >= 0)   return { label: "Rentável",    cor: BRAND.verde,   bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  roiStr };
+  if (r >= -30) return { label: "Atenção",     cor: BRAND.amarelo, bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr };
+  return              { label: "Não Rentável", cor: BRAND.vermelho, bg: "rgba(232,64,37,0.12)", border: "rgba(232,64,37,0.28)", roiStr };
 }
 
 function calculaTotais(rows: RankingRow[]): TotaisData {
@@ -157,30 +191,41 @@ function calculaTotais(rows: RankingRow[]): TotaisData {
   };
 }
 
-// ─── TOOLTIP DO GRÁFICO ───────────────────────────────────────────────────────
-function CustomTooltip({ active, payload, label, cardBg, cardBorder, text }: {
-  active?: boolean; payload?: { name: string; value: number; fill: string }[];
-  label?: string; cardBg: string; cardBorder: string; text: string;
+// ─── COMPONENTE: SECTION TITLE ────────────────────────────────────────────────
+function SectionTitle({ icon, children, sub }: {
+  icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
 }) {
-  if (!active || !payload?.length) return null;
-  const labelMap: Record<string, string> = { GGR: "GGR", Investimento: "Invest." };
+  const { theme: t } = useApp();
   return (
-    <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 12, padding: "10px 14px", fontSize: 12, color: text, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
-      <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 13 }}>{label}</div>
-      {payload.map((p) => (
-        <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 3, background: p.fill, display: "inline-block" }} />
-          <span style={{ color: "#9ca3af" }}>{labelMap[p.name] ?? p.name}:</span>
-          <span style={{ fontWeight: 700 }}>{fmtBRL(p.value)}</span>
-        </div>
-      ))}
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+      <span style={{
+        width: 28, height: 28, borderRadius: 8,
+        background: `rgba(74,32,130,0.18)`,
+        border: `1px solid rgba(74,32,130,0.30)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: BRAND.ciano, flexShrink: 0,
+      }}>
+        {icon}
+      </span>
+      <span style={{
+        fontSize: 14, fontWeight: 800, color: t.text,
+        fontFamily: FONT_TITLE,
+        letterSpacing: "0.05em", textTransform: "uppercase" as const,
+      }}>
+        {children}
+      </span>
+      {sub && (
+        <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
+          {sub}
+        </span>
+      )}
     </div>
   );
 }
 
-// ─── KPI CARD SIMPLES ─────────────────────────────────────────────────────────
+// ─── KPI CARD ─────────────────────────────────────────────────────────────────
 function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHistorico, subValue }: {
-  label: string; value: string; icon: string; accentColor: string;
+  label: string; value: string; icon: React.ReactNode; accentColor: string;
   atual: number; anterior: number; isBRL?: boolean; isHistorico?: boolean;
   subValue?: { label: string; value: string };
 }) {
@@ -188,36 +233,53 @@ function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHi
   const diff     = atual - anterior;
   const pct      = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
   const up       = diff >= 0;
-  const isCusto  = label.toLowerCase().includes("custo");
+  const isCusto  = label.toLowerCase().includes("custo") || label.toLowerCase().includes("invest");
   const positivo = isCusto ? !up : up;
-  const corSeta  = positivo ? "#22c55e" : "#ef4444";
+  const corSeta  = positivo ? BRAND.verde : BRAND.vermelho;
 
   return (
     <div style={{
-      borderRadius: 16, border: `1px solid ${t.cardBorder}`,
-      background: `linear-gradient(135deg, rgba(124,58,237,0.07) 0%, rgba(37,99,235,0.04) 100%)`,
+      borderRadius: 14,
+      border: `1px solid ${t.cardBorder}`,
+      background: t.cardBg,
       overflow: "hidden",
+      transition: "box-shadow 0.2s",
     }}>
       <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{
-            fontSize: 16, width: 32, height: 32, borderRadius: 9,
-            background: `${accentColor}20`, border: `1px solid ${accentColor}40`,
+            width: 30, height: 30, borderRadius: 8,
+            background: `${accentColor}18`,
+            border: `1px solid ${accentColor}35`,
             display: "flex", alignItems: "center", justifyContent: "center",
-          }}>{icon}</span>
-          <span style={{ color: t.textMuted, fontSize: 11, fontFamily: FONT.body, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>{label}</span>
+            color: accentColor, flexShrink: 0,
+          }}>
+            {icon}
+          </span>
+          <span style={{
+            color: t.textMuted, fontSize: 10, fontFamily: FONT.body,
+            fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const,
+          }}>
+            {label}
+          </span>
         </div>
-        <div style={{ fontSize: 21, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: subValue ? 4 : 6 }}>{value}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: subValue ? 4 : 6, lineHeight: 1.1 }}>
+          {value}
+        </div>
         {subValue && (
           <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
             <span style={{ color: t.text, fontWeight: 600 }}>{subValue.value}</span> {subValue.label}
           </div>
         )}
         {!isHistorico && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontFamily: FONT.body }}>
-            <span style={{ color: corSeta, fontWeight: 700 }}>{up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}</span>
-            <span style={{ color: t.textMuted }}>vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontFamily: FONT.body }}>
+            <span style={{ color: corSeta, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>
+              {up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
+            </span>
+            <span style={{ color: t.textMuted, fontSize: 10 }}>
+              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.
+            </span>
           </div>
         )}
       </div>
@@ -225,56 +287,61 @@ function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHi
   );
 }
 
-// KPI card especial para Depósitos (dois sub-valores lado a lado)
-function KpiCardDepositos({ atual, anterior, isHistorico, accentColor }: {
+// ─── KPI CARD DEPÓSITOS ────────────────────────────────────────────────────────
+function KpiCardDepositos({ atual, anterior, isHistorico }: {
   atual: { qtd: number; valor: number };
   anterior: { qtd: number; valor: number };
   isHistorico?: boolean;
-  accentColor: string;
 }) {
   const { theme: t } = useApp();
-  const diffQtd  = atual.qtd - anterior.qtd;
-  const pctQtd   = anterior.qtd !== 0 ? (diffQtd / Math.abs(anterior.qtd)) * 100 : null;
-  const upQtd    = diffQtd >= 0;
-  const diffVal  = atual.valor - anterior.valor;
-  const pctVal   = anterior.valor !== 0 ? (diffVal / Math.abs(anterior.valor)) * 100 : null;
-  const upVal    = diffVal >= 0;
+  const accentColor = BRAND.transacao;
+  const diffQtd = atual.qtd - anterior.qtd;
+  const pctQtd  = anterior.qtd !== 0 ? (diffQtd / Math.abs(anterior.qtd)) * 100 : null;
+  const upQtd   = diffQtd >= 0;
+  const diffVal = atual.valor - anterior.valor;
+  const pctVal  = anterior.valor !== 0 ? (diffVal / Math.abs(anterior.valor)) * 100 : null;
+  const upVal   = diffVal >= 0;
 
   return (
     <div style={{
-      borderRadius: 16, border: `1px solid ${t.cardBorder}`,
-      background: `linear-gradient(135deg, rgba(124,58,237,0.07) 0%, rgba(37,99,235,0.04) 100%)`,
-      overflow: "hidden",
+      borderRadius: 14, border: `1px solid ${t.cardBorder}`,
+      background: t.cardBg, overflow: "hidden",
     }}>
       <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{
-            fontSize: 16, width: 32, height: 32, borderRadius: 9,
-            background: `${accentColor}20`, border: `1px solid ${accentColor}40`,
+            width: 30, height: 30, borderRadius: 8,
+            background: `${accentColor}18`, border: `1px solid ${accentColor}35`,
             display: "flex", alignItems: "center", justifyContent: "center",
-          }}>💳</span>
-          <span style={{ color: t.textMuted, fontSize: 11, fontFamily: FONT.body, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" as const }}>Depósitos</span>
+            color: accentColor,
+          }}>
+            <GiCardPlay size={16} />
+          </span>
+          <span style={{ color: t.textMuted, fontSize: 10, fontFamily: FONT.body, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const }}>
+            Depósitos
+          </span>
         </div>
-        {/* Dois sub-valores lado a lado */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {/* Quantidade */}
           <div>
-            <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Qtd</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>{atual.qtd.toLocaleString("pt-BR")}</div>
+            <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Qtd</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>{atual.qtd.toLocaleString("pt-BR")}</div>
             {!isHistorico && (
               <div style={{ fontSize: 10, fontFamily: FONT.body }}>
-                <span style={{ color: upQtd ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{upQtd ? "↑" : "↓"} {pctQtd !== null ? `${Math.abs(pctQtd).toFixed(0)}%` : "—"}</span>
+                <span style={{ color: upQtd ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
+                  {upQtd ? "↑" : "↓"} {pctQtd !== null ? `${Math.abs(pctQtd).toFixed(0)}%` : "—"}
+                </span>
               </div>
             )}
           </div>
-          {/* Divisor */}
           <div style={{ borderLeft: `1px solid ${t.cardBorder}`, paddingLeft: 10 }}>
-            <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Volume</div>
+            <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Volume</div>
             <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>{fmtBRL(atual.valor)}</div>
             {!isHistorico && (
               <div style={{ fontSize: 10, fontFamily: FONT.body }}>
-                <span style={{ color: upVal ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{upVal ? "↑" : "↓"} {pctVal !== null ? `${Math.abs(pctVal).toFixed(0)}%` : "—"}</span>
+                <span style={{ color: upVal ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
+                  {upVal ? "↑" : "↓"} {pctVal !== null ? `${Math.abs(pctVal).toFixed(0)}%` : "—"}
+                </span>
               </div>
             )}
           </div>
@@ -284,25 +351,105 @@ function KpiCardDepositos({ atual, anterior, isHistorico, accentColor }: {
   );
 }
 
-function FunnelStep({ label, value, pct }: { label: string; value: number; pct?: string }) {
-  const { theme: t } = useApp();
-  return (
-    <div style={{ padding: "10px 14px", borderRadius: 12, border: `1px solid ${t.cardBorder}`, background: "rgba(124,58,237,0.05)", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <div>
-        <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}</div>
-        {pct && <div style={{ fontSize: 11, color: BASE_COLORS.purple, marginTop: 2, fontFamily: "monospace" }}>↓ {pct}</div>}
-      </div>
-      <div style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{value.toLocaleString("pt-BR")}</div>
-    </div>
-  );
-}
+// ─── FUNIL DE CONVERSÃO (visual em SVG) ───────────────────────────────────────
+const FUNIL_COLORS = ["#4a2082", "#1e36f8", "#70cae4", "#22c55e"] as const;
+const FUNIL_STEPS = [
+  { key: "views",      label: "Views (média)" },
+  { key: "acessos",    label: "Acessos"       },
+  { key: "registros",  label: "Registros"     },
+  { key: "ftds",       label: "FTDs"          },
+] as const;
 
-function RateCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function FunilVisual({ values, taxas }: {
+  values: number[];
+  taxas: string[];
+}) {
   const { theme: t } = useApp();
+  const W = 280, H = 260;
+  const levels = 4;
+  const stepH = H / levels;
+  // Larguras: nível 0 = W total, nível 3 = W * 0.32 (fixo pois estático)
+  const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
+
   return (
-    <div style={{ padding: 12, borderRadius: 14, border: highlight ? "1px solid rgba(124,58,237,0.4)" : `1px solid ${t.cardBorder}`, background: highlight ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.02)" }}>
-      <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
-      <div style={{ fontSize: 17, fontWeight: 800, color: highlight ? "#a78bfa" : t.text, margin: "6px 0 0", fontFamily: FONT.body }}>{value}</div>
+    <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+      {/* SVG Funil */}
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ flexShrink: 0, display: "block" }}>
+        {FUNIL_STEPS.map((step, i) => {
+          const wTop = widths[i];
+          const wBot = widths[i + 1] ?? widths[i] * 0.7;
+          const xTop = (W - wTop) / 2;
+          const xBot = (W - wBot) / 2;
+          const yTop = i * stepH;
+          const yBot = yTop + stepH - 2; // 2px gap
+          const col = FUNIL_COLORS[i];
+          // Trapezoid path
+          const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
+          return (
+            <g key={step.key}>
+              {/* Fill com gradiente */}
+              <defs>
+                <linearGradient id={`fgrad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={col} stopOpacity="0.85" />
+                  <stop offset="100%" stopColor={col} stopOpacity="0.55" />
+                </linearGradient>
+              </defs>
+              <path d={path} fill={`url(#fgrad-${i})`} />
+              {/* Label dentro */}
+              <text
+                x={W / 2} y={yTop + stepH / 2 - 6}
+                textAnchor="middle" dominantBaseline="middle"
+                fill="#fff" fontSize={10} fontFamily={FONT.body}
+                fontWeight={600} letterSpacing="0.08em"
+                style={{ textTransform: "uppercase" }}
+              >
+                {step.label}
+              </text>
+              <text
+                x={W / 2} y={yTop + stepH / 2 + 9}
+                textAnchor="middle" dominantBaseline="middle"
+                fill="#fff" fontSize={16} fontFamily={FONT.body} fontWeight={800}
+              >
+                {values[i]?.toLocaleString("pt-BR") ?? "—"}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Taxas de conversão à direita */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 8, flex: 1 }}>
+        <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 4, fontWeight: 600 }}>
+          Taxas de Conversão
+        </div>
+        {[
+          { label: "View → Acesso",     taxa: taxas[0], color: FUNIL_COLORS[1] },
+          { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2] },
+          { label: "Registro → FTD",    taxa: taxas[2], color: FUNIL_COLORS[3] },
+          { label: "Acesso → FTD",      taxa: taxas[3], color: FUNIL_COLORS[3], highlight: true },
+          { label: "View → FTD",        taxa: taxas[4], color: FUNIL_COLORS[0], highlight: true },
+        ].map((r) => (
+          <div key={r.label} style={{
+            padding: "8px 12px", borderRadius: 10,
+            border: r.highlight
+              ? `1px solid ${r.color}50`
+              : `1px solid ${t.cardBorder}`,
+            background: r.highlight
+              ? `${r.color}12`
+              : "rgba(255,255,255,0.02)",
+          }}>
+            <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 2 }}>
+              {r.label}
+            </div>
+            <div style={{
+              fontSize: 16, fontWeight: 800, fontFamily: FONT.body,
+              color: r.highlight ? r.color : t.text,
+            }}>
+              {r.taxa}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -317,18 +464,15 @@ export default function DashboardOverview() {
   const hoje = new Date();
   const idxInicial = mesesDisponiveis.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
 
-  const [idxMes, setIdxMes]     = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+  const [idxMes, setIdxMes]       = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
   const [historico, setHistorico] = useState(false);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading]     = useState(true);
 
-  // Filtros por escopo (Etapa 8)
   const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
-  const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
-  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
-
-  // Filtro de status no ranking (null = todos)
-  const [statusFiltro, setStatusFiltro] = useState<StatusLabel | null>(null);
+  const [filtroOperadora, setFiltroOperadora]   = useState<string>("todas");
+  const [operadorasList, setOperadorasList]     = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMap, setOperadoraInfMap]   = useState<Record<string, string[]>>({});
+  const [statusFiltro, setStatusFiltro]         = useState<StatusLabel | null>(null);
 
   const [perfis, setPerfis]       = useState<InfluencerPerfil[]>([]);
   const [ranking, setRanking]     = useState<RankingRow[]>([]);
@@ -344,7 +488,7 @@ export default function DashboardOverview() {
     else setHistorico(true);
   }
 
-  // ── BUSCA DE DADOS ──────────────────────────────────────────────────────────
+  // ── BUSCA DE DADOS (idêntica ao original) ────────────────────────────────────
   useEffect(() => {
     async function carregar() {
       setLoading(true);
@@ -388,7 +532,6 @@ export default function DashboardOverview() {
 
       function montaRanking(m: Metrica[], l: LiveData[], r: LiveResultado[]): RankingRow[] {
         const mapa = new Map<string, RankingRow>();
-
         m.forEach((met) => {
           if (!mapa.has(met.influencer_id)) {
             const p = perfisLista.find((x) => x.id === met.influencer_id);
@@ -403,7 +546,6 @@ export default function DashboardOverview() {
           row.depositos_valor += met.deposit_total || 0;
           row.ggr            += met.ggr || 0;
         });
-
         l.forEach((live) => {
           if (!mapa.has(live.influencer_id)) {
             const p = perfisLista.find((x) => x.id === live.influencer_id);
@@ -419,17 +561,13 @@ export default function DashboardOverview() {
             if (res.media_views) { row.viewsTotal += res.media_views; row.liveComViews += 1; }
           }
         });
-
         mapa.forEach((row) => {
           const p = perfisLista.find((x) => x.id === row.influencer_id);
           row.investimento = row.horas * (p?.cache_hora || 0);
           row.roi = row.investimento > 0 ? ((row.ggr - row.investimento) / row.investimento) * 100 : null;
           row.statusLabel = getStatusROI(row.roi, row.ggr, row.investimento).label;
-          // views = média de media_views por live (nunca somatória)
           row.views = row.liveComViews > 0 ? Math.round(row.viewsTotal / row.liveComViews) : 0;
         });
-
-        // Ordenar por STATUS_ORDEM depois por ROI desc dentro de cada grupo
         return Array.from(mapa.values()).sort((a, b) => {
           const ia = STATUS_ORDEM.indexOf(a.statusLabel);
           const ib = STATUS_ORDEM.indexOf(b.statusLabel);
@@ -438,11 +576,10 @@ export default function DashboardOverview() {
         });
       }
 
-      // Período atual
       let metricas: Metrica[] = [], lives: LiveData[] = [], resultados: LiveResultado[] = [];
       if (historico) {
-        let qM = supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
-        const { data: mAll } = await qM; metricas = mAll || [];
+        const { data: mAll } = await supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
+        metricas = mAll || [];
         const { data: lAll } = await supabase.from("lives").select("id, influencer_id, status, plataforma, data").eq("status", "realizada");
         lives = lAll || [];
         resultados = await buscaResultados(lives);
@@ -458,7 +595,6 @@ export default function DashboardOverview() {
       setRanking(rowsVisiveis);
       setTotais(calculaTotais(rowsVisiveis));
 
-      // Período anterior MTD
       if (!historico && mesSelecionado) {
         const { inicio: iA, fim: fA } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
         const mA = await buscaMetricas(iA, fA);
@@ -473,35 +609,31 @@ export default function DashboardOverview() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, podeVerInfluencer]);
+  }, [historico, idxMes, mesSelecionado, podeVerInfluencer]);
 
-  // ── FUNIL ────────────────────────────────────────────────────────────────────
-  const pctViewAcesso = totais.views > 0 ? ((totais.acessos / totais.views) * 100).toFixed(1) + "%" : "—";
-  const pctAcessoReg  = totais.acessos > 0 ? ((totais.registros / totais.acessos) * 100).toFixed(1) + "%" : "—";
-  const pctRegFTD     = totais.registros > 0 ? ((totais.ftds / totais.registros) * 100).toFixed(1) + "%" : "—";
-  const pctViewFTD    = totais.views > 0 ? ((totais.ftds / totais.views) * 100).toFixed(1) + "%" : "—";
-  const pctAcessoFTD  = totais.acessos > 0 ? ((totais.ftds / totais.acessos) * 100).toFixed(1) + "%" : "—";
-  const pctRegFTDTotal = totais.registros > 0 ? ((totais.ftds / totais.registros) * 100).toFixed(1) + "%" : "—"; // Registro → FTD total
+  // ── TAXAS DO FUNIL ────────────────────────────────────────────────────────────
+  const pctViewAcesso  = totais.views > 0    ? ((totais.acessos   / totais.views)    * 100).toFixed(1) + "%" : "—";
+  const pctAcessoReg   = totais.acessos > 0  ? ((totais.registros / totais.acessos)  * 100).toFixed(1) + "%" : "—";
+  const pctRegFTD      = totais.registros > 0? ((totais.ftds      / totais.registros)* 100).toFixed(1) + "%" : "—";
+  const pctAcessoFTD   = totais.acessos > 0  ? ((totais.ftds      / totais.acessos)  * 100).toFixed(1) + "%" : "—";
+  const pctViewFTD     = totais.views > 0    ? ((totais.ftds      / totais.views)    * 100).toFixed(1) + "%" : "—";
 
-  // ── CHART (respeita filtros influencer/operadora) ─────────────────────────────
-  const rankingParaChart = useMemo(() => {
+  // ── SCATTER DATA ─────────────────────────────────────────────────────────────
+  const scatterData = useMemo(() => {
     let r = ranking;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
     if (filtroOperadora !== "todas") {
       const ids = operadoraInfMap[filtroOperadora] ?? [];
       r = r.filter((row) => ids.includes(row.influencer_id));
     }
-    return r;
-  }, [ranking, filtroInfluencer, filtroOperadora, operadoraInfMap]);
-  const chartData = rankingParaChart
-    .filter((r) => r.investimento > 0)
-    .sort((a, b) => b.investimento - a.investimento)
-    .slice(0, 10)
-    .map((r) => ({
-      nome: r.nome.split(" ")[0],
-      GGR: parseFloat(r.ggr.toFixed(2)),
-      Investimento: parseFloat(r.investimento.toFixed(2)),
+    return r.map((row) => ({
+      nome: row.nome,
+      ggr: row.ggr,
+      investimento: row.investimento,
+      roi: row.roi,
+      lives: row.lives,
     }));
+  }, [ranking, filtroInfluencer, filtroOperadora, operadoraInfMap]);
 
   // ── RANKING FILTRADO ──────────────────────────────────────────────────────────
   const rankingFiltrado = useMemo(() => {
@@ -515,37 +647,48 @@ export default function DashboardOverview() {
     return r;
   }, [ranking, filtroInfluencer, filtroOperadora, statusFiltro, operadoraInfMap]);
 
-  // ── ESTILOS ───────────────────────────────────────────────────────────────────
-  const card = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 6px 24px rgba(0,0,0,0.25)" } as React.CSSProperties;
-  const cardTitle = { margin: "0 0 16px", fontSize: 13, fontWeight: 700, letterSpacing: "0.02em", color: t.text, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 8 } as React.CSSProperties;
-  const thStyle = { textAlign: "left" as const, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: t.textMuted, padding: "10px 12px", borderBottom: `1px solid ${t.cardBorder}`, background: "rgba(124,58,237,0.06)", fontFamily: FONT.body, whiteSpace: "nowrap" as const };
-  const tdStyle = { padding: "10px 12px", fontSize: 13, borderBottom: `1px solid rgba(255,255,255,0.05)`, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap" as const };
-  const btnNav = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 } as React.CSSProperties;
-  const btnHistorico = { padding: "6px 16px", borderRadius: 999, border: historico ? "1px solid #7c3aed" : `1px solid ${t.cardBorder}`, background: historico ? "rgba(124,58,237,0.15)" : "transparent", color: historico ? "#7c3aed" : t.textMuted, fontSize: 13, fontWeight: historico ? 700 : 400, cursor: "pointer", fontFamily: FONT.body } as React.CSSProperties;
+  // ── ESTILOS BASE ──────────────────────────────────────────────────────────────
+  const card: React.CSSProperties = {
+    background: t.cardBg,
+    border: `1px solid ${t.cardBorder}`,
+    borderRadius: 18,
+    padding: 20,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+  };
+
+  const thStyle: React.CSSProperties = {
+    textAlign: "left",
+    fontSize: 10,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: t.textMuted,
+    fontWeight: 600,
+    padding: "10px 12px",
+    borderBottom: `1px solid ${t.cardBorder}`,
+    background: "rgba(74,32,130,0.10)",
+    fontFamily: FONT.body,
+    whiteSpace: "nowrap",
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: "10px 12px",
+    fontSize: 13,
+    borderBottom: `1px solid rgba(255,255,255,0.04)`,
+    color: t.text,
+    fontFamily: FONT.body,
+    whiteSpace: "nowrap",
+  };
 
   const isPrimeiro = idxMes === 0;
   const isUltimo   = idxMes === mesesDisponiveis.length - 1;
 
-  // Configs KPI — Roxo: GGR/Registros/FTDs | Azul: Invest/Lives/Horas/Influencers | Verde: ROI | Amarelo: Depósito/Custo Reg/Custo FTD
-  const kpiL1 = [
-    { label: "GGR Total",    value: fmtBRL(totais.ggr),         icon: "📈", accentColor: "#7c3aed", atual: totais.ggr,         anterior: totaisAnt.ggr,         isBRL: true  },
-    { label: "Investimento", value: fmtBRL(totais.investimento), icon: "💰", accentColor: "#2563eb", atual: totais.investimento, anterior: totaisAnt.investimento, isBRL: true  },
-    { label: "ROI Geral",    value: totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—", icon: "🎯", accentColor: "#059669", atual: totais.roi, anterior: totaisAnt.roi, isBRL: false },
-  ];
-  const kpiL3 = [
-    { label: "Total Registros",    value: totais.registros.toLocaleString("pt-BR"),                     icon: "👤", accentColor: "#7c3aed", atual: totais.registros,       anterior: totaisAnt.registros,       isBRL: false },
-    { label: "Custo por Registro", value: totais.registros > 0 ? fmtBRL(totais.custoPorRegistro) : "—", icon: "💸", accentColor: "#f59e0b", atual: totais.custoPorRegistro, anterior: totaisAnt.custoPorRegistro, isBRL: true  },
-    { label: "Total FTDs",         value: totais.ftds.toLocaleString("pt-BR"),                          icon: "🏆", accentColor: "#7c3aed", atual: totais.ftds,            anterior: totaisAnt.ftds,            isBRL: false },
-    { label: "Custo por FTD",      value: totais.ftds > 0 ? fmtBRL(totais.custoPorFTD) : "—",          icon: "💸", accentColor: "#f59e0b", atual: totais.custoPorFTD,     anterior: totaisAnt.custoPorFTD,     isBRL: true  },
-  ];
-
-  // Badges de status para o ranking
-  const statusBadges: { label: StatusLabel; cor: string; bg: string; border: string }[] = [
-    { label: "Rentável",     cor: "#22c55e", bg: "rgba(34,197,94,0.10)",   border: "rgba(34,197,94,0.28)"   },
-    { label: "Atenção",      cor: "#f59e0b", bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.28)"  },
-    { label: "Não Rentável", cor: "#ef4444", bg: "rgba(239,68,68,0.10)",   border: "rgba(239,68,68,0.28)"   },
-    { label: "Bônus",        cor: "#a855f7", bg: "rgba(168,85,247,0.10)",  border: "rgba(168,85,247,0.28)"  },
-    { label: "Sem dados",    cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)" },
+  // ── STATUS BADGES ─────────────────────────────────────────────────────────────
+  const statusBadges = [
+    { label: "Rentável"    as StatusLabel, cor: BRAND.verde,    bg: "rgba(34,197,94,0.10)",   border: "rgba(34,197,94,0.28)"    },
+    { label: "Atenção"     as StatusLabel, cor: BRAND.amarelo,  bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.28)"   },
+    { label: "Não Rentável"as StatusLabel, cor: BRAND.vermelho, bg: "rgba(232,64,37,0.10)",   border: "rgba(232,64,37,0.28)"    },
+    { label: "Bônus"       as StatusLabel, cor: "#a855f7",      bg: "rgba(168,85,247,0.10)",  border: "rgba(168,85,247,0.28)"   },
+    { label: "Sem dados"   as StatusLabel, cor: "#6b7280",      bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)"  },
   ];
 
   if (perm.canView === "nao") {
@@ -556,132 +699,245 @@ export default function DashboardOverview() {
     );
   }
 
-  return (
-    <div style={{ padding: "20px 24px 40px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+  // ── ESTILOS FILTROS ───────────────────────────────────────────────────────────
+  const selectStyle: React.CSSProperties = {
+    padding: "6px 12px 6px 32px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg,
+    color: t.text,
+    fontSize: 13,
+    fontFamily: FONT.body,
+    cursor: "pointer",
+    appearance: "none" as const,
+    outline: "none",
+  };
 
-      {/* ── BLOCO 1: FILTROS (centralizado) ── */}
+  const btnNavStyle: React.CSSProperties = {
+    width: 30, height: 30, borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent",
+    color: t.text,
+    cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  };
+
+  return (
+    <div style={{ padding: "20px 24px 48px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+
+      {/* ══ BLOCO 1: FILTROS ══════════════════════════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ ...card, padding: "14px 20px", background: `linear-gradient(135deg, ${t.cardBg} 0%, rgba(124,58,237,0.04) 100%)` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
-            <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>‹</button>
-            <span style={{ fontSize: 16, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+        <div style={{
+          borderRadius: 14,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.cardBg,
+          padding: "12px 20px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            {/* Navegação de mês */}
+            <button
+              style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              onClick={irMesAnterior} disabled={historico || isPrimeiro}
+            >
+              <ChevronLeft size={14} />
+            </button>
+
+            <span style={{
+              fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body,
+              minWidth: 180, textAlign: "center",
+            }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
-            <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>›</button>
-            <button style={btnHistorico} onClick={toggleHistorico}>Histórico</button>
+
+            <button
+              style={{ ...btnNavStyle, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              onClick={irMesProximo} disabled={historico || isUltimo}
+            >
+              <ChevronRight size={14} />
+            </button>
+
+            {/* Botão Histórico */}
+            <button
+              onClick={toggleHistorico}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+                fontFamily: FONT.body, fontSize: 13,
+                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
+                background: historico ? `rgba(124,58,237,0.15)` : "transparent",
+                color: historico ? BRAND.roxoVivo : t.textMuted,
+                fontWeight: historico ? 700 : 400,
+                transition: "all 0.15s",
+              }}
+            >
+              <GiCalendar size={15} />
+              Histórico
+            </button>
+
+            {/* Filtro Influencer */}
             {showFiltroInfluencer && (
-              <select value={filtroInfluencer} onChange={(e) => setFiltroInfluencer(e.target.value)} style={{ padding: "6px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.text, fontSize: 13, fontFamily: FONT.body, cursor: "pointer" }}>
-                <option value="todos">Todos os influencers</option>
-                {ranking.map((r) => (
-                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-                ))}
-              </select>
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                  <GiStarMedal size={15} />
+                </span>
+                <select value={filtroInfluencer} onChange={(e) => setFiltroInfluencer(e.target.value)} style={selectStyle}>
+                  <option value="todos">Todos os influencers</option>
+                  {ranking.map((r) => (
+                    <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+                  ))}
+                </select>
+              </div>
             )}
+
+            {/* Filtro Operadora */}
             {showFiltroOperadora && (
-              <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={{ padding: "6px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.text, fontSize: 13, fontFamily: FONT.body, cursor: "pointer" }}>
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
-                  <option key={o.slug} value={o.slug}>{o.nome}</option>
-                ))}
-              </select>
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                  <GiShield size={15} />
+                </span>
+                <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectStyle}>
+                  <option value="todas">Todas as operadoras</option>
+                  {operadorasList
+                    .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                    .map((o) => (
+                      <option key={o.slug} value={o.slug}>{o.nome}</option>
+                    ))}
+                </select>
+              </div>
             )}
-            {loading && <span style={{ fontSize: 12, color: t.textMuted, marginLeft: 8 }}>⏳ Carregando...</span>}
+
+            {loading && (
+              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
+                <Clock size={12} /> Carregando...
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* ── BLOCO 2: KPIs ── */}
+      {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <h3 style={cardTitle}>
-          <span style={{ fontSize: 16 }}>📊</span> KPIs Executivos
-          {!historico && <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, marginLeft: 4 }}>· comparativo MTD vs mesmo período do mês anterior</span>}
-        </h3>
+        <SectionTitle icon={<GiPokerHand size={15} />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}>
+          KPIs Executivos
+        </SectionTitle>
 
-        {/* Linha 1: GGR / Investimento / ROI */}
+        {/* Linha 1: Receita — GGR / Investimento / ROI */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
-          {kpiL1.map((k) => <KpiCard key={k.label} {...k} isHistorico={historico} />)}
+          <KpiCard
+            label="GGR Total" value={fmtBRL(totais.ggr)}
+            icon={<GiPokerHand size={16} />}
+            accentColor={BRAND.receita}
+            atual={totais.ggr} anterior={totaisAnt.ggr} isBRL isHistorico={historico}
+          />
+          <KpiCard
+            label="Investimento" value={fmtBRL(totais.investimento)}
+            icon={<GiCoins size={16} />}
+            accentColor={BRAND.custo}
+            atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico}
+          />
+          <KpiCard
+            label="ROI Geral"
+            value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"}
+            icon={<GiTrophy size={16} />}
+            accentColor={BRAND.verde}
+            atual={totais.roi} anterior={totaisAnt.roi} isHistorico={historico}
+          />
         </div>
 
-        {/* Linha 2: Lives / Horas / Influencers / Depósitos */}
+        {/* Linha 2: Operação — Lives / Horas / Influencers + Depósitos */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard label="Qtd. Lives" value={totais.lives.toLocaleString("pt-BR")} icon="🎥" accentColor="#2563eb" atual={totais.lives} anterior={totaisAnt.lives} isBRL={false} isHistorico={historico} />
-          <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totais.horas)} icon="⏱️" accentColor="#2563eb" atual={totais.horas} anterior={totaisAnt.horas} isBRL={false} isHistorico={historico} />
-          <KpiCard label="Influencers Ativos" value={totais.influencers.toLocaleString("pt-BR")} icon="🎙️" accentColor="#2563eb" atual={totais.influencers} anterior={totaisAnt.influencers} isBRL={false} isHistorico={historico} />
+          <KpiCard
+            label="Lives" value={totais.lives.toLocaleString("pt-BR")}
+            icon={<GiFilmProjector size={16} />}
+            accentColor={BRAND.operacao}
+            atual={totais.lives} anterior={totaisAnt.lives} isHistorico={historico}
+          />
+          <KpiCard
+            label="Horas Realizadas" value={fmtHorasTotal(totais.horas)}
+            icon={<GiSandsOfTime size={16} />}
+            accentColor={BRAND.operacao}
+            atual={totais.horas} anterior={totaisAnt.horas} isHistorico={historico}
+          />
+          <KpiCard
+            label="Influencers Ativos" value={totais.influencers.toLocaleString("pt-BR")}
+            icon={<GiMicrophone size={16} />}
+            accentColor={BRAND.operacao}
+            atual={totais.influencers} anterior={totaisAnt.influencers} isHistorico={historico}
+          />
           <KpiCardDepositos
             atual={{ qtd: totais.depositos_qtd, valor: totais.depositos_valor }}
             anterior={{ qtd: totaisAnt.depositos_qtd, valor: totaisAnt.depositos_valor }}
             isHistorico={historico}
-            accentColor="#f59e0b"
           />
         </div>
 
-        {/* Linha 3: Registros / Custo Registro / FTDs / Custo FTD */}
+        {/* Linha 3: Transação — Registros / Custo Reg / FTDs / Custo FTD */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          {kpiL3.map((k) => <KpiCard key={k.label} {...k} isHistorico={historico} />)}
+          <KpiCard
+            label="Registros" value={totais.registros.toLocaleString("pt-BR")}
+            icon={<GiPlayerNext size={16} />}
+            accentColor={BRAND.transacao}
+            atual={totais.registros} anterior={totaisAnt.registros} isHistorico={historico}
+          />
+          <KpiCard
+            label="Custo por Registro"
+            value={totais.registros > 0 ? fmtBRL(totais.custoPorRegistro) : "—"}
+            icon={<GiReceiveMoney size={16} />}
+            accentColor={BRAND.custo}
+            atual={totais.custoPorRegistro} anterior={totaisAnt.custoPorRegistro} isBRL isHistorico={historico}
+          />
+          <KpiCard
+            label="FTDs" value={totais.ftds.toLocaleString("pt-BR")}
+            icon={<GiTrophy size={16} />}
+            accentColor={BRAND.transacao}
+            atual={totais.ftds} anterior={totaisAnt.ftds} isHistorico={historico}
+          />
+          <KpiCard
+            label="Custo por FTD"
+            value={totais.ftds > 0 ? fmtBRL(totais.custoPorFTD) : "—"}
+            icon={<GiPayMoney size={16} />}
+            accentColor={BRAND.custo}
+            atual={totais.custoPorFTD} anterior={totaisAnt.custoPorFTD} isBRL isHistorico={historico}
+          />
         </div>
       </div>
 
-      {/* ── BLOCOS 3 e 4: Funil + Gráfico ── */}
+      {/* ══ BLOCOS 3 e 4: Funil + Scatter ════════════════════════════════════ */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
 
-        {/* BLOCO 3: Funil */}
+        {/* BLOCO 3: Funil de Conversão */}
         <div style={card}>
-          <h3 style={cardTitle}><span style={{ fontSize: 16 }}>🔽</span> Funil de Conversão</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <FunnelStep label="Views (média)" value={totais.views} />
-              <FunnelStep label="Acessos"       value={totais.acessos} pct={pctViewAcesso} />
-              <FunnelStep label="Registros"     value={totais.registros} pct={pctAcessoReg} />
-              <FunnelStep label="FTDs"          value={totais.ftds} pct={pctRegFTD} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignContent: "start" }}>
-              <RateCard label="Acesso → FTD total"  value={pctAcessoFTD} />
-              <RateCard label="Registro → FTD total" value={pctRegFTDTotal} />
-              <RateCard label="View → FTD total"     value={pctViewFTD} highlight />
-            </div>
-          </div>
+          <SectionTitle icon={<GiPlayerNext size={15} />}>Funil de Conversão</SectionTitle>
+          <FunilVisual
+            values={[totais.views, totais.acessos, totais.registros, totais.ftds]}
+            taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
+          />
         </div>
 
-        {/* BLOCO 4: Gráfico */}
+        {/* BLOCO 4: Scatter Quadrant */}
         <div style={card}>
-          <h3 style={cardTitle}><span style={{ fontSize: 16 }}>📊</span> GGR vs Investimento por Influencer</h3>
-          {loading ? (
-            <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>Carregando...</div>
-          ) : chartData.length === 0 ? (
-            <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>Sem dados no período</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
-                <XAxis dataKey="nome" tick={{ fill: t.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: t.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip content={<CustomTooltip cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} />
-                <Legend content={() => null} wrapperStyle={{ visibility: "hidden", height: 0 }} />
-                <ReferenceLine y={0} stroke="rgba(255,255,255,0.35)" strokeWidth={1.5} />
-                <Bar dataKey="GGR"          fill="#7c3aed" radius={[6, 6, 0, 0]} legendType="none" />
-                <Bar dataKey="Investimento" fill="#2563eb" radius={[6, 6, 0, 0]} legendType="none" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+          <SectionTitle icon={<GiCoins size={15} />}>GGR vs Investimento por Influencer</SectionTitle>
+          <ScatterQuadrant data={scatterData} loading={loading} />
         </div>
       </div>
 
-      {/* ── BLOCO 5: RANKING ── */}
+      {/* ══ BLOCO 5: RANKING ═════════════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <h3 style={{ ...cardTitle, margin: 0 }}><span style={{ fontSize: 16 }}>🏅</span> Ranking de Influencers</h3>
+          <SectionTitle icon={<GiTrophy size={15} />}>Ranking de Influencers</SectionTitle>
 
-          {/* Legendas clicáveis como filtro */}
+          {/* Filtros de status */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {statusBadges.map((s) => {
               const ativo = statusFiltro === s.label;
-              const qtd = rankingParaChart.filter((r) => r.statusLabel === s.label).length;
+              const qtd = ranking.filter((r) => r.statusLabel === s.label).length;
               return (
                 <button
                   key={s.label}
                   onClick={() => setStatusFiltro(ativo ? null : s.label)}
                   style={{
-                    padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body,
+                    padding: "4px 10px", borderRadius: 999, cursor: "pointer",
+                    fontFamily: FONT.body,
                     border: `1px solid ${ativo ? s.cor : s.border}`,
                     background: ativo ? s.bg : "transparent",
                     color: ativo ? s.cor : t.textMuted,
@@ -705,7 +961,6 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Indicador de filtro ativo */}
         {statusFiltro && (
           <div style={{ marginBottom: 12, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
             Exibindo <strong style={{ color: t.text }}>{rankingFiltrado.length}</strong> influencer{rankingFiltrado.length !== 1 ? "s" : ""} com status <strong style={{ color: t.text }}>{statusFiltro}</strong>
@@ -720,7 +975,11 @@ export default function DashboardOverview() {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
               <thead>
-                <tr>{["Influencer","Lives","Horas","Views","Acessos","Registros","FTDs","GGR","Invest.","ROI","Status"].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                <tr>
+                  {["Influencer","Lives","Horas","Views","Acessos","Registros","FTDs","GGR","Invest.","ROI","Status"].map((h) => (
+                    <th key={h} style={thStyle}>{h}</th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {rankingFiltrado.map((r, i) => {
@@ -728,7 +987,10 @@ export default function DashboardOverview() {
                   const hT = Math.floor(r.horas);
                   const mT = Math.round((r.horas - hT) * 60);
                   return (
-                    <tr key={r.influencer_id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(124,58,237,0.03)" }}>
+                    <tr
+                      key={r.influencer_id}
+                      style={{ background: i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)" }}
+                    >
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
                       <td style={tdStyle}>{r.lives}</td>
                       <td style={tdStyle}>{r.horas > 0 ? `${String(hT).padStart(2,"0")}:${String(mT).padStart(2,"0")}` : "—"}</td>
@@ -736,13 +998,17 @@ export default function DashboardOverview() {
                       <td style={tdStyle}>{r.acessos.toLocaleString("pt-BR")}</td>
                       <td style={tdStyle}>{r.registros.toLocaleString("pt-BR")}</td>
                       <td style={tdStyle}>{r.ftds.toLocaleString("pt-BR")}</td>
-                      <td style={{ ...tdStyle, color: r.ggr >= 0 ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{fmtBRL(r.ggr)}</td>
+                      <td style={{ ...tdStyle, color: r.ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(r.ggr)}</td>
                       <td style={tdStyle}>{r.investimento > 0 ? fmtBRL(r.investimento) : "—"}</td>
                       <td style={tdStyle}>
-                        <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body, fontWeight: 700 }}>{st.roiStr}</span>
+                        <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body, fontWeight: 700 }}>
+                          {st.roiStr}
+                        </span>
                       </td>
                       <td style={tdStyle}>
-                        <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body }}>{st.label}</span>
+                        <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body }}>
+                          {st.label}
+                        </span>
                       </td>
                     </tr>
                   );
