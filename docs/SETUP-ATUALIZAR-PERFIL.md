@@ -8,8 +8,10 @@ Quando um administrador **edita** um usuário (altera perfil, nome, operadoras e
 
 ## Passo 1: Deploy da Edge Function
 
+**Importante:** use a flag `--no-verify-jwt` para evitar 401 no gateway. A verificação de admin é feita dentro da função.
+
 ```bash
-supabase functions deploy atualizar-perfil
+supabase functions deploy atualizar-perfil --no-verify-jwt
 ```
 
 ---
