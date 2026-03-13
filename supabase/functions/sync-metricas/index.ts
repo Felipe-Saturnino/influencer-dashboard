@@ -1,27 +1,8 @@
-// ============================================================
-// Edge Function: sync-metricas
-// Projeto: Acquisition Hub (Spin Gaming)
-// Arquivo: supabase/functions/sync-metricas/index.ts
-// Versão: v1.3.0
-//
-// Descrição:
-//   Busca métricas diárias de cada influencer na API Plywood
-//   da Casa de Apostas (filtro por utm_source) e faz upsert
-//   na tabela influencer_metricas do Supabase.
-//
-//   v1.1.0: Alerta de e-mail via Resend quando a API retornar 403
-//   v1.2.0: Detecção automática de UTMs órfãos via SPLIT por utm_source
-//   v1.2.1: Corrige erro 'cannot insert non-DEFAULT value into column ggr'
-//           (ggr é coluna gerada — removida do upsert de utm_aliases)
-//   v1.3.0: Compatibilidade com schema pós-migração operadora_slug:
-//           - influencer_metricas: inclui operadora_slug + onConflict correto
-//           - utm_aliases: inclui operadora_slug nos órfãos
-//   v1.4.0: Grava execução em sync_logs para Status Técnico
-//
-// ============================================================
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+// Edge Function: sync-metricas | Acquisition Hub (Spin Gaming)
+// Busca métricas da API Plywood e faz upsert em influencer_metricas
 
 // ── Tipos ────────────────────────────────────────────────────
 
