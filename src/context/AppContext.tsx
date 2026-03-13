@@ -184,10 +184,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (session) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("id, name, role, email")
+            .select("id, name, role, email, ativo")
             .eq("id", session.user.id)
             .single();
           if (profile) {
+            if (profile.ativo === false) {
+              await supabase.auth.signOut();
+              setUserState(null);
+              setChecking(false);
+              return;
+            }
             const u = profile as User;
             setUserState(u);
             try {
