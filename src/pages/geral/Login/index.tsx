@@ -38,7 +38,7 @@ export default function Login({ onLogin }: Props) {
 
     // MELHORIA 4: id incluído no select para evitar bug silencioso com user.id
     const { data: profile, error: profileError } = await supabase
-      .from("profiles").select("id, name, role, email, ativo").eq("id", authData.user.id).single();
+      .from("profiles").select("id, name, role, email, ativo, must_change_password").eq("id", authData.user.id).single();
     if (profileError || !profile) {
       setError("Perfil não encontrado. Contate o administrador.");
       await supabase.auth.signOut(); setLoading(false); return;

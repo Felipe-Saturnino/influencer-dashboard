@@ -5,8 +5,9 @@ import { supabase, supabaseConfigOk } from "./lib/supabase";
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
 // Páginas — geral
-import Login         from "./pages/geral/Login";
-import Configuracoes from "./pages/geral/Configuracoes";
+import Login                  from "./pages/geral/Login";
+import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
+import Configuracoes          from "./pages/geral/Configuracoes";
 import Ajuda         from "./pages/geral/Ajuda";
 // Páginas — dashboards
 import DashboardOverview          from "./pages/dashboards/DashboardOverview";
@@ -80,7 +81,9 @@ function Root() {
       </div>
     );
   }
-  return user ? <AppLayout onLogout={handleLogout} /> : <Login onLogin={setUser} />;
+  if (!user) return <Login onLogin={setUser} />;
+  if (user.must_change_password) return <TrocarSenhaObrigatorio />;
+  return <AppLayout onLogout={handleLogout} />;
 }
 
 function ConfigError() {

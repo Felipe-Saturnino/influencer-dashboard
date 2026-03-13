@@ -189,7 +189,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (session) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("id, name, role, email, ativo")
+            .select("id, name, role, email, ativo, must_change_password")
             .eq("id", session.user.id)
             .single();
           if (profile) {

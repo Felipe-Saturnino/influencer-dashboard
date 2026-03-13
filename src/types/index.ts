@@ -8,6 +8,7 @@ export interface User {
   email: string;
   role:  Role;
   ativo?: boolean;
+  must_change_password?: boolean;
 }
 
 // ─── PAGE KEYS ───────────────────────────────────────────────────────────────

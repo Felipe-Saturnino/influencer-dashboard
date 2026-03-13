@@ -468,18 +468,31 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
       if (editando) {
         await supabase.from("profiles").update({ name: nome, role }).eq("id", uid);
       } else {
-        const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-          email, email_confirm: true, user_metadata: { name: nome },
+        const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke("criar-usuario", {
+          body: {
+            email: email.trim().toLowerCase(),
+            nome: nome.trim(),
+            role,
+            scopeInfluencers,
+            scopeOperadoras,
+            scopePares,
+            loginUrl,
+          },
         });
-        if (authErr || !authData?.user) throw new Error(authErr?.message ?? "Erro ao criar usuário");
-        uid = authData.user.id;
-        await supabase.from("profiles").insert({ id: uid, name: nome, email, role });
+        if (fnErr) throw new Error(fnErr.message ?? "Erro ao chamar serviço de criação");
+        const errMsg = (fnData as { error?: string })?.error;
+        if (errMsg) throw new Error(errMsg);
+        uid = (fnData as { userId?: string })?.userId ?? "";
+        if (!uid) throw new Error("Usuário criado mas ID não retornado");
       }
 
-      // Reset e reinsert de escopos
-      await supabase.from("user_scopes").delete().eq("user_id", uid);
+      // Escopos: novos usuários já foram configurados pela Edge Function
+      if (editando) {
+        await supabase.from("user_scopes").delete().eq("user_id", uid);
+      }
 
-      if (!escopoBloqueado(role)) {
+      if (editando && !escopoBloqueado(role)) {
         const novasLinhas: { user_id: string; scope_type: string; scope_ref: string }[] = [];
 
         if (role === "agencia") {
