@@ -64,12 +64,7 @@ INSERT INTO alert_config (condicao, threshold, ativo) VALUES
   ('integracao_offline', 'timeout', true)
 ON CONFLICT (condicao) DO NOTHING;
 
--- 5. Permissões para a página Status Técnico (admin e gestor)
-INSERT INTO role_permissions (role, page_key, can_view, can_criar, can_editar, can_excluir)
-VALUES
-  ('admin', 'status_tecnico', 'sim', 'nao', 'nao', 'nao'),
-  ('gestor', 'status_tecnico', 'sim', 'nao', 'nao', 'nao')
-ON CONFLICT (role, page_key) DO UPDATE SET can_view = 'sim';
+-- 5. Permissões: NÃO inserir aqui — configurar em Gestão de Usuários > Permissões
 
 -- RLS (leitura para authenticated)
 ALTER TABLE sync_logs ENABLE ROW LEVEL SECURITY;

@@ -33,6 +33,7 @@ const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; ha
   { key: "gestao_links",       label: "Gestão de Links",     secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
   { key: "gestao_usuarios",    label: "Gestão de Usuários", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "gestao_operadoras",  label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "status_tecnico",     label: "Status Técnico",     secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "configuracoes",      label: "Configurações",      secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "ajuda",              label: "Ajuda",              secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
