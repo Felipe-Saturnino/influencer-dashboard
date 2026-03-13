@@ -984,7 +984,7 @@ function ModalPerfil({
           <>
             <div style={row}>
               <label style={labelStyle}>Cachê por Hora (R$) {!podeAlterarStatusCache && <span style={{ fontSize: 10, color: t.textMuted, fontWeight: 400 }}>(somente Gestor/Admin)</span>}</label>
-              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", v)} style={inputStyle} disabled={!podeAlterarStatusCache} />
+              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", Math.max(0, v))} style={inputStyle} disabled={!podeAlterarStatusCache} />
             </div>
             <div style={row}>
               <label style={labelStyle}>Chave PIX</label>

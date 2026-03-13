@@ -807,7 +807,7 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
             )}
             <div style={row}>
               <label style={labelStyle}>Cachê Negociado (R$)</label>
-              <input type="number" value={cacheNegociado || ""} onChange={(e) => setCacheNegociado(Number(e.target.value) || 0)} style={inputStyle} placeholder="0" min={0} />
+              <input type="number" value={cacheNegociado || ""} onChange={(e) => setCacheNegociado(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} placeholder="0" min={0} />
             </div>
             <div style={row}>
               <label style={labelStyle}>Live Cassino</label>
