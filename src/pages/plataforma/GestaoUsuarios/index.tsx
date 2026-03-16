@@ -684,14 +684,27 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
   const [erro,             setErro]             = useState("");
 
   useEffect(() => {
-    supabase
-      .from("influencer_perfil")
-      .select("id, nome_artistico")
-      .eq("status", "ativo")
-      .order("nome_artistico")
-      .then(({ data }) => {
-        setInfluencers((data ?? []).map(d => ({ id: d.id, nome: d.nome_artistico })));
-      });
+    (async () => {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, name, email")
+        .eq("role", "influencer")
+        .order("name");
+      if (!profiles?.length) {
+        setInfluencers([]);
+        return;
+      }
+      const ids = profiles.map((p: { id: string }) => p.id);
+      const { data: perfis } = await supabase
+        .from("influencer_perfil")
+        .select("id, nome_artistico")
+        .in("id", ids);
+      const perfisMap = new Map((perfis ?? []).map((p: { id: string; nome_artistico: string }) => [p.id, p.nome_artistico]));
+      setInfluencers(profiles.map((p: { id: string; name?: string; email?: string }) => ({
+        id: p.id,
+        nome: perfisMap.get(p.id) ?? p.name ?? p.email ?? p.id,
+      })));
+    })();
   }, []);
 
   useEffect(() => {
