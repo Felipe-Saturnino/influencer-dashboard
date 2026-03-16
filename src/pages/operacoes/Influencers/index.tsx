@@ -291,6 +291,8 @@ export default function Influencers() {
   // "proprios": ações apenas em registros do escopo do usuário
   const podeEditarInf = (infId: string) =>
     perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(infId));
+  // Status só pode ser alterado por Admin ou Gestor
+  const podeAlterarStatus = user?.role === "admin" || user?.role === "gestor";
 
   const [list,           setList]           = useState<Influencer[]>([]);
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
@@ -376,6 +378,7 @@ export default function Influencers() {
 
   // ── CORREÇÃO 1: upsert com await para garantir persistência do status ──
   async function handleStatusChange(infId: string, newStatus: StatusInfluencer) {
+    if (!podeAlterarStatus) return; // Só Admin/Gestor podem alterar status
     // Atualiza estado local imediatamente (UX responsiva)
     setList((prev) =>
       prev.map((i) =>
@@ -649,7 +652,7 @@ export default function Influencers() {
                     <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
                       {inf.name}
                     </span>
-                    <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} readonly={!podeEditarInf(inf.id)} />
+                    <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} readonly={!podeAlterarStatus} />
                     {incompleto && status === "ativo" && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${BRAND.vermelho}22`, color: BRAND.vermelho, fontWeight: 600, fontFamily: FONT.body }}>
                         <GiWarPick size={10} /> Perfil incompleto

@@ -1507,7 +1507,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 // ── COMPONENTE PRINCIPAL ───────────────────────────────────────────────────────
 
 export default function Financeiro() {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
   const perm = usePermission("financeiro");
 
@@ -1533,7 +1533,7 @@ export default function Financeiro() {
     operadorasList,
   }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList]);
 
-  useEffect(() => { carregarCiclos(); }, []);
+  useEffect(() => { carregarCiclos(); }, [escoposVisiveis]);
 
   useEffect(() => {
     supabase.from("profiles").select("id, name").eq("role", "influencer")
@@ -1600,7 +1600,70 @@ export default function Financeiro() {
     }
 
     // Remove ciclos antes de 19/12 (lives iniciaram nessa data)
-    const ciclosFiltrados = ciclosExistentes.filter(c => (c.data_inicio || "") >= PRIMEIRO_CICLO_INICIO);
+    let ciclosFiltrados = ciclosExistentes.filter(c => (c.data_inicio || "") >= PRIMEIRO_CICLO_INICIO);
+
+    // Filtro por escopo: influencer, agência e operadora só veem ciclos com pagamento no seu escopo
+    if (!escoposVisiveis.semRestricaoEscopo) {
+      const fechados = ciclosFiltrados.filter(c => !cicloAberto(c));
+      const abertos = ciclosFiltrados.filter(c => cicloAberto(c));
+      const fechadoIds = fechados.map(c => c.id);
+
+      const [pagsRes, agtsRes] = await Promise.all([
+        fechadoIds.length > 0 ? supabase.from("pagamentos").select("ciclo_id, influencer_id, operadora_slug").in("ciclo_id", fechadoIds) : { data: [] as any[] },
+        fechadoIds.length > 0 && user?.role !== "influencer"
+          ? supabase.from("pagamentos_agentes").select("ciclo_id, operadora_slug").in("ciclo_id", fechadoIds)
+          : { data: [] as any[] },
+      ]);
+
+      const pags = (pagsRes.data ?? []) as { ciclo_id: string; influencer_id: string; operadora_slug: string }[];
+      const agts = (agtsRes.data ?? []) as { ciclo_id: string; operadora_slug: string }[];
+
+      const ciclosComPagVisible = new Set<string>();
+      for (const p of pags) {
+        if (podeVerInfluencer(p.influencer_id) && p.operadora_slug && podeVerOperadora(p.operadora_slug)) {
+          ciclosComPagVisible.add(p.ciclo_id);
+        }
+      }
+      for (const a of agts) {
+        if (a.operadora_slug && podeVerOperadora(a.operadora_slug)) {
+          ciclosComPagVisible.add(a.ciclo_id);
+        }
+      }
+
+      let ciclosVisiveis = fechados.filter(c => ciclosComPagVisible.has(c.id));
+
+      if (abertos.length > 0) {
+        const dataMin = abertos.reduce((acc, c) => (c.data_inicio || "") < acc ? c.data_inicio! : acc, abertos[0].data_inicio!);
+        const dataMax = abertos.reduce((acc, c) => (c.data_fim || "") > acc ? c.data_fim! : acc, abertos[0].data_fim!);
+
+        const { data: lives } = await supabase
+          .from("lives")
+          .select("id, data, influencer_id, operadora_slug")
+          .eq("status", "realizada")
+          .gte("data", dataMin)
+          .lte("data", dataMax);
+
+        const liveIds = (lives ?? []).map((l: any) => l.id);
+        let resIds = new Set<string>();
+        if (liveIds.length > 0) {
+          const { data: resData } = await supabase.from("live_resultados").select("live_id").in("live_id", liveIds);
+          resIds = new Set((resData ?? []).map((r: { live_id: string }) => String(r.live_id)));
+        }
+
+        for (const c of abertos) {
+          const temVisible = (lives ?? []).some((l: any) =>
+            l.data >= (c.data_inicio || "") && l.data <= (c.data_fim || "") &&
+            resIds.has(String(l.id)) &&
+            podeVerInfluencer(l.influencer_id) &&
+            l.operadora_slug && podeVerOperadora(l.operadora_slug)
+          );
+          if (temVisible) ciclosVisiveis.push(c);
+        }
+      }
+
+      ciclosFiltrados = ciclosVisiveis.sort((a, b) => (b.data_inicio || "").localeCompare(a.data_inicio || ""));
+    }
+
     setCiclos(ciclosFiltrados);
     setLoading(false);
   }

@@ -248,7 +248,7 @@ export default function StatusTecnico() {
         </div>
         <button
           onClick={executarSync}
-          disabled={syncExecutando || perm.canView === "nao"}
+          disabled={syncExecutando || !perm.canView}
           style={{
             padding: "10px 20px",
             borderRadius: 12,

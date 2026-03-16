@@ -78,6 +78,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const podeEditar   = isEdit  && perm.canEditarOk;
   const podeExcluir  = isEdit  && perm.canExcluirOk;
   const somenteLeitura = isEdit && !podeEditar;
+  // Apenas Admin e Gestor podem criar/editar lives em períodos anteriores (data/hora no passado)
+  const podeAlterarPeriodoAnterior = user?.role === "admin" || user?.role === "gestor";
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
@@ -131,6 +133,12 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     if (!form.horario) return setError("Informe o horário.");
     if (!isInfluencer && influencers.length > 0 && !form.influencer_id) return setError("Selecione um influencer.");
     if (!form.link.trim()) return setError("Informe o link da live na plataforma selecionada.");
+
+    // Apenas Admin e Gestor podem criar/editar lives em períodos anteriores
+    const dataHoraLive = new Date(`${form.data}T${form.horario}`);
+    if (dataHoraLive < new Date() && !podeAlterarPeriodoAnterior) {
+      return setError("Apenas Admin e Gestor podem criar ou editar lives em períodos anteriores (data/hora no passado).");
+    }
 
     setSaving(true);
     const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -236,13 +244,31 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div>
             <label style={labelStyle}>Data</label>
-            <input type="date" value={form.data} onChange={e => !somenteLeitura && set("data", e.target.value)} readOnly={somenteLeitura} style={inputStyle} />
+            <input
+              type="date"
+              value={form.data}
+              onChange={e => !somenteLeitura && set("data", e.target.value)}
+              readOnly={somenteLeitura}
+              min={podeAlterarPeriodoAnterior ? undefined : new Date().toISOString().slice(0, 10)}
+              style={inputStyle}
+            />
           </div>
           <div>
             <label style={labelStyle}>Horário</label>
-            <input type="time" value={form.horario} onChange={e => !somenteLeitura && set("horario", e.target.value)} readOnly={somenteLeitura} style={inputStyle} />
+            <input
+              type="time"
+              value={form.horario}
+              onChange={e => !somenteLeitura && set("horario", e.target.value)}
+              readOnly={somenteLeitura}
+              style={inputStyle}
+            />
           </div>
         </div>
+        {!podeAlterarPeriodoAnterior && (podeCriar || podeEditar) && (
+          <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, marginBottom: 0 }}>
+            Apenas Admin e Gestor podem criar ou editar lives em datas/horários passados.
+          </p>
+        )}
         {/* Plataforma — com logos SVG */}
         <div style={row}>
           <label style={labelStyle}>Plataforma</label>
