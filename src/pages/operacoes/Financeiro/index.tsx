@@ -710,12 +710,11 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const ciclo = ciclos.find(c => c.id === cicloId) ?? ciclos[0] ?? null;
   const isAberto = ciclo ? cicloAberto(ciclo) : false;
 
-  // Seleciona o ciclo atual (aberto) por padrão ao carregar ou quando o ciclo selecionado fechou
+  // Padrão: ciclo atual (aberto). Só altera se a seleção for inválida (ciclo removido da lista)
   useEffect(() => {
-    const aberto = ciclos.find(c => !c.fechado_em && cicloAberto(c));
     const sel = ciclos.find(c => c.id === cicloId);
-    if (aberto && (!sel || sel.fechado_em)) setCicloId(aberto.id);
-    else if (!cicloId && ciclos[0]) setCicloId(ciclos[0].id);
+    const aberto = ciclos.find(c => !c.fechado_em && cicloAberto(c));
+    if (!sel) setCicloId(aberto?.id ?? ciclos[0]?.id ?? "");
   }, [ciclos, cicloId]);
 
   // Fecha automaticamente ciclos vencidos (quando quarta 23h59 passou → quinta 00h)
@@ -817,7 +816,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     const horasPorPar: Record<string, { horas: number; qtd: number }> = {};
     const key = (inf: string, op: string) => `${inf}::${op}`;
     for (const live of livesFiltradas as any[]) {
-      const res = resultados.find((r) => r.live_id === live.id);
+      const res = resultados.find((r) => String(r.live_id) === String(live.id));
       if (res) {
         const k = key(live.influencer_id, live.operadora_slug);
         if (!horasPorPar[k]) horasPorPar[k] = { horas: 0, qtd: 0 };
@@ -869,7 +868,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }
 
   async function carregarPagamentos(c: CicloPagamento) {
-    const [{ data: pags }, { data: agentes }] = await Promise.all([
+    const [{ data: pags }, { data: agentes }, { data: livesCiclo }] = await Promise.all([
       supabase.from("pagamentos")
         .select("*")
         .eq("ciclo_id", c.id)
@@ -878,7 +877,29 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         .select("*")
         .eq("ciclo_id", c.id)
         .order("criado_em", { ascending: true }),
+      supabase.from("lives")
+        .select("id, influencer_id, operadora_slug")
+        .eq("status", "realizada")
+        .gte("data", c.data_inicio)
+        .lte("data", c.data_fim),
     ]);
+
+    const liveIds = (livesCiclo ?? []).map((l: any) => l.id);
+    let resultados: { live_id: string }[] = [];
+    if (liveIds.length > 0) {
+      const { data: resData } = await supabase.from("live_resultados").select("live_id").in("live_id", liveIds);
+      resultados = resData ?? [];
+    }
+    const qtdPorPar: Record<string, number> = {};
+    const key = (inf: string, op: string) => `${inf}::${op}`;
+    for (const l of (livesCiclo ?? []) as any[]) {
+      if (!l.operadora_slug || !podeVerInfluencer(l.influencer_id)) continue;
+      const temRes = resultados.some((r) => String(r.live_id) === String(l.id));
+      if (temRes) {
+        const k = key(l.influencer_id, l.operadora_slug);
+        qtdPorPar[k] = (qtdPorPar[k] ?? 0) + 1;
+      }
+    }
 
     // Busca nomes separadamente para evitar falha silenciosa de FK
     const influencerIds = [...new Set((pags ?? []).map((p: any) => p.influencer_id))];
@@ -900,16 +921,20 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       pagsFiltrados = pagsFiltrados.filter((p: any) => p.operadora_slug === filterOperadora);
     }
 
-    const linhasInf: PagamentoRow[] = pagsFiltrados.map((p: any) => ({
-      id: p.id,
-      influencer_id: p.influencer_id,
-      influencer_name: nomeMap[p.influencer_id] ?? p.influencer_id,
-      horas_realizadas: p.horas_realizadas,
-      cache_hora: p.cache_hora,
-      total: p.total,
-      status: p.status,
-      pago_em: p.pago_em,
-    }));
+    const linhasInf: PagamentoRow[] = pagsFiltrados.map((p: any) => {
+      const parKey = key(p.influencer_id, p.operadora_slug);
+      return {
+        id: p.id,
+        influencer_id: p.influencer_id,
+        influencer_name: nomeMap[p.influencer_id] ?? p.influencer_id,
+        horas_realizadas: p.horas_realizadas,
+        cache_hora: p.cache_hora,
+        total: p.total,
+        status: p.status,
+        pago_em: p.pago_em,
+        qtd_lives: qtdPorPar[parKey] ?? 0,
+      };
+    });
 
     let agentesFiltrados = user?.role === "influencer" ? [] : (agentes ?? []);
     if (filterOperadora && filterOperadora !== "todas") {
@@ -926,6 +951,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       pago_em: a.pago_em,
       is_agente: true,
       descricao: a.descricao,
+      qtd_lives: 0,
     }));
 
     setRows([...linhasInf, ...linhasAg]);
@@ -1041,14 +1067,14 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
               <tr>
                 {isAberto
                   ? ["Influencer", "Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} style={th}>{h}</th>)
-                  : ["Influencer", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} style={th}>{h}</th>)
+                  : ["Influencer", "Lives", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} style={th}>{h}</th>)
                 }
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
+                  <td colSpan={isAberto ? 5 : 6} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                       <span style={{ fontSize: "12px", maxWidth: 480, display: "block", marginTop: 8 }}>
@@ -1086,6 +1112,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     </>
                   ) : (
                     <>
+                      <td style={{ ...td, color: t.textMuted }}>{row.is_agente ? "—" : `${row.qtd_lives ?? 0} live${(row.qtd_lives ?? 0) !== 1 ? "s" : ""}`}</td>
                       <td style={td}>{row.is_agente ? "—" : fmtHoras(row.horas_realizadas)}</td>
                       <td style={{ ...td, fontWeight: 700 }}>{fmtMoeda(row.total)}</td>
                       <td style={td}><Badge status={row.status} config={STATUS_PAG} /></td>
@@ -1123,6 +1150,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     </>
                   ) : (
                     <>
+                      <td style={td}></td>
                       <td style={{ ...td, fontWeight: 700 }}>{fmtHoras(rows.filter(r => !r.is_agente).reduce((a, r) => a + r.horas_realizadas, 0))}</td>
                       <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(rows.reduce((a, r) => a + r.total, 0))}</td>
                       <td colSpan={2}></td>
@@ -1538,8 +1566,9 @@ export default function Financeiro() {
       .order("data_inicio", { ascending: false });
     let ciclosExistentes = (data ?? []) as CicloPagamento[];
 
-    // Ciclos apenas até o atual: da primeira qui de dez/2025 até a semana atual (inclusive)
-    const baseQuinta = new Date(2025, 11, 4); // 4 dez 2025 é quinta
+    // Ciclos a partir de 19/12 (lives iniciaram): qui 18/12 a qua 24/12 é o primeiro
+    const PRIMEIRO_CICLO_INICIO = "2025-12-18";
+    const baseQuinta = new Date(2025, 11, 18); // 18 dez 2025 (quinta da semana do dia 19)
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const diffMs = hoje.getTime() - baseQuinta.getTime();
@@ -1570,19 +1599,22 @@ export default function Financeiro() {
       }
     }
 
-    setCiclos(ciclosExistentes);
+    // Remove ciclos antes de 19/12 (lives iniciaram nessa data)
+    const ciclosFiltrados = ciclosExistentes.filter(c => (c.data_inicio || "") >= PRIMEIRO_CICLO_INICIO);
+    setCiclos(ciclosFiltrados);
     setLoading(false);
   }
 
   /** Cria ciclos que faltam para datas de lives realizadas não cobertas pelos existentes */
   async function complementarCiclos(existentes: CicloPagamento[]): Promise<CicloPagamento[]> {
+    const PRIMEIRO_CICLO = "2025-12-18";
     const { data: lives } = await supabase.from("lives").select("data").eq("status", "realizada").not("data", "is", null);
     if (!lives?.length) return [];
     const ciclosParaInserir: { data_inicio: string; data_fim: string }[] = [];
     const ciclosInicioSet = new Set(existentes.map(c => c.data_inicio));
     for (const l of lives as { data: string }[]) {
       const ciclo = cicloSemanalParaData(l.data);
-      if (!ciclo || ciclosInicioSet.has(ciclo.data_inicio)) continue;
+      if (!ciclo || ciclo.data_inicio < PRIMEIRO_CICLO || ciclosInicioSet.has(ciclo.data_inicio)) continue;
       const estaCoberto = existentes.some(c => l.data >= (c.data_inicio || "") && l.data <= (c.data_fim || ""));
       if (!estaCoberto) {
         ciclosInicioSet.add(ciclo.data_inicio);
@@ -1596,7 +1628,7 @@ export default function Financeiro() {
   }
 
   async function criarCiclosAutomaticamente(): Promise<CicloPagamento[]> {
-    const baseQuinta = new Date(2025, 11, 4);
+    const baseQuinta = new Date(2025, 11, 18); // 18 dez 2025 — lives iniciaram em 19/12
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const semanasAteAgora = Math.floor((hoje.getTime() - baseQuinta.getTime()) / (7 * 24 * 60 * 60 * 1000));
