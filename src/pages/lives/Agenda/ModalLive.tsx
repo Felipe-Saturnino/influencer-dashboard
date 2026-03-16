@@ -50,13 +50,6 @@ function PlatLogo({ plataforma, size = 14, isDark }: { plataforma: string; size?
   return <img src={src} alt={plataforma} width={size} height={size} onError={() => setErr(true)} style={{ display: "block" }} />;
 }
 
-// ─── STATUS ───────────────────────────────────────────────────────────────────
-const STATUS_OPTIONS: { value: LiveStatus; label: string; color: string }[] = [
-  { value: "agendada",      label: "Agendada",      color: BRAND.azul     },
-  { value: "realizada",     label: "Realizada",     color: BRAND.verde    },
-  { value: "nao_realizada", label: "Não Realizada", color: BRAND.vermelho },
-];
-
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Props {
   live?:   Live;
@@ -192,12 +185,16 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
       data:           form.data,
       horario:        form.horario,
       plataforma:     form.plataforma,
-      status:         form.status,
       link:           form.link.trim(),
       operadora_slug: opSlug,
       influencer_id:  isInfluencer ? user?.id : form.influencer_id || undefined,
     };
-    if (!isEdit) (payload as Record<string, unknown>).created_by = authUser?.id ?? null;
+    if (isEdit) {
+      // Na edição, não alterar status — definido em Resultados, editável em Feedback
+    } else {
+      (payload as Record<string, unknown>).status = "agendada";
+      (payload as Record<string, unknown>).created_by = authUser?.id ?? null;
+    }
 
     let liveId = live?.id;
     if (isEdit) {
@@ -380,38 +377,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           )}
         </div>
 
-        {/* Status — apenas na criação; na edição o status é alterado em Resultados */}
-        {podeCriar && (
-          <div style={row}>
-            <label style={labelStyle}>Status</label>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {STATUS_OPTIONS.map(s => {
-                const selected = form.status === s.value;
-                return (
-                  <button
-                    key={s.value} type="button"
-                    onClick={() => set("status", s.value)}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "6px 14px", borderRadius: 20,
-                      border: `1.5px solid ${selected ? s.color : t.cardBorder}`,
-                      background: selected ? `${s.color}22` : (t.inputBg ?? t.cardBg),
-                      color: selected ? s.color : t.textMuted,
-                      fontSize: 12, fontWeight: selected ? 700 : 500,
-                      cursor: "pointer",
-                      fontFamily: FONT.body, transition: "all 0.15s",
-                    }}
-                  >
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: selected ? s.color : t.textMuted }} />
-                    {s.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Duração — obrigatória quando status é Realizada (necessário para Financeiro); na edição, só se a live já for realizada */}
+        {/* Duração — obrigatória quando status é Realizada (necessário para Financeiro); na edição, só se a live já for realizada. Status é definido em Resultados e editado em Feedback. */}
         {form.status === "realizada" && (podeCriar || (podeEditar && live?.status === "realizada")) && (
           <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>

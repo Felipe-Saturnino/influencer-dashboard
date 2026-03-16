@@ -55,6 +55,12 @@ As migrações aplicadas no banco (operadora_slug, UNIQUE, remoção de ggr) **q
 - ✅ Alerta de token 403 via Resend
 - ✅ Uso de `label_id` 573703
 
+### 4. **v1.5.0 — Aliases mapeados na Gestão de Links**
+
+**Problema:** UTMs mapeados em `utm_aliases` (status='mapeado') via Gestão de Links **não tinham métricas sincronizadas** para `influencer_metricas`. O sync só processava `influencer_perfil.utm_source`, ignorando aliases mapeados. Isso causava relatórios zerados para influencers cujo UTM principal está em utm_aliases (ex.: após limpeza e recadastramento).
+
+**Solução (v1.5.0):** Fase 1b — o sync agora também processa `utm_aliases` com status='mapeado' e `influencer_id` preenchido. Para cada alias cujo `utm_source` é diferente do perfil do influencer, busca métricas na CDA e faz upsert em `influencer_metricas`.
+
 ---
 
 ## Correções Necessárias

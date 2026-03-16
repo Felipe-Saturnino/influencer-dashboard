@@ -440,7 +440,7 @@ serve(async (req: Request) => {
     const dataInicio = params.data_inicio ?? doisDiasAtras.toISOString().split('T')[0]
 
     const inicioMs = Date.now()
-    console.log(`[sync-metricas] v1.4.0 | Período: ${dataInicio} → ${dataFim}`)
+    console.log(`[sync-metricas] v1.5.0 | Período: ${dataInicio} → ${dataFim}`)
 
     const smaticoToken = Deno.env.get('SMARTICO_TOKEN')
     const labelId      = Deno.env.get('SMARTICO_LABEL_ID') ?? '573703'
@@ -457,14 +457,28 @@ serve(async (req: Request) => {
 
     const utmsMapeados = new Set<string>((influencers ?? []).map((i: InfluencerPerfil) => i.utm_source))
 
-    const { data: aliasesMapeados } = await supabase.from('utm_aliases').select('utm_source').eq('status', 'mapeado')
+    const { data: aliasesMapeados } = await supabase.from('utm_aliases').select('utm_source, influencer_id').eq('status', 'mapeado').or('operadora_slug.eq.casa_apostas,operadora_slug.is.null').not('influencer_id', 'is', null)
     ;(aliasesMapeados ?? []).forEach((a: { utm_source: string }) => utmsMapeados.add(a.utm_source))
 
-    console.log(`[sync-metricas] Fase 1: ${influencers?.length ?? 0} influencer(s)`)
+    // Aliases mapeados: UTMs associados a influencers via Gestão de Links (podem não estar em influencer_perfil.utm_source)
+    const aliasesParaSync = (aliasesMapeados ?? []).filter((a: { utm_source: string; influencer_id: string }) => a.utm_source && a.influencer_id)
+    const influencerIdsAliases = [...new Set(aliasesParaSync.map((a: { influencer_id: string }) => a.influencer_id))]
+    const { data: perfisAliases } = influencerIdsAliases.length > 0
+      ? await supabase.from('influencer_perfil').select('id, utm_source, nome_artistico').in('id', influencerIdsAliases)
+      : { data: [] }
+    const perfilUtmMap = new Map<string, string>((perfisAliases ?? []).map((p: { id: string; utm_source: string }) => [p.id, p.utm_source ?? '']))
+    // Só processar alias se o utm_source do alias é DIFERENTE do utm_source do perfil (evitar duplicata)
+    const aliasesNovos = aliasesParaSync.filter((a: { utm_source: string; influencer_id: string }) => perfilUtmMap.get(a.influencer_id) !== a.utm_source)
+
+    console.log(`[sync-metricas] Fase 1: ${influencers?.length ?? 0} influencer(s) perfil, ${aliasesNovos.length} alias(es) mapeado(s)`)
 
     const resultados: Array<{ utm_source: string; nome: string; dias_sincronizados: number; erros: string[] }> = []
     let totalInseridos = 0
     const todosErros: string[] = []
+    const infNomeCache = new Map<string, string>([
+      ...(influencers ?? []).map((i: InfluencerPerfil) => [i.id, i.nome_artistico] as [string, string]),
+      ...(perfisAliases ?? []).map((p: { id: string; nome_artistico: string }) => [p.id, p.nome_artistico] as [string, string]),
+    ])
 
     for (const influencer of (influencers ?? []) as InfluencerPerfil[]) {
       try {
@@ -498,6 +512,44 @@ serve(async (req: Request) => {
         const msg = `Erro em ${influencer.utm_source}: ${err instanceof Error ? err.message : String(err)}`
         todosErros.push(msg)
         resultados.push({ utm_source: influencer.utm_source, nome: influencer.nome_artistico, dias_sincronizados: 0, erros: [msg] })
+      }
+    }
+
+    // ── FASE 1b: Sync aliases mapeados (UTMs da Gestão de Links) ─
+    for (const alias of aliasesNovos) {
+      try {
+        const metricas = await fetchMetricasPorUtm(alias.utm_source, dataInicio, dataFim, smaticoToken, labelId)
+        const { inseridos, erros } = await upsertMetricas(supabase, alias.influencer_id, metricas)
+        totalInseridos += inseridos
+        todosErros.push(...erros)
+        const nome = infNomeCache.get(alias.influencer_id) ?? '—'
+        resultados.push({ utm_source: alias.utm_source, nome, dias_sincronizados: inseridos, erros })
+        await new Promise(r => setTimeout(r, 300))
+      } catch (err) {
+        if (err instanceof TokenExpiradoError) {
+          await enviarAlertaTokenExpirado()
+          await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403). Renovar SMARTICO_TOKEN.')
+          const duracaoMs = Date.now() - inicioMs
+          await gravarSyncLog(supabase, {
+            status: 'falha',
+            registros_inseridos: totalInseridos,
+            erros_count: 1,
+            mensagem_erro: `Token CDA expirado (403) — falhou em alias ${alias.utm_source}`,
+            duracao_ms: duracaoMs,
+            periodo_inicio: dataInicio,
+            periodo_fim: dataFim,
+          })
+          return new Response(JSON.stringify({
+            ok: false,
+            erro: 'Token CDA expirado (403). Alerta enviado para felipe.saturnino@spingaming.com.br.',
+            influencer_que_falhou: alias.utm_source,
+            total_sincronizados_antes_da_falha: totalInseridos,
+          }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+        }
+        const msg = `Erro em alias ${alias.utm_source}: ${err instanceof Error ? err.message : String(err)}`
+        todosErros.push(msg)
+        const nome = infNomeCache.get(alias.influencer_id) ?? '—'
+        resultados.push({ utm_source: alias.utm_source, nome, dias_sincronizados: 0, erros: [msg] })
       }
     }
 
@@ -556,10 +608,11 @@ serve(async (req: Request) => {
 
     const resposta = {
       ok: true,
-      versao: 'v1.4.0',
+      versao: 'v1.5.0',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       fase1_influencers: {
         total: influencers?.length ?? 0,
+        aliases_mapeados: aliasesNovos.length,
         registros_upserted: totalInseridos,
         erros: todosErros.length,
         detalhes: resultados,

@@ -290,6 +290,7 @@ export default function DashboardOverviewInfluencer() {
   const [totaisAnt, setTotaisAnt] = useState<TotaisData>(totais);
   const [diasData, setDiasData] = useState<DiaData[]>([]);
   const [perfis, setPerfis] = useState<InfluencerPerfil[]>([]);
+  const [influencersComDadosIds, setInfluencersComDadosIds] = useState<string[]>([]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -301,6 +302,12 @@ export default function DashboardOverviewInfluencer() {
   }
 
   const influencersVisiveis = useMemo(() => escoposVisiveis.influencersVisiveis.length === 0 ? [] : escoposVisiveis.influencersVisiveis, [escoposVisiveis.influencersVisiveis]);
+
+  useEffect(() => {
+    if (filtroInfluencer !== "todos" && influencersComDadosIds.length > 0 && !influencersComDadosIds.includes(filtroInfluencer)) {
+      setFiltroInfluencer("todos");
+    }
+  }, [filtroInfluencer, influencersComDadosIds]);
 
   useEffect(() => {
     async function carregar() {
@@ -367,6 +374,9 @@ export default function DashboardOverviewInfluencer() {
 
       const rows = metricas.filter((m) => podeVerInfluencer(m.influencer_id));
       const liveRows = lives.filter((l) => podeVerInfluencer(l.influencer_id));
+
+      const idsComDados = [...new Set([...rows.map((m) => m.influencer_id), ...liveRows.map((l) => l.influencer_id)])];
+      setInfluencersComDadosIds(idsComDados);
 
       function calcTotais(m: Metrica[], l: LiveData[], r: LiveResultado[]): TotaisData {
         const ggr = m.reduce((s, x) => s + (x.ggr || 0), 0);
@@ -539,9 +549,11 @@ export default function DashboardOverviewInfluencer() {
                 t={t}
               >
                 <option value="todos">Todos os influencers</option>
-                {perfis.filter((p) => podeVerInfluencer(p.id)).map((p) => (
-                  <option key={p.id} value={p.id}>{p.nome_artistico}</option>
-                ))}
+                {perfis
+                  .filter((p) => influencersComDadosIds.includes(p.id) && podeVerInfluencer(p.id))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{p.nome_artistico}</option>
+                  ))}
               </SelectComIcone>
             )}
 
