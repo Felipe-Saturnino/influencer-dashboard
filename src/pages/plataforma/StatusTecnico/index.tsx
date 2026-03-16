@@ -140,6 +140,8 @@ export default function StatusTecnico() {
     setSyncExecutando(true);
     setSyncMensagem(null);
     try {
+      // Atualiza a sessão para evitar token expirado (401)
+      await supabase.auth.refreshSession();
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token || !supabaseUrl) {
@@ -157,7 +159,9 @@ export default function StatusTecnico() {
       if (!res.ok) {
         const msg = resData?.erro ?? resData?.error ?? `Erro ${res.status}: ${res.statusText}`;
         let texto = msg;
-        if (msg.includes("SMARTICO_TOKEN")) {
+        if (res.status === 401) {
+          texto = "Sessão expirada. Faça logout e login novamente, depois tente o Sync.";
+        } else if (msg.includes("SMARTICO_TOKEN")) {
           texto = `${msg} Configure em Supabase → Settings → Edge Functions → Secrets.`;
         } else if (res.status === 500) {
           texto = `${msg} Verifique os logs em Supabase → Edge Functions → sync-metricas → Logs.`;
