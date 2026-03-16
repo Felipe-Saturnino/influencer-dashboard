@@ -363,16 +363,17 @@ function FunilVisual({ values, taxas }: {
   taxas: string[];
 }) {
   const { theme: t } = useApp();
-  const W = 280, H = 260;
+  const W = 420, H = 340;
   const levels = 4;
   const stepH = H / levels;
   // Larguras: nível 0 = W total, nível 3 = W * 0.32 (fixo pois estático)
   const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
 
   return (
-    <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-      {/* SVG Funil */}
-      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ flexShrink: 0, display: "block" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "stretch", minHeight: 340 }}>
+      {/* SVG Funil — ocupa metade do espaço */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ maxHeight: 340, display: "block" }} preserveAspectRatio="xMidYMid meet">
         {FUNIL_STEPS.map((step, i) => {
           const wTop = widths[i];
           const wBot = widths[i + 1] ?? widths[i] * 0.7;
@@ -414,10 +415,11 @@ function FunilVisual({ values, taxas }: {
           );
         })}
       </svg>
+      </div>
 
-      {/* Taxas de conversão à direita */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingTop: 8, flex: 1 }}>
-        <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 4, fontWeight: 600 }}>
+      {/* Taxas de conversão — ocupa a outra metade, cards compactos */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, justifyContent: "center" }}>
+        <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 6, fontWeight: 600 }}>
           Taxas de Conversão
         </div>
         {[
@@ -428,7 +430,7 @@ function FunilVisual({ values, taxas }: {
           { label: "View → FTD",        taxa: taxas[4], color: FUNIL_COLORS[0], highlight: true },
         ].map((r) => (
           <div key={r.label} style={{
-            padding: "8px 12px", borderRadius: 10,
+            padding: "6px 10px", borderRadius: 8,
             border: r.highlight
               ? `1px solid ${r.color}50`
               : `1px solid ${t.cardBorder}`,
@@ -440,7 +442,7 @@ function FunilVisual({ values, taxas }: {
               {r.label}
             </div>
             <div style={{
-              fontSize: 16, fontWeight: 800, fontFamily: FONT.body,
+              fontSize: 14, fontWeight: 800, fontFamily: FONT.body,
               color: r.highlight ? r.color : t.text,
             }}>
               {r.taxa}
