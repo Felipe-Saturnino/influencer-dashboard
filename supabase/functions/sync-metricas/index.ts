@@ -433,11 +433,11 @@ serve(async (req: Request) => {
     try { params = await req.json() } catch { /* Body vazio ok */ }
 
     const hoje = new Date()
-    const doisDiasAtras = new Date(hoje)
-    doisDiasAtras.setDate(hoje.getDate() - 2)
+    // Início do projeto (dez/2025). Em produção, alterar para 60 dias: sessentaDiasAtras.setDate(hoje.getDate() - 60)
+    const defaultInicio = '2025-12-01'
 
     const dataFim    = params.data_fim    ?? hoje.toISOString().split('T')[0]
-    const dataInicio = params.data_inicio ?? doisDiasAtras.toISOString().split('T')[0]
+    const dataInicio = params.data_inicio ?? defaultInicio
 
     const inicioMs = Date.now()
     console.log(`[sync-metricas] v1.5.0 | Período: ${dataInicio} → ${dataFim}`)

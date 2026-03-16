@@ -147,11 +147,16 @@ export default function StatusTecnico() {
         setSyncExecutando(false);
         return;
       }
+      const hoje = new Date();
+      const dataFim = hoje.toISOString().split("T")[0];
+      // Início do projeto (dez/2025). Em produção, alterar para 60 dias: new Date(hoje); d.setDate(d.getDate() - 60);
+      const dataInicio = "2025-12-01";
+
       const url = `${supabaseUrl}/functions/v1/sync-metricas`;
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ data_inicio: dataInicio, data_fim: dataFim }),
       });
       const resData = (await res.json().catch(() => ({}))) as { ok?: boolean; erro?: string; error?: string; fase1_influencers?: { registros_upserted?: number; aliases_mapeados?: number } };
       if (!res.ok) {
@@ -171,7 +176,10 @@ export default function StatusTecnico() {
       if (resData?.ok) {
         const regs = resData?.fase1_influencers?.registros_upserted ?? 0;
         const aliases = resData?.fase1_influencers?.aliases_mapeados ?? 0;
-        setSyncMensagem({ tipo: "ok", texto: `Sync concluído: ${regs} registros sincronizados${aliases > 0 ? ` (${aliases} aliases mapeados)` : ""}. Atualize os dashboards.` });
+        setSyncMensagem({
+          tipo: "ok",
+          texto: `Sync concluído: ${regs} registros sincronizados${aliases > 0 ? ` (${aliases} aliases mapeados)` : ""}. Atualize os dashboards. Se não aparecer, selecione o mês correto no filtro do relatório (ex.: Mar 2026).`,
+        });
         carregar();
       } else {
         setSyncMensagem({ tipo: "erro", texto: resData?.erro ?? "Erro desconhecido" });
