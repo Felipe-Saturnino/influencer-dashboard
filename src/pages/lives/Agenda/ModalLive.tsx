@@ -88,6 +88,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [operadorasInfluencer, setOperadorasInfluencer] = useState<{ slug: string; nome: string }[]>([]);
+  const [operadorasTodas, setOperadorasTodas] = useState<{ slug: string; nome: string }[]>([]);
   const [form, setForm] = useState({
     influencer_id:  live?.influencer_id  ?? (user?.role === "influencer" ? user?.id ?? "" : ""),
     operadora_slug: live?.operadora_slug ?? "",
@@ -103,8 +104,15 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const [perfilLinks,        setPerfilLinks]        = useState<Record<string, string>>({});
   const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
 
-  const showOperadoraField  = operadorasInfluencer.length > 1;
-  const operadoraObrigatoria = operadorasInfluencer.length > 1;
+  const showOperadoraField = !!form.influencer_id;
+  const operadoraObrigatoria = !!form.influencer_id;
+  const opcoesOperadora = operadorasInfluencer.length > 0 ? operadorasInfluencer : operadorasTodas;
+
+  useEffect(() => {
+    supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => {
+      setOperadorasTodas((data ?? []).map((o: { slug: string; nome: string }) => ({ slug: o.slug, nome: o.nome })));
+    });
+  }, []);
 
   useEffect(() => {
     if (!isInfluencer) {
@@ -134,7 +142,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           const novaOp = lista.length === 1 ? lista[0].slug : (isEdit && live?.operadora_slug ? live.operadora_slug : "");
           setForm(f => ({ ...f, operadora_slug: novaOp }));
         });
-      } else setOperadorasInfluencer([]);
+      } else {
+        setOperadorasInfluencer([]);
+        setForm(f => ({ ...f, operadora_slug: isEdit && live?.operadora_slug ? live.operadora_slug : "" }));
+      }
       setPerfilLinks((perfRes.data as Record<string, string>) ?? {});
     });
   }, [form.influencer_id, isEdit, live?.operadora_slug]);
@@ -160,11 +171,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     if (operadoraObrigatoria && !form.operadora_slug?.trim()) return setError("Selecione a operadora.");
     if (!form.link.trim()) return setError("Informe o link da live na plataforma selecionada.");
 
-    const opSlug = operadorasInfluencer.length === 1 ? operadorasInfluencer[0].slug : form.operadora_slug?.trim();
-    if (!opSlug) {
-      if (operadorasInfluencer.length === 0) return setError("Influencer sem operadoras cadastradas. Cadastre em Influencers → Operadoras.");
-      return setError("Selecione a operadora.");
-    }
+    const opSlug = form.operadora_slug?.trim();
+    if (!opSlug) return setError("Selecione a operadora. É obrigatório para o Financeiro.");
 
     setSaving(true);
     const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -260,19 +268,24 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           </div>
         )}
 
-        {/* Operadora */}
+        {/* Operadora — sempre visível quando há influencer; obrigatória para o Financeiro */}
         {showOperadoraField && (
           <div style={row}>
-            <label style={labelStyle}>Operadora {operadoraObrigatoria && <span style={{ color: BRAND.vermelho }}>*</span>}</label>
+            <label style={labelStyle}>Operadora <span style={{ color: BRAND.vermelho }}>*</span></label>
             <select
               value={form.operadora_slug}
               onChange={e => !somenteLeitura && setForm(f => ({ ...f, operadora_slug: e.target.value }))}
               disabled={somenteLeitura}
               style={inputStyle}
             >
-              <option value="">Selecione...</option>
-              {operadorasInfluencer.map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+              <option value="">Selecione a operadora...</option>
+              {opcoesOperadora.map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
             </select>
+            {operadorasInfluencer.length === 0 && opcoesOperadora.length > 0 && (
+              <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
+                Influencer sem operadoras vinculadas — selecione uma. Para vincular no perfil, use Operações → Influencers.
+              </span>
+            )}
           </div>
         )}
 
