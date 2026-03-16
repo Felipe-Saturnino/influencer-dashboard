@@ -476,6 +476,7 @@ export default function DashboardOverview() {
 
   const [perfis, setPerfis]       = useState<InfluencerPerfil[]>([]);
   const [ranking, setRanking]     = useState<RankingRow[]>([]);
+  const [rankingAnt, setRankingAnt] = useState<RankingRow[]>([]);
   const [totais, setTotais]       = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
   const [totaisAnt, setTotaisAnt] = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
 
@@ -601,8 +602,10 @@ export default function DashboardOverview() {
         const lA = await buscaLives(iA, fA);
         const rA = await buscaResultados(lA);
         const rowsAnt = montaRanking(mA, lA, rA).filter((r) => podeVerInfluencer(r.influencer_id));
+        setRankingAnt(rowsAnt);
         setTotaisAnt(calculaTotais(rowsAnt));
       } else {
+        setRankingAnt([]);
         setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
       }
 
@@ -610,13 +613,6 @@ export default function DashboardOverview() {
     }
     carregar();
   }, [historico, idxMes, mesSelecionado, podeVerInfluencer]);
-
-  // ── TAXAS DO FUNIL ────────────────────────────────────────────────────────────
-  const pctViewAcesso  = totais.views > 0    ? ((totais.acessos   / totais.views)    * 100).toFixed(1) + "%" : "—";
-  const pctAcessoReg   = totais.acessos > 0  ? ((totais.registros / totais.acessos)  * 100).toFixed(1) + "%" : "—";
-  const pctRegFTD      = totais.registros > 0? ((totais.ftds      / totais.registros)* 100).toFixed(1) + "%" : "—";
-  const pctAcessoFTD   = totais.acessos > 0  ? ((totais.ftds      / totais.acessos)  * 100).toFixed(1) + "%" : "—";
-  const pctViewFTD     = totais.views > 0    ? ((totais.ftds      / totais.views)    * 100).toFixed(1) + "%" : "—";
 
   // ── RANKING FILTRADO ──────────────────────────────────────────────────────────
   const rankingFiltrado = useMemo(() => {
@@ -629,6 +625,29 @@ export default function DashboardOverview() {
     if (statusFiltro) r = r.filter((row) => row.statusLabel === statusFiltro);
     return r;
   }, [ranking, filtroInfluencer, filtroOperadora, statusFiltro, operadoraInfMap]);
+
+  // Mesmo filtro aplicado ao período anterior (para comparativo MTD)
+  const rankingAntFiltrado = useMemo(() => {
+    let r = rankingAnt;
+    if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
+    if (filtroOperadora !== "todas") {
+      const ids = operadoraInfMap[filtroOperadora] ?? [];
+      r = r.filter((row) => ids.includes(row.influencer_id));
+    }
+    if (statusFiltro) r = r.filter((row) => row.statusLabel === statusFiltro);
+    return r;
+  }, [rankingAnt, filtroInfluencer, filtroOperadora, statusFiltro, operadoraInfMap]);
+
+  // Totais exibidos nos KPIs e Funil (respeitam filtros de influencer/operadora/status)
+  const totaisExibidos = useMemo(() => calculaTotais(rankingFiltrado), [rankingFiltrado]);
+  const totaisAntExibidos = useMemo(() => calculaTotais(rankingAntFiltrado), [rankingAntFiltrado]);
+
+  // ── TAXAS DO FUNIL ────────────────────────────────────────────────────────────
+  const pctViewAcesso  = totaisExibidos.views > 0    ? ((totaisExibidos.acessos   / totaisExibidos.views)    * 100).toFixed(1) + "%" : "—";
+  const pctAcessoReg   = totaisExibidos.acessos > 0  ? ((totaisExibidos.registros / totaisExibidos.acessos)  * 100).toFixed(1) + "%" : "—";
+  const pctRegFTD      = totaisExibidos.registros > 0? ((totaisExibidos.ftds      / totaisExibidos.registros)* 100).toFixed(1) + "%" : "—";
+  const pctAcessoFTD   = totaisExibidos.acessos > 0  ? ((totaisExibidos.ftds      / totaisExibidos.acessos)  * 100).toFixed(1) + "%" : "—";
+  const pctViewFTD     = totaisExibidos.views > 0    ? ((totaisExibidos.ftds      / totaisExibidos.views)    * 100).toFixed(1) + "%" : "—";
 
   // ── ESTILOS BASE ──────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
@@ -807,49 +826,49 @@ export default function DashboardOverview() {
         {/* Linha 1: Receita — GGR / Investimento / ROI */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
           <KpiCard
-            label="GGR Total" value={fmtBRL(totais.ggr)}
+            label="GGR Total" value={fmtBRL(totaisExibidos.ggr)}
             icon={<GiPokerHand size={16} />}
             accentColor={BRAND.receita}
-            atual={totais.ggr} anterior={totaisAnt.ggr} isBRL isHistorico={historico}
+            atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico}
           />
           <KpiCard
-            label="Investimento" value={fmtBRL(totais.investimento)}
+            label="Investimento" value={fmtBRL(totaisExibidos.investimento)}
             icon={<GiCoins size={16} />}
             accentColor={BRAND.custo}
-            atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico}
+            atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico}
           />
           <KpiCard
             label="ROI Geral"
-            value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"}
+            value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"}
             icon={<GiTrophy size={16} />}
             accentColor={BRAND.verde}
-            atual={totais.roi} anterior={totaisAnt.roi} isHistorico={historico}
+            atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico}
           />
         </div>
 
         {/* Linha 2: Operação — Lives / Horas / Influencers + Depósitos */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 12 }}>
           <KpiCard
-            label="Lives" value={totais.lives.toLocaleString("pt-BR")}
+            label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")}
             icon={<GiFilmProjector size={16} />}
             accentColor={BRAND.operacao}
-            atual={totais.lives} anterior={totaisAnt.lives} isHistorico={historico}
+            atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico}
           />
           <KpiCard
-            label="Horas Realizadas" value={fmtHorasTotal(totais.horas)}
+            label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)}
             icon={<GiSandsOfTime size={16} />}
             accentColor={BRAND.operacao}
-            atual={totais.horas} anterior={totaisAnt.horas} isHistorico={historico}
+            atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico}
           />
           <KpiCard
-            label="Influencers Ativos" value={totais.influencers.toLocaleString("pt-BR")}
+            label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")}
             icon={<GiMicrophone size={16} />}
             accentColor={BRAND.operacao}
-            atual={totais.influencers} anterior={totaisAnt.influencers} isHistorico={historico}
+            atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico}
           />
           <KpiCardDepositos
-            atual={{ qtd: totais.depositos_qtd, valor: totais.depositos_valor }}
-            anterior={{ qtd: totaisAnt.depositos_qtd, valor: totaisAnt.depositos_valor }}
+            atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }}
+            anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }}
             isHistorico={historico}
           />
         </div>
@@ -857,30 +876,30 @@ export default function DashboardOverview() {
         {/* Linha 3: Transação — Registros / Custo Reg / FTDs / Custo FTD */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
           <KpiCard
-            label="Registros" value={totais.registros.toLocaleString("pt-BR")}
+            label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")}
             icon={<GiPlayerNext size={16} />}
             accentColor={BRAND.transacao}
-            atual={totais.registros} anterior={totaisAnt.registros} isHistorico={historico}
+            atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico}
           />
           <KpiCard
             label="Custo por Registro"
-            value={totais.registros > 0 ? fmtBRL(totais.custoPorRegistro) : "—"}
+            value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"}
             icon={<GiReceiveMoney size={16} />}
             accentColor={BRAND.custo}
-            atual={totais.custoPorRegistro} anterior={totaisAnt.custoPorRegistro} isBRL isHistorico={historico}
+            atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico}
           />
           <KpiCard
-            label="FTDs" value={totais.ftds.toLocaleString("pt-BR")}
+            label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")}
             icon={<GiTrophy size={16} />}
             accentColor={BRAND.transacao}
-            atual={totais.ftds} anterior={totaisAnt.ftds} isHistorico={historico}
+            atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico}
           />
           <KpiCard
             label="Custo por FTD"
-            value={totais.ftds > 0 ? fmtBRL(totais.custoPorFTD) : "—"}
+            value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"}
             icon={<GiPayMoney size={16} />}
             accentColor={BRAND.custo}
-            atual={totais.custoPorFTD} anterior={totaisAnt.custoPorFTD} isBRL isHistorico={historico}
+            atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico}
           />
         </div>
       </div>
@@ -889,7 +908,7 @@ export default function DashboardOverview() {
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle icon={<GiPlayerNext size={15} />}>Funil de Conversão</SectionTitle>
         <FunilVisual
-          values={[totais.views, totais.acessos, totais.registros, totais.ftds]}
+          values={[totaisExibidos.views, totaisExibidos.acessos, totaisExibidos.registros, totaisExibidos.ftds]}
           taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
         />
       </div>
