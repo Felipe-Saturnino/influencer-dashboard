@@ -140,6 +140,7 @@ serve(async (req) => {
         status: 'ativo',
         telefone: (body.telefone ?? '').trim() || undefined,
         cache_hora: body.cache_negociado ?? 0,
+        canais: plat.length > 0 ? plat : undefined,
         link_twitch: plat.includes('Twitch') ? (body.link_twitch ?? '') : undefined,
         link_youtube: plat.includes('YouTube') ? (body.link_youtube ?? '') : undefined,
         link_kick: plat.includes('Kick') ? (body.link_kick ?? '') : undefined,
