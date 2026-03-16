@@ -445,15 +445,17 @@ export default function Scout() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "12px", padding: "14px 18px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body }}>💰 Cachê por Hora — até</span>
-              <span style={{ fontSize: "13px", fontWeight: 700, color: BASE_COLORS.purple, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : formatBRL(cacheLimit) + "/h"}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
+                <GiTwoCoins size={13} style={{ color: BRAND.ciano }} /> Cachê por Hora — até
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.roxoVivo, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : formatBRL(cacheLimit) + "/h"}</span>
             </div>
-            <div style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
-              <div style={{ position: "absolute", left: 0, right: 0, height: "4px", borderRadius: "2px", background: t.cardBorder }} />
-              <div style={{ position: "absolute", left: 0, width: `${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}%`, height: "4px", borderRadius: "2px", background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})` }} />
-              <input type="range" min={0} max={cacheMax || 1} step={50} value={cacheLimit} onChange={(e) => setCacheLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: "20px", zIndex: 2 }} />
-              <div style={{ position: "absolute", left: `calc(${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}% - 8px)`, width: "16px", height: "16px", borderRadius: "50%", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+            <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
+              <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
+              <div style={{ position: "absolute", left: 0, width: `${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+              <input type="range" min={0} max={cacheMax || 1} step={50} value={cacheLimit} onChange={(e) => setCacheLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+              <div style={{ position: "absolute", left: `calc(${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
               <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
@@ -461,15 +463,17 @@ export default function Scout() {
             </div>
           </div>
           <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "12px", padding: "14px 18px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body }}>👁️ Views — até</span>
-              <span style={{ fontSize: "13px", fontWeight: 700, color: BASE_COLORS.blue, fontFamily: FONT.body }}>{viewsMax <= 0 || viewsLimit >= viewsMax ? "Todos" : viewsLimit.toLocaleString("pt-BR")}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
+                <GiEyeball size={13} style={{ color: BRAND.ciano }} /> Views — até
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body }}>{viewsMax <= 0 || viewsLimit >= viewsMax ? "Todos" : viewsLimit.toLocaleString("pt-BR")}</span>
             </div>
-            <div style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
-              <div style={{ position: "absolute", left: 0, right: 0, height: "4px", borderRadius: "2px", background: t.cardBorder }} />
-              <div style={{ position: "absolute", left: 0, width: `${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}%`, height: "4px", borderRadius: "2px", background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})` }} />
-              <input type="range" min={0} max={viewsMax || 1} step={1000} value={viewsLimit} onChange={(e) => setViewsLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: "20px", zIndex: 2 }} />
-              <div style={{ position: "absolute", left: `calc(${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}% - 8px)`, width: "16px", height: "16px", borderRadius: "50%", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+            <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
+              <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
+              <div style={{ position: "absolute", left: 0, width: `${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+              <input type="range" min={0} max={viewsMax || 1} step={1000} value={viewsLimit} onChange={(e) => setViewsLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+              <div style={{ position: "absolute", left: `calc(${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
               <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>0</span>
