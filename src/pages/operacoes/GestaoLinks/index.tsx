@@ -23,12 +23,8 @@ const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 function calcGgr(alias: { total_deposit?: number; total_withdrawal?: number; ggr?: number }): number {
   if (alias.ggr != null) return alias.ggr;
-  const dep = alias.total_deposit ?? 0;
-  const wd = alias.total_withdrawal ?? 0;
-  return dep - wd;
+  return (alias.total_deposit ?? 0) - (alias.total_withdrawal ?? 0);
 }
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fmt(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -40,25 +36,15 @@ function fmtData(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
-// ─── Tipos internos ───────────────────────────────────────────────────────────
-
-interface InfluencerOpcao {
-  id:            string;
-  nome_artistico: string;
-  status:        string;
-}
-
+interface InfluencerOpcao { id: string; nome_artistico: string; status: string; }
 type Aba = "pendentes" | "mapeados" | "ignorados";
-
-// ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function GestaoLinks() {
   const { theme, user, podeVerInfluencer } = useApp();
   const perm = usePermission("gestao_links");
   const { showFiltroOperadora } = useDashboardFiltros();
-  // "proprios": Mapear só para influencers no escopo; Reabrir só em UTMs mapeados a influencers no escopo
-  const podeMapearAlias  = () => perm.canEditarOk; // Mapear: dropdown já filtrado por escopo
-  const podeIgnorarAlias = () => perm.canEditarOk; // Ignorar: pode em qualquer pendente
+
+  const podeMapearAlias   = () => perm.canEditarOk;
   const podeReativarAlias = (alias: UtmAlias) =>
     perm.canEditarOk && (perm.canEditar !== "proprios" || !alias.influencer_id || podeVerInfluencer(alias.influencer_id));
 
@@ -68,87 +54,35 @@ export default function GestaoLinks() {
   const [aliases, setAliases] = useState<UtmAlias[]>([]);
   const [loading, setLoading] = useState(true);
   const [influencers, setInfluencers] = useState<InfluencerOpcao[]>([]);
-
-  // Modal de mapeamento
   const [modalAberto, setModalAberto] = useState(false);
   const [aliasSelecionado, setAliasSelecionado] = useState<UtmAlias | null>(null);
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erroModal, setErroModal] = useState<string | null>(null);
 
-  // ── Carrega dados ──────────────────────────────────────────────────────────
-
   const carregar = useCallback(async () => {
     setLoading(true);
-
-    const statusFiltro: Record<Aba, string> = {
-      pendentes: "pendente",
-      mapeados:  "mapeado",
-      ignorados: "ignorado",
-    };
-
-    // FIX v1.1.0: Removido o JOIN via influencer_perfil:influencer_id.
-    // O join com coluna nullable causava filtro implícito que excluía
-    // todos os registros com influencer_id = null (UTMs órfãos pendentes).
+    const statusFiltro: Record<Aba, string> = { pendentes: "pendente", mapeados: "mapeado", ignorados: "ignorado" };
     let query = supabase.from("utm_aliases").select("*").eq("status", statusFiltro[aba]).order("total_ftds", { ascending: false });
     if (operadoraFiltro !== "todas") query = query.eq("operadora_slug", operadoraFiltro);
     const { data, error } = await query;
-
-    if (error) {
-      console.error("Erro ao carregar utm_aliases:", error.message);
-      setAliases([]);
-      setLoading(false);
-      return;
-    }
-
+    if (error) { console.error("Erro ao carregar utm_aliases:", error.message); setAliases([]); setLoading(false); return; }
     const aliasData = data ?? [];
-
-    // Enriquece com nome do influencer via lookup separado (só para aba mapeados)
     let infNomeMap = new Map<string, string>();
     if (aba === "mapeados") {
-      const influencerIds = aliasData
-        .map((r: any) => r.influencer_id)
-        .filter(Boolean);
-
+      const influencerIds = aliasData.map((r: any) => r.influencer_id).filter(Boolean);
       if (influencerIds.length > 0) {
-        const { data: infData } = await supabase
-          .from("influencer_perfil")
-          .select("id, nome_artistico")
-          .in("id", influencerIds);
-        infNomeMap = new Map(
-          (infData ?? []).map((i: any) => [i.id, i.nome_artistico])
-        );
+        const { data: infData } = await supabase.from("influencer_perfil").select("id, nome_artistico").in("id", influencerIds);
+        infNomeMap = new Map((infData ?? []).map((i: any) => [i.id, i.nome_artistico]));
       }
     }
-
-    const mapped = aliasData.map((r: any) => ({
-      ...r,
-      influencer_name: r.influencer_id
-        ? (infNomeMap.get(r.influencer_id) ?? "—")
-        : null,
-    }));
-
-    setAliases(mapped);
+    setAliases(aliasData.map((r: any) => ({ ...r, influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) ?? "—") : null })));
     setLoading(false);
   }, [aba, operadoraFiltro]);
 
   useEffect(() => { carregar(); }, [carregar]);
-
-  useEffect(() => {
-    supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => setOperadorasList(data ?? []));
-  }, []);
-
-  // FIX v1.2.0: Carrega TODOS os influencers (ativo, inativo, cancelado)
-  // pois UTMs de influencers desativados ainda geram recorrência
-  useEffect(() => {
-    supabase
-      .from("influencer_perfil")
-      .select("id, nome_artistico, status")
-      .order("nome_artistico")
-      .then(({ data }) => setInfluencers(data ?? []));
-  }, []);
-
-  // ── Contagem de pendentes para badge ───────────────────────────────────────
+  useEffect(() => { supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => setOperadorasList(data ?? [])); }, []);
+  useEffect(() => { supabase.from("influencer_perfil").select("id, nome_artistico, status").order("nome_artistico").then(({ data }) => setInfluencers(data ?? [])); }, []);
 
   const [totalPendentes, setTotalPendentes] = useState(0);
   useEffect(() => {
@@ -157,99 +91,50 @@ export default function GestaoLinks() {
     q.then(({ count }) => setTotalPendentes(count ?? 0));
   }, [aliases, operadoraFiltro]);
 
-  // ── Ações ──────────────────────────────────────────────────────────────────
+  function abrirModal(alias: UtmAlias) { setAliasSelecionado(alias); setInfluencerSelecionado(""); setErroModal(null); setModalAberto(true); }
 
-  function abrirModal(alias: UtmAlias) {
-    setAliasSelecionado(alias);
-    setInfluencerSelecionado("");
-    setErroModal(null);
-    setModalAberto(true);
-  }
-
-  // FIX v1.2.0: confirmarMapeamento agora fecha o modal SOMENTE após sucesso
-  // e exibe erro inline caso o update falhe
   async function confirmarMapeamento() {
     if (!aliasSelecionado || !influencerSelecionado) return;
-    if (perm.canEditar === "proprios" && !podeVerInfluencer(influencerSelecionado)) return; // "proprios": só mapear para escopo
-    setSalvando(true);
-    setErroModal(null);
-
-    const { error } = await supabase
-      .from("utm_aliases")
-      .update({
-        influencer_id:  influencerSelecionado,
-        status:         "mapeado",
-        mapeado_por:    user?.id ?? null,
-        mapeado_em:     new Date().toISOString(),
-        atualizado_em:  new Date().toISOString(),
-      })
-      .eq("id", aliasSelecionado.id);
-
+    if (perm.canEditar === "proprios" && !podeVerInfluencer(influencerSelecionado)) return;
+    setSalvando(true); setErroModal(null);
+    const { error } = await supabase.from("utm_aliases").update({ influencer_id: influencerSelecionado, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }).eq("id", aliasSelecionado.id);
     setSalvando(false);
-
-    if (error) {
-      console.error("Erro ao mapear:", error.message);
-      setErroModal(`Erro ao salvar: ${error.message}`);
-      return; // NÃO fecha o modal em caso de erro
-    }
-
-    // Só fecha se sucesso
-    setModalAberto(false);
-    setAliasSelecionado(null);
-    setInfluencerSelecionado("");
-    carregar();
+    if (error) { setErroModal(`Erro ao salvar: ${error.message}`); return; }
+    setModalAberto(false); setAliasSelecionado(null); setInfluencerSelecionado(""); carregar();
   }
 
   async function ignorar(alias: UtmAlias) {
-    const { error } = await supabase
-      .from("utm_aliases")
-      .update({ status: "ignorado", atualizado_em: new Date().toISOString() })
-      .eq("id", alias.id);
-
+    const { error } = await supabase.from("utm_aliases").update({ status: "ignorado", atualizado_em: new Date().toISOString() }).eq("id", alias.id);
     if (!error) carregar();
-    else console.error("Erro ao ignorar:", error.message);
   }
 
   async function reativar(alias: UtmAlias) {
-    const { error } = await supabase
-      .from("utm_aliases")
-      .update({
-        status:        "pendente",
-        influencer_id: null,
-        mapeado_por:   null,
-        mapeado_em:    null,
-        atualizado_em: new Date().toISOString(),
-      })
-      .eq("id", alias.id);
-
+    const { error } = await supabase.from("utm_aliases").update({ status: "pendente", influencer_id: null, mapeado_por: null, mapeado_em: null, atualizado_em: new Date().toISOString() }).eq("id", alias.id);
     if (!error) carregar();
-    else console.error("Erro ao reativar:", error.message);
   }
 
-  // ─── Estilos inline reutilizáveis ─────────────────────────────────────────
-
+  // ─── Estilos ──────────────────────────────────────────────────────────────
+  // th e td sem whiteSpace nowrap — cada coluna controla individualmente
   const th: React.CSSProperties = {
-    textAlign: "left", padding: "10px 16px", color: theme.textMuted,
+    textAlign: "left", padding: "10px 14px", color: theme.textMuted,
     fontWeight: 700, fontSize: 11, textTransform: "uppercase",
     letterSpacing: "0.08em", fontFamily: FONT.body,
     background: "rgba(74,32,130,0.10)", borderBottom: `1px solid ${theme.cardBorder}`,
-    whiteSpace: "nowrap",
   };
-
   const td: React.CSSProperties = {
-    padding: "12px 16px", color: theme.text, fontFamily: FONT.body,
+    padding: "12px 14px", color: theme.text, fontFamily: FONT.body,
     fontSize: 13, verticalAlign: "middle",
     borderBottom: `1px solid ${theme.cardBorder}`,
-    whiteSpace: "nowrap",
+    whiteSpace: "nowrap", // colunas numéricas e de data não quebram
   };
-
-  const tdMuted: React.CSSProperties = {
+  const tdMuted: React.CSSProperties = { ...td, color: theme.textMuted, fontSize: 12 };
+  // coluna UTM Source: permite quebra, tem maxWidth
+  const tdUtm: React.CSSProperties = {
     ...td,
-    color: theme.textMuted,
-    fontSize: 12,
+    whiteSpace: "normal",
+    wordBreak: "break-all",
+    maxWidth: 220,
   };
-
-  // ─── Render ────────────────────────────────────────────────────────────────
 
   const emptyMessages: Record<Aba, string> = {
     pendentes: "Nenhum link pendente. Tudo mapeado!",
@@ -258,15 +143,11 @@ export default function GestaoLinks() {
   };
 
   if (perm.canView === "nao") {
-    return (
-      <div style={{ padding: 24, textAlign: "center", color: theme.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar a Gestão de Links.
-      </div>
-    );
+    return <div style={{ padding: 24, textAlign: "center", color: theme.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar a Gestão de Links.</div>;
   }
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1200, margin: "0 auto" }}>
+    <div style={{ padding: "24px 32px" }}>
 
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 6 }}>
@@ -275,9 +156,7 @@ export default function GestaoLinks() {
         </div>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: theme.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-              Gestão de Links
-            </h1>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: theme.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>Gestão de Links</h1>
             {totalPendentes > 0 && (
               <span style={{ background: BRAND.vermelho, color: "#fff", borderRadius: 10, padding: "2px 9px", fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
                 {totalPendentes} pendente{totalPendentes !== 1 ? "s" : ""}
@@ -293,58 +172,25 @@ export default function GestaoLinks() {
       {/* ─── Filtro Operadora ────────────────────────────────────────────────── */}
       {showFiltroOperadora && operadorasList.length > 0 && (
         <div style={{ margin: "20px 0", display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{
-            fontSize: 11, fontWeight: 700, color: theme.textMuted,
-            textTransform: "uppercase", letterSpacing: "1.2px", fontFamily: FONT.body,
-          }}>
-            Operadora
-          </span>
-          <select
-            value={operadoraFiltro}
-            onChange={(e) => setOperadoraFiltro(e.target.value)}
-            style={{
-              padding: "8px 14px", background: theme.inputBg ?? theme.cardBg,
-              border: `1px solid ${theme.cardBorder}`,
-              borderRadius: 10, color: theme.text,
-              fontSize: 13, cursor: "pointer", minWidth: 180,
-              fontFamily: FONT.body, outline: "none",
-            }}
-          >
+          <span style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.2px", fontFamily: FONT.body }}>Operadora</span>
+          <select value={operadoraFiltro} onChange={(e) => setOperadoraFiltro(e.target.value)}
+            style={{ padding: "8px 14px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 13, cursor: "pointer", minWidth: 180, fontFamily: FONT.body, outline: "none" }}>
             <option value="todas">Todas</option>
-            {operadorasList.map((op) => (
-              <option key={op.slug} value={op.slug}>{op.nome}</option>
-            ))}
+            {operadorasList.map((op) => (<option key={op.slug} value={op.slug}>{op.nome}</option>))}
           </select>
         </div>
       )}
 
-      {/* ─── Abas (pill style) ───────────────────────────────────────────────── */}
+      {/* ─── Abas ────────────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
         {(["pendentes", "mapeados", "ignorados"] as Aba[]).map((a) => {
           const ativa = aba === a;
           return (
-            <button
-              key={a}
-              onClick={() => setAba(a)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "7px 16px", borderRadius: 20, cursor: "pointer",
-                border: `1px solid ${ativa ? BRAND.roxoVivo : theme.cardBorder}`,
-                background: ativa ? `${BRAND.roxoVivo}22` : (theme.inputBg ?? theme.cardBg),
-                color: ativa ? BRAND.roxoVivo : theme.textMuted,
-                fontSize: 13, fontWeight: ativa ? 700 : 400,
-                fontFamily: FONT.body, transition: "all 0.15s",
-              }}
-            >
+            <button key={a} onClick={() => setAba(a)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 20, cursor: "pointer", border: `1px solid ${ativa ? BRAND.roxoVivo : theme.cardBorder}`, background: ativa ? `${BRAND.roxoVivo}22` : (theme.inputBg ?? theme.cardBg), color: ativa ? BRAND.roxoVivo : theme.textMuted, fontSize: 13, fontWeight: ativa ? 700 : 400, fontFamily: FONT.body, transition: "all 0.15s" }}>
               {a.charAt(0).toUpperCase() + a.slice(1)}
               {a === "pendentes" && totalPendentes > 0 && (
-                <span style={{
-                  background: BRAND.vermelho, color: "#fff",
-                  borderRadius: 10, padding: "0px 6px",
-                  fontSize: 10, fontWeight: 700,
-                }}>
-                  {totalPendentes}
-                </span>
+                <span style={{ background: BRAND.vermelho, color: "#fff", borderRadius: 10, padding: "0px 6px", fontSize: 10, fontWeight: 700 }}>{totalPendentes}</span>
               )}
             </button>
           );
@@ -367,34 +213,53 @@ export default function GestaoLinks() {
           {emptyMessages[aba]}
         </div>
       ) : (
+        // sem overflow:hidden no wrapper externo para não forçar scroll
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", overflow: "hidden" }}>
-          {/* overflowX no wrapper interno para scroll horizontal sem quebrar o borderRadius */}
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 800 }}>
-              <thead>
-                <tr>
-                  <th style={th}>UTM Source</th>
-                  {operadoraFiltro === "todas" && operadorasList.length > 1 && <th style={th}>Operadora</th>}
-                  <th style={th}>Primeiro visto</th>
-                  <th style={th}>Último visto</th>
-                  <th style={{ ...th, textAlign: "right" }}>FTDs</th>
-                  <th style={{ ...th, textAlign: "right" }}>Depósitos</th>
-                  <th style={{ ...th, textAlign: "right" }}>GGR</th>
-                  {aba === "mapeados" && <th style={th}>Influencer</th>}
-                  <th style={{ ...th, minWidth: 180 }}>Ações</th>
-                </tr>
-              </thead>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+            <colgroup>
+              {/* UTM Source: largura fixa razoável, vai quebrar internamente */}
+              <col style={{ width: "22%" }} />
+              {operadoraFiltro === "todas" && operadorasList.length > 1 && <col style={{ width: "12%" }} />}
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "11%" }} />
+              {aba === "mapeados" && <col style={{ width: "12%" }} />}
+              {/* Ações: espaço restante */}
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={th}>UTM Source</th>
+                {operadoraFiltro === "todas" && operadorasList.length > 1 && <th style={th}>Operadora</th>}
+                <th style={th}>1º visto</th>
+                <th style={th}>Último</th>
+                <th style={{ ...th, textAlign: "right" }}>FTDs</th>
+                <th style={{ ...th, textAlign: "right" }}>Depósitos</th>
+                <th style={{ ...th, textAlign: "right" }}>GGR</th>
+                {aba === "mapeados" && <th style={th}>Influencer</th>}
+                <th style={th}>Ações</th>
+              </tr>
+            </thead>
             <tbody>
               {aliases.map((alias, idx) => {
                 const ggr = calcGgr(alias);
-                const zebraStyle: React.CSSProperties = idx % 2 === 1
-                  ? { background: "rgba(74,32,130,0.06)" }
-                  : {};
+                const zebraStyle: React.CSSProperties = idx % 2 === 1 ? { background: "rgba(74,32,130,0.06)" } : {};
                 return (
                   <tr key={alias.id} style={zebraStyle}>
-                    <td style={td}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: `${BRAND.roxoVivo}22`, color: BRAND.roxoVivo, border: `1px solid ${BRAND.roxoVivo}44`, borderRadius: 6, padding: "3px 9px", fontSize: 12, fontWeight: 600, fontFamily: "monospace" }}>
-                        <Link2 size={11} />{alias.utm_source}
+                    {/* UTM Source: chip com quebra de linha e maxWidth */}
+                    <td style={tdUtm}>
+                      <span style={{
+                        display: "inline-flex", alignItems: "flex-start", gap: 5,
+                        background: `${BRAND.roxoVivo}22`, color: BRAND.roxoVivo,
+                        border: `1px solid ${BRAND.roxoVivo}44`,
+                        borderRadius: 6, padding: "3px 9px",
+                        fontSize: 12, fontWeight: 600, fontFamily: "monospace",
+                        wordBreak: "break-all", maxWidth: "100%",
+                      }}>
+                        <Link2 size={11} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <span>{alias.utm_source}</span>
                       </span>
                     </td>
                     {operadoraFiltro === "todas" && operadorasList.length > 1 && (
@@ -408,23 +273,23 @@ export default function GestaoLinks() {
                       <span style={ggr >= 0 ? { color: BRAND.verde, fontWeight: 600 } : { color: BRAND.vermelho, fontWeight: 600 }}>{fmt(ggr)}</span>
                     </td>
                     {aba === "mapeados" && <td style={td}>{alias.influencer_name ?? "—"}</td>}
-                    <td style={{ ...td, minWidth: 180 }}>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <td style={td}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                         {aba === "pendentes" && podeMapearAlias() && (
                           <>
                             <button onClick={() => abrirModal(alias)}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 14px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
                               <Link2 size={12} /> Mapear
                             </button>
                             <button onClick={() => ignorar(alias)}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 14px", borderRadius: 10, border: `1px solid ${theme.cardBorder}`, background: "transparent", color: theme.textMuted, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: `1px solid ${theme.cardBorder}`, background: "transparent", color: theme.textMuted, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
                               <EyeOff size={12} /> Ignorar
                             </button>
                           </>
                         )}
                         {(aba === "mapeados" || aba === "ignorados") && podeReativarAlias(alias) && (
                           <button onClick={() => reativar(alias)}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 14px", borderRadius: 10, border: `1px solid ${theme.cardBorder}`, background: "transparent", color: theme.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
+                            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: `1px solid ${theme.cardBorder}`, background: "transparent", color: theme.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
                             <RotateCcw size={12} /> Reabrir
                           </button>
                         )}
@@ -435,37 +300,27 @@ export default function GestaoLinks() {
               })}
             </tbody>
           </table>
-          </div>
         </div>
       )}
 
-      {/* ─── Modal de Mapeamento ─────────────────────────────────────────────── */}
+      {/* ─── Modal ───────────────────────────────────────────────────────────── */}
       {modalAberto && aliasSelecionado && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
           onClick={() => { if (!salvando) setModalAberto(false); }}>
           <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 20, padding: "28px 32px", width: 440, maxWidth: "90vw" }}
             onClick={(e) => e.stopPropagation()}>
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: theme.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
-                Mapear link órfão
-              </h2>
-              <button
-                onClick={() => { if (!salvando) setModalAberto(false); }}
-                style={{ background: "none", border: "none", cursor: salvando ? "not-allowed" : "pointer", color: theme.textMuted, display: "flex", alignItems: "center", padding: 4 }}
-              >
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: theme.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>Mapear link órfão</h2>
+              <button onClick={() => { if (!salvando) setModalAberto(false); }} style={{ background: "none", border: "none", cursor: salvando ? "not-allowed" : "pointer", color: theme.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
                 <X size={18} />
               </button>
             </div>
             <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 22, fontFamily: FONT.body }}>
               Associe o UTM <strong style={{ color: BRAND.roxoVivo }}>{aliasSelecionado.utm_source}</strong> ao influencer correto.
-              O sync automático passará a incluir os dados deste link no influencer selecionado.
             </p>
 
-            <div style={{
-              background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`,
-              borderRadius: 12, padding: "14px 18px", marginBottom: 20,
-              display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8,
-            }}>
+            <div style={{ background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
               {[
                 { label: "FTDs",      value: String(aliasSelecionado.total_ftds) },
                 { label: "Depósitos", value: fmt(aliasSelecionado.total_deposit) },
@@ -478,71 +333,28 @@ export default function GestaoLinks() {
               ))}
             </div>
 
-            <label style={{
-              display: "block", fontSize: 11, fontWeight: 700,
-              color: theme.textMuted, textTransform: "uppercase",
-              letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body,
-            }}>
-              Influencer
-            </label>
-            <select
-              value={influencerSelecionado}
-              onChange={(e) => setInfluencerSelecionado(e.target.value)}
-              style={{
-                width: "100%", padding: "10px 12px",
-                background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`,
-                borderRadius: 10, color: theme.text,
-                fontSize: 14, marginBottom: 16,
-                outline: "none", fontFamily: FONT.body, cursor: "pointer",
-              }}
-            >
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>Influencer</label>
+            <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
+              style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
               <option value="">Selecione o influencer...</option>
-              {(perm.canEditar === "proprios"
-                ? influencers.filter((inf) => podeVerInfluencer(inf.id))
-                : influencers
-              ).map((inf) => (
-                <option key={inf.id} value={inf.id}>
-                  {inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}
-                </option>
+              {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers).map((inf) => (
+                <option key={inf.id} value={inf.id}>{inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}</option>
               ))}
             </select>
 
             {erroModal && (
-              <div style={{
-                display: "flex", alignItems: "center", gap: 8,
-                background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`,
-                borderRadius: 10, padding: "10px 14px",
-                fontSize: 12, color: BRAND.vermelho,
-                marginBottom: 16, fontFamily: FONT.body,
-              }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: BRAND.vermelho, marginBottom: 16, fontFamily: FONT.body }}>
                 <AlertCircle size={14} /> {erroModal}
               </div>
             )}
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button
-                onClick={() => { if (!salvando) setModalAberto(false); }}
-                style={{
-                  padding: "9px 20px", background: "transparent",
-                  border: `1px solid ${theme.cardBorder}`, borderRadius: 10,
-                  color: theme.text, fontSize: 13, fontFamily: FONT.body, cursor: "pointer",
-                }}
-              >
+              <button onClick={() => { if (!salvando) setModalAberto(false); }}
+                style={{ padding: "9px 20px", background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 13, fontFamily: FONT.body, cursor: "pointer" }}>
                 Cancelar
               </button>
-              <button
-                onClick={confirmarMapeamento}
-                disabled={!influencerSelecionado || salvando}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "9px 20px", borderRadius: 10, border: "none",
-                  background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-                  color: "#fff", fontSize: 13, fontWeight: 700,
-                  fontFamily: FONT.body,
-                  cursor: influencerSelecionado && !salvando ? "pointer" : "not-allowed",
-                  opacity: influencerSelecionado && !salvando ? 1 : 0.5,
-                }}
-              >
+              <button onClick={confirmarMapeamento} disabled={!influencerSelecionado || salvando}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: influencerSelecionado && !salvando ? "pointer" : "not-allowed", opacity: influencerSelecionado && !salvando ? 1 : 0.5 }}>
                 <Link2 size={13} />{salvando ? "Salvando..." : "Confirmar mapeamento"}
               </button>
             </div>

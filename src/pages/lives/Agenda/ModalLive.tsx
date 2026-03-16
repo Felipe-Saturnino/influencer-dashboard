@@ -103,6 +103,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const [confirm, setConfirm] = useState(false);
   const [perfilLinks,        setPerfilLinks]        = useState<Record<string, string>>({});
   const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
+  const [duracaoHoras, setDuracaoHoras] = useState(0);
+  const [duracaoMin,   setDuracaoMin]   = useState(0);
 
   const showOperadoraField = !!form.influencer_id;
   const operadoraObrigatoria = !!form.influencer_id;
@@ -158,6 +160,14 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     setLinkAutoPreenchido(!!linkDoPerfil);
   }, [form.plataforma, perfilLinks]);
 
+  useEffect(() => {
+    if (live?.id && live?.status === "realizada") {
+      supabase.from("live_resultados").select("duracao_horas, duracao_min").eq("live_id", live.id).single().then(({ data }) => {
+        if (data) { setDuracaoHoras((data as { duracao_horas: number }).duracao_horas ?? 0); setDuracaoMin((data as { duracao_min: number }).duracao_min ?? 0); }
+      });
+    } else { setDuracaoHoras(0); setDuracaoMin(0); }
+  }, [live?.id, live?.status]);
+
   const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
     if (k === "link") setLinkAutoPreenchido(false);
@@ -173,6 +183,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
     const opSlug = form.operadora_slug?.trim();
     if (!opSlug) return setError("Selecione a operadora. É obrigatório para o Financeiro.");
+    if (form.status === "realizada" && duracaoHoras === 0 && duracaoMin === 0)
+      return setError("Para status Realizada, informe a duração (horas ou minutos). Necessário para o Financeiro.");
 
     setSaving(true);
     const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -187,12 +199,23 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     };
     if (!isEdit) (payload as Record<string, unknown>).created_by = authUser?.id ?? null;
 
-    const { error: err } = isEdit
-      ? await supabase.from("lives").update(payload).eq("id", live!.id)
-      : await supabase.from("lives").insert(payload);
+    let liveId = live?.id;
+    if (isEdit) {
+      const { error: err } = await supabase.from("lives").update(payload).eq("id", live!.id);
+      if (err) { setSaving(false); setError(err.message); return; }
+    } else {
+      const { data: inserted, error: err } = await supabase.from("lives").insert(payload).select("id").single();
+      if (err) { setSaving(false); setError(err.message); return; }
+      liveId = (inserted as { id: string })?.id;
+    }
+
+    if (form.status === "realizada" && liveId) {
+      const payloadRes = { live_id: liveId, duracao_horas: duracaoHoras, duracao_min: duracaoMin, media_views: 0, max_views: 0 };
+      const { error: resErr } = await supabase.from("live_resultados").upsert(payloadRes, { onConflict: "live_id" });
+      if (resErr) { setSaving(false); setError("Live salva, mas falha ao registrar duração. Edite em Resultados."); return; }
+    }
 
     setSaving(false);
-    if (err) { setError(err.message); return; }
     onSave();
   }
 
@@ -357,8 +380,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           )}
         </div>
 
-        {/* Status — seletor visual com chips coloridos (visível apenas na edição) */}
-        {isEdit && (
+        {/* Status — apenas na criação; na edição o status é alterado em Resultados */}
+        {podeCriar && (
           <div style={row}>
             <label style={labelStyle}>Status</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -367,8 +390,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
                 return (
                   <button
                     key={s.value} type="button"
-                    onClick={() => !somenteLeitura && set("status", s.value)}
-                    disabled={somenteLeitura}
+                    onClick={() => set("status", s.value)}
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 6,
                       padding: "6px 14px", borderRadius: 20,
@@ -376,7 +398,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
                       background: selected ? `${s.color}22` : (t.inputBg ?? t.cardBg),
                       color: selected ? s.color : t.textMuted,
                       fontSize: 12, fontWeight: selected ? 700 : 500,
-                      cursor: somenteLeitura ? "default" : "pointer",
+                      cursor: "pointer",
                       fontFamily: FONT.body, transition: "all 0.15s",
                     }}
                   >
@@ -386,6 +408,41 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Duração — obrigatória quando status é Realizada (necessário para Financeiro); na edição, só se a live já for realizada */}
+        {form.status === "realizada" && (podeCriar || (podeEditar && live?.status === "realizada")) && (
+          <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={labelStyle}>Duração (horas) <span style={{ color: BRAND.vermelho }}>*</span></label>
+              <input
+                type="number"
+                min={0}
+                max={24}
+                value={duracaoHoras}
+                onChange={e => !somenteLeitura && setDuracaoHoras(Math.max(0, Math.min(24, parseInt(e.target.value, 10) || 0)))}
+                readOnly={somenteLeitura}
+                style={inputStyle}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Duração (min)</label>
+              <input
+                type="number"
+                min={0}
+                max={59}
+                value={duracaoMin}
+                onChange={e => !somenteLeitura && setDuracaoMin(Math.max(0, Math.min(59, parseInt(e.target.value, 10) || 0)))}
+                readOnly={somenteLeitura}
+                style={inputStyle}
+                placeholder="0"
+              />
+            </div>
+            <span style={{ gridColumn: "1 / -1", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+              Necessário para o Financeiro calcular o pagamento (horas × cachê).
+            </span>
           </div>
         )}
 

@@ -721,18 +721,27 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   async function gerarPagamentosDoCiclo(c: CicloPagamento) {
     const { data: lives } = await supabase
       .from("lives")
-      .select("id, influencer_id, operadora_slug, live_resultados(duracao_horas, duracao_min)")
+      .select("id, influencer_id, operadora_slug")
       .eq("status", "realizada")
       .gte("data", c.data_inicio)
       .lte("data", c.data_fim);
 
+    const livesFiltradas = ((lives ?? []) as any[]).filter((l: any) => podeVerInfluencer(l.influencer_id) && l.operadora_slug);
+    const liveIds = livesFiltradas.map((l: any) => l.id);
+    let resultados: { live_id: string; duracao_horas: number; duracao_min: number }[] = [];
+    if (liveIds.length > 0) {
+      const { data: resData } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", liveIds);
+      resultados = resData || [];
+    }
+
     const horasPorPar: Record<string, number> = {};
     const key = (inf: string, op: string) => `${inf}::${op}`;
-    for (const live of ((lives ?? []) as any[]).filter((l: any) => podeVerInfluencer(l.influencer_id) && l.operadora_slug)) {
-      const res = live.live_resultados?.[0];
+    for (const live of livesFiltradas) {
+      const res = resultados.find((r) => r.live_id === live.id);
       if (res) {
         const k = key(live.influencer_id, live.operadora_slug);
-        horasPorPar[k] = (horasPorPar[k] ?? 0) + res.duracao_horas + res.duracao_min / 60;
+        const horas = (res.duracao_horas ?? 0) + (res.duracao_min ?? 0) / 60;
+        horasPorPar[k] = (horasPorPar[k] ?? 0) + horas;
       }
     }
 
@@ -762,7 +771,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   async function carregarPreview(c: CicloPagamento) {
     const { data: lives } = await supabase
       .from("lives")
-      .select("id, influencer_id, operadora_slug, live_resultados(duracao_horas, duracao_min)")
+      .select("id, influencer_id, operadora_slug")
       .eq("status", "realizada")
       .gte("data", c.data_inicio)
       .lte("data", c.data_fim);
@@ -770,14 +779,22 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     const livesFiltradas = (lives ?? []).filter((l: any) => podeVerInfluencer(l.influencer_id) && l.operadora_slug);
     if (livesFiltradas.length === 0) { setRows([]); return; }
 
+    const liveIds = livesFiltradas.map((l: any) => l.id);
+    let resultados: { live_id: string; duracao_horas: number; duracao_min: number }[] = [];
+    if (liveIds.length > 0) {
+      const { data: resData } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", liveIds);
+      resultados = resData || [];
+    }
+
     const horasPorPar: Record<string, { horas: number; qtd: number }> = {};
     const key = (inf: string, op: string) => `${inf}::${op}`;
     for (const live of livesFiltradas as any[]) {
-      const res = live.live_resultados?.[0];
+      const res = resultados.find((r) => r.live_id === live.id);
       if (res) {
         const k = key(live.influencer_id, live.operadora_slug);
         if (!horasPorPar[k]) horasPorPar[k] = { horas: 0, qtd: 0 };
-        horasPorPar[k].horas += res.duracao_horas + res.duracao_min / 60;
+        const horas = (res.duracao_horas ?? 0) + (res.duracao_min ?? 0) / 60;
+        horasPorPar[k].horas += horas;
         horasPorPar[k].qtd += 1;
       }
     }
