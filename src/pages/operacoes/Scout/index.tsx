@@ -221,8 +221,7 @@ export default function Scout() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const ativos = list.filter((s) => s.status !== "fechado");
-  const filtered = ativos.filter((s) => {
+  const filtered = list.filter((s) => {
     const searchLower = search.toLowerCase();
     if (search && !(s.nome_artistico ?? "").toLowerCase().includes(searchLower)) return false;
     if (filterStatus !== "todos" && s.status !== filterStatus) return false;
@@ -237,10 +236,10 @@ export default function Scout() {
     return true;
   });
 
-  const porStatus: Record<string, number> = { visualizado: 0, contato: 0, negociacao: 0 };
+  const porStatus: Record<string, number> = { visualizado: 0, contato: 0, negociacao: 0, fechado: 0 };
   const porPlat: Record<string, number> = {};
-  ativos.forEach((s) => {
-    if (s.status !== "fechado") porStatus[s.status] = (porStatus[s.status] ?? 0) + 1;
+  list.forEach((s) => {
+    porStatus[s.status] = (porStatus[s.status] ?? 0) + 1;
     (s.plataformas ?? []).forEach((p) => { porPlat[p] = (porPlat[p] ?? 0) + 1; });
   });
 
@@ -359,7 +358,7 @@ export default function Scout() {
       {/* Bloco 1: Cards Consolidados (centralizados) */}
       {!loading && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center", marginBottom: "24px" }}>
-          {(["visualizado", "contato", "negociacao"] as const).map((s) => (
+          {STATUS_SCOUT_OPTS.map((s) => (
             <div key={s} style={{ background: t.cardBg, border: `1px solid ${STATUS_SCOUT_COLOR[s]}44`, borderRadius: "14px", padding: "16px 18px", minWidth: "140px" }}>
               <div style={{ fontSize: "28px", fontWeight: 900, color: t.text, fontFamily: FONT.title, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
               <div style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: "4px" }}>{STATUS_SCOUT_LABEL[s]}</div>
@@ -390,7 +389,7 @@ export default function Scout() {
         <div style={{ display: "flex", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
             <option value="todos">Todos os status</option>
-            {STATUS_SCOUT_OPTS.filter((s) => s !== "fechado").map((s) => (
+            {STATUS_SCOUT_OPTS.map((s) => (
               <option key={s} value={s}>{STATUS_SCOUT_LABEL[s]}</option>
             ))}
           </select>
