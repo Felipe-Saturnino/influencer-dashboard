@@ -164,8 +164,10 @@ export default function StatusTecnico() {
         let texto = msg;
         if (res.status === 401) {
           texto = "Não autorizado (401). Verifique no Supabase se a Edge Function sync-metricas está implantada e se aceita requisições com a chave do projeto.";
-        } else if (msg.includes("SMARTICO_TOKEN")) {
-          texto = `${msg} Configure em Supabase → Settings → Edge Functions → Secrets.`;
+        } else if (msg.includes("403") || msg.includes("Token") || msg.includes("CDA")) {
+          texto = `${msg} Configure CDA_INFLUENCERS_API_KEY em Supabase → Edge Functions → Secrets.`;
+        } else if (msg.includes("SMARTICO_TOKEN") || msg.includes("CDA_INFLUENCERS_API_KEY")) {
+          texto = `${msg} Configure em Supabase → Edge Functions → Secrets.`;
         } else if (res.status === 500) {
           texto = `${msg} Verifique os logs em Supabase → Edge Functions → sync-metricas → Logs.`;
         }
