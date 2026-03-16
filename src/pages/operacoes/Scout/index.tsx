@@ -301,14 +301,21 @@ export default function Scout() {
           </div>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>Cobertura de Plataformas</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {PLATAFORMAS.map((plat) => (
-                <div key={plat} style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `3px solid ${PLAT_COLOR[plat]}`, borderRadius: 18, padding: "16px 20px", minWidth: 110, flex: "1 1 110px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-                  <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porPlat[plat] ?? 0}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                    <PlatLogo plataforma={plat} size={12} isDark={isDark ?? false} />
-                    <span style={{ fontSize: 11, fontWeight: 700, color: PLAT_COLOR[plat], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>{plat}</span>
-                  </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                ["Twitch", "YouTube", "Kick", "Instagram"],
+                ["TikTok", "Discord", "WhatsApp", "Telegram"],
+              ].map((linha, i) => (
+                <div key={i} style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  {linha.map((plat) => (
+                    <div key={plat} style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `3px solid ${PLAT_COLOR[plat]}`, borderRadius: 18, padding: "16px 20px", minWidth: 110, flex: "1 1 110px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+                      <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porPlat[plat] ?? 0}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                        <PlatLogo plataforma={plat} size={12} isDark={isDark ?? false} />
+                        <span style={{ fontSize: 11, fontWeight: 700, color: PLAT_COLOR[plat], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>{plat}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
