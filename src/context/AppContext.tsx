@@ -22,6 +22,7 @@ export interface EscoposVisiveis {
   influencersVisiveis: string[];  // UUIDs
   operadorasVisiveis:  string[];  // slugs
   semRestricaoEscopo?: boolean;   // true = admin/gestor, vê tudo
+  vêTodosInfluencers?: boolean;   // true = executivo, vê todos os influencers
 }
 
 interface AppContextValue {
@@ -72,25 +73,20 @@ async function carregarEscoposVisiveis(
     return { influencersVisiveis: [userId], operadorasVisiveis, semRestricaoEscopo: false };
   }
 
-  // Executivo, Operador, Agência: sempre seguem escopo (vazio = não vê nada)
+  // Executivo: vê TODOS os influencers, escopo só para operadoras
   if (role === "executivo") {
-    const influencersVisiveis = lista
-      .filter((s) => s.scope_type === "influencer")
-      .map((s) => s.scope_ref);
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
       .map((s) => s.scope_ref);
-    return { influencersVisiveis, operadorasVisiveis, semRestricaoEscopo: false };
+    return { influencersVisiveis: [], operadorasVisiveis, semRestricaoEscopo: false, vêTodosInfluencers: true };
   }
 
+  // Operador: vê TODOS os influencers, escopo só para operadoras
   if (role === "operador") {
-    const influencersVisiveis = lista
-      .filter((s) => s.scope_type === "influencer")
-      .map((s) => s.scope_ref);
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
       .map((s) => s.scope_ref);
-    return { influencersVisiveis, operadorasVisiveis, semRestricaoEscopo: false };
+    return { influencersVisiveis: [], operadorasVisiveis, semRestricaoEscopo: false, vêTodosInfluencers: true };
   }
 
   if (role === "agencia") {
@@ -227,7 +223,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const podeVerInfluencer = (id: string) =>
-    escoposVisiveis.semRestricaoEscopo === true || escoposVisiveis.influencersVisiveis.includes(id);
+    escoposVisiveis.semRestricaoEscopo === true ||
+    escoposVisiveis.vêTodosInfluencers === true ||
+    escoposVisiveis.influencersVisiveis.includes(id);
   const podeVerOperadora = (slug: string) =>
     escoposVisiveis.semRestricaoEscopo === true || escoposVisiveis.operadorasVisiveis.includes(slug);
 
