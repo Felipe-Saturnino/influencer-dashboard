@@ -579,10 +579,8 @@ serve(async (req: Request) => {
   }
 
   try {
-    if (!req.headers.get('Authorization')) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-    }
-
+    // O gateway do Supabase já valida o JWT antes de invocar. Não checar Authorization aqui
+    // para evitar 401 quando o header não é repassado ao handler.
     let params: SyncRequest = {}
     try { params = await req.json() } catch { /* Body vazio ok */ }
 
