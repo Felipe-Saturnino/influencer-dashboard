@@ -2,46 +2,65 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
+import { X, Search, AlertCircle, ShieldCheck } from "lucide-react";
+import { GiShield } from "react-icons/gi";
 import {
   Role, PageKey, PermissaoValor, RolePermission,
   UsuarioCompleto, UserScope, Operadora,
 } from "../../../types";
 
+// ─── BRAND ───────────────────────────────────────────────────────────────────
+
+const BRAND = {
+  roxo:      "#4a2082",
+  roxoVivo:  "#7c3aed",
+  azul:      "#1e36f8",
+  vermelho:  "#e84025",
+  ciano:     "#70cae4",
+  verde:     "#22c55e",
+  amarelo:   "#f59e0b",
+  cinza:     "#6b7280",
+  gradiente: "linear-gradient(135deg, #4a2082, #1e36f8)",
+};
+
 // ─── CONSTANTES ──────────────────────────────────────────────────────────────
 
 const ROLES: { value: Role; label: string }[] = [
   { value: "admin",      label: "Administrador" },
-  { value: "gestor",     label: "Gestor" },
-  { value: "executivo",  label: "Executivo" },
-  { value: "influencer", label: "Influencer" },
-  { value: "operador",   label: "Operador" },
-  { value: "agencia",    label: "Agência" },
+  { value: "gestor",     label: "Gestor"        },
+  { value: "executivo",  label: "Executivo"     },
+  { value: "influencer", label: "Influencer"    },
+  { value: "operador",   label: "Operador"      },
+  { value: "agencia",    label: "Agência"       },
 ];
 
-const PAGES: { key: PageKey; label: string; secao: string; hasCriar: boolean; hasEditar: boolean; hasExcluir: boolean }[] = [
-  { key: "agenda",             label: "Agenda",             secao: "Lives",      hasCriar: true,  hasEditar: true,  hasExcluir: true  },
-  { key: "resultados",         label: "Resultados",         secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "feedback",           label: "Feedback",           secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: true  },
-  { key: "dash_overview",           label: "Overview",           secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_conversao",          label: "Conversão",          secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_financeiro",    label: "Financeiro",         secao: "Dashboards",  hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "influencers",        label: "Influencers",        secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
-  { key: "scout",              label: "Scout",              secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: true },
-  { key: "financeiro",         label: "Financeiro",          secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "gestao_links",       label: "Gestão de Links",     secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
-  { key: "gestao_usuarios",    label: "Gestão de Usuários", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "gestao_operadoras",  label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true,  hasEditar: true,  hasExcluir: false },
-  { key: "status_tecnico",     label: "Status Técnico",     secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "configuracoes",      label: "Configurações",      secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "ajuda",              label: "Ajuda",              secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
+const PAGES: {
+  key: PageKey; label: string; secao: string;
+  hasCriar: boolean; hasEditar: boolean; hasExcluir: boolean;
+}[] = [
+  { key: "agenda",                  label: "Agenda",              secao: "Lives",      hasCriar: true,  hasEditar: true,  hasExcluir: true  },
+  { key: "resultados",              label: "Resultados",          secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "feedback",                label: "Feedback",            secao: "Lives",      hasCriar: false, hasEditar: true,  hasExcluir: true  },
+  { key: "dash_overview",           label: "Overview",            secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_overview_influencer",label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_conversao",          label: "Conversão",           secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_financeiro",         label: "Financeiro",          secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "influencers",             label: "Influencers",         secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
+  { key: "scout",                   label: "Scout",               secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: true  },
+  { key: "financeiro",              label: "Financeiro",          secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "gestao_links",            label: "Gestão de Links",     secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "gestao_usuarios",         label: "Gestão de Usuários",  secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "gestao_operadoras",       label: "Gestão de Operadoras",secao: "Plataforma", hasCriar: true,  hasEditar: true,  hasExcluir: false },
+  { key: "status_tecnico",          label: "Status Técnico",      secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "configuracoes",           label: "Configurações",       secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "ajuda",                   label: "Ajuda",               secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
 const ROLES_PERMISSOES: Role[] = ["admin", "gestor", "executivo", "influencer", "operador", "agencia"];
 
 const PERM_OPCOES: { value: PermissaoValor; label: string }[] = [
-  { value: "sim",      label: "Sim" },
-  { value: "nao",      label: "Não" },
+  { value: "sim",      label: "Sim"      },
+  { value: "nao",      label: "Não"      },
   { value: "proprios", label: "Próprios" },
 ];
 
@@ -51,16 +70,17 @@ function roleLabel(role: Role) {
   return ROLES.find(r => r.value === role)?.label ?? role;
 }
 
+/** Cor temática por perfil — usada em borderLeft, badge e multi-select */
 function roleBadgeColor(role: Role): string {
   const map: Record<Role, string> = {
-    admin:      "#7c3aed",
-    gestor:     "#2563eb",
-    executivo:  "#0891b2",
-    influencer: "#059669",
-    operador:   "#d97706",
-    agencia:    "#db2777",
+    admin:      BRAND.roxoVivo,
+    gestor:     BRAND.azul,
+    executivo:  BRAND.ciano,
+    influencer: BRAND.verde,
+    operador:   BRAND.amarelo,
+    agencia:    BRAND.vermelho,
   };
-  return map[role] ?? "#6b7280";
+  return map[role] ?? BRAND.cinza;
 }
 
 function escopoBloqueado(role: Role) {
@@ -73,7 +93,6 @@ export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
   const [aba, setAba] = useState<"usuarios" | "permissoes">("usuarios");
 
-  // Gestão de Usuários: apenas admin tem acesso
   if (user?.role !== "admin") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -83,34 +102,75 @@ export default function GestaoUsuarios() {
   }
 
   const card: React.CSSProperties = {
-    background: t.cardBg, borderRadius: 16, padding: 28,
+    background: t.cardBg,
+    borderRadius: 18,
+    padding: 28,
     border: `1px solid ${t.cardBorder}`,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+
+      {/* ── HEADER — padrão SectionTitle ── */}
       <div>
-        <h1 style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0 }}>
-          🛡️ Gestão de Usuários
-        </h1>
-        <p style={{ color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: BRAND.roxo,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <GiShield size={14} color="#fff" />
+          </div>
+          <h1 style={{
+            fontFamily: FONT.title,
+            fontSize: 22,
+            fontWeight: 800,
+            color: t.text,
+            margin: 0,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+          }}>
+            Gestão de Usuários
+          </h1>
+        </div>
+        <p style={{
+          color: t.textMuted,
+          marginTop: 2,
+          marginLeft: 40,
+          fontFamily: FONT.body,
+          fontSize: 13,
+        }}>
           Gerencie usuários, acessos e permissões da plataforma.
         </p>
       </div>
 
-      <div style={{ display: "flex", gap: 8, borderBottom: `2px solid ${t.cardBorder}`, paddingBottom: 0 }}>
-        {(["usuarios", "permissoes"] as const).map(a => (
-          <button key={a} onClick={() => setAba(a)} style={{
-            background: "none", border: "none", cursor: "pointer",
-            fontFamily: FONT.body, fontSize: 14, fontWeight: 600,
-            color: aba === a ? "#7c3aed" : t.textMuted,
-            paddingBottom: 12, paddingInline: 16,
-            borderBottom: aba === a ? "2px solid #7c3aed" : "2px solid transparent",
-            marginBottom: -2, transition: "all 0.2s",
-          }}>
-            {a === "usuarios" ? "👤 Usuários" : "🔐 Permissões"}
-          </button>
-        ))}
+      {/* ── ABAS — pill style ── */}
+      <div style={{ display: "flex", gap: 8 }}>
+        {(["usuarios", "permissoes"] as const).map(a => {
+          const ativa = aba === a;
+          return (
+            <button
+              key={a}
+              onClick={() => setAba(a)}
+              style={{
+                background:   ativa ? `${BRAND.roxoVivo}22` : t.inputBg ?? t.bg,
+                border:       `1px solid ${ativa ? BRAND.roxoVivo : t.cardBorder}`,
+                color:        ativa ? BRAND.roxoVivo : t.textMuted,
+                borderRadius: 20,
+                padding:      "7px 18px",
+                cursor:       "pointer",
+                fontFamily:   FONT.body,
+                fontSize:     13,
+                fontWeight:   ativa ? 700 : 400,
+                transition:   "all 0.18s",
+              }}
+            >
+              {a === "usuarios" ? "👤 Usuários" : "🔐 Permissões"}
+            </button>
+          );
+        })}
       </div>
 
       <div style={card}>
@@ -125,14 +185,14 @@ export default function GestaoUsuarios() {
 type FiltroStatus = "todos" | "ativos" | "desativados";
 
 function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
-  const [usuarios, setUsuarios] = useState<UsuarioCompleto[]>([]);
-  const [operadoras, setOperadoras] = useState<Operadora[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editando, setEditando] = useState<UsuarioCompleto | null>(null);
-  const [busca, setBusca] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todos");
-  const [modalDesativar, setModalDesativar] = useState<UsuarioCompleto | null>(null);
+  const [usuarios,      setUsuarios]      = useState<UsuarioCompleto[]>([]);
+  const [operadoras,    setOperadoras]    = useState<Operadora[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [modalOpen,     setModalOpen]     = useState(false);
+  const [editando,      setEditando]      = useState<UsuarioCompleto | null>(null);
+  const [busca,         setBusca]         = useState("");
+  const [filtroStatus,  setFiltroStatus]  = useState<FiltroStatus>("todos");
+  const [modalDesativar,setModalDesativar]= useState<UsuarioCompleto | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -152,7 +212,7 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const abrirNovo = () => { setEditando(null); setModalOpen(true); };
+  const abrirNovo   = () => { setEditando(null); setModalOpen(true); };
   const abrirEditar = (u: UsuarioCompleto) => { setEditando(u); setModalOpen(true); };
 
   const formatarEscopo = (scopes: UserScope[], ops: Operadora[]) => {
@@ -165,145 +225,182 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
       }
       return "Influencer";
     });
-    // Remove duplicados e junta
     return [...new Set(partes)].join(", ");
   };
 
-  const thMuted: React.CSSProperties = {
-    fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
-    color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px",
-    padding: "10px 14px", textAlign: "left",
-  };
-  const td: React.CSSProperties = {
-    fontFamily: FONT.body, fontSize: 13, color: t.text,
-    padding: "12px 14px", borderTop: `1px solid ${t.cardBorder}`,
-  };
-
   const usuariosFiltrados = busca.trim()
-    ? usuarios.filter(
-        (u) =>
-          (u.name ?? "").toLowerCase().includes(busca.toLowerCase()) ||
-          (u.email ?? "").toLowerCase().includes(busca.toLowerCase())
+    ? usuarios.filter(u =>
+        (u.name  ?? "").toLowerCase().includes(busca.toLowerCase()) ||
+        (u.email ?? "").toLowerCase().includes(busca.toLowerCase())
       )
     : usuarios;
 
   const usuariosPorStatus = usuariosFiltrados.filter((u: UsuarioCompleto) => {
     const ativo = u.ativo !== false;
-    if (filtroStatus === "todos") return true;
-    if (filtroStatus === "ativos") return ativo;
+    if (filtroStatus === "todos")       return true;
+    if (filtroStatus === "ativos")      return ativo;
     return !ativo;
   });
 
   const desativarOuReativar = async (u: UsuarioCompleto) => {
     const novoAtivo = u.ativo === false;
     const { error } = await supabase.from("profiles").update({ ativo: novoAtivo }).eq("id", u.id);
-    if (!error) {
-      setModalDesativar(null);
-      carregar();
-    }
+    if (!error) { setModalDesativar(null); carregar(); }
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* ── BUSCA + FILTROS ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <input
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome ou e-mail..."
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            padding: "10px 16px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.bg,
-            color: t.text,
-            fontSize: 14,
-            fontFamily: FONT.body,
-            outline: "none",
-          }}
-        />
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+
+        {/* Campo de busca com ícone */}
+        <div style={{ position: "relative" }}>
+          <Search
+            size={14}
+            color={t.textMuted}
+            style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+          />
+          <input
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="Buscar por nome ou e-mail..."
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: "10px 16px 10px 36px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg ?? t.bg,
+              color: t.text,
+              fontSize: 14,
+              fontFamily: FONT.body,
+              outline: "none",
+              transition: "border-color 0.18s",
+            }}
+            onFocus={e  => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
+            onBlur={e   => { e.currentTarget.style.borderColor = t.cardBorder;   }}
+          />
+        </div>
+
+        {/* Filtros de status + contador + botão novo */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
           <div style={{ display: "flex", gap: 6 }}>
-            {(["todos", "ativos", "desativados"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFiltroStatus(f)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 8,
-                  border: `1px solid ${filtroStatus === f ? "#7c3aed" : t.cardBorder}`,
-                  background: filtroStatus === f ? "rgba(124,58,237,0.15)" : "transparent",
-                  color: filtroStatus === f ? "#7c3aed" : t.textMuted,
-                  fontSize: 13,
-                  fontWeight: filtroStatus === f ? 600 : 400,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                }}
-              >
-                {f === "todos" ? "Todos" : f === "ativos" ? "Ativos" : "Desativados"}
-              </button>
-            ))}
+            {(["todos", "ativos", "desativados"] as const).map(f => {
+              const ativo = filtroStatus === f;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setFiltroStatus(f)}
+                  style={{
+                    padding:      "6px 14px",
+                    borderRadius: 20,
+                    border:       `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
+                    background:   ativo ? `${BRAND.roxoVivo}22` : t.inputBg ?? "transparent",
+                    color:        ativo ? BRAND.roxoVivo : t.textMuted,
+                    fontSize:     13,
+                    fontWeight:   ativo ? 700 : 400,
+                    cursor:       "pointer",
+                    fontFamily:   FONT.body,
+                    transition:   "all 0.18s",
+                  }}
+                >
+                  {f === "todos" ? "Todos" : f === "ativos" ? "Ativos" : "Desativados"}
+                </button>
+              );
+            })}
           </div>
-          <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
+
+          {/* Badge contador */}
+          <span style={{
+            background:   t.cardBorder,
+            borderRadius: 20,
+            padding:      "2px 10px",
+            fontSize:     12,
+            color:        t.textMuted,
+            fontFamily:   FONT.body,
+          }}>
             {usuariosPorStatus.length} usuário{usuariosPorStatus.length !== 1 ? "s" : ""}
           </span>
+
           <div style={{ flex: 1 }} />
+
           <button onClick={abrirNovo} style={{
-          background: "linear-gradient(135deg, #7c3aed, #2563eb)",
-          color: "#fff", border: "none", borderRadius: 10,
-          padding: "9px 18px", cursor: "pointer",
-          fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
-        }}>
-          + Novo Usuário
-        </button>
-      </div>
+            background:   BRAND.gradiente,
+            color:        "#fff",
+            border:       "none",
+            borderRadius: 10,
+            padding:      "9px 18px",
+            cursor:       "pointer",
+            fontFamily:   FONT.body,
+            fontSize:     13,
+            fontWeight:   600,
+          }}>
+            + Novo Usuário
+          </button>
+        </div>
       </div>
 
+      {/* ── GRID DE CARDS ── */}
       {loading ? (
         <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
           {usuariosPorStatus.map((u: UsuarioCompleto) => {
             const escopoTexto = formatarEscopo(u.scopes ?? [], operadoras);
-            const ativo = u.ativo !== false;
+            const ativo       = u.ativo !== false;
+            const corPerfil   = roleBadgeColor(u.role as Role);
             return (
               <div
                 key={u.id}
                 style={{
-                  background: t.cardBg,
-                  border: `1px solid ${t.cardBorder}`,
+                  background:   t.cardBg,
+                  border:       `1px solid ${t.cardBorder}`,
+                  borderLeft:   `3px solid ${corPerfil}`,
                   borderRadius: 14,
-                  padding: 18,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                  opacity: ativo ? 1 : 0.85,
+                  padding:      18,
+                  display:      "flex",
+                  flexDirection:"column",
+                  gap:          12,
+                  opacity:      ativo ? 1 : 0.75,
+                  boxShadow:    "0 4px 20px rgba(0,0,0,0.18)",
+                  transition:   "box-shadow 0.18s",
                 }}
               >
+                {/* Nome + badge Ativo/Desativado */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <div>
                     <strong style={{ fontFamily: FONT.body, fontSize: 15, color: t.text }}>{u.name}</strong>
                     <div style={{ fontSize: 12, color: t.textMuted, marginTop: 2 }}>{u.email}</div>
                   </div>
                   <span style={{
-                    background: ativo ? "#dcfce7" : "#f3f4f6",
-                    color: ativo ? "#166534" : "#6b7280",
-                    borderRadius: 6,
-                    padding: "3px 10px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    fontFamily: FONT.body,
+                    background:   ativo ? "#22c55e22" : `${t.cardBorder}`,
+                    color:        ativo ? BRAND.verde  : t.textMuted,
+                    border:       `1px solid ${ativo ? BRAND.verde : t.cardBorder}`,
+                    borderRadius: 20,
+                    padding:      "3px 10px",
+                    fontSize:     11,
+                    fontWeight:   700,
+                    fontFamily:   FONT.body,
+                    whiteSpace:   "nowrap",
                   }}>
                     {ativo ? "Ativo" : "Desativado"}
                   </span>
                 </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+
+                {/* Badge de perfil + escopo */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   <span style={{
-                    background: roleBadgeColor(u.role as Role) + "22",
-                    color: roleBadgeColor(u.role as Role),
-                    borderRadius: 6, padding: "3px 10px",
-                    fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
+                    background:   corPerfil + "22",
+                    color:        corPerfil,
+                    border:       `1px solid ${corPerfil}`,
+                    borderRadius: 20,
+                    padding:      "3px 10px",
+                    fontSize:     11,
+                    fontWeight:   700,
+                    fontFamily:   FONT.body,
+                    textTransform:"uppercase",
+                    letterSpacing:"0.3px",
                   }}>
                     {roleLabel(u.role as Role)}
                   </span>
@@ -311,27 +408,53 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                     <span style={{ fontSize: 12, color: t.textMuted }}>{escopoTexto}</span>
                   )}
                 </div>
+
+                {/* Ações */}
                 <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                   <button onClick={() => abrirEditar(u)} style={{
-                    background: "none", border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 7, padding: "6px 14px", cursor: "pointer",
-                    fontFamily: FONT.body, fontSize: 12, color: t.text,
-                  }}>
+                    background:   "none",
+                    border:       `1px solid ${t.cardBorder}`,
+                    borderRadius: 8,
+                    padding:      "6px 14px",
+                    cursor:       "pointer",
+                    fontFamily:   FONT.body,
+                    fontSize:     12,
+                    color:        t.text,
+                    transition:   "border-color 0.15s",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = t.cardBorder;   }}
+                  >
                     Editar
                   </button>
                   {ativo ? (
                     <button onClick={() => setModalDesativar(u)} style={{
-                      background: "none", border: "1px solid #ef4444",
-                      borderRadius: 7, padding: "6px 14px", cursor: "pointer",
-                      fontFamily: FONT.body, fontSize: 12, color: "#ef4444",
-                    }}>
+                      background:   "none",
+                      border:       `1px solid ${BRAND.vermelho}`,
+                      borderRadius: 8,
+                      padding:      "6px 14px",
+                      cursor:       "pointer",
+                      fontFamily:   FONT.body,
+                      fontSize:     12,
+                      color:        BRAND.vermelho,
+                      transition:   "background 0.15s",
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.background = `${BRAND.vermelho}18`; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
+                    >
                       Desativar
                     </button>
                   ) : (
                     <button onClick={() => desativarOuReativar(u)} style={{
-                      background: "#22c55e22", border: "1px solid #22c55e",
-                      borderRadius: 7, padding: "6px 14px", cursor: "pointer",
-                      fontFamily: FONT.body, fontSize: 12, color: "#22c55e", fontWeight: 600,
+                      background:   `${BRAND.verde}22`,
+                      border:       `1px solid ${BRAND.verde}`,
+                      borderRadius: 8,
+                      padding:      "6px 14px",
+                      cursor:       "pointer",
+                      fontFamily:   FONT.body,
+                      fontSize:     12,
+                      color:        BRAND.verde,
+                      fontWeight:   600,
                     }}>
                       Reativar
                     </button>
@@ -343,29 +466,87 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
         </div>
       )}
 
+      {/* ── MODAL CONFIRMAR DESATIVAR ── */}
       {modalDesativar && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
           onClick={() => setModalDesativar(null)}
         >
           <div
-            style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: 24, maxWidth: 400, width: "90%" }}
-            onClick={(e) => e.stopPropagation()}
+            style={{
+              background:   t.cardBg,
+              border:       `1px solid ${t.cardBorder}`,
+              borderRadius: 20,
+              padding:      "28px 32px",
+              maxWidth:     400,
+              width:        "90%",
+              position:     "relative",
+            }}
+            onClick={e => e.stopPropagation()}
           >
-            <div style={{ fontFamily: FONT.body, fontSize: 16, fontWeight: 700, color: t.text, marginBottom: 8 }}>Desativar usuário</div>
-            <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, marginBottom: 20 }}>
-              O usuário <strong>{modalDesativar.name}</strong> perderá acesso imediato à plataforma. Deseja continuar?
-            </p>
+            {/* Botão fechar */}
+            <button
+              onClick={() => setModalDesativar(null)}
+              style={{
+                position:   "absolute",
+                top:        14,
+                right:      14,
+                background: "none",
+                border:     "none",
+                cursor:     "pointer",
+                color:      t.textMuted,
+                display:    "flex",
+                padding:    4,
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            {/* Bloco de erro/aviso */}
+            <div style={{
+              display:      "flex",
+              alignItems:   "flex-start",
+              gap:          10,
+              background:   `${BRAND.vermelho}18`,
+              border:       `1px solid ${BRAND.vermelho}44`,
+              borderRadius: 10,
+              padding:      "12px 14px",
+              marginBottom: 20,
+            }}>
+              <AlertCircle size={16} color={BRAND.vermelho} style={{ flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>
+                  Desativar usuário
+                </div>
+                <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: 0 }}>
+                  O usuário <strong>{modalDesativar.name}</strong> perderá acesso imediato à plataforma. Deseja continuar?
+                </p>
+              </div>
+            </div>
+
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => setModalDesativar(null)} style={{
-                padding: "8px 18px", borderRadius: 8, border: `1px solid ${t.cardBorder}`,
-                background: "transparent", color: t.text, fontSize: 13, cursor: "pointer", fontFamily: FONT.body,
+                padding:    "8px 18px",
+                borderRadius: 8,
+                border:     `1px solid ${t.cardBorder}`,
+                background: "transparent",
+                color:      t.text,
+                fontSize:   13,
+                cursor:     "pointer",
+                fontFamily: FONT.body,
               }}>
                 Cancelar
               </button>
               <button onClick={() => desativarOuReativar(modalDesativar)} style={{
-                padding: "8px 18px", borderRadius: 8, border: "none",
-                background: "#ef4444", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
+                padding:    "8px 18px",
+                borderRadius: 8,
+                border:     "none",
+                background: BRAND.vermelho,
+                color:      "#fff",
+                fontSize:   13,
+                fontWeight: 600,
+                cursor:     "pointer",
+                fontFamily: FONT.body,
               }}>
                 Desativar
               </button>
@@ -398,18 +579,15 @@ interface ModalUsuarioProps {
 }
 
 function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuarioProps) {
-  const [nome, setNome] = useState(editando?.name ?? "");
-  const [email, setEmail] = useState(editando?.email ?? "");
-  const [role, setRole] = useState<Role>(editando?.role ?? "gestor");
-
-  // Escopos independentes
-  const [scopeInfluencers, setScopeInfluencers] = useState<string[]>([]);  // UUIDs
-  const [scopeOperadoras, setScopeOperadoras] = useState<string[]>([]);    // slugs
-  const [scopePares, setScopePares] = useState<string[]>([]);              // "uuid:slug" só para agencia
-
-  const [influencers, setInfluencers] = useState<{ id: string; nome: string }[]>([]);
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState("");
+  const [nome,             setNome]             = useState(editando?.name  ?? "");
+  const [email,            setEmail]            = useState(editando?.email ?? "");
+  const [role,             setRole]             = useState<Role>(editando?.role ?? "gestor");
+  const [scopeInfluencers, setScopeInfluencers] = useState<string[]>([]);
+  const [scopeOperadoras,  setScopeOperadoras]  = useState<string[]>([]);
+  const [scopePares,       setScopePares]       = useState<string[]>([]);
+  const [influencers,      setInfluencers]      = useState<{ id: string; nome: string }[]>([]);
+  const [salvando,         setSalvando]         = useState(false);
+  const [erro,             setErro]             = useState("");
 
   useEffect(() => {
     supabase
@@ -422,7 +600,6 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
       });
   }, []);
 
-  // Pré-preenche ao editar
   useEffect(() => {
     const scopes = editando?.scopes ?? [];
     setScopeInfluencers(scopes.filter(s => s.scope_type === "influencer").map(s => s.scope_ref));
@@ -430,7 +607,6 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     setScopePares(scopes.filter(s => s.scope_type === "agencia_par").map(s => s.scope_ref));
   }, [editando]);
 
-  // Reset ao trocar role
   useEffect(() => {
     setScopeInfluencers([]);
     setScopeOperadoras([]);
@@ -447,8 +623,6 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     setErro("");
     if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
     if (!editando && !email.trim()) { setErro("E-mail é obrigatório."); return; }
-
-    // Validações por role
     if (role === "influencer" && scopeOperadoras.length === 0) {
       setErro("Selecione pelo menos uma operadora para o influencer."); return;
     }
@@ -458,73 +632,34 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     if (role === "agencia" && scopePares.length === 0) {
       setErro("Selecione pelo menos um par influencer+operadora para a agência."); return;
     }
-
     setSalvando(true);
     try {
       let uid = editando?.id ?? "";
+      const { data: { session } } = await supabase.auth.getSession();
 
       if (editando) {
-        const { data: { session } } = await supabase.auth.getSession();
-        const body = {
-          userId: uid,
-          name: nome.trim(),
-          role,
-          scopeInfluencers,
-          scopeOperadoras,
-          scopePares,
-        };
         const res = await fetch("/api/atualizar-perfil", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session?.access_token ?? ""}`,
-          },
-          body: JSON.stringify(body),
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token ?? ""}` },
+          body: JSON.stringify({ userId: uid, name: nome.trim(), role, scopeInfluencers, scopeOperadoras, scopePares }),
         });
         const fnData = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          const errMsg = (fnData as { error?: string })?.error ?? `Erro ${res.status}: ${res.statusText}`;
-          throw new Error(errMsg);
-        }
-        const errMsg = (fnData as { error?: string })?.error;
-        if (errMsg) throw new Error(errMsg);
+        if (!res.ok) throw new Error((fnData as any)?.error ?? `Erro ${res.status}`);
+        if ((fnData as any)?.error) throw new Error((fnData as any).error);
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
-        const body = {
-          email: email.trim().toLowerCase(),
-          nome: nome.trim(),
-          role,
-          scopeInfluencers,
-          scopeOperadoras,
-          scopePares,
-          loginUrl,
-        };
-        const { data: { session } } = await supabase.auth.getSession();
-        // Usa proxy /api/criar-usuario para evitar CORS (mesma origem)
         const res = await fetch("/api/criar-usuario", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session?.access_token ?? ""}`,
-          },
-          body: JSON.stringify(body),
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token ?? ""}` },
+          body: JSON.stringify({ email: email.trim().toLowerCase(), nome: nome.trim(), role, scopeInfluencers, scopeOperadoras, scopePares, loginUrl }),
         });
         const fnData = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          const errMsg = (fnData as { error?: string })?.error ?? `Erro ${res.status}: ${res.statusText}`;
-          throw new Error(errMsg);
-        }
-        const errMsg = (fnData as { error?: string })?.error;
-        if (errMsg) throw new Error(errMsg);
-        uid = (fnData as { userId?: string })?.userId ?? "";
+        if (!res.ok) throw new Error((fnData as any)?.error ?? `Erro ${res.status}`);
+        if ((fnData as any)?.error) throw new Error((fnData as any).error);
+        uid = (fnData as any)?.userId ?? "";
         if (!uid) throw new Error("Usuário criado mas ID não retornado");
       }
-
-      // Escopos: novos usuários já foram configurados pela Edge Function criar-usuario
-      // Edição: toda a lógica (profiles, user_scopes, influencer_perfil, influencer_operadoras) é feita pela Edge Function atualizar-perfil
-
-      onSalvo();
-      onClose();
+      onSalvo(); onClose();
     } catch (e: unknown) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar.");
     } finally {
@@ -532,33 +667,52 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     }
   };
 
-  // Estilos
+  // ── ESTILOS DO MODAL ──
   const overlay: React.CSSProperties = {
     position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
     display: "flex", alignItems: "center", justifyContent: "center",
     zIndex: 999, padding: 24,
   };
   const modal: React.CSSProperties = {
-    background: t.cardBg, borderRadius: 16, padding: 32,
-    width: "100%", maxWidth: 560, border: `1px solid ${t.cardBorder}`,
-    maxHeight: "90vh", overflowY: "auto",
+    background:  t.cardBg,
+    borderRadius: 20,
+    padding:     "28px 32px",
+    width:       "100%",
+    maxWidth:    560,
+    border:      `1px solid ${t.cardBorder}`,
+    maxHeight:   "90vh",
+    overflowY:   "auto",
+    position:    "relative",
   };
   const labelStyle: React.CSSProperties = {
-    display: "block", fontFamily: FONT.body, fontSize: 12,
-    fontWeight: 600, color: t.textMuted, marginBottom: 6,
-    textTransform: "uppercase", letterSpacing: "0.8px",
+    display:        "block",
+    fontFamily:     FONT.body,
+    fontSize:       11,
+    fontWeight:     700,
+    color:          t.textMuted,
+    marginBottom:   6,
+    textTransform:  "uppercase",
+    letterSpacing:  "0.8px",
   };
-  const input: React.CSSProperties = {
-    width: "100%", background: t.bg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: 8, padding: "10px 12px", color: t.text,
-    fontFamily: FONT.body, fontSize: 14, boxSizing: "border-box",
+  const inputStyle: React.CSSProperties = {
+    width:       "100%",
+    background:  t.bg,
+    border:      `1px solid ${t.cardBorder}`,
+    borderRadius: 8,
+    padding:     "10px 12px",
+    color:       t.text,
+    fontFamily:  FONT.body,
+    fontSize:    14,
+    boxSizing:   "border-box",
+    outline:     "none",
+    transition:  "border-color 0.18s",
   };
-  const selectStyle: React.CSSProperties = { ...input, cursor: "pointer" };
+  const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
   const field: React.CSSProperties = { marginBottom: 18 };
 
-  // Componente reutilizável de multi-seleção
+  // ── MULTI-SELECT COMPONENT ──
   const MultiSelect = ({
-    label, items, selected, onToggle, cor = "#7c3aed", obrigatorio = false,
+    label, items, selected, onToggle, cor = BRAND.roxoVivo, obrigatorio = false,
   }: {
     label: string;
     items: { value: string; label: string }[];
@@ -570,24 +724,44 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     <div style={field}>
       <label style={labelStyle}>
         {label}
-        {obrigatorio && <span style={{ color: "#ef4444", marginLeft: 4 }}>*</span>}
+        {obrigatorio && <span style={{ color: BRAND.vermelho, marginLeft: 4 }}>*</span>}
         <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6 }}>(multi-seleção)</span>
       </label>
       <div style={{
-        border: `1px solid ${t.cardBorder}`, borderRadius: 8, padding: 10,
-        display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 160, overflowY: "auto",
+        border:     `1px solid ${t.cardBorder}`,
+        borderRadius: 8,
+        padding:    10,
+        display:    "flex",
+        flexWrap:   "wrap",
+        gap:        8,
+        maxHeight:  160,
+        overflowY:  "auto",
+        background: t.bg,
       }}>
         {items.map(op => {
           const sel = selected.includes(op.value);
           return (
-            <button key={op.value} onClick={() => onToggle(op.value)} style={{
-              border: `1px solid ${sel ? cor : t.cardBorder}`,
-              background: sel ? cor + "22" : "transparent",
-              color: sel ? cor : t.text,
-              borderRadius: 6, padding: "5px 12px", cursor: "pointer",
-              fontFamily: FONT.body, fontSize: 12, fontWeight: sel ? 600 : 400,
-            }}>
+            <button
+              key={op.value}
+              onClick={() => onToggle(op.value)}
+              style={{
+                border:      `1px solid ${sel ? cor : t.cardBorder}`,
+                background:  sel ? cor + "22" : "transparent",
+                color:       sel ? cor : t.text,
+                borderRadius: 20,
+                padding:     "5px 12px",
+                cursor:      "pointer",
+                fontFamily:  FONT.body,
+                fontSize:    12,
+                fontWeight:  sel ? 700 : 400,
+                transition:  "all 0.15s",
+                display:     "flex",
+                alignItems:  "center",
+                gap:         sel ? 5 : 0,
+              }}
+            >
               {op.label}
+              {sel && <X size={10} style={{ flexShrink: 0 }} />}
             </button>
           );
         })}
@@ -605,25 +779,72 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
   return (
     <div style={overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={modal}>
-        <h2 style={{ fontFamily: FONT.title, fontSize: 20, color: t.text, margin: "0 0 24px" }}>
+
+        {/* Botão fechar */}
+        <button
+          onClick={onClose}
+          style={{
+            position:   "absolute",
+            top:        16,
+            right:      16,
+            background: "none",
+            border:     "none",
+            cursor:     "pointer",
+            color:      t.textMuted,
+            display:    "flex",
+            padding:    4,
+          }}
+        >
+          <X size={18} />
+        </button>
+
+        {/* Título do modal */}
+        <h2 style={{
+          fontFamily:    FONT.title,
+          fontSize:      18,
+          fontWeight:    800,
+          textTransform: "uppercase",
+          letterSpacing: "0.5px",
+          color:         t.text,
+          margin:        "0 0 24px",
+        }}>
           {editando ? "Editar Usuário" : "Novo Usuário"}
         </h2>
 
         <div style={field}>
           <label style={labelStyle}>Nome</label>
-          <input style={input} value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo" />
+          <input
+            style={inputStyle}
+            value={nome}
+            onChange={e => setNome(e.target.value)}
+            placeholder="Nome completo"
+            onFocus={e  => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
+            onBlur={e   => { e.currentTarget.style.borderColor = t.cardBorder;   }}
+          />
         </div>
 
         {!editando && (
           <div style={field}>
             <label style={labelStyle}>E-mail</label>
-            <input style={input} value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" type="email" />
+            <input
+              style={inputStyle}
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="email@exemplo.com"
+              type="email"
+              onFocus={e  => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
+              onBlur={e   => { e.currentTarget.style.borderColor = t.cardBorder;   }}
+            />
           </div>
         )}
 
         <div style={field}>
           <label style={labelStyle}>Perfil</label>
-          <select style={selectStyle} value={role} onChange={e => setRole(e.target.value as Role)}>
+          <select
+            style={selectStyle}
+            value={role}
+            onChange={e => setRole(e.target.value as Role)}
+          >
             {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>
@@ -633,19 +854,23 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
           <div style={field}>
             <label style={labelStyle}>Escopo de acesso</label>
             <div style={{
-              background: t.bg, border: `1px solid ${t.cardBorder}`, borderRadius: 8,
-              padding: "10px 14px", fontFamily: FONT.body, fontSize: 14,
-              color: t.textMuted, fontStyle: "italic",
+              background:  t.bg,
+              border:      `1px solid ${t.cardBorder}`,
+              borderRadius: 8,
+              padding:     "10px 14px",
+              fontFamily:  FONT.body,
+              fontSize:    14,
+              color:       t.textMuted,
+              fontStyle:   "italic",
             }}>
               Todos os influencers e operadoras
             </div>
           </div>
         ) : role === "agencia" ? (
-          // Agência: pares influencer × operadora
           <MultiSelect
             label="Pares Influencer + Operadora"
             obrigatorio
-            cor="#db2777"
+            cor={roleBadgeColor("agencia")}
             items={influencers.flatMap(inf =>
               operadoras.map(op => ({
                 value: `${inf.id}:${op.slug}`,
@@ -656,22 +881,20 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
             onToggle={v => toggleItem(scopePares, setScopePares, v)}
           />
         ) : role === "influencer" ? (
-          // Influencer: só operadoras (ele mesmo é fixo como scope de influencer)
           <MultiSelect
             label="Operadoras atribuídas"
             obrigatorio
-            cor="#059669"
+            cor={roleBadgeColor("influencer")}
             items={operadoras.map(o => ({ value: o.slug, label: o.nome }))}
             selected={scopeOperadoras}
             onToggle={v => toggleItem(scopeOperadoras, setScopeOperadoras, v)}
           />
         ) : (
-          // operador, executivo: campos independentes
           <>
             <MultiSelect
               label={`Influencers${role === "operador" ? "" : " (opcional)"}`}
               obrigatorio={false}
-              cor="#7c3aed"
+              cor={roleBadgeColor("operador")}
               items={influencers.map(i => ({ value: i.id, label: i.nome }))}
               selected={scopeInfluencers}
               onToggle={v => toggleItem(scopeInfluencers, setScopeInfluencers, v)}
@@ -679,7 +902,7 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
             <MultiSelect
               label={`Operadoras${role === "operador" ? "" : " (opcional)"}`}
               obrigatorio={role === "operador"}
-              cor="#d97706"
+              cor={roleBadgeColor("operador")}
               items={operadoras.map(o => ({ value: o.slug, label: o.nome }))}
               selected={scopeOperadoras}
               onToggle={v => toggleItem(scopeOperadoras, setScopeOperadoras, v)}
@@ -687,21 +910,49 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
           </>
         )}
 
+        {/* Erro */}
         {erro && (
-          <p style={{ color: "#ef4444", fontFamily: FONT.body, fontSize: 13, marginBottom: 16 }}>{erro}</p>
+          <div style={{
+            display:      "flex",
+            alignItems:   "center",
+            gap:          8,
+            background:   `${BRAND.vermelho}18`,
+            border:       `1px solid ${BRAND.vermelho}44`,
+            borderRadius: 8,
+            padding:      "10px 12px",
+            marginBottom: 16,
+          }}>
+            <AlertCircle size={14} color={BRAND.vermelho} style={{ flexShrink: 0 }} />
+            <span style={{ color: BRAND.vermelho, fontFamily: FONT.body, fontSize: 13 }}>{erro}</span>
+          </div>
         )}
 
+        {/* Botões de ação */}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button onClick={onClose} style={{
-            background: "none", border: `1px solid ${t.cardBorder}`,
-            borderRadius: 8, padding: "9px 18px", cursor: "pointer",
-            fontFamily: FONT.body, fontSize: 13, color: t.text,
-          }}>Cancelar</button>
+            background:   "none",
+            border:       `1px solid ${t.cardBorder}`,
+            borderRadius: 8,
+            padding:      "9px 18px",
+            cursor:       "pointer",
+            fontFamily:   FONT.body,
+            fontSize:     13,
+            color:        t.text,
+          }}>
+            Cancelar
+          </button>
           <button onClick={salvar} disabled={salvando} style={{
-            background: "linear-gradient(135deg, #7c3aed, #2563eb)",
-            color: "#fff", border: "none", borderRadius: 8,
-            padding: "9px 20px", cursor: salvando ? "not-allowed" : "pointer",
-            fontFamily: FONT.body, fontSize: 13, fontWeight: 600, opacity: salvando ? 0.7 : 1,
+            background:   salvando ? BRAND.cinza : BRAND.gradiente,
+            color:        "#fff",
+            border:       "none",
+            borderRadius: 8,
+            padding:      "9px 20px",
+            cursor:       salvando ? "not-allowed" : "pointer",
+            fontFamily:   FONT.body,
+            fontSize:     13,
+            fontWeight:   600,
+            opacity:      salvando ? 0.7 : 1,
+            transition:   "opacity 0.15s",
           }}>
             {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar usuário"}
           </button>
@@ -715,9 +966,9 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
 
 function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   const [roleAtivo, setRoleAtivo] = useState<Role>("gestor");
-  const [perms, setPerms] = useState<Record<string, Partial<RolePermission>>>({});
-  const [salvando, setSalvando] = useState(false);
-  const [salvoOk, setSalvoOk] = useState(false);
+  const [perms,     setPerms]     = useState<Record<string, Partial<RolePermission>>>({});
+  const [salvando,  setSalvando]  = useState(false);
+  const [salvoOk,   setSalvoOk]   = useState(false);
 
   useEffect(() => {
     supabase.from("role_permissions").select("*").eq("role", roleAtivo).then(({ data }) => {
@@ -735,8 +986,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   };
 
   const salvar = async () => {
-    setSalvando(true);
-    setSalvoOk(false);
+    setSalvando(true); setSalvoOk(false);
     const rows = PAGES.map(p => ({
       role: roleAtivo, page_key: p.key,
       can_view:    perms[p.key]?.can_view    ?? null,
@@ -745,18 +995,12 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
       can_excluir: p.hasExcluir ? (perms[p.key]?.can_excluir ?? null) : null,
     }));
     const { error } = await supabase.from("role_permissions").upsert(rows, {
-      onConflict: "role,page_key",
-      ignoreDuplicates: false,
+      onConflict: "role,page_key", ignoreDuplicates: false,
     });
     setSalvando(false);
-    if (error) {
-      console.error("[GestaoUsuarios] Erro ao salvar permissões:", error);
-      alert(`Erro ao salvar permissões: ${error.message}`);
-      return;
-    }
+    if (error) { console.error("[GestaoUsuarios] Erro ao salvar permissões:", error); alert(`Erro ao salvar permissões: ${error.message}`); return; }
     setSalvoOk(true);
     setTimeout(() => setSalvoOk(false), 2500);
-    // Recarrega dados para garantir consistência
     supabase.from("role_permissions").select("*").eq("role", roleAtivo).then(({ data }) => {
       const mapa: Record<string, Partial<RolePermission>> = {};
       (data ?? []).forEach(r => { mapa[r.page_key] = r; });
@@ -765,33 +1009,54 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   };
 
   const thStyle: React.CSSProperties = {
-    fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
-    color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px",
-    padding: "10px 12px", textAlign: "center",
+    fontFamily:    FONT.body,
+    fontSize:      11,
+    fontWeight:    700,
+    color:         t.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: "1px",
+    padding:       "12px 14px",
+    textAlign:     "center",
+    background:    "rgba(74,32,130,0.10)",
   };
   const tdStyle: React.CSSProperties = {
-    fontFamily: FONT.body, fontSize: 13, color: t.text,
-    padding: "10px 12px", borderTop: `1px solid ${t.cardBorder}`,
+    fontFamily: FONT.body,
+    fontSize:   13,
+    color:      t.text,
+    padding:    "10px 14px",
+    borderTop:  `1px solid ${t.cardBorder}`,
   };
   const secoes = [...new Set(PAGES.map(p => p.secao))];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* ── ABAS DE PERFIL — pill style ── */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {ROLES_PERMISSOES.map(r => (
-          <button key={r} onClick={() => setRoleAtivo(r)} style={{
-            border: `1px solid ${roleAtivo === r ? roleBadgeColor(r) : t.cardBorder}`,
-            background: roleAtivo === r ? roleBadgeColor(r) + "22" : "transparent",
-            color: roleAtivo === r ? roleBadgeColor(r) : t.textMuted,
-            borderRadius: 8, padding: "7px 16px", cursor: "pointer",
-            fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
-          }}>
-            {roleLabel(r)}
-          </button>
-        ))}
+        {ROLES_PERMISSOES.map(r => {
+          const ativo = roleAtivo === r;
+          const cor   = roleBadgeColor(r);
+          return (
+            <button key={r} onClick={() => setRoleAtivo(r)} style={{
+              border:      `1px solid ${ativo ? cor : t.cardBorder}`,
+              background:  ativo ? cor + "22" : t.inputBg ?? "transparent",
+              color:       ativo ? cor : t.textMuted,
+              borderRadius: 20,
+              padding:     "7px 16px",
+              cursor:      "pointer",
+              fontFamily:  FONT.body,
+              fontSize:    13,
+              fontWeight:  ativo ? 700 : 400,
+              transition:  "all 0.18s",
+            }}>
+              {roleLabel(r)}
+            </button>
+          );
+        })}
       </div>
 
-      <div style={{ overflowX: "auto" }}>
+      {/* ── TABELA DE PERMISSÕES ── */}
+      <div style={{ overflowX: "auto", borderRadius: 12, border: `1px solid ${t.cardBorder}`, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
@@ -807,13 +1072,23 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
             {secoes.map(secao => {
               const pagesDaSec = PAGES.filter(p => p.secao === secao);
               return pagesDaSec.map((page, idx) => (
-                <tr key={page.key}>
+                <tr
+                  key={page.key}
+                  style={{ background: idx % 2 !== 0 ? "rgba(74,32,130,0.06)" : "transparent" }}
+                >
                   {idx === 0 && (
                     <td rowSpan={pagesDaSec.length} style={{
-                      ...tdStyle, fontWeight: 700, fontSize: 11,
-                      color: t.textMuted, textTransform: "uppercase",
-                      letterSpacing: "1px", verticalAlign: "middle",
-                      borderRight: `1px solid ${t.cardBorder}`,
+                      ...tdStyle,
+                      fontWeight:    700,
+                      fontSize:      11,
+                      color:         t.textMuted,
+                      textTransform: "uppercase",
+                      letterSpacing: "1px",
+                      verticalAlign: "middle",
+                      borderRight:   `1px solid ${t.cardBorder}`,
+                      borderLeft:    `3px solid ${BRAND.roxo}`,
+                      background:    "rgba(74,32,130,0.10)",
+                      paddingLeft:   12,
                     }}>
                       {secao}
                     </td>
@@ -837,9 +1112,15 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                           value={val ?? ""}
                           onChange={e => setPerm(page.key, campo, (e.target.value as PermissaoValor) || null)}
                           style={{
-                            background: t.bg, border: `1px solid ${t.cardBorder}`,
-                            borderRadius: 6, padding: "4px 8px", color: t.text,
-                            fontFamily: FONT.body, fontSize: 12, cursor: "pointer", minWidth: 100,
+                            background:   t.bg,
+                            border:       `1px solid ${t.cardBorder}`,
+                            borderRadius: 6,
+                            padding:      "4px 8px",
+                            color:        t.text,
+                            fontFamily:   FONT.body,
+                            fontSize:     12,
+                            cursor:       "pointer",
+                            minWidth:     100,
                           }}
                         >
                           <option value="">—</option>
@@ -857,13 +1138,33 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
         </table>
       </div>
 
+      {/* ── RODAPÉ — salvar ── */}
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
-        {salvoOk && <span style={{ color: "#22c55e", fontFamily: FONT.body, fontSize: 13 }}>✓ Permissões salvas com sucesso</span>}
+        {salvoOk && (
+          <span style={{
+            display:    "flex",
+            alignItems: "center",
+            gap:        6,
+            color:      BRAND.verde,
+            fontFamily: FONT.body,
+            fontSize:   13,
+          }}>
+            <ShieldCheck size={14} />
+            Permissões salvas com sucesso
+          </span>
+        )}
         <button onClick={salvar} disabled={salvando} style={{
-          background: "linear-gradient(135deg, #7c3aed, #2563eb)",
-          color: "#fff", border: "none", borderRadius: 10,
-          padding: "10px 22px", cursor: salvando ? "not-allowed" : "pointer",
-          fontFamily: FONT.body, fontSize: 13, fontWeight: 600, opacity: salvando ? 0.7 : 1,
+          background:   salvando ? BRAND.cinza : BRAND.gradiente,
+          color:        "#fff",
+          border:       "none",
+          borderRadius: 10,
+          padding:      "10px 22px",
+          cursor:       salvando ? "not-allowed" : "pointer",
+          fontFamily:   FONT.body,
+          fontSize:     13,
+          fontWeight:   600,
+          opacity:      salvando ? 0.7 : 1,
+          transition:   "opacity 0.18s",
         }}>
           {salvando ? "Salvando..." : `Salvar permissões — ${roleLabel(roleAtivo)}`}
         </button>

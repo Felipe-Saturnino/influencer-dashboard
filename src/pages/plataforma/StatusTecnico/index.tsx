@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../../../lib/supabase";
+import { supabase, supabaseUrl } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
@@ -140,18 +140,39 @@ export default function StatusTecnico() {
     setSyncExecutando(true);
     setSyncMensagem(null);
     try {
-      const { data, error } = await supabase.functions.invoke("sync-metricas", {
-        body: {},
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token || !supabaseUrl) {
+        setSyncMensagem({ tipo: "erro", texto: "Sessão não encontrada. Faça login novamente." });
+        setSyncExecutando(false);
+        return;
+      }
+      const url = `${supabaseUrl}/functions/v1/sync-metricas`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
       });
-      if (error) throw error;
-      const res = data as { ok?: boolean; erro?: string; fase1_influencers?: { registros_upserted?: number; aliases_mapeados?: number } };
-      if (res?.ok) {
-        const regs = res?.fase1_influencers?.registros_upserted ?? 0;
-        const aliases = res?.fase1_influencers?.aliases_mapeados ?? 0;
+      const resData = (await res.json().catch(() => ({}))) as { ok?: boolean; erro?: string; error?: string; fase1_influencers?: { registros_upserted?: number; aliases_mapeados?: number } };
+      if (!res.ok) {
+        const msg = resData?.erro ?? resData?.error ?? `Erro ${res.status}: ${res.statusText}`;
+        let texto = msg;
+        if (msg.includes("SMARTICO_TOKEN")) {
+          texto = `${msg} Configure em Supabase → Settings → Edge Functions → Secrets.`;
+        } else if (res.status === 500) {
+          texto = `${msg} Verifique os logs em Supabase → Edge Functions → sync-metricas → Logs.`;
+        }
+        setSyncMensagem({ tipo: "erro", texto });
+        setSyncExecutando(false);
+        return;
+      }
+      if (resData?.ok) {
+        const regs = resData?.fase1_influencers?.registros_upserted ?? 0;
+        const aliases = resData?.fase1_influencers?.aliases_mapeados ?? 0;
         setSyncMensagem({ tipo: "ok", texto: `Sync concluído: ${regs} registros sincronizados${aliases > 0 ? ` (${aliases} aliases mapeados)` : ""}. Atualize os dashboards.` });
         carregar();
       } else {
-        setSyncMensagem({ tipo: "erro", texto: res?.erro ?? "Erro desconhecido" });
+        setSyncMensagem({ tipo: "erro", texto: resData?.erro ?? "Erro desconhecido" });
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

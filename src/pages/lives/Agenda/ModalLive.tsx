@@ -74,12 +74,15 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const perm = usePermission("agenda");
   const isInfluencer = user?.role === "influencer";
   const isEdit       = !!live;
+  const isAdminOuGestor = user?.role === "admin" || user?.role === "gestor";
+  const statusValidado = live?.status === "realizada" || live?.status === "nao_realizada";
+  // Apenas Admin e Gestor podem editar/excluir lives com status realizada ou não realizada
+  const podeEditar   = isEdit && perm.canEditarOk && (!statusValidado || isAdminOuGestor);
+  const podeExcluir  = isEdit && perm.canExcluirOk && (!statusValidado || isAdminOuGestor);
   const podeCriar    = !isEdit && perm.canCriarOk;
-  const podeEditar   = isEdit  && perm.canEditarOk;
-  const podeExcluir  = isEdit  && perm.canExcluirOk;
   const somenteLeitura = isEdit && !podeEditar;
   // Apenas Admin e Gestor podem criar/editar lives em períodos anteriores (data/hora no passado)
-  const podeAlterarPeriodoAnterior = user?.role === "admin" || user?.role === "gestor";
+  const podeAlterarPeriodoAnterior = isAdminOuGestor;
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
@@ -216,6 +219,13 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         {error && (
           <div style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
             ⚠️ {error}
+          </div>
+        )}
+
+        {/* Bloqueio: apenas Admin/Gestor podem editar lives realizadas ou não realizadas */}
+        {isEdit && statusValidado && !isAdminOuGestor && (
+          <div style={{ background: `${BRAND.amarelo}18`, border: `1px solid ${BRAND.amarelo}44`, color: BRAND.amarelo, borderRadius: 10, padding: "10px 14px", fontSize: 12, marginBottom: 14, fontFamily: FONT.body }}>
+            🔒 Apenas Admin e Gestor podem editar ou excluir lives com status realizada ou não realizada.
           </div>
         )}
 

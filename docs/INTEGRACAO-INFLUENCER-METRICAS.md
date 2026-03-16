@@ -4,6 +4,44 @@ As tabelas `influencer_metricas` e `utm_aliases` **não são preenchidas pelo ap
 
 ---
 
+## Fluxo: utm_aliases → influencer_metricas
+
+### O que cria linhas em influencer_metricas?
+
+**Apenas a Edge Function `sync-metricas`** (e integrações semelhantes). Não há trigger no banco — toda inserção/atualização passa pela função.
+
+### Passo a passo
+
+1. **utm_aliases** recebe UTMs de duas formas:
+   - **Fase 2 do sync:** UTMs órfãos detectados na API da CDA são inseridos com `status='pendente'`
+   - **Gestão de Links:** Usuário mapeia um UTM pendente para um influencer → `status='mapeado'`, `influencer_id` preenchido
+
+2. **sync-metricas (Fase 1):** Para cada influencer com `influencer_perfil.utm_source` preenchido, busca métricas na CDA e faz upsert em `influencer_metricas`.
+
+3. **sync-metricas (Fase 1b):** Para cada `utm_aliases` com `status='mapeado'` e `influencer_id`, cujo `utm_source` é diferente do perfil do influencer:
+   - Busca métricas na CDA para aquele `utm_source`
+   - Faz upsert em `influencer_metricas` com `influencer_id` do alias
+
+4. **Quando mapear na Gestão de Links:** É necessário clicar em **"Executar Sync"** em Plataforma → Status Técnico para que as métricas apareçam nos dashboards. A função não dispara automaticamente ao mapear.
+
+### Pré-requisitos para o Sync funcionar
+
+- **SMARTICO_TOKEN:** Secret no Supabase (token da CDA, obtido no admin.aff.casadeapostas.bet.br)
+- **SMARTICO_LABEL_ID:** (opcional, default 573703)
+- Edge Function `sync-metricas` implantada (v1.5.0+)
+
+### Erro "Edge Function returned a non-2xx status code"
+
+Significa que a função falhou. Possíveis causas:
+
+| Causa | Solução |
+|-------|---------|
+| SMARTICO_TOKEN não configurado | Supabase → Settings → Edge Functions → Secrets → adicionar SMARTICO_TOKEN |
+| Token CDA expirado (403) | Renovar token no admin da CDA e atualizar o secret |
+| Outros erros | Ver logs em Supabase → Edge Functions → sync-metricas → Logs |
+
+---
+
 ## utm_aliases
 
 Ao inserir/atualizar UTMs vindos da API de uma operadora, incluir `operadora_slug` e **não enviar** `ggr` (coluna removida; o app calcula total_deposit - total_withdrawal):
