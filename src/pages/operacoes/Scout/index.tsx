@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
-import { supabase } from "../../../lib/supabase";
+import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
@@ -257,23 +257,16 @@ export default function Scout() {
         return;
       }
     }
-    setList((prev) =>
-      prev.map((s) => (s.id === scout.id ? { ...s, status: newStatus } : s))
-    );
-    const { error } = await supabase.from("scout_influencer").update({ status: newStatus }).eq("id", scout.id);
-    if (error) {
-      console.error("[Scout] Erro ao salvar status:", error.message);
-      setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: scout.status } : s)));
-      return;
-    }
+
+    // Caso especial: fechado + precisa criar usuário — criar PRIMEIRO, só depois atualizar status
     if (newStatus === "fechado" && !scout.user_id) {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch("/api/criar-usuario-scout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${session?.access_token ?? ""}`,
+            "Authorization": `Bearer ${supabaseAnonKey}`,
+            "Apikey": supabaseAnonKey,
           },
           body: JSON.stringify({
             email: (scout.email ?? "").trim(),
@@ -289,14 +282,31 @@ export default function Scout() {
           }),
         });
         const fnData = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
+        if (!res.ok) {
+          const msg = (fnData as { error?: string })?.error ?? `Erro ${res.status}`;
+          throw new Error(msg);
+        }
         const uid = (fnData as { userId?: string })?.userId;
         if (!uid) throw new Error("Usuário criado mas ID não retornado");
-        await supabase.from("scout_influencer").update({ user_id: uid }).eq("id", scout.id);
+
+        const { error } = await supabase.from("scout_influencer").update({ status: "fechado", user_id: uid }).eq("id", scout.id);
+        if (error) throw new Error(error.message);
         loadData();
       } catch (e) {
-        alert(e instanceof Error ? e.message : "Erro ao criar usuário. Verifique permissões.");
+        const msg = e instanceof Error ? e.message : "Erro ao criar usuário. Verifique permissões.";
+        alert(msg);
       }
+      return;
+    }
+
+    setList((prev) =>
+      prev.map((s) => (s.id === scout.id ? { ...s, status: newStatus } : s))
+    );
+    const { error } = await supabase.from("scout_influencer").update({ status: newStatus }).eq("id", scout.id);
+    if (error) {
+      console.error("[Scout] Erro ao salvar status:", error.message);
+      setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: scout.status } : s)));
+      return;
     }
   }
 
@@ -701,6 +711,13 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
 
     setSaving(true);
     try {
+      let userId: string | null = null;
+      if (status === "fechado" && (!scout?.user_id || !scout)) {
+        const scoutData = getScoutData();
+        userId = await criarUsuarioFechado(scout?.id ? { ...scoutData, id: scout.id } : scoutData);
+        if (!userId) throw new Error("Falha ao criar usuário para ativação.");
+      }
+
       const payload: Record<string, unknown> = {
         nome_artistico: nomeArtistico.trim(),
         status,
@@ -725,19 +742,14 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
         updated_at: new Date().toISOString(),
       };
       if (!scout) payload.created_by = user?.id;
+      if (userId) payload.user_id = userId;
 
       if (scout) {
         const { error: err } = await supabase.from("scout_influencer").update(payload).eq("id", scout.id);
         if (err) throw new Error(err.message);
-        if (status === "fechado" && !scout.user_id) {
-          await criarUsuarioFechado({ ...getScoutData(), id: scout.id });
-        }
       } else {
-        const { data: inserted, error: err } = await supabase.from("scout_influencer").insert(payload).select("id").single();
+        const { error: err } = await supabase.from("scout_influencer").insert(payload);
         if (err) throw new Error(err.message);
-        if (status === "fechado" && inserted) {
-          await criarUsuarioFechado({ ...getScoutData(), id: inserted.id });
-        }
       }
 
       onSaved();
@@ -748,18 +760,18 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
     }
   }
 
-  async function criarUsuarioFechado(s: ScoutInfluencer & { id?: string }) {
+  async function criarUsuarioFechado(s: Partial<ScoutInfluencer> & Pick<ScoutInfluencer, "email" | "nome_artistico">): Promise<string | null> {
     const em = (s.email ?? "").trim();
-    if (!em) return;
+    if (!em) return null;
     const nome = (s.nome_artistico ?? "").trim();
-    if (!nome) return;
+    if (!nome) return null;
 
-    const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch("/api/criar-usuario-scout", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${session?.access_token ?? ""}`,
+        "Authorization": `Bearer ${supabaseAnonKey}`,
+        "Apikey": supabaseAnonKey,
       },
       body: JSON.stringify({
         email: em,
@@ -778,10 +790,7 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
     if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
     const uid = (fnData as { userId?: string })?.userId;
     if (!uid) throw new Error("Usuário criado mas ID não retornado");
-
-    if (s.id) {
-      await supabase.from("scout_influencer").update({ user_id: uid, status: "fechado" }).eq("id", s.id);
-    }
+    return uid;
   }
 
   async function handleExcluir() {
