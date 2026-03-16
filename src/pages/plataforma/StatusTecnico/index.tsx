@@ -158,7 +158,13 @@ export default function StatusTecnico() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ data_inicio: dataInicio, data_fim: dataFim }),
       });
-      const resData = (await res.json().catch(() => ({}))) as { ok?: boolean; erro?: string; error?: string; fase1_influencers?: { registros_upserted?: number; aliases_mapeados?: number } };
+      const resData = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        erro?: string;
+        error?: string;
+        auth_usado?: string;
+        fase1_influencers?: { registros_upserted?: number; aliases_mapeados?: number };
+      };
       if (!res.ok) {
         const msg = resData?.erro ?? resData?.error ?? `Erro ${res.status}: ${res.statusText}`;
         let texto = msg;
@@ -184,7 +190,11 @@ export default function StatusTecnico() {
         });
         carregar();
       } else {
-        setSyncMensagem({ tipo: "erro", texto: resData?.erro ?? "Erro desconhecido" });
+        let textoErro = resData?.erro ?? "Erro desconhecido";
+        if (resData?.auth_usado) {
+          textoErro += ` (Auth usado: ${resData.auth_usado})`;
+        }
+        setSyncMensagem({ tipo: "erro", texto: textoErro });
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

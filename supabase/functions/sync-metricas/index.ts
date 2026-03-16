@@ -471,17 +471,19 @@ serve(async (req: Request) => {
     const dataInicio = params.data_inicio ?? defaultInicio
 
     const inicioMs = Date.now()
-    console.log(`[sync-metricas] v1.6.0 | Período: ${dataInicio} → ${dataFim}`)
-
     const cdaApiKey    = Deno.env.get('CDA_INFLUENCERS_API_KEY')
     const smaticoToken = Deno.env.get('SMARTICO_TOKEN')
     const labelId      = Deno.env.get('SMARTICO_LABEL_ID') ?? '573703'
 
+    // Prioridade: CDA_INFLUENCERS_API_KEY (não expira) > SMARTICO_TOKEN (fallback, expira)
     const cdaAuth: CdaAuth = cdaApiKey
       ? { apiKey: cdaApiKey }
       : smaticoToken
         ? { token: smaticoToken }
         : (() => { throw new Error('Configure CDA_INFLUENCERS_API_KEY (recomendado, não expira) ou SMARTICO_TOKEN no Supabase Secrets.') })()
+
+    const usaApiKey = !!cdaApiKey
+    console.log(`[sync-metricas] v1.6.1 | Auth: ${usaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN (fallback)'} | Período: ${dataInicio} → ${dataFim}`)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
@@ -528,20 +530,24 @@ serve(async (req: Request) => {
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           await enviarAlertaAuthCda()
-          await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403). Renovar SMARTICO_TOKEN.')
+          const msgAuth = usaApiKey
+            ? 'Erro de autenticação CDA (403). Verifique se CDA_INFLUENCERS_API_KEY está correta.'
+            : 'Token CDA expirado (403). Configure CDA_INFLUENCERS_API_KEY em Supabase → Secrets (não expira).'
+          await gravarTechLog(supabase, 'auth', msgAuth)
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
             status: 'falha',
             registros_inseridos: totalInseridos,
             erros_count: 1,
-            mensagem_erro: `Token CDA expirado (403) — falhou em ${influencer.utm_source}`,
+            mensagem_erro: `${msgAuth} — falhou em ${influencer.utm_source}`,
             duracao_ms: duracaoMs,
             periodo_inicio: dataInicio,
             periodo_fim: dataFim,
           })
           return new Response(JSON.stringify({
             ok: false,
-            erro: 'Token CDA expirado (403). Alerta enviado para felipe.saturnino@spingaming.com.br.',
+            erro: msgAuth,
+            auth_usado: usaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN',
             influencer_que_falhou: influencer.utm_source,
             total_sincronizados_antes_da_falha: totalInseridos,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
@@ -565,20 +571,24 @@ serve(async (req: Request) => {
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           await enviarAlertaAuthCda()
-          await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403). Renovar SMARTICO_TOKEN.')
+          const msgAuth = usaApiKey
+            ? 'Erro de autenticação CDA (403). Verifique se CDA_INFLUENCERS_API_KEY está correta.'
+            : 'Token CDA expirado (403). Configure CDA_INFLUENCERS_API_KEY em Supabase → Secrets (não expira).'
+          await gravarTechLog(supabase, 'auth', msgAuth)
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
             status: 'falha',
             registros_inseridos: totalInseridos,
             erros_count: 1,
-            mensagem_erro: `Token CDA expirado (403) — falhou em alias ${alias.utm_source}`,
+            mensagem_erro: `${msgAuth} — falhou em alias ${alias.utm_source}`,
             duracao_ms: duracaoMs,
             periodo_inicio: dataInicio,
             periodo_fim: dataFim,
           })
           return new Response(JSON.stringify({
             ok: false,
-            erro: 'Token CDA expirado (403). Alerta enviado para felipe.saturnino@spingaming.com.br.',
+            erro: msgAuth,
+            auth_usado: usaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN',
             influencer_que_falhou: alias.utm_source,
             total_sincronizados_antes_da_falha: totalInseridos,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
@@ -608,20 +618,24 @@ serve(async (req: Request) => {
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           await enviarAlertaAuthCda()
-          await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403) na varredura de UTMs.')
+          const msgAuth = usaApiKey
+            ? 'Erro de autenticação CDA (403). Verifique se CDA_INFLUENCERS_API_KEY está correta.'
+            : 'Token CDA expirado (403). Configure CDA_INFLUENCERS_API_KEY em Supabase → Secrets (não expira).'
+          await gravarTechLog(supabase, 'auth', `${msgAuth} na varredura de UTMs.`)
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
             status: 'falha',
             registros_inseridos: totalInseridos,
             erros_count: todosErros.length + 1,
-            mensagem_erro: `Token CDA expirado (403) na varredura de UTMs`,
+            mensagem_erro: `${msgAuth} na varredura de UTMs`,
             duracao_ms: duracaoMs,
             periodo_inicio: dataInicio,
             periodo_fim: dataFim,
           })
           return new Response(JSON.stringify({
             ok: false,
-            erro: 'Token CDA expirado (403). Alerta enviado.',
+            erro: msgAuth,
+            auth_usado: usaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN',
             total_sincronizados_antes_da_falha: totalInseridos,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
         } else {
@@ -645,7 +659,7 @@ serve(async (req: Request) => {
 
     const resposta = {
       ok: true,
-      versao: 'v1.6.0',
+      versao: 'v1.6.1',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       fase1_influencers: {
         total: influencers?.length ?? 0,
