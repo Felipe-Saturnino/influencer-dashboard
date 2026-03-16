@@ -38,6 +38,7 @@ No **Supabase Dashboard** → **Settings** → **Edge Functions** → **Secrets*
 
 ```bash
 supabase functions deploy criar-usuario
+supabase functions deploy criar-usuario-scout   # Scout: criar influencer ao fechar prospecto
 ```
 
 ---
@@ -58,4 +59,4 @@ supabase functions deploy criar-usuario
 
 ## Nota: Scout
 
-O fluxo de **fechar prospecto no Scout** (criar influencer a partir do scout) ainda usa o método anterior e **não envia e-mail**. Para padronizar, seria necessário adaptar essa função no futuro.
+O fluxo de **fechar prospecto no Scout** (criar influencer a partir do scout) usa a Edge Function `criar-usuario-scout`, que cria o usuário no Auth com a mesma senha padrão e **não envia e-mail**. O novo influencer fica com `must_change_password = true` para trocar a senha no primeiro acesso.

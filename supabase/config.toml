@@ -9,3 +9,7 @@ verify_jwt = false
 [functions.atualizar-perfil]
 verify_jwt = false
 # Verificação de admin é feita manualmente dentro da função
+
+[functions.criar-usuario-scout]
+verify_jwt = false
+# Cria influencer a partir do Scout; usa service_role internamente

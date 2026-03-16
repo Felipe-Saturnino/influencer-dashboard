@@ -95,6 +95,39 @@ function getLiveCassinoLabel(v: string | null | undefined): string {
   return v === "sim" ? "Sim" : "Não";
 }
 
+/** Valida se o prospecto pode ser marcado como Fechado. Retorna { ok, msg } */
+function validarParaFechado(s: {
+  nome_artistico?: string | null;
+  email?: string | null;
+  cache_negociado?: number | null;
+  plataformas?: string[];
+  link_twitch?: string | null;
+  link_youtube?: string | null;
+  link_kick?: string | null;
+  link_instagram?: string | null;
+  link_tiktok?: string | null;
+  views_twitch?: number | null;
+  views_youtube?: number | null;
+  views_kick?: number | null;
+  views_instagram?: number | null;
+  views_tiktok?: number | null;
+}): { ok: boolean; msg?: string } {
+  if (!(s.nome_artistico ?? "").trim()) return { ok: false, msg: "Nome artístico é obrigatório para marcar como Fechado." };
+  if (!(s.email ?? "").trim()) return { ok: false, msg: "E-mail é obrigatório para marcar como Fechado." };
+  const cache = s.cache_negociado ?? 0;
+  if (!cache || cache <= 0) return { ok: false, msg: "Cachê negociado é obrigatório e deve ser maior que zero para marcar como Fechado." };
+  const plats = s.plataformas ?? [];
+  if (plats.length === 0) return { ok: false, msg: "Selecione pelo menos 1 plataforma para marcar como Fechado." };
+  const temPlatCompleta = plats.some((p) => {
+    const key = p.toLowerCase();
+    const link = (s as Record<string, unknown>)[`link_${key}`] as string | null | undefined;
+    const v = (s as Record<string, unknown>)[`views_${key}`] as number | null | undefined;
+    return !!link?.trim() && (v ?? 0) > 0;
+  });
+  if (!temPlatCompleta) return { ok: false, msg: "Pelo menos 1 plataforma deve ter link e views preenchidos para marcar como Fechado." };
+  return { ok: true };
+}
+
 // ─── StatusBadge (editável no card) ───────────────────────────────────────────
 function StatusScoutBadge({ value, onChange, readonly }: { value: StatusScout; onChange: (v: StatusScout) => void; readonly?: boolean }) {
   const { theme: t } = useApp();
@@ -217,33 +250,48 @@ export default function Scout() {
   const podeAlterarStatus = (s: ScoutInfluencer) => podeEditarScout(s);
 
   async function handleStatusChange(scout: ScoutInfluencer, newStatus: StatusScout) {
-    if (newStatus === "fechado" && !(scout.email ?? "").trim()) {
-      alert("Para definir status Fechado, o e-mail é obrigatório. Abra o modal de editar e preencha o e-mail.");
-      return;
+    if (newStatus === "fechado") {
+      const val = validarParaFechado(scout);
+      if (!val.ok) {
+        alert(val.msg);
+        return;
+      }
     }
     setList((prev) =>
       prev.map((s) => (s.id === scout.id ? { ...s, status: newStatus } : s))
     );
     const { error } = await supabase.from("scout_influencer").update({ status: newStatus }).eq("id", scout.id);
-    if (error) { console.error("[Scout] Erro ao salvar status:", error.message); return; }
+    if (error) {
+      console.error("[Scout] Erro ao salvar status:", error.message);
+      setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: scout.status } : s)));
+      return;
+    }
     if (newStatus === "fechado" && !scout.user_id) {
       try {
-        const em = (scout.email ?? "").trim();
-        const nome = (scout.nome_artistico ?? "").trim();
-        const { data: authData, error: authErr } = await supabase.auth.admin.createUser({ email: em, email_confirm: true, user_metadata: { name: nome } });
-        if (authErr || !authData?.user) throw new Error(authErr?.message ?? "Erro ao criar usuário");
-        const uid = authData.user.id;
-        await supabase.from("profiles").insert({ id: uid, name: nome, email: em, role: "influencer" });
-        const plat = scout.plataformas ?? [];
-        await supabase.from("influencer_perfil").upsert({
-          id: uid, nome_artistico: nome, nome_completo: nome, status: "ativo",
-          telefone: (scout.telefone ?? "").trim() || undefined, cache_hora: scout.cache_negociado ?? 0,
-          link_twitch: plat.includes("Twitch") ? (scout.link_twitch ?? "") : undefined,
-          link_youtube: plat.includes("YouTube") ? (scout.link_youtube ?? "") : undefined,
-          link_kick: plat.includes("Kick") ? (scout.link_kick ?? "") : undefined,
-          link_instagram: plat.includes("Instagram") ? (scout.link_instagram ?? "") : undefined,
-          link_tiktok: plat.includes("TikTok") ? (scout.link_tiktok ?? "") : undefined,
-        }, { onConflict: "id", ignoreDuplicates: false });
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch("/api/criar-usuario-scout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token ?? ""}`,
+          },
+          body: JSON.stringify({
+            email: (scout.email ?? "").trim(),
+            nome_artistico: (scout.nome_artistico ?? "").trim(),
+            telefone: (scout.telefone ?? "").trim() || undefined,
+            cache_negociado: scout.cache_negociado ?? 0,
+            plataformas: scout.plataformas ?? [],
+            link_twitch: scout.link_twitch ?? "",
+            link_youtube: scout.link_youtube ?? "",
+            link_kick: scout.link_kick ?? "",
+            link_instagram: scout.link_instagram ?? "",
+            link_tiktok: scout.link_tiktok ?? "",
+          }),
+        });
+        const fnData = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
+        const uid = (fnData as { userId?: string })?.userId;
+        if (!uid) throw new Error("Usuário criado mas ID não retornado");
         await supabase.from("scout_influencer").update({ user_id: uid }).eq("id", scout.id);
         loadData();
       } catch (e) {
@@ -628,7 +676,26 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
   async function handleSave() {
     setError("");
     if (!nomeArtistico.trim()) return setError("Nome artístico é obrigatório.");
-    if (status === "fechado" && !email?.trim()) return setError("Ao definir status Fechado, o e-mail é obrigatório.");
+    if (status === "fechado") {
+      const dadosParaValidar = {
+        nome_artistico: nomeArtistico.trim(),
+        email: email?.trim(),
+        cache_negociado: cacheNegociado,
+        plataformas,
+        link_twitch: links.twitch,
+        link_youtube: links.youtube,
+        link_kick: links.kick,
+        link_instagram: links.instagram,
+        link_tiktok: links.tiktok,
+        views_twitch: views.twitch,
+        views_youtube: views.youtube,
+        views_kick: views.kick,
+        views_instagram: views.instagram,
+        views_tiktok: views.tiktok,
+      };
+      const val = validarParaFechado(dadosParaValidar);
+      if (!val.ok) return setError(val.msg ?? "Dados incompletos para Fechado.");
+    }
     const temCanalSemLink = plataformas.some((p) => !(links[p.toLowerCase()] ?? "").trim());
     if (temCanalSemLink) return setError("Preencha o link de cada plataforma selecionada.");
 
@@ -687,33 +754,30 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
     const nome = (s.nome_artistico ?? "").trim();
     if (!nome) return;
 
-    const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-      email: em,
-      email_confirm: true,
-      user_metadata: { name: nome },
-    });
-    if (authErr || !authData?.user) throw new Error(authErr?.message ?? "Erro ao criar usuário");
-    const uid = authData.user.id;
-
-    await supabase.from("profiles").insert({ id: uid, name: nome, email: em, role: "influencer" });
-    const plat = s.plataformas ?? [];
-    const primaryLink = plat[0] ? (s[`link_${plat[0].toLowerCase()}` as keyof ScoutInfluencer] as string) ?? "" : "";
-    await supabase.from("influencer_perfil").upsert(
-      {
-        id: uid,
-        nome_artistico: nome,
-        nome_completo: nome,
-        status: "ativo",
-        telefone: (s.telefone ?? "").trim() || undefined,
-        cache_hora: s.cache_negociado ?? 0,
-        link_twitch: plat.includes("Twitch") ? (s.link_twitch ?? "") : undefined,
-        link_youtube: plat.includes("YouTube") ? (s.link_youtube ?? "") : undefined,
-        link_kick: plat.includes("Kick") ? (s.link_kick ?? "") : undefined,
-        link_instagram: plat.includes("Instagram") ? (s.link_instagram ?? "") : undefined,
-        link_tiktok: plat.includes("TikTok") ? (s.link_tiktok ?? "") : undefined,
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch("/api/criar-usuario-scout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session?.access_token ?? ""}`,
       },
-      { onConflict: "id", ignoreDuplicates: false }
-    );
+      body: JSON.stringify({
+        email: em,
+        nome_artistico: nome,
+        telefone: (s.telefone ?? "").trim() || undefined,
+        cache_negociado: s.cache_negociado ?? 0,
+        plataformas: s.plataformas ?? [],
+        link_twitch: s.link_twitch ?? "",
+        link_youtube: s.link_youtube ?? "",
+        link_kick: s.link_kick ?? "",
+        link_instagram: s.link_instagram ?? "",
+        link_tiktok: s.link_tiktok ?? "",
+      }),
+    });
+    const fnData = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
+    const uid = (fnData as { userId?: string })?.userId;
+    if (!uid) throw new Error("Usuário criado mas ID não retornado");
 
     if (s.id) {
       await supabase.from("scout_influencer").update({ user_id: uid, status: "fechado" }).eq("id", s.id);
