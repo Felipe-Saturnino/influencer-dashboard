@@ -4,7 +4,7 @@ import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { X, Eye, Pencil, Trash2 } from "lucide-react";
-import { GiSpyglass, GiMoneyStack, GiEyeball, GiTwoCoins } from "react-icons/gi";
+import { GiSpyglass, GiEyeball, GiTwoCoins } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -56,7 +56,6 @@ const STATUS_SCOUT_COLOR: Record<StatusScout, string> = {
 };
 
 const CATEGORIAS = ["Vida Real", "Jogos Populares", "Variedades", "Esportes", "Cassino"] as const;
-type Categoria = (typeof CATEGORIAS)[number];
 
 const TIPO_CONTATO_OPTS = [
   { value: "agente" as const, label: "Agente" },
@@ -112,13 +111,7 @@ function formatBRL(value: number): string {
 }
 
 function getViewsTotal(s: ScoutInfluencer): number {
-  const v = (s.views_twitch ?? 0) + (s.views_youtube ?? 0) + (s.views_kick ?? 0) + (s.views_instagram ?? 0) + (s.views_tiktok ?? 0);
-  return v || 0;
-}
-
-function getPrimaryPlataforma(s: ScoutInfluencer): string {
-  const plats = s.plataformas ?? [];
-  return plats[0] ?? "—";
+  return (s.views_twitch ?? 0) + (s.views_youtube ?? 0) + (s.views_kick ?? 0) + (s.views_instagram ?? 0) + (s.views_tiktok ?? 0);
 }
 
 function getLiveCassinoLabel(v: string | null | undefined): string {
@@ -126,7 +119,6 @@ function getLiveCassinoLabel(v: string | null | undefined): string {
   return v === "sim" ? "Sim" : "Não";
 }
 
-/** Valida se o prospecto pode ser marcado como Fechado. Retorna { ok, msg } */
 function validarParaFechado(s: {
   nome_artistico?: string | null;
   email?: string | null;
@@ -159,7 +151,7 @@ function validarParaFechado(s: {
   return { ok: true };
 }
 
-// ─── StatusBadge (editável no card) ───────────────────────────────────────────
+// ─── StatusBadge ──────────────────────────────────────────────────────────────
 function StatusScoutBadge({ value, onChange, readonly }: { value: StatusScout; onChange: (v: StatusScout) => void; readonly?: boolean }) {
   const { theme: t } = useApp();
   const [open, setOpen] = useState(false);
@@ -168,33 +160,16 @@ function StatusScoutBadge({ value, onChange, readonly }: { value: StatusScout; o
     <div style={{ position: "relative", display: "inline-block" }}>
       <button
         onClick={() => { if (!readonly) setOpen((o) => !o); }}
-        style={{
-          padding: "4px 12px", borderRadius: "20px",
-          border: `1.5px solid ${color}`, background: `${color}18`, color,
-          fontSize: "12px", fontWeight: 700, fontFamily: FONT.body,
-          cursor: readonly ? "default" : "pointer",
-          display: "flex", alignItems: "center", gap: "5px",
-        }}
+        style={{ padding: "4px 12px", borderRadius: 20, border: `1.5px solid ${color}`, background: `${color}18`, color, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: readonly ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5 }}
       >
         {STATUS_SCOUT_LABEL[value]}
-        {!readonly && <span style={{ fontSize: "9px", opacity: 0.7 }}>▼</span>}
+        {!readonly && <span style={{ fontSize: 9, opacity: 0.7 }}>▼</span>}
       </button>
       {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 4px)", left: 0,
-          background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-          borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          zIndex: 200, minWidth: "140px", overflow: "hidden",
-        }}>
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.3)", zIndex: 200, minWidth: 140, overflow: "hidden" }}>
           {STATUS_SCOUT_OPTS.map((s) => (
             <button key={s} onClick={() => { onChange(s); setOpen(false); }}
-              style={{
-                display: "block", width: "100%", padding: "9px 14px", border: "none",
-                background: s === value ? `${STATUS_SCOUT_COLOR[s]}18` : "transparent",
-                color: STATUS_SCOUT_COLOR[s], fontSize: "12px", fontWeight: 700,
-                cursor: "pointer", textAlign: "left", fontFamily: FONT.body,
-              }}
-            >
+              style={{ display: "block", width: "100%", padding: "9px 14px", border: "none", background: s === value ? `${STATUS_SCOUT_COLOR[s]}18` : "transparent", color: STATUS_SCOUT_COLOR[s], fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "left", fontFamily: FONT.body }}>
               {STATUS_SCOUT_LABEL[s]}
             </button>
           ))}
@@ -223,29 +198,14 @@ export default function Scout() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("scout_influencer")
-      .select("*")
-      .order("nome_artistico");
-    if (error) {
-      console.error("[Scout] Erro ao carregar:", error);
-      setList([]);
-    } else {
+    const { data, error } = await supabase.from("scout_influencer").select("*").order("nome_artistico");
+    if (error) { console.error("[Scout] Erro ao carregar:", error); setList([]); }
+    else {
       setList((data ?? []) as ScoutInfluencer[]);
-      const caches = (data ?? [])
-        .map((s: ScoutInfluencer) => s.cache_negociado ?? 0)
-        .filter((v: number) => v > 0);
+      const caches = (data ?? []).map((s: ScoutInfluencer) => s.cache_negociado ?? 0).filter((v: number) => v > 0);
       const viewsAll = (data ?? []).map((s: ScoutInfluencer) => getViewsTotal(s)).filter((v: number) => v > 0);
-      if (caches.length > 0) {
-        const cm = Math.max(...caches, 5000);
-        setCacheMax(cm);
-        setCacheLimit(cm);
-      }
-      if (viewsAll.length > 0) {
-        const vm = Math.max(...viewsAll, 100000);
-        setViewsMax(vm);
-        setViewsLimit(vm);
-      }
+      if (caches.length > 0) { const cm = Math.max(...caches, 5000); setCacheMax(cm); setCacheLimit(cm); }
+      if (viewsAll.length > 0) { const vm = Math.max(...viewsAll, 100000); setViewsMax(vm); setViewsLimit(vm); }
     }
     setLoading(false);
   }, []);
@@ -253,17 +213,12 @@ export default function Scout() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const filtered = list.filter((s) => {
-    const searchLower = search.toLowerCase();
-    if (search && !(s.nome_artistico ?? "").toLowerCase().includes(searchLower)) return false;
+    const q = search.toLowerCase();
+    if (search && !(s.nome_artistico ?? "").toLowerCase().includes(q) && !(s.email ?? "").toLowerCase().includes(q)) return false;
     if (filterStatus !== "todos" && s.status !== filterStatus) return false;
-    if (filterPlat !== "todas") {
-      const plats = s.plataformas ?? [];
-      if (!plats.includes(filterPlat)) return false;
-    }
-    const cache = s.cache_negociado ?? 0;
-    if (cacheMax > 0 && cache > cacheLimit) return false;
-    const views = getViewsTotal(s);
-    if (viewsMax > 0 && views > viewsLimit) return false;
+    if (filterPlat !== "todas" && !(s.plataformas ?? []).includes(filterPlat)) return false;
+    if (cacheMax > 0 && (s.cache_negociado ?? 0) > cacheLimit) return false;
+    if (viewsMax > 0 && getViewsTotal(s) > viewsLimit) return false;
     return true;
   });
 
@@ -274,112 +229,51 @@ export default function Scout() {
     (s.plataformas ?? []).forEach((p) => { porPlat[p] = (porPlat[p] ?? 0) + 1; });
   });
 
-  // "proprios": editar/excluir apenas prospects criados pelo usuário (created_by)
-  const podeEditarScout  = (s: ScoutInfluencer) => perm.canEditarOk && (perm.canEditar !== "proprios" || s.created_by === user?.id);
-  const podeExcluirScout = (s: ScoutInfluencer) => perm.canExcluirOk && (perm.canExcluir !== "proprios" || s.created_by === user?.id);
+  const podeEditarScout   = (s: ScoutInfluencer) => perm.canEditarOk  && (perm.canEditar  !== "proprios" || s.created_by === user?.id);
   const podeAlterarStatus = (s: ScoutInfluencer) => podeEditarScout(s);
 
   async function handleStatusChange(scout: ScoutInfluencer, newStatus: StatusScout) {
-    if (newStatus === "fechado") {
-      const val = validarParaFechado(scout);
-      if (!val.ok) {
-        alert(val.msg);
-        return;
-      }
-    }
-
-    // Caso especial: fechado + precisa criar usuário — criar PRIMEIRO, só depois atualizar status
+    if (newStatus === "fechado") { const val = validarParaFechado(scout); if (!val.ok) { alert(val.msg); return; } }
     if (newStatus === "fechado" && !scout.user_id) {
       try {
         const res = await fetch("/api/criar-usuario-scout", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseAnonKey}`,
-            "Apikey": supabaseAnonKey,
-          },
-          body: JSON.stringify({
-            email: (scout.email ?? "").trim(),
-            nome_artistico: (scout.nome_artistico ?? "").trim(),
-            telefone: (scout.telefone ?? "").trim() || undefined,
-            cache_negociado: scout.cache_negociado ?? 0,
-            plataformas: scout.plataformas ?? [],
-            link_twitch: scout.link_twitch ?? "",
-            link_youtube: scout.link_youtube ?? "",
-            link_kick: scout.link_kick ?? "",
-            link_instagram: scout.link_instagram ?? "",
-            link_tiktok: scout.link_tiktok ?? "",
-          }),
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseAnonKey}`, "Apikey": supabaseAnonKey },
+          body: JSON.stringify({ email: (scout.email ?? "").trim(), nome_artistico: (scout.nome_artistico ?? "").trim(), telefone: (scout.telefone ?? "").trim() || undefined, cache_negociado: scout.cache_negociado ?? 0, plataformas: scout.plataformas ?? [], link_twitch: scout.link_twitch ?? "", link_youtube: scout.link_youtube ?? "", link_kick: scout.link_kick ?? "", link_instagram: scout.link_instagram ?? "", link_tiktok: scout.link_tiktok ?? "" }),
         });
         const fnData = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          const msg = (fnData as { error?: string })?.error ?? `Erro ${res.status}`;
-          throw new Error(msg);
-        }
+        if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
         const uid = (fnData as { userId?: string })?.userId;
         if (!uid) throw new Error("Usuário criado mas ID não retornado");
-
         const { error } = await supabase.from("scout_influencer").update({ status: "fechado", user_id: uid }).eq("id", scout.id);
         if (error) throw new Error(error.message);
         loadData();
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Erro ao criar usuário. Verifique permissões.";
-        alert(msg);
-      }
+      } catch (e) { alert(e instanceof Error ? e.message : "Erro ao criar usuário. Verifique permissões."); }
       return;
     }
-
-    setList((prev) =>
-      prev.map((s) => (s.id === scout.id ? { ...s, status: newStatus } : s))
-    );
+    setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: newStatus } : s)));
     const { error } = await supabase.from("scout_influencer").update({ status: newStatus }).eq("id", scout.id);
-    if (error) {
-      console.error("[Scout] Erro ao salvar status:", error.message);
-      setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: scout.status } : s)));
-      return;
-    }
+    if (error) { setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: scout.status } : s))); }
   }
 
-  const cardStyle: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: "16px", padding: "18px 20px", marginBottom: "10px",
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    gap: "12px", flexWrap: "wrap",
-  };
-  const selectStyle: React.CSSProperties = {
-    flex: 1, minWidth: 120, padding: "8px 12px", borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
-    color: t.text, fontSize: 12, fontFamily: FONT.body,
-    cursor: "pointer", outline: "none",
-  };
+  const selectStyle: React.CSSProperties = { flex: 1, minWidth: 120, padding: "8px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", outline: "none" };
 
   if (perm.canView === "nao") {
-    return (
-      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar a página Scout.
-      </div>
-    );
+    return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar a página Scout.</div>;
   }
+
+  const prospectosLabel = filtered.length === 1 ? "1 prospecto" : `${filtered.length} prospectos`;
 
   return (
     <div style={{ padding: "24px", maxWidth: "900px", margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: BRAND.ciano, flexShrink: 0,
-          }}>
-            <GiSpyglass size={16} />
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <GiSpyglass size={14} color="#fff" />
+          </div>
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-              Scout
-            </h1>
-            <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
-              Prospecte e registre informações de influencers para parcerias.
-            </p>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>Scout</h1>
+            <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>Prospecte e registre informações de influencers para parcerias.</p>
           </div>
         </div>
         {perm.canCriarOk && (
@@ -396,23 +290,34 @@ export default function Scout() {
         )}
       </div>
 
-      {/* Bloco 1: Cards Consolidados (centralizados) */}
+      {/* Bloco 1: Cards Consolidados */}
       {!loading && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center", marginBottom: "24px" }}>
-          {STATUS_SCOUT_OPTS.map((s) => (
-            <div key={s} style={{ background: t.cardBg, border: `1px solid ${STATUS_SCOUT_COLOR[s]}44`, borderRadius: 14, padding: "16px 18px", minWidth: 140 }}>
-              <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: "4px" }}>{STATUS_SCOUT_LABEL[s]}</div>
+        <div style={{ marginBottom: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>Funil de Prospecção</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {STATUS_SCOUT_OPTS.map((s) => (
+                <div key={s} style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `3px solid ${STATUS_SCOUT_COLOR[s]}`, borderRadius: 18, padding: "16px 20px", minWidth: 130, flex: "1 1 130px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: STATUS_SCOUT_COLOR[s], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 6 }}>{STATUS_SCOUT_LABEL[s]}</div>
+                </div>
+              ))}
             </div>
-          ))}
-          {PLATAFORMAS.map((plat) => (
-            <div key={plat} style={{ background: t.cardBg, border: `1px solid ${(PLAT_COLOR[plat] ?? t.cardBorder)}44`, borderRadius: 14, padding: "16px 18px", minWidth: 120 }}>
-              <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porPlat[plat] ?? 0}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: PLAT_COLOR[plat], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 4 }}>
-                <PlatLogo plataforma={plat} size={12} isDark={isDark ?? false} /> {plat}
-              </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>Cobertura de Plataformas</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {PLATAFORMAS.map((plat) => (
+                <div key={plat} style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `3px solid ${PLAT_COLOR[plat]}`, borderRadius: 18, padding: "16px 20px", minWidth: 110, flex: "1 1 110px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porPlat[plat] ?? 0}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                    <PlatLogo plataforma={plat} size={12} isDark={isDark ?? false} />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: PLAT_COLOR[plat], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>{plat}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       )}
 
@@ -421,7 +326,7 @@ export default function Scout() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome do influencer..."
+          placeholder="Buscar por nome ou e-mail..."
           style={{
             width: "100%", boxSizing: "border-box", padding: "10px 16px",
             borderRadius: 12, border: `1px solid ${t.cardBorder}`,
@@ -447,7 +352,7 @@ export default function Scout() {
           <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "12px", padding: "14px 18px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
-                <GiTwoCoins size={13} style={{ color: BRAND.ciano }} /> Cachê por Hora — até
+                <GiTwoCoins size={13} color={BRAND.ciano} /> Cachê por Hora — até
               </span>
               <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.roxoVivo, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : formatBRL(cacheLimit) + "/h"}</span>
             </div>
@@ -465,7 +370,7 @@ export default function Scout() {
           <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "12px", padding: "14px 18px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
-                <GiEyeball size={13} style={{ color: BRAND.ciano }} /> Views — até
+                <GiEyeball size={13} color={BRAND.ciano} /> Views — até
               </span>
               <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body }}>{viewsMax <= 0 || viewsLimit >= viewsMax ? "Todos" : viewsLimit.toLocaleString("pt-BR")}</span>
             </div>
@@ -483,68 +388,82 @@ export default function Scout() {
         </div>
       </div>
 
-      {/* Bloco 3: Cards (largura total, estilo Influencers) */}
-      {!loading && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>{filtered.length} prospecto(s)</div>}
+      {/* Bloco 3: Lista */}
+      {!loading && <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>{prospectosLabel}</div>}
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum prospecto encontrado.</div>
+        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum prospecto encontrado.</div>
       ) : (
-        filtered.map((s) => (
-          <div key={s.id} style={cardStyle}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
-                {(s.nome_artistico || "?")[0]?.toUpperCase()}
-              </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 16, rowGap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{s.nome_artistico}</span>
-                  <StatusScoutBadge value={s.status} onChange={(v) => handleStatusChange(s, v)} readonly={!podeAlterarStatus(s)} />
+        filtered.map((s) => {
+          const plats = s.plataformas ?? [];
+          return (
+            <div key={s.id} style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "18px 20px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
+                  {(s.nome_artistico || "?")[0]?.toUpperCase()}
                 </div>
-                {((s.cache_negociado ?? 0) > 0) && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
-                    <GiMoneyStack size={12} style={{ color: BRAND.ciano }} /> {formatBRL(s.cache_negociado!)}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{s.nome_artistico}</span>
+                    <StatusScoutBadge value={s.status} onChange={(v) => handleStatusChange(s, v)} readonly={!podeAlterarStatus(s)} />
                   </div>
-                )}
-                <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Live Cassino: {getLiveCassinoLabel(s.live_cassino)}</div>
-                {(s.plataformas ?? []).length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 6 }}>
-                    {(s.plataformas ?? []).map((c) => (
-                      <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: PLAT_COLOR[c as Plataforma], fontFamily: FONT.body }}>
-                        <PlatLogo plataforma={c} size={12} isDark={isDark ?? false} /> {c}
+                  {plats.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 6 }}>
+                      {plats.map((p) => {
+                        const plat = p as Plataforma;
+                        const key = p.toLowerCase();
+                        const link = s[`link_${key}` as keyof ScoutInfluencer] as string | null;
+                        const views = s[`views_${key}` as keyof ScoutInfluencer] as number | null;
+                        const platColor = PLAT_COLOR[plat] ?? t.textMuted;
+                        const conteudo = (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: platColor, fontFamily: FONT.body, fontWeight: 600 }}>
+                            <PlatLogo plataforma={p} size={13} isDark={isDark ?? false} />
+                            {p}
+                            {(views ?? 0) > 0 && (
+                              <span style={{ fontSize: 11, color: t.textMuted, fontWeight: 400 }}>
+                                · {(views as number).toLocaleString("pt-BR")} views
+                              </span>
+                            )}
+                          </span>
+                        );
+                        return link?.trim() ? (
+                          <a key={p} href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                            {conteudo}
+                          </a>
+                        ) : (
+                          <span key={p}>{conteudo}</span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {(s.cache_negociado ?? 0) > 0 && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: `${BRAND.roxo}18`, border: `1px solid ${BRAND.roxo}44`, fontSize: 11, fontWeight: 600, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
+                        {formatBRL(s.cache_negociado!)}
                       </span>
-                    ))}
+                    )}
+                    {s.live_cassino === "sim" && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: `${BRAND.azul}18`, border: `1px solid ${BRAND.azul}44`, fontSize: 11, fontWeight: 600, color: BRAND.azul, fontFamily: FONT.body }}>
+                        Live Cassino
+                      </span>
+                    )}
                   </div>
-                )}
-                {getViewsTotal(s) > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                    <GiEyeball size={12} style={{ color: BRAND.ciano }} /> {getViewsTotal(s).toLocaleString("pt-BR")} views
-                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <button onClick={() => setModal({ mode: "visualizar", scout: s })} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+                  <Eye size={13} /> Ver
+                </button>
+                {podeEditarScout(s) && (
+                  <button onClick={() => setModal({ mode: "editar", scout: s })} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
+                    <Pencil size={13} /> Editar
+                  </button>
                 )}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <button onClick={() => setModal({ mode: "visualizar", scout: s })} style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "8px 14px", borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
-                color: t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
-              }}>
-                <Eye size={13} /> Ver
-              </button>
-              {podeEditarScout(s) && (
-                <button onClick={() => setModal({ mode: "editar", scout: s })} style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
-                  background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-                  color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
-                }}>
-                  <Pencil size={13} /> Editar
-                </button>
-              )}
-            </div>
-          </div>
-        ))
+          );
+        })
       )}
 
       {modal?.mode === "visualizar" && modal.scout && (
@@ -591,16 +510,16 @@ function ModalVisualizar({ scout, onClose, isDark }: { scout: ScoutInfluencer; o
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>{scout.nome_artistico}</h2>
-            <span style={{ padding: "4px 12px", borderRadius: 20, background: `${STATUS_SCOUT_COLOR[scout.status]}22`, color: STATUS_SCOUT_COLOR[scout.status], fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>{STATUS_SCOUT_LABEL[scout.status]}</span>
+            <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, background: `${STATUS_SCOUT_COLOR[scout.status]}22`, color: STATUS_SCOUT_COLOR[scout.status], fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>{STATUS_SCOUT_LABEL[scout.status]}</span>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
             <X size={18} />
           </button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: `${BRAND.azul}0d`, border: `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
-          <Eye size={13} style={{ color: BRAND.azul, flexShrink: 0 }} />
+          <Eye size={13} color={BRAND.azul} />
           <span>Modo visualização — somente leitura.</span>
         </div>
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
@@ -623,18 +542,30 @@ function ModalVisualizar({ scout, onClose, isDark }: { scout: ScoutInfluencer; o
         )}
         {tab === "canais" && (
           <>
-            <div style={row}><label style={labelStyle}>Plataformas</label>{val((scout.plataformas ?? []).join(", ") || null)}</div>
-            {(scout.plataformas ?? []).map((p) => {
-              const link = scout[`link_${p.toLowerCase()}` as keyof ScoutInfluencer] as string;
-              const views = scout[`views_${p.toLowerCase()}` as keyof ScoutInfluencer] as number;
-              return link || views ? (
-                <div key={p} style={row}>
-                  <label style={labelStyle}><span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><PlatLogo plataforma={p} size={12} isDark={isDark ?? false} /> {p}</span></label>
-                  {link && <a href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: PLAT_COLOR[p as Plataforma], fontFamily: FONT.body }}>{link}</a>}
-                  {views != null && views > 0 && <span style={{ marginLeft: 8, fontSize: 13, color: t.textMuted }}>{views.toLocaleString("pt-BR")} views</span>}
-                </div>
-              ) : null;
-            })}
+            <div style={row}>
+              <label style={labelStyle}>Plataformas</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {(scout.plataformas ?? []).length === 0 && <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>—</span>}
+                {(scout.plataformas ?? []).map((p) => {
+                  const plat = p as Plataforma;
+                  const link = scout[`link_${p.toLowerCase()}` as keyof ScoutInfluencer] as string;
+                  const views = scout[`views_${p.toLowerCase()}` as keyof ScoutInfluencer] as number;
+                  return (
+                    <div key={p} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <PlatLogo plataforma={p} size={14} isDark={isDark ?? false} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {link ? (
+                          <a href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: PLAT_COLOR[plat], fontFamily: FONT.body, fontWeight: 600, textDecoration: "none", wordBreak: "break-all" }}>{link}</a>
+                        ) : (
+                          <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Sem link</span>
+                        )}
+                        {views != null && views > 0 && <span style={{ display: "block", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>{views.toLocaleString("pt-BR")} views</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             <div style={row}><label style={labelStyle}>Categorias</label>{val((scout.categorias ?? []).join(", ") || null)}</div>
           </>
         )}
@@ -1003,7 +934,9 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
               const key = p.toLowerCase();
               return (
                 <div key={p} style={row}>
-                  <label style={labelStyle}>{p} — Link e Views</label>
+                  <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 6 }}>
+                    <PlatLogo plataforma={p} size={12} isDark={isDark ?? false} /> {p} — Link e Views
+                  </label>
                   <div style={{ display: "flex", gap: "10px" }}>
                     <input value={links[key] ?? ""} onChange={(e) => setLinks((l) => ({ ...l, [key]: e.target.value }))} style={{ ...inputStyle, flex: 2 }} placeholder={`Link ${p}`} />
                     <input type="number" value={views[key] || ""} onChange={(e) => setViews((v) => ({ ...v, [key]: Math.max(0, Number(e.target.value) || 0) }))} style={{ ...inputStyle, flex: 1, minWidth: 80 }} placeholder="Views" min={0} />

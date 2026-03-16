@@ -707,6 +707,18 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }
 
   async function fecharCiclo(c: CicloPagamento) {
+    await gerarPagamentosDoCiclo(c);
+    await supabase.from("ciclos_pagamento").update({ fechado_em: new Date().toISOString() }).eq("id", c.id);
+    onRecarregar();
+  }
+
+  async function recalcularPagamentos(c: CicloPagamento) {
+    await supabase.from("pagamentos").delete().eq("ciclo_id", c.id);
+    await gerarPagamentosDoCiclo(c);
+    await carregarDados(c);
+  }
+
+  async function gerarPagamentosDoCiclo(c: CicloPagamento) {
     const { data: lives } = await supabase
       .from("lives")
       .select("id, influencer_id, operadora_slug, live_resultados(duracao_horas, duracao_min)")
@@ -735,9 +747,6 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         cache_hora, total, status: "em_analise",
       }, { onConflict: "ciclo_id,influencer_id,operadora_slug" });
     }
-
-    await supabase.from("ciclos_pagamento").update({ fechado_em: new Date().toISOString() }).eq("id", c.id);
-    onRecarregar();
   }
 
   async function carregarDados(c: CicloPagamento) {
@@ -939,11 +948,18 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           />
         </div>
 
-        {ciclo && perm.canEditarOk && (
-          <BtnPrimary onClick={() => setModalAgente(true)}>
-            ➕ Pagamento de Agente
-          </BtnPrimary>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          {ciclo && !isAberto && perm.canEditarOk && (
+            <BtnAcao onClick={() => recalcularPagamentos(ciclo)} color="#10b981">
+              🔄 Recalcular
+            </BtnAcao>
+          )}
+          {ciclo && perm.canEditarOk && (
+            <BtnPrimary onClick={() => setModalAgente(true)}>
+              ➕ Pagamento de Agente
+            </BtnPrimary>
+          )}
+        </div>
       </div>
 
       {/* KPIs do ciclo (apenas fechado) */}
@@ -988,7 +1004,14 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
-                    {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+                      {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
+                      {!isAberto && (
+                        <span style={{ fontSize: "12px", maxWidth: 420 }}>
+                          Verifique: a live está no período <strong>{ciclo?.data_inicio} – {ciclo?.data_fim}</strong> (qui–qua)? Tem operadora? A duração foi registrada em <strong>Resultados</strong>? Se adicionou lives depois do fechamento, clique em <strong>Recalcular</strong>.
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : rows.map((row, i) => (
