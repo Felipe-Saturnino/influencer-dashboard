@@ -7,21 +7,26 @@ export interface User {
   name:  string;
   email: string;
   role:  Role;
+  ativo?: boolean;
+  must_change_password?: boolean;
 }
 
 // ─── PAGE KEYS ───────────────────────────────────────────────────────────────
 export type PageKey =
   | "dash_overview"
+  | "dash_overview_influencer"
   | "dash_conversao"
   | "dash_financeiro"
   | "agenda"
   | "resultados"
   | "feedback"
   | "influencers"
+  | "scout"
   | "financeiro"
   | "gestao_links"
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
+  | "status_tecnico"
   | "configuracoes"
   | "ajuda";
 
@@ -34,6 +39,7 @@ export interface Live {
   id:               string;
   influencer_id:    string;
   influencer_name?: string;
+  operadora_slug?:  string;
   titulo:           string;
   data:             string;
   horario:          string;
@@ -75,6 +81,7 @@ export interface Pagamento {
   id:               string;
   ciclo_id:         string;
   influencer_id:    string;
+  operadora_slug:   string;
   influencer_name?: string;
   horas_realizadas: number;
   cache_hora:       number;
@@ -91,6 +98,7 @@ export type UtmAliasStatus = "pendente" | "mapeado" | "ignorado";
 export interface UtmAlias {
   id:               string;
   utm_source:       string;
+  operadora_slug?:  string;
   influencer_id:    string | null;
   influencer_name?: string;
   status:           UtmAliasStatus;
@@ -98,7 +106,9 @@ export interface UtmAlias {
   ultimo_visto:     string;
   total_ftds:       number;
   total_deposit:    number;
-  ggr:              number;
+  total_withdrawal?: number;
+  /** @deprecated Use total_deposit - total_withdrawal. Coluna removida do banco. */
+  ggr?:             number;
   mapeado_por:      string | null;
   mapeado_em:       string | null;
   atualizado_em?:   string;
@@ -162,6 +172,7 @@ export interface UsuarioCompleto {
   name:             string;
   email:            string;
   role:             Role;
+  ativo?:           boolean;
   created_at?:      string;
   last_sign_in_at?: string | null;
   scopes?:          UserScope[];

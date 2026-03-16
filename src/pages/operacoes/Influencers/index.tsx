@@ -1,30 +1,115 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { usePermission } from "../../../hooks/usePermission";
+import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import type { Operadora, InfluencerOperadora } from "../../../types";
+import { Eye, EyeOff, Pencil, X } from "lucide-react";
+import {
+  GiMicrophone, GiPodium, GiWarPick, GiTwoCoins,
+  GiPokerHand, GiCheckMark,
+} from "react-icons/gi";
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
+// ─── BRAND ────────────────────────────────────────────────────────────────────
+const BRAND = {
+  roxo:     "#4a2082",
+  roxoVivo: "#7c3aed",
+  azul:     "#1e36f8",
+  vermelho: "#e84025",
+  ciano:    "#70cae4",
+  verde:    "#22c55e",
+  amarelo:  "#f59e0b",
+} as const;
+
+const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+
+// ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
 const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok"];
 const PLAT_COLOR: Record<Plataforma, string> = {
   Twitch: "#9146ff", YouTube: "#ff0000", Kick: "#53fc18",
-  Instagram: "#e1306c", TikTok: "#010101",
+  Instagram: "#e1306c", TikTok: "#69c9d0",
 };
-const PLAT_ICON: Record<Plataforma, string> = {
-  Twitch: "🟣", YouTube: "▶️", Kick: "🟢", Instagram: "📸", TikTok: "🎵",
+const PLAT_LOGO: Record<Plataforma, string> = {
+  Twitch:    "https://cdn.simpleicons.org/twitch/9146FF",
+  YouTube:   "https://cdn.simpleicons.org/youtube/FF0000",
+  Instagram: "https://cdn.simpleicons.org/instagram/E1306C",
+  TikTok:    "https://cdn.simpleicons.org/tiktok/000000",
+  Kick:      "https://cdn.simpleicons.org/kick/53FC18",
+};
+const PLAT_LOGO_DARK: Record<Plataforma, string> = {
+  ...PLAT_LOGO,
+  TikTok: "https://cdn.simpleicons.org/tiktok/FFFFFF",
 };
 
-type Operadora = "blaze" | "bet_nacional" | "casa_apostas";
-const OPERADORAS: { key: Operadora; label: string }[] = [
-  { key: "blaze",        label: "Blaze"           },
-  { key: "bet_nacional", label: "Bet Nacional"     },
-  { key: "casa_apostas", label: "Casa de Apostas"  },
-];
+function PlatLogo({ plataforma, size = 14, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
+  const [err, setErr] = useState(false);
+  const p = plataforma as Plataforma;
+  const src = isDark ? (PLAT_LOGO_DARK[p] ?? PLAT_LOGO[p]) : PLAT_LOGO[p];
+  if (err || !src) return <span style={{ fontSize: size * 0.65, color: PLAT_COLOR[p] ?? "#fff" }}>●</span>;
+  return <img src={src} alt={plataforma} width={size} height={size} onError={() => setErr(true)} style={{ display: "block", flexShrink: 0 }} />;
+}
 
+// ─── BLUR EM DADOS SENSÍVEIS ──────────────────────────────────────────────────
+function SensitiveField({
+  value, label, labelStyle, textStyle, editMode = false,
+}: {
+  value?: string; label?: string; labelStyle?: React.CSSProperties;
+  textStyle?: React.CSSProperties; editMode?: boolean;
+}) {
+  const [visible, setVisible] = useState(editMode);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { theme: t } = useApp();
+
+  function reveal() {
+    setVisible(true);
+    if (!editMode) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setVisible(false), 10000);
+    }
+  }
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const display = value || "—";
+
+  return (
+    <div>
+      {label && <span style={labelStyle}>{label}</span>}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{
+          ...textStyle,
+          filter: visible ? "none" : "blur(5px)",
+          userSelect: visible ? "auto" : "none",
+          transition: "filter 0.2s",
+          cursor: visible ? "text" : "default",
+        }}>
+          {display}
+        </span>
+        <button
+          onClick={() => visible ? setVisible(false) : reveal()}
+          title={visible ? "Ocultar" : "Revelar dado sensível"}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            color: t.textMuted, padding: 2, flexShrink: 0,
+            display: "flex", alignItems: "center",
+            opacity: 0.7,
+          }}
+        >
+          {visible ? <EyeOff size={13} /> : <Eye size={13} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── STATUS ───────────────────────────────────────────────────────────────────
 type StatusInfluencer = "ativo" | "inativo" | "cancelado";
 const STATUS_OPTS: StatusInfluencer[] = ["ativo", "inativo", "cancelado"];
 const STATUS_COLOR: Record<StatusInfluencer, string> = {
-  ativo: "#27ae60", inativo: "#f39c12", cancelado: "#e94025",
+  ativo:      BRAND.verde,
+  inativo:    BRAND.amarelo,
+  cancelado:  BRAND.vermelho,
 };
 const STATUS_LABEL: Record<StatusInfluencer, string> = {
   ativo: "Ativo", inativo: "Inativo", cancelado: "Cancelado",
@@ -48,27 +133,20 @@ interface Perfil {
   agencia?:         string;
   conta?:           string;
   chave_pix?:       string;
-  op_blaze?:        boolean;
-  id_blaze?:        string;
-  op_bet_nacional?: boolean;
-  id_bet_nacional?: string;
-  op_casa_apostas?: boolean;
-  id_casa_apostas?: string;
 }
 
 interface Influencer {
-  id:    string;
-  name:  string; // Nome Artístico — profiles.name — identificador operacional
-  email: string;
-  perfil: Perfil | null;
+  id:         string;
+  name:       string;
+  email:      string;
+  perfil:     Perfil | null;
+  operadoras: InfluencerOperadora[];
 }
 
 const emptyPerfil = (id: string): Perfil => ({
   id, nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
   canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
   cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
-  op_blaze: false, id_blaze: "", op_bet_nacional: false, id_bet_nacional: "",
-  op_casa_apostas: false, id_casa_apostas: "",
 });
 
 // ─── Moeda BRL ────────────────────────────────────────────────────────────────
@@ -90,18 +168,31 @@ function maskBRL(raw: string): string {
 
 // Input de moeda controlado
 function CurrencyInput({
-  value, onChange, style, placeholder,
+  value, onChange, style, placeholder, disabled,
 }: {
   value: number;
   onChange: (v: number) => void;
   style?: React.CSSProperties;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   const [display, setDisplay] = useState(value > 0 ? formatBRL(value) : "");
 
   useEffect(() => {
     setDisplay(value > 0 ? formatBRL(value) : "");
   }, [value]);
+
+  if (disabled) {
+    return (
+      <input
+        type="text"
+        value={value > 0 ? formatBRL(value) : ""}
+        readOnly
+        disabled
+        style={{ ...style, opacity: 0.8, cursor: "not-allowed" }}
+      />
+    );
+  }
 
   return (
     <input
@@ -149,6 +240,7 @@ interface StatusBadgeProps {
 }
 
 function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
+  const { theme: t } = useApp();
   const [open, setOpen] = useState(false);
   const color = STATUS_COLOR[value] ?? "#888";
   return (
@@ -169,9 +261,9 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 4px)", left: 0,
-          background: "#1a1a2e", border: "1px solid #2a2a4e",
-          borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          zIndex: 200, minWidth: "140px", overflow: "hidden",
+          background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+          borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+          zIndex: 200, minWidth: 140, overflow: "hidden",
         }}>
           {STATUS_OPTS.map((s) => (
             <button key={s} onClick={() => { onChange(s); setOpen(false); }}
@@ -193,12 +285,21 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
-  const { theme: t, user } = useApp();
-  const isAdmin = user?.role === "admin";
+  const { theme: t, user, isDark, escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
+  const perm = usePermission("influencers");
+  const showManagementUI = user?.role !== "influencer";
+  // "proprios": ações apenas em registros do escopo do usuário
+  const podeEditarInf = (infId: string) =>
+    perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(infId));
+  // Status só pode ser alterado por Admin ou Gestor
+  const podeAlterarStatus = user?.role === "admin" || user?.role === "gestor";
 
-  const [list,    setList]    = useState<Influencer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modal,   setModal]   = useState<{ mode: "visualizar" | "editar" | "novo"; inf?: Influencer } | null>(null);
+  const [list,           setList]           = useState<Influencer[]>([]);
+  const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
+
+  const operadorasNoEscopo = operadorasList.filter((o) => podeVerOperadora(o.slug));
+  const [loading,        setLoading]        = useState(true);
+  const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar"; inf?: Influencer } | null>(null);
 
   // Filtros
   const [search,        setSearch]        = useState("");
@@ -210,19 +311,32 @@ export default function Influencers() {
 
   async function loadData() {
     setLoading(true);
-    if (isAdmin) {
+    const { data: opsList } = await supabase.from("operadoras").select("*").order("nome");
+    setOperadorasList(opsList ?? []);
+    const opsMap = Object.fromEntries((opsList ?? []).map((o: Operadora) => [o.slug, o.nome]));
+
+    if (showManagementUI) {
       const { data: profiles } = await supabase
         .from("profiles").select("id, name, email").eq("role", "influencer").order("name");
       if (profiles) {
         const ids = profiles.map((p: any) => p.id);
-        const { data: perfis } = ids.length > 0
-          ? await supabase.from("influencer_perfil").select("*").in("id", ids)
-          : { data: [] };
+        const [perfisRes, opsRes] = await Promise.all([
+          ids.length > 0 ? supabase.from("influencer_perfil").select("*").in("id", ids) : { data: [] },
+          ids.length > 0 ? supabase.from("influencer_operadoras").select("*").in("influencer_id", ids) : { data: [] },
+        ]);
         const perfisMap: Record<string, Perfil> = {};
-        (perfis ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
+        (perfisRes.data ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
+        const opsPorInf: Record<string, InfluencerOperadora[]> = {};
+        (opsRes.data ?? []).forEach((o: InfluencerOperadora) => {
+          if (!opsPorInf[o.influencer_id]) opsPorInf[o.influencer_id] = [];
+          opsPorInf[o.influencer_id].push({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome });
+        });
         const mapped = profiles.map((p: any) => ({
-          id: p.id, name: p.name ?? p.email, email: p.email,
+          id: p.id,
+          name: p.name ?? p.email,
+          email: p.email,
           perfil: perfisMap[p.id] ?? null,
+          operadoras: opsPorInf[p.id] ?? [],
         }));
         setList(mapped);
 
@@ -240,9 +354,22 @@ export default function Influencers() {
       }
     } else {
       if (!user) return;
-      const { data: perfil } = await supabase
-        .from("influencer_perfil").select("*").eq("id", user.id).single();
-      setList([{ id: user.id, name: user.name, email: user.email, perfil: perfil ?? null }]);
+      const [perfilRes, opsRes] = await Promise.all([
+        supabase.from("influencer_perfil").select("*").eq("id", user.id).single(),
+        supabase.from("influencer_operadoras").select("*").eq("influencer_id", user.id),
+      ]);
+      const perfil = perfilRes.data ?? null;
+      const operadoras = ((opsRes.data ?? []) as InfluencerOperadora[]).map((o) => ({
+        ...o,
+        operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome,
+      }));
+      setList([{
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        perfil,
+        operadoras,
+      }]);
     }
     setLoading(false);
   }
@@ -251,6 +378,7 @@ export default function Influencers() {
 
   // ── CORREÇÃO 1: upsert com await para garantir persistência do status ──
   async function handleStatusChange(infId: string, newStatus: StatusInfluencer) {
+    if (!podeAlterarStatus) return; // Só Admin/Gestor podem alterar status
     // Atualiza estado local imediatamente (UX responsiva)
     setList((prev) =>
       prev.map((i) =>
@@ -271,6 +399,7 @@ export default function Influencers() {
   }
 
   const filtered = list.filter((inf) => {
+    if (!podeVerInfluencer(inf.id)) return false;
     const p = inf.perfil;
     const searchLower = search.toLowerCase();
     if (search && !(
@@ -280,8 +409,8 @@ export default function Influencers() {
     if (filterStatus !== "todos" && (p?.status ?? "ativo") !== filterStatus) return false;
     if (filterPlat !== "todas" && !(p?.canais ?? []).includes(filterPlat as Plataforma)) return false;
     if (filterOp !== "todas") {
-      const opKey = `op_${filterOp}` as keyof Perfil;
-      if (!p?.[opKey]) return false;
+      const temOp = inf.operadoras?.some((o) => o.operadora_slug === filterOp);
+      if (!temOp) return false;
     }
     const cache = p?.cache_hora ?? 0;
     if (cacheLimit < cacheMax) {
@@ -290,14 +419,17 @@ export default function Influencers() {
     return true;
   });
 
-  // ── CORREÇÃO 2: apenas influencers ATIVOS entram no quadro de incompletos ──
+  // ── CORREÇÃO 2: apenas influencers ATIVOS no escopo entram no quadro de incompletos ──
   const incompletos = list.filter((i) =>
-    (i.perfil?.status ?? "ativo") === "ativo" && isPerfilIncompleto(i.perfil, i.name)
+    podeVerInfluencer(i.id) &&
+    (i.perfil?.status ?? "ativo") === "ativo" &&
+    isPerfilIncompleto(i.perfil, i.name)
   );
 
+  const listNoEscopo = list.filter((i) => podeVerInfluencer(i.id));
   const porStatus: Record<StatusInfluencer, number> = { ativo: 0, inativo: 0, cancelado: 0 };
   const porPlat: Record<string, number> = {};
-  list.forEach((inf) => {
+  listNoEscopo.forEach((inf) => {
     const s = inf.perfil?.status ?? "ativo";
     porStatus[s]++;
     (inf.perfil?.canais ?? []).forEach((c) => { porPlat[c] = (porPlat[c] ?? 0) + 1; });
@@ -310,49 +442,55 @@ export default function Influencers() {
     display: "flex", alignItems: "center", justifyContent: "space-between",
     gap: "12px", flexWrap: "wrap",
   };
-  const badge = (color: string): React.CSSProperties => ({
-    fontSize: "11px", padding: "3px 9px", borderRadius: "20px",
-    background: `${color}22`, color, fontWeight: 600, fontFamily: FONT.body,
-  });
   const selectStyle: React.CSSProperties = {
-    flex: 1, padding: "8px 12px", borderRadius: "10px",
-    border: `1px solid ${t.inputBorder}`, background: t.inputBg,
-    color: t.inputText, fontSize: "12px", fontFamily: FONT.body,
+    flex: 1, padding: "8px 12px", borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
+    color: t.text, fontSize: 12, fontFamily: FONT.body,
     cursor: "pointer", outline: "none",
   };
+
+  if (perm.canView === "nao") {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar a página de Influencers.
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "24px", maxWidth: "900px", margin: "0 auto" }}>
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "20px", gap: "12px", flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
-            👥 Influencers
-          </h1>
-          <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
-            {isAdmin
-              ? "Gerencie o cadastro completo dos influencers parceiros."
-              : "Seu perfil completo na plataforma."}
-          </p>
+      {/* ── HEADER ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            width: 32, height: 32, borderRadius: 9,
+            background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: BRAND.ciano, flexShrink: 0,
+          }}>
+            <GiMicrophone size={16} />
+          </span>
+          <div>
+            <h1 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Influencers
+            </h1>
+            <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
+              {showManagementUI ? "Gerencie o cadastro completo dos influencers parceiros." : "Seu perfil completo na plataforma."}
+            </p>
+          </div>
         </div>
-        {isAdmin && (
-          <button onClick={() => setModal({ mode: "novo" })}
-            style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            + Adicionar
-          </button>
-        )}
       </div>
 
-      {/* Quadros resumo (admin) */}
-      {isAdmin && (
+      {/* Quadros resumo (quem gerencia múltiplos) */}
+      {showManagementUI && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "20px" }}>
-            <div style={{ fontSize: "12px", fontWeight: 700, color: t.label, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: "6px" }}>
-              📊 Total de Influencers
+          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: t.textMuted, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
+              <GiPodium size={13} style={{ color: BRAND.ciano }} /> Total de Influencers
             </div>
-            <div style={{ fontSize: "36px", fontWeight: 900, color: t.text, fontFamily: FONT.title, marginBottom: "12px" }}>
-              {list.length}
+            <div style={{ fontSize: 36, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
+              {listNoEscopo.length}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "12px" }}>
               {STATUS_OPTS.map((s) => (
@@ -363,58 +501,62 @@ export default function Influencers() {
               ))}
             </div>
             {Object.keys(porPlat).length > 0 && (
-              <div style={{ borderTop: `1px solid ${t.divider}`, paddingTop: "10px" }}>
-                <div style={{ fontSize: "11px", fontWeight: 700, color: t.label, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: "6px" }}>
+              <div style={{ borderTop: `1px solid ${t.cardBorder}`, paddingTop: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
                   Por Plataforma
                 </div>
                 {Object.entries(porPlat).sort((a, b) => b[1] - a[1]).map(([plat, n]) => (
-                  <div key={plat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "12px", color: PLAT_COLOR[plat as Plataforma], fontFamily: FONT.body }}>
-                      {PLAT_ICON[plat as Plataforma]} {plat}
+                  <div key={plat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: PLAT_COLOR[plat as Plataforma], fontFamily: FONT.body }}>
+                      <PlatLogo plataforma={plat} size={12} isDark={isDark ?? false} /> {plat}
                     </span>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{n}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{n}</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div style={{ background: t.cardBg, border: `1px solid #e9402533`, borderRadius: "16px", padding: "20px" }}>
-            <div style={{ fontSize: "12px", fontWeight: 700, color: "#e94025", letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: "6px" }}>
-              ⚠️ Perfil Incompleto
+          <div style={{ background: t.cardBg, border: `1px solid ${BRAND.vermelho}33`, borderRadius: 16, padding: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: BRAND.vermelho, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
+              <GiWarPick size={13} /> Perfil Incompleto
             </div>
-            <div style={{ fontSize: "36px", fontWeight: 900, color: "#e94025", fontFamily: FONT.title, marginBottom: "12px" }}>
+            <div style={{ fontSize: 36, fontWeight: 900, color: BRAND.vermelho, fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
               {incompletos.length}
             </div>
             {incompletos.length === 0 ? (
-              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
-                ✅ Todos os perfis ativos estão completos!
-              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: BRAND.verde, fontFamily: FONT.body }}>
+                <GiCheckMark size={14} /> Todos os perfis ativos estão completos!
+              </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                {incompletos.map((inf) => (
-                  <button key={inf.id} onClick={() => setModal({ mode: "editar", inf })}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontSize: "13px", color: BASE_COLORS.blue, fontFamily: FONT.body, textDecoration: "underline", fontWeight: 500 }}>
-                    {inf.name}
-                  </button>
-                ))}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {incompletos.map((inf) =>
+                  podeEditarInf(inf.id) ? (
+                    <button key={inf.id} onClick={() => setModal({ mode: "editar", inf })}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontSize: 13, color: BRAND.azul, fontFamily: FONT.body, textDecoration: "underline", fontWeight: 500 }}>
+                      {inf.name}
+                    </button>
+                  ) : (
+                    <span key={inf.id} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{inf.name}</span>
+                  )
+                )}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Busca */}
-      {isAdmin && (
+      {/* Busca e filtros */}
+      {showManagementUI && (
         <>
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nome artístico ou e-mail..."
             style={{
               width: "100%", boxSizing: "border-box", padding: "10px 16px",
-              borderRadius: "12px", border: `1px solid ${t.inputBorder}`,
-              background: t.inputBg, color: t.inputText, fontSize: "13px",
-              fontFamily: FONT.body, outline: "none", marginBottom: "10px",
+              borderRadius: 12, border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
+              fontFamily: FONT.body, outline: "none", marginBottom: 10,
             }}
           />
 
@@ -431,7 +573,9 @@ export default function Influencers() {
             </select>
             <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)} style={selectStyle}>
               <option value="todas">Todas as operadoras</option>
-              {OPERADORAS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+              {operadorasNoEscopo.map((o) => (
+                <option key={o.slug} value={o.slug}>{o.nome}</option>
+              ))}
             </select>
           </div>
 
@@ -440,41 +584,21 @@ export default function Influencers() {
               background: t.cardBg, border: `1px solid ${t.cardBorder}`,
               borderRadius: "12px", padding: "14px 18px", marginBottom: "16px",
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.label, fontFamily: FONT.body }}>
-                  💰 Cachê por Hora — até
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
+                  <GiTwoCoins size={13} style={{ color: BRAND.ciano }} /> Cachê por Hora — até
                 </span>
-                <span style={{ fontSize: "13px", fontWeight: 700, color: BASE_COLORS.purple, fontFamily: FONT.body }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
                   {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
                 </span>
               </div>
-              <div style={{ position: "relative", height: "20px", display: "flex", alignItems: "center" }}>
-                <div style={{ position: "absolute", left: 0, right: 0, height: "4px", borderRadius: "2px", background: t.cardBorder }} />
-                <div style={{
-                  position: "absolute", left: 0,
-                  width: `${(cacheLimit / cacheMax) * 100}%`,
-                  height: "4px", borderRadius: "2px",
-                  background: `linear-gradient(90deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-                }} />
-                <input
-                  type="range"
-                  min={0} max={cacheMax} step={50}
-                  value={cacheLimit}
+              <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
+                <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
+                <div style={{ position: "absolute", left: 0, width: `${(cacheLimit / cacheMax) * 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+                <input type="range" min={0} max={cacheMax} step={50} value={cacheLimit}
                   onChange={(e) => setCacheLimit(Number(e.target.value))}
-                  style={{
-                    position: "absolute", width: "100%",
-                    opacity: 0, cursor: "pointer", height: "20px", zIndex: 2,
-                  }}
-                />
-                <div style={{
-                  position: "absolute",
-                  left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`,
-                  width: "16px", height: "16px", borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-                  border: "2px solid white",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-                  pointerEvents: "none", zIndex: 3,
-                }} />
+                  style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+                <div style={{ position: "absolute", left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
                 <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
@@ -486,7 +610,7 @@ export default function Influencers() {
       )}
 
       {/* Contador */}
-      {!loading && isAdmin && (
+      {!loading && showManagementUI && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
           {filtered.length} influencer(s)
         </div>
@@ -498,24 +622,24 @@ export default function Influencers() {
           Carregando...
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-          👥 Nenhum influencer encontrado.
+        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+          Nenhum influencer encontrado.
         </div>
       ) : (
         filtered.map((inf) => {
           const p          = inf.perfil;
           const canais     = p?.canais ?? [];
-          const opsAtivas  = OPERADORAS.filter((o) => p?.[`op_${o.key}` as keyof Perfil]);
+          const opsAtivas  = (inf.operadoras ?? []).filter((o) => o.ativo);
           const incompleto = isPerfilIncompleto(p, inf.name);
           const status: StatusInfluencer = p?.status ?? "ativo";
           return (
             <div key={inf.id} style={cardStyle}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
                 <div style={{
-                  width: "44px", height: "44px", borderRadius: "50%", flexShrink: 0,
-                  background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+                  width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                  background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff", fontWeight: 800, fontSize: "16px", fontFamily: FONT.body,
+                  color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body,
                 }}>
                   {(inf.name || inf.email)[0]?.toUpperCase()}
                 </div>
@@ -528,55 +652,66 @@ export default function Influencers() {
                     <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
                       {inf.name}
                     </span>
-                    <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} />
+                    <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} readonly={!podeAlterarStatus} />
                     {incompleto && status === "ativo" && (
-                      <span style={badge("#e94025")}>⚠️ Perfil incompleto</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${BRAND.vermelho}22`, color: BRAND.vermelho, fontWeight: 600, fontFamily: FONT.body }}>
+                        <GiWarPick size={10} /> Perfil incompleto
+                      </span>
                     )}
                   </div>
-                  {p?.cache_hora && p.cache_hora > 0 ? (
-                    <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "6px" }}>
-                      💰 {formatBRL(p.cache_hora)}/h
+                  {p?.cache_hora && p.cache_hora > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 5 }}>
+                      <GiTwoCoins size={12} style={{ color: BRAND.ciano }} /> {formatBRL(p.cache_hora)}/h
                     </div>
-                  ) : null}
+                  )}
                   {canais.length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "3px", marginBottom: "6px" }}>
                       {canais.map((c) => {
                         const link = p?.[`link_${c.toLowerCase()}` as keyof Perfil] as string;
-                        return link ? (
-                          <a key={c}
-                            href={link.startsWith("http") ? link : `https://${link}`}
-                            target="_blank" rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", color: PLAT_COLOR[c], fontFamily: FONT.body, textDecoration: "none" }}
-                          >
-                            {PLAT_ICON[c]} {c} <span style={{ fontSize: "10px", opacity: 0.7 }}>↗</span>
-                          </a>
-                        ) : (
-                          <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", color: PLAT_COLOR[c], fontFamily: FONT.body }}>
-                            {PLAT_ICON[c]} {c}
+                        const content = (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: PLAT_COLOR[c], fontFamily: FONT.body }}>
+                            <PlatLogo plataforma={c} size={12} isDark={isDark ?? false} /> {c}
+                            {link && <span style={{ fontSize: 10, opacity: 0.7 }}>↗</span>}
                           </span>
                         );
+                        return link ? (
+                          <a key={c} href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ textDecoration: "none" }}>
+                            {content}
+                          </a>
+                        ) : <span key={c}>{content}</span>;
                       })}
                     </div>
                   )}
                   {opsAtivas.length > 0 && (
-                    <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {opsAtivas.map((o) => (
-                        <span key={o.key} style={badge("#f39c12")}>🎰 {o.label}</span>
+                        <span key={o.operadora_slug} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${BRAND.amarelo}22`, color: BRAND.amarelo, fontWeight: 600, fontFamily: FONT.body }}>
+                          <GiPokerHand size={11} /> {o.operadora_nome ?? o.operadora_slug}
+                        </span>
                       ))}
                     </div>
                   )}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                <button onClick={() => setModal({ mode: "visualizar", inf })}
-                  style={{ padding: "8px 14px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.label, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                  👁️ Ver
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <button onClick={() => setModal({ mode: "visualizar", inf })} style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "8px 14px", borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
+                  color: t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+                }}>
+                  <Eye size={13} /> Ver
                 </button>
-                <button onClick={() => setModal({ mode: "editar", inf })}
-                  style={{ padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
-                  ✏️ Editar
-                </button>
+                {podeEditarInf(inf.id) && (
+                  <button onClick={() => setModal({ mode: "editar", inf })} style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
+                    background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                    color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
+                  }}>
+                    <Pencil size={13} /> Editar
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -584,24 +719,34 @@ export default function Influencers() {
       )}
 
       {modal?.mode === "visualizar" && modal.inf && (
-        <ModalVisualizar influencer={modal.inf} onClose={() => setModal(null)} />
+        <ModalVisualizar
+          influencer={modal.inf}
+          operadorasList={operadorasNoEscopo.filter((o) =>
+            (modal.inf!.operadoras ?? []).some((op) => op.operadora_slug === o.slug)
+          )}
+          onClose={() => setModal(null)}
+          isDark={isDark}
+        />
       )}
       {modal?.mode === "editar" && modal.inf && (
         <ModalPerfil
           influencer={modal.inf}
+          operadorasList={operadorasNoEscopo.filter((o) =>
+            (modal.inf!.operadoras ?? []).some((op) => op.operadora_slug === o.slug)
+          )}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); loadData(); }}
+          isDark={isDark}
         />
-      )}
-      {modal?.mode === "novo" && (
-        <ModalNovo onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
       )}
     </div>
   );
 }
 
 // ─── Modal Visualizar ─────────────────────────────────────────────────────────
-function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onClose: () => void }) {
+function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
+  influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; isDark?: boolean;
+}) {
   const { theme: t } = useApp();
   const p = influencer.perfil;
   const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
@@ -614,10 +759,10 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
   ];
 
   const labelStyle: React.CSSProperties = {
-    display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px",
-    textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
+    display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px",
+    textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
-  const row: React.CSSProperties = { marginBottom: "14px" };
+  const row: React.CSSProperties = { marginBottom: 14 };
   const val = (v?: string | number) => (
     <span style={{ fontSize: "13px", color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>
       {v || "—"}
@@ -632,24 +777,27 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
-              <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
                 {influencer.name}
               </h2>
               {p?.status && <StatusBadge value={p.status} onChange={() => {}} readonly />}
             </div>
             <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{influencer.email}</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+            <X size={18} />
+          </button>
         </div>
 
-        <div style={{ background: `${BASE_COLORS.blue}08`, border: `1px solid ${BASE_COLORS.blue}22`, borderRadius: "10px", padding: "8px 14px", fontSize: "12px", color: BASE_COLORS.blue, fontFamily: FONT.body, marginBottom: "18px" }}>
-          👁️ Modo visualização — somente leitura
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: `${BRAND.azul}0d`, border: `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
+          <Eye size={13} style={{ color: BRAND.azul, flexShrink: 0 }} />
+          <span>Modo visualização — somente leitura. Dados sensíveis protegidos.</span>
         </div>
 
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {tabs.map((tb) => (
             <button key={tb.key} onClick={() => setTab(tb.key)}
-              style={{ padding: "7px 14px", borderRadius: "20px", border: `1px solid ${tab === tb.key ? BASE_COLORS.purple : t.cardBorder}`, background: tab === tb.key ? `${BASE_COLORS.purple}22` : t.inputBg, color: tab === tb.key ? BASE_COLORS.purple : t.textMuted, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb.key ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb.key ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
               {tb.label}
             </button>
           ))}
@@ -661,7 +809,9 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
             <div style={row}><label style={labelStyle}>Nome Artístico</label>{val(influencer.name)}</div>
             <div style={row}><label style={labelStyle}>E-mail</label>{val(influencer.email)}</div>
             <div style={row}><label style={labelStyle}>Telefone</label>{val(p?.telefone)}</div>
-            <div style={row}><label style={labelStyle}>CPF</label>{val(p?.cpf)}</div>
+            <div style={row}>
+              <SensitiveField value={p?.cpf} label="CPF" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
+            </div>
           </>
         )}
 
@@ -674,18 +824,15 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
               ) : (
                 (p?.canais ?? []).map((c) => {
                   const link = p?.[`link_${c.toLowerCase()}` as keyof Perfil] as string;
-                  return link ? (
-                    <a key={c}
-                      href={link.startsWith("http") ? link : `https://${link}`}
-                      target="_blank" rel="noopener noreferrer"
-                      style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "20px", border: `2px solid ${PLAT_COLOR[c]}`, background: `${PLAT_COLOR[c]}18`, color: PLAT_COLOR[c], fontSize: "12px", fontWeight: 700, fontFamily: FONT.body, textDecoration: "none" }}>
-                      {PLAT_ICON[c]} {c} <span style={{ fontSize: "10px", opacity: 0.7 }}>↗</span>
-                    </a>
-                  ) : (
-                    <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "20px", border: `2px solid ${PLAT_COLOR[c]}`, background: `${PLAT_COLOR[c]}18`, color: PLAT_COLOR[c], fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
-                      {PLAT_ICON[c]} {c}
+                  const inner = (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 12px", borderRadius: 20, border: `2px solid ${PLAT_COLOR[c]}`, background: `${PLAT_COLOR[c]}18`, color: PLAT_COLOR[c], fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
+                      <PlatLogo plataforma={c} size={13} isDark={isDark ?? false} /> {c}
+                      {link && <span style={{ fontSize: 10, opacity: 0.7 }}>↗</span>}
                     </span>
                   );
+                  return link ? (
+                    <a key={c} href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>{inner}</a>
+                  ) : <span key={c}>{inner}</span>;
                 })
               )}
             </div>
@@ -695,299 +842,84 @@ function ModalVisualizar({ influencer, onClose }: { influencer: Influencer; onCl
         {tab === "financeiro" && (
           <>
             <div style={row}><label style={labelStyle}>Cachê por Hora</label>{val(p?.cache_hora ? formatBRL(p.cache_hora) : "")}</div>
-            <div style={row}><label style={labelStyle}>Chave PIX</label>{val(p?.chave_pix)}</div>
-            <div style={row}><label style={labelStyle}>Banco</label>{val(p?.banco)}</div>
-            <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <div><label style={labelStyle}>Agência</label>{val(p?.agencia)}</div>
-              <div><label style={labelStyle}>Conta</label>{val(p?.conta)}</div>
+            <div style={row}>
+              <SensitiveField value={p?.chave_pix} label="Chave PIX" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
+            </div>
+            <div style={row}>
+              <SensitiveField value={p?.banco} label="Banco" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
+            </div>
+            <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <SensitiveField value={p?.agencia} label="Agência" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
+              <SensitiveField value={p?.conta} label="Conta" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
             </div>
           </>
         )}
 
         {tab === "operadoras" && (
           <>
-            {OPERADORAS.map((op) => {
-              const ativo = !!p?.[`op_${op.key}` as keyof Perfil];
-              const id    = p?.[`id_${op.key}` as keyof Perfil] as string;
-              return (
-                <div key={op.key} style={{ marginBottom: "14px", padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.label}</span>
-                    <span style={{ padding: "4px 12px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, fontFamily: FONT.body }}>
-                      {ativo ? "Ativo" : "Inativo"}
-                    </span>
+            {operadorasList.length === 0 ? (
+              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma operadora cadastrada na plataforma.</p>
+            ) : (
+              operadorasList.map((op) => {
+                const vinculo = influencer.operadoras?.find((o) => o.operadora_slug === op.slug);
+                const ativo = !!vinculo?.ativo;
+                const id = vinculo?.id_operadora;
+                return (
+                  <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? BRAND.roxoVivo + "55" : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}08` : "transparent" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
+                        <GiPokerHand size={13} style={{ color: BRAND.amarelo }} /> {op.nome}
+                      </span>
+                      <span style={{ padding: "4px 12px", borderRadius: 20, border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: ativo ? BRAND.roxoVivo : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
+                        {ativo ? "Ativo" : "Inativo"}
+                      </span>
+                    </div>
+                    {ativo && id && <div style={{ marginTop: "8px", fontSize: "13px", color: t.text, fontFamily: FONT.body }}>ID: {id}</div>}
                   </div>
-                  {ativo && id && <div style={{ marginTop: "8px", fontSize: "13px", color: t.text, fontFamily: FONT.body }}>ID: {id}</div>}
-                </div>
-              );
-            })}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Modal Novo ───────────────────────────────────────────────────────────────
-function ModalNovo({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const { theme: t } = useApp();
-  const [newNomeCompleto,  setNewNomeCompleto]  = useState("");
-  const [newNomeArtistico, setNewNomeArtistico] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [form, setForm] = useState<Perfil>({
-    id: "", nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
-    canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
-    cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
-    op_blaze: false, id_blaze: "", op_bet_nacional: false, id_bet_nacional: "",
-    op_casa_apostas: false, id_casa_apostas: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState("");
-  const [tab,    setTab]    = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
-
-  const set = (key: keyof Perfil, val: any) => setForm((f) => ({ ...f, [key]: val }));
-
-  const toggleCanal = (c: Plataforma) => {
-    const cur = form.canais ?? [];
-    set("canais", cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]);
-  };
-
-  async function handleSave() {
-    setError("");
-    if (!newEmail.trim())          return setError("E-mail é obrigatório.");
-    if (!newNomeArtistico.trim())  return setError("Nome Artístico é obrigatório.");
-    if (!newNomeCompleto.trim())   return setError("Nome Completo é obrigatório.");
-    if (!form.cache_hora || form.cache_hora <= 0) return setError("Cachê por Hora é obrigatório.");
-
-    if ((form.canais ?? []).length === 0) return setError("Selecione ao menos 1 canal com link.");
-    const temCanalSemLink = (form.canais ?? []).some((c) => {
-      const link = form[`link_${c.toLowerCase()}` as keyof Perfil] as string;
-      return !link?.trim();
-    });
-    if (temCanalSemLink) return setError("Preencha o link de cada canal selecionado.");
-
-    const temOp = OPERADORAS.some((o) => {
-      const ativo = form[`op_${o.key}` as keyof Perfil];
-      const id    = form[`id_${o.key}` as keyof Perfil] as string;
-      return ativo && id?.trim();
-    });
-    if (!temOp) return setError("Ative ao menos 1 operadora com ID preenchido.");
-
-    setSaving(true);
-    const { data: profile, error: profileErr } = await supabase
-      .from("profiles").select("id").eq("email", newEmail.toLowerCase().trim()).single();
-    if (profileErr || !profile) {
-      setError("Usuário não encontrado. Verifique o e-mail.");
-      setSaving(false);
-      return;
-    }
-
-    await supabase.from("profiles").update({ name: newNomeArtistico.trim() }).eq("id", profile.id);
-
-    const payload: Perfil = {
-      ...form,
-      id: profile.id,
-      nome_artistico: newNomeArtistico.trim(),
-      nome_completo:  newNomeCompleto.trim(),
-    };
-    const { error: err } = await supabase.from("influencer_perfil").insert(payload);
-    setSaving(false);
-    if (err) { setError(err.message); return; }
-    onSaved();
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", boxSizing: "border-box", padding: "10px 14px",
-    borderRadius: "10px", border: `1px solid ${t.inputBorder}`,
-    background: t.inputBg, color: t.inputText,
-    fontSize: "13px", fontFamily: FONT.body, outline: "none",
-  };
-  const labelStyle: React.CSSProperties = {
-    display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px",
-    textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
-  };
-  const req  = <span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>;
-  const row: React.CSSProperties = { marginBottom: "14px" };
-  const tabs = [
-    { key: "cadastral"   as const, label: "Cadastral"  },
-    { key: "canais"      as const, label: "Canais"     },
-    { key: "financeiro"  as const, label: "Financeiro" },
-    { key: "operadoras"  as const, label: "Operadoras" },
-  ];
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-          <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>➕ Novo Influencer</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
-        </div>
-        <p style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "18px", marginTop: "4px" }}>
-          Campos com <span style={{ color: "#e94025" }}>*</span> são obrigatórios.
-        </p>
-
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px", flexWrap: "wrap" }}>
-          {tabs.map((tb) => (
-            <button key={tb.key} onClick={() => setTab(tb.key)}
-              style={{ padding: "7px 14px", borderRadius: "20px", border: `1px solid ${tab === tb.key ? BASE_COLORS.purple : t.cardBorder}`, background: tab === tb.key ? `${BASE_COLORS.purple}22` : t.inputBg, color: tab === tb.key ? BASE_COLORS.purple : t.textMuted, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
-              {tb.label}
-            </button>
-          ))}
-        </div>
-
-        {error && (
-          <div style={{ background: "#e9402518", border: "1px solid #e9402544", color: "#e94025", borderRadius: "10px", padding: "10px 14px", fontSize: "13px", marginBottom: "14px" }}>
-            ⚠️ {error}
-          </div>
-        )}
-
-        {tab === "cadastral" && (
-          <>
-            <div style={row}>
-              <label style={labelStyle}>Nome Artístico{req}</label>
-              <input value={newNomeArtistico} onChange={(e) => setNewNomeArtistico(e.target.value)} style={inputStyle} placeholder="Ex: NeryXLS" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>Nome Completo{req}</label>
-              <input value={newNomeCompleto} onChange={(e) => setNewNomeCompleto(e.target.value)} style={inputStyle} placeholder="Nome completo do influencer" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>E-mail{req}</label>
-              <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} style={inputStyle} placeholder="email@dominio.com" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>Telefone</label>
-              <input value={form.telefone ?? ""} onChange={(e) => set("telefone", e.target.value)} style={inputStyle} placeholder="(11) 99999-9999" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>CPF</label>
-              <input value={form.cpf ?? ""} onChange={(e) => set("cpf", e.target.value)} style={inputStyle} placeholder="000.000.000-00" />
-            </div>
-          </>
-        )}
-
-        {tab === "canais" && (
-          <>
-            <div style={row}>
-              <label style={labelStyle}>Plataformas Ativas{req}</label>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                {PLATAFORMAS.map((p) => {
-                  const ativo = (form.canais ?? []).includes(p);
-                  return (
-                    <button key={p} onClick={() => toggleCanal(p)}
-                      style={{ padding: "8px 14px", borderRadius: "20px", cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : t.inputBg, color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
-                      {PLAT_ICON[p]} {p}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {(form.canais ?? []).map((c) => {
-              const linkKey = `link_${c.toLowerCase()}` as keyof Perfil;
-              return (
-                <div key={c} style={row}>
-                  <label style={labelStyle}>Link {c}{req}</label>
-                  <input value={(form[linkKey] as string) ?? ""} onChange={(e) => set(linkKey, e.target.value)} style={inputStyle} placeholder={`https://${c.toLowerCase()}.com/seu-canal`} />
-                </div>
-              );
-            })}
-            {(form.canais ?? []).length === 0 && (
-              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Selecione ao menos uma plataforma acima.</p>
+                );
+              })
             )}
           </>
         )}
-
-        {tab === "financeiro" && (
-          <>
-            <div style={row}>
-              <label style={labelStyle}>Cachê por Hora (R$){req}</label>
-              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", v)} style={inputStyle} />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>Chave PIX</label>
-              <input value={form.chave_pix ?? ""} onChange={(e) => set("chave_pix", e.target.value)} style={inputStyle} placeholder="CPF, e-mail, telefone ou chave aleatória" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>Banco</label>
-              <input value={form.banco ?? ""} onChange={(e) => set("banco", e.target.value)} style={inputStyle} placeholder="Ex: Nubank, Itaú, Bradesco" />
-            </div>
-            <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <div>
-                <label style={labelStyle}>Agência</label>
-                <input value={form.agencia ?? ""} onChange={(e) => set("agencia", e.target.value)} style={inputStyle} placeholder="0000" />
-              </div>
-              <div>
-                <label style={labelStyle}>Conta</label>
-                <input value={form.conta ?? ""} onChange={(e) => set("conta", e.target.value)} style={inputStyle} placeholder="00000-0" />
-              </div>
-            </div>
-          </>
-        )}
-
-        {tab === "operadoras" && (
-          <>
-            <p style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
-              Ative ao menos <span style={{ color: "#e94025" }}>1 operadora</span> com ID preenchido.
-            </p>
-            {OPERADORAS.map((op) => {
-              const opKey = `op_${op.key}` as keyof Perfil;
-              const idKey = `id_${op.key}` as keyof Perfil;
-              const ativo = !!form[opKey];
-              return (
-                <div key={op.key} style={{ ...row, padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? "12px" : 0 }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.label}</span>
-                    <button onClick={() => set(opKey, !ativo)}
-                      style={{ padding: "5px 14px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
-                      {ativo ? "Ativo" : "Inativo"}
-                    </button>
-                  </div>
-                  {ativo && (
-                    <div>
-                      <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body }}>
-                        ID {op.label}{<span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>}
-                      </label>
-                      <input
-                        value={(form[idKey] as string) ?? ""}
-                        onChange={(e) => set(idKey, e.target.value)}
-                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }}
-                        placeholder={`ID do influencer na ${op.label}`}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </>
-        )}
-
-        <button onClick={handleSave} disabled={saving}
-          style={{ width: "100%", marginTop: "8px", padding: "13px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-          {saving ? "⏳ Salvando..." : "Criar Influencer"}
-        </button>
       </div>
     </div>
   );
 }
 
 // ─── Modal Editar ─────────────────────────────────────────────────────────────
-function ModalPerfil({
-  influencer, onClose, onSaved,
-}: {
-  influencer: Influencer; onClose: () => void; onSaved: () => void;
+type OperadorasFormState = Record<string, { ativo: boolean; id_operadora: string }>;
+
+function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
+  influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; onSaved: () => void; isDark?: boolean;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const existing = influencer.perfil;
+  // Status e Cachê somente Gestores e Admin podem alterar
+  const podeAlterarStatusCache = user?.role === "admin" || user?.role === "gestor";
+
+  const inicialOperadoras: OperadorasFormState = {};
+  (influencer.operadoras ?? []).forEach((o) => {
+    inicialOperadoras[o.operadora_slug] = {
+      ativo: o.ativo,
+      id_operadora: o.id_operadora ?? "",
+    };
+  });
 
   const [editNomeCompleto, setEditNomeCompleto] = useState(influencer.perfil?.nome_completo ?? "");
-  const [form,     setForm]     = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState("");
-  const [tab,      setTab]      = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
+  const [form,           setForm]           = useState<Perfil>(existing ?? emptyPerfil(influencer.id));
+  const [operadorasForm, setOperadorasForm] = useState<OperadorasFormState>(inicialOperadoras);
+  const [saving,         setSaving]         = useState(false);
+  const [error,          setError]          = useState("");
+  const [tab,            setTab]            = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
   const set = (key: keyof Perfil, val: any) => setForm((f) => ({ ...f, [key]: val }));
+
+  const setOp = (slug: string, patch: Partial<{ ativo: boolean; id_operadora: string }>) => {
+    setOperadorasForm((prev) => {
+      const cur = prev[slug] ?? { ativo: false, id_operadora: "" };
+      return { ...prev, [slug]: { ...cur, ...patch } };
+    });
+  };
 
   const toggleCanal = (c: Plataforma) => {
     const cur = form.canais ?? [];
@@ -1003,11 +935,8 @@ function ModalPerfil({
     });
     if (temCanalSemLink) return setError("Preencha o link de cada canal selecionado.");
 
-    const temOpSemId = OPERADORAS.some((o) => {
-      const ativo = form[`op_${o.key}` as keyof Perfil];
-      const id    = form[`id_${o.key}` as keyof Perfil] as string;
-      return ativo && !id?.trim();
-    });
+    const opsAtivas = Object.entries(operadorasForm).filter(([_, st]) => st.ativo);
+    const temOpSemId = opsAtivas.some(([_, st]) => !st.id_operadora?.trim());
     if (temOpSemId) return setError("Preencha o ID de cada operadora ativa.");
 
     setSaving(true);
@@ -1021,25 +950,44 @@ function ModalPerfil({
       nome_completo: editNomeCompleto.trim(),
       updated_at: new Date().toISOString(),
     };
+    // Impede alteração de status e cache por usuários sem permissão (backend defense)
+    if (!podeAlterarStatusCache && existing) {
+      payload.status = existing.status ?? "ativo";
+      payload.cache_hora = existing.cache_hora ?? 0;
+    }
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
       : await supabase.from("influencer_perfil").insert(payload);
     if (err) { setError(err.message); setSaving(false); return; }
+
+    const slugsValidos = new Set(operadorasList.map((o) => o.slug));
+    await supabase.from("influencer_operadoras").delete().eq("influencer_id", influencer.id);
+    for (const [slug, st] of opsAtivas) {
+      if (slugsValidos.has(slug) && st.id_operadora?.trim()) {
+        await supabase.from("influencer_operadoras").insert({
+          influencer_id: influencer.id,
+          operadora_slug: slug,
+          id_operadora: st.id_operadora.trim(),
+          ativo: true,
+        });
+      }
+    }
+
     setSaving(false);
     onSaved();
   }
 
   const inputStyle: React.CSSProperties = {
     width: "100%", boxSizing: "border-box", padding: "10px 14px",
-    borderRadius: "10px", border: `1px solid ${t.inputBorder}`,
-    background: t.inputBg, color: t.inputText,
-    fontSize: "13px", fontFamily: FONT.body, outline: "none",
+    borderRadius: 10, border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg, color: t.text,
+    fontSize: 13, fontFamily: FONT.body, outline: "none",
   };
   const labelStyle: React.CSSProperties = {
-    display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px",
-    textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
+    display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "1.1px",
+    textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
-  const row: React.CSSProperties = { marginBottom: "14px" };
+  const row: React.CSSProperties = { marginBottom: 14 };
   const tabs = [
     { key: "cadastral"   as const, label: "Cadastral"  },
     { key: "canais"      as const, label: "Canais"     },
@@ -1055,28 +1003,30 @@ function ModalPerfil({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
-              <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
                 {form.nome_artistico?.trim() || influencer.name}
               </h2>
-              <StatusBadge value={form.status ?? "ativo"} onChange={(v) => set("status", v)} />
+              <StatusBadge value={form.status ?? "ativo"} onChange={(v) => set("status", v)} readonly={!podeAlterarStatusCache} />
             </div>
             <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{influencer.email}</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+            <X size={18} />
+          </button>
         </div>
 
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {tabs.map((tb) => (
             <button key={tb.key} onClick={() => setTab(tb.key)}
-              style={{ padding: "7px 14px", borderRadius: "20px", border: `1px solid ${tab === tb.key ? BASE_COLORS.purple : t.cardBorder}`, background: tab === tb.key ? `${BASE_COLORS.purple}22` : t.inputBg, color: tab === tb.key ? BASE_COLORS.purple : t.textMuted, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb.key ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb.key ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
               {tb.label}
             </button>
           ))}
         </div>
 
         {error && (
-          <div style={{ background: "#e9402518", border: "1px solid #e9402544", color: "#e94025", borderRadius: "10px", padding: "10px 14px", fontSize: "13px", marginBottom: "14px" }}>
-            ⚠️ {error}
+          <div style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
+            {error}
           </div>
         )}
 
@@ -1099,8 +1049,8 @@ function ModalPerfil({
               <input value={form.telefone ?? ""} onChange={(e) => set("telefone", e.target.value)} style={inputStyle} placeholder="(11) 99999-9999" />
             </div>
             <div style={row}>
-              <label style={labelStyle}>CPF</label>
-              <input value={form.cpf ?? ""} onChange={(e) => set("cpf", e.target.value)} style={inputStyle} placeholder="000.000.000-00" />
+              <label style={labelStyle}>CPF <span style={{ fontSize: 9, color: BRAND.vermelho, fontWeight: 400 }}>(dado sensível)</span></label>
+              <input value={form.cpf ?? ""} onChange={(e) => set("cpf", e.target.value)} style={{ ...inputStyle, fontFamily: "monospace", letterSpacing: "0.1em" }} placeholder="000.000.000-00" />
             </div>
           </>
         )}
@@ -1114,8 +1064,8 @@ function ModalPerfil({
                   const ativo = (form.canais ?? []).includes(p);
                   return (
                     <button key={p} onClick={() => toggleCanal(p)}
-                      style={{ padding: "8px 14px", borderRadius: "20px", cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : t.inputBg, color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
-                      {PLAT_ICON[p]} {p}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 20, cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : (t.inputBg ?? t.cardBg), color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
+                      <PlatLogo plataforma={p} size={13} isDark={isDark ?? false} /> {p}
                     </button>
                   );
                 })}
@@ -1126,7 +1076,7 @@ function ModalPerfil({
               return (
                 <div key={c} style={row}>
                   <label style={labelStyle}>
-                    Link {c} <span style={{ color: "#e94025", marginLeft: "3px" }}>*</span>
+                    Link {c} <span style={{ color: BRAND.vermelho }}>*</span>
                   </label>
                   <input value={(form[linkKey] as string) ?? ""} onChange={(e) => set(linkKey, e.target.value)} style={inputStyle} placeholder={`https://${c.toLowerCase()}.com/seu-canal`} />
                 </div>
@@ -1141,67 +1091,74 @@ function ModalPerfil({
         {tab === "financeiro" && (
           <>
             <div style={row}>
-              <label style={labelStyle}>Cachê por Hora (R$)</label>
-              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", v)} style={inputStyle} />
+              <label style={labelStyle}>Cachê por Hora (R$) {!podeAlterarStatusCache && <span style={{ fontSize: 10, color: t.textMuted, fontWeight: 400 }}>(somente Gestor/Admin)</span>}</label>
+              <CurrencyInput value={form.cache_hora ?? 0} onChange={(v) => set("cache_hora", Math.max(0, v))} style={inputStyle} disabled={!podeAlterarStatusCache} />
             </div>
-            <div style={row}>
-              <label style={labelStyle}>Chave PIX</label>
-              <input value={form.chave_pix ?? ""} onChange={(e) => set("chave_pix", e.target.value)} style={inputStyle} placeholder="CPF, e-mail, telefone ou chave aleatória" />
-            </div>
-            <div style={row}>
-              <label style={labelStyle}>Banco</label>
-              <input value={form.banco ?? ""} onChange={(e) => set("banco", e.target.value)} style={inputStyle} placeholder="Ex: Nubank, Itaú, Bradesco" />
-            </div>
-            <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <div>
-                <label style={labelStyle}>Agência</label>
-                <input value={form.agencia ?? ""} onChange={(e) => set("agencia", e.target.value)} style={inputStyle} placeholder="0000" />
+            {[
+              { key: "chave_pix" as keyof Perfil, label: "Chave PIX", placeholder: "CPF, e-mail, telefone ou chave aleatória" },
+              { key: "banco"     as keyof Perfil, label: "Banco",     placeholder: "Ex: Nubank, Itaú, Bradesco" },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key as string} style={row}>
+                <label style={labelStyle}>{label} <span style={{ fontSize: 9, color: BRAND.vermelho, fontWeight: 400 }}>(dado sensível)</span></label>
+                <input value={(form[key] as string) ?? ""} onChange={(e) => set(key, e.target.value)} style={inputStyle} placeholder={placeholder} />
               </div>
-              <div>
-                <label style={labelStyle}>Conta</label>
-                <input value={form.conta ?? ""} onChange={(e) => set("conta", e.target.value)} style={inputStyle} placeholder="00000-0" />
-              </div>
+            ))}
+            <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {[
+                { key: "agencia" as keyof Perfil, label: "Agência", placeholder: "0000" },
+                { key: "conta"   as keyof Perfil, label: "Conta",   placeholder: "00000-0" },
+              ].map(({ key, label, placeholder }) => (
+                <div key={key as string}>
+                  <label style={labelStyle}>{label} <span style={{ fontSize: 9, color: BRAND.vermelho, fontWeight: 400 }}>(sensível)</span></label>
+                  <input value={(form[key] as string) ?? ""} onChange={(e) => set(key, e.target.value)} style={inputStyle} placeholder={placeholder} />
+                </div>
+              ))}
             </div>
           </>
         )}
 
         {tab === "operadoras" && (
           <>
-            {OPERADORAS.map((op) => {
-              const opKey = `op_${op.key}` as keyof Perfil;
-              const idKey = `id_${op.key}` as keyof Perfil;
-              const ativo = !!form[opKey];
-              return (
-                <div key={op.key} style={{ ...row, padding: "14px", borderRadius: "12px", border: `1px solid ${ativo ? BASE_COLORS.purple + "55" : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}08` : "transparent" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? "12px" : 0 }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>🎰 {op.label}</span>
-                    <button onClick={() => set(opKey, !ativo)}
-                      style={{ padding: "5px 14px", borderRadius: "20px", border: `1px solid ${ativo ? BASE_COLORS.purple : t.cardBorder}`, background: ativo ? `${BASE_COLORS.purple}22` : t.inputBg, color: ativo ? BASE_COLORS.purple : t.textMuted, fontSize: "11px", fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
-                      {ativo ? "Ativo" : "Inativo"}
-                    </button>
-                  </div>
-                  {ativo && (
-                    <div>
-                      <label style={{ display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body }}>
-                        ID {op.label} <span style={{ color: "#e94025" }}>*</span>
-                      </label>
-                      <input
-                        value={(form[idKey] as string) ?? ""}
-                        onChange={(e) => set(idKey, e.target.value)}
-                        style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.inputText, fontSize: "13px", fontFamily: FONT.body, outline: "none" }}
-                        placeholder={`ID do influencer na ${op.label}`}
-                      />
+            {operadorasList.length === 0 ? (
+              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma operadora cadastrada. Acesse Gestão de Operadoras primeiro.</p>
+            ) : (
+              operadorasList.map((op) => {
+                const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
+                const ativo = st.ativo;
+                return (
+                  <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? BRAND.roxoVivo + "55" : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}08` : "transparent" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? 12 : 0 }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
+                        <GiPokerHand size={13} style={{ color: BRAND.amarelo }} /> {op.nome}
+                      </span>
+                      <button onClick={() => setOp(op.slug, { ativo: !ativo })}
+                        style={{ padding: "5px 14px", borderRadius: 20, border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: ativo ? BRAND.roxoVivo : t.textMuted, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
+                        {ativo ? "Ativo" : "Inativo"}
+                      </button>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                    {ativo && (
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body }}>
+                          ID {op.nome} <span style={{ color: BRAND.vermelho }}>*</span>
+                        </label>
+                        <input
+                          value={st.id_operadora}
+                          onChange={(e) => setOp(op.slug, { id_operadora: e.target.value })}
+                          style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13, fontFamily: FONT.body, outline: "none" }}
+                          placeholder={`ID do influencer na ${op.nome}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </>
         )}
 
         <button onClick={handleSave} disabled={saving}
-          style={{ width: "100%", marginTop: "8px", padding: "13px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-          {saving ? "⏳ Salvando..." : "Salvar Perfil"}
+          style={{ width: "100%", marginTop: 8, padding: 13, borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          {saving ? "Salvando..." : "Salvar Perfil"}
         </button>
       </div>
     </div>

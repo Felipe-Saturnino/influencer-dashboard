@@ -1,0 +1,15 @@
+# Configuração do Supabase (projeto local)
+# Para deploy via CLI: supabase functions deploy criar-usuario
+# Para deploy: supabase functions deploy atualizar-perfil
+
+[functions.criar-usuario]
+verify_jwt = false
+# Evita 401 do gateway quando o browser envia o JWT — a função usa service_role internamente
+
+[functions.atualizar-perfil]
+verify_jwt = false
+# Verificação de admin é feita manualmente dentro da função
+
+[functions.criar-usuario-scout]
+verify_jwt = false
+# Cria influencer a partir do Scout; usa service_role internamente

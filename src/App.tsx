@@ -1,42 +1,49 @@
 import { useState } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
-import { supabase } from "./lib/supabase";
+import { supabase, supabaseConfigOk } from "./lib/supabase";
 // Layout
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
 // Páginas — geral
-import Login         from "./pages/geral/Login";
-import Configuracoes from "./pages/geral/Configuracoes";
+import Login                  from "./pages/geral/Login";
+import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
+import Configuracoes          from "./pages/geral/Configuracoes";
 import Ajuda         from "./pages/geral/Ajuda";
 // Páginas — dashboards
-import DashboardOverview   from "./pages/dashboards/DashboardOverview";
-import DashboardConversao  from "./pages/dashboards/DashboardConversao";
-import DashboardFinanceiro from "./pages/dashboards/DashboardFinanceiro";
+import DashboardOverview          from "./pages/dashboards/DashboardOverview";
+import DashboardOverviewInfluencer from "./pages/dashboards/DashboardOverviewInfluencer";
+import DashboardConversao         from "./pages/dashboards/DashboardConversao";
+import DashboardFinanceiro        from "./pages/dashboards/DashboardFinanceiro";
 // Páginas — lives
 import Agenda     from "./pages/lives/Agenda";
 import Resultados from "./pages/lives/Resultados";
 import Feedback   from "./pages/lives/Feedback";
 // Páginas — operacoes
 import Influencers from "./pages/operacoes/Influencers";
+import Scout from "./pages/operacoes/Scout";
 import Financeiro  from "./pages/operacoes/Financeiro";
 import GestaoLinks from "./pages/operacoes/GestaoLinks";
 // Páginas — plataforma
 import GestaoUsuarios from "./pages/plataforma/GestaoUsuarios";
 import GestaoOperadoras from "./pages/plataforma/GestaoOperadoras";
+import StatusTecnico from "./pages/plataforma/StatusTecnico";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
-  dash_overview:    DashboardOverview,
-  dash_conversao:   DashboardConversao,
-  dash_financeiro:  DashboardFinanceiro,
+  dash_overview:             DashboardOverview,
+  dash_overview_influencer:  DashboardOverviewInfluencer,
+  dash_conversao:            DashboardConversao,
+  dash_financeiro:           DashboardFinanceiro,
   agenda:           Agenda,
   resultados:       Resultados,
   feedback:         Feedback,
   influencers:      Influencers,
+  scout:            Scout,
   financeiro:       Financeiro,
   gestao_links:     GestaoLinks,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
+  status_tecnico:   StatusTecnico,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
 };
@@ -74,10 +81,34 @@ function Root() {
       </div>
     );
   }
-  return user ? <AppLayout onLogout={handleLogout} /> : <Login onLogin={setUser} />;
+  if (!user) return <Login onLogin={setUser} />;
+  if (user.must_change_password) return <TrocarSenhaObrigatorio />;
+  return <AppLayout onLogout={handleLogout} />;
+}
+
+function ConfigError() {
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 24, fontFamily: "Inter, sans-serif", color: "#e5dce1", textAlign: "center",
+    }}>
+      <div>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+        <h1 style={{ fontSize: 20, marginBottom: 12, color: "#fff" }}>Configuração incompleta</h1>
+        <p style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 400 }}>
+          As variáveis <strong>VITE_SUPABASE_URL</strong> e <strong>VITE_SUPABASE_ANON_KEY</strong> não estão configuradas.
+        </p>
+        <p style={{ fontSize: 13, marginTop: 16, color: "#888" }}>
+          No Cloudflare Pages, vá em <strong>Settings → Environment variables</strong> e adicione ambas.<br />
+          Para o branch <em>Staging</em>, configure em <strong>Preview</strong>.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
+  if (!supabaseConfigOk) return <ConfigError />;
   return (
     <AppProvider>
       <Root />
