@@ -1025,7 +1025,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                       {!isAberto && (
                         <span style={{ fontSize: "12px", maxWidth: 420 }}>
-                          Verifique: a live está no período <strong>{ciclo?.data_inicio} – {ciclo?.data_fim}</strong> (qui–qua)? Tem operadora? A duração foi registrada em <strong>Resultados</strong>? Se adicionou lives depois do fechamento, clique em <strong>Recalcular</strong>.
+                          Verifique: a live está no período <strong>{ciclo?.data_inicio} – {ciclo?.data_fim}</strong> (qui–qua)? Foi validada em <strong>Lives → Resultados</strong> com status realizada, operadora e duração preenchidos? O Feedback exibe o resultado final para consumo do Financeiro. Se adicionou lives depois do fechamento, clique em <strong>Recalcular</strong>.
                         </span>
                       )}
                     </div>

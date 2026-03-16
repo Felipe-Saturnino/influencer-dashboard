@@ -476,7 +476,7 @@ export default function Feedback() {
             Feedback de Lives
           </h1>
           <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
-            Histórico de lives realizadas e não realizadas.
+            Resultado final das lives validadas em Resultados. O Financeiro consome operadora, período e influencer das realizadas para o cálculo de pagamento.
           </p>
         </div>
       </div>
@@ -623,6 +623,7 @@ export default function Feedback() {
         <ModalFeedbackEdit
           live={editando}
           res={resultadosAll[editando.id]}
+          operadorasList={operadorasList}
           t={t}
           isDark={isDark ?? false}
           onClose={() => setEditando(null)}
@@ -634,13 +635,17 @@ export default function Feedback() {
 }
 
 // ─── MODAL EDITAR FEEDBACK ────────────────────────────────────────────────────
-function ModalFeedbackEdit({ live, res, t, isDark, onClose, onSalvo }: {
+function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSalvo }: {
   live: LiveComObs; res?: LiveResultado;
+  operadorasList: { slug: string; nome: string }[];
   t: ReturnType<typeof useApp>["theme"]; isDark: boolean;
   onClose: () => void; onSalvo: () => void;
 }) {
   const [observacao,   setObservacao]   = useState(live.observacao ?? "");
-  const [status,       setStatus]       = useState<LiveStatus>(live.status as LiveStatus);
+  const [operadoraSlug, setOperadoraSlug] = useState(live.operadora_slug ?? "");
+  const [status,       setStatus]       = useState<LiveStatus>(
+    live.status === "agendada" ? "realizada" : (live.status as LiveStatus)
+  );
   const [duracaoHoras, setDuracaoHoras] = useState(res?.duracao_horas ?? 0);
   const [duracaoMin,   setDuracaoMin]   = useState(res?.duracao_min   ?? 0);
   const [mediaViews,   setMediaViews]   = useState(res?.media_views   ?? 0);
@@ -652,13 +657,24 @@ function ModalFeedbackEdit({ live, res, t, isDark, onClose, onSalvo }: {
 
   async function handleSave() {
     setError("");
-    if (showResultFields && (duracaoHoras > 0 || duracaoMin > 0) && maxViews < mediaViews) {
-      setError("Pico de views não pode ser menor que a média."); return;
+    if (showResultFields) {
+      if (!operadoraSlug?.trim()) {
+        setError("Selecione a operadora. É obrigatório para lives realizadas (Financeiro)."); return;
+      }
+      if (duracaoHoras === 0 && duracaoMin === 0) {
+        setError("Informe a duração da live para lives realizadas."); return;
+      }
+      if ((duracaoHoras > 0 || duracaoMin > 0) && maxViews < mediaViews) {
+        setError("Pico de views não pode ser menor que a média."); return;
+      }
     }
     setSaving(true);
 
+    const liveUpdate: Record<string, unknown> = { observacao: observacao.trim() || null, status };
+    if (operadoraSlug?.trim()) (liveUpdate as Record<string, string>).operadora_slug = operadoraSlug.trim();
+
     const { error: upErr } = await supabase.from("lives")
-      .update({ observacao: observacao.trim() || null, status }).eq("id", live.id);
+      .update(liveUpdate).eq("id", live.id);
     if (upErr) { setError("Erro ao salvar. Tente novamente."); setSaving(false); return; }
 
     if (showResultFields) {
@@ -729,6 +745,33 @@ function ModalFeedbackEdit({ live, res, t, isDark, onClose, onSalvo }: {
             </button>
           </div>
         </div>
+
+        {/* Operadora — obrigatória para realizada (Financeiro) */}
+        {operadorasList.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>
+              Operadora {showResultFields && <span style={{ color: BRAND.vermelho }}>*</span>}
+            </label>
+            <select
+              value={operadoraSlug}
+              onChange={e => setOperadoraSlug(e.target.value)}
+              style={{
+                width: "100%", boxSizing: "border-box", padding: "10px 14px",
+                borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text,
+                fontSize: 13, fontFamily: FONT.body, outline: "none", cursor: "pointer",
+              }}
+            >
+              <option value="">Selecione a operadora...</option>
+              {operadorasList.map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+            </select>
+            {showResultFields && (
+              <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
+                Obrigatório para o Financeiro considerar a live no cálculo de pagamentos.
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Observação */}
         <div style={{ marginBottom: 14 }}>

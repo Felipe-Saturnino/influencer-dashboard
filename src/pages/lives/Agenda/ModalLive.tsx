@@ -4,7 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
-import { Live, Plataforma, LiveStatus } from "../../../types";
+import { Live, Plataforma } from "../../../types";
 import { X } from "lucide-react";
 import { GiFilmProjector } from "react-icons/gi";
 
@@ -80,34 +80,18 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const somenteLeitura = isEdit && !podeEditar;
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
-  const [operadorasInfluencer, setOperadorasInfluencer] = useState<{ slug: string; nome: string }[]>([]);
-  const [operadorasTodas, setOperadorasTodas] = useState<{ slug: string; nome: string }[]>([]);
   const [form, setForm] = useState({
-    influencer_id:  live?.influencer_id  ?? (user?.role === "influencer" ? user?.id ?? "" : ""),
-    operadora_slug: live?.operadora_slug ?? "",
-    data:           live?.data           ?? "",
-    horario:        live?.horario        ?? "",
-    plataforma:     (live?.plataforma    ?? "Twitch") as Plataforma,
-    status:         (live?.status        ?? "agendada") as LiveStatus,
-    link:           live?.link           ?? "",
+    influencer_id: live?.influencer_id ?? (user?.role === "influencer" ? user?.id ?? "" : ""),
+    data:          live?.data          ?? "",
+    horario:       live?.horario       ?? "",
+    plataforma:    (live?.plataforma    ?? "Twitch") as Plataforma,
+    link:          live?.link          ?? "",
   });
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState("");
   const [confirm, setConfirm] = useState(false);
   const [perfilLinks,        setPerfilLinks]        = useState<Record<string, string>>({});
   const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
-  const [duracaoHoras, setDuracaoHoras] = useState(0);
-  const [duracaoMin,   setDuracaoMin]   = useState(0);
-
-  const showOperadoraField = !!form.influencer_id;
-  const operadoraObrigatoria = !!form.influencer_id;
-  const opcoesOperadora = operadorasInfluencer.length > 0 ? operadorasInfluencer : operadorasTodas;
-
-  useEffect(() => {
-    supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => {
-      setOperadorasTodas((data ?? []).map((o: { slug: string; nome: string }) => ({ slug: o.slug, nome: o.nome })));
-    });
-  }, []);
 
   useEffect(() => {
     if (!isInfluencer) {
@@ -119,31 +103,14 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (!form.influencer_id) {
-      setOperadorasInfluencer([]);
       setPerfilLinks({});
-      setForm(f => ({ ...f, link: "", operadora_slug: "" }));
+      setForm(f => ({ ...f, link: "" }));
       setLinkAutoPreenchido(false);
       return;
     }
-    Promise.all([
-      supabase.from("influencer_operadoras").select("operadora_slug").eq("influencer_id", form.influencer_id).eq("ativo", true),
-      supabase.from("influencer_perfil").select("link_twitch, link_youtube, link_instagram, link_tiktok, link_kick").eq("id", form.influencer_id).single(),
-    ]).then(([opsRes, perfRes]) => {
-      const slugs = (opsRes.data ?? []).map((o: { operadora_slug: string }) => o.operadora_slug).filter(Boolean);
-      if (slugs.length > 0) {
-        supabase.from("operadoras").select("slug, nome").in("slug", slugs).order("nome").then(({ data: ops }) => {
-          const lista = (ops ?? []).map((o: { slug: string; nome: string }) => ({ slug: o.slug, nome: o.nome }));
-          setOperadorasInfluencer(lista);
-          const novaOp = lista.length === 1 ? lista[0].slug : (isEdit && live?.operadora_slug ? live.operadora_slug : "");
-          setForm(f => ({ ...f, operadora_slug: novaOp }));
-        });
-      } else {
-        setOperadorasInfluencer([]);
-        setForm(f => ({ ...f, operadora_slug: isEdit && live?.operadora_slug ? live.operadora_slug : "" }));
-      }
-      setPerfilLinks((perfRes.data as Record<string, string>) ?? {});
-    });
-  }, [form.influencer_id, isEdit, live?.operadora_slug]);
+    supabase.from("influencer_perfil").select("link_twitch, link_youtube, link_instagram, link_tiktok, link_kick").eq("id", form.influencer_id).single()
+      .then(({ data }) => setPerfilLinks((data as Record<string, string>) ?? {}));
+  }, [form.influencer_id]);
 
   useEffect(() => {
     if (!form.influencer_id || Object.keys(perfilLinks).length === 0) return;
@@ -152,14 +119,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     setForm(f => ({ ...f, link: linkDoPerfil }));
     setLinkAutoPreenchido(!!linkDoPerfil);
   }, [form.plataforma, perfilLinks]);
-
-  useEffect(() => {
-    if (live?.id && live?.status === "realizada") {
-      supabase.from("live_resultados").select("duracao_horas, duracao_min").eq("live_id", live.id).single().then(({ data }) => {
-        if (data) { setDuracaoHoras((data as { duracao_horas: number }).duracao_horas ?? 0); setDuracaoMin((data as { duracao_min: number }).duracao_min ?? 0); }
-      });
-    } else { setDuracaoHoras(0); setDuracaoMin(0); }
-  }, [live?.id, live?.status]);
 
   const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -171,23 +130,16 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     if (!form.data)   return setError("Informe a data.");
     if (!form.horario) return setError("Informe o horário.");
     if (!isInfluencer && influencers.length > 0 && !form.influencer_id) return setError("Selecione um influencer.");
-    if (operadoraObrigatoria && !form.operadora_slug?.trim()) return setError("Selecione a operadora.");
     if (!form.link.trim()) return setError("Informe o link da live na plataforma selecionada.");
-
-    const opSlug = form.operadora_slug?.trim();
-    if (!opSlug) return setError("Selecione a operadora. É obrigatório para o Financeiro.");
-    if (form.status === "realizada" && duracaoHoras === 0 && duracaoMin === 0)
-      return setError("Para status Realizada, informe a duração (horas ou minutos). Necessário para o Financeiro.");
 
     setSaving(true);
     const { data: { user: authUser } } = await supabase.auth.getUser();
     const payload: Record<string, unknown> = {
-      data:           form.data,
-      horario:        form.horario,
-      plataforma:     form.plataforma,
-      link:           form.link.trim(),
-      operadora_slug: opSlug,
-      influencer_id:  isInfluencer ? user?.id : form.influencer_id || undefined,
+      data:          form.data,
+      horario:       form.horario,
+      plataforma:    form.plataforma,
+      link:          form.link.trim(),
+      influencer_id: isInfluencer ? user?.id : form.influencer_id || undefined,
     };
     if (isEdit) {
       // Na edição, não alterar status — definido em Resultados, editável em Feedback
@@ -196,20 +148,12 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
       (payload as Record<string, unknown>).created_by = authUser?.id ?? null;
     }
 
-    let liveId = live?.id;
     if (isEdit) {
       const { error: err } = await supabase.from("lives").update(payload).eq("id", live!.id);
       if (err) { setSaving(false); setError(err.message); return; }
     } else {
-      const { data: inserted, error: err } = await supabase.from("lives").insert(payload).select("id").single();
+      const { error: err } = await supabase.from("lives").insert(payload).select("id").single();
       if (err) { setSaving(false); setError(err.message); return; }
-      liveId = (inserted as { id: string })?.id;
-    }
-
-    if (form.status === "realizada" && liveId) {
-      const payloadRes = { live_id: liveId, duracao_horas: duracaoHoras, duracao_min: duracaoMin, media_views: 0, max_views: 0 };
-      const { error: resErr } = await supabase.from("live_resultados").upsert(payloadRes, { onConflict: "live_id" });
-      if (resErr) { setSaving(false); setError("Live salva, mas falha ao registrar duração. Edite em Resultados."); return; }
     }
 
     setSaving(false);
@@ -273,39 +217,18 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             <label style={labelStyle}>Influencer</label>
             <select
               value={form.influencer_id}
-              onChange={e => {
-                if (!somenteLeitura) {
-                  setForm(f => ({ ...f, influencer_id: e.target.value, link: "", operadora_slug: "" }));
-                  setLinkAutoPreenchido(false);
-                }
-              }}
+                onChange={e => {
+                  if (!somenteLeitura) {
+                    setForm(f => ({ ...f, influencer_id: e.target.value, link: "" }));
+                    setLinkAutoPreenchido(false);
+                  }
+                }}
               disabled={somenteLeitura}
               style={inputStyle}
             >
               <option value="">Selecione...</option>
               {influencers.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
-          </div>
-        )}
-
-        {/* Operadora — sempre visível quando há influencer; obrigatória para o Financeiro */}
-        {showOperadoraField && (
-          <div style={row}>
-            <label style={labelStyle}>Operadora <span style={{ color: BRAND.vermelho }}>*</span></label>
-            <select
-              value={form.operadora_slug}
-              onChange={e => !somenteLeitura && setForm(f => ({ ...f, operadora_slug: e.target.value }))}
-              disabled={somenteLeitura}
-              style={inputStyle}
-            >
-              <option value="">Selecione a operadora...</option>
-              {opcoesOperadora.map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-            </select>
-            {operadorasInfluencer.length === 0 && opcoesOperadora.length > 0 && (
-              <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
-                Influencer sem operadoras vinculadas — selecione uma. Para vincular no perfil, use Operações → Influencers.
-              </span>
-            )}
           </div>
         )}
 
@@ -320,7 +243,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             <input type="time" value={form.horario} onChange={e => !somenteLeitura && set("horario", e.target.value)} readOnly={somenteLeitura} style={inputStyle} />
           </div>
         </div>
-
         {/* Plataforma — com logos SVG */}
         <div style={row}>
           <label style={labelStyle}>Plataforma</label>
@@ -376,41 +298,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             </span>
           )}
         </div>
-
-        {/* Duração — obrigatória quando status é Realizada (necessário para Financeiro); na edição, só se a live já for realizada. Status é definido em Resultados e editado em Feedback. */}
-        {form.status === "realizada" && (podeCriar || (podeEditar && live?.status === "realizada")) && (
-          <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label style={labelStyle}>Duração (horas) <span style={{ color: BRAND.vermelho }}>*</span></label>
-              <input
-                type="number"
-                min={0}
-                max={24}
-                value={duracaoHoras}
-                onChange={e => !somenteLeitura && setDuracaoHoras(Math.max(0, Math.min(24, parseInt(e.target.value, 10) || 0)))}
-                readOnly={somenteLeitura}
-                style={inputStyle}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Duração (min)</label>
-              <input
-                type="number"
-                min={0}
-                max={59}
-                value={duracaoMin}
-                onChange={e => !somenteLeitura && setDuracaoMin(Math.max(0, Math.min(59, parseInt(e.target.value, 10) || 0)))}
-                readOnly={somenteLeitura}
-                style={inputStyle}
-                placeholder="0"
-              />
-            </div>
-            <span style={{ gridColumn: "1 / -1", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-              Necessário para o Financeiro calcular o pagamento (horas × cachê).
-            </span>
-          </div>
-        )}
 
         {/* Botões de ação */}
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>

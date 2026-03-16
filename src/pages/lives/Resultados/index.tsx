@@ -235,6 +235,7 @@ export default function Resultados() {
   function ModalValidacao({ live }: { live: Live }) {
     const existing = resultados[live.id];
     const [status,       setStatus]       = useState<LiveStatus>("realizada");
+    const [operadoraSlug, setOperadoraSlug] = useState(live.operadora_slug ?? "");
     const [observacao,   setObservacao]   = useState(live.observacao ?? "");
     const [horarioReal,  setHorarioReal]  = useState(live.horario?.slice(0, 5) ?? "");
     const [duracaoHoras, setDuracaoHoras] = useState(existing?.duracao_horas ?? 0);
@@ -249,6 +250,8 @@ export default function Resultados() {
     async function handleSave() {
       setError("");
       if (showResultFields) {
+        if (!operadoraSlug?.trim())
+          return setError("Selecione a operadora. É obrigatório para o Financeiro.");
         if (duracaoHoras === 0 && duracaoMin === 0)
           return setError("Informe a duração da live.");
         if (maxViews < mediaViews)
@@ -257,6 +260,7 @@ export default function Resultados() {
 
       setSaving(true);
       const liveUpdate: Record<string, unknown> = { status, observacao: observacao || null };
+      if (operadoraSlug?.trim()) (liveUpdate as Record<string, string>).operadora_slug = operadoraSlug.trim();
       if (showResultFields && horarioReal) (liveUpdate as Record<string, string>).horario = horarioReal;
 
       const { error: updateError } = await supabase.from("lives").update(liveUpdate).eq("id", live.id);
@@ -344,6 +348,26 @@ export default function Resultados() {
               ))}
             </div>
           </div>
+
+          {/* Operadora — obrigatória para realizada (Financeiro) */}
+          {showResultFields && operadorasList.length > 0 && (
+            <div style={row}>
+              <label style={labelStyle}>Operadora <span style={{ color: BRAND.vermelho }}>*</span></label>
+              <select
+                value={operadoraSlug}
+                onChange={e => setOperadoraSlug(e.target.value)}
+                style={{ ...inputStyle, cursor: "pointer" }}
+              >
+                <option value="">Selecione a operadora...</option>
+                {operadorasList
+                  .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                  .map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+              </select>
+              <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
+                Obrigatório para o Financeiro considerar a live no cálculo de pagamentos.
+              </span>
+            </div>
+          )}
 
           {/* Observação */}
           <div style={row}>
