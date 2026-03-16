@@ -166,6 +166,9 @@ export default function GestaoLinks() {
           <p style={{ fontSize: 13, color: theme.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>
             Links de rastreio detectados nas operadoras que não estão associados a nenhum influencer.
           </p>
+          <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 10, background: `${BRAND.ciano}15`, border: `1px solid ${BRAND.ciano}40`, fontSize: 12, color: theme.text, fontFamily: FONT.body }}>
+            <strong>Dados nos Dashboards:</strong> Após mapear um link, execute o <strong>Sync</strong> em <strong>Plataforma → Status Técnico</strong> para que as métricas apareçam nos dashboards.
+          </div>
         </div>
       </div>
 

@@ -42,6 +42,8 @@ export default function StatusTecnico() {
   const { theme: t } = useApp();
   const perm = usePermission("status_tecnico");
   const [loading, setLoading] = useState(true);
+  const [syncExecutando, setSyncExecutando] = useState(false);
+  const [syncMensagem, setSyncMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [techLogs, setTechLogs] = useState<TechLog[]>([]);
@@ -133,6 +135,32 @@ export default function StatusTecnico() {
     return () => clearInterval(interval);
   }, [carregar]);
 
+  const executarSync = async () => {
+    if (syncExecutando || !perm.canView || perm.canView === "nao") return;
+    setSyncExecutando(true);
+    setSyncMensagem(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-metricas", {
+        body: {},
+      });
+      if (error) throw error;
+      const res = data as { ok?: boolean; erro?: string; fase1_influencers?: { registros_upserted?: number; aliases_mapeados?: number } };
+      if (res?.ok) {
+        const regs = res?.fase1_influencers?.registros_upserted ?? 0;
+        const aliases = res?.fase1_influencers?.aliases_mapeados ?? 0;
+        setSyncMensagem({ tipo: "ok", texto: `Sync concluído: ${regs} registros sincronizados${aliases > 0 ? ` (${aliases} aliases mapeados)` : ""}. Atualize os dashboards.` });
+        carregar();
+      } else {
+        setSyncMensagem({ tipo: "erro", texto: res?.erro ?? "Erro desconhecido" });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSyncMensagem({ tipo: "erro", texto: msg });
+    } finally {
+      setSyncExecutando(false);
+    }
+  };
+
   // KPIs derivados
   const ultimoSyncOk = syncLogs.find((l) => l.status === "ok");
   const integracoesAtivas = integrations.filter((int) => {
@@ -209,14 +237,53 @@ export default function StatusTecnico() {
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 28 }}>
-      <div>
-        <h1 style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0 }}>
-          📡 Status Técnico
-        </h1>
-        <p style={{ color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-          Acompanhamento de integrações e saúde da plataforma.
-        </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+        <div>
+          <h1 style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0 }}>
+            📡 Status Técnico
+          </h1>
+          <p style={{ color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+            Acompanhamento de integrações e saúde da plataforma.
+          </p>
+        </div>
+        <button
+          onClick={executarSync}
+          disabled={syncExecutando || perm.canView === "nao"}
+          style={{
+            padding: "10px 20px",
+            borderRadius: 12,
+            border: "none",
+            background: syncExecutando ? "#6b7280" : "linear-gradient(135deg, #4a2082, #1e36f8)",
+            color: "#fff",
+            fontSize: 14,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: syncExecutando ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          {syncExecutando ? "Sincronizando..." : "🔄 Executar Sync"}
+        </button>
       </div>
+
+      {syncMensagem && (
+        <div
+          style={{
+            padding: 14,
+            borderRadius: 12,
+            background: syncMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
+            border: `1px solid ${syncMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
+            color: syncMensagem.tipo === "ok" ? "#059669" : "#ef4444",
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          {syncMensagem.tipo === "ok" ? "✅ " : "⚠️ "}
+          {syncMensagem.texto}
+        </div>
+      )}
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
