@@ -20,7 +20,7 @@ import {
   GiStarMedal,      // Filtro Influencer
   GiShield,         // Filtro Operadora
 } from "react-icons/gi";
-import ScatterQuadrant from "./ScatterQuadrant";
+import BulletChart from "./BulletChart";
 
 // Fonte NHD Bold para títulos
 const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
@@ -618,8 +618,8 @@ export default function DashboardOverview() {
   const pctAcessoFTD   = totais.acessos > 0  ? ((totais.ftds      / totais.acessos)  * 100).toFixed(1) + "%" : "—";
   const pctViewFTD     = totais.views > 0    ? ((totais.ftds      / totais.views)    * 100).toFixed(1) + "%" : "—";
 
-  // ── SCATTER DATA ─────────────────────────────────────────────────────────────
-  const scatterData = useMemo(() => {
+  // ── BULLET DATA ──────────────────────────────────────────────────────────────
+  const bulletData = useMemo(() => {
     let r = ranking;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
     if (filtroOperadora !== "todas") {
@@ -631,7 +631,6 @@ export default function DashboardOverview() {
       ggr: row.ggr,
       investimento: row.investimento,
       roi: row.roi,
-      lives: row.lives,
     }));
   }, [ranking, filtroInfluencer, filtroOperadora, operadoraInfMap]);
 
@@ -914,10 +913,10 @@ export default function DashboardOverview() {
           />
         </div>
 
-        {/* BLOCO 4: Scatter Quadrant */}
+        {/* BLOCO 4: Bullet Chart */}
         <div style={card}>
-          <SectionTitle icon={<GiCoins size={15} />}>GGR vs Investimento por Influencer</SectionTitle>
-          <ScatterQuadrant data={scatterData} loading={loading} />
+          <SectionTitle icon={<GiCoins size={15} />}>GGR vs Investimento — Top 10</SectionTitle>
+          <BulletChart data={bulletData} loading={loading} />
         </div>
       </div>
 
