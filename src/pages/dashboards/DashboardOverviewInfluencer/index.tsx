@@ -114,19 +114,52 @@ interface TotaisData {
 }
 
 interface DiaData {
-  data: string;
-  duracao: number;
-  media_views: number;
-  max_views: number;
-  acessos: number;
-  registros: number;
-  ftd_count: number;
-  ftd_total: number;
-  deposit_count: number;
-  deposit_total: number;
-  withdrawal_count: number;
-  withdrawal_total: number;
-  ggr: number;
+  data: string; duracao: number; media_views: number; max_views: number;
+  acessos: number; registros: number; ftd_count: number; ftd_total: number;
+  deposit_count: number; deposit_total: number; withdrawal_count: number;
+  withdrawal_total: number; ggr: number;
+}
+
+// ─── SELECT COM ÍCONE INTERNO ─────────────────────────────────────────────────
+// Replica exatamente o padrão do botão "Histórico": ícone à esquerda + texto
+function SelectComIcone({
+  icon, value, onChange, children, t,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+  t: any;
+}) {
+  return (
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+      <span style={{
+        position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+        pointerEvents: "none", display: "flex", alignItems: "center",
+        color: t.textMuted, zIndex: 1,
+      }}>
+        {icon}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          padding: "6px 12px 6px 30px",
+          borderRadius: 999,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.inputBg ?? t.cardBg,
+          color: t.text,
+          fontSize: 13,
+          fontFamily: FONT.body,
+          cursor: "pointer",
+          outline: "none",
+          appearance: "auto" as const,
+        }}
+      >
+        {children}
+      </select>
+    </div>
+  );
 }
 
 // ─── KPI CARD ────────────────────────────────────────────────────────────────
@@ -144,28 +177,18 @@ function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHi
   const corSeta = positivo ? BRAND.verde : BRAND.vermelho;
 
   return (
-    <div style={{
-      borderRadius: 16, border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg, overflow: "hidden",
-    }}>
+    <div style={{ borderRadius: 16, border: `1px solid ${t.cardBorder}`, background: t.cardBg, overflow: "hidden" }}>
       <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: `${accentColor}20`, border: `1px solid ${accentColor}40`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0,
-          }}>
+          <span style={{ width: 32, height: 32, borderRadius: 9, background: `${accentColor}20`, border: `1px solid ${accentColor}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             {icon}
           </span>
           <span style={{ color: t.textMuted, fontSize: 11, fontFamily: FONT.body, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
             {label}
           </span>
         </div>
-        <div style={{ fontSize: 21, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: subValue ? 4 : 6 }}>
-          {value}
-        </div>
+        <div style={{ fontSize: 21, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: subValue ? 4 : 6 }}>{value}</div>
         {subValue && subValue.value !== "—" && (
           <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
             <span style={{ color: t.text, fontWeight: 600 }}>{subValue.value}</span> {subValue.label}
@@ -174,15 +197,10 @@ function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHi
         {!isHistorico && (
           <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontFamily: FONT.body }}>
             <span style={{ color: corSeta, fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
-              {up
-                ? <TrendingUp size={11} />
-                : <TrendingDown size={11} />
-              }
+              {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
               {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
             </span>
-            <span style={{ color: t.textMuted }}>
-              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.
-            </span>
+            <span style={{ color: t.textMuted }}>vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.</span>
           </div>
         )}
       </div>
@@ -193,8 +211,6 @@ function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHi
 // ─── FUNIL VISUAL ─────────────────────────────────────────────────────────────
 function FunilVisual({ steps }: { steps: { label: string; value: number }[] }) {
   const CORES = [BRAND.roxoVivo, BRAND.azul, BRAND.ciano, BRAND.verde];
-  const total = steps.length;
-
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, width: "100%", maxWidth: 380 }}>
       {steps.map((step, i) => {
@@ -202,29 +218,15 @@ function FunilVisual({ steps }: { steps: { label: string; value: number }[] }) {
         const larguraBase = 100 - (i + 1) * 10;
         const clipTop = `${(100 - larguraTopo) / 2}%`;
         const clipBase = `${(100 - larguraBase) / 2}%`;
-        const isLast = i === total - 1;
-
         return (
-          <div
-            key={step.label}
-            style={{
-              width: "100%",
-              height: 88,
-              background: CORES[i] ?? BRAND.roxo,
-              clipPath: isLast
-                ? `polygon(${clipTop} 0%, ${100 - parseFloat(clipTop)}% 0%, ${100 - parseFloat(clipBase)}% 100%, ${clipBase} 100%)`
-                : `polygon(${clipTop} 0%, ${100 - parseFloat(clipTop)}% 0%, ${100 - parseFloat(clipBase)}% 100%, ${clipBase} 100%)`,
-              display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              gap: 2,
-            }}
-          >
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "rgba(255,255,255,0.85)", fontFamily: FONT.body }}>
-              {step.label}
-            </span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: "#fff", fontFamily: FONT_TITLE, lineHeight: 1 }}>
-              {step.value.toLocaleString("pt-BR")}
-            </span>
+          <div key={step.label} style={{
+            width: "100%", height: 88,
+            background: CORES[i] ?? BRAND.roxo,
+            clipPath: `polygon(${clipTop} 0%, ${100 - parseFloat(clipTop)}% 0%, ${100 - parseFloat(clipBase)}% 100%, ${clipBase} 100%)`,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "rgba(255,255,255,0.85)", fontFamily: FONT.body }}>{step.label}</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: "#fff", fontFamily: FONT_TITLE, lineHeight: 1 }}>{step.value.toLocaleString("pt-BR")}</span>
           </div>
         );
       })}
@@ -238,17 +240,9 @@ function RateCard({ label, value, highlight }: { label: string; value: string; h
   const highlightColor = highlight === true ? BRAND.azul : highlight === "purple" ? BRAND.roxoVivo : null;
 
   return (
-    <div style={{
-      padding: "10px 14px", borderRadius: 10,
-      border: highlightColor ? `1px solid ${highlightColor}44` : `1px solid ${t.cardBorder}`,
-      background: highlightColor ? `${highlightColor}12` : "transparent",
-    }}>
-      <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.08em", fontWeight: 700 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: highlightColor ?? t.text, margin: "5px 0 0", fontFamily: FONT.body }}>
-        {value}
-      </div>
+    <div style={{ padding: "10px 14px", borderRadius: 10, border: highlightColor ? `1px solid ${highlightColor}44` : `1px solid ${t.cardBorder}`, background: highlightColor ? `${highlightColor}12` : "transparent" }}>
+      <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.08em", fontWeight: 700 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: highlightColor ?? t.text, margin: "5px 0 0", fontFamily: FONT.body }}>{value}</div>
     </div>
   );
 }
@@ -258,23 +252,12 @@ function SectionTitle({ icon, title, subtitle }: { icon: React.ReactNode; title:
   const { theme: t } = useApp();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-      <div style={{
-        width: 32, height: 32, borderRadius: 9,
-        background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: BRAND.ciano, flexShrink: 0,
-      }}>
+      <div style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)", display: "flex", alignItems: "center", justifyContent: "center", color: BRAND.ciano, flexShrink: 0 }}>
         {icon}
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" as const }}>
-        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>
-          {title}
-        </h3>
-        {subtitle && (
-          <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body }}>
-            · {subtitle}
-          </span>
-        )}
+        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{title}</h3>
+        {subtitle && <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body }}>· {subtitle}</span>}
       </div>
     </div>
   );
@@ -303,13 +286,10 @@ export default function DashboardOverviewInfluencer() {
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
   const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
 
-  const [perfis, setPerfis] = useState<InfluencerPerfil[]>([]);
-  const [totais, setTotais] = useState<TotaisData>({
-    ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0,
-    depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0,
-  });
+  const [totais, setTotais] = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
   const [totaisAnt, setTotaisAnt] = useState<TotaisData>(totais);
   const [diasData, setDiasData] = useState<DiaData[]>([]);
+  const [perfis, setPerfis] = useState<InfluencerPerfil[]>([]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -320,10 +300,7 @@ export default function DashboardOverviewInfluencer() {
     else setHistorico(true);
   }
 
-  const influencersVisiveis = useMemo(() => {
-    if (escoposVisiveis.influencersVisiveis.length === 0) return [];
-    return escoposVisiveis.influencersVisiveis;
-  }, [escoposVisiveis.influencersVisiveis]);
+  const influencersVisiveis = useMemo(() => escoposVisiveis.influencersVisiveis.length === 0 ? [] : escoposVisiveis.influencersVisiveis, [escoposVisiveis.influencersVisiveis]);
 
   useEffect(() => {
     async function carregar() {
@@ -506,47 +483,16 @@ export default function DashboardOverviewInfluencer() {
   const ticketSaque = totais.saques_qtd > 0 ? fmtBRL(totais.saques_valor / totais.saques_qtd) : "—";
   const ggrPorJogador = totais.ftds > 0 ? fmtBRL(totais.ggr / totais.ftds) : "—";
 
-  const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-  };
-  const btnNav: React.CSSProperties = {
-    width: 30, height: 30, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`, background: "transparent",
-    color: t.text, cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
-  const thStyle: React.CSSProperties = {
-    textAlign: "left",
-    fontSize: 11,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    color: t.textMuted,
-    padding: "10px 12px",
-    background: "rgba(74,32,130,0.10)",
-    borderBottom: `1px solid ${t.cardBorder}`,
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-    fontWeight: 700,
-  };
-  const tdStyle: React.CSSProperties = {
-    padding: "10px 12px",
-    fontSize: 13,
-    color: t.text,
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-    borderBottom: `1px solid ${t.cardBorder}`,
-  };
+  const card: React.CSSProperties = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
+  const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
+  const thStyle: React.CSSProperties = { textAlign: "left", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: t.textMuted, padding: "10px 12px", background: "rgba(74,32,130,0.10)", borderBottom: `1px solid ${t.cardBorder}`, fontFamily: FONT.body, whiteSpace: "nowrap", fontWeight: 700 };
+  const tdStyle: React.CSSProperties = { padding: "10px 12px", fontSize: 13, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", borderBottom: `1px solid ${t.cardBorder}` };
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
   if (perm.canView === "nao") {
-    return (
-      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
-      </div>
-    );
+    return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar este dashboard.</div>;
   }
 
   return (
@@ -557,24 +503,18 @@ export default function DashboardOverviewInfluencer() {
         <div style={{ ...card, padding: "14px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
-            <button
-              style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
-              onClick={irMesAnterior}
-              disabled={historico || isPrimeiro}
-            >
+            {/* Navegação de mês */}
+            <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
               <ChevronLeft size={16} />
             </button>
             <span style={{ fontSize: 16, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 160, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
-            <button
-              style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
-              onClick={irMesProximo}
-              disabled={historico || isUltimo}
-            >
+            <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
               <ChevronRight size={16} />
             </button>
 
+            {/* Botão Histórico — ícone dentro do botão (referência visual) */}
             <button
               style={{
                 padding: "6px 16px", borderRadius: 999,
@@ -590,79 +530,59 @@ export default function DashboardOverviewInfluencer() {
               <GiCalendar size={13} /> Histórico
             </button>
 
+            {/* Filtro Influencer — ícone dentro do campo (mesmo padrão do Histórico) */}
             {showFiltroInfluencer && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <GiStarMedalFilter size={13} color={t.textMuted} />
-                <select
-                  value={filtroInfluencer}
-                  onChange={(e) => setFiltroInfluencer(e.target.value)}
-                  style={{
-                    padding: "6px 12px", borderRadius: 10,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.inputBg ?? t.cardBg, color: t.text,
-                    fontSize: 13, fontFamily: FONT.body, cursor: "pointer", outline: "none",
-                  }}
-                >
-                  <option value="todos">Todos os influencers</option>
-                  {perfis.filter((p) => podeVerInfluencer(p.id)).map((p) => (
-                    <option key={p.id} value={p.id}>{p.nome_artistico}</option>
-                  ))}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiStarMedalFilter size={13} />}
+                value={filtroInfluencer}
+                onChange={setFiltroInfluencer}
+                t={t}
+              >
+                <option value="todos">Todos os influencers</option>
+                {perfis.filter((p) => podeVerInfluencer(p.id)).map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome_artistico}</option>
+                ))}
+              </SelectComIcone>
             )}
 
+            {/* Filtro Operadora — ícone dentro do campo */}
             {showFiltroOperadora && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <GiShield size={13} color={t.textMuted} />
-                <select
-                  value={filtroOperadora}
-                  onChange={(e) => setFiltroOperadora(e.target.value)}
-                  style={{
-                    padding: "6px 12px", borderRadius: 10,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.inputBg ?? t.cardBg, color: t.text,
-                    fontSize: 13, fontFamily: FONT.body, cursor: "pointer", outline: "none",
-                  }}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList.map((o) => (
-                    <option key={o.slug} value={o.slug}>{o.nome}</option>
-                  ))}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiShield size={13} />}
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+                t={t}
+              >
+                <option value="todas">Todas as operadoras</option>
+                {operadorasList.map((o) => (
+                  <option key={o.slug} value={o.slug}>{o.nome}</option>
+                ))}
+              </SelectComIcone>
             )}
 
-            {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                Carregando...
-              </span>
-            )}
+            {loading && <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</span>}
           </div>
         </div>
       </div>
 
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle
-          icon={<GiPodiumWinner size={14} color={BRAND.ciano} />}
-          title="KPIs Executivos"
-          subtitle={!historico ? "MTD vs mês anterior" : undefined}
-        />
+        <SectionTitle icon={<GiPodiumWinner size={14} color={BRAND.ciano} />} title="KPIs Executivos" subtitle={!historico ? "MTD vs mês anterior" : undefined} />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard label="GGR Total"    value={fmtBRL(totais.ggr)}        icon={<GiMoneyStack   size={16} color={BRAND.roxo} />} accentColor={BRAND.roxo} atual={totais.ggr}         anterior={totaisAnt.ggr}         isBRL isHistorico={historico} />
-          <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney  size={16} color={BRAND.azul}   />} accentColor={BRAND.azul}   atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
+          <KpiCard label="GGR Total"    value={fmtBRL(totais.ggr)}         icon={<GiMoneyStack  size={16} color={BRAND.roxo}    />} accentColor={BRAND.roxo}    atual={totais.ggr}         anterior={totaisAnt.ggr}         isBRL isHistorico={historico} />
+          <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney size={16} color={BRAND.azul}    />} accentColor={BRAND.azul}    atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
           <KpiCard label="ROI"          value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"} icon={<GiStarMedal size={16} color={BRAND.verde} />} accentColor={BRAND.verde} atual={totais.roi} anterior={totaisAnt.roi} isHistorico={historico} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard label="Qtd de Lives"    value={totais.lives.toLocaleString("pt-BR")} icon={<GiClapperboard size={16} color={BRAND.azul} />} accentColor={BRAND.azul} atual={totais.lives}  anterior={totaisAnt.lives}  isHistorico={historico} />
-          <KpiCard label="Horas Realizadas" value={fmtHoras(totais.horas)}              icon={<GiSandsOfTime  size={16} color={BRAND.azul} />} accentColor={BRAND.azul} atual={totais.horas}  anterior={totaisAnt.horas}  isHistorico={historico} />
+          <KpiCard label="Qtd de Lives"     value={totais.lives.toLocaleString("pt-BR")} icon={<GiClapperboard size={16} color={BRAND.azul} />} accentColor={BRAND.azul} atual={totais.lives} anterior={totaisAnt.lives} isHistorico={historico} />
+          <KpiCard label="Horas Realizadas" value={fmtHoras(totais.horas)}               icon={<GiSandsOfTime  size={16} color={BRAND.azul} />} accentColor={BRAND.azul} atual={totais.horas} anterior={totaisAnt.horas} isHistorico={historico} />
           <KpiCard label="Média de Views"   value={totais.views > 0 ? totais.views.toLocaleString("pt-BR") : "—"} icon={<GiEyeball size={16} color={BRAND.azul} />} accentColor={BRAND.azul} atual={totais.views} anterior={totaisAnt.views} isHistorico={historico} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          <KpiCard label="Registros"  value={totais.registros.toLocaleString("pt-BR")}   icon={<GiPerson     size={16} color={BRAND.roxo} />} accentColor={BRAND.roxo} atual={totais.registros}     anterior={totaisAnt.registros}     isHistorico={historico} subValue={subValueReg} />
-          <KpiCard label="FTDs"       value={totais.ftds.toLocaleString("pt-BR")}        icon={<GiTrophy     size={16} color={BRAND.roxo} />} accentColor={BRAND.roxo} atual={totais.ftds}          anterior={totaisAnt.ftds}          isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }} />
-          <KpiCard label="Depósitos"  value={totais.depositos_qtd.toLocaleString("pt-BR")} icon={<GiCardPlay size={16} color={BRAND.amarelo} />}           accentColor={BRAND.amarelo}            atual={totais.depositos_qtd} anterior={totaisAnt.depositos_qtd} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.depositos_valor) }} />
-          <KpiCard label="Saques"     value={totais.saques_qtd.toLocaleString("pt-BR")}  icon={<GiCash       size={16} color={BRAND.amarelo} />}             accentColor={BRAND.amarelo}            atual={totais.saques_qtd}    anterior={totaisAnt.saques_qtd}    isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.saques_valor) }} />
+          <KpiCard label="Registros" value={totais.registros.toLocaleString("pt-BR")}    icon={<GiPerson   size={16} color={BRAND.roxo}    />} accentColor={BRAND.roxo}    atual={totais.registros}     anterior={totaisAnt.registros}     isHistorico={historico} subValue={subValueReg} />
+          <KpiCard label="FTDs"      value={totais.ftds.toLocaleString("pt-BR")}         icon={<GiTrophy   size={16} color={BRAND.roxo}    />} accentColor={BRAND.roxo}    atual={totais.ftds}          anterior={totaisAnt.ftds}          isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }} />
+          <KpiCard label="Depósitos" value={totais.depositos_qtd.toLocaleString("pt-BR")} icon={<GiCardPlay size={16} color={BRAND.amarelo} />} accentColor={BRAND.amarelo} atual={totais.depositos_qtd} anterior={totaisAnt.depositos_qtd} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.depositos_valor) }} />
+          <KpiCard label="Saques"    value={totais.saques_qtd.toLocaleString("pt-BR")}   icon={<GiCash     size={16} color={BRAND.amarelo} />} accentColor={BRAND.amarelo} atual={totais.saques_qtd}    anterior={totaisAnt.saques_qtd}    isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.saques_valor) }} />
         </div>
       </div>
 
@@ -679,13 +599,11 @@ export default function DashboardOverviewInfluencer() {
           ]} />
 
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: t.textMuted, fontFamily: FONT.body, marginBottom: 10 }}>
-              Taxas de Conversão
-            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: t.textMuted, fontFamily: FONT.body, marginBottom: 10 }}>Taxas de Conversão</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <RateCard label="View → Acesso"    value={pctViewAcesso} />
+              <RateCard label="View → Acesso"     value={pctViewAcesso} />
               <RateCard label="Acesso → Registro" value={pctAcessoReg} />
-              <RateCard label="Registro → FTD"   value={pctRegFTD} />
+              <RateCard label="Registro → FTD"    value={pctRegFTD} />
               <RateCard label="Acesso → FTD"     value={pctAcessoFTD} highlight={true} />
               <RateCard label="View → FTD"       value={pctViewFTD}   highlight="purple" />
             </div>
@@ -697,10 +615,10 @@ export default function DashboardOverviewInfluencer() {
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle icon={<GiSpeedometer size={14} color={BRAND.ciano} />} title="Eficiência" />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-          <RateCard label="FTD/Hora"            value={ftdPorHora} />
-          <RateCard label="Ticket Médio FTD"    value={ticketFTD} />
+          <RateCard label="FTD/Hora"              value={ftdPorHora} />
+          <RateCard label="Ticket Médio FTD"      value={ticketFTD} />
           <RateCard label="Ticket Médio Depósito" value={ticketDep} />
-          <RateCard label="Ticket Médio Saque"  value={ticketSaque} />
+          <RateCard label="Ticket Médio Saque"    value={ticketSaque} />
           <RateCard label="GGR por Jogador"     value={ggrPorJogador} highlight={true} />
         </div>
       </div>
@@ -715,19 +633,9 @@ export default function DashboardOverviewInfluencer() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={thStyle}>Data</th>
-                  <th style={thStyle}>Duração Live</th>
-                  <th style={thStyle}>Média Views</th>
-                  <th style={thStyle}>Máx Views</th>
-                  <th style={thStyle}>Acessos</th>
-                  <th style={thStyle}>Registros</th>
-                  <th style={thStyle}># FTDs</th>
-                  <th style={thStyle}>R$ FTDs</th>
-                  <th style={thStyle}># Depósitos</th>
-                  <th style={thStyle}>R$ Depósitos</th>
-                  <th style={thStyle}># Saques</th>
-                  <th style={thStyle}>R$ Saques</th>
-                  <th style={thStyle}>R$ GGR</th>
+                  {["Data","Duração Live","Média Views","Máx Views","Acessos","Registros","# FTDs","R$ FTDs","# Depósitos","R$ Depósitos","# Saques","R$ Saques","R$ GGR"].map((h) => (
+                    <th key={h} style={thStyle}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
