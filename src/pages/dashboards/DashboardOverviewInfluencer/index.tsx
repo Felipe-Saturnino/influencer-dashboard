@@ -171,7 +171,7 @@ function cel(v: number, isBRL = false) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverviewInfluencer() {
-  const { theme: t, podeVerInfluencer, escoposVisiveis } = useApp();
+  const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("dash_overview_influencer");
 
@@ -220,7 +220,7 @@ export default function DashboardOverviewInfluencer() {
       ]);
       setPerfis(perfisData || []);
       const opsFiltradas = (opsData || []).filter(
-        (o: { slug: string }) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)
+        (o: { slug: string }) => podeVerOperadora(o.slug)
       );
       setOperadorasList(opsFiltradas);
       const map: Record<string, string[]> = {};

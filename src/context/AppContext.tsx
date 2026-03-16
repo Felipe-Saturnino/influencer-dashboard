@@ -15,10 +15,13 @@ const ALL_PAGE_KEYS: PageKey[] = [
 // Tipo do mapa de permissões de visualização
 export type PermissoesMapa = Record<PageKey, PermissaoValor>;
 
-// Escopos visíveis — [] = sem restrição (admin/gestor)
+// Escopos visíveis
+// semRestricaoEscopo=true (admin/gestor): vê tudo, ignora arrays
+// semRestricaoEscopo=false ou undefined: só vê o que está em influencersVisiveis/operadorasVisiveis
 export interface EscoposVisiveis {
   influencersVisiveis: string[];  // UUIDs
   operadorasVisiveis:  string[];  // slugs
+  semRestricaoEscopo?: boolean;   // true = admin/gestor, vê tudo
 }
 
 interface AppContextValue {
@@ -43,15 +46,16 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-const ESCOPOS_VAZIOS: EscoposVisiveis = { influencersVisiveis: [], operadorasVisiveis: [] };
+const ESCOPOS_VAZIOS: EscoposVisiveis = { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: false };
 
 // ─── Carrega escopos visíveis por role e user_scopes (Etapa 7) ─────────────────
 async function carregarEscoposVisiveis(
   userId: string,
   role: Role
 ): Promise<EscoposVisiveis> {
+  // Admin e Gestor: sempre vê tudo (sem restrição de escopo)
   if (role === "admin" || role === "gestor") {
-    return ESCOPOS_VAZIOS; // [] = sem restrição
+    return { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: true };
   }
 
   const { data: scopes } = await supabase
@@ -65,18 +69,18 @@ async function carregarEscoposVisiveis(
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
       .map((s) => s.scope_ref);
-    return { influencersVisiveis: [userId], operadorasVisiveis };
+    return { influencersVisiveis: [userId], operadorasVisiveis, semRestricaoEscopo: false };
   }
 
+  // Executivo, Operador, Agência: sempre seguem escopo (vazio = não vê nada)
   if (role === "executivo") {
-    if (lista.length === 0) return ESCOPOS_VAZIOS; // sem escopo = vê tudo
     const influencersVisiveis = lista
       .filter((s) => s.scope_type === "influencer")
       .map((s) => s.scope_ref);
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
       .map((s) => s.scope_ref);
-    return { influencersVisiveis, operadorasVisiveis };
+    return { influencersVisiveis, operadorasVisiveis, semRestricaoEscopo: false };
   }
 
   if (role === "operador") {
@@ -86,7 +90,7 @@ async function carregarEscoposVisiveis(
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
       .map((s) => s.scope_ref);
-    return { influencersVisiveis, operadorasVisiveis };
+    return { influencersVisiveis, operadorasVisiveis, semRestricaoEscopo: false };
   }
 
   if (role === "agencia") {
@@ -101,10 +105,11 @@ async function carregarEscoposVisiveis(
     return {
       influencersVisiveis: [...infIds],
       operadorasVisiveis: [...opSlugs],
+      semRestricaoEscopo: false,
     };
   }
 
-  return ESCOPOS_VAZIOS;
+  return { ...ESCOPOS_VAZIOS, semRestricaoEscopo: false };
 }
 
 // ─── Carrega can_view de todas as páginas para o role do usuário ──────────────
@@ -222,9 +227,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const podeVerInfluencer = (id: string) =>
-    escoposVisiveis.influencersVisiveis.length === 0 || escoposVisiveis.influencersVisiveis.includes(id);
+    escoposVisiveis.semRestricaoEscopo === true || escoposVisiveis.influencersVisiveis.includes(id);
   const podeVerOperadora = (slug: string) =>
-    escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(slug);
+    escoposVisiveis.semRestricaoEscopo === true || escoposVisiveis.operadorasVisiveis.includes(slug);
 
   return (
     <AppContext.Provider value={{

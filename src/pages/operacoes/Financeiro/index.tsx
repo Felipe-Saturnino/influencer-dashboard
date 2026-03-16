@@ -429,11 +429,11 @@ function ModalPagar({ row, onClose, onConfirm }: {
 
 // ── MODAL AGENTE ───────────────────────────────────────────────────────────────
 
-function ModalAgente({ cicloId, filterOperadora, operadorasList, operadorasVisiveis, onClose, onSalvo }: {
+function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerOperadora, onClose, onSalvo }: {
   cicloId: string;
   filterOperadora: string;
   operadorasList: { slug: string; nome: string }[];
-  operadorasVisiveis: string[];
+  podeVerOperadora: (slug: string) => boolean;
   onClose: () => void;
   onSalvo: () => Promise<void>;
 }) {
@@ -443,7 +443,7 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, operadorasVisiv
   const [valor, setValor] = useState("");
   const [operadoraSlug, setOperadoraSlug] = useState(filterOperadora !== "todas" ? filterOperadora : "");
 
-  const opcoes = operadorasList.filter((o) => operadorasVisiveis.length === 0 || operadorasVisiveis.includes(o.slug));
+  const opcoes = operadorasList.filter((o) => podeVerOperadora(o.slug));
   const precisaSelecionarOp = filterOperadora === "todas" && opcoes.length > 1;
   const opFinal = filterOperadora !== "todas" ? filterOperadora : operadoraSlug;
 
@@ -534,11 +534,11 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, operadorasVisiv
 
 interface BlocoFiltros {
   podeVerInfluencer: (id: string) => boolean;
+  podeVerOperadora: (slug: string) => boolean;
   filterInfluencers: string[];
   filterOperadora: string;
   operadoraInfMap: Record<string, string[]>;
   operadorasList: { slug: string; nome: string }[];
-  operadorasVisiveis: string[];
 }
 
 function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
@@ -662,7 +662,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 }) {
   const { theme: t, user } = useApp();
   const perm = usePermission("financeiro");
-  const { podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList, operadorasVisiveis } = filtros;
+  const { podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList } = filtros;
 
   const [cicloId, setCicloId] = useState<string>(ciclos[0]?.id ?? "");
   const [rows, setRows] = useState<PagamentoRow[]>([]);
@@ -1065,7 +1065,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           cicloId={ciclo.id}
           filterOperadora={filterOperadora}
           operadorasList={operadorasList}
-          operadorasVisiveis={operadorasVisiveis}
+          podeVerOperadora={filtros.podeVerOperadora}
           onClose={() => setModalAgente(false)}
           onSalvo={async () => { setModalAgente(false); if (ciclo) await carregarDados(ciclo); }}
         />
@@ -1398,7 +1398,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
 export default function Financeiro() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
   const perm = usePermission("financeiro");
 
   const [ciclos, setCiclos] = useState<CicloPagamento[]>([]);
@@ -1416,12 +1416,12 @@ export default function Financeiro() {
 
   const filtros: BlocoFiltros = useMemo(() => ({
     podeVerInfluencer,
+    podeVerOperadora,
     filterInfluencers,
     filterOperadora,
     operadoraInfMap,
     operadorasList,
-    operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
-  }), [podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList, escoposVisiveis.operadorasVisiveis]);
+  }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList]);
 
   useEffect(() => { carregarCiclos(); }, []);
 
@@ -1520,7 +1520,7 @@ export default function Financeiro() {
               }}
             >
               <option value="todas">Todas as operadoras</option>
-              {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+              {operadorasList.filter((o) => podeVerOperadora(o.slug)).map((o) => (
                 <option key={o.slug} value={o.slug}>{o.nome}</option>
               ))}
             </select>

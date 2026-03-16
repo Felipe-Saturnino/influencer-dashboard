@@ -109,18 +109,17 @@ Algumas tabelas têm RLS no Supabase:
 - **user_scopes:** usuário lê próprios; admin lê todos
 - **scout_influencer, scout_anotacoes:** authenticated pode gerenciar
 
-**Tabelas de dados principais** (`influencer_perfil`, `operadoras`, `influencer_operadoras`, `lives`, `influencer_metricas`): em muitos setups não possuem RLS — qualquer usuário autenticado consegue ler. A segregação é feita no frontend via `podeVerInfluencer` / `podeVerOperadora`.
-
-Para segurança mais rigorosa, pode-se adicionar RLS com funções `is_admin()`, `is_gestor()` e políticas que restrinjam SELECT conforme escopos.
+**Tabelas de dados principais** (`influencer_perfil`, `operadoras`, `lives`, `live_resultados`, `influencer_metricas`, etc.): a migration `migration-data-tables-rls-authenticated-read.sql` adiciona políticas que permitem usuários **autenticados** (incl. Gestor) a ler e, onde aplicável, escrever. A segregação (quem vê o quê) continua feita no frontend via `podeVerInfluencer` / `podeVerOperadora` e `user_scopes`.
 
 ---
 
 ## Checklist de configuração
 
 1. [ ] Executar `docs/migration-role-permissions-seed.sql` para popular permissões
-2. [ ] Verificar que `role_permissions` tem constraint UNIQUE (role, page_key) para upsert
-3. [ ] Configurar `user_scopes` para executivo/operador/agência conforme necessidade
-4. [ ] Testar login com cada role (admin, gestor, executivo, operador, agência, influencer)
+2. [ ] Executar `docs/migration-data-tables-rls-authenticated-read.sql` para permitir Gestor ler dados
+3. [ ] Verificar que `role_permissions` tem constraint UNIQUE (role, page_key) para upsert
+4. [ ] Configurar `user_scopes` para executivo/operador/agência conforme necessidade
+5. [ ] Testar login com cada role (admin, gestor, executivo, operador, agência, influencer)
 
 ---
 

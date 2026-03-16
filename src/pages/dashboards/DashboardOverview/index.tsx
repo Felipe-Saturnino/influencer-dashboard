@@ -457,7 +457,7 @@ function FunilVisual({ values, taxas }: {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
   const perm = usePermission("dash_overview");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -781,7 +781,7 @@ export default function DashboardOverview() {
                 <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectStyle}>
                   <option value="todas">Todas as operadoras</option>
                   {operadorasList
-                    .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                    .filter((o) => podeVerOperadora(o.slug))
                     .map((o) => (
                       <option key={o.slug} value={o.slug}>{o.nome}</option>
                     ))}

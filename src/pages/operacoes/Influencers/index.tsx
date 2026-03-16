@@ -194,7 +194,7 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
-  const { theme: t, user, escoposVisiveis, podeVerInfluencer } = useApp();
+  const { theme: t, user, escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
   const perm = usePermission("influencers");
   const showManagementUI = user?.role !== "influencer";
   // "proprios": ações apenas em registros do escopo do usuário
@@ -204,9 +204,7 @@ export default function Influencers() {
   const [list,           setList]           = useState<Influencer[]>([]);
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
 
-  const operadorasNoEscopo = escoposVisiveis.operadorasVisiveis.length === 0
-    ? operadorasList
-    : operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.includes(o.slug));
+  const operadorasNoEscopo = operadorasList.filter((o) => podeVerOperadora(o.slug));
   const [loading,        setLoading]        = useState(true);
   const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar"; inf?: Influencer } | null>(null);
 

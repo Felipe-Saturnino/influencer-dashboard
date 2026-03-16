@@ -370,7 +370,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
   const perm = usePermission("dash_conversao");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -631,7 +631,7 @@ export default function DashboardConversao() {
                 <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectStyle}>
                   <option value="todas">Todas as operadoras</option>
                   {operadorasList
-                    .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                    .filter((o) => podeVerOperadora(o.slug))
                     .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
                 </select>
               </div>

@@ -191,7 +191,7 @@ interface LiveComObs extends Omit<Live, "observacao"> {
 
 export default function Feedback() {
   const { theme: t, isDark } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
   const perm = usePermission("feedback");
 
   const [periodo,           setPeriodo]           = useState<Periodo>("semana");
@@ -641,7 +641,7 @@ export default function Feedback() {
               }}
             >
               <option value="todas">Todas as operadoras</option>
-              {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+              {operadorasList.filter((o) => podeVerOperadora(o.slug)).map((o) => (
                 <option key={o.slug} value={o.slug}>{o.nome}</option>
               ))}
             </select>

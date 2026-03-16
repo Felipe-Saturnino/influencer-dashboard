@@ -266,7 +266,7 @@ function PieTooltip({ active, payload, total, cardBg, cardBorder, text }: {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardFinanceiro() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
   const perm = usePermission("dash_financeiro");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -589,7 +589,7 @@ export default function DashboardFinanceiro() {
                 </span>
                 <select value={operadoraFiltro} onChange={(e) => setOperadoraFiltro(e.target.value)} style={selectStyle}>
                   <option value="todas">Todas as operadoras</option>
-                  {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
+                  {operadorasList.filter((o) => podeVerOperadora(o.slug)).map((o) => (
                     <option key={o.slug} value={o.slug}>{o.nome}</option>
                   ))}
                 </select>

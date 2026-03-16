@@ -75,7 +75,7 @@ function fmtData(iso: string): string {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Resultados() {
   const { theme: t, isDark } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
   const perm = usePermission("resultados");
 
   const [lives,          setLives]          = useState<Live[]>([]);
@@ -486,7 +486,7 @@ export default function Resultados() {
               >
                 <option value="todas">Todas as operadoras</option>
                 {operadorasList
-                  .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                  .filter((o) => podeVerOperadora(o.slug))
                   .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
               </select>
             </div>

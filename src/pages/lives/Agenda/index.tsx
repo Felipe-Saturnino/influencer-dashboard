@@ -194,7 +194,7 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
   const { theme: t, isDark } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
   const perm = usePermission("agenda");
 
   const [view,    setView]    = useState<ViewMode>("mes");
@@ -644,7 +644,7 @@ export default function Agenda() {
                 >
                   <option value="todas">Todas as operadoras</option>
                   {operadorasList
-                    .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                    .filter((o) => podeVerOperadora(o.slug))
                     .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
                 </select>
               </div>
