@@ -74,10 +74,11 @@ async function enviarAlertaAuthCda(): Promise<void> {
     return
   }
 
+  const usaBasicAuth = !!(Deno.env.get('SMARTICO_USERNAME') && Deno.env.get('SMARTICO_PASSWORD'))
   const usaApiKey = !!Deno.env.get('CDA_INFLUENCERS_API_KEY')
   const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
-  const html = usaApiKey
+  const html = (usaApiKey || usaBasicAuth)
     ? `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
       <div style="background: #ef4444; color: white; padding: 16px 24px; border-radius: 8px 8px 0 0;">
@@ -91,9 +92,9 @@ async function enviarAlertaAuthCda(): Promise<void> {
           <strong>Motivo:</strong> A API retornou erro <code style="background: #fee2e2; padding: 2px 6px; border-radius: 4px; color: #ef4444;">403 Forbidden</code> — credencial inválida.
         </p>
         <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-          <p style="margin: 0; color: #856404; font-weight: bold;">Verifique se a chave API (CDA_INFLUENCERS_API_KEY) está correta ou se foi revogada.</p>
+          <p style="margin: 0; color: #856404; font-weight: bold;">Verifique as credenciais em Supabase Secrets (CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME/SMARTICO_PASSWORD).</p>
         </div>
-        <p style="margin: 0; color: #555;">Acesse Supabase → Edge Functions → Secrets e confira <code>CDA_INFLUENCERS_API_KEY</code>.</p>
+        <p style="margin: 0; color: #555;">Acesse Supabase → Edge Functions → Secrets.</p>
       </div>
     </div>
   `
@@ -147,10 +148,17 @@ async function enviarAlertaAuthCda(): Promise<void> {
 }
 
 // ── Headers padrão CDA ───────────────────────────────────────
-// Suporta: CDA_INFLUENCERS_API_KEY (não expira, recomendado) ou SMARTICO_TOKEN (cookie de sessão, expira)
-// CDA_AUTH_FORMAT: "Bearer" (default) ou "direct" — algumas APIs CDA aceitam a chave sem prefixo Bearer
+// Suporta: CDA_INFLUENCERS_API_KEY | SMARTICO_USERNAME+SMARTICO_PASSWORD (Basic) | SMARTICO_TOKEN (cookie)
+// CDA_AUTH_FORMAT: "Bearer" (default) ou "direct" — para API key
 
-function buildHeaders(auth: { apiKey?: string; token?: string; authFormat?: 'Bearer' | 'direct' }, labelId: string): HeadersInit {
+type CdaAuthInput = {
+  apiKey?: string
+  authFormat?: 'Bearer' | 'direct'
+  basicAuth?: { username: string; password: string }
+  token?: string
+}
+
+function buildHeaders(auth: CdaAuthInput, labelId: string): HeadersInit {
   const base: Record<string, string> = {
     'Content-Type': 'application/json;charset=UTF-8',
     'Active_label_id': labelId,
@@ -161,6 +169,9 @@ function buildHeaders(auth: { apiKey?: string; token?: string; authFormat?: 'Bea
   if (auth.apiKey) {
     const format = auth.authFormat ?? 'Bearer'
     base['Authorization'] = format === 'direct' ? auth.apiKey : `Bearer ${auth.apiKey}`
+  } else if (auth.basicAuth) {
+    const encoded = btoa(`${auth.basicAuth.username}:${auth.basicAuth.password}`)
+    base['Authorization'] = `Basic ${encoded}`
   } else if (auth.token) {
     base['Cookie'] = `__smtaff_bo_token=${auth.token}`
   }
@@ -199,7 +210,7 @@ function buildTimeFilter(dataInicio: string, dataFim: string): object {
 
 // ── Busca métricas de um influencer (SPLIT por dia) ──────────
 
-type CdaAuth = { apiKey?: string; token?: string; authFormat?: 'Bearer' | 'direct' }
+type CdaAuth = CdaAuthInput
 
 async function fetchMetricasPorUtm(
   utmSource: string, dataInicio: string, dataFim: string, auth: CdaAuth, labelId: string
@@ -477,16 +488,21 @@ serve(async (req: Request) => {
     const labelId      = Deno.env.get('SMARTICO_LABEL_ID') ?? '573703'
 
     const authFormat = (Deno.env.get('CDA_AUTH_FORMAT') ?? 'Bearer').toLowerCase() === 'direct' ? 'direct' as const : 'Bearer' as const
+    const smarticoUsername = Deno.env.get('SMARTICO_USERNAME')
+    const smarticoPassword = Deno.env.get('SMARTICO_PASSWORD')
 
-    // Prioridade: CDA_INFLUENCERS_API_KEY (não expira) > SMARTICO_TOKEN (fallback, expira)
-    const cdaAuth: CdaAuth = cdaApiKey
-      ? { apiKey: cdaApiKey, authFormat }
-      : smaticoToken
-        ? { token: smaticoToken }
-        : (() => { throw new Error('Configure CDA_INFLUENCERS_API_KEY (recomendado, não expira) ou SMARTICO_TOKEN no Supabase Secrets.') })()
+    // Prioridade: SMARTICO_USERNAME+SMARTICO_PASSWORD (Basic) > CDA_INFLUENCERS_API_KEY > SMARTICO_TOKEN (cookie)
+    // Basic auth testado primeiro pois API key pode não ser aceita pela API Plywood
+    const cdaAuth: CdaAuth = (smarticoUsername && smarticoPassword)
+      ? { basicAuth: { username: smarticoUsername, password: smarticoPassword } }
+      : cdaApiKey
+        ? { apiKey: cdaApiKey, authFormat }
+        : smaticoToken
+          ? { token: smaticoToken }
+          : (() => { throw new Error('Configure SMARTICO_USERNAME+SMARTICO_PASSWORD, CDA_INFLUENCERS_API_KEY ou SMARTICO_TOKEN no Supabase Secrets.') })()
 
-    const usaApiKey = !!cdaApiKey
-    console.log(`[sync-metricas] v1.6.2 | Auth: ${usaApiKey ? `CDA_INFLUENCERS_API_KEY (${authFormat})` : 'SMARTICO_TOKEN (fallback)'} | Período: ${dataInicio} → ${dataFim}`)
+    const authMethod = (smarticoUsername && smarticoPassword) ? 'SMARTICO_USERNAME+PASSWORD' : cdaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN'
+    console.log(`[sync-metricas] v1.7.0 | Auth: ${authMethod}${cdaAuth.apiKey ? ` (${authFormat})` : ''} | Período: ${dataInicio} → ${dataFim}`)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
@@ -533,9 +549,11 @@ serve(async (req: Request) => {
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           await enviarAlertaAuthCda()
-          const msgAuth = usaApiKey
+          const msgAuth = authMethod === 'CDA_INFLUENCERS_API_KEY'
             ? 'Erro de autenticação CDA (403). Verifique se CDA_INFLUENCERS_API_KEY está correta.'
-            : 'Token CDA expirado (403). Configure CDA_INFLUENCERS_API_KEY em Supabase → Secrets (não expira).'
+            : authMethod === 'SMARTICO_USERNAME+PASSWORD'
+              ? 'Erro de autenticação CDA (403). Verifique SMARTICO_USERNAME e SMARTICO_PASSWORD.'
+              : 'Token CDA expirado (403). Tente CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME+SMARTICO_PASSWORD em Supabase → Secrets.'
           await gravarTechLog(supabase, 'auth', msgAuth)
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
@@ -550,7 +568,7 @@ serve(async (req: Request) => {
           return new Response(JSON.stringify({
             ok: false,
             erro: msgAuth,
-            auth_usado: usaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN',
+            auth_usado: authMethod,
             influencer_que_falhou: influencer.utm_source,
             total_sincronizados_antes_da_falha: totalInseridos,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
@@ -574,9 +592,11 @@ serve(async (req: Request) => {
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           await enviarAlertaAuthCda()
-          const msgAuth = usaApiKey
+          const msgAuth = authMethod === 'CDA_INFLUENCERS_API_KEY'
             ? 'Erro de autenticação CDA (403). Verifique se CDA_INFLUENCERS_API_KEY está correta.'
-            : 'Token CDA expirado (403). Configure CDA_INFLUENCERS_API_KEY em Supabase → Secrets (não expira).'
+            : authMethod === 'SMARTICO_USERNAME+PASSWORD'
+              ? 'Erro de autenticação CDA (403). Verifique SMARTICO_USERNAME e SMARTICO_PASSWORD.'
+              : 'Token CDA expirado (403). Tente CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME+SMARTICO_PASSWORD em Supabase → Secrets.'
           await gravarTechLog(supabase, 'auth', msgAuth)
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
@@ -591,7 +611,7 @@ serve(async (req: Request) => {
           return new Response(JSON.stringify({
             ok: false,
             erro: msgAuth,
-            auth_usado: usaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN',
+            auth_usado: authMethod,
             influencer_que_falhou: alias.utm_source,
             total_sincronizados_antes_da_falha: totalInseridos,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
@@ -621,9 +641,11 @@ serve(async (req: Request) => {
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           await enviarAlertaAuthCda()
-          const msgAuth = usaApiKey
+          const msgAuth = authMethod === 'CDA_INFLUENCERS_API_KEY'
             ? 'Erro de autenticação CDA (403). Verifique se CDA_INFLUENCERS_API_KEY está correta.'
-            : 'Token CDA expirado (403). Configure CDA_INFLUENCERS_API_KEY em Supabase → Secrets (não expira).'
+            : authMethod === 'SMARTICO_USERNAME+PASSWORD'
+              ? 'Erro de autenticação CDA (403). Verifique SMARTICO_USERNAME e SMARTICO_PASSWORD.'
+              : 'Token CDA expirado (403). Tente CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME+SMARTICO_PASSWORD em Supabase → Secrets.'
           await gravarTechLog(supabase, 'auth', `${msgAuth} na varredura de UTMs.`)
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
@@ -638,7 +660,7 @@ serve(async (req: Request) => {
           return new Response(JSON.stringify({
             ok: false,
             erro: msgAuth,
-            auth_usado: usaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN',
+            auth_usado: authMethod,
             total_sincronizados_antes_da_falha: totalInseridos,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
         } else {
@@ -662,7 +684,7 @@ serve(async (req: Request) => {
 
     const resposta = {
       ok: true,
-      versao: 'v1.6.2',
+      versao: 'v1.7.0',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       fase1_influencers: {
         total: influencers?.length ?? 0,
