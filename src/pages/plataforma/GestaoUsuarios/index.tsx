@@ -9,6 +9,8 @@ import {
   UsuarioCompleto, UserScope, Operadora,
 } from "../../../types";
 
+const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+
 // ─── BRAND ───────────────────────────────────────────────────────────────────
 
 const BRAND = {
@@ -112,38 +114,21 @@ export default function GestaoUsuarios() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-      {/* ── HEADER — padrão SectionTitle ── */}
-      <div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: BRAND.roxo,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0,
-          }}>
+      {/* ── HEADER — padrão SectionTitle (idêntico ao Scout) ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <GiShield size={14} color="#fff" />
           </div>
-          <h1 style={{
-            fontFamily: FONT.title,
-            fontSize: 22,
-            fontWeight: 800,
-            color: t.text,
-            margin: 0,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-          }}>
-            Gestão de Usuários
-          </h1>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+              Gestão de Usuários
+            </h1>
+            <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>
+              Gerencie usuários, acessos e permissões da plataforma.
+            </p>
+          </div>
         </div>
-        <p style={{
-          color: t.textMuted,
-          marginTop: 2,
-          marginLeft: 40,
-          fontFamily: FONT.body,
-          fontSize: 13,
-        }}>
-          Gerencie usuários, acessos e permissões da plataforma.
-        </p>
       </div>
 
       {/* ── ABAS — pill style ── */}
@@ -586,7 +571,7 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
   const [scopeOperadoras,  setScopeOperadoras]  = useState<string[]>([]);
   const [scopePares,       setScopePares]       = useState<string[]>([]);
   const [influencers,      setInfluencers]      = useState<{ id: string; nome: string }[]>([]);
-  const [salvando,         setSalvando]         = useState(false);
+  const [salvando, setSalvando] = useState(false);
   const [erro,             setErro]             = useState("");
 
   useEffect(() => {
@@ -800,7 +785,7 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
 
         {/* Título do modal */}
         <h2 style={{
-          fontFamily:    FONT.title,
+          fontFamily:    FONT_TITLE,
           fontSize:      18,
           fontWeight:    800,
           textTransform: "uppercase",
@@ -1164,7 +1149,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
           fontSize:     13,
           fontWeight:   600,
           opacity:      salvando ? 0.7 : 1,
-          transition:   "opacity 0.18s",
+          transition:   "opacity 0.15s",
         }}>
           {salvando ? "Salvando..." : `Salvar permissões — ${roleLabel(roleAtivo)}`}
         </button>
