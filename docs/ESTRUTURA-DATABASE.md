@@ -158,6 +158,8 @@ ciclos_pagamento
 | `docs/dashboard-financeiro-operadora.sql` | View e RPC com suporte a operadora |
 | `docs/scout-migrations.sql` | Scout + anotações |
 | `docs/fix-role-permissions-agencia.sql` | Adicionar role "agencia" em role_permissions |
+| `docs/migration-role-permissions-seed.sql` | Seed completo de permissões para todos os roles (incl. gestor) |
+| `docs/ARQUITETURA-ACESSOS.md` | Documentação da arquitetura de permissões e escopos |
 | `docs/passo5-rpc-get_metricas_financeiro.sql` | Apenas a função RPC |
 
 ---

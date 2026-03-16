@@ -2,13 +2,42 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  GiFilmProjector, GiCalendar, GiStarMedal, GiShield,
+} from "react-icons/gi";
 
-type ViewMode = "mes" | "semana" | "dia";
+// ─── BRAND ────────────────────────────────────────────────────────────────────
+const BRAND = {
+  roxo:     "#4a2082",
+  roxoVivo: "#7c3aed",
+  azul:     "#1e36f8",
+  vermelho: "#e84025",
+  ciano:    "#70cae4",
+  verde:    "#22c55e",
+} as const;
+
+const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+
+// ─── LOGOS OFICIAIS DAS PLATAFORMAS (Simple Icons CDN) ───────────────────────
+const PLAT_LOGO: Record<string, string> = {
+  Twitch:    "https://cdn.simpleicons.org/twitch/9146FF",
+  YouTube:   "https://cdn.simpleicons.org/youtube/FF0000",
+  Instagram: "https://cdn.simpleicons.org/instagram/E1306C",
+  TikTok:    "https://cdn.simpleicons.org/tiktok/000000",
+  Kick:      "https://cdn.simpleicons.org/kick/53FC18",
+};
+
+// TikTok precisa de cor branca no dark mode
+const PLAT_LOGO_DARK: Record<string, string> = {
+  ...PLAT_LOGO,
+  TikTok: "https://cdn.simpleicons.org/tiktok/FFFFFF",
+};
 
 const PLAT_COLOR: Record<string, string> = {
   Twitch:    "#9146ff",
@@ -18,10 +47,11 @@ const PLAT_COLOR: Record<string, string> = {
   Kick:      "#53fc18",
 };
 
+// ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
-  agendada:      "#1e36f8",
-  realizada:     "#27ae60",
-  nao_realizada: "#e94025",
+  agendada:      BRAND.azul,
+  realizada:     BRAND.verde,
+  nao_realizada: BRAND.vermelho,
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -29,6 +59,9 @@ const STATUS_LABEL: Record<string, string> = {
   realizada:     "Realizada",
   nao_realizada: "Não Realizada",
 };
+
+// ─── CALENDÁRIO ───────────────────────────────────────────────────────────────
+type ViewMode = "mes" | "semana" | "dia";
 
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const DAYS   = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -56,12 +89,28 @@ function toISO(d: Date) {
   return d.toISOString().split("T")[0];
 }
 
-// ── Dropdown single-select (Visualização) ─────────────────────────────────
+// ─── LOGO COMPONENTE ─────────────────────────────────────────────────────────
+function PlatLogo({ plataforma, size = 18, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
+  const [err, setErr] = useState(false);
+  const src = isDark ? (PLAT_LOGO_DARK[plataforma] ?? PLAT_LOGO[plataforma]) : PLAT_LOGO[plataforma];
+  if (err || !src) {
+    return <span style={{ fontSize: size * 0.7, color: PLAT_COLOR[plataforma] ?? "#fff" }}>●</span>;
+  }
+  return (
+    <img
+      src={src} alt={plataforma} width={size} height={size}
+      onError={() => setErr(true)}
+      style={{ display: "block", flexShrink: 0 }}
+    />
+  );
+}
+
+// ─── SINGLE DROPDOWN (Visualização) ──────────────────────────────────────────
 interface SingleDropdownProps {
   value: string;
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
-  icon?: string;
+  icon?: React.ReactNode;
   t: any;
 }
 
@@ -84,26 +133,26 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
       <button
         onClick={() => setOpen(!open)}
         style={{
-          padding: "6px 14px", borderRadius: "20px",
-          border: `1.5px solid ${BASE_COLORS.purple}`,
-          background: `${BASE_COLORS.purple}22`,
-          color: BASE_COLORS.purple,
-          fontSize: "12px", fontWeight: 600, fontFamily: FONT.body,
+          padding: "6px 14px", borderRadius: 20,
+          border: `1.5px solid ${BRAND.roxoVivo}`,
+          background: `${BRAND.roxoVivo}22`,
+          color: BRAND.roxoVivo,
+          fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
           cursor: "pointer", outline: "none",
-          display: "flex", alignItems: "center", gap: "6px",
+          display: "flex", alignItems: "center", gap: 6,
           whiteSpace: "nowrap" as const,
         }}
       >
-        {icon && <span>{icon}</span>}
+        {icon && <span style={{ display: "flex", alignItems: "center" }}>{icon}</span>}
         {current?.label}
-        <span style={{ fontSize: "9px", opacity: 0.7 }}>{open ? "▲" : "▼"}</span>
+        <span style={{ fontSize: 9, opacity: 0.7 }}>{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 200,
           background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-          borderRadius: "12px", padding: "8px", minWidth: "130px",
+          borderRadius: 12, padding: 8, minWidth: 130,
           boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
         }}>
           {options.map(opt => {
@@ -113,22 +162,22 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
                 key={opt.value}
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 style={{
-                  width: "100%", padding: "8px 12px", borderRadius: "8px",
+                  width: "100%", padding: "8px 12px", borderRadius: 8,
                   border: "none",
-                  background: selected ? `${BASE_COLORS.purple}22` : "transparent",
-                  color: selected ? BASE_COLORS.purple : t.text,
-                  fontSize: "12px", fontFamily: FONT.body,
+                  background: selected ? `${BRAND.roxoVivo}22` : "transparent",
+                  color: selected ? BRAND.roxoVivo : t.text,
+                  fontSize: 12, fontFamily: FONT.body,
                   cursor: "pointer", textAlign: "left",
-                  display: "flex", alignItems: "center", gap: "8px",
+                  display: "flex", alignItems: "center", gap: 8,
                   fontWeight: selected ? 700 : 400,
                 }}
               >
                 <span style={{
-                  width: "14px", height: "14px", borderRadius: "50%", flexShrink: 0,
-                  border: `1.5px solid ${selected ? BASE_COLORS.purple : t.cardBorder}`,
-                  background: selected ? BASE_COLORS.purple : "transparent",
+                  width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+                  border: `1.5px solid ${selected ? BRAND.roxoVivo : t.cardBorder}`,
+                  background: selected ? BRAND.roxoVivo : "transparent",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "8px", color: "#fff",
+                  fontSize: 8, color: "#fff",
                 }}>
                   {selected ? "●" : ""}
                 </span>
@@ -142,9 +191,9 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
   );
 }
 
-// ── Componente Principal ──────────────────────────────────────────────────
+// ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
-  const { theme: t, user, isDark } = useApp();
+  const { theme: t, isDark } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
   const perm = usePermission("agenda");
 
@@ -157,14 +206,14 @@ export default function Agenda() {
   const [filterStatus,      setFilterStatus]      = useState<string | null>(null);
   const [filterPlat,        setFilterPlat]        = useState<string | null>(null);
   const [filterInfluencers, setFilterInfluencers] = useState<string[]>([]);
-  const [filterOperadora,    setFilterOperadora]   = useState<string>("todas");
+  const [filterOperadora,   setFilterOperadora]   = useState<string>("todas");
   const [influencerList,    setInfluencerList]    = useState<{ id: string; name: string }[]>([]);
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
 
   const hasActiveFilters = filterStatus !== null || filterPlat !== null || filterInfluencers.length > 0 || filterOperadora !== "todas";
 
-  const influencerListVisiveis = useMemo(() =>
-    influencerList.filter((i) => podeVerInfluencer(i.id)),
+  const influencerListVisiveis = useMemo(
+    () => influencerList.filter((i) => podeVerInfluencer(i.id)),
     [influencerList, podeVerInfluencer]
   );
   const showInfluencerName = influencerListVisiveis.length > 1;
@@ -176,30 +225,23 @@ export default function Agenda() {
       .select("*, profiles!lives_influencer_id_fkey(name)")
       .order("data",    { ascending: true })
       .order("horario", { ascending: true });
-
     if (!error && data) {
-      const mapped = data.map((l: any) => ({
-        ...l,
-        influencer_name: l.profiles?.name,
-      }));
-      const visiveis = mapped.filter((l: Live) => podeVerInfluencer(l.influencer_id));
-      setLives(visiveis);
+      const mapped = data.map((l: any) => ({ ...l, influencer_name: l.profiles?.name }));
+      setLives(mapped.filter((l: Live) => podeVerInfluencer(l.influencer_id)));
     }
     setLoading(false);
   }
 
-  useEffect(() => {
-    loadLives();
-  }, [podeVerInfluencer]);
+  useEffect(() => { loadLives(); }, [podeVerInfluencer]);
 
   useEffect(() => {
     if (showFiltroInfluencer || showFiltroOperadora) {
       Promise.all([
         showFiltroInfluencer ? supabase.from("profiles").select("id, name").eq("role", "influencer").order("name") : Promise.resolve({ data: [] }),
-        showFiltroOperadora ? supabase.from("operadoras").select("slug, nome").order("nome") : Promise.resolve({ data: [] }),
+        showFiltroOperadora  ? supabase.from("operadoras").select("slug, nome").order("nome") : Promise.resolve({ data: [] }),
       ]).then(([profRes, opsRes]) => {
         if (showFiltroInfluencer && profRes.data) setInfluencerList(profRes.data);
-        if (showFiltroOperadora) setOperadorasList((opsRes.data ?? []) as { slug: string; nome: string }[]);
+        if (showFiltroOperadora)  setOperadorasList((opsRes.data ?? []) as { slug: string; nome: string }[]);
       });
     }
   }, [showFiltroInfluencer, showFiltroOperadora]);
@@ -211,9 +253,7 @@ export default function Agenda() {
       if (filterStatus && l.status !== filterStatus) return false;
       if (filterPlat   && l.plataforma !== filterPlat) return false;
       if (filterInfluencers.length > 0 && !filterInfluencers.includes(l.influencer_id)) return false;
-      if (filterOperadora !== "todas") {
-        if (l.operadora_slug !== filterOperadora) return false;
-      }
+      if (filterOperadora !== "todas" && l.operadora_slug !== filterOperadora) return false;
       return true;
     });
   }
@@ -243,76 +283,107 @@ export default function Agenda() {
     return `${current.getDate()} ${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
   }
 
+  // ── Estilos de dia por estado ────────────────────────────────────────────────
+  function dayStyle(date: Date, todayISO: string): React.CSSProperties {
+    const iso = toISO(date);
+    if (iso === todayISO) return {
+      border: `1.5px solid ${BRAND.azul}55`,
+      background: isDark ? "rgba(30,54,248,0.10)" : "rgba(30,54,248,0.06)",
+    };
+    if (iso < todayISO) return {
+      border: `1.5px solid rgba(232,64,37,0.22)`,
+      background: isDark ? "rgba(232,64,37,0.07)" : "rgba(232,64,37,0.04)",
+    };
+    return {
+      border: `1.5px solid rgba(34,197,94,0.22)`,
+      background: isDark ? "rgba(34,197,94,0.07)" : "rgba(34,197,94,0.04)",
+    };
+  }
+
+  function dayNumberColor(date: Date, todayISO: string) {
+    const iso = toISO(date);
+    if (iso === todayISO) return BRAND.azul;
+    if (iso < todayISO)   return isDark ? "rgba(232,64,37,0.65)"  : "rgba(232,64,37,0.75)";
+    return                       isDark ? "rgba(34,197,94,0.75)"  : "rgba(34,197,94,0.85)";
+  }
+
   const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "20px",
+    background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20,
   };
-  const chip = (active: boolean, color = BASE_COLORS.purple): React.CSSProperties => ({
-    padding: "6px 14px", borderRadius: "20px", fontSize: "12px", fontWeight: 600,
+
+  const chipBase = (active: boolean, color = BRAND.roxoVivo): React.CSSProperties => ({
+    padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
     cursor: "pointer", border: `1.5px solid ${active ? color : t.cardBorder}`,
-    background: active ? `${color}22` : t.inputBg, color: active ? color : t.textMuted,
+    background: active ? `${color}22` : t.inputBg ?? t.cardBg,
+    color: active ? color : t.textMuted,
     fontFamily: FONT.body, transition: "all 0.15s",
   });
 
+  // ── Chip de live no calendário ───────────────────────────────────────────────
   function LiveChip({ live }: { live: Live }) {
     return (
-      <div onClick={() => setModal({ open: true, live })}
-        style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 8px", borderRadius: "8px", cursor: "pointer", background: `${PLAT_COLOR[live.plataforma]}22`, border: `1px solid ${PLAT_COLOR[live.plataforma]}55`, marginBottom: "3px" }}>
-        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: STATUS_COLOR[live.status], flexShrink: 0 }} />
-        <span style={{ fontSize: "11px", color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {live.horario.slice(0, 5)} {showInfluencerName ? `· ${live.influencer_name}` : ""}
+      <div
+        onClick={() => setModal({ open: true, live })}
+        style={{
+          display: "flex", alignItems: "center", gap: 5,
+          padding: "3px 6px", borderRadius: 7, cursor: "pointer",
+          background: `${PLAT_COLOR[live.plataforma]}22`,
+          border: `1px solid ${PLAT_COLOR[live.plataforma]}44`,
+          marginBottom: 3,
+        }}
+      >
+        <span style={{
+          width: 7, height: 7, borderRadius: "50%",
+          background: STATUS_COLOR[live.status], flexShrink: 0,
+        }} />
+        <span style={{ fontSize: 10, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {live.horario.slice(0, 5)}{showInfluencerName ? ` · ${live.influencer_name}` : ""}
         </span>
       </div>
     );
   }
 
-  function dayStyle(date: Date, todayISO: string): React.CSSProperties {
-    const iso = toISO(date);
-    if (iso === todayISO) return { border: `1.5px solid ${BASE_COLORS.blue}`,      background: isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.85)" };
-    if (iso < todayISO)   return { border: `1.5px solid rgba(233,64,37,0.2)`,       background: isDark ? "rgba(233,64,37,0.07)"   : "rgba(233,64,37,0.05)"   };
-    return                       { border: `1.5px solid rgba(39,174,96,0.2)`,       background: isDark ? "rgba(39,174,96,0.07)"   : "rgba(39,174,96,0.05)"   };
-  }
-
-  function dayNumberColor(date: Date, todayISO: string) {
-    const iso = toISO(date);
-    if (iso === todayISO) return BASE_COLORS.blue;
-    if (iso < todayISO)   return isDark ? "rgba(233,64,37,0.6)"  : "rgba(233,64,37,0.7)";
-    return                       isDark ? "rgba(39,174,96,0.7)"  : "rgba(39,174,96,0.8)";
-  }
-
+  // ── View Mês ─────────────────────────────────────────────────────────────────
   function ViewMes() {
     const cells    = getMonthDays(current.getFullYear(), current.getMonth());
     const todayISO = toISO(new Date());
     return (
       <div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", marginBottom: "4px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
           {DAYS.map(d => (
-            <div key={d} style={{ textAlign: "center", fontSize: "11px", fontWeight: 700, color: t.textMuted, padding: "8px 0", fontFamily: FONT.body }}>{d}</div>
+            <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: t.textMuted, padding: "8px 0", fontFamily: FONT.body }}>
+              {d}
+            </div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "110px", gap: "4px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "110px", gap: 4 }}>
           {cells.map((date, i) => {
-            if (!date) return <div key={i} style={{ minHeight: 0 }} />;
+            if (!date) return <div key={i} />;
             const dayLives = livesForDay(date);
-            const count    = dayLives.length;
             return (
-              <div key={i} onClick={() => { setCurrent(date); setView("dia"); }}
+              <div
+                key={i}
+                onClick={() => { setCurrent(date); setView("dia"); }}
                 style={{
-                  height: "110px", maxHeight: "110px",
-                  padding: "6px", borderRadius: "10px", cursor: "pointer", transition: "background 0.15s",
-                  display: "flex", flexDirection: "column", overflow: "hidden", boxSizing: "border-box",
+                  height: 110, padding: 6, borderRadius: 10, cursor: "pointer",
+                  display: "flex", flexDirection: "column", overflow: "hidden",
+                  boxSizing: "border-box", transition: "background 0.15s",
                   ...dayStyle(date, todayISO),
-                }}>
+                }}
+              >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-                  <span style={{ fontSize: "13px", fontWeight: toISO(date) === todayISO ? 700 : 400, color: dayNumberColor(date, todayISO), fontFamily: FONT.body }}>{date.getDate()}</span>
-                  {count > 0 && (
-                    <span style={{ fontSize: "10px", fontWeight: 700, color: "#fff", background: BASE_COLORS.blue, borderRadius: "10px", padding: "1px 6px", fontFamily: FONT.body }}>
-                      {count}
+                  <span style={{ fontSize: 13, fontWeight: toISO(date) === todayISO ? 700 : 400, color: dayNumberColor(date, todayISO), fontFamily: FONT.body }}>
+                    {date.getDate()}
+                  </span>
+                  {dayLives.length > 0 && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: BRAND.azul, borderRadius: 10, padding: "1px 6px", fontFamily: FONT.body }}>
+                      {dayLives.length}
                     </span>
                   )}
                 </div>
-                <div style={{ marginTop: "4px", flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch" }}>
+                <div style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}>
                   {dayLives.slice(0, 3).map(l => <LiveChip key={l.id} live={l} />)}
-                  {dayLives.length > 3 && <span style={{ fontSize: "10px", color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 3}</span>}
+                  {dayLives.length > 3 && <span style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 3}</span>}
                 </div>
               </div>
             );
@@ -322,27 +393,31 @@ export default function Agenda() {
     );
   }
 
+  // ── View Semana ──────────────────────────────────────────────────────────────
   function ViewSemana() {
     const week     = getWeekDays(current);
     const todayISO = toISO(new Date());
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
         {week.map((date, i) => {
           const dayLives = livesForDay(date);
-          const count    = dayLives.length;
           return (
-            <div key={i} style={{ borderRadius: "12px", padding: "10px 8px", minHeight: "200px", ...dayStyle(date, todayISO) }}>
-              <div style={{ textAlign: "center", marginBottom: "8px" }}>
-                <div style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{DAYS[date.getDay()]}</div>
-                <div style={{ fontSize: "20px", fontWeight: 700, color: dayNumberColor(date, todayISO), fontFamily: FONT.title }}>{date.getDate()}</div>
-                {count > 0 && (
-                  <div style={{ fontSize: "10px", fontWeight: 700, color: "#fff", background: BASE_COLORS.blue, borderRadius: "10px", padding: "1px 8px", display: "inline-block", fontFamily: FONT.body, marginTop: "2px" }}>
-                    {count} live{count > 1 ? "s" : ""}
+            <div key={i} style={{ borderRadius: 12, padding: "10px 8px", minHeight: 200, ...dayStyle(date, todayISO) }}>
+              <div style={{ textAlign: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{DAYS[date.getDay()]}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: dayNumberColor(date, todayISO), fontFamily: FONT_TITLE }}>
+                  {date.getDate()}
+                </div>
+                {dayLives.length > 0 && (
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: BRAND.azul, borderRadius: 10, padding: "1px 8px", display: "inline-block", fontFamily: FONT.body, marginTop: 2 }}>
+                    {dayLives.length} live{dayLives.length > 1 ? "s" : ""}
                   </div>
                 )}
               </div>
               {dayLives.map(l => <LiveChip key={l.id} live={l} />)}
-              {dayLives.length === 0 && <div style={{ fontSize: "11px", color: t.textMuted, textAlign: "center", marginTop: "12px", fontFamily: FONT.body }}>—</div>}
+              {dayLives.length === 0 && (
+                <div style={{ fontSize: 11, color: t.textMuted, textAlign: "center", marginTop: 12, fontFamily: FONT.body }}>—</div>
+              )}
             </div>
           );
         })}
@@ -350,46 +425,93 @@ export default function Agenda() {
     );
   }
 
+  // ── View Dia ─────────────────────────────────────────────────────────────────
   function ViewDia() {
     const dayLives = livesForDay(current);
     const todayISO = toISO(new Date());
     const isToday  = toISO(current) === todayISO;
-    const count    = dayLives.length;
+
     return (
       <div>
-        <div style={{ textAlign: "center", marginBottom: "20px" }}>
-          <span style={{ fontSize: "32px", fontWeight: 900, color: isToday ? BASE_COLORS.blue : t.text, fontFamily: FONT.title }}>{current.getDate()}</span>
-          <span style={{ fontSize: "16px", color: t.textMuted, marginLeft: "8px", fontFamily: FONT.body }}>{DAYS[current.getDay()]}</span>
-          {count > 0 && (
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#fff", background: BASE_COLORS.blue, borderRadius: "12px", padding: "2px 10px", marginLeft: "10px", fontFamily: FONT.body }}>
-              {count} live{count > 1 ? "s" : ""}
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <span style={{ fontSize: 32, fontWeight: 900, color: isToday ? BRAND.azul : t.text, fontFamily: FONT_TITLE }}>
+            {current.getDate()}
+          </span>
+          <span style={{ fontSize: 16, color: t.textMuted, marginLeft: 8, fontFamily: FONT.body }}>
+            {DAYS[current.getDay()]}
+          </span>
+          {dayLives.length > 0 && (
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: BRAND.azul, borderRadius: 12, padding: "2px 10px", marginLeft: 10, fontFamily: FONT.body }}>
+              {dayLives.length} live{dayLives.length > 1 ? "s" : ""}
             </span>
           )}
         </div>
+
         {dayLives.length === 0 ? (
-          <div style={{ textAlign: "center", color: t.textMuted, fontSize: "14px", padding: "40px 0", fontFamily: FONT.body }}>
+          <div style={{ textAlign: "center", color: t.textMuted, fontSize: 14, padding: "40px 0", fontFamily: FONT.body }}>
             Nenhuma live agendada para este dia.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {dayLives.map(l => (
-              <div key={l.id} onClick={() => setModal({ open: true, live: l })}
-                style={{ padding: "16px", borderRadius: "12px", cursor: "pointer", border: `1.5px solid ${PLAT_COLOR[l.plataforma]}55`, background: `${PLAT_COLOR[l.plataforma]}11`, display: "flex", alignItems: "center", gap: "14px" }}>
-                <div style={{ width: "48px", height: "48px", borderRadius: "10px", background: PLAT_COLOR[l.plataforma], display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0 }}>
-                  {l.plataforma === "Twitch" ? "🟣" : l.plataforma === "YouTube" ? "▶️" : l.plataforma === "Instagram" ? "📸" : l.plataforma === "TikTok" ? "🎵" : "🟢"}
+              <div
+                key={l.id}
+                onClick={() => setModal({ open: true, live: l })}
+                style={{
+                  padding: 16, borderRadius: 12, cursor: "pointer",
+                  border: `1.5px solid ${PLAT_COLOR[l.plataforma]}44`,
+                  background: `${PLAT_COLOR[l.plataforma]}0d`,
+                  display: "flex", alignItems: "center", gap: 14,
+                }}
+              >
+                {/* Ícone da plataforma — logo SVG oficial */}
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                  background: `${PLAT_COLOR[l.plataforma]}22`,
+                  border: `1.5px solid ${PLAT_COLOR[l.plataforma]}44`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <PlatLogo plataforma={l.plataforma} size={22} isDark={isDark ?? false} />
                 </div>
+
                 <div style={{ flex: 1 }}>
-                  {showInfluencerName && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{l.influencer_name}</div>}
-                  <div style={{ display: "flex", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "11px", background: `${PLAT_COLOR[l.plataforma]}33`, color: PLAT_COLOR[l.plataforma], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{l.plataforma}</span>
-                    <span style={{ fontSize: "11px", background: `${STATUS_COLOR[l.status]}22`, color: STATUS_COLOR[l.status], padding: "2px 8px", borderRadius: "20px", fontFamily: FONT.body }}>{STATUS_LABEL[l.status]}</span>
-                    <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>🕐 {l.horario.slice(0, 5)}</span>
+                  {showInfluencerName && (
+                    <div style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>
+                      {l.influencer_name}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    {/* Badge plataforma */}
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      fontSize: 11, background: `${PLAT_COLOR[l.plataforma]}22`,
+                      color: PLAT_COLOR[l.plataforma], padding: "3px 9px",
+                      borderRadius: 20, fontFamily: FONT.body, fontWeight: 600,
+                    }}>
+                      <PlatLogo plataforma={l.plataforma} size={11} isDark={isDark ?? false} />
+                      {l.plataforma}
+                    </span>
+                    {/* Badge status */}
+                    <span style={{
+                      fontSize: 11, background: `${STATUS_COLOR[l.status]}22`,
+                      color: STATUS_COLOR[l.status], padding: "3px 9px",
+                      borderRadius: 20, fontFamily: FONT.body, fontWeight: 600,
+                      border: `1px solid ${STATUS_COLOR[l.status]}44`,
+                    }}>
+                      {STATUS_LABEL[l.status]}
+                    </span>
+                    {/* Horário */}
+                    <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                      🕐 {l.horario.slice(0, 5)}
+                    </span>
                   </div>
                   {l.link && (
-                    <a href={l.link.startsWith("http") ? l.link : `https://${l.link}`}
+                    <a
+                      href={l.link.startsWith("http") ? l.link : `https://${l.link}`}
                       target="_blank" rel="noopener noreferrer"
                       onClick={e => e.stopPropagation()}
-                      style={{ display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "6px", fontSize: "11px", color: BASE_COLORS.blue, fontFamily: FONT.body, textDecoration: "none", wordBreak: "break-all" }}>
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 11, color: BRAND.azul, fontFamily: FONT.body, textDecoration: "none", wordBreak: "break-all" }}
+                    >
                       🔗 {l.link}
                     </a>
                   )}
@@ -417,49 +539,81 @@ export default function Agenda() {
   }
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1100px", margin: "0 auto" }}>
+    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
 
       {/* ── HEADER ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-        <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: 0 }}>
-          🎥 Agenda de Lives
-        </h1>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        {/* Título — padrão NHD Bold + ícone container */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            width: 32, height: 32, borderRadius: 9,
+            background: "rgba(74,32,130,0.18)",
+            border: "1px solid rgba(74,32,130,0.30)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: BRAND.ciano, flexShrink: 0,
+          }}>
+            <GiFilmProjector size={16} />
+          </span>
+          <h1 style={{
+            fontSize: 18, fontWeight: 800, color: t.text,
+            fontFamily: FONT_TITLE, margin: 0,
+            letterSpacing: "0.05em", textTransform: "uppercase",
+          }}>
+            Agenda de Lives
+          </h1>
+        </div>
+
+        {/* Botão Nova Live — gradiente oficial */}
         {perm.canCriarOk && (
-          <button onClick={() => setModal({ open: true })}
-            style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
+          <button
+            onClick={() => setModal({ open: true })}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "10px 20px", borderRadius: 10, border: "none",
+              cursor: "pointer",
+              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
+            }}
+          >
+            <GiFilmProjector size={14} />
             + Nova Live
           </button>
         )}
       </div>
 
       {/* ── CARD DE CONTROLES ── */}
-      <div style={{ ...card, marginBottom: "16px" }}>
+      <div style={{ ...card, marginBottom: 16 }}>
 
-        {/* LINHA DE NAVEGAÇÃO */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-          <button onClick={prev} style={{ ...chip(false), padding: "6px 12px" }}>‹</button>
-          <span style={{ fontSize: "15px", fontWeight: 700, color: t.text, fontFamily: FONT.title, minWidth: "180px", textAlign: "center" }}>
+        {/* Linha de navegação */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+          {/* Setas */}
+          <button onClick={prev} style={{ ...chipBase(false), padding: "6px 10px", display: "flex", alignItems: "center" }}>
+            <ChevronLeft size={14} />
+          </button>
+          <span style={{ fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, minWidth: 180, textAlign: "center" }}>
             {headerTitle()}
           </span>
-          <button onClick={next} style={{ ...chip(false), padding: "6px 12px" }}>›</button>
+          <button onClick={next} style={{ ...chipBase(false), padding: "6px 10px", display: "flex", alignItems: "center" }}>
+            <ChevronRight size={14} />
+          </button>
 
-          <div style={{ width: "1px", height: "22px", background: t.divider, flexShrink: 0, margin: "0 2px" }} />
+          <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
 
-          <button onClick={goToday} style={chip(false)}>Hoje</button>
+          <button onClick={goToday} style={chipBase(false)}>Hoje</button>
 
-          <div style={{ width: "1px", height: "22px", background: t.divider, flexShrink: 0, margin: "0 2px" }} />
+          <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
 
           <SingleDropdown
             value={view}
             options={VIEW_OPTIONS}
             onChange={v => setView(v as ViewMode)}
-            icon="📅"
+            icon={<GiCalendar size={13} />}
             t={t}
           />
 
           {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
             <>
-              <div style={{ width: "1px", height: "22px", background: t.divider, flexShrink: 0, margin: "0 2px" }} />
+              <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
               <InfluencerMultiSelect
                 selected={filterInfluencers}
                 onChange={setFilterInfluencers}
@@ -468,100 +622,113 @@ export default function Agenda() {
               />
             </>
           )}
+
           {showFiltroOperadora && operadorasList.length > 0 && (
             <>
-              <div style={{ width: "1px", height: "22px", background: t.divider, flexShrink: 0, margin: "0 2px" }} />
-              <select
-                value={filterOperadora}
-                onChange={(e) => setFilterOperadora(e.target.value)}
-                style={{
-                  padding: "6px 14px", borderRadius: "20px",
-                  border: `1.5px solid ${filterOperadora !== "todas" ? BASE_COLORS.purple : t.cardBorder}`,
-                  background: filterOperadora !== "todas" ? `${BASE_COLORS.purple}22` : t.inputBg,
-                  color: filterOperadora !== "todas" ? BASE_COLORS.purple : t.textMuted,
-                  fontSize: "12px", fontWeight: 600, fontFamily: FONT.body,
-                  cursor: "pointer", outline: "none",
-                }}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList.filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug)).map((o) => (
-                  <option key={o.slug} value={o.slug}>{o.nome}</option>
-                ))}
-              </select>
+              <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                  <GiShield size={13} />
+                </span>
+                <select
+                  value={filterOperadora}
+                  onChange={(e) => setFilterOperadora(e.target.value)}
+                  style={{
+                    padding: "6px 14px 6px 30px", borderRadius: 20,
+                    border: `1.5px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
+                    background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg),
+                    color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                    fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
+                    cursor: "pointer", outline: "none", appearance: "none",
+                  }}
+                >
+                  <option value="todas">Todas as operadoras</option>
+                  {operadorasList
+                    .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+                </select>
+              </div>
             </>
           )}
         </div>
 
-        {/* ── LEGENDAS / FILTROS ── */}
+        {/* Legendas / Filtros */}
         <div style={{
-          paddingTop: "14px", borderTop: `1px solid ${t.divider}`,
-          display: "flex", flexDirection: "column", alignItems: "center", gap: "10px",
+          paddingTop: 14, borderTop: `1px solid ${t.cardBorder}`,
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
         }}>
 
-          {/* STATUS */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
-            <span style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
+          {/* Status */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
               Status
             </span>
             {Object.entries(STATUS_COLOR).map(([status, color]) => {
               const active = filterStatus === status;
               return (
-                <button key={status} onClick={() => setFilterStatus(prev => prev === status ? null : status)}
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(prev => prev === status ? null : status)}
                   style={{
-                    display: "flex", alignItems: "center", gap: "6px",
-                    padding: "4px 10px", borderRadius: "20px", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "4px 10px", borderRadius: 20, cursor: "pointer",
                     border: `1.5px solid ${active ? color : color + "55"}`,
                     background: active ? `${color}22` : "transparent",
                     transition: "all 0.15s",
-                  }}>
-                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: color, flexShrink: 0, display: "inline-block" }} />
-                  <span style={{ fontSize: "11px", color: active ? color : t.textMuted, fontWeight: active ? 700 : 400, fontFamily: FONT.body }}>
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: active ? color : t.textMuted, fontWeight: active ? 700 : 400, fontFamily: FONT.body }}>
                     {STATUS_LABEL[status]}
                   </span>
-                  {active && <span style={{ fontSize: "9px", color }}>✕</span>}
+                  {active && <span style={{ fontSize: 9, color }}>✕</span>}
                 </button>
               );
             })}
           </div>
 
-          {/* PLATAFORMA */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
-            <span style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
+          {/* Plataforma — com logos SVG */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
               Plataforma
             </span>
             {Object.entries(PLAT_COLOR).map(([plat, color]) => {
               const active = filterPlat === plat;
               return (
-                <button key={plat} onClick={() => setFilterPlat(prev => prev === plat ? null : plat)}
+                <button
+                  key={plat}
+                  onClick={() => setFilterPlat(prev => prev === plat ? null : plat)}
                   style={{
-                    padding: "4px 10px", borderRadius: "20px", cursor: "pointer",
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "4px 10px", borderRadius: 20, cursor: "pointer",
                     border: `1.5px solid ${active ? color : color + "55"}`,
                     background: active ? `${color}22` : `${color}11`,
                     color: active ? color : color + "cc",
-                    fontSize: "11px", fontWeight: active ? 700 : 500,
-                    fontFamily: FONT.body,
-                    display: "flex", alignItems: "center", gap: "4px",
-                    transition: "all 0.15s",
-                  }}>
+                    fontSize: 11, fontWeight: active ? 700 : 500,
+                    fontFamily: FONT.body, transition: "all 0.15s",
+                  }}
+                >
+                  <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
                   {plat}
-                  {active && <span style={{ fontSize: "9px" }}>✕</span>}
+                  {active && <span style={{ fontSize: 9 }}>✕</span>}
                 </button>
               );
             })}
           </div>
 
-          {/* LIMPAR FILTROS */}
+          {/* Limpar filtros */}
           {hasActiveFilters && (
             <button
               onClick={() => { setFilterStatus(null); setFilterPlat(null); setFilterInfluencers([]); setFilterOperadora("todas"); }}
               style={{
-                padding: "5px 16px", borderRadius: "20px",
-                border: `1px solid ${BASE_COLORS.red}44`,
-                background: `${BASE_COLORS.red}11`,
-                color: BASE_COLORS.red,
-                fontSize: "11px", fontWeight: 600,
+                padding: "5px 16px", borderRadius: 20,
+                border: `1px solid ${BRAND.vermelho}44`,
+                background: `${BRAND.vermelho}11`,
+                color: BRAND.vermelho,
+                fontSize: 11, fontWeight: 600,
                 fontFamily: FONT.body, cursor: "pointer",
-              }}>
+              }}
+            >
               ✕ Limpar filtros
             </button>
           )}
@@ -571,7 +738,7 @@ export default function Agenda() {
       {/* ── CALENDÁRIO ── */}
       <div style={card}>
         {loading ? (
-          <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
+          <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body }}>
             Carregando...
           </div>
         ) : (
