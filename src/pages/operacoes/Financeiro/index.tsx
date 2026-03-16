@@ -88,6 +88,22 @@ function periodoDoMes(mes: string): { inicio: string; fim: string } | null {
   return { inicio: `${mes}-01`, fim: `${mes}-${String(ultimo).padStart(2, "0")}` };
 }
 
+/** Retorna o ciclo (quinta a quarta) ao qual uma data pertence */
+function cicloSemanalParaData(dataStr: string): { data_inicio: string; data_fim: string } | null {
+  if (!dataStr || dataStr.length < 10) return null;
+  const d = new Date(dataStr + "T12:00:00");
+  if (isNaN(d.getTime())) return null;
+  const day = d.getDay();
+  const diff = day >= 4 ? day - 4 : day + 3;
+  const quinta = new Date(d);
+  quinta.setDate(quinta.getDate() - diff);
+  const quarta = new Date(quinta);
+  quarta.setDate(quarta.getDate() + 6);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (x: Date) => `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
+  return { data_inicio: fmt(quinta), data_fim: fmt(quarta) };
+}
+
 function cicloAberto(ciclo: CicloPagamento): boolean {
   if (ciclo.fechado_em) return false;
   const hoje = new Date();
@@ -1454,8 +1470,44 @@ export default function Financeiro() {
       .from("ciclos_pagamento")
       .select("*")
       .order("data_inicio", { ascending: false });
-    setCiclos(data ?? []);
+    const ciclosExistentes = data ?? [];
+    if (ciclosExistentes.length === 0) {
+      const criados = await criarCiclosAutomaticamente();
+      setCiclos(criados);
+    } else {
+      setCiclos(ciclosExistentes);
+    }
     setLoading(false);
+  }
+
+  async function criarCiclosAutomaticamente(): Promise<CicloPagamento[]> {
+    const { data: lives } = await supabase
+      .from("lives")
+      .select("data")
+      .eq("status", "realizada")
+      .not("data", "is", null);
+    if (!lives?.length) return [];
+
+    const ciclosUnicos = new Map<string, { data_inicio: string; data_fim: string }>();
+    for (const l of lives as { data: string }[]) {
+      const ciclo = cicloSemanalParaData(l.data);
+      if (ciclo) ciclosUnicos.set(`${ciclo.data_inicio}`, ciclo);
+    }
+    if (ciclosUnicos.size === 0) return [];
+
+    const ciclosParaInserir = Array.from(ciclosUnicos.values()).sort(
+      (a, b) => a.data_inicio.localeCompare(b.data_inicio)
+    );
+
+    const { data: inseridos, error } = await supabase
+      .from("ciclos_pagamento")
+      .insert(ciclosParaInserir)
+      .select("*");
+    if (error) {
+      console.warn("Não foi possível criar ciclos automaticamente:", error.message);
+      return [];
+    }
+    return (inseridos ?? []).sort((a, b) => (b.data_inicio || "").localeCompare(a.data_inicio || ""));
   }
 
   if (perm.canView === "nao") {
@@ -1481,11 +1533,24 @@ export default function Financeiro() {
     return (
       <div style={{ padding: "28px 32px", maxWidth: "900px", margin: "0 auto" }}>
         <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
-        <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
+        <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos de influencers.</p>
         <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
           <div style={{ fontSize: "40px", marginBottom: "16px" }}>📅</div>
           <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>Nenhum ciclo cadastrado</p>
-          <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Crie o primeiro ciclo de pagamento no Supabase para começar.</p>
+          <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
+            Os ciclos são criados automaticamente a partir das lives realizadas. Se você já tem lives de dez/25 ou outro mês marcadas como realizadas e nada aparece, execute no Supabase SQL Editor: <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>docs/migration-ciclos-pagamento-insert-policy.sql</code> e depois <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>docs/migration-ciclos-pagamento-seed.sql</code>. Em seguida, recarregue esta página.
+          </p>
+          <button
+            onClick={() => { carregarCiclos(); }}
+            style={{
+              padding: "10px 20px", borderRadius: "10px", border: "none",
+              background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+              color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar novamente
+          </button>
         </div>
       </div>
     );

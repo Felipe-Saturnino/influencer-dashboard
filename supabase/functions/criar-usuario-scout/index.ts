@@ -83,6 +83,7 @@ serve(async (req) => {
   }
 
   const plat = body.plataformas ?? []
+  const cacheHora = Math.max(0, Number(body.cache_negociado) || 0)
 
   try {
     const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
@@ -139,7 +140,7 @@ serve(async (req) => {
         nome_completo: nome,
         status: 'ativo',
         telefone: (body.telefone ?? '').trim() || undefined,
-        cache_hora: body.cache_negociado ?? 0,
+        cache_hora: cacheHora,
         canais: plat.length > 0 ? plat : undefined,
         link_twitch: plat.includes('Twitch') ? (body.link_twitch ?? '') : undefined,
         link_youtube: plat.includes('YouTube') ? (body.link_youtube ?? '') : undefined,
