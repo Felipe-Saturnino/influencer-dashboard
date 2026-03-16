@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import {
   GiPodiumWinner, GiFunnel, GiSpeedometer, GiCalendar,
@@ -368,14 +369,30 @@ export default function DashboardOverviewInfluencer() {
         return data || [];
       }
 
-      const metricas = await buscaMetricas(inicio, fim);
+      let metricas = await buscaMetricas(inicio, fim);
+      const aliasesSinteticas = await buscarMetricasDeAliases({
+        operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+        influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
+        dataInicio: inicio,
+        dataFim: fim,
+      });
+      metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
+
       const lives = await buscaLives(inicio, fim);
       const resultados = await buscaResultados(lives);
 
       const rows = metricas.filter((m) => podeVerInfluencer(m.influencer_id));
       const liveRows = lives.filter((l) => podeVerInfluencer(l.influencer_id));
 
-      const idsComDados = [...new Set([...rows.map((m) => m.influencer_id), ...liveRows.map((l) => l.influencer_id)])];
+      // Incluir influencers com métricas, lives OU aliases mapeados (caso só tenham tráfego via Gestão de Links)
+      let idsComDados = [...new Set([...rows.map((m) => m.influencer_id), ...liveRows.map((l) => l.influencer_id)])];
+      const { data: aliasesMapeados } = await supabase
+        .from("utm_aliases")
+        .select("influencer_id")
+        .eq("status", "mapeado")
+        .not("influencer_id", "is", null);
+      const idsAliases = [...new Set((aliasesMapeados ?? []).map((a: { influencer_id: string }) => a.influencer_id).filter((id) => podeVerInfluencer(id)))];
+      idsComDados = [...new Set([...idsComDados, ...idsAliases])];
       setInfluencersComDadosIds(idsComDados);
 
       function calcTotais(m: Metrica[], l: LiveData[], r: LiveResultado[]): TotaisData {
@@ -418,7 +435,14 @@ export default function DashboardOverviewInfluencer() {
 
       if (!historico && mesSelecionado) {
         const { inicio: iA, fim: fA } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
-        const mA = await buscaMetricas(iA, fA);
+        let mA = await buscaMetricas(iA, fA);
+        const aliasesA = await buscarMetricasDeAliases({
+          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
+          dataInicio: iA,
+          dataFim: fA,
+        });
+        mA = mesclarMetricasComAliases(mA, aliasesA, fA, podeVerInfluencer);
         const lA = await buscaLives(iA, fA);
         const rA = await buscaResultados(lA);
         const rowsA = mA.filter((m) => podeVerInfluencer(m.influencer_id));

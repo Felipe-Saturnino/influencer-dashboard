@@ -139,6 +139,17 @@ async function fetchMetricasReportingAPI(
   return byUtm
 }
 
+/** Obtém métricas por utm_source com fallback case-insensitive (API pode retornar "Ellen" vs "ellen"). */
+function getMetricasPorUtm(cache: Map<string, DailyMetric[]>, utmSource: string): DailyMetric[] {
+  const exact = cache.get(utmSource)
+  if (exact) return exact
+  const u = utmSource.toLowerCase()
+  for (const [key, val] of cache) {
+    if (key.toLowerCase() === u) return val
+  }
+  return []
+}
+
 /** Converte Map<utm, DailyMetric[]> da Reporting API em UtmTotais[] para órfãos. */
 function reportingDataToUtmTotais(
   byUtm: Map<string, DailyMetric[]>,
@@ -689,7 +700,7 @@ serve(async (req: Request) => {
     for (const influencer of (influencers ?? []) as InfluencerPerfil[]) {
       try {
         const metricas = useReportingApi && reportingCache
-          ? (reportingCache.get(influencer.utm_source) ?? [])
+          ? getMetricasPorUtm(reportingCache, influencer.utm_source)
           : await fetchMetricasPorUtm(influencer.utm_source, dataInicio, dataFim, cdaAuth, labelId)
         const { inseridos, erros } = await upsertMetricas(supabase, influencer.id, metricas)
         totalInseridos += inseridos
@@ -733,7 +744,7 @@ serve(async (req: Request) => {
     for (const alias of aliasesNovos) {
       try {
         const metricas = useReportingApi && reportingCache
-          ? (reportingCache.get(alias.utm_source) ?? [])
+          ? getMetricasPorUtm(reportingCache, alias.utm_source)
           : await fetchMetricasPorUtm(alias.utm_source, dataInicio, dataFim, cdaAuth, labelId)
         const { inseridos, erros } = await upsertMetricas(supabase, alias.influencer_id, metricas)
         totalInseridos += inseridos

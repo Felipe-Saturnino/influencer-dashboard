@@ -513,7 +513,14 @@ export default function DashboardOverview() {
         const { data } = await supabase.from("influencer_metricas")
           .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data")
           .gte("data", ini).lte("data", fim);
-        return data || [];
+        const metricas = data || [];
+        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
+        const aliasesSinteticas = await buscarMetricasDeAliases({
+          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          dataInicio: ini,
+          dataFim: fim,
+        });
+        return mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
       }
 
       async function buscaLives(ini: string, fim: string): Promise<LiveData[]> {
@@ -612,7 +619,7 @@ export default function DashboardOverview() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, mesSelecionado, podeVerInfluencer]);
+  }, [historico, idxMes, mesSelecionado, podeVerInfluencer, filtroOperadora]);
 
   // ── RANKING FILTRADO ──────────────────────────────────────────────────────────
   const rankingFiltrado = useMemo(() => {
