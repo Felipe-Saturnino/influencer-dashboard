@@ -216,8 +216,6 @@ export default function Agenda() {
     () => influencerList.filter((i) => podeVerInfluencer(i.id)),
     [influencerList, podeVerInfluencer]
   );
-  const showInfluencerName = influencerListVisiveis.length > 1;
-
   async function loadLives() {
     setLoading(true);
     const { data, error } = await supabase
@@ -337,7 +335,7 @@ export default function Agenda() {
           background: STATUS_COLOR[live.status], flexShrink: 0,
         }} />
         <span style={{ fontSize: 10, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {live.horario.slice(0, 5)}{showInfluencerName ? ` · ${live.influencer_name}` : ""}
+          {live.horario.slice(0, 5)}{live.influencer_name ? ` · ${live.influencer_name}` : ""}
         </span>
       </div>
     );
@@ -475,7 +473,7 @@ export default function Agenda() {
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  {showInfluencerName && (
+                  {l.influencer_name && (
                     <div style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>
                       {l.influencer_name}
                     </div>
