@@ -239,7 +239,7 @@ export default function Scout() {
         const res = await fetch("/api/criar-usuario-scout", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseAnonKey}`, "Apikey": supabaseAnonKey },
-          body: JSON.stringify({ email: (scout.email ?? "").trim(), nome_artistico: (scout.nome_artistico ?? "").trim(), telefone: (scout.telefone ?? "").trim() || undefined, cache_negociado: scout.cache_negociado ?? 0, plataformas: scout.plataformas ?? [], link_twitch: scout.link_twitch ?? "", link_youtube: scout.link_youtube ?? "", link_kick: scout.link_kick ?? "", link_instagram: scout.link_instagram ?? "", link_tiktok: scout.link_tiktok ?? "" }),
+          body: JSON.stringify({ email: (scout.email ?? "").trim(), nome_artistico: (scout.nome_artistico ?? "").trim(), telefone: (scout.telefone ?? "").trim() || undefined, cache_negociado: Math.max(0, Number(scout.cache_negociado) || 0), scout_id: scout.id, plataformas: scout.plataformas ?? [], link_twitch: scout.link_twitch ?? "", link_youtube: scout.link_youtube ?? "", link_kick: scout.link_kick ?? "", link_instagram: scout.link_instagram ?? "", link_tiktok: scout.link_tiktok ?? "" }),
         });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
@@ -753,6 +753,12 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
       if (scout) {
         const { error: err } = await supabase.from("scout_influencer").update(payload).eq("id", scout.id);
         if (err) throw new Error(err.message);
+        // Sincronizar cache para influencer_perfil quando scout já tem user_id e status fechado
+        if (status === "fechado" && scout.user_id) {
+          const cacheHora = Math.max(0, Number(cacheNegociado) || 0);
+          const { error: syncErr } = await supabase.from("influencer_perfil").update({ cache_hora: cacheHora }).eq("id", scout.user_id);
+          if (syncErr) console.warn("[Scout] Falha ao sincronizar cache para influencer_perfil:", syncErr.message);
+        }
       } else {
         const { error: err } = await supabase.from("scout_influencer").insert(payload);
         if (err) throw new Error(err.message);
@@ -783,7 +789,8 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         email: em,
         nome_artistico: nome,
         telefone: (s.telefone ?? "").trim() || undefined,
-        cache_negociado: s.cache_negociado ?? 0,
+        cache_negociado: Math.max(0, Number(s.cache_negociado) || 0),
+        scout_id: s.id ?? undefined,
         plataformas: s.plataformas ?? [],
         link_twitch: s.link_twitch ?? "",
         link_youtube: s.link_youtube ?? "",

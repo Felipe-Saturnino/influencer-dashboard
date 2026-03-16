@@ -9,6 +9,7 @@ interface CriarUsuarioScoutRequest {
   nome_artistico: string
   telefone?: string
   cache_negociado?: number
+  scout_id?: string
   plataformas?: string[]
   link_twitch?: string
   link_youtube?: string
@@ -83,7 +84,17 @@ serve(async (req) => {
   }
 
   const plat = body.plataformas ?? []
-  const cacheHora = Math.max(0, Number(body.cache_negociado) || 0)
+  let cacheHora = Math.max(0, Number(body.cache_negociado) || 0)
+  // Fallback: se cache vier zerado e tiver scout_id, busca direto do banco (cache_negociado → cache_hora)
+  if (cacheHora <= 0 && body.scout_id) {
+    const { data: scoutRow } = await supabase
+      .from('scout_influencer')
+      .select('cache_negociado')
+      .eq('id', body.scout_id)
+      .single()
+    const dbCache = scoutRow?.cache_negociado
+    cacheHora = Math.max(0, Number(dbCache) || 0)
+  }
 
   try {
     const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
