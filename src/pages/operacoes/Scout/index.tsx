@@ -400,7 +400,7 @@ export default function Scout() {
       {!loading && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center", marginBottom: "24px" }}>
           {STATUS_SCOUT_OPTS.map((s) => (
-            <div key={s} style={{ background: t.cardBg, border: `1px solid ${STATUS_SCOUT_COLOR[s]}44`, borderRadius: "14px", padding: "16px 18px", minWidth: "140px" }}>
+            <div key={s} style={{ background: t.cardBg, border: `1px solid ${STATUS_SCOUT_COLOR[s]}44`, borderRadius: 14, padding: "16px 18px", minWidth: 140 }}>
               <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
               <div style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: "4px" }}>{STATUS_SCOUT_LABEL[s]}</div>
             </div>
@@ -492,31 +492,55 @@ export default function Scout() {
       ) : (
         filtered.map((s) => (
           <div key={s.id} style={cardStyle}>
-            <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
-              <div style={{ width: "44px", height: "44px", borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: "16px", fontFamily: FONT.body }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
                 {(s.nome_artistico || "?")[0]?.toUpperCase()}
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", rowGap: "8px", flexWrap: "wrap", marginBottom: "10px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{s.nome_artistico}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, rowGap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{s.nome_artistico}</span>
                   <StatusScoutBadge value={s.status} onChange={(v) => handleStatusChange(s, v)} readonly={!podeAlterarStatus(s)} />
                 </div>
-                {((s.cache_negociado ?? 0) > 0) && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "6px" }}>💰 {formatBRL(s.cache_negociado!)}</div>}
-                <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "6px" }}>Live Cassino: {getLiveCassinoLabel(s.live_cassino)}</div>
+                {((s.cache_negociado ?? 0) > 0) && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
+                    <GiMoneyStack size={12} style={{ color: BRAND.ciano }} /> {formatBRL(s.cache_negociado!)}
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Live Cassino: {getLiveCassinoLabel(s.live_cassino)}</div>
                 {(s.plataformas ?? []).length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "3px", marginBottom: "6px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 6 }}>
                     {(s.plataformas ?? []).map((c) => (
-                      <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", color: PLAT_COLOR[c as Plataforma], fontFamily: FONT.body }}>{PLAT_ICON[c as Plataforma]} {c}</span>
+                      <span key={c} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: PLAT_COLOR[c as Plataforma], fontFamily: FONT.body }}>
+                        <PlatLogo plataforma={c} size={12} isDark={isDark ?? false} /> {c}
+                      </span>
                     ))}
                   </div>
                 )}
-                {getViewsTotal(s) > 0 && <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{getViewsTotal(s).toLocaleString("pt-BR")} views</div>}
+                {getViewsTotal(s) > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                    <GiEyeball size={12} style={{ color: BRAND.ciano }} /> {getViewsTotal(s).toLocaleString("pt-BR")} views
+                  </div>
+                )}
               </div>
             </div>
-            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-              <button onClick={() => setModal({ mode: "visualizar", scout: s })} style={{ padding: "8px 14px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.label, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>👁️ Ver</button>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <button onClick={() => setModal({ mode: "visualizar", scout: s })} style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "8px 14px", borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
+                color: t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+              }}>
+                <Eye size={13} /> Ver
+              </button>
               {podeEditarScout(s) && (
-                <button onClick={() => setModal({ mode: "editar", scout: s })} style={{ padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer", background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>✏️ Editar</button>
+                <button onClick={() => setModal({ mode: "editar", scout: s })} style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
+                  background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                  color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
+                }}>
+                  <Pencil size={13} /> Editar
+                </button>
               )}
             </div>
           </div>
@@ -524,26 +548,26 @@ export default function Scout() {
       )}
 
       {modal?.mode === "visualizar" && modal.scout && (
-        <ModalVisualizar scout={modal.scout} onClose={() => setModal(null)} />
+        <ModalVisualizar scout={modal.scout} onClose={() => setModal(null)} isDark={isDark} />
       )}
       {modal?.mode === "editar" && modal.scout && (
-        <ModalEditar scout={modal.scout} perm={perm} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} />
+        <ModalEditar scout={modal.scout} perm={perm} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} isDark={isDark} />
       )}
       {modalNovo && (
-        <ModalEditar scout={null} perm={perm} onClose={() => setModalNovo(false)} onSaved={() => { setModalNovo(false); loadData(); }} />
+        <ModalEditar scout={null} perm={perm} onClose={() => setModalNovo(false)} onSaved={() => { setModalNovo(false); loadData(); }} isDark={isDark} />
       )}
     </div>
   );
 }
 
 // ─── Modal Visualizar ─────────────────────────────────────────────────────────
-function ModalVisualizar({ scout, onClose }: { scout: ScoutInfluencer; onClose: () => void }) {
+function ModalVisualizar({ scout, onClose, isDark }: { scout: ScoutInfluencer; onClose: () => void; isDark?: boolean }) {
   const { theme: t } = useApp();
   const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
   const [anotacoes, setAnotacoes] = useState<ScoutAnotacao[]>([]);
-  const labelStyle: React.CSSProperties = { display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body };
-  const row: React.CSSProperties = { marginBottom: "14px" };
-  const val = (v?: string | number | null) => <span style={{ fontSize: "13px", color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v ?? "—"}</span>;
+  const labelStyle: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
+  const row: React.CSSProperties = { marginBottom: 14 };
+  const val = (v?: string | number | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v ?? "—"}</span>;
 
   useEffect(() => {
     if (scout?.id) {
@@ -566,18 +590,23 @@ function ModalVisualizar({ scout, onClose }: { scout: ScoutInfluencer; onClose: 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>{scout.nome_artistico}</h2>
-            <span style={{ padding: "4px 12px", borderRadius: "20px", background: `${STATUS_SCOUT_COLOR[scout.status]}22`, color: STATUS_SCOUT_COLOR[scout.status], fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>{STATUS_SCOUT_LABEL[scout.status]}</span>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>{scout.nome_artistico}</h2>
+            <span style={{ padding: "4px 12px", borderRadius: 20, background: `${STATUS_SCOUT_COLOR[scout.status]}22`, color: STATUS_SCOUT_COLOR[scout.status], fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>{STATUS_SCOUT_LABEL[scout.status]}</span>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+            <X size={18} />
+          </button>
         </div>
-        <div style={{ background: `${BASE_COLORS.blue}08`, border: `1px solid ${BASE_COLORS.blue}22`, borderRadius: "10px", padding: "8px 14px", fontSize: "12px", color: BASE_COLORS.blue, fontFamily: FONT.body, marginBottom: "18px" }}>👁️ Modo visualização — somente leitura</div>
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: `${BRAND.azul}0d`, border: `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
+          <Eye size={13} style={{ color: BRAND.azul, flexShrink: 0 }} />
+          <span>Modo visualização — somente leitura.</span>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {(["contato", "canais", "anotacoes"] as const).map((tb) => (
             <button key={tb} onClick={() => setTab(tb)}
-              style={{ padding: "7px 14px", borderRadius: "20px", border: `1px solid ${tab === tb ? BASE_COLORS.purple : t.cardBorder}`, background: tab === tb ? `${BASE_COLORS.purple}22` : t.inputBg, color: tab === tb ? BASE_COLORS.purple : t.textMuted, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
               {tb === "contato" ? "Contato" : tb === "canais" ? "Canais" : "Anotações"}
             </button>
           ))}
@@ -600,9 +629,9 @@ function ModalVisualizar({ scout, onClose }: { scout: ScoutInfluencer; onClose: 
               const views = scout[`views_${p.toLowerCase()}` as keyof ScoutInfluencer] as number;
               return link || views ? (
                 <div key={p} style={row}>
-                  <label style={labelStyle}>{p}</label>
-                  {link && <a href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "13px", color: PLAT_COLOR[p as Plataforma], fontFamily: FONT.body }}>{link}</a>}
-                  {views != null && views > 0 && <span style={{ marginLeft: "8px", fontSize: "13px", color: t.textMuted }}>{views.toLocaleString("pt-BR")} views</span>}
+                  <label style={labelStyle}><span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><PlatLogo plataforma={p} size={12} isDark={isDark ?? false} /> {p}</span></label>
+                  {link && <a href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: PLAT_COLOR[p as Plataforma], fontFamily: FONT.body }}>{link}</a>}
+                  {views != null && views > 0 && <span style={{ marginLeft: 8, fontSize: 13, color: t.textMuted }}>{views.toLocaleString("pt-BR")} views</span>}
                 </div>
               ) : null;
             })}
@@ -612,11 +641,11 @@ function ModalVisualizar({ scout, onClose }: { scout: ScoutInfluencer; onClose: 
         {tab === "anotacoes" && (
           <div style={row}>
             <label style={labelStyle}>Histórico de Anotações</label>
-            <div style={{ maxHeight: 240, overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ maxHeight: 240, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
               {anotacoes.length === 0 ? (
-                <span style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma anotação ainda.</span>
+                <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Nenhuma anotação ainda.</span>
               ) : anotacoes.map((a) => (
-                <div key={a.id} style={{ padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, fontSize: "12px", fontFamily: FONT.body }}>
+                <div key={a.id} style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, fontSize: 12, fontFamily: FONT.body }}>
                   <div style={{ color: t.text }}>{a.texto}</div>
                   <div style={{ fontSize: "11px", color: t.textMuted, marginTop: "4px" }}>{a.usuario_nome ?? "—"} • {new Date(a.created_at).toLocaleString("pt-BR")}</div>
                 </div>
@@ -630,7 +659,7 @@ function ModalVisualizar({ scout, onClose }: { scout: ScoutInfluencer; onClose: 
 }
 
 // ─── Modal Editar ─────────────────────────────────────────────────────────────
-function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer | null; perm: Permissoes; onClose: () => void; onSaved: () => void }) {
+function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutInfluencer | null; perm: Permissoes; onClose: () => void; onSaved: () => void; isDark?: boolean }) {
   const { theme: t, user } = useApp();
   const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
   const [nomeArtistico, setNomeArtistico] = useState(scout?.nome_artistico ?? "");
@@ -864,22 +893,24 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
 
   const inputStyle: React.CSSProperties = {
     width: "100%", boxSizing: "border-box", padding: "10px 14px",
-    borderRadius: "10px", border: `1px solid ${t.inputBorder}`,
-    background: t.inputBg, color: t.inputText,
-    fontSize: "13px", fontFamily: FONT.body, outline: "none",
+    borderRadius: 10, border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg, color: t.text,
+    fontSize: 13, fontFamily: FONT.body, outline: "none",
   };
   const labelStyle: React.CSSProperties = {
-    display: "block", fontSize: "11px", fontWeight: 700, letterSpacing: "1.1px",
-    textTransform: "uppercase", color: t.label, marginBottom: "5px", fontFamily: FONT.body,
+    display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "1.1px",
+    textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
-  const row: React.CSSProperties = { marginBottom: "14px" };
+  const row: React.CSSProperties = { marginBottom: 14 };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "540px", maxHeight: "92vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
-          <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>{scout ? "Editar" : "Novo"} Prospecto</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
+    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 540, maxHeight: "92vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>{scout ? "Editar" : "Novo"} Prospecto</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+            <X size={18} />
+          </button>
         </div>
 
         <div style={row}>
@@ -895,17 +926,19 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
           </select>
         </div>
 
-        <div style={{ display: "flex", gap: "6px", marginBottom: "20px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {(["contato", "canais", "anotacoes"] as const).map((tb) => (
             <button key={tb} onClick={() => setTab(tb)}
-              style={{ padding: "7px 14px", borderRadius: "20px", border: `1px solid ${tab === tb ? BASE_COLORS.purple : t.cardBorder}`, background: tab === tb ? `${BASE_COLORS.purple}22` : t.inputBg, color: tab === tb ? BASE_COLORS.purple : t.textMuted, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
               {tb === "contato" ? "Contato" : tb === "canais" ? "Canais" : "Anotações"}
             </button>
           ))}
         </div>
 
         {error && (
-          <div style={{ background: "#e9402518", border: "1px solid #e9402544", color: "#e94025", borderRadius: "10px", padding: "10px 14px", fontSize: "13px", marginBottom: "14px" }}>⚠️ {error}</div>
+          <div style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
+            {error}
+          </div>
         )}
 
         {tab === "contato" && (
@@ -944,7 +977,7 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
               </select>
             </div>
             <div style={row}>
-              <label style={labelStyle}>E-mail {status === "fechado" && <span style={{ color: "#e94025" }}>*</span>}</label>
+              <label style={labelStyle}>E-mail {status === "fechado" && <span style={{ color: BRAND.vermelho }}>*</span>}</label>
               <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="email@exemplo.com" />
             </div>
           </>
@@ -959,8 +992,8 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
                   const ativo = plataformas.includes(p);
                   return (
                     <button key={p} onClick={() => togglePlataforma(p)}
-                      style={{ padding: "8px 14px", borderRadius: "20px", cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : t.inputBg, color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: "12px", fontWeight: 700, fontFamily: FONT.body }}>
-                      {PLAT_ICON[p]} {p}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 20, cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : (t.inputBg ?? t.cardBg), color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
+                      <PlatLogo plataforma={p} size={13} isDark={isDark ?? false} /> {p}
                     </button>
                   );
                 })}
@@ -985,7 +1018,7 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
                   const sel = categorias.includes(c);
                   return (
                     <button key={c} onClick={() => toggleCategoria(c)}
-                      style={{ padding: "6px 12px", borderRadius: "16px", cursor: "pointer", border: `1px solid ${sel ? BASE_COLORS.purple : t.cardBorder}`, background: sel ? `${BASE_COLORS.purple}22` : t.inputBg, color: sel ? BASE_COLORS.purple : t.textMuted, fontSize: "12px", fontWeight: 600, fontFamily: FONT.body }}>
+                      style={{ padding: "6px 12px", borderRadius: 16, cursor: "pointer", border: `1px solid ${sel ? BRAND.roxoVivo : t.cardBorder}`, background: sel ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: sel ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
                       {c}
                     </button>
                   );
@@ -1000,7 +1033,7 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
             <div style={row}>
               <label style={labelStyle}>Nova Anotação</label>
               <textarea value={novoTextoAnotacao} onChange={(e) => setNovoTextoAnotacao(e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} placeholder="Digite sua anotação..." />
-              <button onClick={handleAddAnotacao} disabled={!novoTextoAnotacao.trim()} style={{ marginTop: "8px", padding: "8px 16px", borderRadius: "10px", border: "none", cursor: novoTextoAnotacao.trim() ? "pointer" : "not-allowed", background: BASE_COLORS.blue, color: "#fff", fontSize: "12px", fontWeight: 600, fontFamily: FONT.body }}>
+              <button onClick={handleAddAnotacao} disabled={!novoTextoAnotacao.trim()} style={{ marginTop: 8, padding: "8px 16px", borderRadius: 10, border: "none", cursor: novoTextoAnotacao.trim() ? "pointer" : "not-allowed", background: BRAND.azul, color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
                 Adicionar Anotação
               </button>
             </div>
@@ -1011,7 +1044,7 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
                   <span style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body }}>Nenhuma anotação ainda.</span>
                 ) : (
                   anotacoes.map((a) => (
-                    <div key={a.id} style={{ padding: "10px 14px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, fontSize: "12px", fontFamily: FONT.body }}>
+                    <div key={a.id} style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, fontSize: 12, fontFamily: FONT.body }}>
                       <div style={{ color: t.text }}>{a.texto}</div>
                       <div style={{ fontSize: "11px", color: t.textMuted, marginTop: "4px" }}>{a.usuario_nome ?? "—"} • {new Date(a.created_at).toLocaleString("pt-BR")}</div>
                     </div>
@@ -1025,15 +1058,15 @@ function ModalEditar({ scout, perm, onClose, onSaved }: { scout: ScoutInfluencer
         <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
           {scout && perm.canExcluirOk && (perm.canExcluir !== "proprios" || scout.created_by === user?.id) && (
             <button onClick={handleExcluir} disabled={saving}
-              style={{ padding: "10px 18px", borderRadius: "10px", border: "1px solid rgba(233,64,37,0.5)", background: "rgba(233,64,37,0.1)", color: "#e94025", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
-              🗑️ Excluir
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", borderRadius: 10, border: `1px solid ${BRAND.vermelho}80`, background: `${BRAND.vermelho}18`, color: BRAND.vermelho, fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
+              <Trash2 size={14} /> Excluir
             </button>
           )}
           <div style={{ flex: 1, minWidth: 0 }} />
-          <button onClick={onClose} style={{ padding: "10px 18px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: "13px", fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
+          <button onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
           <button onClick={handleSave} disabled={saving}
-            style={{ padding: "10px 20px", borderRadius: "10px", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}>
-            {saving ? "⏳ Salvando..." : "Salvar"}
+            style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
+            {saving ? "Salvando..." : "Salvar"}
           </button>
         </div>
       </div>
