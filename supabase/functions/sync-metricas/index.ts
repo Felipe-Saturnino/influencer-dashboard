@@ -2,7 +2,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Edge Function: sync-metricas | Acquisition Hub (Spin Gaming)
-// Busca métricas da API Plywood e faz upsert em influencer_metricas
+// Busca métricas da API Plywood OU Reporting API (af2_media_report_af) e faz upsert em influencer_metricas
+// Use CDA_USE_REPORTING_API=true para a Reporting API (recomendado se Plywood retorna 403)
 
 // ── Tipos ────────────────────────────────────────────────────
 
@@ -53,6 +54,116 @@ interface InfluencerPerfil {
   id: string
   utm_source: string
   nome_artistico: string
+}
+
+// ── Reporting API (af2_media_report_af) ─────────────────────────
+// https://help.theaffiliateplatform.com/apis-and-configurations/reporting-api
+
+interface ReportingApiDataItem {
+  dt: string
+  utm_source?: string
+  visit_count: number
+  registration_count: number
+  deposit_count: number
+  deposit_total: number
+  ftd_count: number
+  ftd_total: number
+  withdrawal_count: number
+  withdrawal_total: number
+  net_deposit_total?: number
+  pl?: number
+  commissions_total?: number
+}
+
+function reportingItemToDailyMetric(item: ReportingApiDataItem): DailyMetric {
+  const dt = item.dt?.split('T')[0] ?? ''
+  return {
+    time: { start: `${dt}T00:00:00.000Z`, end: `${dt}T23:59:59.999Z` },
+    visit_count: item.visit_count ?? 0,
+    registration_count: item.registration_count ?? 0,
+    deposit_count: item.deposit_count ?? 0,
+    deposit_total: item.deposit_total ?? 0,
+    ftd_count: item.ftd_count ?? 0,
+    ftd_total: item.ftd_total ?? 0,
+    withdrawal_count: item.withdrawal_count ?? 0,
+    withdrawal_total: item.withdrawal_total ?? 0,
+    net_deposit_total: item.net_deposit_total ?? 0,
+    pl: item.pl ?? 0,
+    commissions_total: item.commissions_total ?? 0,
+  }
+}
+
+/** Busca TODAS as métricas via Reporting API em uma única chamada. Retorna Map<utm_source, DailyMetric[]>. */
+async function fetchMetricasReportingAPI(
+  dataInicio: string,
+  dataFim: string,
+  apiKey: string,
+  baseUrl: string,
+  authFormat: 'Bearer' | 'direct'
+): Promise<Map<string, DailyMetric[]>> {
+  // date_to é exclusivo: para incluir dataFim, usar o dia seguinte
+  const dateTo = new Date(dataFim)
+  dateTo.setDate(dateTo.getDate() + 1)
+  const dateToStr = dateTo.toISOString().split('T')[0]
+
+  const params = new URLSearchParams({
+    aggregation_period: 'DAY',
+    group_by: 'utm_source',
+    date_from: dataInicio,
+    date_to: dateToStr,
+  })
+
+  const authHeader = authFormat === 'direct' ? apiKey : `Bearer ${apiKey}`
+  const url = `${baseUrl.replace(/\/$/, '')}/api/af2_media_report_af?${params}`
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'authorization': authHeader },
+  })
+
+  if (response.status === 403) throw new TokenExpiradoError('403 na Reporting API')
+  if (!response.ok) throw new Error(`Reporting API: ${response.status}`)
+
+  const json = await response.json()
+  const data: ReportingApiDataItem[] = json?.data ?? []
+
+  const byUtm = new Map<string, DailyMetric[]>()
+  for (const item of data) {
+    const utm = item.utm_source ?? 'Empty'
+    if (utm === 'Empty') continue
+    const m = reportingItemToDailyMetric(item)
+    const list = byUtm.get(utm) ?? []
+    list.push(m)
+    byUtm.set(utm, list)
+  }
+  return byUtm
+}
+
+/** Converte Map<utm, DailyMetric[]> da Reporting API em UtmTotais[] para órfãos. */
+function reportingDataToUtmTotais(
+  byUtm: Map<string, DailyMetric[]>,
+  dataInicio: string,
+  dataFim: string
+): UtmTotais[] {
+  const out: UtmTotais[] = []
+  for (const [utm, metrics] of byUtm) {
+    const total_visits = metrics.reduce((s, m) => s + (m.visit_count ?? 0), 0)
+    const total_registrations = metrics.reduce((s, m) => s + (m.registration_count ?? 0), 0)
+    const total_ftds = metrics.reduce((s, m) => s + (m.ftd_count ?? 0), 0)
+    const total_deposit = metrics.reduce((s, m) => s + (m.deposit_total ?? 0), 0)
+    const total_withdrawal = metrics.reduce((s, m) => s + (m.withdrawal_total ?? 0), 0)
+    out.push({
+      utm_source: utm,
+      total_visits,
+      total_registrations,
+      total_ftds,
+      total_deposit: parseFloat(total_deposit.toFixed(2)),
+      total_withdrawal: parseFloat(total_withdrawal.toFixed(2)),
+      primeiro_visto: dataInicio,
+      ultimo_visto: dataFim,
+    })
+  }
+  return out.sort((a, b) => b.total_ftds - a.total_ftds).slice(0, 500)
 }
 
 // ── Erro especial para 403 ────────────────────────────────────
@@ -502,9 +613,48 @@ serve(async (req: Request) => {
           : (() => { throw new Error('Configure SMARTICO_USERNAME+SMARTICO_PASSWORD, CDA_INFLUENCERS_API_KEY ou SMARTICO_TOKEN no Supabase Secrets.') })()
 
     const authMethod = (smarticoUsername && smarticoPassword) ? 'SMARTICO_USERNAME+PASSWORD' : cdaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN'
-    console.log(`[sync-metricas] v1.7.0 | Auth: ${authMethod}${cdaAuth.apiKey ? ` (${authFormat})` : ''} | Período: ${dataInicio} → ${dataFim}`)
+    const useReportingApi = Deno.env.get('CDA_USE_REPORTING_API') === 'true'
+    const reportingBaseUrl = Deno.env.get('SMARTICO_REPORTING_API_URL') ?? 'https://boapi.smartico.ai'
+
+    if (useReportingApi && !cdaApiKey) {
+      throw new Error('Reporting API exige CDA_INFLUENCERS_API_KEY. Configure no Supabase Secrets.')
+    }
+
+    console.log(`[sync-metricas] v1.8.0 | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Auth: ${authMethod}${cdaAuth.apiKey ? ` (${authFormat})` : ''} | Período: ${dataInicio} → ${dataFim}`)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+
+    // ── Cache Reporting API (uma chamada para todos os UTMs) ─────────
+    let reportingCache: Map<string, DailyMetric[]> | null = null
+    if (useReportingApi && cdaApiKey) {
+      try {
+        reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat)
+        console.log(`[sync-metricas] Reporting API: ${reportingCache.size} UTMs carregados`)
+      } catch (err) {
+        if (err instanceof TokenExpiradoError) {
+          await enviarAlertaAuthCda()
+          const msgAuth = 'Erro de autenticação na Reporting API (403). Verifique CDA_INFLUENCERS_API_KEY em Supabase Secrets.'
+          await gravarTechLog(supabase, 'auth', msgAuth)
+          const duracaoMs = Date.now() - inicioMs
+          await gravarSyncLog(supabase, {
+            status: 'falha',
+            registros_inseridos: 0,
+            erros_count: 1,
+            mensagem_erro: msgAuth,
+            duracao_ms: duracaoMs,
+            periodo_inicio: dataInicio,
+            periodo_fim: dataFim,
+          })
+          return new Response(JSON.stringify({
+            ok: false,
+            erro: msgAuth,
+            auth_usado: authMethod,
+            api_usada: 'Reporting API',
+          }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+        }
+        throw err
+      }
+    }
 
     // ── FASE 1: Sync influencers mapeados ─────────────────────
     let query = supabase.from('influencer_perfil').select('id, nome_artistico, utm_source').not('utm_source', 'is', null)
@@ -540,7 +690,9 @@ serve(async (req: Request) => {
 
     for (const influencer of (influencers ?? []) as InfluencerPerfil[]) {
       try {
-        const metricas = await fetchMetricasPorUtm(influencer.utm_source, dataInicio, dataFim, cdaAuth, labelId)
+        const metricas = useReportingApi && reportingCache
+          ? (reportingCache.get(influencer.utm_source) ?? [])
+          : await fetchMetricasPorUtm(influencer.utm_source, dataInicio, dataFim, cdaAuth, labelId)
         const { inseridos, erros } = await upsertMetricas(supabase, influencer.id, metricas)
         totalInseridos += inseridos
         todosErros.push(...erros)
@@ -582,7 +734,9 @@ serve(async (req: Request) => {
     // ── FASE 1b: Sync aliases mapeados (UTMs da Gestão de Links) ─
     for (const alias of aliasesNovos) {
       try {
-        const metricas = await fetchMetricasPorUtm(alias.utm_source, dataInicio, dataFim, cdaAuth, labelId)
+        const metricas = useReportingApi && reportingCache
+          ? (reportingCache.get(alias.utm_source) ?? [])
+          : await fetchMetricasPorUtm(alias.utm_source, dataInicio, dataFim, cdaAuth, labelId)
         const { inseridos, erros } = await upsertMetricas(supabase, alias.influencer_id, metricas)
         totalInseridos += inseridos
         todosErros.push(...erros)
@@ -631,7 +785,9 @@ serve(async (req: Request) => {
 
     if (!params.utm_source && !params.skip_orfaos) {
       try {
-        const todosUtmsCda = await fetchTodosUtms(dataInicio, dataFim, cdaAuth, labelId)
+        const todosUtmsCda = useReportingApi && reportingCache
+          ? reportingDataToUtmTotais(reportingCache, dataInicio, dataFim)
+          : await fetchTodosUtms(dataInicio, dataFim, cdaAuth, labelId)
         totalUtmsCda = todosUtmsCda.length
         const resultado = await detectarERegistrarOrfaos(supabase, todosUtmsCda, utmsMapeados)
         orfaosNovos = resultado.novos
@@ -684,7 +840,8 @@ serve(async (req: Request) => {
 
     const resposta = {
       ok: true,
-      versao: 'v1.7.0',
+      versao: 'v1.8.0',
+      api_usada: useReportingApi ? 'Reporting API' : 'Plywood',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       fase1_influencers: {
         total: influencers?.length ?? 0,
