@@ -65,17 +65,39 @@ class TokenExpiradoError extends Error {
 }
 
 // ── Alerta de e-mail via Resend ───────────────────────────────
+// Enviado quando a API CDA retorna 403 (token expirado OU API key revogada)
 
-async function enviarAlertaTokenExpirado(): Promise<void> {
+async function enviarAlertaAuthCda(): Promise<void> {
   const resendKey = Deno.env.get('RESEND_API_KEY')
   if (!resendKey) {
     console.warn('[sync-metricas] RESEND_API_KEY não configurada — alerta ignorado.')
     return
   }
 
+  const usaApiKey = !!Deno.env.get('CDA_INFLUENCERS_API_KEY')
   const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
-  const html = `
+  const html = usaApiKey
+    ? `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <div style="background: #ef4444; color: white; padding: 16px 24px; border-radius: 8px 8px 0 0;">
+        <h2 style="margin: 0; font-size: 18px;">⚠️ Sync de Métricas Interrompido</h2>
+      </div>
+      <div style="background: #f9f9f9; border: 1px solid #e5e5e5; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p style="margin: 0 0 16px; color: #333;">
+          O sync automático de métricas da <strong>Casa de Apostas</strong> falhou às <strong>${agora}</strong>.
+        </p>
+        <p style="margin: 0 0 16px; color: #333;">
+          <strong>Motivo:</strong> A API retornou erro <code style="background: #fee2e2; padding: 2px 6px; border-radius: 4px; color: #ef4444;">403 Forbidden</code> — credencial inválida.
+        </p>
+        <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+          <p style="margin: 0; color: #856404; font-weight: bold;">Verifique se a chave API (CDA_INFLUENCERS_API_KEY) está correta ou se foi revogada.</p>
+        </div>
+        <p style="margin: 0; color: #555;">Acesse Supabase → Edge Functions → Secrets e confira <code>CDA_INFLUENCERS_API_KEY</code>.</p>
+      </div>
+    </div>
+  `
+    : `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
       <div style="background: #ef4444; color: white; padding: 16px 24px; border-radius: 8px 8px 0 0;">
         <h2 style="margin: 0; font-size: 18px;">⚠️ Sync de Métricas Interrompido</h2>
@@ -88,16 +110,16 @@ async function enviarAlertaTokenExpirado(): Promise<void> {
           <strong>Motivo:</strong> A API retornou erro <code style="background: #fee2e2; padding: 2px 6px; border-radius: 4px; color: #ef4444;">403 Forbidden</code> — o token de sessão expirou.
         </p>
         <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-          <p style="margin: 0; color: #856404; font-weight: bold;">Nenhum dado novo será salvo até o token ser renovado.</p>
+          <p style="margin: 0; color: #856404; font-weight: bold;">Migre para CDA_INFLUENCERS_API_KEY (não expira). Ou renove SMARTICO_TOKEN conforme abaixo.</p>
         </div>
-        <h3 style="color: #333; font-size: 15px; margin-bottom: 12px;">Como renovar (menos de 2 minutos):</h3>
+        <h3 style="color: #333; font-size: 15px; margin-bottom: 12px;">Como renovar token (temporário):</h3>
         <ol style="color: #555; padding-left: 20px; line-height: 1.8;">
           <li>Acesse <a href="https://admin.aff.casadeapostas.bet.br" style="color: #2563eb;">admin.aff.casadeapostas.bet.br</a> e faça login</li>
           <li>Abra o DevTools (F12) → aba <strong>Network</strong></li>
           <li>Recarregue a página (F5) e filtre por <code>getBoUserInfo</code></li>
           <li>Clique na requisição → aba <strong>Headers</strong> → copie o valor de <strong>Authorization</strong></li>
-          <li>Acesse <a href="https://supabase.com/dashboard/project/dzyuqibobeujzedomlsc/settings/functions" style="color: #2563eb;">Supabase → Secrets</a></li>
-          <li>Atualize <code>SMARTICO_TOKEN</code> com o novo valor e clique em <strong>Save</strong></li>
+          <li>Acesse Supabase → Edge Functions → Secrets</li>
+          <li>Atualize <code>SMARTICO_TOKEN</code> ou adicione <code>CDA_INFLUENCERS_API_KEY</code> (recomendado)</li>
         </ol>
       </div>
     </div>
@@ -110,7 +132,7 @@ async function enviarAlertaTokenExpirado(): Promise<void> {
       body: JSON.stringify({
         from: 'Acquisition Hub <onboarding@resend.dev>',
         to: ['felipe.saturnino@spingaming.com.br'],
-        subject: '⚠️ [Acquisition Hub] Token CDA expirado — sync interrompido',
+        subject: '⚠️ [Acquisition Hub] Erro de autenticação CDA (403) — sync interrompido',
         html,
       }),
     })
@@ -125,16 +147,23 @@ async function enviarAlertaTokenExpirado(): Promise<void> {
 }
 
 // ── Headers padrão CDA ───────────────────────────────────────
+// Suporta: CDA_INFLUENCERS_API_KEY (não expira, recomendado) ou SMARTICO_TOKEN (cookie de sessão, expira)
+// v1.6.0: Prioridade para CDA_INFLUENCERS_API_KEY; se ausente, usa SMARTICO_TOKEN (compatibilidade)
 
-function buildHeaders(token: string, labelId: string): HeadersInit {
-  return {
+function buildHeaders(auth: { apiKey?: string; token?: string }, labelId: string): HeadersInit {
+  const base: Record<string, string> = {
     'Content-Type': 'application/json;charset=UTF-8',
-    'Cookie': `__smtaff_bo_token=${token}`,
     'Active_label_id': labelId,
     'X-Smartico-Active-Label-Id': labelId,
     'Origin': 'https://admin.aff.casadeapostas.bet.br',
     'Referer': `https://data-api3.aff.casadeapostas.bet.br/?label_id=${labelId}&noNav=true`,
   }
+  if (auth.apiKey) {
+    base['Authorization'] = `Bearer ${auth.apiKey}`
+  } else if (auth.token) {
+    base['Cookie'] = `__smtaff_bo_token=${auth.token}`
+  }
+  return base
 }
 
 // ── Métricas base ────────────────────────────────────────────
@@ -169,8 +198,10 @@ function buildTimeFilter(dataInicio: string, dataFim: string): object {
 
 // ── Busca métricas de um influencer (SPLIT por dia) ──────────
 
+type CdaAuth = { apiKey?: string; token?: string }
+
 async function fetchMetricasPorUtm(
-  utmSource: string, dataInicio: string, dataFim: string, token: string, labelId: string
+  utmSource: string, dataInicio: string, dataFim: string, auth: CdaAuth, labelId: string
 ): Promise<DailyMetric[]> {
 
   const utmFilter = {
@@ -197,7 +228,7 @@ async function fetchMetricasPorUtm(
 
   const payload = { dataCube: 'data-cube-affiliate-general-affiliate-view4', timezone: 'Etc/UTC', version: '1.31.0', settingsVersion: 0, expression: withSplit }
 
-  const response = await fetch('https://data-api3.aff.casadeapostas.bet.br/plywood?by=', { method: 'POST', headers: buildHeaders(token, labelId), body: JSON.stringify(payload) })
+  const response = await fetch('https://data-api3.aff.casadeapostas.bet.br/plywood?by=', { method: 'POST', headers: buildHeaders(auth, labelId), body: JSON.stringify(payload) })
 
   if (response.status === 403) throw new TokenExpiradoError(`403 para utm_source=${utmSource}`)
   if (!response.ok) throw new Error(`Erro API para ${utmSource}: ${response.status}`)
@@ -211,7 +242,7 @@ async function fetchMetricasPorUtm(
 // ── Varredura de UTMs: SPLIT por utm_source (sem filtro) ──────
 
 async function fetchTodosUtms(
-  dataInicio: string, dataFim: string, token: string, labelId: string
+  dataInicio: string, dataFim: string, auth: CdaAuth, labelId: string
 ): Promise<UtmTotais[]> {
 
   const filteredMain = { op: 'filter', operand: { op: 'ref', name: 'main' }, expression: buildTimeFilter(dataInicio, dataFim) }
@@ -236,7 +267,7 @@ async function fetchTodosUtms(
 
   console.log('[sync-metricas] Fase 2: Varrendo UTMs órfãos na CDA...')
 
-  const response = await fetch('https://data-api3.aff.casadeapostas.bet.br/plywood?by=', { method: 'POST', headers: buildHeaders(token, labelId), body: JSON.stringify(payload) })
+  const response = await fetch('https://data-api3.aff.casadeapostas.bet.br/plywood?by=', { method: 'POST', headers: buildHeaders(auth, labelId), body: JSON.stringify(payload) })
 
   if (response.status === 403) throw new TokenExpiradoError('403 na varredura de UTMs')
   if (!response.ok) throw new Error(`Erro na varredura: ${response.status}`)
@@ -440,11 +471,17 @@ serve(async (req: Request) => {
     const dataInicio = params.data_inicio ?? defaultInicio
 
     const inicioMs = Date.now()
-    console.log(`[sync-metricas] v1.5.0 | Período: ${dataInicio} → ${dataFim}`)
+    console.log(`[sync-metricas] v1.6.0 | Período: ${dataInicio} → ${dataFim}`)
 
+    const cdaApiKey    = Deno.env.get('CDA_INFLUENCERS_API_KEY')
     const smaticoToken = Deno.env.get('SMARTICO_TOKEN')
     const labelId      = Deno.env.get('SMARTICO_LABEL_ID') ?? '573703'
-    if (!smaticoToken) throw new Error('Secret SMARTICO_TOKEN não configurado.')
+
+    const cdaAuth: CdaAuth = cdaApiKey
+      ? { apiKey: cdaApiKey }
+      : smaticoToken
+        ? { token: smaticoToken }
+        : (() => { throw new Error('Configure CDA_INFLUENCERS_API_KEY (recomendado, não expira) ou SMARTICO_TOKEN no Supabase Secrets.') })()
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
@@ -482,7 +519,7 @@ serve(async (req: Request) => {
 
     for (const influencer of (influencers ?? []) as InfluencerPerfil[]) {
       try {
-        const metricas = await fetchMetricasPorUtm(influencer.utm_source, dataInicio, dataFim, smaticoToken, labelId)
+        const metricas = await fetchMetricasPorUtm(influencer.utm_source, dataInicio, dataFim, cdaAuth, labelId)
         const { inseridos, erros } = await upsertMetricas(supabase, influencer.id, metricas)
         totalInseridos += inseridos
         todosErros.push(...erros)
@@ -490,7 +527,7 @@ serve(async (req: Request) => {
         await new Promise(r => setTimeout(r, 300))
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
-          await enviarAlertaTokenExpirado()
+          await enviarAlertaAuthCda()
           await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403). Renovar SMARTICO_TOKEN.')
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
@@ -518,7 +555,7 @@ serve(async (req: Request) => {
     // ── FASE 1b: Sync aliases mapeados (UTMs da Gestão de Links) ─
     for (const alias of aliasesNovos) {
       try {
-        const metricas = await fetchMetricasPorUtm(alias.utm_source, dataInicio, dataFim, smaticoToken, labelId)
+        const metricas = await fetchMetricasPorUtm(alias.utm_source, dataInicio, dataFim, cdaAuth, labelId)
         const { inseridos, erros } = await upsertMetricas(supabase, alias.influencer_id, metricas)
         totalInseridos += inseridos
         todosErros.push(...erros)
@@ -527,7 +564,7 @@ serve(async (req: Request) => {
         await new Promise(r => setTimeout(r, 300))
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
-          await enviarAlertaTokenExpirado()
+          await enviarAlertaAuthCda()
           await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403). Renovar SMARTICO_TOKEN.')
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
@@ -561,7 +598,7 @@ serve(async (req: Request) => {
 
     if (!params.utm_source && !params.skip_orfaos) {
       try {
-        const todosUtmsCda = await fetchTodosUtms(dataInicio, dataFim, smaticoToken, labelId)
+        const todosUtmsCda = await fetchTodosUtms(dataInicio, dataFim, cdaAuth, labelId)
         totalUtmsCda = todosUtmsCda.length
         const resultado = await detectarERegistrarOrfaos(supabase, todosUtmsCda, utmsMapeados)
         orfaosNovos = resultado.novos
@@ -570,7 +607,7 @@ serve(async (req: Request) => {
         console.log(`[sync-metricas] Fase 2: ${orfaosNovos.length} novos, ${orfaosAtualizados.length} atualizados, ${orfaosErros.length} erros`)
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
-          await enviarAlertaTokenExpirado()
+          await enviarAlertaAuthCda()
           await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403) na varredura de UTMs.')
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
@@ -608,7 +645,7 @@ serve(async (req: Request) => {
 
     const resposta = {
       ok: true,
-      versao: 'v1.5.0',
+      versao: 'v1.6.0',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       fase1_influencers: {
         total: influencers?.length ?? 0,

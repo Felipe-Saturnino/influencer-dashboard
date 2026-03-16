@@ -26,9 +26,10 @@ As tabelas `influencer_metricas` e `utm_aliases` **não são preenchidas pelo ap
 
 ### Pré-requisitos para o Sync funcionar
 
-- **SMARTICO_TOKEN:** Secret no Supabase (token da CDA, obtido no admin.aff.casadeapostas.bet.br)
+- **CDA_INFLUENCERS_API_KEY** (recomendado): Chave API da plataforma CDA — **não expira**, evita renovação manual. Adicione no Supabase → Edge Functions → Secrets.
+- **SMARTICO_TOKEN** (alternativa): Token de sessão da CDA (obtido no admin.aff.casadeapostas.bet.br). Expira com frequência; use CDA_INFLUENCERS_API_KEY quando possível.
 - **SMARTICO_LABEL_ID:** (opcional, default 573703)
-- Edge Function `sync-metricas` implantada (v1.5.0+)
+- Edge Function `sync-metricas` implantada (v1.6.0+)
 
 ### Erro "Edge Function returned a non-2xx status code"
 
@@ -36,8 +37,8 @@ Significa que a função falhou. Possíveis causas:
 
 | Causa | Solução |
 |-------|---------|
-| SMARTICO_TOKEN não configurado | Supabase → Settings → Edge Functions → Secrets → adicionar SMARTICO_TOKEN |
-| Token CDA expirado (403) | Renovar token no admin da CDA e atualizar o secret |
+| CDA_INFLUENCERS_API_KEY ou SMARTICO_TOKEN não configurado | Supabase → Edge Functions → Secrets → adicionar CDA_INFLUENCERS_API_KEY (recomendado) ou SMARTICO_TOKEN |
+| Erro 403 (credencial inválida) | Com CDA_INFLUENCERS_API_KEY: verificar se a chave está correta. Com SMARTICO_TOKEN: renovar no admin da CDA |
 | Outros erros | Ver logs em Supabase → Edge Functions → sync-metricas → Logs |
 
 ---
