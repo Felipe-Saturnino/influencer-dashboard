@@ -20,8 +20,6 @@ import {
   GiStarMedal,      // Filtro Influencer
   GiShield,         // Filtro Operadora
 } from "react-icons/gi";
-import BulletChart from "./BulletChart";
-
 // Fonte NHD Bold para títulos
 const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
@@ -618,22 +616,6 @@ export default function DashboardOverview() {
   const pctAcessoFTD   = totais.acessos > 0  ? ((totais.ftds      / totais.acessos)  * 100).toFixed(1) + "%" : "—";
   const pctViewFTD     = totais.views > 0    ? ((totais.ftds      / totais.views)    * 100).toFixed(1) + "%" : "—";
 
-  // ── BULLET DATA ──────────────────────────────────────────────────────────────
-  const bulletData = useMemo(() => {
-    let r = ranking;
-    if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (filtroOperadora !== "todas") {
-      const ids = operadoraInfMap[filtroOperadora] ?? [];
-      r = r.filter((row) => ids.includes(row.influencer_id));
-    }
-    return r.map((row) => ({
-      nome: row.nome,
-      ggr: row.ggr,
-      investimento: row.investimento,
-      roi: row.roi,
-    }));
-  }, [ranking, filtroInfluencer, filtroOperadora, operadoraInfMap]);
-
   // ── RANKING FILTRADO ──────────────────────────────────────────────────────────
   const rankingFiltrado = useMemo(() => {
     let r = ranking;
@@ -901,26 +883,16 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* ══ BLOCOS 3 e 4: Funil + Scatter ════════════════════════════════════ */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-
-        {/* BLOCO 3: Funil de Conversão */}
-        <div style={card}>
-          <SectionTitle icon={<GiPlayerNext size={15} />}>Funil de Conversão</SectionTitle>
-          <FunilVisual
-            values={[totais.views, totais.acessos, totais.registros, totais.ftds]}
-            taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
-          />
-        </div>
-
-        {/* BLOCO 4: Bullet Chart */}
-        <div style={card}>
-          <SectionTitle icon={<GiCoins size={15} />}>GGR vs Investimento — Top 10</SectionTitle>
-          <BulletChart data={bulletData} loading={loading} />
-        </div>
+      {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
+      <div style={{ ...card, marginBottom: 14 }}>
+        <SectionTitle icon={<GiPlayerNext size={15} />}>Funil de Conversão</SectionTitle>
+        <FunilVisual
+          values={[totais.views, totais.acessos, totais.registros, totais.ftds]}
+          taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
+        />
       </div>
 
-      {/* ══ BLOCO 5: RANKING ═════════════════════════════════════════════════ */}
+      {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
           <SectionTitle icon={<GiTrophy size={15} />}>Ranking de Influencers</SectionTitle>
