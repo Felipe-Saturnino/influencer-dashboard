@@ -229,25 +229,18 @@ export default function GestaoLinks() {
   // ─── Estilos inline reutilizáveis ─────────────────────────────────────────
 
   const th: React.CSSProperties = {
-    textAlign: "left",
-    padding: "10px 16px",
-    color: theme.textMuted,
-    fontWeight: 700,
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    fontFamily: FONT.body,
-    background: "rgba(74,32,130,0.10)",
-    borderBottom: `1px solid ${theme.cardBorder}`,
+    textAlign: "left", padding: "10px 16px", color: theme.textMuted,
+    fontWeight: 700, fontSize: 11, textTransform: "uppercase",
+    letterSpacing: "0.08em", fontFamily: FONT.body,
+    background: "rgba(74,32,130,0.10)", borderBottom: `1px solid ${theme.cardBorder}`,
+    whiteSpace: "nowrap",
   };
 
   const td: React.CSSProperties = {
-    padding: "12px 16px",
-    color: theme.text,
-    fontFamily: FONT.body,
-    fontSize: 13,
-    verticalAlign: "middle",
+    padding: "12px 16px", color: theme.text, fontFamily: FONT.body,
+    fontSize: 13, verticalAlign: "middle",
     borderBottom: `1px solid ${theme.cardBorder}`,
+    whiteSpace: "nowrap",
   };
 
   const tdMuted: React.CSSProperties = {
@@ -273,38 +266,25 @@ export default function GestaoLinks() {
   }
 
   return (
-    <div style={{ padding: 32, maxWidth: 1100 }}>
+    <div style={{ padding: "24px 32px", maxWidth: 1200, margin: "0 auto" }}>
 
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 6 }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 9,
-          background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: BRAND.ciano, flexShrink: 0,
-        }}>
-          <GiLinkedRings size={16} />
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+          <GiLinkedRings size={14} color="#fff" />
         </div>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h1 style={{
-              fontSize: 18, fontWeight: 800, color: theme.text,
-              fontFamily: FONT_TITLE, margin: 0,
-              letterSpacing: "0.05em", textTransform: "uppercase",
-            }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: theme.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
               Gestão de Links
             </h1>
             {totalPendentes > 0 && (
-              <span style={{
-                background: BRAND.vermelho, color: "#fff",
-                borderRadius: 10, padding: "2px 9px",
-                fontSize: 11, fontWeight: 700, fontFamily: FONT.body,
-              }}>
+              <span style={{ background: BRAND.vermelho, color: "#fff", borderRadius: 10, padding: "2px 9px", fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
                 {totalPendentes} pendente{totalPendentes !== 1 ? "s" : ""}
               </span>
             )}
           </div>
-          <p style={{ fontSize: 12, color: theme.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
+          <p style={{ fontSize: 13, color: theme.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>
             Links de rastreio detectados nas operadoras que não estão associados a nenhum influencer.
           </p>
         </div>
@@ -387,29 +367,23 @@ export default function GestaoLinks() {
           {emptyMessages[aba]}
         </div>
       ) : (
-        <div style={{
-          background: theme.cardBg,
-          border: `1px solid ${theme.cardBorder}`,
-          borderRadius: 18,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-          overflow: "hidden",
-        }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr>
-                <th style={th}>UTM Source</th>
-                {operadoraFiltro === "todas" && operadorasList.length > 1 && (
-                  <th style={th}>Operadora</th>
-                )}
-                <th style={th}>Primeiro visto</th>
-                <th style={th}>Último visto</th>
-                <th style={{ ...th, textAlign: "right" }}>FTDs</th>
-                <th style={{ ...th, textAlign: "right" }}>Depósitos</th>
-                <th style={{ ...th, textAlign: "right" }}>GGR</th>
-                {aba === "mapeados" && <th style={th}>Influencer</th>}
-                <th style={th}>Ações</th>
-              </tr>
-            </thead>
+        <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", overflow: "hidden" }}>
+          {/* overflowX no wrapper interno para scroll horizontal sem quebrar o borderRadius */}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 800 }}>
+              <thead>
+                <tr>
+                  <th style={th}>UTM Source</th>
+                  {operadoraFiltro === "todas" && operadorasList.length > 1 && <th style={th}>Operadora</th>}
+                  <th style={th}>Primeiro visto</th>
+                  <th style={th}>Último visto</th>
+                  <th style={{ ...th, textAlign: "right" }}>FTDs</th>
+                  <th style={{ ...th, textAlign: "right" }}>Depósitos</th>
+                  <th style={{ ...th, textAlign: "right" }}>GGR</th>
+                  {aba === "mapeados" && <th style={th}>Influencer</th>}
+                  <th style={{ ...th, minWidth: 180 }}>Ações</th>
+                </tr>
+              </thead>
             <tbody>
               {aliases.map((alias, idx) => {
                 const ggr = calcGgr(alias);
@@ -419,86 +393,38 @@ export default function GestaoLinks() {
                 return (
                   <tr key={alias.id} style={zebraStyle}>
                     <td style={td}>
-                      <span style={{
-                        display: "inline-flex", alignItems: "center", gap: 5,
-                        background: `${BRAND.roxoVivo}22`,
-                        color: BRAND.roxoVivo,
-                        border: `1px solid ${BRAND.roxoVivo}44`,
-                        borderRadius: 6, padding: "3px 9px",
-                        fontSize: 12, fontWeight: 600,
-                        fontFamily: "monospace",
-                      }}>
-                        <Link2 size={11} />
-                        {alias.utm_source}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: `${BRAND.roxoVivo}22`, color: BRAND.roxoVivo, border: `1px solid ${BRAND.roxoVivo}44`, borderRadius: 6, padding: "3px 9px", fontSize: 12, fontWeight: 600, fontFamily: "monospace" }}>
+                        <Link2 size={11} />{alias.utm_source}
                       </span>
                     </td>
-
                     {operadoraFiltro === "todas" && operadorasList.length > 1 && (
-                      <td style={td}>
-                        {operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—"}
-                      </td>
+                      <td style={td}>{operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—"}</td>
                     )}
-
                     <td style={tdMuted}>{fmtData(alias.primeiro_visto)}</td>
                     <td style={tdMuted}>{fmtData(alias.ultimo_visto)}</td>
                     <td style={{ ...td, textAlign: "right" }}>{alias.total_ftds}</td>
                     <td style={{ ...td, textAlign: "right" }}>{fmt(alias.total_deposit)}</td>
                     <td style={{ ...td, textAlign: "right" }}>
-                      <span style={ggr >= 0
-                        ? { color: BRAND.verde, fontWeight: 600 }
-                        : { color: BRAND.vermelho, fontWeight: 600 }
-                      }>
-                        {fmt(ggr)}
-                      </span>
+                      <span style={ggr >= 0 ? { color: BRAND.verde, fontWeight: 600 } : { color: BRAND.vermelho, fontWeight: 600 }}>{fmt(ggr)}</span>
                     </td>
-
-                    {aba === "mapeados" && (
-                      <td style={td}>{alias.influencer_name ?? "—"}</td>
-                    )}
-
-                    <td style={td}>
+                    {aba === "mapeados" && <td style={td}>{alias.influencer_name ?? "—"}</td>}
+                    <td style={{ ...td, minWidth: 180 }}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                         {aba === "pendentes" && podeMapearAlias() && (
                           <>
-                            <button
-                              onClick={() => abrirModal(alias)}
-                              style={{
-                                display: "inline-flex", alignItems: "center", gap: 5,
-                                padding: "6px 14px", borderRadius: 10, border: "none",
-                                background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-                                color: "#fff", fontSize: 12, fontWeight: 700,
-                                fontFamily: FONT.body, cursor: "pointer",
-                              }}
-                            >
+                            <button onClick={() => abrirModal(alias)}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 14px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
                               <Link2 size={12} /> Mapear
                             </button>
-                            <button
-                              onClick={() => ignorar(alias)}
-                              style={{
-                                display: "inline-flex", alignItems: "center", gap: 5,
-                                padding: "6px 14px", borderRadius: 10,
-                                border: `1px solid ${theme.cardBorder}`,
-                                background: "transparent",
-                                color: theme.textMuted, fontSize: 12,
-                                fontFamily: FONT.body, cursor: "pointer",
-                              }}
-                            >
+                            <button onClick={() => ignorar(alias)}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 14px", borderRadius: 10, border: `1px solid ${theme.cardBorder}`, background: "transparent", color: theme.textMuted, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
                               <EyeOff size={12} /> Ignorar
                             </button>
                           </>
                         )}
                         {(aba === "mapeados" || aba === "ignorados") && podeReativarAlias(alias) && (
-                          <button
-                            onClick={() => reativar(alias)}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: 5,
-                              padding: "6px 14px", borderRadius: 10,
-                              border: `1px solid ${theme.cardBorder}`,
-                              background: "transparent",
-                              color: theme.text, fontSize: 12,
-                              fontFamily: FONT.body, cursor: "pointer",
-                            }}
-                          >
+                          <button onClick={() => reativar(alias)}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 14px", borderRadius: 10, border: `1px solid ${theme.cardBorder}`, background: "transparent", color: theme.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
                             <RotateCcw size={12} /> Reabrir
                           </button>
                         )}
@@ -509,26 +435,16 @@ export default function GestaoLinks() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {/* ─── Modal de Mapeamento ─────────────────────────────────────────────── */}
       {modalAberto && aliasSelecionado && (
-        <div
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
-            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
-          }}
-          onClick={() => { if (!salvando) setModalAberto(false); }}
-        >
-          <div
-            style={{
-              background: theme.cardBg, border: `1px solid ${theme.cardBorder}`,
-              borderRadius: 20, padding: "28px 32px",
-              width: 440, maxWidth: "90vw",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+          onClick={() => { if (!salvando) setModalAberto(false); }}>
+          <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 20, padding: "28px 32px", width: 440, maxWidth: "90vw" }}
+            onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: theme.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
                 Mapear link órfão
@@ -627,8 +543,7 @@ export default function GestaoLinks() {
                   opacity: influencerSelecionado && !salvando ? 1 : 0.5,
                 }}
               >
-                <Link2 size={13} />
-                {salvando ? "Salvando..." : "Confirmar mapeamento"}
+                <Link2 size={13} />{salvando ? "Salvando..." : "Confirmar mapeamento"}
               </button>
             </div>
           </div>
