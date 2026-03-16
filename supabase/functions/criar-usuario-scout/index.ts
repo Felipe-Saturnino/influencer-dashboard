@@ -102,7 +102,7 @@ serve(async (req) => {
     const uid = authData.user.id
 
     // Upsert: o trigger on_auth_user_created já cria o profile; atualizamos com role e must_change_password
-    const { error: profileErr } = await supabase.from('profiles').upsert(
+    let { error: profileErr } = await supabase.from('profiles').upsert(
       {
         id: uid,
         name: nome,
@@ -112,6 +112,17 @@ serve(async (req) => {
       },
       { onConflict: 'id', ignoreDuplicates: false }
     )
+
+    // Fallback: se falhar por duplicate key (perfil já existe do trigger), faz update e continua
+    if (profileErr && /duplicate key|unique constraint/i.test(profileErr.message ?? '')) {
+      const { error: updateErr } = await supabase.from('profiles').update({
+        name: nome,
+        email,
+        role: 'influencer',
+        must_change_password: true,
+      }).eq('id', uid)
+      if (!updateErr) profileErr = null
+    }
 
     if (profileErr) {
       await supabase.auth.admin.deleteUser(uid)
