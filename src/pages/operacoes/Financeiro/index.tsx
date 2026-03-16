@@ -104,6 +104,25 @@ function cicloSemanalParaData(dataStr: string): { data_inicio: string; data_fim:
   return { data_inicio: fmt(quinta), data_fim: fmt(quarta) };
 }
 
+/** Gera ciclos semanais (qui–qua) de uma data inicial até N semanas à frente */
+function gerarCiclosProativos(desdeData: Date, semanasAhead: number): { data_inicio: string; data_fim: string }[] {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (x: Date) => `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
+  const day = desdeData.getDay();
+  const diff = day >= 4 ? day - 4 : day + 3;
+  const primeiraQuinta = new Date(desdeData);
+  primeiraQuinta.setDate(desdeData.getDate() - diff);
+  const ciclos: { data_inicio: string; data_fim: string }[] = [];
+  for (let i = 0; i < semanasAhead; i++) {
+    const quinta = new Date(primeiraQuinta);
+    quinta.setDate(primeiraQuinta.getDate() + i * 7);
+    const quarta = new Date(quinta);
+    quarta.setDate(quinta.getDate() + 6);
+    ciclos.push({ data_inicio: fmt(quinta), data_fim: fmt(quarta) });
+  }
+  return ciclos;
+}
+
 function cicloAberto(ciclo: CicloPagamento): boolean {
   if (ciclo.fechado_em) return false;
   const hoje = new Date();
@@ -680,7 +699,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const perm = usePermission("financeiro");
   const { podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList } = filtros;
 
-  const [cicloId, setCicloId] = useState<string>(ciclos[0]?.id ?? "");
+  const cicloAtualAberto = ciclos.find(c => !c.fechado_em && cicloAberto(c));
+  const [cicloId, setCicloId] = useState<string>(cicloAtualAberto?.id ?? ciclos[0]?.id ?? "");
   const [rows, setRows] = useState<PagamentoRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalAnalisar, setModalAnalisar] = useState<PagamentoRow | null>(null);
@@ -690,21 +710,26 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const ciclo = ciclos.find(c => c.id === cicloId) ?? ciclos[0] ?? null;
   const isAberto = ciclo ? cicloAberto(ciclo) : false;
 
+  // Seleciona o ciclo atual (aberto) por padrão ao carregar ou quando o ciclo selecionado fechou
   useEffect(() => {
-    if (ciclo) verificarFechamento(ciclo);
-  }, [cicloId]);
+    const aberto = ciclos.find(c => !c.fechado_em && cicloAberto(c));
+    const sel = ciclos.find(c => c.id === cicloId);
+    if (aberto && (!sel || sel.fechado_em)) setCicloId(aberto.id);
+    else if (!cicloId && ciclos[0]) setCicloId(ciclos[0].id);
+  }, [ciclos, cicloId]);
+
+  // Fecha automaticamente ciclos vencidos (quando quarta 23h59 passou → quinta 00h)
+  useEffect(() => {
+    if (ciclos.length === 0) return;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const paraFechar = ciclos.find(c => !c.fechado_em && hoje > new Date((c.data_fim || "") + "T00:00:00"));
+    if (paraFechar) fecharCiclo(paraFechar);
+  }, [ciclos]);
 
   useEffect(() => {
     if (ciclo) carregarDados(ciclo);
   }, [cicloId, podeVerInfluencer, filterInfluencers, filterOperadora]);
-
-  async function verificarFechamento(c: CicloPagamento) {
-    if (c.fechado_em) return;
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const fim = new Date(c.data_fim + "T00:00:00");
-    if (hoje > fim) await fecharCiclo(c);
-  }
 
   async function fecharCiclo(c: CicloPagamento) {
     await gerarPagamentosDoCiclo(c);
@@ -763,6 +788,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (cicloAberto(c)) {
       await carregarPreview(c);
     } else {
+      // Ciclo fechado: re-sincroniza para incluir lives validadas após o fechamento (data dentro do ciclo)
+      await supabase.from("pagamentos").delete().eq("ciclo_id", c.id);
+      await gerarPagamentosDoCiclo(c);
       await carregarPagamentos(c);
     }
     setLoading(false);
@@ -1023,11 +1051,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   <td colSpan={5} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
-                      {!isAberto && (
-                        <span style={{ fontSize: "12px", maxWidth: 420 }}>
-                          Verifique: a live está no período <strong>{ciclo?.data_inicio} – {ciclo?.data_fim}</strong> (qui–qua)? Foi validada em <strong>Lives → Resultados</strong> com status realizada, operadora e duração preenchidos? O Feedback exibe o resultado final para consumo do Financeiro. Se adicionou lives depois do fechamento, clique em <strong>Recalcular</strong>.
-                        </span>
-                      )}
+                      <span style={{ fontSize: "12px", maxWidth: 480, display: "block", marginTop: 8 }}>
+                        <strong>Confira:</strong> (1) Selecione no dropdown acima o ciclo que contém as datas das suas lives — ex.: lives em 26–28/01 ficam no ciclo 22/01–28/01 (qui–qua). (2) A live foi validada em <strong>Lives → Resultados</strong> com status realizada, operadora e duração? (3) O influencer tem cachê/hora em Operações → Influencers? (4) O filtro de operadora está em &quot;Todas&quot;? Se alterou dados após fechar, use <strong>Recalcular</strong>.
+                      </span>
                     </div>
                   </td>
                 </tr>
@@ -1510,39 +1536,73 @@ export default function Financeiro() {
       .from("ciclos_pagamento")
       .select("*")
       .order("data_inicio", { ascending: false });
-    const ciclosExistentes = data ?? [];
-    if (ciclosExistentes.length === 0) {
-      const criados = await criarCiclosAutomaticamente();
-      setCiclos(criados);
-    } else {
-      setCiclos(ciclosExistentes);
+    let ciclosExistentes = (data ?? []) as CicloPagamento[];
+
+    // Ciclos apenas até o atual: da primeira qui de dez/2025 até a semana atual (inclusive)
+    const baseQuinta = new Date(2025, 11, 4); // 4 dez 2025 é quinta
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const diffMs = hoje.getTime() - baseQuinta.getTime();
+    const semanasAteAgora = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
+    const semanasAhead = Math.max(1, semanasAteAgora + 1); // +1 para incluir a semana atual
+    const ciclosProativos = gerarCiclosProativos(baseQuinta, semanasAhead);
+    const existentesInicio = new Set(ciclosExistentes.map(c => c.data_inicio));
+    const paraInserir = ciclosProativos.filter(c => !existentesInicio.has(c.data_inicio));
+
+    if (paraInserir.length > 0) {
+      const { data: inseridos } = await supabase.from("ciclos_pagamento").insert(paraInserir).select("*");
+      if (inseridos?.length) {
+        ciclosExistentes = [...ciclosExistentes, ...(inseridos as CicloPagamento[])].sort(
+          (a, b) => (b.data_inicio || "").localeCompare(a.data_inicio || "")
+        );
+      }
     }
+
+    // Fallback: se ainda vazio, criar a partir de lives realizadas (histórico)
+    if (ciclosExistentes.length === 0) {
+      ciclosExistentes = await criarCiclosAutomaticamente();
+    } else {
+      const complementados = await complementarCiclos(ciclosExistentes);
+      if (complementados.length > 0) {
+        ciclosExistentes = [...ciclosExistentes, ...complementados].sort(
+          (a, b) => (b.data_inicio || "").localeCompare(a.data_inicio || "")
+        );
+      }
+    }
+
+    setCiclos(ciclosExistentes);
     setLoading(false);
   }
 
-  async function criarCiclosAutomaticamente(): Promise<CicloPagamento[]> {
-    const { data: lives } = await supabase
-      .from("lives")
-      .select("data")
-      .eq("status", "realizada")
-      .not("data", "is", null);
+  /** Cria ciclos que faltam para datas de lives realizadas não cobertas pelos existentes */
+  async function complementarCiclos(existentes: CicloPagamento[]): Promise<CicloPagamento[]> {
+    const { data: lives } = await supabase.from("lives").select("data").eq("status", "realizada").not("data", "is", null);
     if (!lives?.length) return [];
-
-    const ciclosUnicos = new Map<string, { data_inicio: string; data_fim: string }>();
+    const ciclosParaInserir: { data_inicio: string; data_fim: string }[] = [];
+    const ciclosInicioSet = new Set(existentes.map(c => c.data_inicio));
     for (const l of lives as { data: string }[]) {
       const ciclo = cicloSemanalParaData(l.data);
-      if (ciclo) ciclosUnicos.set(`${ciclo.data_inicio}`, ciclo);
+      if (!ciclo || ciclosInicioSet.has(ciclo.data_inicio)) continue;
+      const estaCoberto = existentes.some(c => l.data >= (c.data_inicio || "") && l.data <= (c.data_fim || ""));
+      if (!estaCoberto) {
+        ciclosInicioSet.add(ciclo.data_inicio);
+        ciclosParaInserir.push(ciclo);
+      }
     }
-    if (ciclosUnicos.size === 0) return [];
+    if (ciclosParaInserir.length === 0) return [];
+    const { data: inseridos, error } = await supabase.from("ciclos_pagamento").insert(ciclosParaInserir).select("*");
+    if (error) return [];
+    return (inseridos ?? []) as CicloPagamento[];
+  }
 
-    const ciclosParaInserir = Array.from(ciclosUnicos.values()).sort(
-      (a, b) => a.data_inicio.localeCompare(b.data_inicio)
-    );
-
-    const { data: inseridos, error } = await supabase
-      .from("ciclos_pagamento")
-      .insert(ciclosParaInserir)
-      .select("*");
+  async function criarCiclosAutomaticamente(): Promise<CicloPagamento[]> {
+    const baseQuinta = new Date(2025, 11, 4);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const semanasAteAgora = Math.floor((hoje.getTime() - baseQuinta.getTime()) / (7 * 24 * 60 * 60 * 1000));
+    const semanasAhead = Math.max(1, semanasAteAgora + 1);
+    const ciclosProativos = gerarCiclosProativos(baseQuinta, semanasAhead);
+    const { data: inseridos, error } = await supabase.from("ciclos_pagamento").insert(ciclosProativos).select("*");
     if (error) {
       console.warn("Não foi possível criar ciclos automaticamente:", error.message);
       return [];
@@ -1578,7 +1638,7 @@ export default function Financeiro() {
           <div style={{ fontSize: "40px", marginBottom: "16px" }}>📅</div>
           <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>Nenhum ciclo cadastrado</p>
           <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
-            Os ciclos são criados automaticamente a partir das lives realizadas. Se você já tem lives de dez/25 ou outro mês marcadas como realizadas e nada aparece, execute no Supabase SQL Editor: <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>docs/migration-ciclos-pagamento-insert-policy.sql</code> e depois <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>docs/migration-ciclos-pagamento-seed.sql</code>. Em seguida, recarregue esta página.
+            Os ciclos são criados automaticamente (qui–qua). Verifique as permissões da tabela <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>ciclos_pagamento</code> no Supabase (INSERT permitido para autenticados).
           </p>
           <button
             onClick={() => { carregarCiclos(); }}
