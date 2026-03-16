@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { MENU } from "../constants/menu";
 import { BASE_COLORS, FONT } from "../constants/theme";
@@ -7,6 +8,11 @@ interface Props {
   activePage: string;
   onNavigate: (page: string) => void;
 }
+
+// Cor do ícone inativo — lilás neutro, subordinado ao texto
+const ICON_COLOR_INACTIVE = "#c4b5d4";
+// Cor do ícone ativo — branco puro, máximo contraste sobre gradiente
+const ICON_COLOR_ACTIVE    = "#ffffff";
 
 export default function Sidebar({ activePage, onNavigate }: Props) {
   const { theme: t, permissions } = useApp();
@@ -39,15 +45,15 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
       </div>
 
       {/* NAV */}
-      <nav style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", paddingRight: "4px", minHeight: 0 }}>
+      <nav style={{
+        flex: 1, overflowY: "auto", display: "flex",
+        flexDirection: "column", gap: "4px",
+        paddingRight: "4px", minHeight: 0,
+      }}>
         {MENU.map((sec) => {
-          // Filtra itens que o usuário tem permissão de ver
-          // "sim" ou "proprios" → exibe | null ou "nao" → oculta
           const itensFiltrados = sec.items.filter(
             (item) => permissions[item.key] === "sim" || permissions[item.key] === "proprios"
           );
-
-          // Seção inteira some se não tiver nenhum item visível
           if (itensFiltrados.length === 0) return null;
 
           const isOpen    = openSections[sec.section] ?? true;
@@ -55,26 +61,35 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
 
           return (
             <div key={sec.section}>
+              {/* Cabeçalho da seção */}
               <button
                 onClick={() => setOpenSections((p) => ({ ...p, [sec.section]: !p[sec.section] }))}
                 style={{
                   ...btnBase,
-                  justifyContent: "space-between", padding: "10px 14px",
+                  justifyContent: "space-between",
+                  padding: "10px 14px",
                   color: hasActive ? "white" : "#8888aa",
-                  fontWeight: 700, fontSize: "11px", letterSpacing: "1.5px",
+                  fontWeight: 700,
+                  fontSize: "11px",
+                  letterSpacing: "1.5px",
                   textTransform: "uppercase",
-                }}>
+                }}
+              >
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {/* Chevron Lucide — substitui o ">" de texto */}
                   <span style={{
-                    fontSize: "10px", display: "inline-block",
+                    display: "inline-flex",
                     transition: "transform 0.25s",
                     transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
                     color: "#6b6b8a",
-                  }}>{">"}</span>
+                  }}>
+                    <ChevronRight size={12} />
+                  </span>
                   {sec.section}
                 </span>
               </button>
 
+              {/* Itens da seção */}
               <div style={{
                 overflow: "hidden",
                 maxHeight: isOpen ? `${itensFiltrados.length * 52}px` : "0px",
@@ -82,7 +97,10 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
                 display: "flex", flexDirection: "column", gap: "2px", paddingLeft: "8px",
               }}>
                 {itensFiltrados.map((item) => {
-                  const active = activePage === item.key;
+                  const active    = activePage === item.key;
+                  const Icon      = item.icon;
+                  const iconColor = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
+
                   return (
                     <button
                       key={item.key}
@@ -92,10 +110,11 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
                         background: active
                           ? `linear-gradient(135deg, ${BASE_COLORS.purple}cc, ${BASE_COLORS.blue}cc)`
                           : "transparent",
-                        color: active ? "white" : "#e5dce1",
+                        color:     active ? "white" : "#e5dce1",
                         boxShadow: active ? `0 4px 16px ${BASE_COLORS.purple}44` : "none",
-                      }}>
-                      <span style={{ fontSize: "15px" }}>{item.icon}</span>
+                      }}
+                    >
+                      <Icon size={15} color={iconColor} />
                       {item.label}
                     </button>
                   );
