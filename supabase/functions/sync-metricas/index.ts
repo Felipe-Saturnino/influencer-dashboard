@@ -148,9 +148,9 @@ async function enviarAlertaAuthCda(): Promise<void> {
 
 // ── Headers padrão CDA ───────────────────────────────────────
 // Suporta: CDA_INFLUENCERS_API_KEY (não expira, recomendado) ou SMARTICO_TOKEN (cookie de sessão, expira)
-// v1.6.0: Prioridade para CDA_INFLUENCERS_API_KEY; se ausente, usa SMARTICO_TOKEN (compatibilidade)
+// CDA_AUTH_FORMAT: "Bearer" (default) ou "direct" — algumas APIs CDA aceitam a chave sem prefixo Bearer
 
-function buildHeaders(auth: { apiKey?: string; token?: string }, labelId: string): HeadersInit {
+function buildHeaders(auth: { apiKey?: string; token?: string; authFormat?: 'Bearer' | 'direct' }, labelId: string): HeadersInit {
   const base: Record<string, string> = {
     'Content-Type': 'application/json;charset=UTF-8',
     'Active_label_id': labelId,
@@ -159,7 +159,8 @@ function buildHeaders(auth: { apiKey?: string; token?: string }, labelId: string
     'Referer': `https://data-api3.aff.casadeapostas.bet.br/?label_id=${labelId}&noNav=true`,
   }
   if (auth.apiKey) {
-    base['Authorization'] = `Bearer ${auth.apiKey}`
+    const format = auth.authFormat ?? 'Bearer'
+    base['Authorization'] = format === 'direct' ? auth.apiKey : `Bearer ${auth.apiKey}`
   } else if (auth.token) {
     base['Cookie'] = `__smtaff_bo_token=${auth.token}`
   }
@@ -198,7 +199,7 @@ function buildTimeFilter(dataInicio: string, dataFim: string): object {
 
 // ── Busca métricas de um influencer (SPLIT por dia) ──────────
 
-type CdaAuth = { apiKey?: string; token?: string }
+type CdaAuth = { apiKey?: string; token?: string; authFormat?: 'Bearer' | 'direct' }
 
 async function fetchMetricasPorUtm(
   utmSource: string, dataInicio: string, dataFim: string, auth: CdaAuth, labelId: string
@@ -475,15 +476,17 @@ serve(async (req: Request) => {
     const smaticoToken = Deno.env.get('SMARTICO_TOKEN')
     const labelId      = Deno.env.get('SMARTICO_LABEL_ID') ?? '573703'
 
+    const authFormat = (Deno.env.get('CDA_AUTH_FORMAT') ?? 'Bearer').toLowerCase() === 'direct' ? 'direct' as const : 'Bearer' as const
+
     // Prioridade: CDA_INFLUENCERS_API_KEY (não expira) > SMARTICO_TOKEN (fallback, expira)
     const cdaAuth: CdaAuth = cdaApiKey
-      ? { apiKey: cdaApiKey }
+      ? { apiKey: cdaApiKey, authFormat }
       : smaticoToken
         ? { token: smaticoToken }
         : (() => { throw new Error('Configure CDA_INFLUENCERS_API_KEY (recomendado, não expira) ou SMARTICO_TOKEN no Supabase Secrets.') })()
 
     const usaApiKey = !!cdaApiKey
-    console.log(`[sync-metricas] v1.6.1 | Auth: ${usaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN (fallback)'} | Período: ${dataInicio} → ${dataFim}`)
+    console.log(`[sync-metricas] v1.6.2 | Auth: ${usaApiKey ? `CDA_INFLUENCERS_API_KEY (${authFormat})` : 'SMARTICO_TOKEN (fallback)'} | Período: ${dataInicio} → ${dataFim}`)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
@@ -659,7 +662,7 @@ serve(async (req: Request) => {
 
     const resposta = {
       ok: true,
-      versao: 'v1.6.1',
+      versao: 'v1.6.2',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       fase1_influencers: {
         total: influencers?.length ?? 0,

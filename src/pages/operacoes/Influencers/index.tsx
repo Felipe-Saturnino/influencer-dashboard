@@ -24,23 +24,7 @@ const BRAND = {
 const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
-type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
-const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok"];
-const PLAT_COLOR: Record<Plataforma, string> = {
-  Twitch: "#9146ff", YouTube: "#ff0000", Kick: "#53fc18",
-  Instagram: "#e1306c", TikTok: "#69c9d0",
-};
-const PLAT_LOGO: Record<Plataforma, string> = {
-  Twitch:    "https://cdn.simpleicons.org/twitch/9146FF",
-  YouTube:   "https://cdn.simpleicons.org/youtube/FF0000",
-  Instagram: "https://cdn.simpleicons.org/instagram/E1306C",
-  TikTok:    "https://cdn.simpleicons.org/tiktok/000000",
-  Kick:      "https://cdn.simpleicons.org/kick/53FC18",
-};
-const PLAT_LOGO_DARK: Record<Plataforma, string> = {
-  ...PLAT_LOGO,
-  TikTok: "https://cdn.simpleicons.org/tiktok/FFFFFF",
-};
+import { PLATAFORMAS, PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK, type Plataforma } from "../../../constants/platforms";
 
 function PlatLogo({ plataforma, size = 14, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
   const [err, setErr] = useState(false);
@@ -128,6 +112,9 @@ interface Perfil {
   link_kick?:       string;
   link_instagram?:  string;
   link_tiktok?:     string;
+  link_discord?:    string;
+  link_whatsapp?:   string;
+  link_telegram?:   string;
   cache_hora?:      number;
   banco?:           string;
   agencia?:         string;
@@ -145,7 +132,7 @@ interface Influencer {
 
 const emptyPerfil = (id: string): Perfil => ({
   id, nome_artistico: "", nome_completo: "", status: "ativo", telefone: "", cpf: "",
-  canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "",
+  canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "", link_discord: "", link_whatsapp: "", link_telegram: "",
   cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
 });
 

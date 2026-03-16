@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { PLATAFORMAS, PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK, type Plataforma } from "../../../constants/platforms";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { X, Eye, Pencil, Trash2 } from "lucide-react";
 import { GiSpyglass, GiEyeball, GiTwoCoins } from "react-icons/gi";
@@ -20,24 +21,6 @@ const BRAND = {
 const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
-const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok"];
-const PLAT_COLOR: Record<Plataforma, string> = {
-  Twitch: "#9146ff", YouTube: "#ff0000", Kick: "#53fc18",
-  Instagram: "#e1306c", TikTok: "#69c9d0",
-};
-const PLAT_LOGO: Record<Plataforma, string> = {
-  Twitch:    "https://cdn.simpleicons.org/twitch/9146FF",
-  YouTube:   "https://cdn.simpleicons.org/youtube/FF0000",
-  Instagram: "https://cdn.simpleicons.org/instagram/E1306C",
-  TikTok:    "https://cdn.simpleicons.org/tiktok/000000",
-  Kick:      "https://cdn.simpleicons.org/kick/53FC18",
-};
-const PLAT_LOGO_DARK: Record<Plataforma, string> = {
-  ...PLAT_LOGO,
-  TikTok: "https://cdn.simpleicons.org/tiktok/FFFFFF",
-};
-
 function PlatLogo({ plataforma, size = 14, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
   const [err, setErr] = useState(false);
   const p = plataforma as Plataforma;
@@ -85,11 +68,17 @@ export interface ScoutInfluencer {
   link_kick?: string | null;
   link_instagram?: string | null;
   link_tiktok?: string | null;
+  link_discord?: string | null;
+  link_whatsapp?: string | null;
+  link_telegram?: string | null;
   views_twitch?: number | null;
   views_youtube?: number | null;
   views_kick?: number | null;
   views_instagram?: number | null;
   views_tiktok?: number | null;
+  views_discord?: number | null;
+  views_whatsapp?: number | null;
+  views_telegram?: number | null;
   categorias?: string[];
   user_id?: string | null;
   created_by?: string | null;
@@ -111,7 +100,7 @@ function formatBRL(value: number): string {
 }
 
 function getViewsTotal(s: ScoutInfluencer): number {
-  return (s.views_twitch ?? 0) + (s.views_youtube ?? 0) + (s.views_kick ?? 0) + (s.views_instagram ?? 0) + (s.views_tiktok ?? 0);
+  return (s.views_twitch ?? 0) + (s.views_youtube ?? 0) + (s.views_kick ?? 0) + (s.views_instagram ?? 0) + (s.views_tiktok ?? 0) + (s.views_discord ?? 0) + (s.views_whatsapp ?? 0) + (s.views_telegram ?? 0);
 }
 
 function getLiveCassinoLabel(v: string | null | undefined): string {
@@ -129,11 +118,17 @@ function validarParaFechado(s: {
   link_kick?: string | null;
   link_instagram?: string | null;
   link_tiktok?: string | null;
+  link_discord?: string | null;
+  link_whatsapp?: string | null;
+  link_telegram?: string | null;
   views_twitch?: number | null;
   views_youtube?: number | null;
   views_kick?: number | null;
   views_instagram?: number | null;
   views_tiktok?: number | null;
+  views_discord?: number | null;
+  views_whatsapp?: number | null;
+  views_telegram?: number | null;
 }): { ok: boolean; msg?: string } {
   if (!(s.nome_artistico ?? "").trim()) return { ok: false, msg: "Nome artístico é obrigatório para marcar como Fechado." };
   if (!(s.email ?? "").trim()) return { ok: false, msg: "E-mail é obrigatório para marcar como Fechado." };
@@ -239,7 +234,7 @@ export default function Scout() {
         const res = await fetch("/api/criar-usuario-scout", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseAnonKey}`, "Apikey": supabaseAnonKey },
-          body: JSON.stringify({ email: (scout.email ?? "").trim(), nome_artistico: (scout.nome_artistico ?? "").trim(), telefone: (scout.telefone ?? "").trim() || undefined, cache_negociado: Math.max(0, Number(scout.cache_negociado) || 0), scout_id: scout.id, plataformas: scout.plataformas ?? [], link_twitch: scout.link_twitch ?? "", link_youtube: scout.link_youtube ?? "", link_kick: scout.link_kick ?? "", link_instagram: scout.link_instagram ?? "", link_tiktok: scout.link_tiktok ?? "" }),
+          body: JSON.stringify({ email: (scout.email ?? "").trim(), nome_artistico: (scout.nome_artistico ?? "").trim(), telefone: (scout.telefone ?? "").trim() || undefined, cache_negociado: Math.max(0, Number(scout.cache_negociado) || 0), scout_id: scout.id, plataformas: scout.plataformas ?? [], link_twitch: scout.link_twitch ?? "", link_youtube: scout.link_youtube ?? "", link_kick: scout.link_kick ?? "", link_instagram: scout.link_instagram ?? "", link_tiktok: scout.link_tiktok ?? "", link_discord: scout.link_discord ?? "", link_whatsapp: scout.link_whatsapp ?? "", link_telegram: scout.link_telegram ?? "" }),
         });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
@@ -608,10 +603,12 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
   const [links, setLinks] = useState<Record<string, string>>({
     twitch: scout?.link_twitch ?? "", youtube: scout?.link_youtube ?? "", kick: scout?.link_kick ?? "",
     instagram: scout?.link_instagram ?? "", tiktok: scout?.link_tiktok ?? "",
+    discord: scout?.link_discord ?? "", whatsapp: scout?.link_whatsapp ?? "", telegram: scout?.link_telegram ?? "",
   });
   const [views, setViews] = useState<Record<string, number>>({
     twitch: scout?.views_twitch ?? 0, youtube: scout?.views_youtube ?? 0, kick: scout?.views_kick ?? 0,
     instagram: scout?.views_instagram ?? 0, tiktok: scout?.views_tiktok ?? 0,
+    discord: scout?.views_discord ?? 0, whatsapp: scout?.views_whatsapp ?? 0, telegram: scout?.views_telegram ?? 0,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -628,8 +625,8 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
       setEmail(scout.email ?? "");
       setPlataformas(scout.plataformas ?? []);
       setCategorias(scout.categorias ?? []);
-      setLinks({ twitch: scout.link_twitch ?? "", youtube: scout.link_youtube ?? "", kick: scout.link_kick ?? "", instagram: scout.link_instagram ?? "", tiktok: scout.link_tiktok ?? "" });
-      setViews({ twitch: scout.views_twitch ?? 0, youtube: scout.views_youtube ?? 0, kick: scout.views_kick ?? 0, instagram: scout.views_instagram ?? 0, tiktok: scout.views_tiktok ?? 0 });
+      setLinks({ twitch: scout.link_twitch ?? "", youtube: scout.link_youtube ?? "", kick: scout.link_kick ?? "", instagram: scout.link_instagram ?? "", tiktok: scout.link_tiktok ?? "", discord: scout.link_discord ?? "", whatsapp: scout.link_whatsapp ?? "", telegram: scout.link_telegram ?? "" });
+      setViews({ twitch: scout.views_twitch ?? 0, youtube: scout.views_youtube ?? 0, kick: scout.views_kick ?? 0, instagram: scout.views_instagram ?? 0, tiktok: scout.views_tiktok ?? 0, discord: scout.views_discord ?? 0, whatsapp: scout.views_whatsapp ?? 0, telegram: scout.views_telegram ?? 0 });
     }
   }, [scout]);
 
@@ -681,11 +678,17 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
       link_kick: links.kick?.trim() || null,
       link_instagram: links.instagram?.trim() || null,
       link_tiktok: links.tiktok?.trim() || null,
+      link_discord: links.discord?.trim() || null,
+      link_whatsapp: links.whatsapp?.trim() || null,
+      link_telegram: links.telegram?.trim() || null,
       views_twitch: views.twitch || null,
       views_youtube: views.youtube || null,
       views_kick: views.kick || null,
       views_instagram: views.instagram || null,
       views_tiktok: views.tiktok || null,
+      views_discord: views.discord || null,
+      views_whatsapp: views.whatsapp || null,
+      views_telegram: views.telegram || null,
     };
   }
 
@@ -703,11 +706,17 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         link_kick: links.kick,
         link_instagram: links.instagram,
         link_tiktok: links.tiktok,
+        link_discord: links.discord,
+        link_whatsapp: links.whatsapp,
+        link_telegram: links.telegram,
         views_twitch: views.twitch,
         views_youtube: views.youtube,
         views_kick: views.kick,
         views_instagram: views.instagram,
         views_tiktok: views.tiktok,
+        views_discord: views.discord,
+        views_whatsapp: views.whatsapp,
+        views_telegram: views.telegram,
       };
       const val = validarParaFechado(dadosParaValidar);
       if (!val.ok) return setError(val.msg ?? "Dados incompletos para Fechado.");
@@ -740,11 +749,17 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         link_kick: links.kick?.trim() || null,
         link_instagram: links.instagram?.trim() || null,
         link_tiktok: links.tiktok?.trim() || null,
+        link_discord: links.discord?.trim() || null,
+        link_whatsapp: links.whatsapp?.trim() || null,
+        link_telegram: links.telegram?.trim() || null,
         views_twitch: views.twitch || null,
         views_youtube: views.youtube || null,
         views_kick: views.kick || null,
         views_instagram: views.instagram || null,
         views_tiktok: views.tiktok || null,
+        views_discord: views.discord || null,
+        views_whatsapp: views.whatsapp || null,
+        views_telegram: views.telegram || null,
         updated_at: new Date().toISOString(),
       };
       if (!scout) payload.created_by = user?.id;
@@ -797,6 +812,9 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         link_kick: s.link_kick ?? "",
         link_instagram: s.link_instagram ?? "",
         link_tiktok: s.link_tiktok ?? "",
+        link_discord: s.link_discord ?? "",
+        link_whatsapp: s.link_whatsapp ?? "",
+        link_telegram: s.link_telegram ?? "",
       }),
     });
     const fnData = await res.json().catch(() => ({}));

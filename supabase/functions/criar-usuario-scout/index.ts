@@ -16,6 +16,9 @@ interface CriarUsuarioScoutRequest {
   link_kick?: string
   link_instagram?: string
   link_tiktok?: string
+  link_discord?: string
+  link_whatsapp?: string
+  link_telegram?: string
 }
 
 function corsHeaders(req: Request) {
@@ -158,6 +161,9 @@ serve(async (req) => {
         link_kick: plat.includes('Kick') ? (body.link_kick ?? '') : undefined,
         link_instagram: plat.includes('Instagram') ? (body.link_instagram ?? '') : undefined,
         link_tiktok: plat.includes('TikTok') ? (body.link_tiktok ?? '') : undefined,
+        link_discord: plat.includes('Discord') ? (body.link_discord ?? '') : undefined,
+        link_whatsapp: plat.includes('WhatsApp') ? (body.link_whatsapp ?? '') : undefined,
+        link_telegram: plat.includes('Telegram') ? (body.link_telegram ?? '') : undefined,
       },
       { onConflict: 'id', ignoreDuplicates: false }
     )
