@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase, supabaseUrl } from "../../../lib/supabase";
+import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
@@ -140,12 +140,10 @@ export default function StatusTecnico() {
     setSyncExecutando(true);
     setSyncMensagem(null);
     try {
-      // Atualiza a sessão para evitar token expirado (401)
-      await supabase.auth.refreshSession();
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      // Usa anon key (não expira) em vez do token de sessão para evitar 401
+      const token = supabaseAnonKey;
       if (!token || !supabaseUrl) {
-        setSyncMensagem({ tipo: "erro", texto: "Sessão não encontrada. Faça login novamente." });
+        setSyncMensagem({ tipo: "erro", texto: "Configuração do Supabase incompleta." });
         setSyncExecutando(false);
         return;
       }
@@ -160,7 +158,7 @@ export default function StatusTecnico() {
         const msg = resData?.erro ?? resData?.error ?? `Erro ${res.status}: ${res.statusText}`;
         let texto = msg;
         if (res.status === 401) {
-          texto = "Sessão expirada. Faça logout e login novamente, depois tente o Sync.";
+          texto = "Não autorizado (401). Verifique no Supabase se a Edge Function sync-metricas está implantada e se aceita requisições com a chave do projeto.";
         } else if (msg.includes("SMARTICO_TOKEN")) {
           texto = `${msg} Configure em Supabase → Settings → Edge Functions → Secrets.`;
         } else if (res.status === 500) {
