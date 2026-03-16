@@ -430,7 +430,7 @@ export default function Scout() {
                             {p}
                             {(views ?? 0) > 0 && (
                               <span style={{ fontSize: 11, color: t.textMuted, fontWeight: 400 }}>
-                                · {(views as number).toLocaleString("pt-BR")} views
+                                · {(views as number).toLocaleString("pt-BR")} {PLAT_METRICA[p] ?? "views"}
                               </span>
                             )}
                           </span>
@@ -567,7 +567,7 @@ function ModalVisualizar({ scout, onClose, isDark }: { scout: ScoutInfluencer; o
                         ) : (
                           <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Sem link</span>
                         )}
-                        {views != null && views > 0 && <span style={{ display: "block", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>{views.toLocaleString("pt-BR")} views</span>}
+                        {views != null && views > 0 && <span style={{ display: "block", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>{views.toLocaleString("pt-BR")} {PLAT_METRICA[p] ?? "views"}</span>}
                       </div>
                     </div>
                   );
