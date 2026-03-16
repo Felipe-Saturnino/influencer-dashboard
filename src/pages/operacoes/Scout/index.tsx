@@ -1,19 +1,50 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { FONT } from "../../../constants/theme";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
+import { X, Eye, Pencil, Trash2 } from "lucide-react";
+import { GiSpyglass, GiMoneyStack, GiEyeball, GiTwoCoins } from "react-icons/gi";
+
+// ─── BRAND ────────────────────────────────────────────────────────────────────
+const BRAND = {
+  roxo:     "#4a2082",
+  roxoVivo: "#7c3aed",
+  azul:     "#1e36f8",
+  vermelho: "#e84025",
+  ciano:    "#70cae4",
+  verde:    "#22c55e",
+  amarelo:  "#f59e0b",
+} as const;
+
+const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type Plataforma = "Twitch" | "YouTube" | "Kick" | "Instagram" | "TikTok";
 const PLATAFORMAS: Plataforma[] = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok"];
 const PLAT_COLOR: Record<Plataforma, string> = {
   Twitch: "#9146ff", YouTube: "#ff0000", Kick: "#53fc18",
-  Instagram: "#e1306c", TikTok: "#010101",
+  Instagram: "#e1306c", TikTok: "#69c9d0",
 };
-const PLAT_ICON: Record<Plataforma, string> = {
-  Twitch: "🟣", YouTube: "▶️", Kick: "🟢", Instagram: "📸", TikTok: "🎵",
+const PLAT_LOGO: Record<Plataforma, string> = {
+  Twitch:    "https://cdn.simpleicons.org/twitch/9146FF",
+  YouTube:   "https://cdn.simpleicons.org/youtube/FF0000",
+  Instagram: "https://cdn.simpleicons.org/instagram/E1306C",
+  TikTok:    "https://cdn.simpleicons.org/tiktok/000000",
+  Kick:      "https://cdn.simpleicons.org/kick/53FC18",
 };
+const PLAT_LOGO_DARK: Record<Plataforma, string> = {
+  ...PLAT_LOGO,
+  TikTok: "https://cdn.simpleicons.org/tiktok/FFFFFF",
+};
+
+function PlatLogo({ plataforma, size = 14, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
+  const [err, setErr] = useState(false);
+  const p = plataforma as Plataforma;
+  const src = isDark ? (PLAT_LOGO_DARK[p] ?? PLAT_LOGO[p]) : PLAT_LOGO[p];
+  if (err || !src) return <span style={{ fontSize: size * 0.65, color: PLAT_COLOR[p] ?? "#fff" }}>●</span>;
+  return <img src={src} alt={plataforma} width={size} height={size} onError={() => setErr(true)} style={{ display: "block", flexShrink: 0 }} />;
+}
 
 export type StatusScout = "visualizado" | "contato" | "negociacao" | "fechado";
 const STATUS_SCOUT_OPTS: StatusScout[] = ["visualizado", "contato", "negociacao", "fechado"];
@@ -21,7 +52,7 @@ const STATUS_SCOUT_LABEL: Record<StatusScout, string> = {
   visualizado: "Visualizado", contato: "Contato", negociacao: "Negociação", fechado: "Fechado",
 };
 const STATUS_SCOUT_COLOR: Record<StatusScout, string> = {
-  visualizado: "#6b7280", contato: "#3b82f6", negociacao: "#f59e0b", fechado: "#059669",
+  visualizado: "#6b7280", contato: BRAND.azul, negociacao: BRAND.amarelo, fechado: BRAND.verde,
 };
 
 const CATEGORIAS = ["Vida Real", "Jogos Populares", "Variedades", "Esportes", "Cassino"] as const;
@@ -175,7 +206,7 @@ function StatusScoutBadge({ value, onChange, readonly }: { value: StatusScout; o
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Scout() {
-  const { theme: t, user } = useApp();
+  const { theme: t, user, isDark } = useApp();
   const perm = usePermission("scout");
   const [list, setList] = useState<ScoutInfluencer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,9 +347,9 @@ export default function Scout() {
     gap: "12px", flexWrap: "wrap",
   };
   const selectStyle: React.CSSProperties = {
-    flex: 1, minWidth: 120, padding: "8px 12px", borderRadius: "10px",
-    border: `1px solid ${t.inputBorder}`, background: t.inputBg,
-    color: t.inputText, fontSize: "12px", fontFamily: FONT.body,
+    flex: 1, minWidth: 120, padding: "8px 12px", borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
+    color: t.text, fontSize: 12, fontFamily: FONT.body,
     cursor: "pointer", outline: "none",
   };
 
@@ -332,22 +363,32 @@ export default function Scout() {
 
   return (
     <div style={{ padding: "24px", maxWidth: "900px", margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "20px", gap: "12px", flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: "22px", fontWeight: 900, color: t.text, fontFamily: FONT.title, margin: "0 0 6px" }}>
-            🔍 Scout
-          </h1>
-          <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>
-            Prospecte e registre informações de influencers para parcerias.
-          </p>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            width: 32, height: 32, borderRadius: 9,
+            background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: BRAND.ciano, flexShrink: 0,
+          }}>
+            <GiSpyglass size={16} />
+          </span>
+          <div>
+            <h1 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Scout
+            </h1>
+            <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
+              Prospecte e registre informações de influencers para parcerias.
+            </p>
+          </div>
         </div>
         {perm.canCriarOk && (
           <button
             onClick={() => setModalNovo(true)}
             style={{
-              padding: "10px 18px", borderRadius: "10px", border: "none", cursor: "pointer",
-              background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-              color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
+              padding: "10px 18px", borderRadius: 10, border: "none", cursor: "pointer",
+              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
             }}
           >
             + Adicionar
@@ -360,14 +401,16 @@ export default function Scout() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", justifyContent: "center", marginBottom: "24px" }}>
           {STATUS_SCOUT_OPTS.map((s) => (
             <div key={s} style={{ background: t.cardBg, border: `1px solid ${STATUS_SCOUT_COLOR[s]}44`, borderRadius: "14px", padding: "16px 18px", minWidth: "140px" }}>
-              <div style={{ fontSize: "28px", fontWeight: 900, color: t.text, fontFamily: FONT.title, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
               <div style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: "4px" }}>{STATUS_SCOUT_LABEL[s]}</div>
             </div>
           ))}
           {PLATAFORMAS.map((plat) => (
-            <div key={plat} style={{ background: t.cardBg, border: `1px solid ${(PLAT_COLOR[plat] ?? t.cardBorder)}44`, borderRadius: "14px", padding: "16px 18px", minWidth: "120px" }}>
-              <div style={{ fontSize: "28px", fontWeight: 900, color: t.text, fontFamily: FONT.title, lineHeight: 1 }}>{porPlat[plat] ?? 0}</div>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: PLAT_COLOR[plat], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: "4px" }}>{PLAT_ICON[plat]} {plat}</div>
+            <div key={plat} style={{ background: t.cardBg, border: `1px solid ${(PLAT_COLOR[plat] ?? t.cardBorder)}44`, borderRadius: 14, padding: "16px 18px", minWidth: 120 }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porPlat[plat] ?? 0}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: PLAT_COLOR[plat], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 4 }}>
+                <PlatLogo plataforma={plat} size={12} isDark={isDark ?? false} /> {plat}
+              </div>
             </div>
           ))}
         </div>
@@ -381,9 +424,9 @@ export default function Scout() {
           placeholder="Buscar por nome do influencer..."
           style={{
             width: "100%", boxSizing: "border-box", padding: "10px 16px",
-            borderRadius: "12px", border: `1px solid ${t.inputBorder}`,
-            background: t.inputBg, color: t.inputText, fontSize: "13px",
-            fontFamily: FONT.body, outline: "none", marginBottom: "10px",
+            borderRadius: 12, border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
+            fontFamily: FONT.body, outline: "none", marginBottom: 10,
           }}
         />
         <div style={{ display: "flex", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>

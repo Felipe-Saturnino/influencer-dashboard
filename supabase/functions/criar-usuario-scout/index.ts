@@ -101,13 +101,17 @@ serve(async (req) => {
 
     const uid = authData.user.id
 
-    const { error: profileErr } = await supabase.from('profiles').insert({
-      id: uid,
-      name: nome,
-      email,
-      role: 'influencer',
-      must_change_password: true,
-    })
+    // Upsert: o trigger on_auth_user_created já cria o profile; atualizamos com role e must_change_password
+    const { error: profileErr } = await supabase.from('profiles').upsert(
+      {
+        id: uid,
+        name: nome,
+        email,
+        role: 'influencer',
+        must_change_password: true,
+      },
+      { onConflict: 'id', ignoreDuplicates: false }
+    )
 
     if (profileErr) {
       await supabase.auth.admin.deleteUser(uid)
