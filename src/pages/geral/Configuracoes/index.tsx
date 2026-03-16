@@ -1,8 +1,24 @@
 import { useState } from "react";
+import { Eye, EyeOff, Lock, Check, Sun, Moon, AlertCircle, CheckCircle2 } from "lucide-react";
+import { GiPalette, GiPadlock } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+
+// ─── BRAND ────────────────────────────────────────────────────────────────────
+const BRAND = {
+  roxo:      "#4a2082",
+  roxoVivo:  "#7c3aed",
+  azul:      "#1e36f8",
+  vermelho:  "#e84025",
+  verde:     "#22c55e",
+  gradiente: "linear-gradient(135deg, #4a2082, #1e36f8)",
+};
+
+const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function passwordStrength(pwd: string) {
   let s = 0;
@@ -13,17 +29,7 @@ function passwordStrength(pwd: string) {
   return s;
 }
 
-function EyeIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <ellipse cx="12" cy="12" rx="10" ry="6"/><circle cx="12" cy="12" r="2.5"/>
-    </svg>
-  ) : (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12c2.5-5 5.5-7 10-7s7.5 2 10 7"/><path d="M6 16.5l1.5-2"/><path d="M12 18v-2.5"/><path d="M18 16.5l-1.5-2"/>
-    </svg>
-  );
-}
+// ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
 export default function Configuracoes() {
   const { theme: t, isDark, setIsDark } = useApp();
@@ -39,9 +45,14 @@ export default function Configuracoes() {
   const [showNew,  setShowNew]  = useState(false);
   const [showConf, setShowConf] = useState(false);
 
-  const strength = passwordStrength(newPass);
-  const strengthColor = ["#e94025","#e94025","#f5a623","#27ae60","#27ae60"][strength];
-  const strengthLabel = strength <= 1 ? "Fraca" : strength <= 2 ? "Média" : "Forte";
+  const strength      = passwordStrength(newPass);
+  const strengthColor =
+    strength <= 1 ? BRAND.vermelho :
+    strength <= 2 ? "#f59e0b" :
+    BRAND.verde;
+  const strengthLabel =
+    strength <= 1 ? "Fraca" :
+    strength <= 2 ? "Média" : "Forte";
 
   if (perm.canView === "nao") {
     return (
@@ -52,9 +63,9 @@ export default function Configuracoes() {
   }
 
   const reqs = [
-    { ok: newPass.length >= 8,                             label: "Mínimo 8 caracteres" },
-    { ok: /[a-z]/.test(newPass) && /[A-Z]/.test(newPass), label: "Maiúsculas e minúsculas" },
-    { ok: /\d/.test(newPass),                              label: "Pelo menos um número" },
+    { ok: newPass.length >= 8,                             label: "Mínimo 8 caracteres"             },
+    { ok: /[a-z]/.test(newPass) && /[A-Z]/.test(newPass), label: "Maiúsculas e minúsculas"          },
+    { ok: /\d/.test(newPass),                              label: "Pelo menos um número"             },
     { ok: /[^a-zA-Z0-9]/.test(newPass),                   label: "Pelo menos um caractere especial" },
   ];
 
@@ -81,137 +92,280 @@ export default function Configuracoes() {
     setTimeout(() => setPassOk(false), 4000);
   }
 
+  // ── ESTILOS COMPARTILHADOS ──
   const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: "16px", padding: "28px", marginBottom: "20px",
+    background:   t.cardBg,
+    border:       `1px solid ${t.cardBorder}`,
+    borderRadius: 18,
+    padding:      28,
+    marginBottom: 20,
+    boxShadow:    "0 4px 20px rgba(0,0,0,0.18)",
   };
-  const sectionTitle: React.CSSProperties = {
-    fontSize: "13px", fontWeight: 700, letterSpacing: "1.5px",
-    textTransform: "uppercase", color: BASE_COLORS.purple,
-    fontFamily: FONT.body, margin: "0 0 6px",
-  };
-  const desc: React.CSSProperties = {
-    fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, margin: "0 0 20px",
-  };
+
   const inputStyle: React.CSSProperties = {
-    width: "100%", boxSizing: "border-box",
-    background: t.inputBg, border: `1px solid ${t.inputBorder}`,
-    borderRadius: "10px", color: t.inputText,
-    fontSize: "14px", padding: "12px 44px 12px 14px",
-    outline: "none", fontFamily: FONT.body,
+    width:        "100%",
+    boxSizing:    "border-box",
+    background:   t.inputBg,
+    border:       `1px solid ${t.inputBorder ?? t.cardBorder}`,
+    borderRadius: 10,
+    color:        t.inputText ?? t.text,
+    fontSize:     14,
+    padding:      "12px 44px 12px 14px",
+    outline:      "none",
+    fontFamily:   FONT.body,
+    transition:   "border-color 0.18s",
   };
+
   const labelStyle: React.CSSProperties = {
-    display: "block", fontSize: "11px", fontWeight: 700,
-    letterSpacing: "1.2px", textTransform: "uppercase",
-    color: t.label, marginBottom: "6px", fontFamily: FONT.body,
+    display:       "block",
+    fontSize:      11,
+    fontWeight:    700,
+    letterSpacing: "1.2px",
+    textTransform: "uppercase",
+    color:         t.textMuted,
+    marginBottom:  6,
+    fontFamily:    FONT.body,
   };
 
   return (
     <div style={{ maxWidth: "640px", margin: "0 auto", padding: "32px 4px" }}>
 
-      {/* APARÊNCIA */}
+      {/* ── APARÊNCIA ── */}
       <div style={card}>
-        <p style={sectionTitle}>🎨 Aparência</p>
-        <p style={desc}>Escolha como a interface será exibida.</p>
-        <div style={{ display: "flex", gap: "12px" }}>
-          {([false, true] as const).map(dark => (
-            <button key={String(dark)} onClick={() => setIsDark(dark)}
-              style={{ flex: 1, padding: "16px 12px", borderRadius: "12px", cursor: "pointer", border: `2px solid ${isDark === dark ? BASE_COLORS.purple : t.cardBorder}`, background: isDark === dark ? `${BASE_COLORS.purple}18` : t.inputBg, display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", transition: "all 0.2s" }}>
-              <div style={{ width: "64px", height: "40px", borderRadius: "8px", background: dark ? "#1a1a2e" : "#f0f0f8", border: `1px solid ${dark ? "#3a3a5c" : "#d0d0e0"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" }}>
-                {dark ? "🌙" : "☀️"}
-              </div>
-              <span style={{ fontSize: "13px", fontWeight: 600, color: t.text, fontFamily: FONT.body }}>
-                {dark ? "Modo Escuro" : "Modo Claro"}
-              </span>
-              {isDark === dark && (
-                <span style={{ fontSize: "10px", background: BASE_COLORS.purple, color: "#fff", padding: "2px 8px", borderRadius: "20px" }}>✓ Ativo</span>
-              )}
-            </button>
-          ))}
+
+        {/* Header — padrão SectionTitle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <GiPalette size={14} color="#fff" />
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+            Aparência
+          </h2>
+        </div>
+        <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 20px 40px" }}>
+          Escolha como a interface será exibida.
+        </p>
+
+        {/* Cards de tema */}
+        <div style={{ display: "flex", gap: 12 }}>
+          {([false, true] as const).map(dark => {
+            const ativo = isDark === dark;
+            return (
+              <button
+                key={String(dark)}
+                onClick={() => setIsDark(dark)}
+                style={{
+                  flex:          1,
+                  padding:       "20px 12px",
+                  borderRadius:  14,
+                  cursor:        "pointer",
+                  border:        `2px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
+                  background:    ativo ? `${BRAND.roxoVivo}18` : t.inputBg ?? t.bg,
+                  display:       "flex",
+                  flexDirection: "column",
+                  alignItems:    "center",
+                  gap:           10,
+                  transition:    "all 0.2s",
+                }}
+              >
+                {/* Preview do tema */}
+                <div style={{
+                  width:          64,
+                  height:         40,
+                  borderRadius:   8,
+                  background:     dark ? "#1a1a2e" : "#f0f0f8",
+                  border:         `1px solid ${dark ? "#3a3a5c" : "#d0d0e0"}`,
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                }}>
+                  {dark
+                    ? <Moon  size={18} color="#f59e0b" />
+                    : <Sun   size={18} color="#f59e0b" />
+                  }
+                </div>
+
+                <span style={{ fontSize: 13, fontWeight: 600, color: t.text, fontFamily: FONT.body }}>
+                  {dark ? "Modo Escuro" : "Modo Claro"}
+                </span>
+
+                {/* Badge ativo */}
+                {ativo && (
+                  <span style={{
+                    display:      "flex",
+                    alignItems:   "center",
+                    gap:          4,
+                    fontSize:     10,
+                    background:   BRAND.roxoVivo,
+                    color:        "#fff",
+                    padding:      "3px 10px",
+                    borderRadius: 20,
+                    fontWeight:   700,
+                    fontFamily:   FONT.body,
+                  }}>
+                    <Check size={9} /> Ativo
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* ALTERAR SENHA */}
+      {/* ── ALTERAR SENHA ── */}
       <div style={card}>
-        <p style={sectionTitle}>🔒 Alterar Senha</p>
-        <p style={desc}>Para sua segurança, use uma senha forte.</p>
 
+        {/* Header — padrão SectionTitle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <GiPadlock size={14} color="#fff" />
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+            Alterar Senha
+          </h2>
+        </div>
+        <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 20px 40px" }}>
+          Para sua segurança, use uma senha forte.
+        </p>
+
+        {/* Feedback de sucesso */}
         {passOk && (
-          <div style={{ background: "#27ae6018", border: "1px solid #27ae6044", color: "#27ae60", borderRadius: "10px", padding: "12px 16px", fontSize: "13px", marginBottom: "16px" }}>
-            ✓ Senha alterada com sucesso!
-          </div>
-        )}
-        {passErr && (
-          <div style={{ background: "#e9402518", border: "1px solid #e9402544", color: "#e94025", borderRadius: "10px", padding: "12px 16px", fontSize: "13px", marginBottom: "16px" }}>
-            ⚠️ {passErr}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.verde}18`, border: `1px solid ${BRAND.verde}44`, color: BRAND.verde, borderRadius: 10, padding: "12px 16px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+            <CheckCircle2 size={14} style={{ flexShrink: 0 }} />
+            Senha alterada com sucesso!
           </div>
         )}
 
-        {/* Senha atual */}
-        <div style={{ marginBottom: "14px" }}>
+        {/* Feedback de erro */}
+        {passErr && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "12px 16px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+            <AlertCircle size={14} style={{ flexShrink: 0 }} />
+            {passErr}
+          </div>
+        )}
+
+        {/* Campo: Senha atual */}
+        <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Senha Atual</label>
           <div style={{ position: "relative" }}>
-            <input type={showCur ? "text" : "password"} value={curPass} placeholder="••••••••"
+            <input
+              type={showCur ? "text" : "password"}
+              value={curPass}
+              placeholder="••••••••"
               onChange={e => { setCurPass(e.target.value); setPassErr(""); setPassOk(false); }}
-              style={inputStyle} />
-            <button onClick={() => setShowCur(!showCur)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: t.textMuted }}>
-              <EyeIcon open={showCur} />
+              style={inputStyle}
+              onFocus={e  => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
+              onBlur={e   => { e.currentTarget.style.borderColor = t.inputBorder ?? t.cardBorder; }}
+            />
+            <button onClick={() => setShowCur(!showCur)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex" }}>
+              {showCur ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
         </div>
 
-        {/* Nova senha */}
-        <div style={{ marginBottom: "14px" }}>
+        {/* Campo: Nova senha */}
+        <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Nova Senha</label>
           <div style={{ position: "relative" }}>
-            <input type={showNew ? "text" : "password"} value={newPass} placeholder="••••••••"
+            <input
+              type={showNew ? "text" : "password"}
+              value={newPass}
+              placeholder="••••••••"
               onChange={e => { setNewPass(e.target.value); setPassErr(""); setPassOk(false); }}
-              style={inputStyle} />
-            <button onClick={() => setShowNew(!showNew)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: t.textMuted }}>
-              <EyeIcon open={showNew} />
+              style={inputStyle}
+              onFocus={e  => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
+              onBlur={e   => { e.currentTarget.style.borderColor = t.inputBorder ?? t.cardBorder; }}
+            />
+            <button onClick={() => setShowNew(!showNew)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex" }}>
+              {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+
+          {/* Medidor de força */}
           {newPass.length > 0 && (
-            <div style={{ marginTop: "8px" }}>
-              <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
-                {[1,2,3,4].map(i => (
-                  <div key={i} style={{ flex: 1, height: "4px", borderRadius: "4px", background: i <= strength ? strengthColor : t.divider, transition: "background 0.3s" }} />
+            <div style={{ marginTop: 8 }}>
+              <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} style={{ flex: 1, height: 4, borderRadius: 4, background: i <= strength ? strengthColor : t.cardBorder, transition: "background 0.3s" }} />
                 ))}
               </div>
-              <p style={{ fontSize: "11px", color: strengthColor, margin: "0 0 8px", fontFamily: FONT.body }}>
+              <p style={{ fontSize: 11, color: strengthColor, margin: "0 0 8px", fontFamily: FONT.body }}>
                 Força: {strengthLabel}
               </p>
               {reqs.map((r, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: r.ok ? "#27ae60" : t.textMuted, fontFamily: FONT.body, marginBottom: "3px" }}>
-                  {r.ok ? "✓" : "○"} {r.label}
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: r.ok ? BRAND.verde : t.textMuted, fontFamily: FONT.body, marginBottom: 3 }}>
+                  {r.ok
+                    ? <Check size={10} color={BRAND.verde} />
+                    : <span style={{ fontSize: 9, opacity: 0.5 }}>○</span>
+                  }
+                  {r.label}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Confirmar senha */}
-        <div style={{ marginBottom: "20px" }}>
+        {/* Campo: Confirmar senha */}
+        <div style={{ marginBottom: 24 }}>
           <label style={labelStyle}>Confirmar Nova Senha</label>
           <div style={{ position: "relative" }}>
-            <input type={showConf ? "text" : "password"} value={confPass} placeholder="••••••••"
+            <input
+              type={showConf ? "text" : "password"}
+              value={confPass}
+              placeholder="••••••••"
               onChange={e => { setConfPass(e.target.value); setPassErr(""); setPassOk(false); }}
-              style={{ ...inputStyle, borderColor: confPass.length > 0 ? (confPass === newPass ? "#27ae60" : "#e94025") : t.inputBorder }} />
-            <button onClick={() => setShowConf(!showConf)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: t.textMuted }}>
-              <EyeIcon open={showConf} />
+              style={{
+                ...inputStyle,
+                borderColor: confPass.length > 0
+                  ? confPass === newPass ? BRAND.verde : BRAND.vermelho
+                  : t.inputBorder ?? t.cardBorder,
+              }}
+              onFocus={e  => { if (!confPass.length) e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
+              onBlur={e   => { if (!confPass.length) e.currentTarget.style.borderColor = t.inputBorder ?? t.cardBorder; }}
+            />
+            <button onClick={() => setShowConf(!showConf)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex" }}>
+              {showConf ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
           {confPass.length > 0 && confPass !== newPass && (
-            <p style={{ fontSize: "11px", color: "#e94025", margin: "4px 0 0", fontFamily: FONT.body }}>⚠️ As senhas não coincidem</p>
+            <p style={{ fontSize: 11, color: BRAND.vermelho, margin: "4px 0 0", fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
+              <AlertCircle size={10} /> As senhas não coincidem
+            </p>
           )}
           {confPass.length > 0 && confPass === newPass && newPass.length >= 8 && (
-            <p style={{ fontSize: "11px", color: "#27ae60", margin: "4px 0 0", fontFamily: FONT.body }}>✓ Senhas coincidem</p>
+            <p style={{ fontSize: 11, color: BRAND.verde, margin: "4px 0 0", fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
+              <Check size={10} /> Senhas coincidem
+            </p>
           )}
         </div>
 
-        <button onClick={handleChangePassword} disabled={saving}
-          style={{ width: "100%", border: "none", borderRadius: "10px", padding: "14px", fontSize: "14px", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "white", fontFamily: FONT.title }}>
-          {saving ? "⏳ Salvando..." : "🔒 Salvar Nova Senha"}
+        {/* Botão principal — gradiente padrão + ícone Lucide */}
+        <button
+          onClick={handleChangePassword}
+          disabled={saving}
+          style={{
+            width:         "100%",
+            border:        "none",
+            borderRadius:  10,
+            padding:       "14px",
+            fontSize:      13,
+            fontWeight:    700,
+            letterSpacing: "1px",
+            textTransform: "uppercase",
+            cursor:        saving ? "not-allowed" : "pointer",
+            opacity:       saving ? 0.7 : 1,
+            background:    saving ? BRAND.roxo : BRAND.gradiente,
+            color:         "white",
+            fontFamily:    FONT_TITLE,
+            display:       "flex",
+            alignItems:    "center",
+            justifyContent:"center",
+            gap:           8,
+            transition:    "opacity 0.15s",
+          }}
+        >
+          <Lock size={14} />
+          {saving ? "Salvando..." : "Salvar Nova Senha"}
         </button>
       </div>
     </div>
