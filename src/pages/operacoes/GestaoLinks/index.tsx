@@ -98,8 +98,22 @@ export default function GestaoLinks() {
     if (perm.canEditar === "proprios" && !podeVerInfluencer(influencerSelecionado)) return;
     setSalvando(true); setErroModal(null);
     const { error } = await supabase.from("utm_aliases").update({ influencer_id: influencerSelecionado, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }).eq("id", aliasSelecionado.id);
+    if (error) { setSalvando(false); setErroModal(`Erro ao salvar: ${error.message}`); return; }
+
+    // Dispara sync para criar linhas em influencer_metricas (período primeiro_visto → ultimo_visto)
+    const dataInicio = (aliasSelecionado.primeiro_visto ?? "2025-12-01").split("T")[0];
+    const dataFim = (aliasSelecionado.ultimo_visto ?? new Date().toISOString().split("T")[0]).split("T")[0];
+    try {
+      const { data: res, error: syncErr } = await supabase.functions.invoke("sync-metricas", {
+        body: { data_inicio: dataInicio, data_fim: dataFim, utm_source: aliasSelecionado.utm_source, skip_orfaos: true },
+      });
+      if (syncErr) console.warn("[GestaoLinks] Sync pós-mapeamento:", syncErr.message);
+      else if (res && !(res as { ok?: boolean }).ok) console.warn("[GestaoLinks] Sync retornou erro:", (res as { erro?: string }).erro);
+    } catch (e) {
+      console.warn("[GestaoLinks] Falha ao invocar sync após mapeamento:", e);
+    }
+
     setSalvando(false);
-    if (error) { setErroModal(`Erro ao salvar: ${error.message}`); return; }
     setModalAberto(false); setAliasSelecionado(null); setInfluencerSelecionado(""); carregar();
   }
 
@@ -167,7 +181,7 @@ export default function GestaoLinks() {
             Links de rastreio detectados nas operadoras que não estão associados a nenhum influencer.
           </p>
           <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 10, background: `${BRAND.ciano}15`, border: `1px solid ${BRAND.ciano}40`, fontSize: 12, color: theme.text, fontFamily: FONT.body }}>
-            <strong>Dados nos Dashboards:</strong> Após mapear um link, execute o <strong>Sync</strong> em <strong>Plataforma → Status Técnico</strong> para que as métricas apareçam nos dashboards.
+            <strong>Dados nos Dashboards:</strong> Ao mapear, o sync é disparado automaticamente e as linhas são criadas em <code>influencer_metricas</code>. Novos dias são incluídos pela automação diária (4h).
           </div>
         </div>
       </div>

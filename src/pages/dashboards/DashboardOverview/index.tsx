@@ -587,7 +587,15 @@ export default function DashboardOverview() {
       let metricas: Metrica[] = [], lives: LiveData[] = [], resultados: LiveResultado[] = [];
       if (historico) {
         const { data: mAll } = await supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
-        metricas = mAll || [];
+        let mRaw = mAll || [];
+        const fimHoje = fmt(new Date());
+        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
+        const aliasesSinteticas = await buscarMetricasDeAliases({
+          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          dataInicio: "2020-01-01",
+          dataFim: fimHoje,
+        });
+        metricas = mesclarMetricasComAliases(mRaw, aliasesSinteticas, fimHoje, podeVerInfluencer);
         const { data: lAll } = await supabase.from("lives").select("id, influencer_id, status, plataforma, data").eq("status", "realizada");
         lives = lAll || [];
         resultados = await buscaResultados(lives);

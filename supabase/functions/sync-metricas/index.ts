@@ -678,7 +678,8 @@ serve(async (req: Request) => {
     ;(aliasesMapeados ?? []).forEach((a: { utm_source: string }) => utmsMapeados.add(a.utm_source))
 
     // Aliases mapeados: UTMs associados a influencers via Gestão de Links (podem não estar em influencer_perfil.utm_source)
-    const aliasesParaSync = (aliasesMapeados ?? []).filter((a: { utm_source: string; influencer_id: string }) => a.utm_source && a.influencer_id)
+    let aliasesParaSync = (aliasesMapeados ?? []).filter((a: { utm_source: string; influencer_id: string }) => a.utm_source && a.influencer_id)
+    if (params.utm_source) aliasesParaSync = aliasesParaSync.filter((a: { utm_source: string }) => a.utm_source === params.utm_source)
     const influencerIdsAliases = [...new Set(aliasesParaSync.map((a: { influencer_id: string }) => a.influencer_id))]
     const { data: perfisAliases } = influencerIdsAliases.length > 0
       ? await supabase.from('influencer_perfil').select('id, utm_source, nome_artistico').in('id', influencerIdsAliases)
