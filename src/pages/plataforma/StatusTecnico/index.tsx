@@ -38,18 +38,6 @@ interface FluxoDia {
   total: number;
 }
 
-interface RelatorioProcessamentoLog {
-  id: string;
-  processado_em: string | null;
-  email_subject: string | null;
-  email_from: string | null;
-  linhas_daily: number | null;
-  linhas_monthly: number | null;
-  linhas_por_tabela: number | null;
-  erros: string | null;
-  status: string | null;
-}
-
 export default function StatusTecnico() {
   const { theme: t } = useApp();
   const perm = usePermission("status_tecnico");
@@ -62,7 +50,6 @@ export default function StatusTecnico() {
   const [fluxoDados, setFluxoDados] = useState<FluxoDia[]>([]);
   const [registrosHoje, setRegistrosHoje] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
-  const [relatorioLogs, setRelatorioLogs] = useState<RelatorioProcessamentoLog[]>([]);
 
   const card: React.CSSProperties = {
     background: t.cardBg,
@@ -138,14 +125,6 @@ export default function StatusTecnico() {
       .map(([data, total]) => ({ data, total }))
       .sort((a, b) => a.data.localeCompare(b.data));
     setFluxoDados(fluxoArray);
-
-    // Processamento de relatórios (Upload de Arquivos)
-    const { data: relatorioData } = await supabase
-      .from("relatorio_processamento_log")
-      .select("*")
-      .order("processado_em", { ascending: false })
-      .limit(50);
-    setRelatorioLogs(relatorioData ?? []);
 
     setLoading(false);
   }, [logFiltro]);
@@ -442,81 +421,6 @@ export default function StatusTecnico() {
                         {row.status === "warning" && "🟡 Warning"}
                         {row.status === "falha" && "🔴 Falha"}
                       </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Processamento de Relatórios (Upload) */}
-      <div style={card}>
-        <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
-          📄 Processamento de Relatórios (Upload)
-        </h2>
-        <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: "-12px 0 16px" }}>
-          Logs do upload de imagens do relatório PLS via Upload de Arquivos.
-        </p>
-        {loading ? (
-          <p style={{ color: t.textMuted }}>Carregando...</p>
-        ) : relatorioLogs.length === 0 ? (
-          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Nenhum processamento registrado.</p>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Processado em</th>
-                  <th style={thStyle}>Origem</th>
-                  <th style={thStyle}>Daily</th>
-                  <th style={thStyle}>Monthly</th>
-                  <th style={thStyle}>Por tabela</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Erros</th>
-                </tr>
-              </thead>
-              <tbody>
-                {relatorioLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td style={tdStyle}>
-                      {log.processado_em ? formatarHora(log.processado_em) : "—"}
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{ fontSize: 12 }} title={log.email_from ?? undefined}>
-                        {log.email_subject ?? log.email_from ?? "—"}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>{log.linhas_daily ?? 0}</td>
-                    <td style={tdStyle}>{log.linhas_monthly ?? 0}</td>
-                    <td style={tdStyle}>{log.linhas_por_tabela ?? 0}</td>
-                    <td style={tdStyle}>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          background: log.status === "ok" ? "#05966922" : log.status === "erro_parcial" ? "#f59e0b22" : "#ef444422",
-                          color: log.status === "ok" ? "#059669" : log.status === "erro_parcial" ? "#f59e0b" : "#ef4444",
-                          borderRadius: 8,
-                          padding: "4px 10px",
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {log.status === "ok" && "🟢 OK"}
-                        {log.status === "erro_parcial" && "🟡 Parcial"}
-                        {log.status === "falha" && "🔴 Falha"}
-                        {!["ok", "erro_parcial", "falha"].includes(log.status ?? "") && (log.status ?? "—")}
-                      </span>
-                    </td>
-                    <td style={{ ...tdStyle, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={log.erros ?? undefined}>
-                      {log.erros ? (
-                        <span style={{ color: "#ef4444", fontSize: 11 }}>{log.erros}</span>
-                      ) : (
-                        "—"
-                      )}
                     </td>
                   </tr>
                 ))}

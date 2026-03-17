@@ -55,7 +55,6 @@ const PAGES: {
   { key: "gestao_dealers",          label: "Gestão de Dealers",   secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: true  },
   { key: "gestao_usuarios",         label: "Gestão de Usuários",  secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "gestao_operadoras",       label: "Gestão de Operadoras",secao: "Plataforma", hasCriar: true,  hasEditar: true,  hasExcluir: false },
-  { key: "upload_arquivos",          label: "Upload de Arquivos",  secao: "Plataforma", hasCriar: true,  hasEditar: false, hasExcluir: false },
   { key: "status_tecnico",          label: "Status Técnico",      secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "configuracoes",           label: "Configurações",       secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "ajuda",                   label: "Ajuda",               secao: "Geral",      hasCriar: false, hasEditar: false, hasExcluir: false },
