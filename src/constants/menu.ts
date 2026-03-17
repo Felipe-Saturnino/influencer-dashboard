@@ -14,6 +14,7 @@ import {
   GiShield,
   GiFactory,
   GiRadarSweep,
+  GiCardRandom,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -48,10 +49,11 @@ export const MENU: MenuSection[] = [
   {
     section: "Operações",
     items: [
-      { key: "influencers",  label: "Influencers",     icon: GiStarMedal },
-      { key: "scout",        label: "Scout",           icon: GiSpyglass  },
-      { key: "financeiro",   label: "Financeiro",      icon: GiCash      },
-      { key: "gestao_links", label: "Gestão de Links", icon: GiLinkedRings },
+      { key: "influencers",     label: "Influencers",       icon: GiStarMedal   },
+      { key: "scout",           label: "Scout",            icon: GiSpyglass    },
+      { key: "gestao_dealers",  label: "Gestão de Dealers", icon: GiCardRandom  },
+      { key: "financeiro",      label: "Financeiro",       icon: GiCash        },
+      { key: "gestao_links",    label: "Gestão de Links",  icon: GiLinkedRings },
     ],
   },
   {

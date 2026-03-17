@@ -51,6 +51,7 @@ const PAGES: {
   { key: "scout",                   label: "Scout",               secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: true  },
   { key: "financeiro",              label: "Financeiro",          secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
   { key: "gestao_links",            label: "Gestão de Links",     secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },
+  { key: "gestao_dealers",          label: "Gestão de Dealers",   secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: true  },
   { key: "gestao_usuarios",         label: "Gestão de Usuários",  secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "gestao_operadoras",       label: "Gestão de Operadoras",secao: "Plataforma", hasCriar: true,  hasEditar: true,  hasExcluir: false },
   { key: "status_tecnico",          label: "Status Técnico",      secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
