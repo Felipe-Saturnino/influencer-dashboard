@@ -101,7 +101,8 @@ async function fetchMetricasReportingAPI(
   baseUrl: string,
   authFormat: 'Bearer' | 'direct',
   endpoint: 'af2_media_report_af' | 'af2_media_report_op' = 'af2_media_report_af',
-  labelId: string
+  labelId: string,
+  omitLabel = false // true = não envia label (chave de afiliado pode inferir do token)
 ): Promise<Map<string, DailyMetric[]>> {
   // date_to é exclusivo: para incluir dataFim, usar o dia seguinte
   const dateTo = new Date(dataFim)
@@ -113,18 +114,20 @@ async function fetchMetricasReportingAPI(
     group_by: 'utm_source',
     date_from: dataInicio,
     date_to: dateToStr,
-    label_id: labelId, // query param — algumas implementações CDA exigem
   })
+  if (!omitLabel) {
+    params.set('label_id', labelId)
+    params.set('lbl', labelId) // boapi3 usa este parâmetro (ex.: getBoUserInfo)
+  }
 
   const authHeader = authFormat === 'direct' ? apiKey : `Bearer ${apiKey}`
   const url = `${baseUrl.replace(/\/$/, '')}/api/${endpoint}?${params}`
 
-  // Headers de label — "Access to this label is not allowed" sem eles
-  const headers: Record<string, string> = {
-    'authorization': authHeader,
-    'Active_label_id': labelId,
-    'X-Smartico-Active-Label-Id': labelId,
-    'Referer': `https://admin.aff.casadeapostas.bet.br/${labelId}/`,
+  const headers: Record<string, string> = { 'authorization': authHeader }
+  if (!omitLabel) {
+    headers['Active_label_id'] = labelId
+    headers['X-Smartico-Active-Label-Id'] = labelId
+    headers['Referer'] = `https://admin.aff.casadeapostas.bet.br/${labelId}/`
   }
 
   const response = await fetch(url, {
@@ -692,7 +695,8 @@ serve(async (req: Request) => {
 
     const authMethod = (smarticoUsername && smarticoPassword) ? 'SMARTICO_USERNAME+PASSWORD' : cdaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN'
     const useReportingApi = Deno.env.get('CDA_USE_REPORTING_API') === 'true'
-    const reportingBaseUrl = Deno.env.get('SMARTICO_REPORTING_API_URL') ?? 'https://boapi.smartico.ai'
+    // CDA usa boapi3 (verificado via DevTools: getBoUserInfo). Docs padrão: boapi.smartico.ai
+    const reportingBaseUrl = Deno.env.get('SMARTICO_REPORTING_API_URL') ?? 'https://boapi3.smartico.ai'
     // af2_media_report_op = Operator (métricas de todos os afiliados) | af2_media_report_af = Affiliate (apenas do próprio)
     const reportingEndpoint = (Deno.env.get('CDA_REPORTING_ENDPOINT') ?? 'af2_media_report_af').toLowerCase()
     const endpoint = reportingEndpoint.includes('_op') ? 'af2_media_report_op' as const : 'af2_media_report_af' as const
@@ -708,23 +712,32 @@ serve(async (req: Request) => {
     // ── Cache Reporting API (uma chamada para todos os UTMs) ─────────
     let reportingCache: Map<string, DailyMetric[]> | null = null
     if (useReportingApi && cdaApiKey) {
-      let lastErr: Error | null = null
-      const endpointsToTry: Array<'af2_media_report_op' | 'af2_media_report_af'> =
+      type Strategy = { ep: 'af2_media_report_op' | 'af2_media_report_af'; omitLabel: boolean }
+      const strategies: Strategy[] =
         endpoint === 'af2_media_report_op'
-          ? ['af2_media_report_op', 'af2_media_report_af'] // tenta Op, fallback Af (chave de afiliado)
-          : ['af2_media_report_af']
-      for (const ep of endpointsToTry) {
+          ? [
+              { ep: 'af2_media_report_op', omitLabel: false },
+              { ep: 'af2_media_report_af', omitLabel: false },
+              { ep: 'af2_media_report_af', omitLabel: true }, // chave afiliado: token já escopa o label
+            ]
+          : [
+              { ep: 'af2_media_report_af', omitLabel: false },
+              { ep: 'af2_media_report_af', omitLabel: true },
+            ]
+      let lastErr: Error | null = null
+      for (const { ep, omitLabel } of strategies) {
         try {
-          reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, ep, labelId)
-          if (ep !== endpoint) console.log(`[sync-metricas] Fallback: ${ep} funcionou (chave de afiliado)`)
+          reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, ep, labelId, omitLabel)
+          if (omitLabel) console.log(`[sync-metricas] Funcionou sem label (chave afiliado inferiu)`)
+          else if (ep !== endpoint) console.log(`[sync-metricas] Fallback: ${ep} funcionou`)
           console.log(`[sync-metricas] Reporting API: ${reportingCache.size} UTMs carregados`)
           lastErr = null
           break
         } catch (err) {
           lastErr = err instanceof Error ? err : new Error(String(err))
           const isLabelAccess = String(lastErr.message).includes('Access to this label')
-          if (isLabelAccess && ep === 'af2_media_report_op') {
-            console.log(`[sync-metricas] Operator (_op) negado, tentando Affiliate (_af)...`)
+          if (isLabelAccess) {
+            console.log(`[sync-metricas] Tentativa ${ep}${omitLabel ? ' sem label' : ''} falhou, próxima...`)
             continue
           }
           if (err instanceof TokenExpiradoError) {

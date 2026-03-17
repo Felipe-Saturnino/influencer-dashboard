@@ -53,13 +53,13 @@ LIMIT 5;
 
 ## 4. Conferir URL da Reporting API
 
-Se a CDA usa um domínio próprio (ex.: `boapi.aff.casadeapostas.bet.br`), o secret correto é:
+A CDA (via painel admin.aff.casadeapostas.bet.br) usa **boapi3.smartico.ai** (verificado via DevTools → Network → getBoUserInfo).
 
-| Secret | Exemplo |
-|--------|---------|
-| `SMARTICO_REPORTING_API_URL` | `https://boapi.aff.casadeapostas.bet.br` |
+| Secret | Valor para CDA |
+|--------|----------------|
+| `SMARTICO_REPORTING_API_URL` | `https://boapi3.smartico.ai` |
 
-O padrão é `https://boapi.smartico.ai`; para CDA o valor pode ser outro.
+O padrão no código é `boapi3`. Para outros operadores, verifique na aba Network qual host as requisições usam.
 
 ---
 
