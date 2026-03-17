@@ -100,7 +100,8 @@ async function fetchMetricasReportingAPI(
   apiKey: string,
   baseUrl: string,
   authFormat: 'Bearer' | 'direct',
-  endpoint: 'af2_media_report_af' | 'af2_media_report_op' = 'af2_media_report_af'
+  endpoint: 'af2_media_report_af' | 'af2_media_report_op' = 'af2_media_report_af',
+  labelId: string
 ): Promise<Map<string, DailyMetric[]>> {
   // date_to é exclusivo: para incluir dataFim, usar o dia seguinte
   const dateTo = new Date(dataFim)
@@ -117,9 +118,16 @@ async function fetchMetricasReportingAPI(
   const authHeader = authFormat === 'direct' ? apiKey : `Bearer ${apiKey}`
   const url = `${baseUrl.replace(/\/$/, '')}/api/${endpoint}?${params}`
 
+  // label_id obrigatório — "Access to this label is not allowed" sem ele
+  const headers: Record<string, string> = {
+    'authorization': authHeader,
+    'Active_label_id': labelId,
+    'X-Smartico-Active-Label-Id': labelId,
+  }
+
   const response = await fetch(url, {
     method: 'GET',
-    headers: { 'authorization': authHeader },
+    headers,
   })
 
   if (response.status === 403) throw new TokenExpiradoError('403 na Reporting API')
@@ -699,7 +707,7 @@ serve(async (req: Request) => {
     let reportingCache: Map<string, DailyMetric[]> | null = null
     if (useReportingApi && cdaApiKey) {
       try {
-        reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, endpoint)
+        reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, endpoint, labelId)
         console.log(`[sync-metricas] Reporting API: ${reportingCache.size} UTMs carregados`)
       } catch (err) {
         if (err instanceof TokenExpiradoError) {

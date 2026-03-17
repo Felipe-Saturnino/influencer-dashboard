@@ -29,6 +29,7 @@ Procure na última execução:
 |--------|----------------|
 | `CDA_USE_REPORTING_API` | `true` |
 | `CDA_INFLUENCERS_API_KEY` | Chave da API CDA |
+| `SMARTICO_LABEL_ID` | ID do label/brand da CDA (ex.: `573703`). Erro "Access to this label is not allowed" = label incorreto. |
 
 Sem `CDA_USE_REPORTING_API=true`, o sync usa Plywood e **não grava** em `utm_metricas_diarias`.
 
