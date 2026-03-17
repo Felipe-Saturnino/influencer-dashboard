@@ -122,9 +122,15 @@ export default function UploadArquivos() {
         }),
       });
 
-      let json: { success?: boolean; error?: string; inserted?: Record<string, number>; data_relatorio?: string };
+      type ApiResponse = {
+        success?: boolean;
+        error?: string;
+        inserted?: { daily: number; monthly: number; por_tabela: number };
+        data_relatorio?: string;
+      };
+      let json: ApiResponse;
       try {
-        json = await res.json();
+        json = await res.json() as ApiResponse;
       } catch {
         throw new Error(res.ok ? "Resposta inválida da função" : `Erro ${res.status}: ${res.statusText}`);
       }
