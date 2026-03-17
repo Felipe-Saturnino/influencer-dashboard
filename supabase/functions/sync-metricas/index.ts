@@ -126,10 +126,18 @@ async function fetchMetricasReportingAPI(
   if (!response.ok) throw new Error(`Reporting API: ${response.status}`)
 
   const json = await response.json()
+  // API pode retornar erro em vez de data: { errorCode, message }
+  const errorCode = (json as Record<string, unknown>)?.errorCode
+  const errorMsg = (json as Record<string, unknown>)?.message
+  if (errorCode != null || errorMsg != null) {
+    const msg = `Reporting API erro: ${errorCode ?? 'N/A'} - ${String(errorMsg ?? 'sem detalhes')}`
+    console.error(`[sync-metricas] ${msg}`)
+    throw new Error(msg)
+  }
   // Suporta json.data ou json.result (algumas implementações)
   const data: ReportingApiDataItem[] = json?.data ?? json?.result ?? []
 
-  // Diagnóstico: quando vazio, logar estrutura para debug
+  // Diagnóstico: quando vazio (sem ser erro), logar estrutura para debug
   if (data.length === 0) {
     const meta = json?.meta ? JSON.stringify(json.meta).slice(0, 150) : 'sem meta'
     const topKeys = json ? Object.keys(json).join(', ') : 'resposta vazia'
@@ -943,6 +951,6 @@ serve(async (req: Request) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[sync-metricas] Erro fatal: ${msg}`)
-    return new Response(JSON.stringify({ ok: false, erro: msg }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ ok: false, erro: msg }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
   }
 })

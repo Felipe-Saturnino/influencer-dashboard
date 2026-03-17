@@ -1,5 +1,11 @@
 # Diagnóstico: Sync retorna 0 registros / tabelas vazias
 
+## Resposta com errorCode / message
+
+Se os logs mostram `keys=errorCode, message`, a API retornou um **erro** (não dados vazios). O sync passou a detectar isso e exibir a mensagem no Status Técnico. O próximo sync mostrará o `errorCode` e `message` exatos — confira com a CDA/Smartico o que o erro significa (ex.: endpoint não disponível para esse tipo de chave, permissões insuficientes, etc.).
+
+---
+
 ## 1. Logs da Edge Function
 
 **Supabase Dashboard** → **Edge Functions** → **sync-metricas** → **Logs**
@@ -76,13 +82,18 @@ Reimplante a Edge Function e rode o sync novamente.
 
 ## 6. Testar a API manualmente (opcional)
 
-No PowerShell, com a chave configurada:
+**Não é SQL** — é uma requisição HTTP no PowerShell (ou Postman/curl).
+
+Use a URL exata dos logs (ex.: `SMARTICO_REPORTING_API_URL` ou `boapi.smartico.ai`):
 
 ```powershell
 $key = "SUA_CDA_INFLUENCERS_API_KEY"
-$url = "https://boapi.smartico.ai/api/af2_media_report_af?aggregation_period=DAY&group_by=utm_source&date_from=2025-12-01&date_to=2026-03-17"
-Invoke-RestMethod -Uri $url -Headers @{ "Authorization" = "Bearer $key" }
+# Endpoint Operator (igual ao sync)
+$url = "https://boapi.smartico.ai/api/af2_media_report_op?aggregation_period=DAY&group_by=utm_source&date_from=2025-12-01&date_to=2026-03-18"
+$r = Invoke-RestMethod -Uri $url -Headers @{ "Authorization" = "Bearer $key" }
+$r | ConvertTo-Json -Depth 5
 ```
 
-- Se retornar `data: []` ou vazio: API sem dados para o período.
+- Se retornar `errorCode` e `message`: a API está recusando (permissão, chave, endpoint).
+- Se retornar `data: []`: API ok, mas sem dados para o período.
 - Se retornar 403: chave inválida ou expirada.
