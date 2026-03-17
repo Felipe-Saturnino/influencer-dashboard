@@ -708,33 +708,50 @@ serve(async (req: Request) => {
     // ── Cache Reporting API (uma chamada para todos os UTMs) ─────────
     let reportingCache: Map<string, DailyMetric[]> | null = null
     if (useReportingApi && cdaApiKey) {
-      try {
-        reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, endpoint, labelId)
-        console.log(`[sync-metricas] Reporting API: ${reportingCache.size} UTMs carregados`)
-      } catch (err) {
-        if (err instanceof TokenExpiradoError) {
-          await enviarAlertaAuthCda()
-          const msgAuth = 'Erro de autenticação na Reporting API (403). Verifique CDA_INFLUENCERS_API_KEY em Supabase Secrets.'
-          await gravarTechLog(supabase, 'auth', msgAuth)
-          const duracaoMs = Date.now() - inicioMs
-          await gravarSyncLog(supabase, {
-            status: 'falha',
-            registros_inseridos: 0,
-            erros_count: 1,
-            mensagem_erro: msgAuth,
-            duracao_ms: duracaoMs,
-            periodo_inicio: dataInicio,
-            periodo_fim: dataFim,
-          })
-          return new Response(JSON.stringify({
-            ok: false,
-            erro: msgAuth,
-            auth_usado: authMethod,
-            api_usada: 'Reporting API',
-          }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+      let lastErr: Error | null = null
+      const endpointsToTry: Array<'af2_media_report_op' | 'af2_media_report_af'> =
+        endpoint === 'af2_media_report_op'
+          ? ['af2_media_report_op', 'af2_media_report_af'] // tenta Op, fallback Af (chave de afiliado)
+          : ['af2_media_report_af']
+      for (const ep of endpointsToTry) {
+        try {
+          reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, ep, labelId)
+          if (ep !== endpoint) console.log(`[sync-metricas] Fallback: ${ep} funcionou (chave de afiliado)`)
+          console.log(`[sync-metricas] Reporting API: ${reportingCache.size} UTMs carregados`)
+          lastErr = null
+          break
+        } catch (err) {
+          lastErr = err instanceof Error ? err : new Error(String(err))
+          const isLabelAccess = String(lastErr.message).includes('Access to this label')
+          if (isLabelAccess && ep === 'af2_media_report_op') {
+            console.log(`[sync-metricas] Operator (_op) negado, tentando Affiliate (_af)...`)
+            continue
+          }
+          if (err instanceof TokenExpiradoError) {
+            await enviarAlertaAuthCda()
+            const msgAuth = 'Erro de autenticação na Reporting API (403). Verifique CDA_INFLUENCERS_API_KEY em Supabase Secrets.'
+            await gravarTechLog(supabase, 'auth', msgAuth)
+            const duracaoMs = Date.now() - inicioMs
+            await gravarSyncLog(supabase, {
+              status: 'falha',
+              registros_inseridos: 0,
+              erros_count: 1,
+              mensagem_erro: msgAuth,
+              duracao_ms: duracaoMs,
+              periodo_inicio: dataInicio,
+              periodo_fim: dataFim,
+            })
+            return new Response(JSON.stringify({
+              ok: false,
+              erro: msgAuth,
+              auth_usado: authMethod,
+              api_usada: 'Reporting API',
+            }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+          }
+          throw err
         }
-        throw err
       }
+      if (lastErr && !reportingCache) throw lastErr
     }
 
     // ── FASE 1: Sync influencers mapeados ─────────────────────
