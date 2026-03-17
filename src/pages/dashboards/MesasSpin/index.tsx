@@ -3,74 +3,75 @@ import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
-import { GiPokerHand, GiCoins, GiTrophy, GiPerson, GiCalendar } from "react-icons/gi";
+import { ChevronLeft, ChevronRight, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  CartesianGrid,
-} from "recharts";
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+  GiPokerHand,
+  GiCoins,
+  GiTrophy,
+  GiPerson,
+  GiCalendar,
+} from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  verde:    "#22c55e",
-  ciano:    "#70cae4",
+  roxo:      "#4a2082",
+  roxoVivo:  "#7c3aed",
+  azul:      "#1e36f8",
+  vermelho:  "#e84025",
+  verde:     "#22c55e",
+  ciano:     "#70cae4",
+  amarelo:   "#f59e0b",
+  rosa:      "#ec4899",
 } as const;
+
+const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface DailyRow {
   data: string;
   turnover: number | null;
   ggr: number | null;
+  margin_pct: number | null;
   bets: number | null;
   uap: number | null;
+  bet_size: number | null;
+  arpu: number | null;
 }
 
 interface MonthlyRow {
   mes: string;
   turnover: number | null;
   ggr: number | null;
+  margin_pct: number | null;
   bets: number | null;
   uap: number | null;
+  bet_size: number | null;
+  arpu: number | null;
 }
 
-interface PorTabelaRow {
-  data_relatorio: string;
-  nome_tabela: string;
-  ggr_d1: number | null;
-  turnover_d1: number | null;
-  bets_d1: number | null;
-  ggr_d2: number | null;
-  turnover_d2: number | null;
-  bets_d2: number | null;
-  ggr_mtd: number | null;
-  turnover_mtd: number | null;
-  bets_mtd: number | null;
+interface Operadora {
+  slug: string;
+  nome: string;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MESES_PT = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+];
+const MESES_CURTOS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
 const pad = (n: number) => String(n).padStart(2, "0");
-const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 
 function getMesesDisponiveis() {
   const hoje = new Date();
   const lista: { ano: number; mes: number; label: string }[] = [];
-  let ano = 2024, mes = 0; // Ajuste conforme seus dados
+  let ano = 2024, mes = 0;
   while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
     lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
-    mes++; if (mes > 11) { mes = 0; ano++; }
+    mes++;
+    if (mes > 11) { mes = 0; ano++; }
   }
   return lista;
 }
@@ -84,8 +85,10 @@ function getDatasDoMesMtd(ano: number, mes: number) {
   if (mesAnt < 0) { mesAnt = 11; anoAnt--; }
   const ultimoDia = new Date(anoAnt, mesAnt + 1, 0).getDate();
   const hoje = new Date();
-  const dia = anoAnt === hoje.getFullYear() && mesAnt === hoje.getMonth()
-    ? Math.min(hoje.getDate(), ultimoDia) : ultimoDia;
+  const dia =
+    anoAnt === hoje.getFullYear() && mesAnt === hoje.getMonth()
+      ? Math.min(hoje.getDate(), ultimoDia)
+      : ultimoDia;
   return { inicio: fmt(new Date(anoAnt, mesAnt, 1)), fim: fmt(new Date(anoAnt, mesAnt, dia)) };
 }
 
@@ -94,53 +97,159 @@ function fmtBRL(v: number) {
   return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-const KPIS_ZERO = { bets: 0, turnover: 0, ggr: 0, uap: 0 };
+function fmtBRLCompact(v: number) {
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}R$ ${(abs / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `${sign}R$ ${(abs / 1_000).toFixed(1)}k`;
+  return fmtBRL(v);
+}
 
-// ─── KPI CARD ──────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHistorico }: {
+function fmtPct(v: number | null) {
+  if (v == null) return "—";
+  return `${Number(v).toFixed(1)}%`;
+}
+
+const KPIS_ZERO = { bets: 0, turnover: 0, ggr: 0, uap: 0, margin_pct: 0, arpu: 0 };
+
+// ─── BADGE MARGEM ─────────────────────────────────────────────────────────────
+function MarginBadge({ value }: { value: number | null }) {
+  const { theme: t } = useApp();
+  if (value == null) return <span style={{ color: t.textMuted }}>—</span>;
+  const v = Number(value);
+  let bg: string = "rgba(124,58,237,0.12)", color: string = BRAND.roxoVivo;
+  if (v >= 5) { bg = "rgba(34,197,94,0.12)"; color = BRAND.verde; }
+  else if (v < 3) { bg = "rgba(232,64,37,0.12)"; color = BRAND.vermelho; }
+  return (
+    <span style={{
+      display: "inline-block", padding: "2px 8px", borderRadius: 999,
+      background: bg, color, fontSize: 11, fontWeight: 600, fontFamily: FONT.body,
+    }}>
+      {fmtPct(v)}
+    </span>
+  );
+}
+
+// ─── KPI CARD ─────────────────────────────────────────────────────────────────
+function KpiCard({
+  label, value, icon, accentColor,
+  atual, anterior, isBRL, isPct, isHistorico,
+}: {
   label: string; value: string; icon: React.ReactNode; accentColor: string;
-  atual: number; anterior: number; isBRL?: boolean; isHistorico?: boolean;
+  atual: number; anterior: number; isBRL?: boolean; isPct?: boolean; isHistorico?: boolean;
 }) {
   const { theme: t } = useApp();
   const diff = atual - anterior;
   const pct = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
   const up = diff >= 0;
-  const corSeta = up ? BRAND.verde : BRAND.vermelho;
+  const neutral = Math.abs(diff) < 0.001;
 
   return (
     <div style={{
-      borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg, overflow: "hidden",
+      borderRadius: 14,
+      border: `1px solid ${t.cardBorder}`,
+      background: t.cardBg,
+      overflow: "hidden",
+      transition: "box-shadow 0.2s",
     }}>
       <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
       <div style={{ padding: "14px 16px" }}>
+        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{
             width: 30, height: 30, borderRadius: 8,
-            background: `${accentColor}18`, border: `1px solid ${accentColor}35`,
+            background: `${accentColor}18`,
+            border: `1px solid ${accentColor}35`,
             display: "flex", alignItems: "center", justifyContent: "center",
             color: accentColor,
           }}>
             {icon}
           </span>
-          <span style={{ color: t.textMuted, fontSize: 10, fontFamily: FONT.body, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" }}>
+          <span style={{
+            color: t.textMuted, fontSize: 10, fontFamily: FONT.body,
+            fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase",
+          }}>
             {label}
           </span>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 6, lineHeight: 1.1 }}>
+
+        {/* Valor principal */}
+        <div style={{
+          fontSize: 22, fontWeight: 800, color: t.text,
+          fontFamily: FONT.body, marginBottom: 6, lineHeight: 1.1,
+        }}>
           {value}
         </div>
+
+        {/* Delta */}
         {!isHistorico && (
           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontFamily: FONT.body }}>
-            <span style={{ color: corSeta, fontWeight: 700, fontSize: 12 }}>
-              {up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
+            {neutral ? (
+              <Minus size={12} color={t.textMuted} />
+            ) : up ? (
+              <TrendingUp size={12} color={BRAND.verde} />
+            ) : (
+              <TrendingDown size={12} color={BRAND.vermelho} />
+            )}
+            <span style={{ color: neutral ? t.textMuted : up ? BRAND.verde : BRAND.vermelho, fontWeight: 700, fontSize: 12 }}>
+              {pct !== null ? `${up && !neutral ? "+" : ""}${pct.toFixed(1)}%` : "—"}
             </span>
             <span style={{ color: t.textMuted, fontSize: 10 }}>
-              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.
+              vs {isPct
+                ? fmtPct(anterior)
+                : isBRL
+                  ? fmtBRLCompact(anterior)
+                  : anterior.toLocaleString("pt-BR")} mês ant.
             </span>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── SECTION HEADER ───────────────────────────────────────────────────────────
+function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
+  const { theme: t } = useApp();
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+      <span style={{
+        width: 28, height: 28, borderRadius: 8,
+        background: "rgba(74,32,130,0.18)",
+        border: "1px solid rgba(74,32,130,0.30)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: BRAND.ciano,
+      }}>
+        {icon}
+      </span>
+      <span style={{
+        fontSize: 14, fontWeight: 800, color: t.text,
+        fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase",
+      }}>
+        {title}
+      </span>
+      {sub && (
+        <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
+          {sub}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── PLACEHOLDER BLOCO ────────────────────────────────────────────────────────
+function PlaceholderBloco({ label }: { label: string }) {
+  const { theme: t } = useApp();
+  return (
+    <div style={{
+      borderRadius: 18, border: `1.5px dashed ${t.cardBorder}`,
+      background: `${t.cardBg}80`,
+      padding: "32px 20px",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      color: t.textMuted, fontFamily: FONT.body, fontSize: 13, gap: 8,
+    }}>
+      <Clock size={14} />
+      {label} — em breve
     </div>
   );
 }
@@ -152,44 +261,84 @@ export default function MesasSpin() {
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
   const hoje = new Date();
-  const idxInicial = mesesDisponiveis.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
+  const idxInicial = mesesDisponiveis.findIndex(
+    (m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth()
+  );
 
-  const [idxMes, setIdxMes] = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
-  const [historico, setHistorico] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // ── Estado ──────────────────────────────────────────────────────────────────
+  const [idxMes, setIdxMes]           = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
+  const [historico, setHistorico]     = useState(false);
+  const [loading, setLoading]         = useState(true);
+  const [operadoras, setOperadoras]   = useState<Operadora[]>([]);
+  const [operadoraSel, setOperadoraSel] = useState<string>("todas");
 
-  const [dailyData, setDailyData] = useState<DailyRow[]>([]);
+  const [dailyData, setDailyData]     = useState<DailyRow[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
-  const [porTabelaData, setPorTabelaData] = useState<PorTabelaRow[]>([]);
+  const [kpisAnterior, setKpisAnterior] = useState(KPIS_ZERO);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
+  // ── Navegação ────────────────────────────────────────────────────────────────
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
-  function irMesProximo() { setHistorico(false); setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1)); }
+  function irMesProximo()  { setHistorico(false); setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1)); }
   function toggleHistorico() {
     if (historico) { setHistorico(false); setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1); }
     else setHistorico(true);
   }
 
-  // ── CARREGAR DADOS ──────────────────────────────────────────────────────────
+  // ── Carregar operadoras ──────────────────────────────────────────────────────
+  useEffect(() => {
+    supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => {
+      setOperadoras(data ?? []);
+    });
+  }, []);
+
+  // ── Carregar dados principais ─────────────────────────────────────────────────
   useEffect(() => {
     async function carregar() {
       setLoading(true);
 
       if (historico) {
-        const { data: daily } = await supabase.from("relatorio_daily_summary").select("data, turnover, ggr, bets, uap").order("data");
-        const { data: monthly } = await supabase.from("relatorio_monthly_summary").select("mes, turnover, ggr, bets, uap").order("mes");
-        const { data: porTabela } = await supabase.from("relatorio_por_tabela").select("*").order("data_relatorio", { ascending: false });
-        setDailyData(daily ?? []);
+        const { data: monthly } = await supabase
+          .from("relatorio_monthly_summary")
+          .select("mes, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+          .order("mes");
+        const { data: daily } = await supabase
+          .from("relatorio_daily_summary")
+          .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+          .order("data");
         setMonthlyData(monthly ?? []);
-        setPorTabelaData(porTabela ?? []);
+        setDailyData(daily ?? []);
       } else if (mesSelecionado) {
         const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-        const { data: daily } = await supabase.from("relatorio_daily_summary").select("data, turnover, ggr, bets, uap").gte("data", inicio).lte("data", fim).order("data");
-        const { data: porTabela } = await supabase.from("relatorio_por_tabela").select("*").gte("data_relatorio", inicio).lte("data_relatorio", fim).order("data_relatorio", { ascending: false });
+        const { data: daily } = await supabase
+          .from("relatorio_daily_summary")
+          .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+          .gte("data", inicio).lte("data", fim).order("data");
         setDailyData(daily ?? []);
-        setPorTabelaData(porTabela ?? []);
         setMonthlyData([]);
+
+        // KPIs mês anterior (MTD comparável)
+        const { inicio: iAnt, fim: fAnt } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
+        const { data: ant } = await supabase
+          .from("relatorio_daily_summary")
+          .select("turnover, ggr, margin_pct, bets, uap, arpu")
+          .gte("data", iAnt).lte("data", fAnt);
+        const rows = ant ?? [];
+        const totalAnt = rows.reduce((s, r) => ({
+          bets:       s.bets + (r.bets ?? 0),
+          turnover:   s.turnover + (r.turnover ?? 0),
+          ggr:        s.ggr + (r.ggr ?? 0),
+          uap:        s.uap + (r.uap ?? 0),
+          margin_pct: 0,
+          arpu:       0,
+        }), KPIS_ZERO);
+        // Margem e ARPU: médias ponderadas simples
+        const margemMedia = rows.length > 0
+          ? rows.reduce((s, r) => s + (Number(r.margin_pct) || 0), 0) / rows.length : 0;
+        const arpuMedio = rows.length > 0
+          ? rows.reduce((s, r) => s + (Number(r.arpu) || 0), 0) / rows.length : 0;
+        setKpisAnterior({ ...totalAnt, margin_pct: margemMedia, arpu: arpuMedio });
       }
 
       setLoading(false);
@@ -197,82 +346,85 @@ export default function MesasSpin() {
     carregar();
   }, [historico, idxMes, mesSelecionado]);
 
-  // ── KPIs (período atual vs anterior) ─────────────────────────────────────────
+  // ── KPIs período atual ───────────────────────────────────────────────────────
   const kpisAtual = useMemo(() => {
-    return dailyData.reduce((s, r) => ({
-      bets: s.bets + (r.bets ?? 0),
-      turnover: s.turnover + (r.turnover ?? 0),
-      ggr: s.ggr + (r.ggr ?? 0),
-      uap: s.uap + (r.uap ?? 0),
+    const source = historico
+      ? monthlyData.map((r) => ({ ...r, data: r.mes }))
+      : dailyData;
+    const totais = source.reduce((s, r) => ({
+      bets:       s.bets + (r.bets ?? 0),
+      turnover:   s.turnover + (r.turnover ?? 0),
+      ggr:        s.ggr + (r.ggr ?? 0),
+      uap:        s.uap + (r.uap ?? 0),
+      margin_pct: 0,
+      arpu:       0,
     }), KPIS_ZERO);
-  }, [dailyData]);
+    const margemMedia = source.length > 0
+      ? source.reduce((s, r) => s + (Number(r.margin_pct) || 0), 0) / source.length : 0;
+    const arpuMedio = source.length > 0
+      ? source.reduce((s, r) => s + (Number(r.arpu) || 0), 0) / source.length : 0;
+    return { ...totais, margin_pct: margemMedia, arpu: arpuMedio };
+  }, [historico, dailyData, monthlyData]);
 
-  const [kpisAnteriorReal, setKpisAnteriorReal] = useState(KPIS_ZERO);
-  useEffect(() => {
-    if (historico || !mesSelecionado) {
-      setKpisAnteriorReal(KPIS_ZERO);
-      return;
-    }
-    const { inicio, fim } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
-    supabase.from("relatorio_daily_summary").select("data, turnover, ggr, bets, uap").gte("data", inicio).lte("data", fim).then(({ data }) => {
-      const r = (data ?? []).reduce((s, row) => ({
-        bets: s.bets + (row.bets ?? 0),
-        turnover: s.turnover + (row.turnover ?? 0),
-        ggr: s.ggr + (row.ggr ?? 0),
-        uap: s.uap + (row.uap ?? 0),
-      }), KPIS_ZERO);
-      setKpisAnteriorReal(r);
-    });
-  }, [historico, mesSelecionado]);
+  const kpisAnt = historico ? KPIS_ZERO : kpisAnterior;
 
-  const kpisAnt = historico ? KPIS_ZERO : kpisAnteriorReal;
-
-  // ── Dados para gráfico ──────────────────────────────────────────────────────
-  const graficoData = useMemo(() => {
-    if (historico && monthlyData.length > 0) {
+  // ── Dados tabela (diário ou mensal) ──────────────────────────────────────────
+  const tabelaRows = useMemo(() => {
+    if (historico) {
       return monthlyData.map((r) => {
         const d = new Date(r.mes + "T12:00:00");
-        return {
-          nome: `${MESES_PT[d.getMonth()]} ${d.getFullYear()}`,
-          ggr: r.ggr ?? 0,
-          turnover: r.turnover ?? 0,
-          bets: r.bets ?? 0,
-          uap: r.uap ?? 0,
-        };
+        return { label: `${MESES_CURTOS[d.getMonth()]} ${d.getFullYear()}`, ...r };
       });
     }
     return dailyData.map((r) => ({
-      nome: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-      ggr: r.ggr ?? 0,
-      turnover: r.turnover ?? 0,
-      bets: r.bets ?? 0,
-      uap: r.uap ?? 0,
+      label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+      ...r,
     }));
   }, [historico, dailyData, monthlyData]);
 
-  // ── ESTILOS ──────────────────────────────────────────────────────────────────
+  // ── Estilos base ─────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+    background: t.cardBg,
+    border: `1px solid ${t.cardBorder}`,
+    borderRadius: 18,
+    padding: 20,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
   };
+
   const thStyle: React.CSSProperties = {
-    textAlign: "left", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase",
-    color: t.textMuted, fontWeight: 600, padding: "10px 12px", borderBottom: `1px solid ${t.cardBorder}`,
-    background: "rgba(74,32,130,0.10)", fontFamily: FONT.body, whiteSpace: "nowrap",
+    textAlign: "left", fontSize: 10, letterSpacing: "0.1em",
+    textTransform: "uppercase", color: t.textMuted, fontWeight: 600,
+    padding: "10px 12px", borderBottom: `1px solid ${t.cardBorder}`,
+    background: "rgba(74,32,130,0.08)", fontFamily: FONT.body, whiteSpace: "nowrap",
   };
+
   const tdStyle: React.CSSProperties = {
-    padding: "10px 12px", fontSize: 13, borderBottom: `1px solid rgba(255,255,255,0.04)`,
+    padding: "9px 12px", fontSize: 13,
+    borderBottom: `1px solid rgba(255,255,255,0.04)`,
     color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap",
   };
 
+  const tdNum: React.CSSProperties = { ...tdStyle, textAlign: "right", fontVariantNumeric: "tabular-nums" };
+
   const isPrimeiro = idxMes === 0;
-  const isUltimo = idxMes === mesesDisponiveis.length - 1;
-  const btnNavStyle: React.CSSProperties = {
-    width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`,
+  const isUltimo   = idxMes === mesesDisponiveis.length - 1;
+
+  const btnNav: React.CSSProperties = {
+    width: 30, height: 30, borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
     background: "transparent", color: t.text, cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center",
   };
 
+  const selectStyle: React.CSSProperties = {
+    padding: "5px 12px", borderRadius: 8,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.cardBg, color: t.text,
+    fontFamily: FONT.body, fontSize: 13, cursor: "pointer",
+    outline: "none",
+  };
+
+  // ── Permissão ────────────────────────────────────────────────────────────────
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -282,186 +434,271 @@ export default function MesasSpin() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+    <div style={{ padding: "20px 24px 64px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ══ BLOCO 1: FILTRO PERÍODO ═══════════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          BLOCO 1 — FILTROS
+      ══════════════════════════════════════════════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: t.cardBg, padding: "12px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-            <button style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-              <ChevronLeft size={14} />
-            </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
-              {historico ? "Todo o período" : mesSelecionado?.label}
-            </span>
-            <button style={{ ...btnNavStyle, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
-              <ChevronRight size={14} />
-            </button>
-            <button
-              onClick={toggleHistorico}
-              style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-                fontFamily: FONT.body, fontSize: 13,
-                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-                background: historico ? `rgba(124,58,237,0.15)` : "transparent",
-                color: historico ? BRAND.roxoVivo : t.textMuted, fontWeight: historico ? 700 : 400,
-              }}
-            >
-              <GiCalendar size={15} /> Histórico
-            </button>
-            {loading && <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}><Clock size={12} /> Carregando...</span>}
+        <div style={{
+          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
+          background: t.cardBg, padding: "12px 20px",
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            gap: 12, flexWrap: "wrap",
+          }}>
+
+            {/* Carrossel de meses */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button
+                style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.3 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+                onClick={irMesAnterior}
+                disabled={historico || isPrimeiro}
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span style={{
+                fontSize: 17, fontWeight: 800, color: t.text,
+                fontFamily: FONT.body, minWidth: 190, textAlign: "center",
+              }}>
+                {historico ? "Todo o período" : mesSelecionado?.label}
+              </span>
+              <button
+                style={{ ...btnNav, opacity: historico || isUltimo ? 0.3 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+                onClick={irMesProximo}
+                disabled={historico || isUltimo}
+              >
+                <ChevronRight size={14} />
+              </button>
+
+              {/* Botão Histórico */}
+              <button
+                onClick={toggleHistorico}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+                  fontFamily: FONT.body, fontSize: 13,
+                  border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
+                  background: historico ? `rgba(124,58,237,0.15)` : "transparent",
+                  color: historico ? BRAND.roxoVivo : t.textMuted,
+                  fontWeight: historico ? 700 : 400,
+                  transition: "all 0.15s",
+                }}
+              >
+                <GiCalendar size={15} /> Histórico
+              </button>
+            </div>
+
+            {/* Filtro operadora */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                Operadora:
+              </span>
+              <select
+                value={operadoraSel}
+                onChange={(e) => setOperadoraSel(e.target.value)}
+                style={selectStyle}
+              >
+                <option value="todas">Todas</option>
+                {operadoras.map((op) => (
+                  <option key={op.slug} value={op.slug}>{op.nome}</option>
+                ))}
+              </select>
+
+              {loading && (
+                <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
+                  <Clock size={12} /> Carregando...
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ══ BLOCO 2: KPIs PRINCIPAIS ═══════════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          BLOCO 2 — KPIs PRINCIPAIS
+      ══════════════════════════════════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <span style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)", display: "flex", alignItems: "center", justifyContent: "center", color: BRAND.ciano }}>
-            <GiPokerHand size={15} />
-          </span>
-          <span style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            KPIs Principais
-          </span>
-          {!historico && <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>· comparativo MTD vs mesmo período do mês anterior</span>}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          <KpiCard label="Apostas Realizadas" value={kpisAtual.bets.toLocaleString("pt-BR")} icon={<GiTrophy size={16} />} accentColor={BRAND.ciano} atual={kpisAtual.bets} anterior={kpisAnt.bets} isHistorico={historico} />
-          <KpiCard label="Turnover" value={fmtBRL(kpisAtual.turnover)} icon={<GiCoins size={16} />} accentColor={BRAND.azul} atual={kpisAtual.turnover} anterior={kpisAnt.turnover} isBRL isHistorico={historico} />
-          <KpiCard label="GGR" value={fmtBRL(kpisAtual.ggr)} icon={<GiPokerHand size={16} />} accentColor={BRAND.roxoVivo} atual={kpisAtual.ggr} anterior={kpisAnt.ggr} isBRL isHistorico={historico} />
-          <KpiCard label="UAP" value={kpisAtual.uap.toLocaleString("pt-BR")} icon={<GiPerson size={16} />} accentColor={BRAND.verde} atual={kpisAtual.uap} anterior={kpisAnt.uap} isHistorico={historico} />
+        <SectionHeader
+          icon={<GiPokerHand size={15} />}
+          title="KPIs Principais"
+          sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
+        />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12 }}>
+          <KpiCard
+            label="Apostas"
+            value={kpisAtual.bets.toLocaleString("pt-BR")}
+            icon={<GiTrophy size={16} />}
+            accentColor={BRAND.ciano}
+            atual={kpisAtual.bets}
+            anterior={kpisAnt.bets}
+            isHistorico={historico}
+          />
+          <KpiCard
+            label="Turnover"
+            value={fmtBRLCompact(kpisAtual.turnover)}
+            icon={<GiCoins size={16} />}
+            accentColor={BRAND.azul}
+            atual={kpisAtual.turnover}
+            anterior={kpisAnt.turnover}
+            isBRL
+            isHistorico={historico}
+          />
+          <KpiCard
+            label="GGR"
+            value={fmtBRLCompact(kpisAtual.ggr)}
+            icon={<GiPokerHand size={16} />}
+            accentColor={BRAND.roxoVivo}
+            atual={kpisAtual.ggr}
+            anterior={kpisAnt.ggr}
+            isBRL
+            isHistorico={historico}
+          />
+          <KpiCard
+            label="Margem"
+            value={fmtPct(kpisAtual.margin_pct)}
+            icon={<TrendingUp size={16} />}
+            accentColor={BRAND.amarelo}
+            atual={kpisAtual.margin_pct}
+            anterior={kpisAnt.margin_pct}
+            isPct
+            isHistorico={historico}
+          />
+          <KpiCard
+            label="UAP"
+            value={kpisAtual.uap.toLocaleString("pt-BR")}
+            icon={<GiPerson size={16} />}
+            accentColor={BRAND.verde}
+            atual={kpisAtual.uap}
+            anterior={kpisAnt.uap}
+            isHistorico={historico}
+          />
+          <KpiCard
+            label="ARPU"
+            value={fmtBRL(kpisAtual.arpu)}
+            icon={<GiCoins size={14} />}
+            accentColor={BRAND.rosa}
+            atual={kpisAtual.arpu}
+            anterior={kpisAnt.arpu}
+            isBRL
+            isHistorico={historico}
+          />
         </div>
       </div>
 
-      {/* ══ BLOCO 3: GRÁFICO COMPARATIVO ══════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          BLOCO 3 — EVOLUÇÃO DO MÊS (PLACEHOLDER)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div style={{ marginBottom: 14 }}>
+        <PlaceholderBloco label="Bloco 3 · Gráfico de evolução — últimos 12 meses (Turnover, GGR, UAP)" />
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          BLOCO 5 — DETALHAMENTO DIÁRIO / MENSAL
+      ══════════════════════════════════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <span style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)", display: "flex", alignItems: "center", justifyContent: "center", color: BRAND.ciano }}>
-            <GiCoins size={15} />
-          </span>
-          <span style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Comparativo {historico ? "mensal" : "diário"} — GGR, Turnover, Apostas, UAP
-          </span>
-        </div>
+        <SectionHeader
+          icon={<GiCalendar size={15} />}
+          title={historico ? "Comparativo Mensal" : `Detalhamento Diário · ${mesSelecionado?.label}`}
+          sub={historico ? "· consolidado mês a mês" : "· dia a dia do mês selecionado"}
+        />
+
         {loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>Carregando gráfico...</div>
-        ) : graficoData.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>Nenhum dado para o período.</div>
-        ) : (
-          <div style={{ width: "100%", height: 340 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={graficoData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
-                <XAxis dataKey="nome" tick={{ fontSize: 11, fill: t.textMuted, fontFamily: FONT.body }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: t.textMuted, fontFamily: FONT.body }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: t.textMuted, fontFamily: FONT.body }} tickFormatter={(v) => fmtBRL(v).slice(0, 8)} />
-                <Tooltip contentStyle={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 12, fontFamily: FONT.body }} formatter={(v: number, name: string) => [name === "ggr" || name === "turnover" ? fmtBRL(v) : v.toLocaleString("pt-BR"), name]} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="bets" name="Apostas" fill={BRAND.ciano} radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="left" dataKey="uap" name="UAP" fill={BRAND.verde} radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="right" dataKey="turnover" name="Turnover" fill={BRAND.azul} radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="right" dataKey="ggr" name="GGR" fill={BRAND.roxoVivo} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
+            <Clock size={16} style={{ marginBottom: 8 }} />
+            <div>Carregando...</div>
           </div>
-        )}
-      </div>
-
-      {/* ══ BLOCO 4: TABELA DIÁRIA ═════════════════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <span style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)", display: "flex", alignItems: "center", justifyContent: "center", color: BRAND.ciano }}>
-            <GiCalendar size={15} />
-          </span>
-          <span style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Diário {historico ? "— todo o período" : `— ${mesSelecionado?.label}`}
-          </span>
-        </div>
-        {loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>Carregando...</div>
-        ) : dailyData.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>Nenhum dado diário no período.</div>
+        ) : tabelaRows.length === 0 ? (
+          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
+            Nenhum dado para o período selecionado.
+          </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={thStyle}>Data</th>
-                  <th style={thStyle}>Turnover</th>
-                  <th style={thStyle}>GGR</th>
-                  <th style={thStyle}>Apostas</th>
-                  <th style={thStyle}>UAP</th>
+                  <th style={thStyle}>{historico ? "Mês" : "Data"}</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>UAP</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Bet Size</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>ARPU</th>
                 </tr>
               </thead>
               <tbody>
-                {dailyData.map((r, i) => (
-                  <tr key={r.data} style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
-                    <td style={tdStyle}>{new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR")}</td>
-                    <td style={tdStyle}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
-                    <td style={{ ...tdStyle, color: (r.ggr ?? 0) >= 0 ? BRAND.verde : BRAND.vermelho }}>{r.ggr != null ? fmtBRL(r.ggr) : "—"}</td>
-                    <td style={tdStyle}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
-                    <td style={tdStyle}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
+                {tabelaRows.map((r, i) => {
+                  const ggr = r.ggr ?? 0;
+                  return (
+                    <tr
+                      key={i}
+                      style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent" }}
+                    >
+                      <td style={{ ...tdStyle, fontWeight: 600 }}>{r.label}</td>
+                      <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
+                      <td style={{
+                        ...tdNum,
+                        color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+                        fontWeight: 600,
+                      }}>
+                        {r.ggr != null ? fmtBRL(r.ggr) : "—"}
+                      </td>
+                      <td style={{ ...tdNum }}>
+                        <MarginBadge value={r.margin_pct} />
+                      </td>
+                      <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
+                      <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
+                    </tr>
+                  );
+                })}
+
+                {/* Linha de totais */}
+                {tabelaRows.length > 1 && (
+                  <tr style={{
+                    borderTop: `2px solid ${t.cardBorder}`,
+                    background: "rgba(74,32,130,0.10)",
+                  }}>
+                    <td style={{ ...tdStyle, fontWeight: 700, color: t.text }}>Total</td>
+                    <td style={{ ...tdNum, fontWeight: 700 }}>
+                      {fmtBRL(tabelaRows.reduce((s, r) => s + (r.turnover ?? 0), 0))}
+                    </td>
+                    <td style={{ ...tdNum, fontWeight: 700, color: BRAND.roxoVivo }}>
+                      {fmtBRL(tabelaRows.reduce((s, r) => s + (r.ggr ?? 0), 0))}
+                    </td>
+                    <td style={tdNum}>
+                      <MarginBadge
+                        value={
+                          tabelaRows.length > 0
+                            ? tabelaRows.reduce((s, r) => s + (Number(r.margin_pct) || 0), 0) / tabelaRows.length
+                            : null
+                        }
+                      />
+                    </td>
+                    <td style={{ ...tdNum, fontWeight: 700 }}>
+                      {tabelaRows.reduce((s, r) => s + (r.bets ?? 0), 0).toLocaleString("pt-BR")}
+                    </td>
+                    <td style={{ ...tdNum, fontWeight: 700 }}>
+                      {tabelaRows.reduce((s, r) => s + (r.uap ?? 0), 0).toLocaleString("pt-BR")}
+                    </td>
+                    <td style={tdNum}>—</td>
+                    <td style={tdNum}>—</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* ══ BLOCO 5: MESAS (PER TABLE) ═════════════════════════════════════════════ */}
-      <div style={card}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <span style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)", display: "flex", alignItems: "center", justifyContent: "center", color: BRAND.ciano }}>
-            <GiPokerHand size={15} />
-          </span>
-          <span style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Mesas (Per Table)
-          </span>
-        </div>
-        {loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>Carregando...</div>
-        ) : porTabelaData.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>Nenhum dado de mesas no período.</div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Data</th>
-                  <th style={thStyle}>Mesa</th>
-                  <th style={thStyle}>GGR d-1</th>
-                  <th style={thStyle}>Turnover d-1</th>
-                  <th style={thStyle}>Bets d-1</th>
-                  <th style={thStyle}>GGR d-2</th>
-                  <th style={thStyle}>Turnover d-2</th>
-                  <th style={thStyle}>Bets d-2</th>
-                  <th style={thStyle}>GGR MTD</th>
-                  <th style={thStyle}>Turnover MTD</th>
-                  <th style={thStyle}>Bets MTD</th>
-                </tr>
-              </thead>
-              <tbody>
-                {porTabelaData.map((r, i) => (
-                  <tr key={`${r.data_relatorio}-${r.nome_tabela}-${i}`} style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
-                    <td style={tdStyle}>{new Date(r.data_relatorio + "T12:00:00").toLocaleDateString("pt-BR")}</td>
-                    <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome_tabela}</td>
-                    <td style={tdStyle}>{r.ggr_d1 != null ? fmtBRL(r.ggr_d1) : "—"}</td>
-                    <td style={tdStyle}>{r.turnover_d1 != null ? fmtBRL(r.turnover_d1) : "—"}</td>
-                    <td style={tdStyle}>{r.bets_d1 != null ? r.bets_d1.toLocaleString("pt-BR") : "—"}</td>
-                    <td style={tdStyle}>{r.ggr_d2 != null ? fmtBRL(r.ggr_d2) : "—"}</td>
-                    <td style={tdStyle}>{r.turnover_d2 != null ? fmtBRL(r.turnover_d2) : "—"}</td>
-                    <td style={tdStyle}>{r.bets_d2 != null ? r.bets_d2.toLocaleString("pt-BR") : "—"}</td>
-                    <td style={tdStyle}>{r.ggr_mtd != null ? fmtBRL(r.ggr_mtd) : "—"}</td>
-                    <td style={tdStyle}>{r.turnover_mtd != null ? fmtBRL(r.turnover_mtd) : "—"}</td>
-                    <td style={tdStyle}>{r.bets_mtd != null ? r.bets_mtd.toLocaleString("pt-BR") : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* ══════════════════════════════════════════════════════════════════════
+          BLOCO 6 — MESAS (PLACEHOLDER)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <PlaceholderBloco label="Bloco 6 · Mesas por operadora com dropdown diário (aguarda nova tabela)" />
+
     </div>
   );
 }
