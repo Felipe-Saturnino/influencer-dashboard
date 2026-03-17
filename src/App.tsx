@@ -27,6 +27,7 @@ import GestaoDealers from "./pages/operacoes/GestaoDealers";
 // Páginas — plataforma
 import GestaoUsuarios from "./pages/plataforma/GestaoUsuarios";
 import GestaoOperadoras from "./pages/plataforma/GestaoOperadoras";
+import UploadArquivos from "./pages/plataforma/UploadArquivos";
 import StatusTecnico from "./pages/plataforma/StatusTecnico";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   gestao_dealers:   GestaoDealers,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
+  upload_arquivos:  UploadArquivos,
   status_tecnico:   StatusTecnico,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,

@@ -8,7 +8,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "dash_overview", "dash_overview_influencer", "dash_conversao", "dash_financeiro",
   "agenda", "resultados", "feedback",
   "influencers", "scout", "financeiro", "gestao_links", "gestao_dealers",
-  "gestao_usuarios", "gestao_operadoras", "status_tecnico",
+  "gestao_usuarios", "gestao_operadoras", "upload_arquivos", "status_tecnico",
   "configuracoes", "ajuda",
 ];
 

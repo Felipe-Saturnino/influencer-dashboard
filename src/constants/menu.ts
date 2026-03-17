@@ -16,6 +16,7 @@ import {
   GiRadarSweep,
   GiCardRandom,
 } from "react-icons/gi";
+import { MdUpload } from "react-icons/md";
 
 export interface MenuItem {
   key:   PageKey;
@@ -61,6 +62,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "gestao_usuarios",   label: "Gestão de Usuários",   icon: GiShield    },
       { key: "gestao_operadoras", label: "Gestão de Operadoras", icon: GiFactory   },
+      { key: "upload_arquivos",   label: "Upload de Arquivos",   icon: MdUpload    },
       { key: "status_tecnico",    label: "Status Técnico",       icon: GiRadarSweep },
     ],
   },

@@ -26,6 +26,7 @@ export type PageKey =
   | "gestao_links"
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
+  | "upload_arquivos"
   | "gestao_dealers"
   | "status_tecnico"
   | "configuracoes"
