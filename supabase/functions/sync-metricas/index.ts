@@ -99,7 +99,8 @@ async function fetchMetricasReportingAPI(
   dataFim: string,
   apiKey: string,
   baseUrl: string,
-  authFormat: 'Bearer' | 'direct'
+  authFormat: 'Bearer' | 'direct',
+  endpoint: 'af2_media_report_af' | 'af2_media_report_op' = 'af2_media_report_af'
 ): Promise<Map<string, DailyMetric[]>> {
   // date_to é exclusivo: para incluir dataFim, usar o dia seguinte
   const dateTo = new Date(dataFim)
@@ -114,7 +115,7 @@ async function fetchMetricasReportingAPI(
   })
 
   const authHeader = authFormat === 'direct' ? apiKey : `Bearer ${apiKey}`
-  const url = `${baseUrl.replace(/\/$/, '')}/api/af2_media_report_af?${params}`
+  const url = `${baseUrl.replace(/\/$/, '')}/api/${endpoint}?${params}`
 
   const response = await fetch(url, {
     method: 'GET',
@@ -125,16 +126,28 @@ async function fetchMetricasReportingAPI(
   if (!response.ok) throw new Error(`Reporting API: ${response.status}`)
 
   const json = await response.json()
-  const data: ReportingApiDataItem[] = json?.data ?? []
+  // Suporta json.data ou json.result (algumas implementações)
+  const data: ReportingApiDataItem[] = json?.data ?? json?.result ?? []
+
+  // Diagnóstico: quando vazio, logar estrutura para debug
+  if (data.length === 0) {
+    const meta = json?.meta ? JSON.stringify(json.meta).slice(0, 150) : 'sem meta'
+    const topKeys = json ? Object.keys(json).join(', ') : 'resposta vazia'
+    console.log(`[sync-metricas] Reporting API retornou 0 linhas. URL: ${url}`)
+    console.log(`[sync-metricas] Resposta: keys=${topKeys} | meta=${meta}`)
+  }
 
   const byUtm = new Map<string, DailyMetric[]>()
   for (const item of data) {
-    const utm = item.utm_source ?? 'Empty'
-    if (utm === 'Empty') continue
+    // Suporta snake_case e camelCase (API pode variar)
+    const raw = item as unknown as Record<string, unknown>
+    const utm = raw?.utm_source ?? raw?.utmSource ?? 'Empty'
+    const utmStr = String(utm)
+    if (utmStr === 'Empty' || !utmStr) continue
     const m = reportingItemToDailyMetric(item)
-    const list = byUtm.get(utm) ?? []
+    const list = byUtm.get(utmStr) ?? []
     list.push(m)
-    byUtm.set(utm, list)
+    byUtm.set(utmStr, list)
   }
   return byUtm
 }
@@ -662,12 +675,15 @@ serve(async (req: Request) => {
     const authMethod = (smarticoUsername && smarticoPassword) ? 'SMARTICO_USERNAME+PASSWORD' : cdaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN'
     const useReportingApi = Deno.env.get('CDA_USE_REPORTING_API') === 'true'
     const reportingBaseUrl = Deno.env.get('SMARTICO_REPORTING_API_URL') ?? 'https://boapi.smartico.ai'
+    // af2_media_report_op = Operator (métricas de todos os afiliados) | af2_media_report_af = Affiliate (apenas do próprio)
+    const reportingEndpoint = (Deno.env.get('CDA_REPORTING_ENDPOINT') ?? 'af2_media_report_af').toLowerCase()
+    const endpoint = reportingEndpoint.includes('_op') ? 'af2_media_report_op' as const : 'af2_media_report_af' as const
 
     if (useReportingApi && !cdaApiKey) {
       throw new Error('Reporting API exige CDA_INFLUENCERS_API_KEY. Configure no Supabase Secrets.')
     }
 
-    console.log(`[sync-metricas] v1.8.0 | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Auth: ${authMethod}${cdaAuth.apiKey ? ` (${authFormat})` : ''} | Período: ${dataInicio} → ${dataFim}`)
+    console.log(`[sync-metricas] v1.9.0 | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Endpoint: ${endpoint} | Auth: ${authMethod}${cdaAuth.apiKey ? ` (${authFormat})` : ''} | Período: ${dataInicio} → ${dataFim}`)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
@@ -675,7 +691,7 @@ serve(async (req: Request) => {
     let reportingCache: Map<string, DailyMetric[]> | null = null
     if (useReportingApi && cdaApiKey) {
       try {
-        reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat)
+        reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, endpoint)
         console.log(`[sync-metricas] Reporting API: ${reportingCache.size} UTMs carregados`)
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
