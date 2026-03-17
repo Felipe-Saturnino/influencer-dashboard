@@ -254,7 +254,15 @@ export default function Scout() {
     }
     setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: newStatus } : s)));
     const { error } = await supabase.from("scout_influencer").update({ status: newStatus }).eq("id", scout.id);
-    if (error) { setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: scout.status } : s))); }
+    if (error) { setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: scout.status } : s))); return; }
+    // Sincronizar cache para influencer_perfil quando scout já tinha user_id e passou a fechado
+    if (newStatus === "fechado" && scout.user_id) {
+      const cacheHora = Math.max(0, Number(scout.cache_negociado) || 0);
+      if (cacheHora > 0) {
+        const { error: syncErr } = await supabase.from("influencer_perfil").update({ cache_hora: cacheHora }).eq("id", scout.user_id);
+        if (syncErr) console.warn("[Scout] Falha ao sincronizar cache para influencer_perfil:", syncErr.message);
+      }
+    }
   }
 
   const selectStyle: React.CSSProperties = { flex: 1, minWidth: 120, padding: "8px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", outline: "none" };
@@ -781,10 +789,11 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
       if (scout) {
         const { error: err } = await supabase.from("scout_influencer").update(payload).eq("id", scout.id);
         if (err) throw new Error(err.message);
-        // Sincronizar cache para influencer_perfil quando scout já tem user_id e status fechado
-        if (status === "fechado" && scout.user_id) {
+        // Sincronizar cache para influencer_perfil quando status fechado (userId = recém-criado, scout.user_id = já existia)
+        const userIdParaSync = userId ?? scout.user_id;
+        if (status === "fechado" && userIdParaSync) {
           const cacheHora = Math.max(0, Number(cacheNegociado) || 0);
-          const { error: syncErr } = await supabase.from("influencer_perfil").update({ cache_hora: cacheHora }).eq("id", scout.user_id);
+          const { error: syncErr } = await supabase.from("influencer_perfil").update({ cache_hora: cacheHora }).eq("id", userIdParaSync);
           if (syncErr) console.warn("[Scout] Falha ao sincronizar cache para influencer_perfil:", syncErr.message);
         }
       } else {
