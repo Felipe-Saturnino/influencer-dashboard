@@ -25,26 +25,7 @@ const BRAND = {
 const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
-const PLAT_COLOR: Record<string, string> = {
-  Twitch:    "#9146ff",
-  YouTube:   "#ff0000",
-  Instagram: "#e1306c",
-  TikTok:    "#69c9d0",
-  Kick:      "#53fc18",
-};
-
-const PLAT_LOGO: Record<string, string> = {
-  Twitch:    "https://cdn.simpleicons.org/twitch/9146FF",
-  YouTube:   "https://cdn.simpleicons.org/youtube/FF0000",
-  Instagram: "https://cdn.simpleicons.org/instagram/E1306C",
-  TikTok:    "https://cdn.simpleicons.org/tiktok/000000",
-  Kick:      "https://cdn.simpleicons.org/kick/53FC18",
-};
-
-const PLAT_LOGO_DARK: Record<string, string> = {
-  ...PLAT_LOGO,
-  TikTok: "https://cdn.simpleicons.org/tiktok/FFFFFF",
-};
+import { PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK } from "../../../constants/platforms";
 
 function PlatLogo({ plataforma, size = 20, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
   const [err, setErr] = useState(false);

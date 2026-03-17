@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import {
   GiPodiumWinner, GiFunnel, GiSpeedometer, GiCalendar,
@@ -368,14 +369,32 @@ export default function DashboardOverviewInfluencer() {
         return data || [];
       }
 
-      const metricas = await buscaMetricas(inicio, fim);
+      let metricas = await buscaMetricas(inicio, fim);
+      if (historico) {
+        const aliasesSinteticas = await buscarMetricasDeAliases({
+          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
+          dataInicio: inicio,
+          dataFim: fim,
+        });
+        metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
+      }
+
       const lives = await buscaLives(inicio, fim);
       const resultados = await buscaResultados(lives);
 
       const rows = metricas.filter((m) => podeVerInfluencer(m.influencer_id));
       const liveRows = lives.filter((l) => podeVerInfluencer(l.influencer_id));
 
-      const idsComDados = [...new Set([...rows.map((m) => m.influencer_id), ...liveRows.map((l) => l.influencer_id)])];
+      // Incluir influencers com métricas, lives OU aliases mapeados (caso só tenham tráfego via Gestão de Links)
+      let idsComDados = [...new Set([...rows.map((m) => m.influencer_id), ...liveRows.map((l) => l.influencer_id)])];
+      const { data: aliasesMapeados } = await supabase
+        .from("utm_aliases")
+        .select("influencer_id")
+        .eq("status", "mapeado")
+        .not("influencer_id", "is", null);
+      const idsAliases = [...new Set((aliasesMapeados ?? []).map((a: { influencer_id: string }) => a.influencer_id).filter((id) => podeVerInfluencer(id)))];
+      idsComDados = [...new Set([...idsComDados, ...idsAliases])];
       setInfluencersComDadosIds(idsComDados);
 
       function calcTotais(m: Metrica[], l: LiveData[], r: LiveResultado[]): TotaisData {
@@ -668,6 +687,37 @@ export default function DashboardOverviewInfluencer() {
                     <td style={tdStyle}>{cel(d.ggr, true)}</td>
                   </tr>
                 ))}
+                {diasData.length > 0 && (() => {
+                  const tot = diasData.reduce((acc, d) => ({
+                    duracao: acc.duracao + d.duracao,
+                    acessos: acc.acessos + d.acessos,
+                    registros: acc.registros + d.registros,
+                    ftd_count: acc.ftd_count + d.ftd_count,
+                    ftd_total: acc.ftd_total + d.ftd_total,
+                    deposit_count: acc.deposit_count + d.deposit_count,
+                    deposit_total: acc.deposit_total + d.deposit_total,
+                    withdrawal_count: acc.withdrawal_count + d.withdrawal_count,
+                    withdrawal_total: acc.withdrawal_total + d.withdrawal_total,
+                    ggr: acc.ggr + d.ggr,
+                  }), { duracao: 0, acessos: 0, registros: 0, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
+                  return (
+                    <tr key="total" style={{ background: "rgba(74,32,130,0.12)", fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
+                      <td style={tdStyle}>Total</td>
+                      <td style={tdStyle}>{tot.duracao > 0 ? fmtHoras(tot.duracao) : "—"}</td>
+                      <td style={tdStyle}>—</td>
+                      <td style={tdStyle}>—</td>
+                      <td style={tdStyle}>{cel(tot.acessos)}</td>
+                      <td style={tdStyle}>{cel(tot.registros)}</td>
+                      <td style={tdStyle}>{cel(tot.ftd_count)}</td>
+                      <td style={tdStyle}>{cel(tot.ftd_total, true)}</td>
+                      <td style={tdStyle}>{cel(tot.deposit_count)}</td>
+                      <td style={tdStyle}>{cel(tot.deposit_total, true)}</td>
+                      <td style={tdStyle}>{cel(tot.withdrawal_count)}</td>
+                      <td style={tdStyle}>{cel(tot.withdrawal_total, true)}</td>
+                      <td style={tdStyle}>{cel(tot.ggr, true)}</td>
+                    </tr>
+                  );
+                })()}
               </tbody>
             </table>
           </div>

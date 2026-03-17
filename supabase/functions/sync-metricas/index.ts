@@ -2,7 +2,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Edge Function: sync-metricas | Acquisition Hub (Spin Gaming)
-// Busca métricas da API Plywood e faz upsert em influencer_metricas
+// Busca métricas da API Plywood OU Reporting API (af2_media_report_af) e faz upsert em influencer_metricas
+// Use CDA_USE_REPORTING_API=true para a Reporting API (recomendado se Plywood retorna 403)
 
 // ── Tipos ────────────────────────────────────────────────────
 
@@ -55,6 +56,161 @@ interface InfluencerPerfil {
   nome_artistico: string
 }
 
+// ── Reporting API (af2_media_report_af) ─────────────────────────
+// https://help.theaffiliateplatform.com/apis-and-configurations/reporting-api
+
+interface ReportingApiDataItem {
+  dt: string
+  utm_source?: string
+  visit_count: number
+  registration_count: number
+  deposit_count: number
+  deposit_total: number
+  ftd_count: number
+  ftd_total: number
+  withdrawal_count: number
+  withdrawal_total: number
+  net_deposit_total?: number
+  pl?: number
+  commissions_total?: number
+}
+
+function reportingItemToDailyMetric(item: ReportingApiDataItem): DailyMetric {
+  const dt = item.dt?.split('T')[0] ?? ''
+  return {
+    time: { start: `${dt}T00:00:00.000Z`, end: `${dt}T23:59:59.999Z` },
+    visit_count: item.visit_count ?? 0,
+    registration_count: item.registration_count ?? 0,
+    deposit_count: item.deposit_count ?? 0,
+    deposit_total: item.deposit_total ?? 0,
+    ftd_count: item.ftd_count ?? 0,
+    ftd_total: item.ftd_total ?? 0,
+    withdrawal_count: item.withdrawal_count ?? 0,
+    withdrawal_total: item.withdrawal_total ?? 0,
+    net_deposit_total: item.net_deposit_total ?? 0,
+    pl: item.pl ?? 0,
+    commissions_total: item.commissions_total ?? 0,
+  }
+}
+
+/** Busca TODAS as métricas via Reporting API em uma única chamada. Retorna Map<utm_source, DailyMetric[]>. */
+async function fetchMetricasReportingAPI(
+  dataInicio: string,
+  dataFim: string,
+  apiKey: string,
+  baseUrl: string,
+  authFormat: 'Bearer' | 'direct',
+  endpoint: 'af2_media_report_af' | 'af2_media_report_op' = 'af2_media_report_af',
+  labelId: string,
+  omitLabel = false // true = não envia label (chave de afiliado pode inferir do token)
+): Promise<Map<string, DailyMetric[]>> {
+  // date_to é exclusivo: para incluir dataFim, usar o dia seguinte
+  const dateTo = new Date(dataFim)
+  dateTo.setDate(dateTo.getDate() + 1)
+  const dateToStr = dateTo.toISOString().split('T')[0]
+
+  const params = new URLSearchParams({
+    aggregation_period: 'DAY',
+    group_by: 'utm_source',
+    date_from: dataInicio,
+    date_to: dateToStr,
+  })
+  if (!omitLabel) {
+    params.set('label_id', labelId)
+    params.set('lbl', labelId) // boapi3 usa este parâmetro (ex.: getBoUserInfo)
+  }
+
+  const authHeader = authFormat === 'direct' ? apiKey : `Bearer ${apiKey}`
+  const url = `${baseUrl.replace(/\/$/, '')}/api/${endpoint}?${params}`
+
+  const headers: Record<string, string> = { 'authorization': authHeader }
+  if (!omitLabel) {
+    headers['Active_label_id'] = labelId
+    headers['X-Smartico-Active-Label-Id'] = labelId
+    headers['Referer'] = `https://admin.aff.casadeapostas.bet.br/${labelId}/`
+  }
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers,
+  })
+
+  if (response.status === 403) throw new TokenExpiradoError('403 na Reporting API')
+  if (!response.ok) throw new Error(`Reporting API: ${response.status}`)
+
+  const json = await response.json()
+  // API pode retornar erro em vez de data: { errorCode, message }
+  const errorCode = (json as Record<string, unknown>)?.errorCode
+  const errorMsg = (json as Record<string, unknown>)?.message
+  if (errorCode != null || errorMsg != null) {
+    const msg = `Reporting API erro: ${errorCode ?? 'N/A'} - ${String(errorMsg ?? 'sem detalhes')}`
+    console.error(`[sync-metricas] ${msg}`)
+    throw new Error(msg)
+  }
+  // Suporta json.data ou json.result (algumas implementações)
+  const data: ReportingApiDataItem[] = json?.data ?? json?.result ?? []
+
+  // Diagnóstico: quando vazio (sem ser erro), logar estrutura para debug
+  if (data.length === 0) {
+    const meta = json?.meta ? JSON.stringify(json.meta).slice(0, 150) : 'sem meta'
+    const topKeys = json ? Object.keys(json).join(', ') : 'resposta vazia'
+    console.log(`[sync-metricas] Reporting API retornou 0 linhas. URL: ${url}`)
+    console.log(`[sync-metricas] Resposta: keys=${topKeys} | meta=${meta}`)
+  }
+
+  const byUtm = new Map<string, DailyMetric[]>()
+  for (const item of data) {
+    // Suporta snake_case e camelCase (API pode variar)
+    const raw = item as unknown as Record<string, unknown>
+    const utm = raw?.utm_source ?? raw?.utmSource ?? 'Empty'
+    const utmStr = String(utm)
+    if (utmStr === 'Empty' || !utmStr) continue
+    const m = reportingItemToDailyMetric(item)
+    const list = byUtm.get(utmStr) ?? []
+    list.push(m)
+    byUtm.set(utmStr, list)
+  }
+  return byUtm
+}
+
+/** Obtém métricas por utm_source com fallback case-insensitive (API pode retornar "Ellen" vs "ellen"). */
+function getMetricasPorUtm(cache: Map<string, DailyMetric[]>, utmSource: string): DailyMetric[] {
+  const exact = cache.get(utmSource)
+  if (exact) return exact
+  const u = utmSource.toLowerCase()
+  for (const [key, val] of cache) {
+    if (key.toLowerCase() === u) return val
+  }
+  return []
+}
+
+/** Converte Map<utm, DailyMetric[]> da Reporting API em UtmTotais[] para órfãos. */
+function reportingDataToUtmTotais(
+  byUtm: Map<string, DailyMetric[]>,
+  dataInicio: string,
+  dataFim: string
+): UtmTotais[] {
+  const out: UtmTotais[] = []
+  for (const [utm, metrics] of byUtm) {
+    const total_visits = metrics.reduce((s, m) => s + (m.visit_count ?? 0), 0)
+    const total_registrations = metrics.reduce((s, m) => s + (m.registration_count ?? 0), 0)
+    const total_ftds = metrics.reduce((s, m) => s + (m.ftd_count ?? 0), 0)
+    const total_deposit = metrics.reduce((s, m) => s + (m.deposit_total ?? 0), 0)
+    const total_withdrawal = metrics.reduce((s, m) => s + (m.withdrawal_total ?? 0), 0)
+    out.push({
+      utm_source: utm,
+      total_visits,
+      total_registrations,
+      total_ftds,
+      total_deposit: parseFloat(total_deposit.toFixed(2)),
+      total_withdrawal: parseFloat(total_withdrawal.toFixed(2)),
+      primeiro_visto: dataInicio,
+      ultimo_visto: dataFim,
+    })
+  }
+  return out.sort((a, b) => b.total_ftds - a.total_ftds).slice(0, 500)
+}
+
 // ── Erro especial para 403 ────────────────────────────────────
 
 class TokenExpiradoError extends Error {
@@ -65,17 +221,40 @@ class TokenExpiradoError extends Error {
 }
 
 // ── Alerta de e-mail via Resend ───────────────────────────────
+// Enviado quando a API CDA retorna 403 (token expirado OU API key revogada)
 
-async function enviarAlertaTokenExpirado(): Promise<void> {
+async function enviarAlertaAuthCda(): Promise<void> {
   const resendKey = Deno.env.get('RESEND_API_KEY')
   if (!resendKey) {
     console.warn('[sync-metricas] RESEND_API_KEY não configurada — alerta ignorado.')
     return
   }
 
+  const usaBasicAuth = !!(Deno.env.get('SMARTICO_USERNAME') && Deno.env.get('SMARTICO_PASSWORD'))
+  const usaApiKey = !!Deno.env.get('CDA_INFLUENCERS_API_KEY')
   const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
-  const html = `
+  const html = (usaApiKey || usaBasicAuth)
+    ? `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <div style="background: #ef4444; color: white; padding: 16px 24px; border-radius: 8px 8px 0 0;">
+        <h2 style="margin: 0; font-size: 18px;">⚠️ Sync de Métricas Interrompido</h2>
+      </div>
+      <div style="background: #f9f9f9; border: 1px solid #e5e5e5; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p style="margin: 0 0 16px; color: #333;">
+          O sync automático de métricas da <strong>Casa de Apostas</strong> falhou às <strong>${agora}</strong>.
+        </p>
+        <p style="margin: 0 0 16px; color: #333;">
+          <strong>Motivo:</strong> A API retornou erro <code style="background: #fee2e2; padding: 2px 6px; border-radius: 4px; color: #ef4444;">403 Forbidden</code> — credencial inválida.
+        </p>
+        <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+          <p style="margin: 0; color: #856404; font-weight: bold;">Verifique as credenciais em Supabase Secrets (CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME/SMARTICO_PASSWORD).</p>
+        </div>
+        <p style="margin: 0; color: #555;">Acesse Supabase → Edge Functions → Secrets.</p>
+      </div>
+    </div>
+  `
+    : `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
       <div style="background: #ef4444; color: white; padding: 16px 24px; border-radius: 8px 8px 0 0;">
         <h2 style="margin: 0; font-size: 18px;">⚠️ Sync de Métricas Interrompido</h2>
@@ -88,16 +267,16 @@ async function enviarAlertaTokenExpirado(): Promise<void> {
           <strong>Motivo:</strong> A API retornou erro <code style="background: #fee2e2; padding: 2px 6px; border-radius: 4px; color: #ef4444;">403 Forbidden</code> — o token de sessão expirou.
         </p>
         <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-          <p style="margin: 0; color: #856404; font-weight: bold;">Nenhum dado novo será salvo até o token ser renovado.</p>
+          <p style="margin: 0; color: #856404; font-weight: bold;">Migre para CDA_INFLUENCERS_API_KEY (não expira). Ou renove SMARTICO_TOKEN conforme abaixo.</p>
         </div>
-        <h3 style="color: #333; font-size: 15px; margin-bottom: 12px;">Como renovar (menos de 2 minutos):</h3>
+        <h3 style="color: #333; font-size: 15px; margin-bottom: 12px;">Como renovar token (temporário):</h3>
         <ol style="color: #555; padding-left: 20px; line-height: 1.8;">
           <li>Acesse <a href="https://admin.aff.casadeapostas.bet.br" style="color: #2563eb;">admin.aff.casadeapostas.bet.br</a> e faça login</li>
           <li>Abra o DevTools (F12) → aba <strong>Network</strong></li>
           <li>Recarregue a página (F5) e filtre por <code>getBoUserInfo</code></li>
           <li>Clique na requisição → aba <strong>Headers</strong> → copie o valor de <strong>Authorization</strong></li>
-          <li>Acesse <a href="https://supabase.com/dashboard/project/dzyuqibobeujzedomlsc/settings/functions" style="color: #2563eb;">Supabase → Secrets</a></li>
-          <li>Atualize <code>SMARTICO_TOKEN</code> com o novo valor e clique em <strong>Save</strong></li>
+          <li>Acesse Supabase → Edge Functions → Secrets</li>
+          <li>Atualize <code>SMARTICO_TOKEN</code> ou adicione <code>CDA_INFLUENCERS_API_KEY</code> (recomendado)</li>
         </ol>
       </div>
     </div>
@@ -110,7 +289,7 @@ async function enviarAlertaTokenExpirado(): Promise<void> {
       body: JSON.stringify({
         from: 'Acquisition Hub <onboarding@resend.dev>',
         to: ['felipe.saturnino@spingaming.com.br'],
-        subject: '⚠️ [Acquisition Hub] Token CDA expirado — sync interrompido',
+        subject: '⚠️ [Acquisition Hub] Erro de autenticação CDA (403) — sync interrompido',
         html,
       }),
     })
@@ -125,16 +304,34 @@ async function enviarAlertaTokenExpirado(): Promise<void> {
 }
 
 // ── Headers padrão CDA ───────────────────────────────────────
+// Suporta: CDA_INFLUENCERS_API_KEY | SMARTICO_USERNAME+SMARTICO_PASSWORD (Basic) | SMARTICO_TOKEN (cookie)
+// CDA_AUTH_FORMAT: "Bearer" (default) ou "direct" — para API key
 
-function buildHeaders(token: string, labelId: string): HeadersInit {
-  return {
+type CdaAuthInput = {
+  apiKey?: string
+  authFormat?: 'Bearer' | 'direct'
+  basicAuth?: { username: string; password: string }
+  token?: string
+}
+
+function buildHeaders(auth: CdaAuthInput, labelId: string): HeadersInit {
+  const base: Record<string, string> = {
     'Content-Type': 'application/json;charset=UTF-8',
-    'Cookie': `__smtaff_bo_token=${token}`,
     'Active_label_id': labelId,
     'X-Smartico-Active-Label-Id': labelId,
     'Origin': 'https://admin.aff.casadeapostas.bet.br',
     'Referer': `https://data-api3.aff.casadeapostas.bet.br/?label_id=${labelId}&noNav=true`,
   }
+  if (auth.apiKey) {
+    const format = auth.authFormat ?? 'Bearer'
+    base['Authorization'] = format === 'direct' ? auth.apiKey : `Bearer ${auth.apiKey}`
+  } else if (auth.basicAuth) {
+    const encoded = btoa(`${auth.basicAuth.username}:${auth.basicAuth.password}`)
+    base['Authorization'] = `Basic ${encoded}`
+  } else if (auth.token) {
+    base['Cookie'] = `__smtaff_bo_token=${auth.token}`
+  }
+  return base
 }
 
 // ── Métricas base ────────────────────────────────────────────
@@ -169,8 +366,10 @@ function buildTimeFilter(dataInicio: string, dataFim: string): object {
 
 // ── Busca métricas de um influencer (SPLIT por dia) ──────────
 
+type CdaAuth = CdaAuthInput
+
 async function fetchMetricasPorUtm(
-  utmSource: string, dataInicio: string, dataFim: string, token: string, labelId: string
+  utmSource: string, dataInicio: string, dataFim: string, auth: CdaAuth, labelId: string
 ): Promise<DailyMetric[]> {
 
   const utmFilter = {
@@ -197,7 +396,7 @@ async function fetchMetricasPorUtm(
 
   const payload = { dataCube: 'data-cube-affiliate-general-affiliate-view4', timezone: 'Etc/UTC', version: '1.31.0', settingsVersion: 0, expression: withSplit }
 
-  const response = await fetch('https://data-api3.aff.casadeapostas.bet.br/plywood?by=', { method: 'POST', headers: buildHeaders(token, labelId), body: JSON.stringify(payload) })
+  const response = await fetch('https://data-api3.aff.casadeapostas.bet.br/plywood?by=', { method: 'POST', headers: buildHeaders(auth, labelId), body: JSON.stringify(payload) })
 
   if (response.status === 403) throw new TokenExpiradoError(`403 para utm_source=${utmSource}`)
   if (!response.ok) throw new Error(`Erro API para ${utmSource}: ${response.status}`)
@@ -211,7 +410,7 @@ async function fetchMetricasPorUtm(
 // ── Varredura de UTMs: SPLIT por utm_source (sem filtro) ──────
 
 async function fetchTodosUtms(
-  dataInicio: string, dataFim: string, token: string, labelId: string
+  dataInicio: string, dataFim: string, auth: CdaAuth, labelId: string
 ): Promise<UtmTotais[]> {
 
   const filteredMain = { op: 'filter', operand: { op: 'ref', name: 'main' }, expression: buildTimeFilter(dataInicio, dataFim) }
@@ -236,7 +435,7 @@ async function fetchTodosUtms(
 
   console.log('[sync-metricas] Fase 2: Varrendo UTMs órfãos na CDA...')
 
-  const response = await fetch('https://data-api3.aff.casadeapostas.bet.br/plywood?by=', { method: 'POST', headers: buildHeaders(token, labelId), body: JSON.stringify(payload) })
+  const response = await fetch('https://data-api3.aff.casadeapostas.bet.br/plywood?by=', { method: 'POST', headers: buildHeaders(auth, labelId), body: JSON.stringify(payload) })
 
   if (response.status === 403) throw new TokenExpiradoError('403 na varredura de UTMs')
   if (!response.ok) throw new Error(`Erro na varredura: ${response.status}`)
@@ -332,6 +531,44 @@ async function detectarERegistrarOrfaos(
   return { novos, atualizados, erros }
 }
 
+// ── Upsert utm_metricas_diarias (TODAS as UTMs, por dia) ───────
+// Permite mapear sem novo sync: UPDATE influencer_id + cópia para influencer_metricas
+async function upsertUtmMetricasDiarias(
+  supabase: ReturnType<typeof createClient>,
+  byUtm: Map<string, DailyMetric[]>,
+  utmToInfluencerId: Map<string, string>
+): Promise<{ inseridos: number; erros: string[] }> {
+  const rows: Array<Record<string, unknown>> = []
+  for (const [utm, metrics] of byUtm) {
+    const influencerId = utmToInfluencerId.get(utm) ?? null
+    for (const m of metrics) {
+      const data = m.time.start.split('T')[0]
+      rows.push({
+        utm_source: utm,
+        data,
+        operadora_slug: 'casa_apostas',
+        visit_count: Math.round(m.visit_count ?? 0),
+        registration_count: Math.round(m.registration_count ?? 0),
+        ftd_count: Math.round(m.ftd_count ?? 0),
+        ftd_total: parseFloat((m.ftd_total ?? 0).toFixed(2)),
+        deposit_count: Math.round(m.deposit_count ?? 0),
+        deposit_total: parseFloat((m.deposit_total ?? 0).toFixed(2)),
+        withdrawal_count: Math.round(m.withdrawal_count ?? 0),
+        withdrawal_total: parseFloat((m.withdrawal_total ?? 0).toFixed(2)),
+        influencer_id: influencerId,
+        fonte: 'api',
+      })
+    }
+  }
+  if (rows.length === 0) return { inseridos: 0, erros: [] }
+  const { error } = await supabase.from('utm_metricas_diarias').upsert(rows, {
+    onConflict: 'utm_source,data,operadora_slug',
+    ignoreDuplicates: false,
+  })
+  if (error) return { inseridos: 0, erros: [`utm_metricas_diarias: ${error.message}`] }
+  return { inseridos: rows.length, erros: [] }
+}
+
 // ── Upsert métricas influencer ───────────────────────────────
 // v1.3.0: inclui operadora_slug e onConflict alinhado à constraint
 // UNIQUE(influencer_id, data, operadora_slug)
@@ -425,10 +662,8 @@ serve(async (req: Request) => {
   }
 
   try {
-    if (!req.headers.get('Authorization')) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-    }
-
+    // O gateway do Supabase já valida o JWT antes de invocar. Não checar Authorization aqui
+    // para evitar 401 quando o header não é repassado ao handler.
     let params: SyncRequest = {}
     try { params = await req.json() } catch { /* Body vazio ok */ }
 
@@ -440,13 +675,97 @@ serve(async (req: Request) => {
     const dataInicio = params.data_inicio ?? defaultInicio
 
     const inicioMs = Date.now()
-    console.log(`[sync-metricas] v1.5.0 | Período: ${dataInicio} → ${dataFim}`)
-
+    const cdaApiKey    = Deno.env.get('CDA_INFLUENCERS_API_KEY')
     const smaticoToken = Deno.env.get('SMARTICO_TOKEN')
     const labelId      = Deno.env.get('SMARTICO_LABEL_ID') ?? '573703'
-    if (!smaticoToken) throw new Error('Secret SMARTICO_TOKEN não configurado.')
+
+    const authFormat = (Deno.env.get('CDA_AUTH_FORMAT') ?? 'Bearer').toLowerCase() === 'direct' ? 'direct' as const : 'Bearer' as const
+    const smarticoUsername = Deno.env.get('SMARTICO_USERNAME')
+    const smarticoPassword = Deno.env.get('SMARTICO_PASSWORD')
+
+    // Prioridade: SMARTICO_USERNAME+SMARTICO_PASSWORD (Basic) > CDA_INFLUENCERS_API_KEY > SMARTICO_TOKEN (cookie)
+    // Basic auth testado primeiro pois API key pode não ser aceita pela API Plywood
+    const cdaAuth: CdaAuth = (smarticoUsername && smarticoPassword)
+      ? { basicAuth: { username: smarticoUsername, password: smarticoPassword } }
+      : cdaApiKey
+        ? { apiKey: cdaApiKey, authFormat }
+        : smaticoToken
+          ? { token: smaticoToken }
+          : (() => { throw new Error('Configure SMARTICO_USERNAME+SMARTICO_PASSWORD, CDA_INFLUENCERS_API_KEY ou SMARTICO_TOKEN no Supabase Secrets.') })()
+
+    const authMethod = (smarticoUsername && smarticoPassword) ? 'SMARTICO_USERNAME+PASSWORD' : cdaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN'
+    const useReportingApi = Deno.env.get('CDA_USE_REPORTING_API') === 'true'
+    // CDA usa boapi3 (verificado via DevTools: getBoUserInfo). Docs padrão: boapi.smartico.ai
+    const reportingBaseUrl = Deno.env.get('SMARTICO_REPORTING_API_URL') ?? 'https://boapi3.smartico.ai'
+    // af2_media_report_op = Operator (métricas de todos os afiliados) | af2_media_report_af = Affiliate (apenas do próprio)
+    const reportingEndpoint = (Deno.env.get('CDA_REPORTING_ENDPOINT') ?? 'af2_media_report_af').toLowerCase()
+    const endpoint = reportingEndpoint.includes('_op') ? 'af2_media_report_op' as const : 'af2_media_report_af' as const
+
+    if (useReportingApi && !cdaApiKey) {
+      throw new Error('Reporting API exige CDA_INFLUENCERS_API_KEY. Configure no Supabase Secrets.')
+    }
+
+    console.log(`[sync-metricas] v1.9.0 | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Endpoint: ${endpoint} | Auth: ${authMethod}${cdaAuth.apiKey ? ` (${authFormat})` : ''} | Período: ${dataInicio} → ${dataFim}`)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+
+    // ── Cache Reporting API (uma chamada para todos os UTMs) ─────────
+    let reportingCache: Map<string, DailyMetric[]> | null = null
+    if (useReportingApi && cdaApiKey) {
+      type Strategy = { ep: 'af2_media_report_op' | 'af2_media_report_af'; omitLabel: boolean }
+      const strategies: Strategy[] =
+        endpoint === 'af2_media_report_op'
+          ? [
+              { ep: 'af2_media_report_op', omitLabel: false },
+              { ep: 'af2_media_report_af', omitLabel: false },
+              { ep: 'af2_media_report_af', omitLabel: true }, // chave afiliado: token já escopa o label
+            ]
+          : [
+              { ep: 'af2_media_report_af', omitLabel: false },
+              { ep: 'af2_media_report_af', omitLabel: true },
+            ]
+      let lastErr: Error | null = null
+      for (const { ep, omitLabel } of strategies) {
+        try {
+          reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, ep, labelId, omitLabel)
+          if (omitLabel) console.log(`[sync-metricas] Funcionou sem label (chave afiliado inferiu)`)
+          else if (ep !== endpoint) console.log(`[sync-metricas] Fallback: ${ep} funcionou`)
+          console.log(`[sync-metricas] Reporting API: ${reportingCache.size} UTMs carregados`)
+          lastErr = null
+          break
+        } catch (err) {
+          lastErr = err instanceof Error ? err : new Error(String(err))
+          const isLabelAccess = String(lastErr.message).includes('Access to this label')
+          if (isLabelAccess) {
+            console.log(`[sync-metricas] Tentativa ${ep}${omitLabel ? ' sem label' : ''} falhou, próxima...`)
+            continue
+          }
+          if (err instanceof TokenExpiradoError) {
+            await enviarAlertaAuthCda()
+            const msgAuth = 'Erro de autenticação na Reporting API (403). Verifique CDA_INFLUENCERS_API_KEY em Supabase Secrets.'
+            await gravarTechLog(supabase, 'auth', msgAuth)
+            const duracaoMs = Date.now() - inicioMs
+            await gravarSyncLog(supabase, {
+              status: 'falha',
+              registros_inseridos: 0,
+              erros_count: 1,
+              mensagem_erro: msgAuth,
+              duracao_ms: duracaoMs,
+              periodo_inicio: dataInicio,
+              periodo_fim: dataFim,
+            })
+            return new Response(JSON.stringify({
+              ok: false,
+              erro: msgAuth,
+              auth_usado: authMethod,
+              api_usada: 'Reporting API',
+            }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+          }
+          throw err
+        }
+      }
+      if (lastErr && !reportingCache) throw lastErr
+    }
 
     // ── FASE 1: Sync influencers mapeados ─────────────────────
     let query = supabase.from('influencer_perfil').select('id, nome_artistico, utm_source').not('utm_source', 'is', null)
@@ -461,7 +780,8 @@ serve(async (req: Request) => {
     ;(aliasesMapeados ?? []).forEach((a: { utm_source: string }) => utmsMapeados.add(a.utm_source))
 
     // Aliases mapeados: UTMs associados a influencers via Gestão de Links (podem não estar em influencer_perfil.utm_source)
-    const aliasesParaSync = (aliasesMapeados ?? []).filter((a: { utm_source: string; influencer_id: string }) => a.utm_source && a.influencer_id)
+    let aliasesParaSync = (aliasesMapeados ?? []).filter((a: { utm_source: string; influencer_id: string }) => a.utm_source && a.influencer_id)
+    if (params.utm_source) aliasesParaSync = aliasesParaSync.filter((a: { utm_source: string }) => a.utm_source === params.utm_source)
     const influencerIdsAliases = [...new Set(aliasesParaSync.map((a: { influencer_id: string }) => a.influencer_id))]
     const { data: perfisAliases } = influencerIdsAliases.length > 0
       ? await supabase.from('influencer_perfil').select('id, utm_source, nome_artistico').in('id', influencerIdsAliases)
@@ -469,6 +789,18 @@ serve(async (req: Request) => {
     const perfilUtmMap = new Map<string, string>((perfisAliases ?? []).map((p: { id: string; utm_source: string }) => [p.id, p.utm_source ?? '']))
     // Só processar alias se o utm_source do alias é DIFERENTE do utm_source do perfil (evitar duplicata)
     const aliasesNovos = aliasesParaSync.filter((a: { utm_source: string; influencer_id: string }) => perfilUtmMap.get(a.influencer_id) !== a.utm_source)
+
+    // Mapa utm → influencer_id (para utm_metricas_diarias e mapeados)
+    const utmToInfluencerId = new Map<string, string>()
+    ;(influencers ?? []).forEach((i: InfluencerPerfil) => utmToInfluencerId.set(i.utm_source, i.id))
+    aliasesMapeados?.forEach((a: { utm_source: string; influencer_id: string }) => utmToInfluencerId.set(a.utm_source, a.influencer_id))
+
+    // FASE 0: Gravar TODAS as UTMs em utm_metricas_diarias (por dia) — permite mapear sem novo sync
+    if (useReportingApi && reportingCache && reportingCache.size > 0) {
+      const { inseridos: diarias, erros: errosDiarias } = await upsertUtmMetricasDiarias(supabase, reportingCache, utmToInfluencerId)
+      if (errosDiarias.length > 0) console.warn('[sync-metricas] utm_metricas_diarias:', errosDiarias.join('; '))
+      else if (diarias > 0) console.log(`[sync-metricas] utm_metricas_diarias: ${diarias} linhas`)
+    }
 
     console.log(`[sync-metricas] Fase 1: ${influencers?.length ?? 0} influencer(s) perfil, ${aliasesNovos.length} alias(es) mapeado(s)`)
 
@@ -482,7 +814,9 @@ serve(async (req: Request) => {
 
     for (const influencer of (influencers ?? []) as InfluencerPerfil[]) {
       try {
-        const metricas = await fetchMetricasPorUtm(influencer.utm_source, dataInicio, dataFim, smaticoToken, labelId)
+        const metricas = useReportingApi && reportingCache
+          ? getMetricasPorUtm(reportingCache, influencer.utm_source)
+          : await fetchMetricasPorUtm(influencer.utm_source, dataInicio, dataFim, cdaAuth, labelId)
         const { inseridos, erros } = await upsertMetricas(supabase, influencer.id, metricas)
         totalInseridos += inseridos
         todosErros.push(...erros)
@@ -490,21 +824,27 @@ serve(async (req: Request) => {
         await new Promise(r => setTimeout(r, 300))
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
-          await enviarAlertaTokenExpirado()
-          await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403). Renovar SMARTICO_TOKEN.')
+          await enviarAlertaAuthCda()
+          const msgAuth = authMethod === 'CDA_INFLUENCERS_API_KEY'
+            ? 'Erro de autenticação CDA (403). Verifique se CDA_INFLUENCERS_API_KEY está correta.'
+            : authMethod === 'SMARTICO_USERNAME+PASSWORD'
+              ? 'Erro de autenticação CDA (403). Verifique SMARTICO_USERNAME e SMARTICO_PASSWORD.'
+              : 'Token CDA expirado (403). Tente CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME+SMARTICO_PASSWORD em Supabase → Secrets.'
+          await gravarTechLog(supabase, 'auth', msgAuth)
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
             status: 'falha',
             registros_inseridos: totalInseridos,
             erros_count: 1,
-            mensagem_erro: `Token CDA expirado (403) — falhou em ${influencer.utm_source}`,
+            mensagem_erro: `${msgAuth} — falhou em ${influencer.utm_source}`,
             duracao_ms: duracaoMs,
             periodo_inicio: dataInicio,
             periodo_fim: dataFim,
           })
           return new Response(JSON.stringify({
             ok: false,
-            erro: 'Token CDA expirado (403). Alerta enviado para felipe.saturnino@spingaming.com.br.',
+            erro: msgAuth,
+            auth_usado: authMethod,
             influencer_que_falhou: influencer.utm_source,
             total_sincronizados_antes_da_falha: totalInseridos,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
@@ -518,7 +858,9 @@ serve(async (req: Request) => {
     // ── FASE 1b: Sync aliases mapeados (UTMs da Gestão de Links) ─
     for (const alias of aliasesNovos) {
       try {
-        const metricas = await fetchMetricasPorUtm(alias.utm_source, dataInicio, dataFim, smaticoToken, labelId)
+        const metricas = useReportingApi && reportingCache
+          ? getMetricasPorUtm(reportingCache, alias.utm_source)
+          : await fetchMetricasPorUtm(alias.utm_source, dataInicio, dataFim, cdaAuth, labelId)
         const { inseridos, erros } = await upsertMetricas(supabase, alias.influencer_id, metricas)
         totalInseridos += inseridos
         todosErros.push(...erros)
@@ -527,21 +869,27 @@ serve(async (req: Request) => {
         await new Promise(r => setTimeout(r, 300))
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
-          await enviarAlertaTokenExpirado()
-          await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403). Renovar SMARTICO_TOKEN.')
+          await enviarAlertaAuthCda()
+          const msgAuth = authMethod === 'CDA_INFLUENCERS_API_KEY'
+            ? 'Erro de autenticação CDA (403). Verifique se CDA_INFLUENCERS_API_KEY está correta.'
+            : authMethod === 'SMARTICO_USERNAME+PASSWORD'
+              ? 'Erro de autenticação CDA (403). Verifique SMARTICO_USERNAME e SMARTICO_PASSWORD.'
+              : 'Token CDA expirado (403). Tente CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME+SMARTICO_PASSWORD em Supabase → Secrets.'
+          await gravarTechLog(supabase, 'auth', msgAuth)
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
             status: 'falha',
             registros_inseridos: totalInseridos,
             erros_count: 1,
-            mensagem_erro: `Token CDA expirado (403) — falhou em alias ${alias.utm_source}`,
+            mensagem_erro: `${msgAuth} — falhou em alias ${alias.utm_source}`,
             duracao_ms: duracaoMs,
             periodo_inicio: dataInicio,
             periodo_fim: dataFim,
           })
           return new Response(JSON.stringify({
             ok: false,
-            erro: 'Token CDA expirado (403). Alerta enviado para felipe.saturnino@spingaming.com.br.',
+            erro: msgAuth,
+            auth_usado: authMethod,
             influencer_que_falhou: alias.utm_source,
             total_sincronizados_antes_da_falha: totalInseridos,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
@@ -561,7 +909,9 @@ serve(async (req: Request) => {
 
     if (!params.utm_source && !params.skip_orfaos) {
       try {
-        const todosUtmsCda = await fetchTodosUtms(dataInicio, dataFim, smaticoToken, labelId)
+        const todosUtmsCda = useReportingApi && reportingCache
+          ? reportingDataToUtmTotais(reportingCache, dataInicio, dataFim)
+          : await fetchTodosUtms(dataInicio, dataFim, cdaAuth, labelId)
         totalUtmsCda = todosUtmsCda.length
         const resultado = await detectarERegistrarOrfaos(supabase, todosUtmsCda, utmsMapeados)
         orfaosNovos = resultado.novos
@@ -570,21 +920,27 @@ serve(async (req: Request) => {
         console.log(`[sync-metricas] Fase 2: ${orfaosNovos.length} novos, ${orfaosAtualizados.length} atualizados, ${orfaosErros.length} erros`)
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
-          await enviarAlertaTokenExpirado()
-          await gravarTechLog(supabase, 'auth', 'Token CDA expirado (403) na varredura de UTMs.')
+          await enviarAlertaAuthCda()
+          const msgAuth = authMethod === 'CDA_INFLUENCERS_API_KEY'
+            ? 'Erro de autenticação CDA (403). Verifique se CDA_INFLUENCERS_API_KEY está correta.'
+            : authMethod === 'SMARTICO_USERNAME+PASSWORD'
+              ? 'Erro de autenticação CDA (403). Verifique SMARTICO_USERNAME e SMARTICO_PASSWORD.'
+              : 'Token CDA expirado (403). Tente CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME+SMARTICO_PASSWORD em Supabase → Secrets.'
+          await gravarTechLog(supabase, 'auth', `${msgAuth} na varredura de UTMs.`)
           const duracaoMs = Date.now() - inicioMs
           await gravarSyncLog(supabase, {
             status: 'falha',
             registros_inseridos: totalInseridos,
             erros_count: todosErros.length + 1,
-            mensagem_erro: `Token CDA expirado (403) na varredura de UTMs`,
+            mensagem_erro: `${msgAuth} na varredura de UTMs`,
             duracao_ms: duracaoMs,
             periodo_inicio: dataInicio,
             periodo_fim: dataFim,
           })
           return new Response(JSON.stringify({
             ok: false,
-            erro: 'Token CDA expirado (403). Alerta enviado.',
+            erro: msgAuth,
+            auth_usado: authMethod,
             total_sincronizados_antes_da_falha: totalInseridos,
           }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
         } else {
@@ -608,7 +964,8 @@ serve(async (req: Request) => {
 
     const resposta = {
       ok: true,
-      versao: 'v1.5.0',
+      versao: 'v1.8.0',
+      api_usada: useReportingApi ? 'Reporting API' : 'Plywood',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       fase1_influencers: {
         total: influencers?.length ?? 0,
@@ -634,6 +991,6 @@ serve(async (req: Request) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[sync-metricas] Erro fatal: ${msg}`)
-    return new Response(JSON.stringify({ ok: false, erro: msg }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ ok: false, erro: msg }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
   }
 })

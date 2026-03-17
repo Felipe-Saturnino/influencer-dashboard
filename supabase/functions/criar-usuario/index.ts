@@ -185,14 +185,17 @@ serve(async (req) => {
 
     const uid = authData.user.id
 
-    // 2. Inserir profile com must_change_password = true
-    const { error: profileErr } = await supabase.from('profiles').insert({
-      id: uid,
-      name: nome.trim(),
-      email: email.trim().toLowerCase(),
-      role,
-      must_change_password: true,
-    })
+    // 2. Upsert profile (trigger já pode ter inserido; atualiza role e must_change_password)
+    const { error: profileErr } = await supabase.from('profiles').upsert(
+      {
+        id: uid,
+        name: nome.trim(),
+        email: email.trim().toLowerCase(),
+        role,
+        must_change_password: true,
+      },
+      { onConflict: 'id' }
+    )
 
     if (profileErr) {
       // Rollback: excluir usuário do Auth se profile falhou

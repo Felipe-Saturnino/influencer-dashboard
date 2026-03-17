@@ -31,7 +31,7 @@ export type PageKey =
   | "ajuda";
 
 // ─── PLATAFORMA / LIVE STATUS ────────────────────────────────────────────────
-export type Plataforma = "Twitch" | "YouTube" | "Instagram" | "TikTok" | "Kick";
+export type Plataforma = "Twitch" | "YouTube" | "Instagram" | "TikTok" | "Kick" | "Discord" | "WhatsApp" | "Telegram";
 export type LiveStatus = "agendada" | "realizada" | "nao_realizada";
 
 // ─── LIVE ────────────────────────────────────────────────────────────────────

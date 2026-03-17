@@ -26,9 +26,19 @@ As tabelas `influencer_metricas` e `utm_aliases` **não são preenchidas pelo ap
 
 ### Pré-requisitos para o Sync funcionar
 
-- **SMARTICO_TOKEN:** Secret no Supabase (token da CDA, obtido no admin.aff.casadeapostas.bet.br)
+**Opção A — Plywood (padrão):**
+- **SMARTICO_USERNAME** + **SMARTICO_PASSWORD** (recomendado): Autenticação Basic — prioridade quando ambos configurados.
+- **CDA_INFLUENCERS_API_KEY:** Chave API da plataforma CDA. Alternativa se Basic auth não funcionar.
+- **SMARTICO_TOKEN** (fallback): Token de sessão (expira). Use apenas se Basic e API key não estiverem disponíveis.
 - **SMARTICO_LABEL_ID:** (opcional, default 573703)
-- Edge Function `sync-metricas` implantada (v1.5.0+)
+
+**Opção B — Reporting API (recomendado se Plywood retorna 403):**
+- **CDA_USE_REPORTING_API:** `true` — ativa a [Reporting API](https://help.theaffiliateplatform.com/apis-and-configurations/reporting-api).
+- **CDA_INFLUENCERS_API_KEY:** Obrigatório. Chave obtida em Account Settings no perfil CDA.
+- **SMARTICO_REPORTING_API_URL:** (opcional) URL base. Default: `https://boapi.smartico.ai`. Para CDA, verificar em Account Settings — pode ser `https://boapi.aff.casadeapostas.bet.br`.
+- **CDA_AUTH_FORMAT:** (opcional) `Bearer` (default) ou `direct` — para API key (vale para Plywood e Reporting API).
+
+- Edge Function `sync-metricas` implantada (v1.8.0+)
 
 ### Erro "Edge Function returned a non-2xx status code"
 
@@ -36,8 +46,9 @@ Significa que a função falhou. Possíveis causas:
 
 | Causa | Solução |
 |-------|---------|
-| SMARTICO_TOKEN não configurado | Supabase → Settings → Edge Functions → Secrets → adicionar SMARTICO_TOKEN |
-| Token CDA expirado (403) | Renovar token no admin da CDA e atualizar o secret |
+| CDA_INFLUENCERS_API_KEY ou SMARTICO_TOKEN não configurado | Supabase → Edge Functions → Secrets → adicionar CDA_INFLUENCERS_API_KEY (recomendado) ou SMARTICO_TOKEN |
+| Erro 403 (credencial inválida) na Plywood | Usar **Reporting API**: CDA_USE_REPORTING_API=true + CDA_INFLUENCERS_API_KEY (chave em Account Settings no perfil CDA) |
+| Erro 403 na Reporting API | Verificar CDA_INFLUENCERS_API_KEY; conferir SMARTICO_REPORTING_API_URL se CDA usar domínio próprio |
 | Outros erros | Ver logs em Supabase → Edge Functions → sync-metricas → Logs |
 
 ---

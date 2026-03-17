@@ -140,53 +140,72 @@ export default function StatusTecnico() {
     setSyncExecutando(true);
     setSyncMensagem(null);
     try {
-      // Usa anon key (não expira) em vez do token de sessão para evitar 401
-      const token = supabaseAnonKey;
-      if (!token || !supabaseUrl) {
-        setSyncMensagem({ tipo: "erro", texto: "Configuração do Supabase incompleta." });
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncMensagem({ tipo: "erro", texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env." });
         setSyncExecutando(false);
         return;
       }
       const hoje = new Date();
       const dataFim = hoje.toISOString().split("T")[0];
-      // Início do projeto (dez/2025). Em produção, alterar para 60 dias: new Date(hoje); d.setDate(d.getDate() - 60);
       const dataInicio = "2025-12-01";
 
-      const url = `${supabaseUrl}/functions/v1/sync-metricas`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ data_inicio: dataInicio, data_fim: dataFim }),
+      // Usa supabase.functions.invoke — gerencia URL, CORS e auth automaticamente
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("sync-metricas", {
+        body: { data_inicio: dataInicio, data_fim: dataFim },
       });
-      const resData = (await res.json().catch(() => ({}))) as { ok?: boolean; erro?: string; error?: string; fase1_influencers?: { registros_upserted?: number; aliases_mapeados?: number } };
-      if (!res.ok) {
-        const msg = resData?.erro ?? resData?.error ?? `Erro ${res.status}: ${res.statusText}`;
+
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        erro?: string;
+        error?: string;
+        auth_usado?: string;
+        fase1_influencers?: { registros_upserted?: number; aliases_mapeados?: number };
+      };
+
+      // invokeError = problema de rede ou função retornou 4xx/5xx
+      if (invokeError) {
+        const msg = invokeError.message ?? "Erro ao chamar sync-metricas";
         let texto = msg;
-        if (res.status === 401) {
-          texto = "Não autorizado (401). Verifique no Supabase se a Edge Function sync-metricas está implantada e se aceita requisições com a chave do projeto.";
-        } else if (msg.includes("SMARTICO_TOKEN")) {
-          texto = `${msg} Configure em Supabase → Settings → Edge Functions → Secrets.`;
-        } else if (res.status === 500) {
-          texto = `${msg} Verifique os logs em Supabase → Edge Functions → sync-metricas → Logs.`;
+        if (msg.includes("Failed to fetch") || msg.includes("fetch")) {
+          texto =
+            "Failed to fetch — a requisição não chegou ao servidor. Verifique: (1) VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env; (2) Edge Function sync-metricas implantada (supabase functions deploy sync-metricas); (3) CORS/firewall/rede.";
+        } else if (msg.includes("401") || msg.includes("unauthorized")) {
+          texto = "Não autorizado. Verifique no Supabase se a Edge Function sync-metricas está implantada.";
+        } else if (msg.includes("404") || msg.includes("not found")) {
+          texto = "Edge Function sync-metricas não encontrada. Execute: supabase functions deploy sync-metricas";
         }
         setSyncMensagem({ tipo: "erro", texto });
         setSyncExecutando(false);
         return;
       }
-      if (resData?.ok) {
-        const regs = resData?.fase1_influencers?.registros_upserted ?? 0;
-        const aliases = resData?.fase1_influencers?.aliases_mapeados ?? 0;
-        setSyncMensagem({
-          tipo: "ok",
-          texto: `Sync concluído: ${regs} registros sincronizados${aliases > 0 ? ` (${aliases} aliases mapeados)` : ""}. Atualize os dashboards. Se não aparecer, selecione o mês correto no filtro do relatório (ex.: Mar 2026).`,
-        });
-        carregar();
-      } else {
-        setSyncMensagem({ tipo: "erro", texto: resData?.erro ?? "Erro desconhecido" });
+
+      // Função retornou 200 mas pode ter ok: false no payload
+      if (!resData?.ok) {
+        let textoErro = resData?.erro ?? resData?.error ?? "Erro desconhecido";
+        if (resData?.auth_usado) textoErro += ` (Auth: ${resData.auth_usado})`;
+        if (textoErro.includes("403") || textoErro.includes("CDA")) {
+          textoErro += " Configure CDA_INFLUENCERS_API_KEY ou CDA_USE_REPORTING_API=true em Supabase → Edge Functions → Secrets.";
+        }
+        setSyncMensagem({ tipo: "erro", texto: textoErro });
+        setSyncExecutando(false);
+        return;
       }
+
+      const regs = resData?.fase1_influencers?.registros_upserted ?? 0;
+      const aliases = resData?.fase1_influencers?.aliases_mapeados ?? 0;
+      setSyncMensagem({
+        tipo: "ok",
+        texto: `Sync concluído: ${regs} registros sincronizados${aliases > 0 ? ` (${aliases} aliases mapeados)` : ""}. Atualize os dashboards. Se não aparecer, selecione o mês correto no filtro do relatório (ex.: Mar 2026).`,
+      });
+      carregar();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setSyncMensagem({ tipo: "erro", texto: msg });
+      let texto = msg;
+      if (msg === "Failed to fetch") {
+        texto =
+          "Failed to fetch — a requisição não chegou ao servidor. Verifique: (1) VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env; (2) Edge Function sync-metricas implantada (supabase functions deploy sync-metricas); (3) CORS/firewall/rede; (4) Abra o DevTools (F12) → Network para ver o erro exato.";
+      }
+      setSyncMensagem({ tipo: "erro", texto });
     } finally {
       setSyncExecutando(false);
     }

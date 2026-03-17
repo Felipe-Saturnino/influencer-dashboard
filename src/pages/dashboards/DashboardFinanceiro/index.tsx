@@ -316,6 +316,9 @@ export default function DashboardFinanceiro() {
 
       const hojeNow = new Date();
       const isMesAtual = !historico && mesSelecionado && mesSelecionado.ano === hojeNow.getFullYear() && mesSelecionado.mes === hojeNow.getMonth();
+      const { inicio: periodoInicio, fim: periodoFim } = historico || !mesSelecionado
+        ? { inicio: "2020-01-01", fim: hojeNow.toISOString().split("T")[0] }
+        : getDatasDoMesOuMtd(mesSelecionado.ano, mesSelecionado.mes);
 
       let metricas: { influencer_id: string; ftd_count: number; ftd_total: number; deposit_count: number; deposit_total: number; withdrawal_count: number; withdrawal_total: number; ggr: number }[] = [];
       try {
@@ -327,7 +330,24 @@ export default function DashboardFinanceiro() {
           p_historico: historico,
           p_operadora_slug: operadoraFiltro === "todas" ? null : operadoraFiltro,
         });
-        if (!rpcErr && rpcData?.length) { metricas = rpcData; } else { throw new Error("RPC vazia ou erro"); }
+        if (!rpcErr && rpcData) {
+          metricas = rpcData;
+          if (historico) {
+            const { buscarMetricasDeAliases } = await import("../../../lib/metricasAliases");
+            const aliasesSinteticas = await buscarMetricasDeAliases({
+              operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+              influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
+              dataInicio: periodoInicio,
+              dataFim: periodoFim,
+            });
+            const idsNaRpc = new Set(metricas.map((m) => m.influencer_id));
+            for (const a of aliasesSinteticas) {
+              if (!idsNaRpc.has(a.influencer_id) && podeVerInfluencer(a.influencer_id)) {
+                metricas = [...metricas, { influencer_id: a.influencer_id, ftd_count: a.ftd_count, ftd_total: a.ftd_total, deposit_count: a.deposit_count, deposit_total: a.deposit_total, withdrawal_count: a.withdrawal_count, withdrawal_total: a.withdrawal_total, ggr: a.ggr, ano: mesSelecionado?.ano, mes: mesSelecionado?.mes } as (typeof metricas)[0]];
+              }
+            }
+          }
+        } else { throw new Error("RPC vazia ou erro"); }
       } catch {
         let qMetricas = supabase.from("influencer_metricas")
           .select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug");
@@ -348,6 +368,29 @@ export default function DashboardFinanceiro() {
           r.withdrawal_count += m.withdrawal_count || 0; r.withdrawal_total += m.withdrawal_total || 0;
           r.ggr += m.ggr || 0;
         });
+        if (historico) {
+          const { buscarMetricasDeAliases } = await import("../../../lib/metricasAliases");
+          const aliasesSinteticas = await buscarMetricasDeAliases({
+            operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+            influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
+            dataInicio: periodoInicio,
+            dataFim: periodoFim,
+          });
+          for (const a of aliasesSinteticas) {
+            if (!mapaAgreg.has(a.influencer_id) && podeVerInfluencer(a.influencer_id)) {
+              mapaAgreg.set(a.influencer_id, {
+                influencer_id: a.influencer_id,
+                ftd_count: a.ftd_count,
+                ftd_total: a.ftd_total,
+                deposit_count: a.deposit_count,
+                deposit_total: a.deposit_total,
+                withdrawal_count: a.withdrawal_count,
+                withdrawal_total: a.withdrawal_total,
+                ggr: a.ggr,
+              });
+            }
+          }
+        }
         metricas = Array.from(mapaAgreg.entries()).map(([id, r]) => ({ ...r, influencer_id: id, ano: mesSelecionado?.ano, mes: mesSelecionado?.mes })) as typeof metricas;
       }
 

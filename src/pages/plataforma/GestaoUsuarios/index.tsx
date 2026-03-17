@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
-import { X, Search, AlertCircle, ShieldCheck } from "lucide-react";
+import { X, Search, AlertCircle, ShieldCheck, Plus, Trash2 } from "lucide-react";
 import { GiShield } from "react-icons/gi";
 import {
   Role, PageKey, PermissaoValor, RolePermission,
@@ -553,6 +553,114 @@ function AbaUsuarios({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
   );
 }
 
+// ─── PARES AGÊNCIA UI: linhas Influencer × Operadora ──────────────────────────
+
+interface ParesAgenciaUIProps {
+  pares: Array<{ influencerId: string; operadoraSlug: string }>;
+  onAdd: () => void;
+  onRemove: (idx: number) => void;
+  onUpdate: (idx: number, field: "influencerId" | "operadoraSlug", val: string) => void;
+  influencers: { id: string; nome: string }[];
+  operadoras: Operadora[];
+  labelStyle: React.CSSProperties;
+  selectStyle: React.CSSProperties;
+  field: React.CSSProperties;
+  t: ReturnType<typeof useApp>["theme"];
+}
+
+function ParesAgenciaUI({
+  pares, onAdd, onRemove, onUpdate, influencers, operadoras,
+  labelStyle, selectStyle, field, t,
+}: ParesAgenciaUIProps) {
+  return (
+    <div style={field}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <label style={labelStyle}>
+          Pares Influencer × Operadora
+          <span style={{ color: BRAND.vermelho, marginLeft: 4 }}>*</span>
+        </label>
+        <button
+          type="button"
+          onClick={onAdd}
+          style={{
+            display:      "flex",
+            alignItems:   "center",
+            gap:          6,
+            padding:      "6px 12px",
+            borderRadius:  8,
+            border:       `1px solid ${BRAND.roxoVivo}`,
+            background:   `${BRAND.roxoVivo}18`,
+            color:        BRAND.roxoVivo,
+            fontSize:     12,
+            fontWeight:   600,
+            cursor:       "pointer",
+            fontFamily:   FONT.body,
+          }}
+        >
+          <Plus size={14} /> Adicionar par
+        </button>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {pares.map((par, idx) => (
+          <div
+            key={idx}
+            style={{
+              display:       "flex",
+              gap:           10,
+              alignItems:   "center",
+              flexWrap:     "wrap",
+            }}
+          >
+            <select
+              style={{ ...selectStyle, flex: 1, minWidth: 140 }}
+              value={par.influencerId}
+              onChange={e => onUpdate(idx, "influencerId", e.target.value)}
+            >
+              <option value="">Selecione o influencer</option>
+              {influencers.map(i => (
+                <option key={i.id} value={i.id}>{i.nome}</option>
+              ))}
+            </select>
+            <span style={{ color: t.textMuted, fontSize: 14 }}>×</span>
+            <select
+              style={{ ...selectStyle, flex: 1, minWidth: 140 }}
+              value={par.operadoraSlug}
+              onChange={e => onUpdate(idx, "operadoraSlug", e.target.value)}
+            >
+              <option value="">Selecione a operadora</option>
+              {operadoras.map(op => (
+                <option key={op.slug} value={op.slug}>{op.nome}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => onRemove(idx)}
+              style={{
+                display:    "flex",
+                alignItems: "center",
+                padding:    8,
+                border:     "none",
+                background: "none",
+                color:      t.textMuted,
+                cursor:     "pointer",
+                borderRadius: 6,
+              }}
+              title="Remover par"
+              onMouseEnter={e => { e.currentTarget.style.color = BRAND.vermelho; e.currentTarget.style.background = `${BRAND.vermelho}18`; }}
+              onMouseLeave={e => { e.currentTarget.style.color = t.textMuted; e.currentTarget.style.background = "none"; }}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, marginTop: 6 }}>
+        {pares.filter(p => p.influencerId && p.operadoraSlug).length} par{pares.filter(p => p.influencerId && p.operadoraSlug).length !== 1 ? "es" : ""} definido{pares.filter(p => p.influencerId && p.operadoraSlug).length !== 1 ? "s" : ""}
+      </p>
+    </div>
+  );
+}
+
 // ─── MODAL DE USUÁRIO ─────────────────────────────────────────────────────────
 
 interface ModalUsuarioProps {
@@ -570,19 +678,33 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
   const [scopeInfluencers, setScopeInfluencers] = useState<string[]>([]);
   const [scopeOperadoras,  setScopeOperadoras]  = useState<string[]>([]);
   const [scopePares,       setScopePares]       = useState<string[]>([]);
+  const [paresAgencia,     setParesAgencia]     = useState<Array<{ influencerId: string; operadoraSlug: string }>>([]);
   const [influencers,      setInfluencers]      = useState<{ id: string; nome: string }[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro,             setErro]             = useState("");
 
   useEffect(() => {
-    supabase
-      .from("influencer_perfil")
-      .select("id, nome_artistico")
-      .eq("status", "ativo")
-      .order("nome_artistico")
-      .then(({ data }) => {
-        setInfluencers((data ?? []).map(d => ({ id: d.id, nome: d.nome_artistico })));
-      });
+    (async () => {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, name, email")
+        .eq("role", "influencer")
+        .order("name");
+      if (!profiles?.length) {
+        setInfluencers([]);
+        return;
+      }
+      const ids = profiles.map((p: { id: string }) => p.id);
+      const { data: perfis } = await supabase
+        .from("influencer_perfil")
+        .select("id, nome_artistico")
+        .in("id", ids);
+      const perfisMap = new Map((perfis ?? []).map((p: { id: string; nome_artistico: string }) => [p.id, p.nome_artistico]));
+      setInfluencers(profiles.map((p: { id: string; name?: string; email?: string }) => ({
+        id: p.id,
+        nome: perfisMap.get(p.id) ?? p.name ?? p.email ?? p.id,
+      })));
+    })();
   }, []);
 
   useEffect(() => {
@@ -597,6 +719,22 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     setScopeOperadoras([]);
     setScopePares([]);
   }, [role]);
+
+  // Pares Agência: sync ao carregar editando (agência) ou ao mudar role para agência
+  useEffect(() => {
+    if (role !== "agencia") return;
+    const scopes = editando?.scopes ?? [];
+    const agenciaPars = scopes.filter((s: { scope_type: string }) => s.scope_type === "agencia_par");
+    if (agenciaPars.length > 0) {
+      const parsed = agenciaPars.map((s: { scope_ref: string }) => {
+        const [inf, op] = (s.scope_ref || "").split(":");
+        return { influencerId: inf ?? "", operadoraSlug: op ?? "" };
+      });
+      setParesAgencia(parsed);
+    } else {
+      setParesAgencia([{ influencerId: "", operadoraSlug: "" }]);
+    }
+  }, [role, editando?.id]);
 
   const toggleItem = (
     list: string[],
@@ -614,19 +752,25 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     if (role === "operador" && scopeOperadoras.length === 0) {
       setErro("Selecione pelo menos uma operadora para o operador."); return;
     }
-    if (role === "agencia" && scopePares.length === 0) {
-      setErro("Selecione pelo menos um par influencer+operadora para a agência."); return;
+    const paresValidos = role === "agencia"
+      ? paresAgencia.filter(p => p.influencerId && p.operadoraSlug)
+      : [];
+    if (role === "agencia" && paresValidos.length === 0) {
+      setErro("Adicione pelo menos um par influencer + operadora."); return;
     }
     setSalvando(true);
     try {
       let uid = editando?.id ?? "";
       const { data: { session } } = await supabase.auth.getSession();
+      const scopeParesParaApi = role === "agencia"
+        ? paresAgencia.filter(p => p.influencerId && p.operadoraSlug).map(p => `${p.influencerId}:${p.operadoraSlug}`)
+        : scopePares;
 
       if (editando) {
         const res = await fetch("/api/atualizar-perfil", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token ?? ""}` },
-          body: JSON.stringify({ userId: uid, name: nome.trim(), role, scopeInfluencers, scopeOperadoras, scopePares }),
+          body: JSON.stringify({ userId: uid, name: nome.trim(), role, scopeInfluencers, scopeOperadoras, scopePares: scopeParesParaApi }),
         });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as any)?.error ?? `Erro ${res.status}`);
@@ -636,7 +780,7 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
         const res = await fetch("/api/criar-usuario", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token ?? ""}` },
-          body: JSON.stringify({ email: email.trim().toLowerCase(), nome: nome.trim(), role, scopeInfluencers, scopeOperadoras, scopePares, loginUrl }),
+          body: JSON.stringify({ email: email.trim().toLowerCase(), nome: nome.trim(), role, scopeInfluencers, scopeOperadoras, scopePares: scopeParesParaApi, loginUrl }),
         });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as any)?.error ?? `Erro ${res.status}`);
@@ -694,6 +838,14 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
   };
   const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
   const field: React.CSSProperties = { marginBottom: 18 };
+
+  // ── PARES AGÊNCIA: Influencer × Operadora (linhas dinâmicas) ──
+  const addParAgencia = () =>
+    setParesAgencia(prev => [...prev, { influencerId: "", operadoraSlug: "" }]);
+  const removeParAgencia = (idx: number) =>
+    setParesAgencia(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : [{ influencerId: "", operadoraSlug: "" }]);
+  const updateParAgencia = (idx: number, field: "influencerId" | "operadoraSlug", val: string) =>
+    setParesAgencia(prev => prev.map((p, i) => i === idx ? { ...p, [field]: val } : p));
 
   // ── MULTI-SELECT COMPONENT ──
   const MultiSelect = ({
@@ -852,18 +1004,17 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
             </div>
           </div>
         ) : role === "agencia" ? (
-          <MultiSelect
-            label="Pares Influencer + Operadora"
-            obrigatorio
-            cor={roleBadgeColor("agencia")}
-            items={influencers.flatMap(inf =>
-              operadoras.map(op => ({
-                value: `${inf.id}:${op.slug}`,
-                label: `${inf.nome} × ${op.nome}`,
-              }))
-            )}
-            selected={scopePares}
-            onToggle={v => toggleItem(scopePares, setScopePares, v)}
+          <ParesAgenciaUI
+            pares={paresAgencia}
+            onAdd={addParAgencia}
+            onRemove={removeParAgencia}
+            onUpdate={updateParAgencia}
+            influencers={influencers}
+            operadoras={operadoras}
+            labelStyle={labelStyle}
+            selectStyle={selectStyle}
+            field={field}
+            t={t}
           />
         ) : role === "influencer" ? (
           <MultiSelect
@@ -876,14 +1027,16 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
           />
         ) : (
           <>
-            <MultiSelect
-              label={`Influencers${role === "operador" ? "" : " (opcional)"}`}
-              obrigatorio={false}
-              cor={roleBadgeColor("operador")}
-              items={influencers.map(i => ({ value: i.id, label: i.nome }))}
-              selected={scopeInfluencers}
-              onToggle={v => toggleItem(scopeInfluencers, setScopeInfluencers, v)}
-            />
+            {(role !== "executivo" && role !== "operador") && (
+              <MultiSelect
+                label={`Influencers${role === "operador" ? "" : " (opcional)"}`}
+                obrigatorio={false}
+                cor={roleBadgeColor("operador")}
+                items={influencers.map(i => ({ value: i.id, label: i.nome }))}
+                selected={scopeInfluencers}
+                onToggle={v => toggleItem(scopeInfluencers, setScopeInfluencers, v)}
+              />
+            )}
             <MultiSelect
               label={`Operadoras${role === "operador" ? "" : " (opcional)"}`}
               obrigatorio={role === "operador"}
