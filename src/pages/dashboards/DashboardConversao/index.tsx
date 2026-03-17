@@ -425,13 +425,15 @@ export default function DashboardConversao() {
       if (!historico && mesSelecionado) qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
       const { data: metricasData } = await qMetricas;
       let metricas = (metricasData || []) as { influencer_id: string; visit_count: number; registration_count: number; ftd_count: number }[];
-      const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
-      const aliasesSinteticas = await buscarMetricasDeAliases({
-        operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-        dataInicio: inicio,
-        dataFim: fim,
-      });
-      metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
+      if (historico) {
+        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
+        const aliasesSinteticas = await buscarMetricasDeAliases({
+          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          dataInicio: inicio,
+          dataFim: fim,
+        });
+        metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
+      }
 
       let qLives = supabase.from("lives").select("id, influencer_id, status, plataforma, data").eq("status", "realizada");
       if (!historico && mesSelecionado) {

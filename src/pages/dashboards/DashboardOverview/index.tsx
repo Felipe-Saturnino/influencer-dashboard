@@ -509,11 +509,12 @@ export default function DashboardOverview() {
       });
       setOperadoraInfMap(map);
 
-      async function buscaMetricas(ini: string, fim: string): Promise<Metrica[]> {
+      async function buscaMetricas(ini: string, fim: string, incluirAliases = false): Promise<Metrica[]> {
         const { data } = await supabase.from("influencer_metricas")
           .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data")
           .gte("data", ini).lte("data", fim);
         const metricas = data || [];
+        if (!incluirAliases) return metricas;
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
           operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
@@ -601,7 +602,7 @@ export default function DashboardOverview() {
         resultados = await buscaResultados(lives);
       } else {
         const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-        metricas   = await buscaMetricas(inicio, fim);
+        metricas   = await buscaMetricas(inicio, fim, false);
         lives      = await buscaLives(inicio, fim);
         resultados = await buscaResultados(lives);
       }
@@ -613,7 +614,7 @@ export default function DashboardOverview() {
 
       if (!historico && mesSelecionado) {
         const { inicio: iA, fim: fA } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
-        const mA = await buscaMetricas(iA, fA);
+        const mA = await buscaMetricas(iA, fA, false);
         const lA = await buscaLives(iA, fA);
         const rA = await buscaResultados(lA);
         const rowsAnt = montaRanking(mA, lA, rA).filter((r) => podeVerInfluencer(r.influencer_id));

@@ -100,17 +100,30 @@ export default function GestaoLinks() {
     const { error } = await supabase.from("utm_aliases").update({ influencer_id: influencerSelecionado, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }).eq("id", aliasSelecionado.id);
     if (error) { setSalvando(false); setErroModal(`Erro ao salvar: ${error.message}`); return; }
 
-    // Dispara sync para criar linhas em influencer_metricas (período primeiro_visto → ultimo_visto)
-    const dataInicio = (aliasSelecionado.primeiro_visto ?? "2025-12-01").split("T")[0];
-    const dataFim = (aliasSelecionado.ultimo_visto ?? new Date().toISOString().split("T")[0]).split("T")[0];
+    // RPC: copia utm_metricas_diarias → influencer_metricas (sem chamar API)
+    let linhasCopiadas = 0;
     try {
-      const { data: res, error: syncErr } = await supabase.functions.invoke("sync-metricas", {
-        body: { data_inicio: dataInicio, data_fim: dataFim, utm_source: aliasSelecionado.utm_source, skip_orfaos: true },
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("aplicar_mapeamento_utm", {
+        p_utm_source: aliasSelecionado.utm_source,
+        p_influencer_id: influencerSelecionado,
       });
-      if (syncErr) console.warn("[GestaoLinks] Sync pós-mapeamento:", syncErr.message);
-      else if (res && !(res as { ok?: boolean }).ok) console.warn("[GestaoLinks] Sync retornou erro:", (res as { erro?: string }).erro);
-    } catch (e) {
-      console.warn("[GestaoLinks] Falha ao invocar sync após mapeamento:", e);
+      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+        const row = rpcData[0] as { linhas_copiadas?: number };
+        linhasCopiadas = Number(row?.linhas_copiadas ?? 0);
+      }
+    } catch (_e) { /* RPC pode não existir ainda */ }
+
+    // Se utm_metricas_diarias estava vazio, dispara sync (fallback)
+    if (linhasCopiadas === 0) {
+      const dataInicio = (aliasSelecionado.primeiro_visto ?? "2025-12-01").split("T")[0];
+      const dataFim = (aliasSelecionado.ultimo_visto ?? new Date().toISOString().split("T")[0]).split("T")[0];
+      try {
+        await supabase.functions.invoke("sync-metricas", {
+          body: { data_inicio: dataInicio, data_fim: dataFim, utm_source: aliasSelecionado.utm_source, skip_orfaos: true },
+        });
+      } catch (e) {
+        console.warn("[GestaoLinks] Sync fallback:", e);
+      }
     }
 
     setSalvando(false);

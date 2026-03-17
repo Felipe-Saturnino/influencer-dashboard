@@ -497,6 +497,44 @@ async function detectarERegistrarOrfaos(
   return { novos, atualizados, erros }
 }
 
+// ── Upsert utm_metricas_diarias (TODAS as UTMs, por dia) ───────
+// Permite mapear sem novo sync: UPDATE influencer_id + cópia para influencer_metricas
+async function upsertUtmMetricasDiarias(
+  supabase: ReturnType<typeof createClient>,
+  byUtm: Map<string, DailyMetric[]>,
+  utmToInfluencerId: Map<string, string>
+): Promise<{ inseridos: number; erros: string[] }> {
+  const rows: Array<Record<string, unknown>> = []
+  for (const [utm, metrics] of byUtm) {
+    const influencerId = utmToInfluencerId.get(utm) ?? null
+    for (const m of metrics) {
+      const data = m.time.start.split('T')[0]
+      rows.push({
+        utm_source: utm,
+        data,
+        operadora_slug: 'casa_apostas',
+        visit_count: Math.round(m.visit_count ?? 0),
+        registration_count: Math.round(m.registration_count ?? 0),
+        ftd_count: Math.round(m.ftd_count ?? 0),
+        ftd_total: parseFloat((m.ftd_total ?? 0).toFixed(2)),
+        deposit_count: Math.round(m.deposit_count ?? 0),
+        deposit_total: parseFloat((m.deposit_total ?? 0).toFixed(2)),
+        withdrawal_count: Math.round(m.withdrawal_count ?? 0),
+        withdrawal_total: parseFloat((m.withdrawal_total ?? 0).toFixed(2)),
+        influencer_id: influencerId,
+        fonte: 'api',
+      })
+    }
+  }
+  if (rows.length === 0) return { inseridos: 0, erros: [] }
+  const { error } = await supabase.from('utm_metricas_diarias').upsert(rows, {
+    onConflict: 'utm_source,data,operadora_slug',
+    ignoreDuplicates: false,
+  })
+  if (error) return { inseridos: 0, erros: [`utm_metricas_diarias: ${error.message}`] }
+  return { inseridos: rows.length, erros: [] }
+}
+
 // ── Upsert métricas influencer ───────────────────────────────
 // v1.3.0: inclui operadora_slug e onConflict alinhado à constraint
 // UNIQUE(influencer_id, data, operadora_slug)
@@ -687,6 +725,18 @@ serve(async (req: Request) => {
     const perfilUtmMap = new Map<string, string>((perfisAliases ?? []).map((p: { id: string; utm_source: string }) => [p.id, p.utm_source ?? '']))
     // Só processar alias se o utm_source do alias é DIFERENTE do utm_source do perfil (evitar duplicata)
     const aliasesNovos = aliasesParaSync.filter((a: { utm_source: string; influencer_id: string }) => perfilUtmMap.get(a.influencer_id) !== a.utm_source)
+
+    // Mapa utm → influencer_id (para utm_metricas_diarias e mapeados)
+    const utmToInfluencerId = new Map<string, string>()
+    ;(influencers ?? []).forEach((i: InfluencerPerfil) => utmToInfluencerId.set(i.utm_source, i.id))
+    aliasesMapeados?.forEach((a: { utm_source: string; influencer_id: string }) => utmToInfluencerId.set(a.utm_source, a.influencer_id))
+
+    // FASE 0: Gravar TODAS as UTMs em utm_metricas_diarias (por dia) — permite mapear sem novo sync
+    if (useReportingApi && reportingCache && reportingCache.size > 0) {
+      const { inseridos: diarias, erros: errosDiarias } = await upsertUtmMetricasDiarias(supabase, reportingCache, utmToInfluencerId)
+      if (errosDiarias.length > 0) console.warn('[sync-metricas] utm_metricas_diarias:', errosDiarias.join('; '))
+      else if (diarias > 0) console.log(`[sync-metricas] utm_metricas_diarias: ${diarias} linhas`)
+    }
 
     console.log(`[sync-metricas] Fase 1: ${influencers?.length ?? 0} influencer(s) perfil, ${aliasesNovos.length} alias(es) mapeado(s)`)
 

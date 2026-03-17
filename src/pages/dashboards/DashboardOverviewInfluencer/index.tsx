@@ -370,13 +370,15 @@ export default function DashboardOverviewInfluencer() {
       }
 
       let metricas = await buscaMetricas(inicio, fim);
-      const aliasesSinteticas = await buscarMetricasDeAliases({
-        operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-        influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
-        dataInicio: inicio,
-        dataFim: fim,
-      });
-      metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
+      if (historico) {
+        const aliasesSinteticas = await buscarMetricasDeAliases({
+          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
+          dataInicio: inicio,
+          dataFim: fim,
+        });
+        metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
+      }
 
       const lives = await buscaLives(inicio, fim);
       const resultados = await buscaResultados(lives);
@@ -435,14 +437,7 @@ export default function DashboardOverviewInfluencer() {
 
       if (!historico && mesSelecionado) {
         const { inicio: iA, fim: fA } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
-        let mA = await buscaMetricas(iA, fA);
-        const aliasesA = await buscarMetricasDeAliases({
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-          influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
-          dataInicio: iA,
-          dataFim: fA,
-        });
-        mA = mesclarMetricasComAliases(mA, aliasesA, fA, podeVerInfluencer);
+        const mA = await buscaMetricas(iA, fA);
         const lA = await buscaLives(iA, fA);
         const rA = await buscaResultados(lA);
         const rowsA = mA.filter((m) => podeVerInfluencer(m.influencer_id));
@@ -692,6 +687,37 @@ export default function DashboardOverviewInfluencer() {
                     <td style={tdStyle}>{cel(d.ggr, true)}</td>
                   </tr>
                 ))}
+                {diasData.length > 0 && (() => {
+                  const tot = diasData.reduce((acc, d) => ({
+                    duracao: acc.duracao + d.duracao,
+                    acessos: acc.acessos + d.acessos,
+                    registros: acc.registros + d.registros,
+                    ftd_count: acc.ftd_count + d.ftd_count,
+                    ftd_total: acc.ftd_total + d.ftd_total,
+                    deposit_count: acc.deposit_count + d.deposit_count,
+                    deposit_total: acc.deposit_total + d.deposit_total,
+                    withdrawal_count: acc.withdrawal_count + d.withdrawal_count,
+                    withdrawal_total: acc.withdrawal_total + d.withdrawal_total,
+                    ggr: acc.ggr + d.ggr,
+                  }), { duracao: 0, acessos: 0, registros: 0, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
+                  return (
+                    <tr key="total" style={{ background: "rgba(74,32,130,0.12)", fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
+                      <td style={tdStyle}>Total</td>
+                      <td style={tdStyle}>{tot.duracao > 0 ? fmtHoras(tot.duracao) : "—"}</td>
+                      <td style={tdStyle}>—</td>
+                      <td style={tdStyle}>—</td>
+                      <td style={tdStyle}>{cel(tot.acessos)}</td>
+                      <td style={tdStyle}>{cel(tot.registros)}</td>
+                      <td style={tdStyle}>{cel(tot.ftd_count)}</td>
+                      <td style={tdStyle}>{cel(tot.ftd_total, true)}</td>
+                      <td style={tdStyle}>{cel(tot.deposit_count)}</td>
+                      <td style={tdStyle}>{cel(tot.deposit_total, true)}</td>
+                      <td style={tdStyle}>{cel(tot.withdrawal_count)}</td>
+                      <td style={tdStyle}>{cel(tot.withdrawal_total, true)}</td>
+                      <td style={tdStyle}>{cel(tot.ggr, true)}</td>
+                    </tr>
+                  );
+                })()}
               </tbody>
             </table>
           </div>

@@ -38,6 +38,9 @@ interface AliasRow {
  * - dataInicio/dataFim: só inclui aliases cuja atividade sobrepõe o período
  *   (primeiro_visto <= fim E ultimo_visto >= inicio). Respeita o filtro de período.
  *   Obs: utm_aliases tem totais acumulados; quando sobrepõe, mostramos o total disponível.
+ *   IMPORTANTE: Usar APENAS no modo Histórico (all-time). Em vista mensal, NÃO use este
+ *   fallback — os totais seriam repetidos em todos os meses. Para dados por mês, o sync
+ *   deve preencher influencer_metricas.
  */
 export async function buscarMetricasDeAliases(opts?: {
   operadora_slug?: string;
