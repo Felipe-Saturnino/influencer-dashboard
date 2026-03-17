@@ -87,6 +87,19 @@ export default function UploadArquivos() {
       reader.readAsDataURL(file);
     });
 
+  // ─── Extrair mensagem de erro legível ─────────────────────────────────────
+  const extrairErro = (e: unknown): string => {
+    if (e instanceof Error) return e.message;
+    if (e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string") {
+      return (e as { message: string }).message;
+    }
+    const s = String(e);
+    if (s === "[object ProgressEvent]" || s === "[object Event]") {
+      return "Erro de rede ou CORS. Verifique se a Edge Function está implantada e acessível.";
+    }
+    return s || "Erro desconhecido";
+  };
+
   // ─── Processar um arquivo ─────────────────────────────────────────────────
   const processarArquivo = async (item: FileItem) => {
     setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: "processing" } : f));
@@ -109,7 +122,12 @@ export default function UploadArquivos() {
         }),
       });
 
-      const json = await res.json();
+      let json: { success?: boolean; error?: string; inserted?: Record<string, number>; data_relatorio?: string };
+      try {
+        json = await res.json();
+      } catch {
+        throw new Error(res.ok ? "Resposta inválida da função" : `Erro ${res.status}: ${res.statusText}`);
+      }
 
       if (!res.ok || !json.success) {
         throw new Error(json.error ?? "Erro desconhecido na função");
@@ -123,7 +141,7 @@ export default function UploadArquivos() {
       } : f));
 
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = extrairErro(e);
       setFiles(prev => prev.map(f => f.id === item.id ? { ...f, status: "error", erro: msg } : f));
     }
   };
