@@ -47,6 +47,7 @@ const PAGES: {
   { key: "dash_overview_influencer",label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_conversao",          label: "Conversão",           secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_financeiro",         label: "Financeiro",          secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "mesas_spin",              label: "Mesas Spin",          secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "influencers",             label: "Influencers",         secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: false },
   { key: "scout",                   label: "Scout",               secao: "Operações",  hasCriar: true,  hasEditar: true,  hasExcluir: true  },
   { key: "financeiro",              label: "Financeiro",          secao: "Operações",  hasCriar: false, hasEditar: true,  hasExcluir: false },

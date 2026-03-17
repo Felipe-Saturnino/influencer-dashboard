@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
-  "dash_overview", "dash_overview_influencer", "dash_conversao", "dash_financeiro",
+  "dash_overview", "dash_overview_influencer", "dash_conversao", "dash_financeiro", "mesas_spin",
   "agenda", "resultados", "feedback",
   "influencers", "scout", "financeiro", "gestao_links", "gestao_dealers",
   "gestao_usuarios", "gestao_operadoras", "upload_arquivos", "status_tecnico",

@@ -17,6 +17,7 @@ export type PageKey =
   | "dash_overview_influencer"
   | "dash_conversao"
   | "dash_financeiro"
+  | "mesas_spin"
   | "agenda"
   | "resultados"
   | "feedback"

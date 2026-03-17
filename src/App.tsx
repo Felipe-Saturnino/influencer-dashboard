@@ -14,6 +14,7 @@ import DashboardOverview          from "./pages/dashboards/DashboardOverview";
 import DashboardOverviewInfluencer from "./pages/dashboards/DashboardOverviewInfluencer";
 import DashboardConversao         from "./pages/dashboards/DashboardConversao";
 import DashboardFinanceiro        from "./pages/dashboards/DashboardFinanceiro";
+import MesasSpin                 from "./pages/dashboards/MesasSpin";
 // Páginas — lives
 import Agenda     from "./pages/lives/Agenda";
 import Resultados from "./pages/lives/Resultados";
@@ -36,6 +37,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   dash_overview_influencer:  DashboardOverviewInfluencer,
   dash_conversao:            DashboardConversao,
   dash_financeiro:           DashboardFinanceiro,
+  mesas_spin:               MesasSpin,
   agenda:           Agenda,
   resultados:       Resultados,
   feedback:         Feedback,

@@ -15,6 +15,7 @@ import {
   GiFactory,
   GiRadarSweep,
   GiCardRandom,
+  GiDiceSixFacesFour,
 } from "react-icons/gi";
 import { MdUpload } from "react-icons/md";
 
@@ -37,6 +38,7 @@ export const MENU: MenuSection[] = [
       { key: "dash_overview_influencer", label: "Overview Influencer", icon: GiMicrophone         },
       { key: "dash_conversao",           label: "Conversão",           icon: GiConvergenceTarget  },
       { key: "dash_financeiro",          label: "Financeiro",          icon: GiMoneyStack         },
+      { key: "mesas_spin",               label: "Mesas Spin",          icon: GiDiceSixFacesFour   },
     ],
   },
   {
