@@ -113,16 +113,18 @@ async function fetchMetricasReportingAPI(
     group_by: 'utm_source',
     date_from: dataInicio,
     date_to: dateToStr,
+    label_id: labelId, // query param — algumas implementações CDA exigem
   })
 
   const authHeader = authFormat === 'direct' ? apiKey : `Bearer ${apiKey}`
   const url = `${baseUrl.replace(/\/$/, '')}/api/${endpoint}?${params}`
 
-  // label_id obrigatório — "Access to this label is not allowed" sem ele
+  // Headers de label — "Access to this label is not allowed" sem eles
   const headers: Record<string, string> = {
     'authorization': authHeader,
     'Active_label_id': labelId,
     'X-Smartico-Active-Label-Id': labelId,
+    'Referer': `https://admin.aff.casadeapostas.bet.br/${labelId}/`,
   }
 
   const response = await fetch(url, {

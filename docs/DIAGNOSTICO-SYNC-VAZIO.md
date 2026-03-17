@@ -66,18 +66,16 @@ O padrão é `https://boapi.smartico.ai`; para CDA o valor pode ser outro.
 ## 5. Endpoint Operator vs Affiliate
 
 A Reporting API tem dois endpoints:
-- **af2_media_report_af** — Affiliate (métricas só do próprio afiliado)
+- **af2_media_report_af** — Affiliate (métricas do próprio afiliado e seus UTMs)
 - **af2_media_report_op** — Operator (métricas de todos os afiliados)
 
-Se a `CDA_INFLUENCERS_API_KEY` for uma chave de **operador**, use o endpoint Operator.
-
-**Supabase Secrets** → adicione ou altere:
+Se aparecer **"Access to this label is not allowed"** com `af2_media_report_op`, a chave pode ser de **afiliado** (não operador). Nesse caso, use o endpoint Affiliate:
 
 | Secret | Valor |
 |--------|-------|
-| `CDA_REPORTING_ENDPOINT` | `af2_media_report_op` |
+| `CDA_REPORTING_ENDPOINT` | `af2_media_report_af` |
 
-Reimplante a Edge Function e rode o sync novamente.
+A chave de afiliado retorna as métricas do afiliado logado (incluindo todos os UTMs/links dele).
 
 ---
 
