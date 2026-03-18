@@ -282,6 +282,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
 }) {
   const { theme: t } = useApp();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [valor, setValor] = useState(String(row.total));
   const [lives, setLives] = useState<any[]>([]);
 
@@ -305,9 +306,15 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   }
 
   async function handleConfirm() {
+    setError("");
     setSaving(true);
-    await onConfirm(row.id, valorNum, row.is_agente ?? false);
-    setSaving(false);
+    try {
+      await onConfirm(row.id, valorNum, row.is_agente ?? false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const rowStyle: React.CSSProperties = {
@@ -322,6 +329,12 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
         title={row.is_agente ? "⏳ Analisar — Agente" : `⏳ Analisar — ${row.influencer_name}`}
         onClose={onClose}
       />
+
+      {error && (
+        <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {!row.is_agente && (
         <div style={{ marginBottom: "16px" }}>
@@ -426,16 +439,28 @@ function ModalPagar({ row, onClose, onConfirm }: {
 }) {
   const { theme: t } = useApp();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleConfirm() {
+    setError("");
     setSaving(true);
-    await onConfirm(row.id, row.is_agente ?? false);
-    setSaving(false);
+    try {
+      await onConfirm(row.id, row.is_agente ?? false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <ModalBase maxWidth={380} onClose={onClose}>
       <ModalHeader title="💰 Registrar Pagamento" onClose={onClose} />
+      {error && (
+        <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+          ⚠️ {error}
+        </div>
+      )}
       <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
         Confirmar pagamento para <strong style={{ color: t.text }}>{row.influencer_name}</strong>
         {row.is_agente && row.descricao && <> — {row.descricao}</>}
@@ -962,14 +987,16 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
   async function handleAprovar(id: string, novoTotal: number, isAgente: boolean) {
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id);
+    const { error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id);
+    if (error) throw new Error(error.message);
     setModalAnalisar(null);
     if (ciclo) await carregarDados(ciclo);
   }
 
   async function handlePagar(id: string, isAgente: boolean) {
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id);
+    const { error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id);
+    if (error) throw new Error(error.message);
     setModalPagar(null);
     if (ciclo) await carregarDados(ciclo);
   }
