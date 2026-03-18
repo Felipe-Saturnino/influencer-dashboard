@@ -36,6 +36,8 @@ interface PostUnificado {
   resumo: string;
   stats: string[];
   date: string;
+  url: string | null;
+  thumbnailUrl: string | null;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -410,21 +412,21 @@ export default function SocialMediaDashboard() {
       const [igRes, fbRes, ytRes] = await Promise.all([
         supabase
           .from("instagram_posts")
-          .select("date,type,caption,likes,comments,saves,impressions")
+          .select("date,type,caption,likes,comments,saves,impressions,permalink,thumbnail_url")
           .gte("date", start)
           .lte("date", end)
           .order("date", { ascending: false })
           .limit(30),
         supabase
           .from("facebook_posts")
-          .select("date,type,message,reactions,comments,impressions")
+          .select("date,type,message,reactions,comments,impressions,permalink,thumbnail_url")
           .gte("date", start)
           .lte("date", end)
           .order("date", { ascending: false })
           .limit(30),
         supabase
           .from("youtube_videos")
-          .select("date,type,title,views,likes,comments")
+          .select("date,type,title,views,likes,comments,video_id")
           .gte("date", start)
           .lte("date", end)
           .order("date", { ascending: false })
@@ -441,6 +443,8 @@ export default function SocialMediaDashboard() {
         comments: number | null;
         saves: number | null;
         impressions: number | null;
+        permalink: string | null;
+        thumbnail_url: string | null;
       }>;
       const fb = (fbRes.data ?? []) as Array<{
         date: string;
@@ -449,6 +453,8 @@ export default function SocialMediaDashboard() {
         reactions: number | null;
         comments: number | null;
         impressions: number | null;
+        permalink: string | null;
+        thumbnail_url: string | null;
       }>;
       const yt = (ytRes.data ?? []) as Array<{
         date: string;
@@ -457,6 +463,7 @@ export default function SocialMediaDashboard() {
         views: number | null;
         likes: number | null;
         comments: number | null;
+        video_id: string;
       }>;
 
       const tipoMap: Record<string, string> = {
@@ -479,7 +486,9 @@ export default function SocialMediaDashboard() {
         cor: string,
         tag: string,
         getResumo: (r: T) => string,
-        getStats: (r: T) => string[]
+        getStats: (r: T) => string[],
+        getUrl: (r: T) => string | null,
+        getThumbnail: (r: T) => string | null
       ): PostUnificado[] =>
         arr.map((r) => {
           const tipo = tipoMap[r.type] ?? r.type ?? "Post";
@@ -492,24 +501,42 @@ export default function SocialMediaDashboard() {
             resumo: getResumo(r),
             stats: getStats(r),
             date: r.date,
+            url: getUrl(r),
+            thumbnailUrl: getThumbnail(r),
           };
         });
 
       const postsUnif: PostUnificado[] = [
-        ...unificar(ig, "Instagram", "#E1306C", "IG", (r) => (r.caption ?? "").slice(0, 80), (r) => [
-          `♥ ${fmtNum(r.likes)}`,
-          `💬 ${fmtNum(r.comments)}`,
-          r.saves != null ? `🔖 ${fmtNum(r.saves)}` : "",
-        ].filter(Boolean)),
-        ...unificar(fb, "Facebook", "#1877F2", "FB", (r) => (r.message ?? "").slice(0, 80), (r) => [
-          `♥ ${fmtNum(r.reactions)}`,
-          `💬 ${fmtNum(r.comments)}`,
-        ]),
-        ...unificar(yt, "YouTube", "#FF0000", "YT", (r) => (r.title ?? "").slice(0, 80), (r) => [
-          `▶ ${fmtNum(r.views)}`,
-          `♥ ${fmtNum(r.likes)}`,
-          `💬 ${fmtNum(r.comments)}`,
-        ]),
+        ...unificar(
+          ig,
+          "Instagram",
+          "#E1306C",
+          "IG",
+          (r) => (r.caption ?? "").slice(0, 80),
+          (r) => [`♥ ${fmtNum(r.likes)}`, `💬 ${fmtNum(r.comments)}`, r.saves != null ? `🔖 ${fmtNum(r.saves)}` : ""].filter(Boolean),
+          (r) => r.permalink,
+          (r) => r.thumbnail_url
+        ),
+        ...unificar(
+          fb,
+          "Facebook",
+          "#1877F2",
+          "FB",
+          (r) => (r.message ?? "").slice(0, 80),
+          (r) => [`♥ ${fmtNum(r.reactions)}`, `💬 ${fmtNum(r.comments)}`],
+          (r) => r.permalink,
+          (r) => r.thumbnail_url
+        ),
+        ...unificar(
+          yt,
+          "YouTube",
+          "#FF0000",
+          "YT",
+          (r) => (r.title ?? "").slice(0, 80),
+          (r) => [`▶ ${fmtNum(r.views)}`, `♥ ${fmtNum(r.likes)}`, `💬 ${fmtNum(r.comments)}`],
+          (r) => (r.video_id ? `https://www.youtube.com/watch?v=${r.video_id}` : null),
+          (r) => (r.video_id ? `https://img.youtube.com/vi/${r.video_id}/mqdefault.jpg` : null)
+        ),
       ].sort((a, b) => b.date.localeCompare(a.date));
 
       setPosts(postsUnif);
@@ -909,27 +936,43 @@ export default function SocialMediaDashboard() {
                           style={{
                             ...S.postImg,
                             background: `${p.cor}18`,
+                            overflow: "hidden",
+                            position: "relative",
                           }}
                         >
-                          <svg width="44" height="44" viewBox="0 0 44 44">
-                            <rect
-                              width="44"
-                              height="44"
-                              rx="10"
-                              fill={p.cor}
-                              opacity=".2"
+                          {p.thumbnailUrl && (
+                            <img
+                              src={p.thumbnailUrl}
+                              alt=""
+                              style={{
+                                position: "absolute",
+                                inset: 0,
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                              loading="lazy"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
                             />
-                            <text
-                              x="22"
-                              y="28"
-                              textAnchor="middle"
-                              fontSize="16"
-                              fill={p.cor}
-                              fontFamily="Inter"
-                            >
-                              {p.tag}
-                            </text>
-                          </svg>
+                          )}
+                          <div
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <svg width="44" height="44" viewBox="0 0 44 44">
+                              <rect width="44" height="44" rx="10" fill={p.cor} opacity=".2" />
+                              <text x="22" y="28" textAnchor="middle" fontSize="16" fill={p.cor} fontFamily="Inter">
+                                {p.tag}
+                              </text>
+                            </svg>
+                          </div>
                         </div>
                         <div style={S.postBody}>
                           <div
@@ -938,7 +981,24 @@ export default function SocialMediaDashboard() {
                               color: p.cor,
                             }}
                           >
-                            {p.canal} · {p.tipo}
+                            {p.url ? (
+                              <a
+                                href={p.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  color: "inherit",
+                                  textDecoration: "none",
+                                  cursor: "pointer",
+                                  borderBottom: "1px dotted currentColor",
+                                }}
+                                title="Abrir post"
+                              >
+                                {p.canal} · {p.tipo}
+                              </a>
+                            ) : (
+                              <>{p.canal} · {p.tipo}</>
+                            )}
                           </div>
                           <div style={S.postCaption}>
                             {p.resumo || `Post de ${p.date}`}
