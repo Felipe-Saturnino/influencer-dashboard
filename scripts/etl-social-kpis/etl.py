@@ -179,7 +179,7 @@ def fetch_instagram():
     media_resp = requests.get(
         f"{base}/{ig_id}/media",
         params={
-            "fields": "id,timestamp,media_type,caption,permalink,like_count,comments_count",
+            "fields": "id,timestamp,media_type,caption,permalink,thumbnail_url,media_url,like_count,comments_count",
             "since": since,
             "until": until,
             "access_token": META_TOKEN,
@@ -203,6 +203,7 @@ def fetch_instagram():
         impr = ins_map.get("impressions", 1) or 1
         total_engagements += eng
 
+        thumbnail = p.get("thumbnail_url") or p.get("media_url")
         post_rows.append(
             {
                 "post_id": p["id"],
@@ -210,6 +211,7 @@ def fetch_instagram():
                 "type": p.get("media_type"),
                 "caption": (p.get("caption") or "")[:500],
                 "permalink": p.get("permalink"),
+                "thumbnail_url": thumbnail[:2048] if thumbnail else None,
                 "impressions": ins_map.get("impressions"),
                 "reach": ins_map.get("reach"),
                 "likes": likes,
@@ -287,7 +289,7 @@ def fetch_facebook():
     posts_resp = requests.get(
         f"{base}/{META_PAGE_ID}/posts",
         params={
-            "fields": "id,created_time,message,permalink_url,full_picture,status_type",
+            "fields": "id,created_time,message,permalink_url,full_picture,thumbnail_url,status_type",
             "since": since,
             "until": until,
             "access_token": META_TOKEN,
@@ -330,6 +332,7 @@ def fetch_facebook():
 
         fb_type = _STATUS_MAP.get(p.get("status_type", ""), "status")
 
+        thumb = p.get("full_picture") or p.get("thumbnail_url")
         post_rows.append(
             {
                 "post_id": p["id"],
@@ -337,6 +340,7 @@ def fetch_facebook():
                 "type": fb_type,
                 "message": (p.get("message") or "")[:500],
                 "permalink": p.get("permalink_url"),
+                "thumbnail_url": (thumb[:2048] if thumb else None),
                 "impressions": ins_map.get("post_media_view") or ins_map.get("post_impressions"),
                 "reach": ins_map.get("post_reach"),
                 "reactions": reactions,

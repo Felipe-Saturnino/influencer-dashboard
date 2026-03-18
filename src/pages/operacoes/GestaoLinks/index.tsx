@@ -37,7 +37,9 @@ function fmtData(iso: string): string {
 }
 
 interface InfluencerOpcao { id: string; nome_artistico: string; status: string; }
+interface CampanhaOpcao { id: string; nome: string; ativo: boolean; }
 type Aba = "pendentes" | "mapeados" | "ignorados";
+type TipoMapeamento = "influencer" | "campanha";
 
 export default function GestaoLinks() {
   const { theme, user, podeVerInfluencer } = useApp();
@@ -46,7 +48,10 @@ export default function GestaoLinks() {
 
   const podeMapearAlias   = () => perm.canEditarOk;
   const podeReativarAlias = (alias: UtmAlias) =>
-    perm.canEditarOk && (perm.canEditar !== "proprios" || !alias.influencer_id || podeVerInfluencer(alias.influencer_id));
+    perm.canEditarOk && (
+      perm.canEditar !== "proprios" ||
+      (alias.campanha_id ? true : !alias.influencer_id || podeVerInfluencer(alias.influencer_id!))
+    );
 
   const [aba, setAba] = useState<Aba>("pendentes");
   const [operadoraFiltro, setOperadoraFiltro] = useState("todas");
@@ -57,6 +62,9 @@ export default function GestaoLinks() {
   const [modalAberto, setModalAberto] = useState(false);
   const [aliasSelecionado, setAliasSelecionado] = useState<UtmAlias | null>(null);
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
+  const [campanhaSelecionada, setCampanhaSelecionada] = useState("");
+  const [tipoMapeamento, setTipoMapeamento] = useState<TipoMapeamento>("influencer");
+  const [campanhas, setCampanhas] = useState<CampanhaOpcao[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erroModal, setErroModal] = useState<string | null>(null);
 
@@ -69,20 +77,31 @@ export default function GestaoLinks() {
     if (error) { console.error("Erro ao carregar utm_aliases:", error.message); setAliases([]); setLoading(false); return; }
     const aliasData = data ?? [];
     let infNomeMap = new Map<string, string>();
+    let campanhaNomeMap = new Map<string, string>();
     if (aba === "mapeados") {
       const influencerIds = aliasData.map((r: any) => r.influencer_id).filter(Boolean);
       if (influencerIds.length > 0) {
         const { data: infData } = await supabase.from("influencer_perfil").select("id, nome_artistico").in("id", influencerIds);
         infNomeMap = new Map((infData ?? []).map((i: any) => [i.id, i.nome_artistico]));
       }
+      const campanhaIds = aliasData.map((r: any) => r.campanha_id).filter(Boolean);
+      if (campanhaIds.length > 0) {
+        const { data: campData } = await supabase.from("campanhas").select("id, nome").in("id", campanhaIds);
+        campanhaNomeMap = new Map((campData ?? []).map((c: any) => [c.id, c.nome]));
+      }
     }
-    setAliases(aliasData.map((r: any) => ({ ...r, influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) ?? "—") : null })));
+    setAliases(aliasData.map((r: any) => ({
+      ...r,
+      influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) ?? "—") : null,
+      campanha_nome: r.campanha_id ? (campanhaNomeMap.get(r.campanha_id) ?? "—") : null,
+    })));
     setLoading(false);
   }, [aba, operadoraFiltro]);
 
   useEffect(() => { carregar(); }, [carregar]);
   useEffect(() => { supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => setOperadorasList(data ?? [])); }, []);
   useEffect(() => { supabase.from("influencer_perfil").select("id, nome_artistico, status").order("nome_artistico").then(({ data }) => setInfluencers(data ?? [])); }, []);
+  useEffect(() => { supabase.from("campanhas").select("id, nome, ativo").eq("ativo", true).order("nome").then(({ data }) => setCampanhas(data ?? [])); }, []);
 
   const [totalPendentes, setTotalPendentes] = useState(0);
   useEffect(() => {
@@ -91,43 +110,61 @@ export default function GestaoLinks() {
     q.then(({ count }) => setTotalPendentes(count ?? 0));
   }, [aliases, operadoraFiltro]);
 
-  function abrirModal(alias: UtmAlias) { setAliasSelecionado(alias); setInfluencerSelecionado(""); setErroModal(null); setModalAberto(true); }
+  function abrirModal(alias: UtmAlias) {
+    setAliasSelecionado(alias);
+    setInfluencerSelecionado("");
+    setCampanhaSelecionada("");
+    setTipoMapeamento("influencer");
+    setErroModal(null);
+    setModalAberto(true);
+  }
 
   async function confirmarMapeamento() {
-    if (!aliasSelecionado || !influencerSelecionado) return;
-    if (perm.canEditar === "proprios" && !podeVerInfluencer(influencerSelecionado)) return;
+    if (!aliasSelecionado) return;
+    const isInfluencer = tipoMapeamento === "influencer";
+    const idSelecionado = isInfluencer ? influencerSelecionado : campanhaSelecionada;
+    if (!idSelecionado) return;
+    if (isInfluencer && perm.canEditar === "proprios" && !podeVerInfluencer(idSelecionado)) return;
+
     setSalvando(true); setErroModal(null);
-    const { error } = await supabase.from("utm_aliases").update({ influencer_id: influencerSelecionado, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }).eq("id", aliasSelecionado.id);
+
+    const updatePayload = isInfluencer
+      ? { influencer_id: idSelecionado, campanha_id: null, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }
+      : { campanha_id: idSelecionado, influencer_id: null, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() };
+
+    const { error } = await supabase.from("utm_aliases").update(updatePayload).eq("id", aliasSelecionado.id);
     if (error) { setSalvando(false); setErroModal(`Erro ao salvar: ${error.message}`); return; }
 
-    // RPC: copia utm_metricas_diarias → influencer_metricas (sem chamar API)
+    // RPC: copia utm_metricas_diarias → influencer_metricas (apenas para mapeamento influencer)
     let linhasCopiadas = 0;
-    try {
-      const { data: rpcData, error: rpcErr } = await supabase.rpc("aplicar_mapeamento_utm", {
-        p_utm_source: aliasSelecionado.utm_source,
-        p_influencer_id: influencerSelecionado,
-      });
-      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
-        const row = rpcData[0] as { linhas_copiadas?: number };
-        linhasCopiadas = Number(row?.linhas_copiadas ?? 0);
-      }
-    } catch (_e) { /* RPC pode não existir ainda */ }
-
-    // Se utm_metricas_diarias estava vazio, dispara sync (fallback)
-    if (linhasCopiadas === 0) {
-      const dataInicio = (aliasSelecionado.primeiro_visto ?? "2025-12-01").split("T")[0];
-      const dataFim = (aliasSelecionado.ultimo_visto ?? new Date().toISOString().split("T")[0]).split("T")[0];
+    if (isInfluencer) {
       try {
-        await supabase.functions.invoke("sync-metricas", {
-          body: { data_inicio: dataInicio, data_fim: dataFim, utm_source: aliasSelecionado.utm_source, skip_orfaos: true },
+        const { data: rpcData, error: rpcErr } = await supabase.rpc("aplicar_mapeamento_utm", {
+          p_utm_source: aliasSelecionado.utm_source,
+          p_influencer_id: idSelecionado,
         });
-      } catch (e) {
-        console.warn("[GestaoLinks] Sync fallback:", e);
+        if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+          const row = rpcData[0] as { linhas_copiadas?: number };
+          linhasCopiadas = Number(row?.linhas_copiadas ?? 0);
+        }
+      } catch (_e) { /* RPC pode não existir ainda */ }
+
+      // Se utm_metricas_diarias estava vazio, dispara sync (fallback)
+      if (linhasCopiadas === 0) {
+        const dataInicio = (aliasSelecionado.primeiro_visto ?? "2025-12-01").split("T")[0];
+        const dataFim = (aliasSelecionado.ultimo_visto ?? new Date().toISOString().split("T")[0]).split("T")[0];
+        try {
+          await supabase.functions.invoke("sync-metricas", {
+            body: { data_inicio: dataInicio, data_fim: dataFim, utm_source: aliasSelecionado.utm_source, skip_orfaos: true },
+          });
+        } catch (e) {
+          console.warn("[GestaoLinks] Sync fallback:", e);
+        }
       }
     }
 
     setSalvando(false);
-    setModalAberto(false); setAliasSelecionado(null); setInfluencerSelecionado(""); carregar();
+    setModalAberto(false); setAliasSelecionado(null); setInfluencerSelecionado(""); setCampanhaSelecionada(""); carregar();
   }
 
   async function ignorar(alias: UtmAlias) {
@@ -136,7 +173,14 @@ export default function GestaoLinks() {
   }
 
   async function reativar(alias: UtmAlias) {
-    const { error } = await supabase.from("utm_aliases").update({ status: "pendente", influencer_id: null, mapeado_por: null, mapeado_em: null, atualizado_em: new Date().toISOString() }).eq("id", alias.id);
+    const { error } = await supabase.from("utm_aliases").update({
+      status: "pendente",
+      influencer_id: null,
+      campanha_id: null,
+      mapeado_por: null,
+      mapeado_em: null,
+      atualizado_em: new Date().toISOString(),
+    }).eq("id", alias.id);
     if (!error) carregar();
   }
 
@@ -268,7 +312,7 @@ export default function GestaoLinks() {
                 <th style={{ ...th, textAlign: "right" }}>FTDs</th>
                 <th style={{ ...th, textAlign: "right" }}>Depósitos</th>
                 <th style={{ ...th, textAlign: "right" }}>GGR</th>
-                {aba === "mapeados" && <th style={th}>Influencer</th>}
+                {aba === "mapeados" && <th style={th}>Influencer / Campanha</th>}
                 <th style={th}>Ações</th>
               </tr>
             </thead>
@@ -302,7 +346,11 @@ export default function GestaoLinks() {
                     <td style={{ ...td, textAlign: "right" }}>
                       <span style={ggr >= 0 ? { color: BRAND.verde, fontWeight: 600 } : { color: BRAND.vermelho, fontWeight: 600 }}>{fmt(ggr)}</span>
                     </td>
-                    {aba === "mapeados" && <td style={td}>{alias.influencer_name ?? "—"}</td>}
+                    {aba === "mapeados" && (
+                      <td style={td}>
+                        {alias.influencer_id ? (alias.influencer_name ?? "—") : (alias.campanha_nome ?? "—")}
+                      </td>
+                    )}
                     <td style={td}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                         {aba === "pendentes" && podeMapearAlias() && (
@@ -347,7 +395,7 @@ export default function GestaoLinks() {
               </button>
             </div>
             <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 22, fontFamily: FONT.body }}>
-              Associe o UTM <strong style={{ color: BRAND.roxoVivo }}>{aliasSelecionado.utm_source}</strong> ao influencer correto.
+              Associe o UTM <strong style={{ color: BRAND.roxoVivo }}>{aliasSelecionado.utm_source}</strong> a um influencer ou campanha.
             </p>
 
             <div style={{ background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
@@ -363,14 +411,56 @@ export default function GestaoLinks() {
               ))}
             </div>
 
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>Influencer</label>
-            <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
-              style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
-              <option value="">Selecione o influencer...</option>
-              {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers).map((inf) => (
-                <option key={inf.id} value={inf.id}>{inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}</option>
-              ))}
-            </select>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <button
+                type="button"
+                onClick={() => { setTipoMapeamento("influencer"); setCampanhaSelecionada(""); }}
+                style={{
+                  flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "influencer" ? BRAND.roxoVivo : theme.cardBorder}`,
+                  background: tipoMapeamento === "influencer" ? `${BRAND.roxoVivo}22` : "transparent",
+                  color: tipoMapeamento === "influencer" ? BRAND.roxoVivo : theme.textMuted,
+                  fontSize: 13, fontWeight: tipoMapeamento === "influencer" ? 700 : 400, fontFamily: FONT.body, cursor: "pointer",
+                }}
+              >
+                Influencer
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTipoMapeamento("campanha"); setInfluencerSelecionado(""); }}
+                style={{
+                  flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "campanha" ? BRAND.roxoVivo : theme.cardBorder}`,
+                  background: tipoMapeamento === "campanha" ? `${BRAND.roxoVivo}22` : "transparent",
+                  color: tipoMapeamento === "campanha" ? BRAND.roxoVivo : theme.textMuted,
+                  fontSize: 13, fontWeight: tipoMapeamento === "campanha" ? 700 : 400, fontFamily: FONT.body, cursor: "pointer",
+                }}
+              >
+                Campanha
+              </button>
+            </div>
+
+            {tipoMapeamento === "influencer" ? (
+              <>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>Influencer</label>
+                <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
+                  <option value="">Selecione o influencer...</option>
+                  {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers).map((inf) => (
+                    <option key={inf.id} value={inf.id}>{inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}</option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>Campanha</label>
+                <select value={campanhaSelecionada} onChange={(e) => setCampanhaSelecionada(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
+                  <option value="">Selecione a campanha...</option>
+                  {campanhas.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </>
+            )}
 
             {erroModal && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: BRAND.vermelho, marginBottom: 16, fontFamily: FONT.body }}>
@@ -383,8 +473,8 @@ export default function GestaoLinks() {
                 style={{ padding: "9px 20px", background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 13, fontFamily: FONT.body, cursor: "pointer" }}>
                 Cancelar
               </button>
-              <button onClick={confirmarMapeamento} disabled={!influencerSelecionado || salvando}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: influencerSelecionado && !salvando ? "pointer" : "not-allowed", opacity: influencerSelecionado && !salvando ? 1 : 0.5 }}>
+              <button onClick={confirmarMapeamento} disabled={(tipoMapeamento === "influencer" ? !influencerSelecionado : !campanhaSelecionada) || salvando}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? "pointer" : "not-allowed", opacity: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? 1 : 0.5 }}>
                 <Link2 size={13} />{salvando ? "Salvando..." : "Confirmar mapeamento"}
               </button>
             </div>

@@ -15,6 +15,7 @@ import DashboardOverviewInfluencer from "./pages/dashboards/DashboardOverviewInf
 import DashboardConversao         from "./pages/dashboards/DashboardConversao";
 import DashboardFinanceiro        from "./pages/dashboards/DashboardFinanceiro";
 import MesasSpin                 from "./pages/dashboards/MesasSpin";
+import SocialMediaDashboard      from "./pages/dashboards/SocialMediaDashboard";
 // Páginas — lives
 import Agenda     from "./pages/lives/Agenda";
 import Resultados from "./pages/lives/Resultados";
@@ -24,6 +25,7 @@ import Influencers from "./pages/operacoes/Influencers";
 import Scout from "./pages/operacoes/Scout";
 import Financeiro  from "./pages/operacoes/Financeiro";
 import GestaoLinks from "./pages/operacoes/GestaoLinks";
+import Campanhas from "./pages/operacoes/Campanhas";
 import GestaoDealers from "./pages/operacoes/GestaoDealers";
 // Páginas — plataforma
 import GestaoUsuarios from "./pages/plataforma/GestaoUsuarios";
@@ -37,6 +39,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   dash_conversao:            DashboardConversao,
   dash_financeiro:           DashboardFinanceiro,
   mesas_spin:               MesasSpin,
+  dash_midias_sociais:      SocialMediaDashboard,
   agenda:           Agenda,
   resultados:       Resultados,
   feedback:         Feedback,
@@ -44,6 +47,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   scout:            Scout,
   financeiro:       Financeiro,
   gestao_links:     GestaoLinks,
+  campanhas:        Campanhas,
   gestao_dealers:   GestaoDealers,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
