@@ -24,6 +24,7 @@ interface PagamentoRow {
   id: string;
   influencer_id: string;
   influencer_name: string;
+  operadora_slug?: string;
   horas_realizadas: number;
   cache_hora: number;
   total: number;
@@ -281,6 +282,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
 }) {
   const { theme: t } = useApp();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [valor, setValor] = useState(String(row.total));
   const [lives, setLives] = useState<any[]>([]);
 
@@ -304,9 +306,15 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   }
 
   async function handleConfirm() {
+    setError("");
     setSaving(true);
-    await onConfirm(row.id, valorNum, row.is_agente ?? false);
-    setSaving(false);
+    try {
+      await onConfirm(row.id, valorNum, row.is_agente ?? false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const rowStyle: React.CSSProperties = {
@@ -321,6 +329,12 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
         title={row.is_agente ? "⏳ Analisar — Agente" : `⏳ Analisar — ${row.influencer_name}`}
         onClose={onClose}
       />
+
+      {error && (
+        <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {!row.is_agente && (
         <div style={{ marginBottom: "16px" }}>
@@ -425,16 +439,28 @@ function ModalPagar({ row, onClose, onConfirm }: {
 }) {
   const { theme: t } = useApp();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleConfirm() {
+    setError("");
     setSaving(true);
-    await onConfirm(row.id, row.is_agente ?? false);
-    setSaving(false);
+    try {
+      await onConfirm(row.id, row.is_agente ?? false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <ModalBase maxWidth={380} onClose={onClose}>
       <ModalHeader title="💰 Registrar Pagamento" onClose={onClose} />
+      {error && (
+        <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+          ⚠️ {error}
+        </div>
+      )}
       <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
         Confirmar pagamento para <strong style={{ color: t.text }}>{row.influencer_name}</strong>
         {row.is_agente && row.descricao && <> — {row.descricao}</>}
@@ -846,7 +872,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
 
     const result: PagamentoRow[] = parKeys.map(parKey => {
-      const [id] = parKey.split("::");
+      const [id, opSlug] = parKey.split("::");
       const { horas, qtd } = horasPorPar[parKey];
       const h = Math.round(horas * 100) / 100;
       const cache = perfilMap[id]?.cache ?? 0;
@@ -854,6 +880,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         id: `preview_${parKey}`,
         influencer_id: id,
         influencer_name: perfilMap[id]?.artistico ?? nameMap[id] ?? id,
+        operadora_slug: opSlug,
         horas_realizadas: h,
         cache_hora: cache,
         total: Math.round(h * cache * 100) / 100,
@@ -927,6 +954,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         id: p.id,
         influencer_id: p.influencer_id,
         influencer_name: nomeMap[p.influencer_id] ?? p.influencer_id,
+        operadora_slug: p.operadora_slug,
         horas_realizadas: p.horas_realizadas,
         cache_hora: p.cache_hora,
         total: p.total,
@@ -958,15 +986,29 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }
 
   async function handleAprovar(id: string, novoTotal: number, isAgente: boolean) {
+    if (String(id).startsWith("preview_")) {
+      throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período. Não é possível aprovar a prévia.");
+    }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id);
+    const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) {
+      throw new Error("Nenhum registro atualizado. Verifique permissões no Supabase (RLS em " + tb + ") ou se o registro existe.");
+    }
     setModalAnalisar(null);
     if (ciclo) await carregarDados(ciclo);
   }
 
   async function handlePagar(id: string, isAgente: boolean) {
+    if (String(id).startsWith("preview_")) {
+      throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período.");
+    }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id);
+    const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) {
+      throw new Error("Nenhum registro atualizado. Verifique permissões no Supabase (RLS em " + tb + ") ou se o registro existe.");
+    }
     setModalPagar(null);
     if (ciclo) await carregarDados(ciclo);
   }
@@ -1065,16 +1107,18 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
+                <th style={th}>Influencer</th>
+                {filterOperadora === "todas" && <th style={th}>Operadora</th>}
                 {isAberto
-                  ? ["Influencer", "Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} style={th}>{h}</th>)
-                  : ["Influencer", "Lives", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} style={th}>{h}</th>)
+                  ? ["Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} style={th}>{h}</th>)
+                  : ["Lives", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} style={th}>{h}</th>)
                 }
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={isAberto ? 5 : 6} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
+                  <td colSpan={(isAberto ? 5 : 6) + (filterOperadora === "todas" ? 1 : 0)} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                       <span style={{ fontSize: "12px", maxWidth: 480, display: "block", marginTop: 8 }}>
@@ -1096,6 +1140,12 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       </div>
                     </div>
                   </td>
+
+                  {filterOperadora === "todas" && (
+                    <td style={{ ...td, color: t.textMuted, fontSize: "12px" }}>
+                      {row.is_agente ? "—" : (operadorasList.find(o => o.slug === row.operadora_slug)?.nome ?? row.operadora_slug ?? "—")}
+                    </td>
+                  )}
 
                   {isAberto ? (
                     <>
@@ -1141,6 +1191,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   <td style={{ ...td, fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>
                     {isAberto ? "ESTIMATIVA TOTAL" : "TOTAL"}
                   </td>
+                  {filterOperadora === "todas" && <td style={td}></td>}
                   {isAberto ? (
                     <>
                       <td style={td}></td>
