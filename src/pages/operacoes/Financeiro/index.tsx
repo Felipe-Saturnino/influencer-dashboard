@@ -311,7 +311,10 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
     try {
       await onConfirm(row.id, valorNum, row.is_agente ?? false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.");
+      const msg = e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.";
+      setError(msg);
+      console.error("[ModalAnalisar] Erro ao aprovar:", e);
+      alert("Erro ao aprovar: " + msg);
     } finally {
       setSaving(false);
     }
@@ -419,6 +422,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
           Cancelar
         </button>
         <button
+          type="button"
           onClick={handleConfirm}
           disabled={saving || valorNum <= 0}
           style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || valorNum <= 0) ? "not-allowed" : "pointer", opacity: (saving || valorNum <= 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
@@ -991,9 +995,10 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
     const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
+    console.log("[handleAprovar]", { id, tb, data, error, dataLength: data?.length });
     if (error) throw new Error(error.message);
     if (!data || data.length === 0) {
-      throw new Error("Nenhum registro atualizado. Verifique permissões no Supabase (RLS em " + tb + ") ou se o registro existe.");
+      throw new Error("Nenhum registro atualizado (0 linhas). O ID existe na tabela " + tb + "? Confira no Supabase Table Editor.");
     }
     setModalAnalisar(null);
     if (ciclo) await carregarDados(ciclo);
