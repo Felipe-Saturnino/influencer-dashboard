@@ -1020,10 +1020,20 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período. Não é possível aprovar a prévia.");
     }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) {
-      throw new Error("Nenhum registro atualizado (0 linhas). O ID existe na tabela " + tb + "? Confira no Supabase Table Editor.");
+    const { data: rpcData, error: rpcError } = await supabase.rpc("aprovar_pagamento", {
+      p_id: id,
+      p_total: novoTotal,
+      p_is_agente: isAgente,
+    });
+    if (!rpcError && rpcData && typeof rpcData === "object") {
+      const res = rpcData as { ok?: boolean; error?: string };
+      if (res.ok === false) throw new Error(res.error ?? "Erro ao aprovar.");
+    } else if (rpcError) {
+      const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error("Não foi possível aprovar. Execute no Supabase SQL Editor o script: supabase/migrations/20260318000000_rpc_aprovar_pagamento.sql");
+      }
     }
     setModalAnalisar(null);
     if (ciclo) await carregarDados(ciclo);
@@ -1034,10 +1044,19 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período.");
     }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) {
-      throw new Error("Nenhum registro atualizado. Verifique permissões no Supabase (RLS em " + tb + ") ou se o registro existe.");
+    const { data: rpcData, error: rpcError } = await supabase.rpc("registrar_pagamento", {
+      p_id: id,
+      p_is_agente: isAgente,
+    });
+    if (!rpcError && rpcData && typeof rpcData === "object") {
+      const res = rpcData as { ok?: boolean; error?: string };
+      if (res.ok === false) throw new Error(res.error ?? "Erro ao registrar pagamento.");
+    } else if (rpcError) {
+      const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error("Não foi possível registrar. Execute no Supabase SQL Editor o script: supabase/migrations/20260318000000_rpc_aprovar_pagamento.sql");
+      }
     }
     setModalPagar(null);
     if (ciclo) await carregarDados(ciclo);
