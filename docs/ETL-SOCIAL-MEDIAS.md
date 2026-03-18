@@ -44,7 +44,28 @@ python etl.py
 
 Canais sem variáveis configuradas são pulados.
 
-### 2. GitHub Actions (automático)
+### 2. Carga histórica (backfill)
+
+Para carregar dados de um período passado (~90 dias, ex.: jan/2026 até ontem):
+
+```powershell
+# Na pasta do projeto
+cd scripts/etl-social-kpis
+pip install -r requirements.txt
+
+# Defina as mesmas env vars do ETL (SUPABASE_*, META_*, YOUTUBE_*, etc.)
+# Período padrão: 2026-01-01 até ontem
+python backfill.py
+
+# Ou especifique o intervalo:
+$env:BACKFILL_START_DATE = "2026-01-01"
+$env:BACKFILL_END_DATE = "2026-03-17"
+python backfill.py
+```
+
+Também pode rodar via **GitHub Actions** em: Actions → Backfill Social KPIs (histórico) → Run workflow.
+
+### 3. GitHub Actions (automático)
 
 O workflow `.github/workflows/sync-social-kpis-daily.yml` roda **todo dia às 6h (horário de Brasília)**.
 
@@ -110,7 +131,8 @@ Também é possível rodar manualmente em: Actions → Sync Social Media KPIs (6
 
 ```
 scripts/etl-social-kpis/
-├── etl.py           # Script principal
+├── etl.py           # Script principal (dia a dia)
+├── backfill.py      # Carga histórica (intervalo de datas)
 ├── requirements.txt
 docs/
 └── ETL-SOCIAL-MEDIAS.md   # Esta documentação
