@@ -1019,21 +1019,18 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (String(id).startsWith("preview_")) {
       throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período. Não é possível aprovar a prévia.");
     }
-    const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    const { data: rpcData, error: rpcError } = await supabase.rpc("aprovar_pagamento", {
-      p_id: id,
-      p_total: novoTotal,
-      p_is_agente: isAgente,
+    const { data: fnData, error: fnError } = await supabase.functions.invoke("aprovar-pagamento", {
+      body: { action: "aprovar", id, total: novoTotal, isAgente: isAgente ?? false },
     });
-    if (!rpcError && rpcData && typeof rpcData === "object") {
-      const res = rpcData as { ok?: boolean; error?: string };
-      if (res.ok === false) throw new Error(res.error ?? "Erro ao aprovar.");
-    } else if (rpcError) {
+    if (fnError) {
+      const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
       const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) {
-        throw new Error("Não foi possível aprovar. Execute no Supabase SQL Editor o script: supabase/migrations/20260318000000_rpc_aprovar_pagamento.sql");
+        throw new Error("Edge Function aprovar-pagamento falhou. Execute: supabase functions deploy aprovar-pagamento");
       }
+    } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
+      throw new Error((fnData as { error?: string }).error ?? "Erro ao aprovar.");
     }
     setModalAnalisar(null);
     if (ciclo) await carregarDados(ciclo);
@@ -1043,20 +1040,18 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (String(id).startsWith("preview_")) {
       throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período.");
     }
-    const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    const { data: rpcData, error: rpcError } = await supabase.rpc("registrar_pagamento", {
-      p_id: id,
-      p_is_agente: isAgente,
+    const { data: fnData, error: fnError } = await supabase.functions.invoke("aprovar-pagamento", {
+      body: { action: "registrar", id, isAgente: isAgente ?? false },
     });
-    if (!rpcError && rpcData && typeof rpcData === "object") {
-      const res = rpcData as { ok?: boolean; error?: string };
-      if (res.ok === false) throw new Error(res.error ?? "Erro ao registrar pagamento.");
-    } else if (rpcError) {
+    if (fnError) {
+      const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
       const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) {
-        throw new Error("Não foi possível registrar. Execute no Supabase SQL Editor o script: supabase/migrations/20260318000000_rpc_aprovar_pagamento.sql");
+        throw new Error("Edge Function aprovar-pagamento falhou. Execute: supabase functions deploy aprovar-pagamento");
       }
+    } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
+      throw new Error((fnData as { error?: string }).error ?? "Erro ao registrar pagamento.");
     }
     setModalPagar(null);
     if (ciclo) await carregarDados(ciclo);
