@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
   GiPokerHand,      // GGR Total — chip de cassino
@@ -168,9 +169,9 @@ function getStatusROI(roi: number | null, ggr: number, investimento: number): {
   return              { label: "Não Rentável", cor: BRAND.vermelho, bg: "rgba(232,64,37,0.12)", border: "rgba(232,64,37,0.28)", roiStr };
 }
 
-function calculaTotais(rows: RankingRow[]): TotaisData {
+function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisData {
   const ggr           = rows.reduce((s, r) => s + r.ggr, 0);
-  const invest        = rows.reduce((s, r) => s + r.investimento, 0);
+  const invest        = totalInvestimento ?? rows.reduce((s, r) => s + r.investimento, 0);
   const ftds          = rows.reduce((s, r) => s + r.ftds, 0);
   const registros     = rows.reduce((s, r) => s + r.registros, 0);
   const acessos       = rows.reduce((s, r) => s + r.acessos, 0);
@@ -541,7 +542,7 @@ export default function DashboardOverview() {
         return data || [];
       }
 
-      function montaRanking(m: Metrica[], l: LiveData[], r: LiveResultado[]): RankingRow[] {
+      function montaRanking(m: Metrica[], l: LiveData[], r: LiveResultado[], investimentoPorInf: Record<string, number>): RankingRow[] {
         const mapa = new Map<string, RankingRow>();
         m.forEach((met) => {
           if (!mapa.has(met.influencer_id)) {
@@ -573,8 +574,7 @@ export default function DashboardOverview() {
           }
         });
         mapa.forEach((row) => {
-          const p = perfisLista.find((x) => x.id === row.influencer_id);
-          row.investimento = row.horas * (p?.cache_hora || 0);
+          row.investimento = investimentoPorInf[row.influencer_id] ?? 0;
           row.roi = row.investimento > 0 ? ((row.ggr - row.investimento) / row.investimento) * 100 : null;
           row.statusLabel = getStatusROI(row.roi, row.ggr, row.investimento).label;
           row.views = row.liveComViews > 0 ? Math.round(row.viewsTotal / row.liveComViews) : 0;
@@ -588,42 +588,51 @@ export default function DashboardOverview() {
       }
 
       let metricas: Metrica[] = [], lives: LiveData[] = [], resultados: LiveResultado[] = [];
+      let periodo: { inicio: string; fim: string };
       if (historico) {
+        periodo = { inicio: "2020-01-01", fim: fmt(new Date()) };
         let qM = supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
         if (filtroOperadora !== "todas") qM = qM.eq("operadora_slug", filtroOperadora);
         const { data: mAll } = await qM;
         let mRaw = mAll || [];
-        const fimHoje = fmt(new Date());
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
           operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
-          dataInicio: "2020-01-01",
-          dataFim: fimHoje,
+          dataInicio: periodo.inicio,
+          dataFim: periodo.fim,
         });
-        metricas = mesclarMetricasComAliases(mRaw, aliasesSinteticas, fimHoje, podeVerInfluencer);
+        metricas = mesclarMetricasComAliases(mRaw, aliasesSinteticas, periodo.fim, podeVerInfluencer);
         const { data: lAll } = await supabase.from("lives").select("id, influencer_id, status, plataforma, data").eq("status", "realizada");
         lives = lAll || [];
         resultados = await buscaResultados(lives);
       } else {
-        const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-        metricas   = await buscaMetricas(inicio, fim, false);
-        lives      = await buscaLives(inicio, fim);
+        periodo = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
+        metricas   = await buscaMetricas(periodo.inicio, periodo.fim, false);
+        lives      = await buscaLives(periodo.inicio, periodo.fim);
         resultados = await buscaResultados(lives);
       }
 
-      const rows = montaRanking(metricas, lives, resultados);
+      const investimentoPago = await buscarInvestimentoPago(periodo, {
+        operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+      });
+      const rows = montaRanking(metricas, lives, resultados, investimentoPago.porInfluencer);
       const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
       setRanking(rowsVisiveis);
-      setTotais(calculaTotais(rowsVisiveis));
+      setTotais(calculaTotais(rowsVisiveis, investimentoPago.total));
 
       if (!historico && mesSelecionado) {
-        const { inicio: iA, fim: fA } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
-        const mA = await buscaMetricas(iA, fA, false);
-        const lA = await buscaLives(iA, fA);
+        const periodoAnt = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
+        const [investAnt, mA, lA] = await Promise.all([
+          buscarInvestimentoPago(periodoAnt, {
+            operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          }),
+          buscaMetricas(periodoAnt.inicio, periodoAnt.fim, false),
+          buscaLives(periodoAnt.inicio, periodoAnt.fim),
+        ]);
         const rA = await buscaResultados(lA);
-        const rowsAnt = montaRanking(mA, lA, rA).filter((r) => podeVerInfluencer(r.influencer_id));
+        const rowsAnt = montaRanking(mA, lA, rA, investAnt.porInfluencer).filter((r) => podeVerInfluencer(r.influencer_id));
         setRankingAnt(rowsAnt);
-        setTotaisAnt(calculaTotais(rowsAnt));
+        setTotaisAnt(calculaTotais(rowsAnt, investAnt.total));
       } else {
         setRankingAnt([]);
         setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });

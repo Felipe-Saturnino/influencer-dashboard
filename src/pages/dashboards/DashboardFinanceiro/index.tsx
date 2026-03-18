@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
   GiCalendar, GiStarMedal, GiShield,
@@ -415,6 +416,14 @@ export default function DashboardFinanceiro() {
         if (res) { const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60; horasMap.set(live.influencer_id, (horasMap.get(live.influencer_id) || 0) + h); }
       });
 
+      const { total: investimentoTotal, porInfluencer: investimentoPorInf } = await buscarInvestimentoPago(
+        { inicio: periodoInicio, fim: periodoFim },
+        {
+          influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
+          operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+        }
+      );
+
       const mapa = new Map<string, Record<string, unknown>>();
       metricas.forEach((m) => mapa.set(m.influencer_id, { ...m, ftd_count: Number(m.ftd_count)||0, ftd_total: Number(m.ftd_total)||0, deposit_count: Number(m.deposit_count)||0, deposit_total: Number(m.deposit_total)||0, withdrawal_count: Number(m.withdrawal_count)||0, withdrawal_total: Number(m.withdrawal_total)||0, ggr: Number(m.ggr)||0 }));
 
@@ -422,8 +431,7 @@ export default function DashboardFinanceiro() {
       mapa.forEach((data, id) => {
         const perfil = perfisLista.find((p) => p.id === id);
         if (!perfil) return;
-        const horas = horasMap.get(id) || 0;
-        const investimento = horas * (perfil.cache_hora || 0);
+        const investimento = investimentoPorInf[id] ?? 0;
         const d = data as Record<string, number>;
         const ftd_ticket_medio = (d.ftd_ticket_medio as number) ?? (d.ftd_count > 0 ? d.ftd_total / d.ftd_count : 0);
         const deposito_ticket_medio = (d.deposito_ticket_medio as number) ?? (d.deposit_count > 0 ? d.deposit_total / d.deposit_count : 0);
@@ -442,14 +450,14 @@ export default function DashboardFinanceiro() {
       const rowsVisiveis = resultado.filter((r) => podeVerInfluencer(r.influencer_id));
       setRows(rowsVisiveis);
 
-      function calcTotais(arr: FinanceiroRow[]): TotaisFinanceiros {
+      function calcTotais(arr: FinanceiroRow[], totalInvestimento?: number): TotaisFinanceiros {
         const tFTDs = arr.reduce((s,r) => s+r.ftds, 0);
         const tFtdTotal = arr.reduce((s,r) => s+r.ftd_total, 0);
         const tDep = arr.reduce((s,r) => s+r.depositos, 0);
         const tDepCount = arr.reduce((s,r) => s+r.deposit_count, 0);
         const tSaq = arr.reduce((s,r) => s+r.saques, 0);
         const tGGR = arr.reduce((s,r) => s+r.ggr, 0);
-        const tInvest = arr.reduce((s,r) => s+r.investimento, 0);
+        const tInvest = totalInvestimento ?? arr.reduce((s,r) => s+r.investimento, 0);
         const depTM = tDepCount > 0 ? tDep/tDepCount : 0;
         const ggrPJ = tFTDs > 0 ? tGGR/tFTDs : 0;
         const wdPct = tDep > 0 ? (tSaq/tDep)*100 : 0;
@@ -457,16 +465,28 @@ export default function DashboardFinanceiro() {
         return { ftd_total: tFtdTotal, ftds: tFTDs, ftd_ticket_medio: tFTDs>0?tFtdTotal/tFTDs:0, depositos: tDep, deposit_count: tDepCount, deposito_ticket_medio: depTM, saques: tSaq, saque_ticket_medio: saqCount>0?tSaq/saqCount:0, ggr: tGGR, ggr_por_jogador: ggrPJ, wd_ratio: wdPct, pvi: calculaPVI(depTM, ggrPJ, wdPct), investimento: tInvest };
       }
 
-      setTotais(calcTotais(rowsVisiveis));
+      setTotais(calcTotais(rowsVisiveis, investimentoTotal));
 
       if (!historico && mesSelecionado) {
-        const { inicio: iA, fim: fA } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
-        let qA = supabase.from("influencer_metricas").select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug").gte("data", iA).lte("data", fA);
-        if (filtroInfluencer !== "todos") qA = qA.eq("influencer_id", filtroInfluencer);
-        if (operadoraFiltro !== "todas")  qA = qA.eq("operadora_slug", operadoraFiltro);
-        const { data: mA } = await qA;
+        const periodoAnt = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
+        const [investAnt, mA] = await Promise.all([
+          buscarInvestimentoPago(
+            { inicio: periodoAnt.inicio, fim: periodoAnt.fim },
+            {
+              influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
+              operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+            }
+          ),
+          (async () => {
+            let qA = supabase.from("influencer_metricas").select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug").gte("data", periodoAnt.inicio).lte("data", periodoAnt.fim);
+            if (filtroInfluencer !== "todos") qA = qA.eq("influencer_id", filtroInfluencer);
+            if (operadoraFiltro !== "todas")  qA = qA.eq("operadora_slug", operadoraFiltro);
+            const { data } = await qA;
+            return data || [];
+          })(),
+        ]);
         const mapaA = new Map<string, MetricaRow>();
-        (mA||[]).forEach((m: Record<string, unknown>) => {
+        (mA as Record<string, unknown>[]).forEach((m: Record<string, unknown>) => {
           const mid = m.influencer_id as string;
           if (!mapaA.has(mid)) mapaA.set(mid, { influencer_id: mid, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
           const r = mapaA.get(mid)!;
@@ -475,29 +495,18 @@ export default function DashboardFinanceiro() {
           r.withdrawal_count += (m.withdrawal_count as number)||0; r.withdrawal_total += (m.withdrawal_total as number)||0;
           r.ggr += (m.ggr as number)||0;
         });
-        let qLA = supabase.from("lives").select("id, influencer_id, data, operadora_slug").eq("status","realizada").gte("data",iA).lte("data",fA);
-        if (filtroInfluencer !== "todos") qLA = qLA.eq("influencer_id", filtroInfluencer);
-        if (operadoraFiltro !== "todas")  qLA = qLA.eq("operadora_slug", operadoraFiltro);
-        const { data: lA } = await qLA;
-        const livesAnt = lA||[];
-        const idsLA = livesAnt.map((l: { id: string }) => l.id);
-        let resA: { live_id: string; duracao_horas: number; duracao_min: number }[] = [];
-        if (idsLA.length > 0) { const { data: rA } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", idsLA); resA = rA||[]; }
-        const horasAnt = new Map<string, number>();
-        livesAnt.forEach((live: { influencer_id: string; id: string }) => { const res = resA.find((r) => r.live_id === live.id); if (res) { const h = (res.duracao_horas||0)+(res.duracao_min||0)/60; horasAnt.set(live.influencer_id, (horasAnt.get(live.influencer_id)||0)+h); } });
         const rowsAnt: FinanceiroRow[] = [];
         mapaA.forEach((data, id) => {
           const perfil = perfisLista.find((p) => p.id === id);
           if (!perfil) return;
-          const horas = horasAnt.get(id)||0;
-          const investimento = horas*(perfil.cache_hora||0);
+          const investimento = investAnt.porInfluencer[id] ?? 0;
           const deposito_ticket_medio = data.deposit_count>0?data.deposit_total/data.deposit_count:0;
           const ggr_por_jogador = data.ftd_count>0?data.ggr/data.ftd_count:0;
           const wd_ratio_pct = data.deposit_total>0?(data.withdrawal_total/data.deposit_total)*100:0;
           const pvi = calculaPVI(deposito_ticket_medio, ggr_por_jogador, wd_ratio_pct);
           rowsAnt.push({ influencer_id: id, nome: perfil.nome_artistico, investimento, ggr: data.ggr, roi: 0, ftds: data.ftd_count, ftd_total: data.ftd_total, ftd_ticket_medio: data.ftd_count>0?data.ftd_total/data.ftd_count:0, depositos: data.deposit_total, deposit_count: data.deposit_count, deposito_ticket_medio, saques: data.withdrawal_total, saque_ticket_medio: (data.withdrawal_count||0)>0?data.withdrawal_total/(data.withdrawal_count||1):0, ggr_por_jogador, wd_ratio: wd_ratio_pct, pvi, perfil_jogador: getPerfilJogador(pvi) });
         });
-        setTotaisAnt(calcTotais(rowsAnt.filter((r) => podeVerInfluencer(r.influencer_id))));
+        setTotaisAnt(calcTotais(rowsAnt.filter((r) => podeVerInfluencer(r.influencer_id)), investAnt.total));
       } else {
         setTotaisAnt({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
       }
