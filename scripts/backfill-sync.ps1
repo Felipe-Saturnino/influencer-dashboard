@@ -3,8 +3,8 @@
 # Variáveis: SUPABASE_SYNC_URL (ou SUPABASE_URL) e SUPABASE_ANON_KEY
 
 $base = if ($env:SUPABASE_SYNC_URL) { $env:SUPABASE_SYNC_URL }
-        elseif ($env:SUPABASE_URL) { $env:SUPABASE_URL.TrimEnd("/") + "/functions/v1/sync-metricas" }
-        elseif ($env:VITE_SUPABASE_URL) { $env:VITE_SUPABASE_URL.TrimEnd("/") + "/functions/v1/sync-metricas" }
+        elseif ($env:SUPABASE_URL) { $env:SUPABASE_URL.TrimEnd("/") + "/functions/v1/sync-metricas-cda" }
+        elseif ($env:VITE_SUPABASE_URL) { $env:VITE_SUPABASE_URL.TrimEnd("/") + "/functions/v1/sync-metricas-cda" }
         else { $null }
 $key = $env:SUPABASE_ANON_KEY ?? $env:VITE_SUPABASE_ANON_KEY
 

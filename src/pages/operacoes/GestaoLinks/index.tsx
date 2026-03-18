@@ -154,7 +154,7 @@ export default function GestaoLinks() {
         const dataInicio = (aliasSelecionado.primeiro_visto ?? "2025-12-01").split("T")[0];
         const dataFim = (aliasSelecionado.ultimo_visto ?? new Date().toISOString().split("T")[0]).split("T")[0];
         try {
-          await supabase.functions.invoke("sync-metricas", {
+          await supabase.functions.invoke("sync-metricas-cda", {
             body: { data_inicio: dataInicio, data_fim: dataFim, utm_source: aliasSelecionado.utm_source, skip_orfaos: true },
           });
         } catch (e) {

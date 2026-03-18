@@ -349,6 +349,7 @@ export default function DashboardOverviewInfluencer() {
           .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data")
           .gte("data", ini).lte("data", fim);
         if (infIdsQuery.length > 0) q = q.in("influencer_id", infIdsQuery);
+        if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
         const { data } = await q;
         return data || [];
       }

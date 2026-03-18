@@ -152,7 +152,7 @@ export default function StatusTecnico() {
       const dataInicio = "2025-12-01";
 
       // Usa supabase.functions.invoke — gerencia URL, CORS e auth automaticamente
-      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("sync-metricas", {
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("sync-metricas-cda", {
         body: { data_inicio: dataInicio, data_fim: dataFim },
       });
 
@@ -166,15 +166,15 @@ export default function StatusTecnico() {
 
       // invokeError = problema de rede ou função retornou 4xx/5xx
       if (invokeError) {
-        const msg = invokeError.message ?? "Erro ao chamar sync-metricas";
+        const msg = invokeError.message ?? "Erro ao chamar sync-metricas-cda";
         let texto = msg;
         if (msg.includes("Failed to fetch") || msg.includes("fetch")) {
           texto =
-            "Failed to fetch — a requisição não chegou ao servidor. Verifique: (1) VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env; (2) Edge Function sync-metricas implantada (supabase functions deploy sync-metricas); (3) CORS/firewall/rede.";
+            "Failed to fetch — a requisição não chegou ao servidor. Verifique: (1) VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env; (2) Edge Function sync-metricas-cda implantada (supabase functions deploy sync-metricas-cda); (3) CORS/firewall/rede.";
         } else if (msg.includes("401") || msg.includes("unauthorized")) {
-          texto = "Não autorizado. Verifique no Supabase se a Edge Function sync-metricas está implantada.";
+          texto = "Não autorizado. Verifique no Supabase se a Edge Function sync-metricas-cda está implantada.";
         } else if (msg.includes("404") || msg.includes("not found")) {
-          texto = "Edge Function sync-metricas não encontrada. Execute: supabase functions deploy sync-metricas";
+          texto = "Edge Function sync-metricas-cda não encontrada. Execute: supabase functions deploy sync-metricas-cda";
         }
         setSyncMensagem({ tipo: "erro", texto });
         setSyncExecutando(false);
@@ -205,7 +205,7 @@ export default function StatusTecnico() {
       let texto = msg;
       if (msg === "Failed to fetch") {
         texto =
-          "Failed to fetch — a requisição não chegou ao servidor. Verifique: (1) VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env; (2) Edge Function sync-metricas implantada (supabase functions deploy sync-metricas); (3) CORS/firewall/rede; (4) Abra o DevTools (F12) → Network para ver o erro exato.";
+          "Failed to fetch — a requisição não chegou ao servidor. Verifique: (1) VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env; (2) Edge Function sync-metricas-cda implantada (supabase functions deploy sync-metricas-cda); (3) CORS/firewall/rede; (4) Abra o DevTools (F12) → Network para ver o erro exato.";
       }
       setSyncMensagem({ tipo: "erro", texto });
     } finally {
@@ -377,7 +377,7 @@ export default function StatusTecnico() {
             Sync Métricas CDA
           </h2>
           <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: "0 0 16px" }}>
-            Sincroniza métricas da CDA (afiliados) para influencer_metricas e utm_aliases.
+            Sincroniza métricas da CDA (integração Casa de Apostas) para influencer_metricas e utm_aliases. Múltiplas UTMs por influencer são somadas.
           </p>
           <button onClick={executarSync} disabled={syncExecutando || !perm.canView} style={syncBtnStyle(syncExecutando)}>
             {syncExecutando ? "Sincronizando..." : "🔄 Executar Sync"}

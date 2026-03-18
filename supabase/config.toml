@@ -14,9 +14,9 @@ verify_jwt = false
 verify_jwt = false
 # Cria influencer a partir do Scout; usa service_role internamente
 
-[functions.sync-metricas]
+[functions.sync-metricas-cda]
 verify_jwt = false
-# Evita 401 do gateway; a função é chamada pelo app via supabase.functions.invoke
+# Integração CDA (Casa de Apostas): sync de métricas. Chamada pelo app e workflow diário.
 
 [functions.trigger-social-kpis]
 verify_jwt = false

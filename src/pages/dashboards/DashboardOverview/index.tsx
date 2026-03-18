@@ -510,9 +510,11 @@ export default function DashboardOverview() {
       setOperadoraInfMap(map);
 
       async function buscaMetricas(ini: string, fim: string, incluirAliases = false): Promise<Metrica[]> {
-        const { data } = await supabase.from("influencer_metricas")
+        let q = supabase.from("influencer_metricas")
           .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data")
           .gte("data", ini).lte("data", fim);
+        if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
+        const { data } = await q;
         const metricas = data || [];
         if (!incluirAliases) return metricas;
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
@@ -587,7 +589,9 @@ export default function DashboardOverview() {
 
       let metricas: Metrica[] = [], lives: LiveData[] = [], resultados: LiveResultado[] = [];
       if (historico) {
-        const { data: mAll } = await supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
+        let qM = supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
+        if (filtroOperadora !== "todas") qM = qM.eq("operadora_slug", filtroOperadora);
+        const { data: mAll } = await qM;
         let mRaw = mAll || [];
         const fimHoje = fmt(new Date());
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
