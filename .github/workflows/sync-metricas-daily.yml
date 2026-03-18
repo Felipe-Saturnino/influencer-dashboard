@@ -23,7 +23,7 @@ jobs:
           ONTEM=$(date -u -d "yesterday" +%Y-%m-%d)
           BODY="{\"data_inicio\":\"2025-12-01\",\"data_fim\":\"$ONTEM\",\"skip_orfaos\":false}"
           RES=$(curl -s -w "\n%{http_code}" -X POST \
-            "$SUPABASE_URL/functions/v1/sync-metricas" \
+            "$SUPABASE_URL/functions/v1/sync-metricas-cda" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
             -H "Content-Type: application/json" \
             -d "$BODY")

@@ -1,7 +1,7 @@
 /**
  * Métricas de utm_aliases como fallback quando influencer_metricas está vazio.
  * Permite que influencers com links mapeados na Gestão de Links apareçam nos
- * dashboards imediatamente, mesmo antes do sync-metricas rodar.
+ * dashboards imediatamente, mesmo antes do sync-metricas-cda rodar.
  */
 import { supabase } from "./supabase";
 

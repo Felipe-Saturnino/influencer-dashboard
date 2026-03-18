@@ -423,6 +423,7 @@ export default function DashboardConversao() {
         ? { inicio: "2020-01-01", fim: new Date().toISOString().split("T")[0] }
         : getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
       if (!historico && mesSelecionado) qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
+      if (filtroOperadora !== "todas") qMetricas = qMetricas.eq("operadora_slug", filtroOperadora);
       const { data: metricasData } = await qMetricas;
       let metricas = (metricasData || []) as { influencer_id: string; visit_count: number; registration_count: number; ftd_count: number }[];
       if (historico) {

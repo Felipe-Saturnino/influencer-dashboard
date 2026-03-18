@@ -9,7 +9,7 @@ Use para preencher `influencer_metricas` com dados de um período passado. Execu
 Substitua `SUPABASE_URL` e `SUPABASE_ANON_KEY` pelos valores do seu projeto (`.env` ou Supabase Dashboard):
 
 ```powershell
-$url = "$env:VITE_SUPABASE_URL/functions/v1/sync-metricas"
+$url = "$env:VITE_SUPABASE_URL/functions/v1/sync-metricas-cda"
 $key = $env:VITE_SUPABASE_ANON_KEY
 $body = @{
   data_inicio = "2025-12-01"
@@ -27,7 +27,7 @@ Invoke-RestMethod -Uri $url -Method Post -Headers @{
 
 ```powershell
 # Backfill de 2025-12-01 até ontem
-Invoke-RestMethod -Uri "https://SEU_PROJECT_REF.supabase.co/functions/v1/sync-metricas" -Method Post `
+Invoke-RestMethod -Uri "https://SEU_PROJECT_REF.supabase.co/functions/v1/sync-metricas-cda" -Method Post `
   -Headers @{
     "Authorization" = "Bearer SUA_ANON_KEY"
     "Content-Type" = "application/json"
@@ -41,7 +41,7 @@ Para rodar o backfill manualmente ou via **Agendador de Tarefas** (Task Schedule
 
 ```powershell
 # scripts/backfill-sync.ps1
-$url = $env:SUPABASE_SYNC_URL   # Ex: https://xxx.supabase.co/functions/v1/sync-metricas
+$url = $env:SUPABASE_SYNC_URL   # Ex: https://xxx.supabase.co/functions/v1/sync-metricas-cda
 $key = $env:SUPABASE_ANON_KEY
 
 $hoje = Get-Date
@@ -65,7 +65,7 @@ try {
 Defina as variáveis de ambiente antes de rodar:
 
 ```powershell
-$env:SUPABASE_SYNC_URL = "https://SEU_PROJECT_REF.supabase.co/functions/v1/sync-metricas"
+$env:SUPABASE_SYNC_URL = "https://SEU_PROJECT_REF.supabase.co/functions/v1/sync-metricas-cda"
 $env:SUPABASE_ANON_KEY = "sua-anon-key"
 .\scripts\backfill-sync.ps1
 ```
@@ -76,7 +76,7 @@ $env:SUPABASE_ANON_KEY = "sua-anon-key"
 
 ### Opção A: GitHub Actions (recomendado)
 
-O workflow `.github/workflows/sync-metricas-daily.yml` executa o sync diariamente às **4h (horário de Brasília)**.
+O workflow `.github/workflows/sync-metricas-cda-daily.yml` executa o sync diariamente às **4h (horário de Brasília)**.
 
 **Configuração:**
 
@@ -85,7 +85,7 @@ O workflow `.github/workflows/sync-metricas-daily.yml` executa o sync diariament
    - `SUPABASE_URL`: `https://SEU_PROJECT_REF.supabase.co`
    - `SUPABASE_ANON_KEY`: sua anon key (ou `SUPABASE_SERVICE_ROLE_KEY` se preferir)
 
-O workflow usa `SUPABASE_URL` + `/functions/v1/sync-metricas` para chamar a Edge Function.
+O workflow usa `SUPABASE_URL` + `/functions/v1/sync-metricas-cda` para chamar a Edge Function.
 
 ### Opção B: Agendador de Tarefas (Windows)
 
