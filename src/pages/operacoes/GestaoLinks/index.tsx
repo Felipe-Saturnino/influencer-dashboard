@@ -37,7 +37,9 @@ function fmtData(iso: string): string {
 }
 
 interface InfluencerOpcao { id: string; nome_artistico: string; status: string; }
+interface CampanhaOpcao { id: string; nome: string; ativo: boolean; }
 type Aba = "pendentes" | "mapeados" | "ignorados";
+type TipoMapeamento = "influencer" | "campanha";
 
 export default function GestaoLinks() {
   const { theme, user, podeVerInfluencer } = useApp();
@@ -46,7 +48,10 @@ export default function GestaoLinks() {
 
   const podeMapearAlias   = () => perm.canEditarOk;
   const podeReativarAlias = (alias: UtmAlias) =>
-    perm.canEditarOk && (perm.canEditar !== "proprios" || !alias.influencer_id || podeVerInfluencer(alias.influencer_id));
+    perm.canEditarOk && (
+      perm.canEditar !== "proprios" ||
+      (alias.campanha_id ? true : !alias.influencer_id || podeVerInfluencer(alias.influencer_id!))
+    );
 
   const [aba, setAba] = useState<Aba>("pendentes");
   const [operadoraFiltro, setOperadoraFiltro] = useState("todas");
@@ -57,6 +62,9 @@ export default function GestaoLinks() {
   const [modalAberto, setModalAberto] = useState(false);
   const [aliasSelecionado, setAliasSelecionado] = useState<UtmAlias | null>(null);
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
+  const [campanhaSelecionada, setCampanhaSelecionada] = useState("");
+  const [tipoMapeamento, setTipoMapeamento] = useState<TipoMapeamento>("influencer");
+  const [campanhas, setCampanhas] = useState<CampanhaOpcao[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erroModal, setErroModal] = useState<string | null>(null);
 
@@ -83,6 +91,7 @@ export default function GestaoLinks() {
   useEffect(() => { carregar(); }, [carregar]);
   useEffect(() => { supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => setOperadorasList(data ?? [])); }, []);
   useEffect(() => { supabase.from("influencer_perfil").select("id, nome_artistico, status").order("nome_artistico").then(({ data }) => setInfluencers(data ?? [])); }, []);
+  useEffect(() => { supabase.from("campanhas").select("id, nome, ativo").eq("ativo", true).order("nome").then(({ data }) => setCampanhas(data ?? [])); }, []);
 
   const [totalPendentes, setTotalPendentes] = useState(0);
   useEffect(() => {
@@ -91,7 +100,14 @@ export default function GestaoLinks() {
     q.then(({ count }) => setTotalPendentes(count ?? 0));
   }, [aliases, operadoraFiltro]);
 
-  function abrirModal(alias: UtmAlias) { setAliasSelecionado(alias); setInfluencerSelecionado(""); setErroModal(null); setModalAberto(true); }
+  function abrirModal(alias: UtmAlias) {
+    setAliasSelecionado(alias);
+    setInfluencerSelecionado("");
+    setCampanhaSelecionada("");
+    setTipoMapeamento("influencer");
+    setErroModal(null);
+    setModalAberto(true);
+  }
 
   async function confirmarMapeamento() {
     if (!aliasSelecionado || !influencerSelecionado) return;
@@ -136,7 +152,14 @@ export default function GestaoLinks() {
   }
 
   async function reativar(alias: UtmAlias) {
-    const { error } = await supabase.from("utm_aliases").update({ status: "pendente", influencer_id: null, mapeado_por: null, mapeado_em: null, atualizado_em: new Date().toISOString() }).eq("id", alias.id);
+    const { error } = await supabase.from("utm_aliases").update({
+      status: "pendente",
+      influencer_id: null,
+      campanha_id: null,
+      mapeado_por: null,
+      mapeado_em: null,
+      atualizado_em: new Date().toISOString(),
+    }).eq("id", alias.id);
     if (!error) carregar();
   }
 
@@ -268,7 +291,7 @@ export default function GestaoLinks() {
                 <th style={{ ...th, textAlign: "right" }}>FTDs</th>
                 <th style={{ ...th, textAlign: "right" }}>Depósitos</th>
                 <th style={{ ...th, textAlign: "right" }}>GGR</th>
-                {aba === "mapeados" && <th style={th}>Influencer</th>}
+                {aba === "mapeados" && <th style={th}>Influencer / Campanha</th>}
                 <th style={th}>Ações</th>
               </tr>
             </thead>
@@ -302,7 +325,11 @@ export default function GestaoLinks() {
                     <td style={{ ...td, textAlign: "right" }}>
                       <span style={ggr >= 0 ? { color: BRAND.verde, fontWeight: 600 } : { color: BRAND.vermelho, fontWeight: 600 }}>{fmt(ggr)}</span>
                     </td>
-                    {aba === "mapeados" && <td style={td}>{alias.influencer_name ?? "—"}</td>}
+                    {aba === "mapeados" && (
+                      <td style={td}>
+                        {alias.influencer_id ? (alias.influencer_name ?? "—") : (alias.campanha_nome ?? "—")}
+                      </td>
+                    )}
                     <td style={td}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                         {aba === "pendentes" && podeMapearAlias() && (
@@ -347,7 +374,7 @@ export default function GestaoLinks() {
               </button>
             </div>
             <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 22, fontFamily: FONT.body }}>
-              Associe o UTM <strong style={{ color: BRAND.roxoVivo }}>{aliasSelecionado.utm_source}</strong> ao influencer correto.
+              Associe o UTM <strong style={{ color: BRAND.roxoVivo }}>{aliasSelecionado.utm_source}</strong> a um influencer ou campanha.
             </p>
 
             <div style={{ background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
@@ -363,14 +390,56 @@ export default function GestaoLinks() {
               ))}
             </div>
 
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>Influencer</label>
-            <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
-              style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
-              <option value="">Selecione o influencer...</option>
-              {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers).map((inf) => (
-                <option key={inf.id} value={inf.id}>{inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}</option>
-              ))}
-            </select>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <button
+                type="button"
+                onClick={() => { setTipoMapeamento("influencer"); setCampanhaSelecionada(""); }}
+                style={{
+                  flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "influencer" ? BRAND.roxoVivo : theme.cardBorder}`,
+                  background: tipoMapeamento === "influencer" ? `${BRAND.roxoVivo}22` : "transparent",
+                  color: tipoMapeamento === "influencer" ? BRAND.roxoVivo : theme.textMuted,
+                  fontSize: 13, fontWeight: tipoMapeamento === "influencer" ? 700 : 400, fontFamily: FONT.body, cursor: "pointer",
+                }}
+              >
+                Influencer
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTipoMapeamento("campanha"); setInfluencerSelecionado(""); }}
+                style={{
+                  flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "campanha" ? BRAND.roxoVivo : theme.cardBorder}`,
+                  background: tipoMapeamento === "campanha" ? `${BRAND.roxoVivo}22` : "transparent",
+                  color: tipoMapeamento === "campanha" ? BRAND.roxoVivo : theme.textMuted,
+                  fontSize: 13, fontWeight: tipoMapeamento === "campanha" ? 700 : 400, fontFamily: FONT.body, cursor: "pointer",
+                }}
+              >
+                Campanha
+              </button>
+            </div>
+
+            {tipoMapeamento === "influencer" ? (
+              <>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>Influencer</label>
+                <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
+                  <option value="">Selecione o influencer...</option>
+                  {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers).map((inf) => (
+                    <option key={inf.id} value={inf.id}>{inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}</option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>Campanha</label>
+                <select value={campanhaSelecionada} onChange={(e) => setCampanhaSelecionada(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
+                  <option value="">Selecione a campanha...</option>
+                  {campanhas.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </>
+            )}
 
             {erroModal && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: BRAND.vermelho, marginBottom: 16, fontFamily: FONT.body }}>
@@ -383,8 +452,8 @@ export default function GestaoLinks() {
                 style={{ padding: "9px 20px", background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 13, fontFamily: FONT.body, cursor: "pointer" }}>
                 Cancelar
               </button>
-              <button onClick={confirmarMapeamento} disabled={!influencerSelecionado || salvando}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: influencerSelecionado && !salvando ? "pointer" : "not-allowed", opacity: influencerSelecionado && !salvando ? 1 : 0.5 }}>
+              <button onClick={confirmarMapeamento} disabled={(tipoMapeamento === "influencer" ? !influencerSelecionado : !campanhaSelecionada) || salvando}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? "pointer" : "not-allowed", opacity: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? 1 : 0.5 }}>
                 <Link2 size={13} />{salvando ? "Salvando..." : "Confirmar mapeamento"}
               </button>
             </div>

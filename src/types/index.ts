@@ -18,6 +18,7 @@ export type PageKey =
   | "dash_conversao"
   | "dash_financeiro"
   | "mesas_spin"
+  | "dash_midias_sociais"
   | "agenda"
   | "resultados"
   | "feedback"
@@ -25,6 +26,7 @@ export type PageKey =
   | "scout"
   | "financeiro"
   | "gestao_links"
+  | "campanhas"
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
   | "gestao_dealers"
@@ -94,6 +96,16 @@ export interface Pagamento {
   criado_em?:       string;
 }
 
+// ─── CAMPANHA ─────────────────────────────────────────────────────────────────
+export interface Campanha {
+  id:              string;
+  nome:            string;
+  operadora_slug?: string | null;
+  ativo:           boolean;
+  created_at?:     string;
+  updated_at?:     string;
+}
+
 // ─── UTM ALIAS ───────────────────────────────────────────────────────────────
 export type UtmAliasStatus = "pendente" | "mapeado" | "ignorado";
 
@@ -102,7 +114,9 @@ export interface UtmAlias {
   utm_source:       string;
   operadora_slug?:  string;
   influencer_id:    string | null;
+  campanha_id:      string | null;
   influencer_name?: string;
+  campanha_nome?:   string;
   status:           UtmAliasStatus;
   primeiro_visto:   string;
   ultimo_visto:     string;
