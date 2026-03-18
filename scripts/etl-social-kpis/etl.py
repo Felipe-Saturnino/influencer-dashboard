@@ -133,11 +133,11 @@ def fetch_instagram():
     page_resp.raise_for_status()
     ig_id = page_resp.json()["instagram_business_account"]["id"]
 
-    # Métricas: impressions, reach, follower_count (profile_views pode estar depreciado)
+    # Métricas válidas (impressions foi depreciado; usar reach, follower_count, profile_views, views)
     insights_resp = requests.get(
         f"{base}/{ig_id}/insights",
         params={
-            "metric": "impressions,reach,follower_count",
+            "metric": "reach,follower_count,profile_views,views",
             "period": "day",
             "since": ins_since,
             "until": ins_until,
@@ -195,13 +195,13 @@ def fetch_instagram():
         )
 
     followers = metrics.get("follower_count", 0)
-    impressions = metrics.get("impressions", 1) or 1
+    impressions = metrics.get("views", metrics.get("impressions", 1)) or 1
 
     kpi_row = {
         "channel": "instagram",
         "date": TARGET_DATE.isoformat(),
         "followers": followers,
-        "impressions": metrics.get("impressions"),
+        "impressions": metrics.get("views", metrics.get("impressions")),
         "reach": metrics.get("reach"),
         "engagements": total_engagements,
         "engagement_rate": round(total_engagements / impressions, 4),
@@ -233,10 +233,11 @@ def fetch_facebook():
     since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
     until = since + 86400
 
+    # Métricas: page_media_view (substitui page_impressions), page_fans, page_engaged_users
     ins_resp = requests.get(
         f"{base}/{META_PAGE_ID}/insights",
         params={
-            "metric": "page_impressions,page_reach,page_engaged_users,page_fans",
+            "metric": "page_media_view,page_fans,page_engaged_users",
             "period": "day",
             "since": ins_since,
             "until": ins_until,
@@ -311,12 +312,12 @@ def fetch_facebook():
             }
         )
 
-    impressions = metrics.get("page_impressions", 1) or 1
+    impressions = metrics.get("page_media_view", metrics.get("page_impressions", 1)) or 1
     kpi_row = {
         "channel": "facebook",
         "date": TARGET_DATE.isoformat(),
         "followers": metrics.get("page_fans"),
-        "impressions": metrics.get("page_impressions"),
+        "impressions": metrics.get("page_media_view", metrics.get("page_impressions")),
         "reach": metrics.get("page_reach"),
         "engagements": metrics.get("page_engaged_users"),
         "engagement_rate": round(metrics.get("page_engaged_users", 0) / impressions, 4),
@@ -409,11 +410,11 @@ def fetch_youtube():
                     "type": vtype,
                     "views": int(s.get("viewCount", 0)),
                     "watch_time_min": int(watch_min) if len(video_ids) == 1 else None,
-                    "avg_view_pct": float(avg_view_pct) if len(video_ids) == 1 else None,
+                    "avg_view_pct": float(avg_view_pct) if len(video_ids) == 1 and avg_view_pct is not None else None,
                     "likes": int(s.get("likeCount", 0)),
                     "comments": int(s.get("commentCount", 0)),
                     "impressions": int(impressions) if impressions is not None and len(video_ids) == 1 else None,
-                    "ctr": float(ctr) if len(video_ids) == 1 else None,
+                    "ctr": float(ctr) if len(video_ids) == 1 and ctr is not None else None,
                     "subscribers_gained": int(subs_gained) if len(video_ids) == 1 else None,
                 }
             )
