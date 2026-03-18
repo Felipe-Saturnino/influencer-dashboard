@@ -75,7 +75,7 @@ const S = {
     borderRadius: 14,
     padding: "10px 20px",
     marginBottom: 14,
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
   },
   navBtn: (disabled: boolean) =>
     ({
@@ -96,7 +96,7 @@ const S = {
     fontSize: 18,
     fontWeight: 800,
     minWidth: 180,
-    textAlign: "center",
+    textAlign: "center" as const,
     color: "#f0eefc",
   },
   pill: (active: boolean) =>
@@ -473,13 +473,13 @@ export default function SocialMediaDashboard() {
         upload: "Upload",
       };
       const formatoCount: Record<string, number> = {};
-      const unificar = (
-        arr: typeof ig | typeof fb | typeof yt,
+      const unificar = <T extends { date: string; type: string }>(
+        arr: T[],
         canal: string,
         cor: string,
         tag: string,
-        getResumo: (r: (typeof arr)[0]) => string,
-        getStats: (r: (typeof arr)[0]) => string[]
+        getResumo: (r: T) => string,
+        getStats: (r: T) => string[]
       ): PostUnificado[] =>
         arr.map((r) => {
           const tipo = tipoMap[r.type] ?? r.type ?? "Post";
@@ -499,7 +499,7 @@ export default function SocialMediaDashboard() {
         ...unificar(ig, "Instagram", "#E1306C", "IG", (r) => (r.caption ?? "").slice(0, 80), (r) => [
           `♥ ${fmtNum(r.likes)}`,
           `💬 ${fmtNum(r.comments)}`,
-          r.saves ? `🔖 ${fmtNum(r.saves)}` : "",
+          r.saves != null ? `🔖 ${fmtNum(r.saves)}` : "",
         ].filter(Boolean)),
         ...unificar(fb, "Facebook", "#1877F2", "FB", (r) => (r.message ?? "").slice(0, 80), (r) => [
           `♥ ${fmtNum(r.reactions)}`,
