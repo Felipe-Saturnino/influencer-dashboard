@@ -155,11 +155,17 @@ alter table youtube_videos   enable row level security;
 alter table linkedin_posts   enable row level security;
 alter table pipeline_runs    enable row level security;
 
+drop policy if exists "read_only" on kpi_daily;
 create policy "read_only" on kpi_daily        for select using (true);
+drop policy if exists "read_only" on instagram_posts;
 create policy "read_only" on instagram_posts  for select using (true);
+drop policy if exists "read_only" on facebook_posts;
 create policy "read_only" on facebook_posts   for select using (true);
+drop policy if exists "read_only" on youtube_videos;
 create policy "read_only" on youtube_videos   for select using (true);
+drop policy if exists "read_only" on linkedin_posts;
 create policy "read_only" on linkedin_posts   for select using (true);
+drop policy if exists "read_only" on pipeline_runs;
 create policy "read_only" on pipeline_runs    for select using (true);
 
 -- Apenas service_role (usado pelo ETL) pode inserir/atualizar
