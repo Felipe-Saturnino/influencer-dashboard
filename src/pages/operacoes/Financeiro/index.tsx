@@ -294,15 +294,34 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   }, []);
 
   async function carregarLives() {
-    const { data } = await supabase
+    let query = supabase
       .from("lives")
-      .select("id, data, plataforma, live_resultados(duracao_horas, duracao_min)")
+      .select("id, data, plataforma")
       .eq("influencer_id", row.influencer_id)
       .eq("status", "realizada")
       .gte("data", ciclo.data_inicio)
       .lte("data", ciclo.data_fim)
       .order("data", { ascending: false });
-    setLives(data ?? []);
+    if (row.operadora_slug) {
+      query = query.eq("operadora_slug", row.operadora_slug);
+    }
+    const { data: livesData } = await query;
+    const livesList = livesData ?? [];
+    if (livesList.length === 0) { setLives([]); return; }
+    const liveIds = livesList.map((l: any) => l.id);
+    const { data: resData } = await supabase
+      .from("live_resultados")
+      .select("live_id, duracao_horas, duracao_min")
+      .in("live_id", liveIds);
+    const resultadosMap = new Map<string, { duracao_horas: number; duracao_min: number }>();
+    for (const r of (resData ?? []) as { live_id: string; duracao_horas: number; duracao_min: number }[]) {
+      resultadosMap.set(String(r.live_id), { duracao_horas: r.duracao_horas ?? 0, duracao_min: r.duracao_min ?? 0 });
+    }
+    const merged = livesList.map((l: any) => ({
+      ...l,
+      _resultado: resultadosMap.get(String(l.id)),
+    }));
+    setLives(merged);
   }
 
   async function handleConfirm() {
@@ -378,8 +397,8 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
             Lives no período
           </div>
           {lives.map((l: any) => {
-            const r = l.live_resultados?.[0];
-            const h = r ? r.duracao_horas + r.duracao_min / 60 : 0;
+            const r = l._resultado;
+            const h = r ? (r.duracao_horas ?? 0) + (r.duracao_min ?? 0) / 60 : 0;
             return (
               <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${t.divider}`, fontSize: "12px" }}>
                 <span style={{ color: t.text }}>{l.data} · {l.plataforma}</span>
