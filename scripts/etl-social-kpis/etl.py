@@ -34,6 +34,8 @@ LINKEDIN_TOKEN = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
 LINKEDIN_ORG_ID = os.environ.get("LINKEDIN_ORG_ID", "")
 
 TARGET_DATE = date.today() - timedelta(days=1)
+# Meta e Instagram têm delay de 24-48h nos insights; usar D-2 aumenta chance de dados disponíveis
+INSIGHTS_DATE = date.today() - timedelta(days=2)
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
@@ -41,6 +43,14 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and
 # ------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------
+def _log_api_error(resp: requests.Response, context: str = ""):
+    """Loga o corpo da resposta quando a API retorna erro."""
+    try:
+        body = resp.json()
+        err_msg = body.get("error", body).get("message", str(body)) if isinstance(body.get("error"), dict) else str(body)
+        log.error("%s API erro %s: %s", context, resp.status_code, err_msg)
+    except Exception:
+        log.error("%s API erro %s: %s", context, resp.status_code, resp.text[:500])
 def _parse_iso_duration_seconds(duration: str) -> int:
     """Converte duração ISO 8601 (PT1M30S, PT45S, PT2H) para segundos."""
     m = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)
@@ -110,6 +120,9 @@ def fetch_instagram():
     log.info("Instagram — iniciando coleta para %s", TARGET_DATE)
 
     base = "https://graph.facebook.com/v19.0"
+    # Insights têm delay de 24-48h; usar INSIGHTS_DATE
+    ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
+    ins_until = ins_since + 86400
     since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
     until = since + 86400
 
@@ -120,17 +133,20 @@ def fetch_instagram():
     page_resp.raise_for_status()
     ig_id = page_resp.json()["instagram_business_account"]["id"]
 
+    # Métricas: impressions, reach, follower_count (profile_views pode estar depreciado)
     insights_resp = requests.get(
         f"{base}/{ig_id}/insights",
         params={
-            "metric": "impressions,reach,follower_count,profile_views",
+            "metric": "impressions,reach,follower_count",
             "period": "day",
-            "since": since,
-            "until": until,
+            "since": ins_since,
+            "until": ins_until,
             "access_token": META_TOKEN,
         },
     )
-    insights_resp.raise_for_status()
+    if insights_resp.status_code != 200:
+        _log_api_error(insights_resp, "Instagram insights")
+        insights_resp.raise_for_status()
     metrics = {m["name"]: m["values"][0]["value"] for m in insights_resp.json().get("data", [])}
 
     media_resp = requests.get(
@@ -212,6 +228,8 @@ def fetch_facebook():
     log.info("Facebook — iniciando coleta para %s", TARGET_DATE)
 
     base = "https://graph.facebook.com/v19.0"
+    ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
+    ins_until = ins_since + 86400
     since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
     until = since + 86400
 
@@ -220,12 +238,14 @@ def fetch_facebook():
         params={
             "metric": "page_impressions,page_reach,page_engaged_users,page_fans",
             "period": "day",
-            "since": since,
-            "until": until,
+            "since": ins_since,
+            "until": ins_until,
             "access_token": META_TOKEN,
         },
     )
-    ins_resp.raise_for_status()
+    if ins_resp.status_code != 200:
+        _log_api_error(ins_resp, "Facebook insights")
+        ins_resp.raise_for_status()
     metrics = {m["name"]: m["values"][0]["value"] for m in ins_resp.json().get("data", [])}
 
     posts_resp = requests.get(
@@ -328,6 +348,7 @@ def fetch_youtube():
     headers = {"Authorization": f"Bearer {get_youtube_token()}"}
     date_str = TARGET_DATE.isoformat()
 
+    # YouTube Analytics API exige dimensions para reports; day + métricas básicas
     ana_resp = requests.get(
         f"{ana_base}/reports",
         headers=headers,
@@ -335,13 +356,22 @@ def fetch_youtube():
             "ids": f"channel=={YOUTUBE_CHANNEL_ID}",
             "startDate": date_str,
             "endDate": date_str,
-            "metrics": "views,estimatedMinutesWatched,averageViewPercentage,likes,comments,shares,subscribersGained,impressions,impressionClickThroughRate",
+            "dimensions": "day",
+            "metrics": "views,estimatedMinutesWatched,likes,comments,subscribersGained",
         },
     )
-    ana_resp.raise_for_status()
+    if ana_resp.status_code != 200:
+        _log_api_error(ana_resp, "YouTube Analytics")
+        ana_resp.raise_for_status()
     rows = ana_resp.json().get("rows", [[]])
-    row = rows[0] if rows else [0] * 9
-    (views, watch_min, avg_view_pct, likes, comments, shares, subs_gained, impressions, ctr) = row
+    # Com dimensions=day: cada row = [date, views, watch_min, likes, comments, subs_gained]
+    row = rows[0] if rows else ["", 0, 0, 0, 0, 0]
+    if len(row) >= 6:
+        views, watch_min, likes, comments, subs_gained = row[1], row[2], row[3], row[4], row[5]
+    else:
+        views = watch_min = likes = comments = subs_gained = 0
+    avg_view_pct = impressions = ctr = None
+    shares = 0
 
     search_resp = requests.get(
         f"{base}/search",
@@ -382,7 +412,7 @@ def fetch_youtube():
                     "avg_view_pct": float(avg_view_pct) if len(video_ids) == 1 else None,
                     "likes": int(s.get("likeCount", 0)),
                     "comments": int(s.get("commentCount", 0)),
-                    "impressions": int(impressions) if len(video_ids) == 1 else None,
+                    "impressions": int(impressions) if impressions is not None and len(video_ids) == 1 else None,
                     "ctr": float(ctr) if len(video_ids) == 1 else None,
                     "subscribers_gained": int(subs_gained) if len(video_ids) == 1 else None,
                 }
@@ -391,7 +421,7 @@ def fetch_youtube():
     kpi_row = {
         "channel": "youtube",
         "date": date_str,
-        "impressions": int(impressions),
+        "impressions": int(impressions or 0),
         "video_views": int(views),
         "engagements": int(likes) + int(comments) + int(shares),
         "engagement_rate": round((int(likes) + int(comments)) / max(int(views), 1), 4),

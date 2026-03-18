@@ -10,6 +10,9 @@ build/
 .env.local
 .env.*.local
 
+# OAuth / Google (client secret — não versionar)
+client_secret*.json
+
 # Logs
 *.log
 npm-debug.log*
