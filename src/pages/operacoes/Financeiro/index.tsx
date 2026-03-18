@@ -306,6 +306,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   }
 
   async function handleConfirm() {
+    console.log("[ModalAnalisar] handleConfirm chamado", { id: row.id, valorNum, valor });
     setError("");
     setSaving(true);
     try {
@@ -319,6 +320,14 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
       setSaving(false);
     }
   }
+  const handleConfirmClick = () => {
+    if (valorNum <= 0) {
+      alert("Valor deve ser maior que zero. Valor atual: " + valor);
+      return;
+    }
+    alert("Clicou! ID: " + row.id + " — verifique o Console (F12) para ver o resultado.");
+    handleConfirm();
+  };
 
   const rowStyle: React.CSSProperties = {
     display: "flex", justifyContent: "space-between",
@@ -423,8 +432,8 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
         </button>
         <button
           type="button"
-          onClick={handleConfirm}
-          disabled={saving || valorNum <= 0}
+          onClick={handleConfirmClick}
+          disabled={saving}
           style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || valorNum <= 0) ? "not-allowed" : "pointer", opacity: (saving || valorNum <= 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
         >
           {saving ? "⏳ Salvando..." : "✅ Aprovar valor"}
