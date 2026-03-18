@@ -296,7 +296,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   async function carregarLives() {
     const { data } = await supabase
       .from("lives")
-      .select("id, titulo, data, plataforma, live_resultados(duracao_horas, duracao_min)")
+      .select("id, data, plataforma, live_resultados(duracao_horas, duracao_min)")
       .eq("influencer_id", row.influencer_id)
       .eq("status", "realizada")
       .gte("data", ciclo.data_inicio)
@@ -306,7 +306,6 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   }
 
   async function handleConfirm() {
-    console.log("[ModalAnalisar] handleConfirm chamado", { id: row.id, valorNum, valor });
     setError("");
     setSaving(true);
     try {
@@ -325,7 +324,6 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
       alert("Valor deve ser maior que zero. Valor atual: " + valor);
       return;
     }
-    alert("Clicou! ID: " + row.id + " — verifique o Console (F12) para ver o resultado.");
     handleConfirm();
   };
 
@@ -1004,7 +1002,6 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
     const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
-    console.log("[handleAprovar]", { id, tb, data, error, dataLength: data?.length });
     if (error) throw new Error(error.message);
     if (!data || data.length === 0) {
       throw new Error("Nenhum registro atualizado (0 linhas). O ID existe na tabela " + tb + "? Confira no Supabase Table Editor.");
