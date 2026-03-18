@@ -1019,20 +1019,45 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (String(id).startsWith("preview_")) {
       throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período. Não é possível aprovar a prévia.");
     }
-    const { data: fnData, error: fnError } = await supabase.functions.invoke("aprovar-pagamento", {
-      body: { action: "aprovar", id, total: novoTotal, isAgente: isAgente ?? false },
+    const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
+
+    let ok = false;
+    const { data: rpcData, error: rpcError } = await supabase.rpc("aprovar_pagamento", {
+      p_id: id,
+      p_total: novoTotal,
+      p_is_agente: isAgente ?? false,
     });
-    if (fnError) {
-      const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
+    console.log("[handleAprovar] RPC response:", { rpcData, rpcError });
+    if (rpcError) {
+      throw new Error(rpcError.message ?? "RPC falhou: " + JSON.stringify(rpcError));
+    }
+    if (rpcData && typeof rpcData === "object") {
+      const res = rpcData as { ok?: boolean; error?: string };
+      if (res.ok === true) ok = true;
+      else if (res.ok === false) throw new Error(res.error ?? "Erro ao aprovar.");
+    }
+
+    if (!ok) {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("aprovar-pagamento", {
+        body: { action: "aprovar", id, total: novoTotal, isAgente: isAgente ?? false },
+      });
+      if (!fnError && fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === true) {
+        ok = true;
+      } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
+        throw new Error((fnData as { error?: string }).error ?? "Erro ao aprovar.");
+      }
+    }
+
+    if (!ok) {
       const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) {
-        throw new Error("Edge Function aprovar-pagamento falhou. Execute: supabase functions deploy aprovar-pagamento");
+        throw new Error("Não foi possível aprovar. Confira: (1) RPC aprovar_pagamento existe no Supabase? Execute docs/fix-financeiro-rpc-aprovar.sql. (2) Edge Function: supabase functions deploy aprovar-pagamento");
       }
-    } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
-      throw new Error((fnData as { error?: string }).error ?? "Erro ao aprovar.");
     }
+
     setModalAnalisar(null);
+    await new Promise(r => setTimeout(r, 100));
     if (ciclo) await carregarDados(ciclo);
   }
 
@@ -1040,20 +1065,43 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (String(id).startsWith("preview_")) {
       throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período.");
     }
-    const { data: fnData, error: fnError } = await supabase.functions.invoke("aprovar-pagamento", {
-      body: { action: "registrar", id, isAgente: isAgente ?? false },
+    const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
+
+    let ok = false;
+    const { data: rpcData, error: rpcError } = await supabase.rpc("registrar_pagamento", {
+      p_id: id,
+      p_is_agente: isAgente ?? false,
     });
-    if (fnError) {
-      const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
+    if (rpcError) {
+      throw new Error(rpcError.message ?? "RPC falhou: " + JSON.stringify(rpcError));
+    }
+    if (rpcData && typeof rpcData === "object") {
+      const res = rpcData as { ok?: boolean; error?: string };
+      if (res.ok === true) ok = true;
+      else if (res.ok === false) throw new Error(res.error ?? "Erro ao registrar pagamento.");
+    }
+
+    if (!ok) {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("aprovar-pagamento", {
+        body: { action: "registrar", id, isAgente: isAgente ?? false },
+      });
+      if (!fnError && fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === true) {
+        ok = true;
+      } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
+        throw new Error((fnData as { error?: string }).error ?? "Erro ao registrar pagamento.");
+      }
+    }
+
+    if (!ok) {
       const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) {
-        throw new Error("Edge Function aprovar-pagamento falhou. Execute: supabase functions deploy aprovar-pagamento");
+        throw new Error("Não foi possível registrar pagamento. Execute docs/fix-financeiro-rpc-aprovar.sql no Supabase.");
       }
-    } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
-      throw new Error((fnData as { error?: string }).error ?? "Erro ao registrar pagamento.");
     }
+
     setModalPagar(null);
+    await new Promise(r => setTimeout(r, 100));
     if (ciclo) await carregarDados(ciclo);
   }
 
