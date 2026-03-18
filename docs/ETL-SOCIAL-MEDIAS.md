@@ -31,6 +31,7 @@ $env:SUPABASE_SERVICE_KEY = "sua-service-role-key"
 # Opcional: só as plataformas que deseja coletar
 $env:META_ACCESS_TOKEN = "..."      # Instagram + Facebook
 $env:META_PAGE_ID = "..."          # ID da página do Facebook
+$env:META_IG_ACCOUNT_ID = "..."    # (opcional) ID da conta Instagram Business
 $env:YOUTUBE_CLIENT_ID = "..."
 $env:YOUTUBE_CLIENT_SECRET = "..."
 $env:YOUTUBE_REFRESH_TOKEN = "..."
@@ -54,7 +55,8 @@ Configure os **Secrets** em: Repositório → Settings → Secrets and variables
 | `SUPABASE_URL` | ✅ | URL do projeto Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Chave `service_role` (Dashboard → Settings → API) |
 | `META_ACCESS_TOKEN` | Para IG/FB | Token de longa duração da Meta |
-| `META_PAGE_ID` | Para IG/FB | ID da página vinculada ao Instagram Business |
+| `META_PAGE_ID` | Para IG/FB | ID da página do Facebook |
+| `META_IG_ACCOUNT_ID` | Para IG (opcional) | ID direto da conta Instagram Business (evita lookup via Page) |
 | `YOUTUBE_CLIENT_ID` | Para YT | OAuth 2.0 Client ID |
 | `YOUTUBE_CLIENT_SECRET` | Para YT | OAuth 2.0 Client Secret |
 | `YOUTUBE_REFRESH_TOKEN` | Para YT | Refresh token obtido no fluxo OAuth |
@@ -84,6 +86,10 @@ Também é possível rodar manualmente em: Actions → Sync Social Media KPIs (6
 3. Vincule a conta do Instagram Business à página.
 4. Gere um **Page Access Token** de longa duração (60 dias).
 5. Permissões necessárias: `pages_read_engagement`, `pages_show_list`, `instagram_basic`, `instagram_manage_insights`.
+
+**Token expirado?** Se aparecer `Session has expired` ou `Token expirado`, gere um novo Page Access Token em Meta for Developers → Seu App → Ferramentas → Graph API Explorer. Atualize o secret `META_ACCESS_TOKEN` no GitHub.
+
+**Instagram retorna 400 na Page lookup?** Se a Página não tiver Instagram vinculada, use o secret opcional `META_IG_ACCOUNT_ID` com o ID direto da conta Instagram Business.
 
 ### YouTube
 

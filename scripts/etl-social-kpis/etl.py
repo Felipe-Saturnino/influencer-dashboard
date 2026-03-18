@@ -24,6 +24,8 @@ SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", os.environ.get("SUPABASE_S
 
 META_TOKEN = os.environ.get("META_ACCESS_TOKEN", "")
 META_PAGE_ID = os.environ.get("META_PAGE_ID", "")
+# Opcional: ID direto da conta Instagram Business (evita lookup via Page quando não vinculada)
+META_IG_ACCOUNT_ID = os.environ.get("META_IG_ACCOUNT_ID", "")
 
 YOUTUBE_CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID", "")
 YOUTUBE_CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET", "")
@@ -47,10 +49,16 @@ def _log_api_error(resp: requests.Response, context: str = ""):
     """Loga o corpo da resposta quando a API retorna erro."""
     try:
         body = resp.json()
-        err_msg = body.get("error", body).get("message", str(body)) if isinstance(body.get("error"), dict) else str(body)
+        err = body.get("error", {}) if isinstance(body.get("error"), dict) else {}
+        err_msg = err.get("message", str(body))
         log.error("%s API erro %s: %s", context, resp.status_code, err_msg)
+        if "expired" in err_msg.lower() or "session" in err_msg.lower():
+            log.error("Meta — Token expirado. Gere novo Page Access Token em Meta for Developers.")
     except Exception:
-        log.error("%s API erro %s: %s", context, resp.status_code, resp.text[:500])
+        txt = (resp.text or "")[:500]
+        log.error("%s API erro %s: %s", context, resp.status_code, txt)
+        if "expired" in txt.lower():
+            log.error("Meta — Token expirado. Gere novo Page Access Token em Meta for Developers.")
 def _parse_iso_duration_seconds(duration: str) -> int:
     """Converte duração ISO 8601 (PT1M30S, PT45S, PT2H) para segundos."""
     m = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)
@@ -112,32 +120,51 @@ def log_run(channel: str, status: str, records: int = 0, error: str = None, ms: 
 # Instagram
 # ------------------------------------------------------------
 def fetch_instagram():
-    if not META_TOKEN or not META_PAGE_ID:
-        log.warning("Instagram — META_ACCESS_TOKEN e META_PAGE_ID não configurados, pulando")
+    if not META_TOKEN:
+        log.warning("Instagram — META_ACCESS_TOKEN não configurado, pulando")
+        return
+    if not META_IG_ACCOUNT_ID and not META_PAGE_ID:
+        log.warning("Instagram — META_IG_ACCOUNT_ID ou META_PAGE_ID necessário, pulando")
         return
 
     t0 = time.monotonic()
     log.info("Instagram — iniciando coleta para %s", TARGET_DATE)
 
-    base = "https://graph.facebook.com/v19.0"
+    base = "https://graph.facebook.com/v21.0"
     # Insights têm delay de 24-48h; usar INSIGHTS_DATE
     ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
     ins_until = ins_since + 86400
     since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
     until = since + 86400
 
-    page_resp = requests.get(
-        f"{base}/{META_PAGE_ID}",
-        params={"fields": "instagram_business_account", "access_token": META_TOKEN},
-    )
-    page_resp.raise_for_status()
-    ig_id = page_resp.json()["instagram_business_account"]["id"]
+    ig_id = META_IG_ACCOUNT_ID
+    if not ig_id:
+        page_resp = requests.get(
+            f"{base}/{META_PAGE_ID}",
+            params={"fields": "instagram_business_account", "access_token": META_TOKEN},
+        )
+        if page_resp.status_code != 200:
+            _log_api_error(page_resp, "Instagram (Page lookup)")
+            if "expired" in (page_resp.text or "").lower():
+                log.error("Instagram — Token expirado. Renove META_ACCESS_TOKEN em Meta for Developers.")
+            page_resp.raise_for_status()
+        data = page_resp.json()
+        ig_biz = data.get("instagram_business_account")
+        if not ig_biz:
+            log.error("Instagram — Página %s não tem Instagram Business Account vinculada. Use META_IG_ACCOUNT_ID ou vincule no Meta Business.", META_PAGE_ID)
+            log_run("instagram", "error", 0, "Page sem IG Business Account")
+            return
+        ig_id = ig_biz.get("id")
+        if not ig_id:
+            log.error("Instagram — instagram_business_account.id não encontrado")
+            log_run("instagram", "error", 0, "instagram_business_account.id ausente")
+            return
 
-    # Métricas válidas (impressions foi depreciado; usar reach, follower_count, profile_views, views)
+    # Métricas: reach e follower_count funcionam com period=day; profile_views e views exigem metric_type=total_value
     insights_resp = requests.get(
         f"{base}/{ig_id}/insights",
         params={
-            "metric": "reach,follower_count,profile_views,views",
+            "metric": "reach,follower_count",
             "period": "day",
             "since": ins_since,
             "until": ins_until,
@@ -195,13 +222,13 @@ def fetch_instagram():
         )
 
     followers = metrics.get("follower_count", 0)
-    impressions = metrics.get("views", metrics.get("impressions", 1)) or 1
+    impressions = metrics.get("reach", 1) or 1  # reach como proxy quando impressions não disponível
 
     kpi_row = {
         "channel": "instagram",
         "date": TARGET_DATE.isoformat(),
         "followers": followers,
-        "impressions": metrics.get("views", metrics.get("impressions")),
+        "impressions": metrics.get("reach"),  # reach como proxy
         "reach": metrics.get("reach"),
         "engagements": total_engagements,
         "engagement_rate": round(total_engagements / impressions, 4),
@@ -227,17 +254,25 @@ def fetch_facebook():
     t0 = time.monotonic()
     log.info("Facebook — iniciando coleta para %s", TARGET_DATE)
 
-    base = "https://graph.facebook.com/v19.0"
+    base = "https://graph.facebook.com/v21.0"
     ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
     ins_until = ins_since + 86400
     since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
     until = since + 86400
 
-    # Métricas: page_media_view (substitui page_impressions), page_fans, page_engaged_users
+    # Total de seguidores via Page object (page_fans depreciado)
+    page_resp = requests.get(
+        f"{base}/{META_PAGE_ID}",
+        params={"fields": "followers_count", "access_token": META_TOKEN},
+    )
+    page_data = page_resp.json() if page_resp.status_code == 200 else {}
+    followers_count = page_data.get("followers_count")
+
+    # Métricas atualizadas (nov 2025): page_media_view, page_post_engagements
     ins_resp = requests.get(
         f"{base}/{META_PAGE_ID}/insights",
         params={
-            "metric": "page_media_view,page_fans,page_engaged_users",
+            "metric": "page_media_view,page_post_engagements",
             "period": "day",
             "since": ins_since,
             "until": ins_until,
@@ -275,7 +310,7 @@ def fetch_facebook():
         ins = requests.get(
             f"{base}/{p['id']}/insights",
             params={
-                "metric": "post_impressions,post_reach,post_reactions_by_type_total,post_clicks,post_shares",
+                "metric": "post_media_view,post_reach,post_reactions_by_type_total,post_clicks,post_shares",
                 "access_token": META_TOKEN,
             },
         ).json().get("data", [])
@@ -290,7 +325,7 @@ def fetch_facebook():
             reactions = 0
 
         eng = reactions + ins_map.get("post_clicks", 0) + ins_map.get("post_shares", 0)
-        impr = ins_map.get("post_impressions", 1) or 1
+        impr = ins_map.get("post_media_view", ins_map.get("post_impressions", 1)) or 1
         total_eng += eng
 
         fb_type = _STATUS_MAP.get(p.get("status_type", ""), "status")
@@ -302,7 +337,7 @@ def fetch_facebook():
                 "type": fb_type,
                 "message": (p.get("message") or "")[:500],
                 "permalink": p.get("permalink_url"),
-                "impressions": ins_map.get("post_impressions"),
+                "impressions": ins_map.get("post_media_view") or ins_map.get("post_impressions"),
                 "reach": ins_map.get("post_reach"),
                 "reactions": reactions,
                 "comments": 0,
@@ -312,15 +347,18 @@ def fetch_facebook():
             }
         )
 
-    impressions = metrics.get("page_media_view", metrics.get("page_impressions", 1)) or 1
+    page_views = metrics.get("page_media_view", 1) or 1
+    engagements = metrics.get("page_post_engagements", total_eng)
+    if engagements is None:
+        engagements = total_eng
     kpi_row = {
         "channel": "facebook",
         "date": TARGET_DATE.isoformat(),
-        "followers": metrics.get("page_fans"),
-        "impressions": metrics.get("page_media_view", metrics.get("page_impressions")),
-        "reach": metrics.get("page_reach"),
-        "engagements": metrics.get("page_engaged_users"),
-        "engagement_rate": round(metrics.get("page_engaged_users", 0) / impressions, 4),
+        "followers": followers_count or metrics.get("page_follows"),
+        "impressions": metrics.get("page_media_view"),
+        "reach": metrics.get("page_media_view"),
+        "engagements": engagements,
+        "engagement_rate": round(int(engagements or 0) / max(1, int(page_views or 1)), 4),
         "posts_published": len(post_rows),
         "link_clicks": sum(r.get("link_clicks") or 0 for r in post_rows),
     }
