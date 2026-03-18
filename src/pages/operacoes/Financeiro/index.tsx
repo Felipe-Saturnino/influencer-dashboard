@@ -986,17 +986,29 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }
 
   async function handleAprovar(id: string, novoTotal: number, isAgente: boolean) {
+    if (String(id).startsWith("preview_")) {
+      throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período. Não é possível aprovar a prévia.");
+    }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    const { error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id);
+    const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) {
+      throw new Error("Nenhum registro atualizado. Verifique permissões no Supabase (RLS em " + tb + ") ou se o registro existe.");
+    }
     setModalAnalisar(null);
     if (ciclo) await carregarDados(ciclo);
   }
 
   async function handlePagar(id: string, isAgente: boolean) {
+    if (String(id).startsWith("preview_")) {
+      throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período.");
+    }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    const { error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id);
+    const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) {
+      throw new Error("Nenhum registro atualizado. Verifique permissões no Supabase (RLS em " + tb + ") ou se o registro existe.");
+    }
     setModalPagar(null);
     if (ciclo) await carregarDados(ciclo);
   }
