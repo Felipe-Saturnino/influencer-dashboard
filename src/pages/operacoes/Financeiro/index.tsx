@@ -24,6 +24,7 @@ interface PagamentoRow {
   id: string;
   influencer_id: string;
   influencer_name: string;
+  operadora_slug?: string;
   horas_realizadas: number;
   cache_hora: number;
   total: number;
@@ -846,7 +847,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
 
     const result: PagamentoRow[] = parKeys.map(parKey => {
-      const [id] = parKey.split("::");
+      const [id, opSlug] = parKey.split("::");
       const { horas, qtd } = horasPorPar[parKey];
       const h = Math.round(horas * 100) / 100;
       const cache = perfilMap[id]?.cache ?? 0;
@@ -854,6 +855,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         id: `preview_${parKey}`,
         influencer_id: id,
         influencer_name: perfilMap[id]?.artistico ?? nameMap[id] ?? id,
+        operadora_slug: opSlug,
         horas_realizadas: h,
         cache_hora: cache,
         total: Math.round(h * cache * 100) / 100,
@@ -927,6 +929,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         id: p.id,
         influencer_id: p.influencer_id,
         influencer_name: nomeMap[p.influencer_id] ?? p.influencer_id,
+        operadora_slug: p.operadora_slug,
         horas_realizadas: p.horas_realizadas,
         cache_hora: p.cache_hora,
         total: p.total,
@@ -1065,16 +1068,18 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
+                <th style={th}>Influencer</th>
+                {filterOperadora === "todas" && <th style={th}>Operadora</th>}
                 {isAberto
-                  ? ["Influencer", "Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} style={th}>{h}</th>)
-                  : ["Influencer", "Lives", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} style={th}>{h}</th>)
+                  ? ["Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} style={th}>{h}</th>)
+                  : ["Lives", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} style={th}>{h}</th>)
                 }
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={isAberto ? 5 : 6} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
+                  <td colSpan={(isAberto ? 5 : 6) + (filterOperadora === "todas" ? 1 : 0)} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                       <span style={{ fontSize: "12px", maxWidth: 480, display: "block", marginTop: 8 }}>
@@ -1096,6 +1101,12 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                       </div>
                     </div>
                   </td>
+
+                  {filterOperadora === "todas" && (
+                    <td style={{ ...td, color: t.textMuted, fontSize: "12px" }}>
+                      {row.is_agente ? "—" : (operadorasList.find(o => o.slug === row.operadora_slug)?.nome ?? row.operadora_slug ?? "—")}
+                    </td>
+                  )}
 
                   {isAberto ? (
                     <>
@@ -1141,6 +1152,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                   <td style={{ ...td, fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>
                     {isAberto ? "ESTIMATIVA TOTAL" : "TOTAL"}
                   </td>
+                  {filterOperadora === "todas" && <td style={td}></td>}
                   {isAberto ? (
                     <>
                       <td style={td}></td>
