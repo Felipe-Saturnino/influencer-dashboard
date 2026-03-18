@@ -160,7 +160,8 @@ def fetch_instagram():
             log_run("instagram", "error", 0, "instagram_business_account.id ausente")
             return
 
-    # Métricas: reach e follower_count funcionam com period=day; profile_views e views exigem metric_type=total_value
+    # Métricas: reach e follower_count — limitadas a 30 dias pela API Meta; para backfill, continuamos sem insights
+    metrics = {}
     insights_resp = requests.get(
         f"{base}/{ig_id}/insights",
         params={
@@ -171,10 +172,15 @@ def fetch_instagram():
             "access_token": META_TOKEN,
         },
     )
-    if insights_resp.status_code != 200:
-        _log_api_error(insights_resp, "Instagram insights")
-        insights_resp.raise_for_status()
-    metrics = {m["name"]: m["values"][0]["value"] for m in insights_resp.json().get("data", [])}
+    if insights_resp.status_code == 200:
+        metrics = {m["name"]: m["values"][0]["value"] for m in insights_resp.json().get("data", [])}
+    else:
+        err_text = (insights_resp.text or "").lower()
+        if "30 days" in err_text or "follower_count" in err_text:
+            log.warning("Instagram — Insights fora da janela de 30 dias (ignorando). Prosseguindo com posts.")
+        else:
+            _log_api_error(insights_resp, "Instagram insights")
+            insights_resp.raise_for_status()
 
     media_resp = requests.get(
         f"{base}/{ig_id}/media",
@@ -191,11 +197,16 @@ def fetch_instagram():
     post_rows = []
     total_engagements = 0
     for p in posts_raw:
-        ins = requests.get(
-            f"{base}/{p['id']}/insights",
-            params={"metric": "impressions,reach,saved,shares,video_views", "access_token": META_TOKEN},
-        ).json().get("data", [])
-        ins_map = {i["name"]: i["values"][0]["value"] for i in ins}
+        ins_map = {}
+        try:
+            ins_resp = requests.get(
+                f"{base}/{p['id']}/insights",
+                params={"metric": "impressions,reach,saved,shares,video_views", "access_token": META_TOKEN},
+            )
+            if ins_resp.status_code == 200:
+                ins_map = {i["name"]: i["values"][0]["value"] for i in ins_resp.json().get("data", [])}
+        except Exception as e:
+            log.debug("Instagram post %s insights: %s", p.get("id"), e)
 
         likes = p.get("like_count", 0)
         comments = p.get("comments_count", 0)
