@@ -14,6 +14,8 @@ import {
   GiShield,
   GiFactory,
   GiRadarSweep,
+  GiCardRandom,
+  GiDiceSixFacesFour,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -35,6 +37,7 @@ export const MENU: MenuSection[] = [
       { key: "dash_overview_influencer", label: "Overview Influencer", icon: GiMicrophone         },
       { key: "dash_conversao",           label: "Conversão",           icon: GiConvergenceTarget  },
       { key: "dash_financeiro",          label: "Financeiro",          icon: GiMoneyStack         },
+      { key: "mesas_spin",               label: "Mesas Spin",          icon: GiDiceSixFacesFour   },
     ],
   },
   {
@@ -48,10 +51,11 @@ export const MENU: MenuSection[] = [
   {
     section: "Operações",
     items: [
-      { key: "influencers",  label: "Influencers",     icon: GiStarMedal },
-      { key: "scout",        label: "Scout",           icon: GiSpyglass  },
-      { key: "financeiro",   label: "Financeiro",      icon: GiCash      },
-      { key: "gestao_links", label: "Gestão de Links", icon: GiLinkedRings },
+      { key: "influencers",     label: "Influencers",       icon: GiStarMedal   },
+      { key: "scout",           label: "Scout",            icon: GiSpyglass    },
+      { key: "gestao_dealers",  label: "Gestão de Dealers", icon: GiCardRandom  },
+      { key: "financeiro",      label: "Financeiro",       icon: GiCash        },
+      { key: "gestao_links",    label: "Gestão de Links",  icon: GiLinkedRings },
     ],
   },
   {

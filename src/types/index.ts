@@ -17,6 +17,7 @@ export type PageKey =
   | "dash_overview_influencer"
   | "dash_conversao"
   | "dash_financeiro"
+  | "mesas_spin"
   | "agenda"
   | "resultados"
   | "feedback"
@@ -26,6 +27,7 @@ export type PageKey =
   | "gestao_links"
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
+  | "gestao_dealers"
   | "status_tecnico"
   | "configuracoes"
   | "ajuda";
@@ -143,6 +145,27 @@ export interface UserScope {
   scope_type:  ScopeType;
   scope_ref:   string;
   created_at?: string;
+}
+
+// ─── DEALER ──────────────────────────────────────────────────────────────────
+export type DealerGenero = "feminino" | "masculino";
+export type DealerTurno = "manha" | "tarde" | "noite";
+export type DealerJogo = "blackjack" | "roleta" | "baccarat" | "mesa_vip";
+
+export interface Dealer {
+  id:               string;
+  nome_real:        string;
+  nickname:         string;
+  fotos:            string[];
+  genero:           DealerGenero;
+  turno:            DealerTurno;
+  jogos:            DealerJogo[];
+  operadora_slug:   string | null;
+  perfil_influencer: string | null;
+  status?:          "aprovado" | "pendente";
+  vip?:             boolean;
+  created_at?:      string;
+  updated_at?:      string;
 }
 
 // ─── OPERADORA ───────────────────────────────────────────────────────────────

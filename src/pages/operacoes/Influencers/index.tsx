@@ -389,7 +389,9 @@ export default function Influencers() {
     if (!podeVerInfluencer(inf.id)) return false;
     const p = inf.perfil;
     const searchLower = search.toLowerCase();
+    const nomeExibicao = p?.nome_artistico?.trim() || inf.name || "";
     if (search && !(
+      nomeExibicao.toLowerCase().includes(searchLower) ||
       inf.name?.toLowerCase().includes(searchLower) ||
       inf.email?.toLowerCase().includes(searchLower)
     )) return false;
@@ -410,7 +412,7 @@ export default function Influencers() {
   const incompletos = list.filter((i) =>
     podeVerInfluencer(i.id) &&
     (i.perfil?.status ?? "ativo") === "ativo" &&
-    isPerfilIncompleto(i.perfil, i.name)
+    isPerfilIncompleto(i.perfil, i.perfil?.nome_artistico ?? i.name ?? "")
   );
 
   const listNoEscopo = list.filter((i) => podeVerInfluencer(i.id));
@@ -517,16 +519,17 @@ export default function Influencers() {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {incompletos.map((inf) =>
-                  podeEditarInf(inf.id) ? (
+                {incompletos.map((inf) => {
+                  const nomeInf = inf.perfil?.nome_artistico || inf.name;
+                  return podeEditarInf(inf.id) ? (
                     <button key={inf.id} onClick={() => setModal({ mode: "editar", inf })}
                       style={{ background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", fontSize: 13, color: BRAND.azul, fontFamily: FONT.body, textDecoration: "underline", fontWeight: 500 }}>
-                      {inf.name}
+                      {nomeInf}
                     </button>
                   ) : (
-                    <span key={inf.id} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{inf.name}</span>
-                  )
-                )}
+                    <span key={inf.id} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{nomeInf}</span>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -628,7 +631,7 @@ export default function Influencers() {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body,
                 }}>
-                  {(inf.name || inf.email)[0]?.toUpperCase()}
+                  {((p?.nome_artistico || inf.name) || inf.email)[0]?.toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{
@@ -637,7 +640,7 @@ export default function Influencers() {
                     flexWrap: "wrap", marginBottom: "10px",
                   }}>
                     <span style={{ fontSize: "14px", fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
-                      {inf.name}
+                      {p?.nome_artistico || inf.name}
                     </span>
                     <StatusBadge value={status} onChange={(v) => handleStatusChange(inf.id, v)} readonly={!podeAlterarStatus} />
                     {incompleto && status === "ativo" && (
@@ -765,7 +768,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
-                {influencer.name}
+                {p?.nome_artistico || influencer.name}
               </h2>
               {p?.status && <StatusBadge value={p.status} onChange={() => {}} readonly />}
             </div>
@@ -793,7 +796,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
         {tab === "cadastral" && (
           <>
             <div style={row}><label style={labelStyle}>Nome Completo</label>{val(p?.nome_completo)}</div>
-            <div style={row}><label style={labelStyle}>Nome Artístico</label>{val(influencer.name)}</div>
+            <div style={row}><label style={labelStyle}>Nome Artístico</label>{val(p?.nome_artistico ?? influencer.name)}</div>
             <div style={row}><label style={labelStyle}>E-mail</label>{val(influencer.email)}</div>
             <div style={row}><label style={labelStyle}>Telefone</label>{val(p?.telefone)}</div>
             <div style={row}>
