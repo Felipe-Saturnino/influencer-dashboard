@@ -762,6 +762,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const [modalAnalisar, setModalAnalisar] = useState<PagamentoRow | null>(null);
   const [modalPagar, setModalPagar] = useState<PagamentoRow | null>(null);
   const [modalAgente, setModalAgente] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const ciclo = ciclos.find(c => c.id === cicloId) ?? ciclos[0] ?? null;
   const isAberto = ciclo ? cicloAberto(ciclo) : false;
@@ -784,7 +785,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
   useEffect(() => {
     if (ciclo) carregarDados(ciclo);
-  }, [cicloId, podeVerInfluencer, filterInfluencers, filterOperadora]);
+  }, [cicloId, podeVerInfluencer, filterInfluencers, filterOperadora, refreshTrigger]);
 
   async function fecharCiclo(c: CicloPagamento) {
     await gerarPagamentosDoCiclo(c);
@@ -843,9 +844,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (cicloAberto(c)) {
       await carregarPreview(c);
     } else {
-      // Ciclo fechado: re-sincroniza para incluir lives validadas após o fechamento (data dentro do ciclo)
-      await supabase.from("pagamentos").delete().eq("ciclo_id", c.id);
-      await gerarPagamentosDoCiclo(c);
+      // Ciclo fechado: carrega os pagamentos existentes (preserva status aprovado/a pagar/pago).
+      // Para incluir lives validadas após o fechamento, usar o botão "Recalcular".
       await carregarPagamentos(c);
     }
     setLoading(false);
@@ -1027,7 +1027,6 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       p_total: novoTotal,
       p_is_agente: isAgente ?? false,
     });
-    console.log("[handleAprovar] RPC response:", { rpcData, rpcError });
     if (rpcError) {
       throw new Error(rpcError.message ?? "RPC falhou: " + JSON.stringify(rpcError));
     }
@@ -1057,8 +1056,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
 
     setModalAnalisar(null);
-    await new Promise(r => setTimeout(r, 100));
-    if (ciclo) await carregarDados(ciclo);
+    setRefreshTrigger(t => t + 1);
   }
 
   async function handlePagar(id: string, isAgente: boolean) {
@@ -1101,8 +1099,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
 
     setModalPagar(null);
-    await new Promise(r => setTimeout(r, 100));
-    if (ciclo) await carregarDados(ciclo);
+    setRefreshTrigger(t => t + 1);
   }
 
   const kpi = useMemo(() => ({
