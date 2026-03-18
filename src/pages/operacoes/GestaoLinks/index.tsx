@@ -77,14 +77,24 @@ export default function GestaoLinks() {
     if (error) { console.error("Erro ao carregar utm_aliases:", error.message); setAliases([]); setLoading(false); return; }
     const aliasData = data ?? [];
     let infNomeMap = new Map<string, string>();
+    let campanhaNomeMap = new Map<string, string>();
     if (aba === "mapeados") {
       const influencerIds = aliasData.map((r: any) => r.influencer_id).filter(Boolean);
       if (influencerIds.length > 0) {
         const { data: infData } = await supabase.from("influencer_perfil").select("id, nome_artistico").in("id", influencerIds);
         infNomeMap = new Map((infData ?? []).map((i: any) => [i.id, i.nome_artistico]));
       }
+      const campanhaIds = aliasData.map((r: any) => r.campanha_id).filter(Boolean);
+      if (campanhaIds.length > 0) {
+        const { data: campData } = await supabase.from("campanhas").select("id, nome").in("id", campanhaIds);
+        campanhaNomeMap = new Map((campData ?? []).map((c: any) => [c.id, c.nome]));
+      }
     }
-    setAliases(aliasData.map((r: any) => ({ ...r, influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) ?? "—") : null })));
+    setAliases(aliasData.map((r: any) => ({
+      ...r,
+      influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) ?? "—") : null,
+      campanha_nome: r.campanha_id ? (campanhaNomeMap.get(r.campanha_id) ?? "—") : null,
+    })));
     setLoading(false);
   }, [aba, operadoraFiltro]);
 
@@ -110,40 +120,51 @@ export default function GestaoLinks() {
   }
 
   async function confirmarMapeamento() {
-    if (!aliasSelecionado || !influencerSelecionado) return;
-    if (perm.canEditar === "proprios" && !podeVerInfluencer(influencerSelecionado)) return;
+    if (!aliasSelecionado) return;
+    const isInfluencer = tipoMapeamento === "influencer";
+    const idSelecionado = isInfluencer ? influencerSelecionado : campanhaSelecionada;
+    if (!idSelecionado) return;
+    if (isInfluencer && perm.canEditar === "proprios" && !podeVerInfluencer(idSelecionado)) return;
+
     setSalvando(true); setErroModal(null);
-    const { error } = await supabase.from("utm_aliases").update({ influencer_id: influencerSelecionado, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }).eq("id", aliasSelecionado.id);
+
+    const updatePayload = isInfluencer
+      ? { influencer_id: idSelecionado, campanha_id: null, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }
+      : { campanha_id: idSelecionado, influencer_id: null, status: "mapeado", mapeado_por: user?.id ?? null, mapeado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() };
+
+    const { error } = await supabase.from("utm_aliases").update(updatePayload).eq("id", aliasSelecionado.id);
     if (error) { setSalvando(false); setErroModal(`Erro ao salvar: ${error.message}`); return; }
 
-    // RPC: copia utm_metricas_diarias → influencer_metricas (sem chamar API)
+    // RPC: copia utm_metricas_diarias → influencer_metricas (apenas para mapeamento influencer)
     let linhasCopiadas = 0;
-    try {
-      const { data: rpcData, error: rpcErr } = await supabase.rpc("aplicar_mapeamento_utm", {
-        p_utm_source: aliasSelecionado.utm_source,
-        p_influencer_id: influencerSelecionado,
-      });
-      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
-        const row = rpcData[0] as { linhas_copiadas?: number };
-        linhasCopiadas = Number(row?.linhas_copiadas ?? 0);
-      }
-    } catch (_e) { /* RPC pode não existir ainda */ }
-
-    // Se utm_metricas_diarias estava vazio, dispara sync (fallback)
-    if (linhasCopiadas === 0) {
-      const dataInicio = (aliasSelecionado.primeiro_visto ?? "2025-12-01").split("T")[0];
-      const dataFim = (aliasSelecionado.ultimo_visto ?? new Date().toISOString().split("T")[0]).split("T")[0];
+    if (isInfluencer) {
       try {
-        await supabase.functions.invoke("sync-metricas", {
-          body: { data_inicio: dataInicio, data_fim: dataFim, utm_source: aliasSelecionado.utm_source, skip_orfaos: true },
+        const { data: rpcData, error: rpcErr } = await supabase.rpc("aplicar_mapeamento_utm", {
+          p_utm_source: aliasSelecionado.utm_source,
+          p_influencer_id: idSelecionado,
         });
-      } catch (e) {
-        console.warn("[GestaoLinks] Sync fallback:", e);
+        if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+          const row = rpcData[0] as { linhas_copiadas?: number };
+          linhasCopiadas = Number(row?.linhas_copiadas ?? 0);
+        }
+      } catch (_e) { /* RPC pode não existir ainda */ }
+
+      // Se utm_metricas_diarias estava vazio, dispara sync (fallback)
+      if (linhasCopiadas === 0) {
+        const dataInicio = (aliasSelecionado.primeiro_visto ?? "2025-12-01").split("T")[0];
+        const dataFim = (aliasSelecionado.ultimo_visto ?? new Date().toISOString().split("T")[0]).split("T")[0];
+        try {
+          await supabase.functions.invoke("sync-metricas", {
+            body: { data_inicio: dataInicio, data_fim: dataFim, utm_source: aliasSelecionado.utm_source, skip_orfaos: true },
+          });
+        } catch (e) {
+          console.warn("[GestaoLinks] Sync fallback:", e);
+        }
       }
     }
 
     setSalvando(false);
-    setModalAberto(false); setAliasSelecionado(null); setInfluencerSelecionado(""); carregar();
+    setModalAberto(false); setAliasSelecionado(null); setInfluencerSelecionado(""); setCampanhaSelecionada(""); carregar();
   }
 
   async function ignorar(alias: UtmAlias) {
