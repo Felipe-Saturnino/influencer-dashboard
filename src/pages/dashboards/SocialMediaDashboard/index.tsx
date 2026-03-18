@@ -416,21 +416,21 @@ export default function SocialMediaDashboard() {
           .gte("date", start)
           .lte("date", end)
           .order("date", { ascending: false })
-          .limit(30),
+          .limit(100),
         supabase
           .from("facebook_posts")
           .select("date,type,message,reactions,comments,impressions,permalink,thumbnail_url")
           .gte("date", start)
           .lte("date", end)
           .order("date", { ascending: false })
-          .limit(30),
+          .limit(100),
         supabase
           .from("youtube_videos")
           .select("date,type,title,views,likes,comments,video_id")
           .gte("date", start)
           .lte("date", end)
           .order("date", { ascending: false })
-          .limit(30),
+          .limit(100),
       ]);
 
       if (cancelled) return;

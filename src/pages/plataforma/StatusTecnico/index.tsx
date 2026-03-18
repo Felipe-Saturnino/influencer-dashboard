@@ -44,6 +44,8 @@ export default function StatusTecnico() {
   const [loading, setLoading] = useState(true);
   const [syncExecutando, setSyncExecutando] = useState(false);
   const [syncMensagem, setSyncMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncSocialExecutando, setSyncSocialExecutando] = useState(false);
+  const [syncSocialMensagem, setSyncSocialMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [techLogs, setTechLogs] = useState<TechLog[]>([]);
@@ -211,6 +213,57 @@ export default function StatusTecnico() {
     }
   };
 
+  const executarSyncSocial = async () => {
+    if (syncSocialExecutando || !perm.canView || perm.canView === "nao") return;
+    setSyncSocialExecutando(true);
+    setSyncSocialMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncSocialMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setSyncSocialExecutando(false);
+        return;
+      }
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("trigger-social-kpis", {
+        body: {},
+      });
+
+      const resData = (resDataRaw ?? {}) as { ok?: boolean; erro?: string; message?: string };
+
+      if (invokeError) {
+        let texto = invokeError.message ?? "Erro ao chamar trigger-social-kpis";
+        if (texto.includes("404") || texto.includes("not found")) {
+          texto =
+            "Edge Function trigger-social-kpis não encontrada. Execute: supabase functions deploy trigger-social-kpis. Configure GITHUB_TOKEN e GITHUB_REPO nos Secrets.";
+        }
+        setSyncSocialMensagem({ tipo: "erro", texto });
+        setSyncSocialExecutando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        setSyncSocialMensagem({
+          tipo: "erro",
+          texto: resData?.erro ?? "Erro ao disparar workflow. Verifique GITHUB_TOKEN e GITHUB_REPO nos Secrets.",
+        });
+        setSyncSocialExecutando(false);
+        return;
+      }
+
+      setSyncSocialMensagem({
+        tipo: "ok",
+        texto: resData?.message ?? "Workflow disparado. Verifique o Dashboard de Mídias Sociais em alguns minutos.",
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSyncSocialMensagem({ tipo: "erro", texto: msg });
+    } finally {
+      setSyncSocialExecutando(false);
+    }
+  };
+
   // KPIs derivados
   const ultimoSyncOk = syncLogs.find((l) => l.status === "ok");
   const integracoesAtivas = integrations.filter((int) => {
@@ -285,55 +338,101 @@ export default function StatusTecnico() {
     );
   }
 
+  const syncCardStyle: React.CSSProperties = {
+    ...card,
+    flex: 1,
+    minWidth: 280,
+  };
+  const syncBtnStyle = (executando: boolean) =>
+    ({
+      padding: "10px 20px",
+      borderRadius: 12,
+      border: "none",
+      background: executando ? "#6b7280" : "linear-gradient(135deg, #4a2082, #1e36f8)",
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: 700,
+      fontFamily: FONT.body,
+      cursor: executando ? "not-allowed" : "pointer",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+    }) as React.CSSProperties;
+
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 28 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0 }}>
-            📡 Status Técnico
-          </h1>
-          <p style={{ color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-            Acompanhamento de integrações e saúde da plataforma.
-          </p>
-        </div>
-        <button
-          onClick={executarSync}
-          disabled={syncExecutando || !perm.canView}
-          style={{
-            padding: "10px 20px",
-            borderRadius: 12,
-            border: "none",
-            background: syncExecutando ? "#6b7280" : "linear-gradient(135deg, #4a2082, #1e36f8)",
-            color: "#fff",
-            fontSize: 14,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-            cursor: syncExecutando ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          {syncExecutando ? "Sincronizando..." : "🔄 Executar Sync"}
-        </button>
+      <div>
+        <h1 style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0 }}>
+          📡 Status Técnico
+        </h1>
+        <p style={{ color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+          Acompanhamento de integrações e saúde da plataforma.
+        </p>
       </div>
 
-      {syncMensagem && (
-        <div
-          style={{
-            padding: 14,
-            borderRadius: 12,
-            background: syncMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
-            border: `1px solid ${syncMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
-            color: syncMensagem.tipo === "ok" ? "#059669" : "#ef4444",
-            fontFamily: FONT.body,
-            fontSize: 13,
-          }}
-        >
-          {syncMensagem.tipo === "ok" ? "✅ " : "⚠️ "}
-          {syncMensagem.texto}
+      {/* Sync Métricas CDA + Sync Social Media KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
+        <div style={syncCardStyle}>
+          <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 8px" }}>
+            Sync Métricas CDA
+          </h2>
+          <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: "0 0 16px" }}>
+            Sincroniza métricas da CDA (afiliados) para influencer_metricas e utm_aliases.
+          </p>
+          <button onClick={executarSync} disabled={syncExecutando || !perm.canView} style={syncBtnStyle(syncExecutando)}>
+            {syncExecutando ? "Sincronizando..." : "🔄 Executar Sync"}
+          </button>
+          {syncMensagem && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                borderRadius: 10,
+                background: syncMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
+                border: `1px solid ${syncMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
+                color: syncMensagem.tipo === "ok" ? "#059669" : "#ef4444",
+                fontFamily: FONT.body,
+                fontSize: 12,
+              }}
+            >
+              {syncMensagem.tipo === "ok" ? "✅ " : "⚠️ "}
+              {syncMensagem.texto}
+            </div>
+          )}
         </div>
-      )}
+        <div style={syncCardStyle}>
+          <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 8px" }}>
+            Sync Social Media KPIs
+          </h2>
+          <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: "0 0 16px" }}>
+            Dispara o ETL de Instagram, Facebook, YouTube e LinkedIn (kpi_daily, posts, vídeos).
+          </p>
+          <button
+            onClick={executarSyncSocial}
+            disabled={syncSocialExecutando || !perm.canView}
+            style={syncBtnStyle(syncSocialExecutando)}
+          >
+            {syncSocialExecutando ? "Disparando..." : "🔄 Executar Sync"}
+          </button>
+          {syncSocialMensagem && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                borderRadius: 10,
+                background: syncSocialMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
+                border: `1px solid ${syncSocialMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
+                color: syncSocialMensagem.tipo === "ok" ? "#059669" : "#ef4444",
+                fontFamily: FONT.body,
+                fontSize: 12,
+              }}
+            >
+              {syncSocialMensagem.tipo === "ok" ? "✅ " : "⚠️ "}
+              {syncSocialMensagem.texto}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
