@@ -119,7 +119,7 @@ def fetch_instagram():
     t0 = time.monotonic()
     log.info("Instagram — iniciando coleta para %s", TARGET_DATE)
 
-    base = "https://graph.facebook.com/v19.0"
+    base = "https://graph.facebook.com/v21.0"
     # Insights têm delay de 24-48h; usar INSIGHTS_DATE
     ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
     ins_until = ins_since + 86400
@@ -133,11 +133,11 @@ def fetch_instagram():
     page_resp.raise_for_status()
     ig_id = page_resp.json()["instagram_business_account"]["id"]
 
-    # Métricas válidas (impressions foi depreciado; usar reach, follower_count, profile_views, views)
+    # Métricas: reach e follower_count funcionam com period=day; profile_views e views exigem metric_type=total_value
     insights_resp = requests.get(
         f"{base}/{ig_id}/insights",
         params={
-            "metric": "reach,follower_count,profile_views,views",
+            "metric": "reach,follower_count",
             "period": "day",
             "since": ins_since,
             "until": ins_until,
@@ -195,13 +195,13 @@ def fetch_instagram():
         )
 
     followers = metrics.get("follower_count", 0)
-    impressions = metrics.get("views", metrics.get("impressions", 1)) or 1
+    impressions = metrics.get("reach", 1) or 1  # reach como proxy quando impressions não disponível
 
     kpi_row = {
         "channel": "instagram",
         "date": TARGET_DATE.isoformat(),
         "followers": followers,
-        "impressions": metrics.get("views", metrics.get("impressions")),
+        "impressions": metrics.get("reach"),  # reach como proxy
         "reach": metrics.get("reach"),
         "engagements": total_engagements,
         "engagement_rate": round(total_engagements / impressions, 4),
@@ -227,17 +227,25 @@ def fetch_facebook():
     t0 = time.monotonic()
     log.info("Facebook — iniciando coleta para %s", TARGET_DATE)
 
-    base = "https://graph.facebook.com/v19.0"
+    base = "https://graph.facebook.com/v21.0"
     ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
     ins_until = ins_since + 86400
     since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
     until = since + 86400
 
-    # Métricas: page_media_view (substitui page_impressions), page_fans, page_engaged_users
+    # Total de seguidores via Page object (page_fans depreciado)
+    page_resp = requests.get(
+        f"{base}/{META_PAGE_ID}",
+        params={"fields": "followers_count", "access_token": META_TOKEN},
+    )
+    page_data = page_resp.json() if page_resp.status_code == 200 else {}
+    followers_count = page_data.get("followers_count")
+
+    # Métricas atualizadas (nov 2025): page_media_view, page_post_engagements
     ins_resp = requests.get(
         f"{base}/{META_PAGE_ID}/insights",
         params={
-            "metric": "page_media_view,page_fans,page_engaged_users",
+            "metric": "page_media_view,page_post_engagements",
             "period": "day",
             "since": ins_since,
             "until": ins_until,
@@ -275,7 +283,7 @@ def fetch_facebook():
         ins = requests.get(
             f"{base}/{p['id']}/insights",
             params={
-                "metric": "post_impressions,post_reach,post_reactions_by_type_total,post_clicks,post_shares",
+                "metric": "post_media_view,post_reach,post_reactions_by_type_total,post_clicks,post_shares",
                 "access_token": META_TOKEN,
             },
         ).json().get("data", [])
@@ -290,7 +298,7 @@ def fetch_facebook():
             reactions = 0
 
         eng = reactions + ins_map.get("post_clicks", 0) + ins_map.get("post_shares", 0)
-        impr = ins_map.get("post_impressions", 1) or 1
+        impr = ins_map.get("post_media_view", ins_map.get("post_impressions", 1)) or 1
         total_eng += eng
 
         fb_type = _STATUS_MAP.get(p.get("status_type", ""), "status")
@@ -302,7 +310,7 @@ def fetch_facebook():
                 "type": fb_type,
                 "message": (p.get("message") or "")[:500],
                 "permalink": p.get("permalink_url"),
-                "impressions": ins_map.get("post_impressions"),
+                "impressions": ins_map.get("post_media_view") or ins_map.get("post_impressions"),
                 "reach": ins_map.get("post_reach"),
                 "reactions": reactions,
                 "comments": 0,
@@ -312,15 +320,18 @@ def fetch_facebook():
             }
         )
 
-    impressions = metrics.get("page_media_view", metrics.get("page_impressions", 1)) or 1
+    page_views = metrics.get("page_media_view", 1) or 1
+    engagements = metrics.get("page_post_engagements", total_eng)
+    if engagements is None:
+        engagements = total_eng
     kpi_row = {
         "channel": "facebook",
         "date": TARGET_DATE.isoformat(),
-        "followers": metrics.get("page_fans"),
-        "impressions": metrics.get("page_media_view", metrics.get("page_impressions")),
-        "reach": metrics.get("page_reach"),
-        "engagements": metrics.get("page_engaged_users"),
-        "engagement_rate": round(metrics.get("page_engaged_users", 0) / impressions, 4),
+        "followers": followers_count or metrics.get("page_follows"),
+        "impressions": metrics.get("page_media_view"),
+        "reach": metrics.get("page_media_view"),
+        "engagements": engagements,
+        "engagement_rate": round(int(engagements or 0) / max(1, int(page_views or 1)), 4),
         "posts_published": len(post_rows),
         "link_clicks": sum(r.get("link_clicks") or 0 for r in post_rows),
     }
