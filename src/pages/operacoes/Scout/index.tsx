@@ -353,13 +353,13 @@ export default function Scout() {
         <div style={{ display: "flex", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
             <option value="todos">Todos os status</option>
-            {STATUS_SCOUT_OPTS.map((s) => (
+            {[...STATUS_SCOUT_OPTS].sort((a, b) => STATUS_SCOUT_LABEL[a].localeCompare(STATUS_SCOUT_LABEL[b], "pt-BR")).map((s) => (
               <option key={s} value={s}>{STATUS_SCOUT_LABEL[s]}</option>
             ))}
           </select>
           <select value={filterPlat} onChange={(e) => setFilterPlat(e.target.value)} style={selectStyle}>
             <option value="todas">Todas as plataformas</option>
-            {PLATAFORMAS.map((p) => (
+            {[...PLATAFORMAS].sort((a, b) => a.localeCompare(b, "pt-BR")).map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
@@ -898,7 +898,7 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         <div style={row}>
           <label style={labelStyle}>Status</label>
           <select value={status} onChange={(e) => setStatus(e.target.value as StatusScout)} style={{ ...inputStyle, cursor: "pointer" }}>
-            {STATUS_SCOUT_OPTS.map((s) => (
+            {[...STATUS_SCOUT_OPTS].sort((a, b) => STATUS_SCOUT_LABEL[a].localeCompare(STATUS_SCOUT_LABEL[b], "pt-BR")).map((s) => (
               <option key={s} value={s}>{STATUS_SCOUT_LABEL[s]}</option>
             ))}
           </select>
@@ -925,7 +925,7 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
               <label style={labelStyle}>Tipo de Contato</label>
               <select value={tipoContato} onChange={(e) => setTipoContato(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
                 <option value="">—</option>
-                {TIPO_CONTATO_OPTS.map((o) => (
+                {[...TIPO_CONTATO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
@@ -949,7 +949,7 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
             <div style={row}>
               <label style={labelStyle}>Live Cassino</label>
               <select value={liveCassino} onChange={(e) => setLiveCassino(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                {LIVE_CASSINO_OPTS.map((o) => (
+                {[...LIVE_CASSINO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>

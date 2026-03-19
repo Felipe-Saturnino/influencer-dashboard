@@ -342,6 +342,7 @@ export default function Resultados() {
                 <option value="">Selecione a operadora...</option>
                 {operadorasList
                   .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
                   .map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
               </select>
               <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
@@ -492,6 +493,7 @@ export default function Resultados() {
                 <option value="todas">Todas as operadoras</option>
                 {operadorasList
                   .filter((o) => podeVerOperadora(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
                   .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
               </select>
             </div>

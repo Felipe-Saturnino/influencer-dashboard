@@ -182,17 +182,29 @@ def fetch_instagram():
             _log_api_error(insights_resp, "Instagram insights")
             insights_resp.raise_for_status()
 
-    media_resp = requests.get(
-        f"{base}/{ig_id}/media",
-        params={
-            "fields": "id,timestamp,media_type,caption,permalink,thumbnail_url,media_url,like_count,comments_count",
-            "since": since,
-            "until": until,
-            "access_token": META_TOKEN,
-        },
-    )
-    media_resp.raise_for_status()
-    posts_raw = media_resp.json().get("data", [])
+    # Coleta com paginação (API retorna 25 por padrão; limit=100 + loop para pegar todos)
+    posts_raw = []
+    next_url = None
+    params = {
+        "fields": "id,timestamp,media_type,caption,permalink,thumbnail_url,media_url,like_count,comments_count",
+        "since": since,
+        "until": until,
+        "limit": 100,
+        "access_token": META_TOKEN,
+    }
+    while True:
+        if next_url:
+            media_resp = requests.get(next_url)
+        else:
+            media_resp = requests.get(f"{base}/{ig_id}/media", params=params)
+        media_resp.raise_for_status()
+        data = media_resp.json()
+        batch = data.get("data", [])
+        posts_raw.extend(batch)
+        next_url = data.get("paging", {}).get("next")
+        if not next_url or not batch:
+            break
+        time.sleep(0.3)  # evita rate limit
 
     post_rows = []
     total_engagements = 0
@@ -297,17 +309,29 @@ def fetch_facebook():
         ins_resp.raise_for_status()
     metrics = {m["name"]: m["values"][0]["value"] for m in ins_resp.json().get("data", [])}
 
-    posts_resp = requests.get(
-        f"{base}/{META_PAGE_ID}/posts",
-        params={
-            "fields": "id,created_time,message,permalink_url,full_picture,thumbnail_url,status_type",
-            "since": since,
-            "until": until,
-            "access_token": META_TOKEN,
-        },
-    )
-    posts_resp.raise_for_status()
-    posts_raw = posts_resp.json().get("data", [])
+    # Coleta com paginação (API retorna 25 por padrão; limit=100 + loop para pegar todos)
+    posts_raw = []
+    next_url = None
+    params = {
+        "fields": "id,created_time,message,permalink_url,full_picture,thumbnail_url,status_type",
+        "since": since,
+        "until": until,
+        "limit": 100,
+        "access_token": META_TOKEN,
+    }
+    while True:
+        if next_url:
+            posts_resp = requests.get(next_url)
+        else:
+            posts_resp = requests.get(f"{base}/{META_PAGE_ID}/posts", params=params)
+        posts_resp.raise_for_status()
+        data = posts_resp.json()
+        batch = data.get("data", [])
+        posts_raw.extend(batch)
+        next_url = data.get("paging", {}).get("next")
+        if not next_url or not batch:
+            break
+        time.sleep(0.3)  # evita rate limit
 
     _STATUS_MAP = {
         "added_photos": "photo",

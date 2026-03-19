@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { CicloPagamento, Pagamento, PagamentoStatus } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 
@@ -184,7 +185,7 @@ function SelectInput({ value, onChange, options, style }: {
         outline: "none", cursor: "pointer", ...style,
       }}
     >
-      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      {[...options].sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "", "pt-BR")).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   );
 }
@@ -294,15 +295,34 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   }, []);
 
   async function carregarLives() {
-    const { data } = await supabase
+    let query = supabase
       .from("lives")
-      .select("id, titulo, data, plataforma, live_resultados(duracao_horas, duracao_min)")
+      .select("id, data, plataforma")
       .eq("influencer_id", row.influencer_id)
       .eq("status", "realizada")
       .gte("data", ciclo.data_inicio)
       .lte("data", ciclo.data_fim)
       .order("data", { ascending: false });
-    setLives(data ?? []);
+    if (row.operadora_slug) {
+      query = query.eq("operadora_slug", row.operadora_slug);
+    }
+    const { data: livesData } = await query;
+    const livesList = livesData ?? [];
+    if (livesList.length === 0) { setLives([]); return; }
+    const liveIds = livesList.map((l: any) => l.id);
+    const { data: resData } = await supabase
+      .from("live_resultados")
+      .select("live_id, duracao_horas, duracao_min")
+      .in("live_id", liveIds);
+    const resultadosMap = new Map<string, { duracao_horas: number; duracao_min: number }>();
+    for (const r of (resData ?? []) as { live_id: string; duracao_horas: number; duracao_min: number }[]) {
+      resultadosMap.set(String(r.live_id), { duracao_horas: r.duracao_horas ?? 0, duracao_min: r.duracao_min ?? 0 });
+    }
+    const merged = livesList.map((l: any) => ({
+      ...l,
+      _resultado: resultadosMap.get(String(l.id)),
+    }));
+    setLives(merged);
   }
 
   async function handleConfirm() {
@@ -311,11 +331,21 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
     try {
       await onConfirm(row.id, valorNum, row.is_agente ?? false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.");
+      const msg = e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.";
+      setError(msg);
+      console.error("[ModalAnalisar] Erro ao aprovar:", e);
+      alert("Erro ao aprovar: " + msg);
     } finally {
       setSaving(false);
     }
   }
+  const handleConfirmClick = () => {
+    if (valorNum <= 0) {
+      alert("Valor deve ser maior que zero. Valor atual: " + valor);
+      return;
+    }
+    handleConfirm();
+  };
 
   const rowStyle: React.CSSProperties = {
     display: "flex", justifyContent: "space-between",
@@ -368,8 +398,8 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
             Lives no período
           </div>
           {lives.map((l: any) => {
-            const r = l.live_resultados?.[0];
-            const h = r ? r.duracao_horas + r.duracao_min / 60 : 0;
+            const r = l._resultado;
+            const h = r ? (r.duracao_horas ?? 0) + (r.duracao_min ?? 0) / 60 : 0;
             return (
               <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${t.divider}`, fontSize: "12px" }}>
                 <span style={{ color: t.text }}>{l.data} · {l.plataforma}</span>
@@ -419,8 +449,9 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
           Cancelar
         </button>
         <button
-          onClick={handleConfirm}
-          disabled={saving || valorNum <= 0}
+          type="button"
+          onClick={handleConfirmClick}
+          disabled={saving}
           style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || valorNum <= 0) ? "not-allowed" : "pointer", opacity: (saving || valorNum <= 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
         >
           {saving ? "⏳ Salvando..." : "✅ Aprovar valor"}
@@ -547,7 +578,7 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerOperador
             <label style={labelStyle}>Operadora *</label>
             <select value={operadoraSlug} onChange={e => setOperadoraSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
               <option value="">Selecione...</option>
-              {opcoes.map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+              {[...opcoes].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
             </select>
           </div>
         )}
@@ -624,7 +655,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
       const { data: ciclos } = await supabase
         .from("ciclos_pagamento")
         .select("id")
-        .gte("data_inicio", periodo.inicio)
+        .gte("data_fim", periodo.inicio)
         .lte("data_fim", periodo.fim);
       cicloIds = (ciclos ?? []).map((c: any) => c.id);
       if (cicloIds.length === 0) {
@@ -633,9 +664,18 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
       }
     }
 
+    // Total pago: usa mesma fonte que os Dashboards (RPC ou fallback) — garante alinhamento
+    if (periodo) {
+      const { total } = await buscarInvestimentoPago(periodo, {
+        influencerIds: filterInfluencers.length > 0 ? filterInfluencers : undefined,
+        operadora_slug: filterOperadora !== "todas" ? filterOperadora : undefined,
+      });
+      setTotalPago(total);
+    }
+
     const pQuery = periodo
-      ? supabase.from("pagamentos").select("total, horas_realizadas, status, operadora_slug").in("ciclo_id", cicloIds)
-      : supabase.from("pagamentos").select("total, horas_realizadas, status, operadora_slug");
+      ? supabase.from("pagamentos").select("influencer_id, total, horas_realizadas, status, operadora_slug").in("ciclo_id", cicloIds)
+      : supabase.from("pagamentos").select("influencer_id, total, horas_realizadas, status, operadora_slug");
 
     const aQuery = periodo
       ? supabase.from("pagamentos_agentes").select("total, status, operadora_slug").in("ciclo_id", cicloIds)
@@ -653,10 +693,12 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
       allAgs = allAgs.filter((a: any) => a.operadora_slug === filterOperadora);
     }
 
-    setTotalPago(
-      [...allPags.filter((p: any) => p.status === "pago"), ...allAgs.filter((a: any) => a.status === "pago")]
-        .reduce((acc: number, x: any) => acc + x.total, 0)
-    );
+    if (!periodo) {
+      setTotalPago(
+        [...allPags.filter((p: any) => p.status === "pago"), ...allAgs.filter((a: any) => a.status === "pago")]
+          .reduce((acc: number, x: any) => acc + x.total, 0)
+      );
+    }
     setPendente(
       [...allPags.filter((p: any) => p.status === "em_analise" || p.status === "a_pagar"), ...allAgs.filter((a: any) => a.status === "em_analise" || a.status === "a_pagar")]
         .reduce((acc: number, x: any) => acc + x.total, 0)
@@ -732,6 +774,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const [modalAnalisar, setModalAnalisar] = useState<PagamentoRow | null>(null);
   const [modalPagar, setModalPagar] = useState<PagamentoRow | null>(null);
   const [modalAgente, setModalAgente] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const ciclo = ciclos.find(c => c.id === cicloId) ?? ciclos[0] ?? null;
   const isAberto = ciclo ? cicloAberto(ciclo) : false;
@@ -754,7 +797,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
   useEffect(() => {
     if (ciclo) carregarDados(ciclo);
-  }, [cicloId, podeVerInfluencer, filterInfluencers, filterOperadora]);
+  }, [cicloId, podeVerInfluencer, filterInfluencers, filterOperadora, refreshTrigger]);
 
   async function fecharCiclo(c: CicloPagamento) {
     await gerarPagamentosDoCiclo(c);
@@ -813,9 +856,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (cicloAberto(c)) {
       await carregarPreview(c);
     } else {
-      // Ciclo fechado: re-sincroniza para incluir lives validadas após o fechamento (data dentro do ciclo)
-      await supabase.from("pagamentos").delete().eq("ciclo_id", c.id);
-      await gerarPagamentosDoCiclo(c);
+      // Ciclo fechado: carrega os pagamentos existentes (preserva status aprovado/a pagar/pago).
+      // Para incluir lives validadas após o fechamento, usar o botão "Recalcular".
       await carregarPagamentos(c);
     }
     setLoading(false);
@@ -990,13 +1032,43 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período. Não é possível aprovar a prévia.");
     }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) {
-      throw new Error("Nenhum registro atualizado. Verifique permissões no Supabase (RLS em " + tb + ") ou se o registro existe.");
+
+    let ok = false;
+    const { data: rpcData, error: rpcError } = await supabase.rpc("aprovar_pagamento", {
+      p_id: id,
+      p_total: novoTotal,
+      p_is_agente: isAgente ?? false,
+    });
+    if (rpcError) {
+      throw new Error(rpcError.message ?? "RPC falhou: " + JSON.stringify(rpcError));
     }
+    if (rpcData && typeof rpcData === "object") {
+      const res = rpcData as { ok?: boolean; error?: string };
+      if (res.ok === true) ok = true;
+      else if (res.ok === false) throw new Error(res.error ?? "Erro ao aprovar.");
+    }
+
+    if (!ok) {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("aprovar-pagamento", {
+        body: { action: "aprovar", id, total: novoTotal, isAgente: isAgente ?? false },
+      });
+      if (!fnError && fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === true) {
+        ok = true;
+      } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
+        throw new Error((fnData as { error?: string }).error ?? "Erro ao aprovar.");
+      }
+    }
+
+    if (!ok) {
+      const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error("Não foi possível aprovar. Confira: (1) RPC aprovar_pagamento existe no Supabase? Execute docs/fix-financeiro-rpc-aprovar.sql. (2) Edge Function: supabase functions deploy aprovar-pagamento");
+      }
+    }
+
     setModalAnalisar(null);
-    if (ciclo) await carregarDados(ciclo);
+    setRefreshTrigger(t => t + 1);
   }
 
   async function handlePagar(id: string, isAgente: boolean) {
@@ -1004,13 +1076,42 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       throw new Error("Ciclo ainda aberto — os pagamentos serão gerados ao fechar o período.");
     }
     const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
-    const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) {
-      throw new Error("Nenhum registro atualizado. Verifique permissões no Supabase (RLS em " + tb + ") ou se o registro existe.");
+
+    let ok = false;
+    const { data: rpcData, error: rpcError } = await supabase.rpc("registrar_pagamento", {
+      p_id: id,
+      p_is_agente: isAgente ?? false,
+    });
+    if (rpcError) {
+      throw new Error(rpcError.message ?? "RPC falhou: " + JSON.stringify(rpcError));
     }
+    if (rpcData && typeof rpcData === "object") {
+      const res = rpcData as { ok?: boolean; error?: string };
+      if (res.ok === true) ok = true;
+      else if (res.ok === false) throw new Error(res.error ?? "Erro ao registrar pagamento.");
+    }
+
+    if (!ok) {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("aprovar-pagamento", {
+        body: { action: "registrar", id, isAgente: isAgente ?? false },
+      });
+      if (!fnError && fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === true) {
+        ok = true;
+      } else if (fnData && typeof fnData === "object" && (fnData as { ok?: boolean }).ok === false) {
+        throw new Error((fnData as { error?: string }).error ?? "Erro ao registrar pagamento.");
+      }
+    }
+
+    if (!ok) {
+      const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error("Não foi possível registrar pagamento. Execute docs/fix-financeiro-rpc-aprovar.sql no Supabase.");
+      }
+    }
+
     setModalPagar(null);
-    if (ciclo) await carregarDados(ciclo);
+    setRefreshTrigger(t => t + 1);
   }
 
   const kpi = useMemo(() => ({
@@ -1298,9 +1399,10 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
     const periodo = periodoDoMes(mes);
     let cicloIds: string[] = [];
     if (periodo) {
+      // Ciclos cujo último dia (data_fim) cai no período. Não usa fechado_em nem data de aprovação/pagamento.
       const { data: ciclos } = await supabase
         .from("ciclos_pagamento").select("id")
-        .gte("data_inicio", periodo.inicio)
+        .gte("data_fim", periodo.inicio)
         .lte("data_fim", periodo.fim);
       cicloIds = (ciclos ?? []).map((c: any) => c.id);
     }
@@ -1831,9 +1933,12 @@ export default function Financeiro() {
               }}
             >
               <option value="todas">Todas as operadoras</option>
-              {operadorasList.filter((o) => podeVerOperadora(o.slug)).map((o) => (
-                <option key={o.slug} value={o.slug}>{o.nome}</option>
-              ))}
+              {operadorasList
+                .filter((o) => podeVerOperadora(o.slug))
+                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                .map((o) => (
+                  <option key={o.slug} value={o.slug}>{o.nome}</option>
+                ))}
             </select>
           )}
         </div>

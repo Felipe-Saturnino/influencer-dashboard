@@ -216,7 +216,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               style={inputStyle}
             >
               <option value="">Selecione...</option>
-              {influencers.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+              {[...influencers].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "pt-BR")).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
         )}

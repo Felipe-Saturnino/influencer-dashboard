@@ -623,6 +623,7 @@ export default function Agenda() {
                   <option value="todas">Todas as operadoras</option>
                   {operadorasList
                     .filter((o) => podeVerOperadora(o.slug))
+                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
                     .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
                 </select>
               </div>

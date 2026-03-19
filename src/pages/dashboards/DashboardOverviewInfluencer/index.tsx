@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import {
@@ -387,6 +388,16 @@ export default function DashboardOverviewInfluencer() {
       const rows = metricas.filter((m) => podeVerInfluencer(m.influencer_id));
       const liveRows = lives.filter((l) => podeVerInfluencer(l.influencer_id));
 
+      // Investimento apenas de pagamentos com status PAGO (valores revisados no Financeiro)
+      const { total: investTotal } = await buscarInvestimentoPago(
+        { inicio, fim },
+        {
+          influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
+          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          includeAgentes: false,
+        }
+      );
+
       // Incluir influencers com métricas, lives OU aliases mapeados (caso só tenham tráfego via Gestão de Links)
       let idsComDados = [...new Set([...rows.map((m) => m.influencer_id), ...liveRows.map((l) => l.influencer_id)])];
       const { data: aliasesMapeados } = await supabase
@@ -398,7 +409,7 @@ export default function DashboardOverviewInfluencer() {
       idsComDados = [...new Set([...idsComDados, ...idsAliases])];
       setInfluencersComDadosIds(idsComDados);
 
-      function calcTotais(m: Metrica[], l: LiveData[], r: LiveResultado[]): TotaisData {
+      function calcTotais(m: Metrica[], l: LiveData[], r: LiveResultado[], investimentoPago: number): TotaisData {
         const ggr = m.reduce((s, x) => s + (x.ggr || 0), 0);
         const ftds = m.reduce((s, x) => s + (x.ftd_count || 0), 0);
         const ftd_total = m.reduce((s, x) => s + (x.ftd_total || 0), 0);
@@ -419,31 +430,35 @@ export default function DashboardOverviewInfluencer() {
           }
         });
         const views = viewsPorLive.length > 0 ? Math.round(viewsPorLive.reduce((a, b) => a + b, 0) / viewsPorLive.length) : 0;
-        const investTotal = liveRows.reduce((s, live) => {
-          const p = perfisData?.find((x) => x.id === live.influencer_id);
-          const res = r.find((x) => x.live_id === live.id);
-          const h = res ? (res.duracao_horas || 0) + (res.duracao_min || 0) / 60 : 0;
-          return s + h * (p?.cache_hora || 0);
-        }, 0);
 
         return {
-          ggr, investimento: investTotal, roi: investTotal > 0 ? ((ggr - investTotal) / investTotal) * 100 : 0,
+          ggr, investimento: investimentoPago, roi: investimentoPago > 0 ? ((ggr - investimentoPago) / investimentoPago) * 100 : 0,
           ftds, ftd_total, registros, acessos, views,
           depositos_qtd, depositos_valor, saques_qtd, saques_valor,
           lives: l.length, horas,
         };
       }
 
-      setTotais(calcTotais(rows, liveRows, resultados));
+      setTotais(calcTotais(rows, liveRows, resultados, investTotal));
 
       if (!historico && mesSelecionado) {
         const { inicio: iA, fim: fA } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
-        const mA = await buscaMetricas(iA, fA);
-        const lA = await buscaLives(iA, fA);
+        const [investAnt, mA, lA] = await Promise.all([
+          buscarInvestimentoPago(
+            { inicio: iA, fim: fA },
+            {
+              influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
+              operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+              includeAgentes: false,
+            }
+          ),
+          buscaMetricas(iA, fA),
+          buscaLives(iA, fA),
+        ]);
         const rA = await buscaResultados(lA);
         const rowsA = mA.filter((m) => podeVerInfluencer(m.influencer_id));
         const liveA = lA.filter((l) => podeVerInfluencer(l.influencer_id));
-        setTotaisAnt(calcTotais(rowsA, liveA, rA));
+        setTotaisAnt(calcTotais(rowsA, liveA, rA, investAnt.total));
       } else {
         setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
       }
@@ -571,6 +586,7 @@ export default function DashboardOverviewInfluencer() {
                 <option value="todos">Todos os influencers</option>
                 {perfis
                   .filter((p) => influencersComDadosIds.includes(p.id) && podeVerInfluencer(p.id))
+                  .sort((a, b) => (a.nome_artistico ?? "").localeCompare(b.nome_artistico ?? "", "pt-BR"))
                   .map((p) => (
                     <option key={p.id} value={p.id}>{p.nome_artistico}</option>
                   ))}
@@ -586,7 +602,7 @@ export default function DashboardOverviewInfluencer() {
                 t={t}
               >
                 <option value="todas">Todas as operadoras</option>
-                {operadorasList.map((o) => (
+                {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
                   <option key={o.slug} value={o.slug}>{o.nome}</option>
                 ))}
               </SelectComIcone>

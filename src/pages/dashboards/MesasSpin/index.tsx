@@ -501,7 +501,7 @@ export default function MesasSpin() {
                 style={selectStyle}
               >
                 <option value="todas">Todas</option>
-                {operadoras.map((op) => (
+                {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
                   <option key={op.slug} value={op.slug}>{op.nome}</option>
                 ))}
               </select>

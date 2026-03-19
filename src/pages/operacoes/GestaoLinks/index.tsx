@@ -250,7 +250,7 @@ export default function GestaoLinks() {
           <select value={operadoraFiltro} onChange={(e) => setOperadoraFiltro(e.target.value)}
             style={{ padding: "8px 14px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 13, cursor: "pointer", minWidth: 180, fontFamily: FONT.body, outline: "none" }}>
             <option value="todas">Todas</option>
-            {operadorasList.map((op) => (<option key={op.slug} value={op.slug}>{op.nome}</option>))}
+            {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (<option key={op.slug} value={op.slug}>{op.nome}</option>))}
           </select>
         </div>
       )}
@@ -444,9 +444,11 @@ export default function GestaoLinks() {
                 <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
                   style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
                   <option value="">Selecione o influencer...</option>
-                  {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers).map((inf) => (
-                    <option key={inf.id} value={inf.id}>{inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}</option>
-                  ))}
+                  {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers)
+                    .sort((a, b) => (a.nome_artistico ?? "").localeCompare(b.nome_artistico ?? "", "pt-BR"))
+                    .map((inf) => (
+                      <option key={inf.id} value={inf.id}>{inf.nome_artistico}{inf.status !== "ativo" ? ` (${inf.status})` : ""}</option>
+                    ))}
                 </select>
               </>
             ) : (
@@ -455,7 +457,7 @@ export default function GestaoLinks() {
                 <select value={campanhaSelecionada} onChange={(e) => setCampanhaSelecionada(e.target.value)}
                   style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
                   <option value="">Selecione a campanha...</option>
-                  {campanhas.map((c) => (
+                  {[...campanhas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((c) => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
                 </select>

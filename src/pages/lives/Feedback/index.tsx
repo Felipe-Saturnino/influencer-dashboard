@@ -214,7 +214,7 @@ export default function Feedback() {
 
       const unique = Array.from(
         new Map(visiveis.map(l => [l.influencer_id, { id: l.influencer_id, name: l.influencer_name ?? l.influencer_id }])).values()
-      ).filter((i) => podeVerInfluencer(i.id));
+      ).filter((i) => podeVerInfluencer(i.id)).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "pt-BR"));
       setInfluencers(unique);
 
       const allIds = visiveis.map(l => l.id);
@@ -562,6 +562,7 @@ export default function Feedback() {
                 <option value="todas">Todas as operadoras</option>
                 {operadorasList
                   .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
                   .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
               </select>
             </div>
@@ -744,7 +745,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSa
               }}
             >
               <option value="">Selecione a operadora...</option>
-              {operadorasList.map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+              {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
             </select>
             {showResultFields && (
               <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>

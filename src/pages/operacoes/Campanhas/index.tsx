@@ -488,7 +488,7 @@ function ModalCampanha({ t, editando, operadoras, onClose, onSalvo }: ModalProps
             }}
           >
             <option value="">Todas / Nenhuma</option>
-            {operadoras.map((op) => (
+            {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
               <option key={op.slug} value={op.slug}>
                 {op.nome}
               </option>
