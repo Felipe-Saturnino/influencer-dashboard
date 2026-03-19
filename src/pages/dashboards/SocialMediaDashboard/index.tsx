@@ -330,15 +330,15 @@ export default function SocialMediaDashboard() {
 
       const postsUnif: PostUnificado[] = [
         ...unificar(ig, "Instagram", "#E1306C", "IG",
-          (r) => (r.caption ?? "").slice(0, 80),
+          (r) => (r.caption ?? "").slice(0, 140),
           (r) => [`♥ ${fmtNum(r.likes)}`, `💬 ${fmtNum(r.comments)}`, r.saves != null ? `🔖 ${fmtNum(r.saves)}` : ""].filter(Boolean),
           (r) => r.permalink, (r) => r.thumbnail_url),
         ...unificar(fb, "Facebook", "#1877F2", "FB",
-          (r) => (r.message ?? "").slice(0, 80),
+          (r) => (r.message ?? "").slice(0, 140),
           (r) => [`♥ ${fmtNum(r.reactions)}`, `💬 ${fmtNum(r.comments)}`],
           (r) => r.permalink, (r) => r.thumbnail_url),
         ...unificar(yt, "YouTube", "#FF0000", "YT",
-          (r) => (r.title ?? "").slice(0, 80),
+          (r) => (r.title ?? "").slice(0, 140),
           (r) => [`▶ ${fmtNum(r.views)}`, `♥ ${fmtNum(r.likes)}`, `💬 ${fmtNum(r.comments)}`],
           (r) => (r.video_id ? `https://www.youtube.com/watch?v=${r.video_id}` : null),
           (r) => (r.video_id ? `https://img.youtube.com/vi/${r.video_id}/mqdefault.jpg` : null)),
@@ -429,9 +429,10 @@ export default function SocialMediaDashboard() {
     },
   ];
 
-  const POST_W    = 260;
-  const POST_GAP  = 14;
-  const carMaxNew = Math.max(0, posts.length - 4);
+  const POST_W    = 520;
+  const POST_GAP  = 20;
+  const POST_H_THUMB = 320;
+  const carMaxNew = Math.max(0, posts.length - 2);
   const totalFormatos = formatos.reduce((a, f) => a + f.total, 0);
 
   // ── Estilos base ─────────────────────────────────────────────────────────────
@@ -744,13 +745,13 @@ export default function SocialMediaDashboard() {
                   }}>
                     {posts.map((p, i) => (
                       <div key={i} style={{
-                        flex: `0 0 ${POST_W}px`, borderRadius: 14,
+                        flex: `0 0 ${POST_W}px`, borderRadius: 18,
                         border: `1px solid ${t.cardBorder}`,
                         background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
                         overflow: "hidden",
                       }}>
                         <div style={{
-                          width: "100%", height: 160,
+                          width: "100%", height: POST_H_THUMB,
                           display: "flex", alignItems: "center", justifyContent: "center",
                           background: `${p.cor}18`, overflow: "hidden", position: "relative",
                         }}>
@@ -763,14 +764,14 @@ export default function SocialMediaDashboard() {
                             />
                           )}
                           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <svg width="52" height="52" viewBox="0 0 52 52">
-                              <rect width="52" height="52" rx="12" fill={p.cor} opacity=".2" />
-                              <text x="26" y="34" textAnchor="middle" fontSize="20" fill={p.cor} fontFamily={FONT.body}>{p.tag}</text>
+                            <svg width="96" height="96" viewBox="0 0 96 96">
+                              <rect width="96" height="96" rx="20" fill={p.cor} opacity=".2" />
+                              <text x="48" y="62" textAnchor="middle" fontSize="36" fill={p.cor} fontFamily={FONT.body}>{p.tag}</text>
                             </svg>
                           </div>
                         </div>
-                        <div style={{ padding: 14 }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 6, color: p.cor }}>
+                        <div style={{ padding: 24 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 10, color: p.cor }}>
                             {p.url ? (
                               <a href={p.url} target="_blank" rel="noopener noreferrer"
                                 style={{ color: "inherit", textDecoration: "none", borderBottom: "1px dotted currentColor" }}>
@@ -779,13 +780,13 @@ export default function SocialMediaDashboard() {
                             ) : <>{p.canal} · {p.tipo}</>}
                           </div>
                           <div style={{
-                            fontSize: 12, color: t.textMuted, lineHeight: 1.5, marginBottom: 10,
-                            display: "-webkit-box", WebkitLineClamp: 3,
+                            fontSize: 16, color: t.textMuted, lineHeight: 1.55, marginBottom: 14,
+                            display: "-webkit-box", WebkitLineClamp: 4,
                             WebkitBoxOrient: "vertical" as const, overflow: "hidden", fontFamily: FONT.body,
                           }}>
                             {p.resumo || `Post de ${p.date}`}
                           </div>
-                          <div style={{ display: "flex", gap: 10, fontSize: 11, color: t.textMuted, fontFamily: FONT.body, flexWrap: "wrap" as const }}>
+                          <div style={{ display: "flex", gap: 14, fontSize: 14, color: t.textMuted, fontFamily: FONT.body, flexWrap: "wrap" as const }}>
                             {p.stats.map((s, j) => <span key={j}>{s}</span>)}
                           </div>
                         </div>
@@ -793,12 +794,12 @@ export default function SocialMediaDashboard() {
                     ))}
                   </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
                   <button
                     onClick={() => setCarIdx((i) => Math.max(0, i - 1))}
                     disabled={carIdx === 0}
                     style={{
-                      width: 34, height: 34, borderRadius: "50%",
+                      width: 40, height: 40, borderRadius: "50%",
                       border: `1px solid ${t.cardBorder}`, background: "transparent",
                       color: t.text, cursor: carIdx === 0 ? "not-allowed" : "pointer",
                       opacity: carIdx === 0 ? 0.35 : 1,
@@ -812,7 +813,7 @@ export default function SocialMediaDashboard() {
                     onClick={() => setCarIdx((i) => Math.min(carMaxNew, i + 1))}
                     disabled={carIdx >= carMaxNew}
                     style={{
-                      width: 34, height: 34, borderRadius: "50%",
+                      width: 40, height: 40, borderRadius: "50%",
                       border: `1px solid ${t.cardBorder}`, background: "transparent",
                       color: t.text, cursor: carIdx >= carMaxNew ? "not-allowed" : "pointer",
                       opacity: carIdx >= carMaxNew ? 0.35 : 1,
