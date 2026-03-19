@@ -3,7 +3,77 @@ import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
 
+// ─── BRAND ────────────────────────────────────────────────────────────────────
+const BRAND = {
+  roxo:     "#4a2082",
+  roxoVivo: "#7c3aed",
+  azul:     "#1e36f8",
+  vermelho: "#e84025",
+  ciano:    "#70cae4",
+  verde:    "#22c55e",
+  amarelo:  "#f59e0b",
+} as const;
+
+const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+
+// ─── SectionTitle (padrão da plataforma) ─────────────────────────────────────
+function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  const { theme: t } = useApp();
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+      <span style={{
+        width: 28, height: 28, borderRadius: 8,
+        background: "rgba(74,32,130,0.18)",
+        border: "1px solid rgba(74,32,130,0.30)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: BRAND.ciano, flexShrink: 0,
+      }}>
+        {icon}
+      </span>
+      <span style={{
+        fontSize: 14, fontWeight: 800, color: t.text,
+        fontFamily: FONT_TITLE,
+        letterSpacing: "0.05em", textTransform: "uppercase" as const,
+      }}>
+        {children}
+      </span>
+    </div>
+  );
+}
+
+// ─── KpiCard (padrão da plataforma com accent bar) ───────────────────────────
+function KpiCard({ label, value, accentColor, loading }: {
+  label: string; value: React.ReactNode; accentColor: string; loading?: boolean;
+}) {
+  const { theme: t } = useApp();
+  return (
+    <div style={{
+      background: t.cardBg, borderRadius: 16,
+      border: `1px solid ${t.cardBorder}`, overflow: "hidden",
+    }}>
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
+      <div style={{ padding: "18px 20px" }}>
+        <p style={{
+          fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
+          color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px",
+          margin: "0 0 10px",
+        }}>
+          {label}
+        </p>
+        <div style={{
+          fontFamily: FONT.body, fontSize: 28, fontWeight: 800,
+          color: t.text, margin: 0, lineHeight: 1.1,
+        }}>
+          {loading ? "—" : value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface SyncLog {
   id: string;
   integracao_slug: string;
@@ -78,21 +148,15 @@ export default function StatusTecnico() {
     border: `1px solid ${t.cardBorder}`,
   };
   const thStyle: React.CSSProperties = {
-    fontFamily: FONT.body,
-    fontSize: 11,
-    fontWeight: 700,
-    color: t.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: "1px",
-    padding: "10px 14px",
-    textAlign: "left",
+    fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
+    color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px",
+    padding: "10px 14px", textAlign: "left",
+    background: "rgba(74,32,130,0.10)",
+    borderBottom: `1px solid ${t.cardBorder}`,
   };
   const tdStyle: React.CSSProperties = {
-    fontFamily: FONT.body,
-    fontSize: 13,
-    color: t.text,
-    padding: "12px 14px",
-    borderTop: `1px solid ${t.cardBorder}`,
+    fontFamily: FONT.body, fontSize: 13, color: t.text,
+    padding: "12px 14px", borderTop: `1px solid ${t.cardBorder}`,
   };
 
   const carregar = useCallback(async () => {
@@ -409,12 +473,10 @@ export default function StatusTecnico() {
   const integracoesAtivasCount = [cdaStatusOk, socialStatusOk, emailStatusOk].filter(Boolean).length;
   const totalIntegracoes = 3;
 
-  // Último Sync: mais recente de qualquer uma das 3
-  const ultimoSyncCda = syncLogs.find((l) => l.integracao_slug === "casa_apostas");
-  const ultimoSyncSocial = pipelineRuns.find((r) => r.status === "success");
+  // Último Sync: mais recente de qualquer uma das 3 (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
-  if (ultimoSyncCda?.executado_em) timestamps.push({ ts: ultimoSyncCda.executado_em, label: "CDA" });
-  if (ultimoSyncSocial?.created_at) timestamps.push({ ts: ultimoSyncSocial.created_at, label: "Social" });
+  if (ultimoSyncCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncCdaLog.executado_em, label: "CDA" });
+  if (ultimoPipelineRun?.created_at) timestamps.push({ ts: ultimoPipelineRun.created_at, label: "Social" });
   if (ultimoEmailEnvioAt) timestamps.push({ ts: ultimoEmailEnvioAt, label: "E-mail" });
   const ultimoSyncQualquer = timestamps.length > 0 ? timestamps.reduce((a, b) => (a.ts > b.ts ? a : b)) : null;
 
@@ -568,7 +630,17 @@ export default function StatusTecnico() {
   const fluxoLabel = (k: string) =>
     ({ cda: "CDA (Casa de Apostas)", social: "Social Media", relatorio_diretoria: "E-mail: Relatório Diretoria" }[k] ?? `E-mail: ${k}`);
   const fluxoCor = (k: string) =>
-    ({ cda: "#7c3aed", social: "#2563eb", relatorio_diretoria: "#059669" }[k] ?? "#10b981");
+    ({ cda: BRAND.roxoVivo, social: BRAND.azul, relatorio_diretoria: BRAND.verde }[k] ?? "#10b981");
+
+  const corIntegracoes = integracoesAtivasCount === totalIntegracoes ? BRAND.verde : integracoesAtivasCount > 0 ? BRAND.amarelo : BRAND.vermelho;
+  const corTaxaErro = parseFloat(taxaErro) > 5 ? BRAND.vermelho : parseFloat(taxaErro) > 0 ? BRAND.amarelo : BRAND.verde;
+
+  const btnAcao = (disabled: boolean): React.CSSProperties => ({
+    padding: "6px 14px", borderRadius: 8, border: "none",
+    background: disabled ? "#6b7280" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+    color: "#fff", fontSize: 12, fontWeight: 700,
+    fontFamily: FONT.body, cursor: disabled ? "not-allowed" : "pointer",
+  });
   const formatarHora = (iso: string) => {
     const d = new Date(iso);
     const hoje = new Date();
@@ -587,225 +659,140 @@ export default function StatusTecnico() {
   }
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 28 }}>
-      <div>
-        <h1 style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0 }}>
-          📡 Status Técnico
-        </h1>
-        <p style={{ color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-          Acompanhamento de integrações e saúde da plataforma.
-        </p>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+
+      {/* ── Header — padrão da plataforma ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: BRAND.ciano, flexShrink: 0,
+        }}>
+          <GiRadarSweep size={18} />
+        </span>
+        <div>
+          <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: t.text, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            Status Técnico
+          </h1>
+          <p style={{ color: t.textMuted, margin: "4px 0 0", fontFamily: FONT.body, fontSize: 13 }}>
+            Acompanhamento de integrações e saúde da plataforma.
+          </p>
+        </div>
       </div>
 
-      {/* KPIs */}
+      {/* ── KPI Cards — accent bar ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-        <div style={card} title="CDA, Social Media e E-mail — OK quando o último Sync (automático ou manual) foi sucesso">
-          <p style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>
-            Integrações Ativas
-          </p>
-          <p style={{ fontFamily: FONT.title, fontSize: 28, color: integracoesAtivasCount === totalIntegracoes ? "#059669" : integracoesAtivasCount > 0 ? "#f59e0b" : "#ef4444", margin: 0, fontWeight: 700 }}>
-            {loading ? "—" : `${integracoesAtivasCount} / ${totalIntegracoes}`}
-          </p>
-          <p style={{ fontFamily: FONT.body, fontSize: 10, color: t.textMuted, margin: "4px 0 0", opacity: 0.8 }}>
-            CDA, Social, E-mail
-          </p>
-        </div>
-        <div style={card} title="Mais recente de: sync_logs (CDA), pipeline_runs (Social) ou email_envios (E-mail)">
-          <p style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>
-            Último Sync
-          </p>
-          <p style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0, fontWeight: 600 }}>
-            {loading ? "—" : ultimoSyncQualquer ? formatarHora(ultimoSyncQualquer.ts) : "Nunca"}
-          </p>
-        </div>
-        <div style={card} title="Soma do fluxo do dia: CDA (influencer_metricas) + Social Media (kpi_daily) + E-mails (destinatários)">
-          <p style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>
-            Registros Hoje
-          </p>
-          <p style={{ fontFamily: FONT.title, fontSize: 28, color: "#7c3aed", margin: 0, fontWeight: 700 }}>
-            {loading ? "—" : registrosHojeTotal.toLocaleString("pt-BR")}
-          </p>
-          <p style={{ fontFamily: FONT.body, fontSize: 10, color: t.textMuted, margin: "4px 0 0", opacity: 0.8 }}>
-            CDA + Social + E-mails
-          </p>
-        </div>
-        <div style={card} title="Falhas / total tentativas das 3: sync_logs (CDA) + pipeline_runs (Social) + email_envios + tech_logs (E-mail)">
-          <p style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>
-            Taxa de Erro
-          </p>
-          <p style={{
-            fontFamily: FONT.title,
-            fontSize: 28,
-            color: parseFloat(taxaErro) > 5 ? "#ef4444" : parseFloat(taxaErro) > 0 ? "#f59e0b" : "#059669",
-            margin: 0,
-            fontWeight: 700,
-          }}>
-            {loading ? "—" : `${taxaErro}%`}
-          </p>
-          <p style={{ fontFamily: FONT.body, fontSize: 10, color: t.textMuted, margin: "4px 0 0", opacity: 0.8 }}>
-            Falhas / total (3 fontes)
-          </p>
-        </div>
+        <KpiCard
+          label="Integrações Ativas"
+          loading={loading}
+          accentColor={corIntegracoes}
+          value={<span style={{ color: corIntegracoes }}>{integracoesAtivasCount} / {totalIntegracoes}</span>}
+        />
+        <KpiCard
+          label="Último Sync"
+          loading={loading}
+          accentColor={BRAND.ciano}
+          value={<span style={{ fontSize: 20, fontWeight: 700 }}>{ultimoSyncQualquer ? formatarHora(ultimoSyncQualquer.ts) : "Nunca"}</span>}
+        />
+        <KpiCard
+          label="Registros Hoje"
+          loading={loading}
+          accentColor={BRAND.roxoVivo}
+          value={<span style={{ color: BRAND.roxoVivo }}>{registrosHojeTotal.toLocaleString("pt-BR")}</span>}
+        />
+        <KpiCard
+          label="Taxa de Erro"
+          loading={loading}
+          accentColor={corTaxaErro}
+          value={<span style={{ color: corTaxaErro }}>{taxaErro}%</span>}
+        />
       </div>
 
-      {/* Status das Integrações */}
+      {/* ── Status das Integrações ── */}
       <div style={card}>
-        <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
-          Status das Integrações
-        </h2>
+        <SectionTitle icon={<GiCircuitry size={14} />}>Status das Integrações</SectionTitle>
         {(syncMensagem || syncSocialMensagem || emailMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-            {syncMensagem && (
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 10,
-                  background: syncMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
-                  border: `1px solid ${syncMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
-                  color: syncMensagem.tipo === "ok" ? "#059669" : "#ef4444",
-                  fontFamily: FONT.body,
-                  fontSize: 12,
-                }}
-              >
-                {syncMensagem.tipo === "ok" ? "✅ " : "⚠️ "} Sync CDA: {syncMensagem.texto}
-              </div>
-            )}
-            {syncSocialMensagem && (
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 10,
-                  background: syncSocialMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
-                  border: `1px solid ${syncSocialMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
-                  color: syncSocialMensagem.tipo === "ok" ? "#059669" : "#ef4444",
-                  fontFamily: FONT.body,
-                  fontSize: 12,
-                }}
-              >
-                {syncSocialMensagem.tipo === "ok" ? "✅ " : "⚠️ "} Sync Social: {syncSocialMensagem.texto}
-              </div>
-            )}
-            {emailMensagem && (
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 10,
-                  background: emailMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
-                  border: `1px solid ${emailMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
-                  color: emailMensagem.tipo === "ok" ? "#059669" : "#ef4444",
-                  fontFamily: FONT.body,
-                  fontSize: 12,
-                }}
-              >
-                {emailMensagem.tipo === "ok" ? "✅ " : "⚠️ "} {emailMensagem.texto}
-              </div>
-            )}
+            {[syncMensagem && { prefix: "Sync CDA", msg: syncMensagem }, syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem }, emailMensagem && { prefix: "E-mail", msg: emailMensagem }]
+              .filter(Boolean)
+              .map((item, i) => {
+                const { prefix, msg } = item as { prefix: string; msg: { tipo: "ok" | "erro"; texto: string } };
+                return (
+                  <div key={i} style={{
+                    padding: 12, borderRadius: 10,
+                    background: msg.tipo === "ok" ? `${BRAND.verde}18` : `${BRAND.vermelho}18`,
+                    border: `1px solid ${msg.tipo === "ok" ? BRAND.verde : BRAND.vermelho}`,
+                    color: msg.tipo === "ok" ? BRAND.verde : BRAND.vermelho,
+                    fontFamily: FONT.body, fontSize: 12,
+                  }}>
+                    {msg.tipo === "ok" ? "✅ " : "⚠️ "}{prefix}: {msg.texto}
+                  </div>
+                );
+              })}
           </div>
         )}
         {loading ? (
-          <p style={{ color: t.textMuted }}>Carregando...</p>
+          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={{
+              width: "100%", borderCollapse: "separate", borderSpacing: 0,
+              borderRadius: 12, overflow: "hidden", border: `1px solid ${t.cardBorder}`,
+            }}>
               <thead>
                 <tr>
-                  <th style={thStyle}>Integração</th>
-                  <th style={thStyle}>Último Sync</th>
-                  <th style={thStyle}>Registros Hoje</th>
-                  <th style={thStyle}>Erros</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Ação</th>
+                  {["Integração", "Último Sync", "Registros Hoje", "Erros", "Status", "Ação"].map((h, i) => (
+                    <th key={h} style={{ ...thStyle, textAlign: i === 0 ? "left" : "left" }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {linhasCompletas.map((row) => {
+                {linhasCompletas.map((row, idx) => {
                   const isCda = row.syncTipo === "cda";
                   const isSocial = row.syncTipo === "social";
                   const isEmail = row.syncTipo === "email";
                   const syncExecutandoRow = isCda ? syncExecutando : isSocial ? syncSocialExecutando : false;
                   const onSync = isCda ? executarSync : isSocial ? executarSyncSocial : () => {};
                   const ultimoSync = "ultimoSync" in row ? row.ultimoSync : null;
-                  const registrosHoje = "registrosHoje" in row ? row.registrosHoje : 0;
+                  const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
                   const erros = "erros" in row ? row.erros : 0;
                   const status = "status" in row ? row.status : null;
+                  const rowBg = idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent";
                   return (
-                    <tr key={row.slug}>
+                    <tr key={row.slug} style={{ background: rowBg }}>
                       <td style={tdStyle}>
-                        {isEmail ? (
-                          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            📧 {row.nome}
-                          </span>
-                        ) : (
-                          row.nome
-                        )}
+                        {isEmail ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}>📧 {row.nome}</span> : row.nome}
                       </td>
                       <td style={tdStyle}>{ultimoSync ? formatarHora(ultimoSync) : "—"}</td>
-                      <td style={tdStyle}>{registrosHoje.toLocaleString("pt-BR")}</td>
-                      <td style={tdStyle}>{erros}</td>
+                      <td style={tdStyle}>{(registrosHojeR as number).toLocaleString("pt-BR")}</td>
+                      <td style={tdStyle}>{erros as number}</td>
                       <td style={tdStyle}>
-                        {status ? (
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              background: status === "ok" ? "#05966922" : status === "warning" ? "#f59e0b22" : "#ef444422",
-                              color: status === "ok" ? "#059669" : status === "warning" ? "#f59e0b" : "#ef4444",
-                              borderRadius: 8,
-                              padding: "4px 12px",
-                              fontSize: 12,
-                              fontWeight: 600,
-                            }}
-                          >
+                        {status && (
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", gap: 6,
+                            background: status === "ok" ? `${BRAND.verde}18` : status === "warning" ? `${BRAND.amarelo}18` : `${BRAND.vermelho}18`,
+                            color: status === "ok" ? BRAND.verde : status === "warning" ? BRAND.amarelo : BRAND.vermelho,
+                            borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700,
+                            border: `1px solid ${status === "ok" ? `${BRAND.verde}44` : status === "warning" ? `${BRAND.amarelo}44` : `${BRAND.vermelho}44`}`,
+                          }}>
                             {status === "ok" && "🟢 OK"}
                             {status === "warning" && "🟡 Warning"}
                             {status === "falha" && "🔴 Falha"}
                           </span>
-                        ) : (
-                          "—"
                         )}
                       </td>
                       <td style={tdStyle}>
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          {(isCda || isSocial) && (
-                            <button
-                              onClick={onSync}
-                              disabled={syncExecutandoRow || !perm.canView}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: 8,
-                                border: "none",
-                                background: syncExecutandoRow ? "#6b7280" : "linear-gradient(135deg, #4a2082, #1e36f8)",
-                                color: "#fff",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                fontFamily: FONT.body,
-                                cursor: syncExecutandoRow ? "not-allowed" : "pointer",
-                              }}
-                            >
-                              {syncExecutandoRow ? "..." : "🔄 Sync"}
-                            </button>
-                          )}
-                          {isEmail && (
-                            <button
-                              onClick={enviarEmailDiretoria}
-                              disabled={emailEnviando || !perm.canView}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: 8,
-                                border: "none",
-                                background: emailEnviando ? "#6b7280" : "#059669",
-                                color: "#fff",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                fontFamily: FONT.body,
-                                cursor: emailEnviando ? "not-allowed" : "pointer",
-                              }}
-                            >
-                              {emailEnviando ? "Enviando..." : "Enviar"}
-                            </button>
-                          )}
-                        </div>
+                        {(isCda || isSocial) && (
+                          <button onClick={onSync} disabled={syncExecutandoRow || !perm.canView} style={btnAcao(syncExecutandoRow)}>
+                            {syncExecutandoRow ? "..." : "🔄 Sync"}
+                          </button>
+                        )}
+                        {isEmail && (
+                          <button onClick={enviarEmailDiretoria} disabled={emailEnviando || !perm.canView} style={btnAcao(emailEnviando)}>
+                            {emailEnviando ? "Enviando..." : "Enviar"}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -816,35 +803,33 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Fluxo de Dados */}
+      {/* Fluxo de Dados — sem legenda textual (#5 + remoção legenda) */}
       <div style={card}>
-        <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
-          Fluxo de Dados (últimos 14 dias)
-        </h2>
-        <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: "-8px 0 8px" }}>
-          CDA e Social: 1 = 1 registro. E-mail: 1 = cada destinatário.
-        </p>
-        <div style={{ display: "flex", gap: 20, marginBottom: 16, flexWrap: "wrap" }}>
-          <span style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted }}>
-            <span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> CDA
-          </span>
-          <span style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted }}>
-            <span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> Social Media
-          </span>
-          <span style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted }}>
-            <span style={{ color: fluxoCor("relatorio_diretoria"), fontWeight: 600 }}>●</span> E-mail Diretoria
-          </span>
+        <SectionTitle icon={<GiGearStick size={14} />}>Fluxo de Dados (últimos 14 dias)</SectionTitle>
+
+        {/* Legenda visual compacta — sem texto explicativo de escala */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+          {[
+            { key: "cda", label: "CDA" },
+            { key: "social", label: "Social Media" },
+            { key: "relatorio_diretoria", label: "E-mail Diretoria" },
+          ].map((item) => (
+            <span key={item.key} style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: fluxoCor(item.key), flexShrink: 0, display: "inline-block" }} />
+              {item.label}
+            </span>
+          ))}
         </div>
+
         {loading ? (
-          <p style={{ color: t.textMuted }}>Carregando...</p>
+          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
         ) : fluxoDados.length === 0 ? (
           <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Nenhum dado no período.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[...fluxoDados.slice(-14)].reverse().map((f) => {
-              const emailTotal = Object.values(f.emails).reduce((s, n) => s + n, 0);
-              const pct = (v: number) => (f.total > 0 ? (v / f.total) * 100 : 0);
               const isHover = fluxoHover === f.data;
+              const pct = (v: number) => f.total > 0 ? (v / f.total) * 100 : 0;
               return (
                 <div
                   key={f.data}
@@ -852,99 +837,47 @@ export default function StatusTecnico() {
                   onMouseEnter={() => setFluxoHover(f.data)}
                   onMouseLeave={() => setFluxoHover(null)}
                 >
-                  <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: 100 }}>
+                  <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: 100, flexShrink: 0 }}>
                     {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
                   </span>
-                  <div
-                    style={{
-                      flex: 1,
-                      height: 24,
-                      background: t.bg,
-                      borderRadius: 6,
-                      overflow: "hidden",
-                      display: "flex",
-                    }}
-                  >
+                  <div style={{ flex: 1, height: 24, background: t.cardBorder, borderRadius: 6, overflow: "hidden", display: "flex" }}>
                     {f.cda > 0 && (
                       <div
                         title={`${fluxoLabel("cda")}: ${f.cda.toLocaleString("pt-BR")}`}
-                        style={{
-                          width: `${pct(f.cda)}%`,
-                          minWidth: f.cda > 0 ? 4 : 0,
-                          height: "100%",
-                          background: fluxoCor("cda"),
-                          transition: "opacity 0.15s",
-                          opacity: isHover ? 1 : 0.9,
-                        }}
+                        style={{ width: `${pct(f.cda)}%`, minWidth: f.cda > 0 ? 8 : 0, height: "100%", background: fluxoCor("cda"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
                     {f.social > 0 && (
                       <div
                         title={`${fluxoLabel("social")}: ${f.social.toLocaleString("pt-BR")}`}
-                        style={{
-                          width: `${pct(f.social)}%`,
-                          minWidth: f.social > 0 ? 4 : 0,
-                          height: "100%",
-                          background: fluxoCor("social"),
-                          transition: "opacity 0.15s",
-                          opacity: isHover ? 1 : 0.9,
-                        }}
+                        style={{ width: `${pct(f.social)}%`, minWidth: f.social > 0 ? 8 : 0, height: "100%", background: fluxoCor("social"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
-                    {Object.entries(f.emails)
-                      .filter(([, n]) => n > 0)
-                      .map(([tipo, n]) => (
-                        <div
-                          key={tipo}
-                          title={`${fluxoLabel(tipo)}: ${n.toLocaleString("pt-BR")}`}
-                          style={{
-                            width: `${pct(n)}%`,
-                            minWidth: 4,
-                            height: "100%",
-                            background: fluxoCor(tipo),
-                            transition: "opacity 0.15s",
-                            opacity: isHover ? 1 : 0.9,
-                          }}
-                        />
-                      ))}
+                    {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
+                      <div
+                        key={tipo}
+                        title={`${fluxoLabel(tipo)}: ${n.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(n)}%`, minWidth: 8, height: "100%", background: fluxoCor(tipo), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    ))}
                   </div>
-                  <span style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 600, color: t.text, minWidth: 60 }}>
+                  <span style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 700, color: t.text, minWidth: 40, textAlign: "right" }}>
                     {f.total.toLocaleString("pt-BR")}
                   </span>
+
+                  {/* Tooltip on hover */}
                   {isHover && f.total > 0 && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        left: 116,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        marginLeft: 4,
-                        padding: "8px 12px",
-                        background: t.cardBg,
-                        border: `1px solid ${t.cardBorder}`,
-                        borderRadius: 8,
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                        fontSize: 12,
-                        fontFamily: FONT.body,
-                        color: t.text,
-                        zIndex: 10,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {f.cda > 0 && (
-                        <div style={{ padding: "2px 0" }}>
-                          <span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}
-                        </div>
-                      )}
-                      {f.social > 0 && (
-                        <div style={{ padding: "2px 0" }}>
-                          <span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}
-                        </div>
-                      )}
-                      {Object.entries(f.emails).map(([tipo, n]) => (
-                        <div key={tipo} style={{ padding: "2px 0" }}>
-                          <span style={{ color: fluxoCor(tipo), fontWeight: 600 }}>●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}
-                        </div>
+                    <div style={{
+                      position: "absolute", left: 116, top: "50%", transform: "translateY(-50%)",
+                      marginLeft: 4, padding: "8px 12px",
+                      background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+                      borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                      fontSize: 12, fontFamily: FONT.body, color: t.text, zIndex: 10, whiteSpace: "nowrap",
+                    }}>
+                      {f.cda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}</div>}
+                      {f.social > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}</div>}
+                      {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
+                        <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }}>●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
                       ))}
                     </div>
                   )}
@@ -955,30 +888,31 @@ export default function StatusTecnico() {
         )}
       </div>
 
-      {/* Alertas */}
+      {/* Alertas — hierarquia erro vs aviso (#4, #8) */}
       <div style={card}>
-        <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
-          ⚠ Alertas
-        </h2>
+        <SectionTitle icon={<GiSiren size={14} />}>Alertas</SectionTitle>
         {alertas.length === 0 ? (
-          <p style={{ color: "#059669", fontFamily: FONT.body, fontSize: 14 }}>✅ Nenhum alerta no momento.</p>
+          <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0 }}>✅ Nenhum alerta no momento.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {alertas.map((a, i) => (
               <div
                 key={i}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: 14,
-                  borderRadius: 10,
-                  background: a.nivel === "erro" ? "#ef444422" : "#f59e0b22",
-                  border: `1px solid ${a.nivel === "erro" ? "#ef4444" : "#f59e0b"}`,
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "12px 16px", borderRadius: 10,
+                  background: a.nivel === "erro" ? `${BRAND.vermelho}12` : `${BRAND.amarelo}12`,
+                  border: `1px solid ${a.nivel === "erro" ? `${BRAND.vermelho}44` : `${BRAND.amarelo}44`}`,
+                  borderLeft: `${a.nivel === "erro" ? "4px" : "2px"} solid ${a.nivel === "erro" ? BRAND.vermelho : BRAND.amarelo}`,
                 }}
               >
-                <span style={{ fontSize: 18 }}>{a.nivel === "erro" ? "🔴" : "🟡"}</span>
-                <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.text }}>{a.msg}</span>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{a.nivel === "erro" ? "🔴" : "🟡"}</span>
+                <span style={{
+                  fontFamily: FONT.body, fontSize: 13, color: t.text,
+                  fontWeight: a.nivel === "erro" ? 700 : 400,
+                }}>
+                  {a.msg}
+                </span>
               </div>
             ))}
           </div>
@@ -988,72 +922,73 @@ export default function StatusTecnico() {
       {/* Logs Recentes */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: 0 }}>
-            Logs Recentes
-          </h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: BRAND.ciano, flexShrink: 0,
+            }}>
+              <GiCircuitry size={13} />
+            </span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Logs Recentes
+            </span>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             {(["1h", "24h", "48h"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setLogFiltro(f)}
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  border: `1px solid ${logFiltro === f ? "#7c3aed" : t.cardBorder}`,
-                  background: logFiltro === f ? "#7c3aed22" : "transparent",
-                  color: logFiltro === f ? "#a78bfa" : t.textMuted,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 12,
-                  fontWeight: 600,
+                  padding: "6px 12px", borderRadius: 8,
+                  border: `1px solid ${logFiltro === f ? BRAND.roxoVivo : t.cardBorder}`,
+                  background: logFiltro === f ? `${BRAND.roxoVivo}22` : "transparent",
+                  color: logFiltro === f ? BRAND.roxoVivo : t.textMuted,
+                  cursor: "pointer", fontFamily: FONT.body, fontSize: 12, fontWeight: 600,
                 }}
               >
-                Última{f === "1h" ? " 1 hora" : f === "24h" ? "s 24h" : "s 48h"}
+                {f === "1h" ? "Última 1 hora" : f === "24h" ? "Últimas 24h" : "Últimas 48h"}
               </button>
             ))}
           </div>
         </div>
+
         {loading ? (
-          <p style={{ color: t.textMuted }}>Carregando...</p>
+          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
         ) : (() => {
           const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
-          const desdeDisplay = new Date();
-          desdeDisplay.setHours(desdeDisplay.getHours() - horasDisplay);
+          const desdeDisplay = new Date(); desdeDisplay.setHours(desdeDisplay.getHours() - horasDisplay);
           const techLogsFiltrados = techLogs.filter((l) => new Date(l.created_at) >= desdeDisplay);
           return techLogsFiltrados.length === 0 ? (
-            <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Nenhum log de erro no período.</p>
+            <p style={{ color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>Nenhum log de erro no período.</p>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 12, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>Hora</th>
-                    <th style={thStyle}>Integração</th>
-                    <th style={thStyle}>Tipo</th>
-                    <th style={thStyle}>Descrição</th>
+                    {["Hora", "Integração", "Tipo", "Descrição"].map((h) => (
+                      <th key={h} style={thStyle}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {techLogsFiltrados.map((log) => {
-                  const integracaoLabel =
-                    log.integracao_slug
-                      ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ?? log.integracao_slug
-                      : {
-                          instagram: "Social Media (Instagram)",
-                          facebook: "Social Media (Facebook)",
-                          youtube: "Social Media (YouTube)",
-                          linkedin: "Social Media (LinkedIn)",
-                          relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
-                          resend: "E-mail (Resend)",
-                        }[log.tipo] ?? (log.tipo.startsWith("relatorio_")
-                          ? `E-mail - Relatório ${log.tipo.replace("relatorio_", "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} (Resend)`
-                          : log.tipo);
+                  {techLogsFiltrados.map((log, idx) => {
+                    const integracaoLabel =
+                      log.integracao_slug
+                        ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ?? log.integracao_slug
+                        : {
+                            instagram: "Social Media (Instagram)", facebook: "Social Media (Facebook)",
+                            youtube: "Social Media (YouTube)", linkedin: "Social Media (LinkedIn)",
+                            relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
+                            resend: "E-mail (Resend)",
+                          }[log.tipo] ?? log.tipo;
                     return (
-                      <tr key={log.id}>
+                      <tr key={log.id} style={{ background: idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
                         <td style={tdStyle}>{formatarHora(log.created_at)}</td>
                         <td style={tdStyle}>{integracaoLabel}</td>
                         <td style={tdStyle}>
-                          <code style={{ background: t.bg, padding: "2px 6px", borderRadius: 4, fontSize: 11 }}>{log.tipo}</code>
+                          <code style={{ background: t.cardBorder, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontFamily: FONT.body }}>{log.tipo}</code>
                         </td>
                         <td style={tdStyle}>{log.descricao}</td>
                       </tr>
