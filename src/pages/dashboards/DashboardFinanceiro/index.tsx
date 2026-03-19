@@ -282,6 +282,7 @@ export default function DashboardFinanceiro() {
   const [rows, setRows]             = useState<FinanceiroRow[]>([]);
   const [totais, setTotais]         = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
   const [totaisAnt, setTotaisAnt]   = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
+  const [investimentoAgentes, setInvestimentoAgentes] = useState(0);
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
   const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
 
@@ -416,11 +417,12 @@ export default function DashboardFinanceiro() {
         if (res) { const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60; horasMap.set(live.influencer_id, (horasMap.get(live.influencer_id) || 0) + h); }
       });
 
-      const { total: investimentoTotal, porInfluencer: investimentoPorInf } = await buscarInvestimentoPago(
+      const { total: investimentoTotal, porInfluencer: investimentoPorInf, agentes: investimentoAgentes } = await buscarInvestimentoPago(
         { inicio: periodoInicio, fim: periodoFim },
         {
           influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
           operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+          includeAgentes: filtroInfluencer === "todos",
         }
       );
 
@@ -466,6 +468,7 @@ export default function DashboardFinanceiro() {
       }
 
       setTotais(calcTotais(rowsVisiveis, investimentoTotal));
+      setInvestimentoAgentes(investimentoAgentes ?? 0);
 
       if (!historico && mesSelecionado) {
         const periodoAnt = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
@@ -475,6 +478,7 @@ export default function DashboardFinanceiro() {
             {
               influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
               operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+              includeAgentes: filtroInfluencer === "todos",
             }
           ),
           (async () => {
@@ -530,25 +534,31 @@ export default function DashboardFinanceiro() {
     const tDepCount = rowsParaExibir.reduce((s,r) => s+r.deposit_count, 0);
     const tSaq = rowsParaExibir.reduce((s,r) => s+r.saques, 0);
     const tGGR = rowsParaExibir.reduce((s,r) => s+r.ggr, 0);
-    const tInvest = rowsParaExibir.reduce((s,r) => s+r.investimento, 0);
     const depTM = tDepCount>0?tDep/tDepCount:0;
     const ggrPJ = tFTDs>0?tGGR/tFTDs:0;
     const wdPct = tDep>0?(tSaq/tDep)*100:0;
     const saqCount = rowsParaExibir.reduce((s,r) => s+(r.saque_ticket_medio>0?Math.round(r.saques/r.saque_ticket_medio):0), 0);
-    return { ...totais, ftd_total: tFtdTotal, ftds: tFTDs, ftd_ticket_medio: tFTDs>0?tFtdTotal/tFTDs:0, depositos: tDep, deposit_count: tDepCount, deposito_ticket_medio: depTM, saques: tSaq, saque_ticket_medio: saqCount>0?tSaq/saqCount:0, ggr: tGGR, ggr_por_jogador: ggrPJ, wd_ratio: wdPct, pvi: calculaPVI(depTM,ggrPJ,wdPct), investimento: tInvest };
+    // investimento vem de totais (inclui Agentes via buscarInvestimentoPago); não usar soma das rows
+    return { ...totais, ftd_total: tFtdTotal, ftds: tFTDs, ftd_ticket_medio: tFTDs>0?tFtdTotal/tFTDs:0, depositos: tDep, deposit_count: tDepCount, deposito_ticket_medio: depTM, saques: tSaq, saque_ticket_medio: saqCount>0?tSaq/saqCount:0, ggr: tGGR, ggr_por_jogador: ggrPJ, wd_ratio: wdPct, pvi: calculaPVI(depTM,ggrPJ,wdPct) };
   }, [rowsParaExibir, totais]);
 
-  // Pizza: paleta oficial + percentual
+  // Pizza: top 9 influencers individuais; Agentes sempre em Outros (quando filtroInfluencer === "todos")
   const pieInvestimento = useMemo(() => {
     const raw = rowsParaExibir
       .filter((r) => Math.round(r.investimento) > 0)
       .sort((a, b) => b.investimento - a.investimento)
       .map((r, i) => ({ name: r.nome.split(" ")[0], nomeCompleto: r.nome, value: Math.round(r.investimento), color: PIE_COLORS[i % PIE_COLORS.length] }));
-    if (raw.length <= 10) return raw;
+    const agentesVal = Math.round(investimentoAgentes);
     const top9 = raw.slice(0, 9);
-    const outros = raw.slice(9);
-    return [...top9, { name: "Outros", nomeCompleto: `Outros (${outros.length} influencers)`, value: outros.reduce((s,o) => s+o.value, 0), color: "#94a3b8" }];
-  }, [rowsParaExibir]);
+    const resto = raw.slice(9);
+    const valorOutros = resto.reduce((s, o) => s + o.value, 0) + agentesVal;
+    if (valorOutros <= 0) return top9;
+    const qtdResto = resto.length;
+    const labelOutros = agentesVal > 0
+      ? (qtdResto > 0 ? `Outros (${qtdResto} influencers + Agentes)` : "Outros (Agentes)")
+      : `Outros (${qtdResto} influencers)`;
+    return [...top9, { name: "Outros", nomeCompleto: labelOutros, value: valorOutros, color: "#94a3b8" }];
+  }, [rowsParaExibir, investimentoAgentes]);
 
   const pieTotal = useMemo(() => pieInvestimento.reduce((s, d) => s + d.value, 0), [pieInvestimento]);
 

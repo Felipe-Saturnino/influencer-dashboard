@@ -394,6 +394,7 @@ export default function DashboardOverviewInfluencer() {
         {
           influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
           operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          includeAgentes: false,
         }
       );
 
@@ -448,6 +449,7 @@ export default function DashboardOverviewInfluencer() {
             {
               influencerIds: infIdsQuery.length > 0 ? infIdsQuery : undefined,
               operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+              includeAgentes: false,
             }
           ),
           buscaMetricas(iA, fA),

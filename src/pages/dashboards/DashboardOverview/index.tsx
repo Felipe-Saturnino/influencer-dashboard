@@ -668,8 +668,15 @@ export default function DashboardOverview() {
   }, [rankingAnt, filtroInfluencer, filtroOperadora, statusFiltro, operadoraInfMap]);
 
   // Totais exibidos nos KPIs e Funil (respeitam filtros de influencer/operadora/status)
-  const totaisExibidos = useMemo(() => calculaTotais(rankingFiltrado), [rankingFiltrado]);
-  const totaisAntExibidos = useMemo(() => calculaTotais(rankingAntFiltrado), [rankingAntFiltrado]);
+  // Com filtro por influencer: desconsiderar Agentes (soma só das rows). Sem filtro: usar totais (inclui Agentes)
+  const totaisExibidos = useMemo(() => {
+    const totalInvest = filtroInfluencer === "todos" ? totais.investimento : undefined;
+    return calculaTotais(rankingFiltrado, totalInvest);
+  }, [rankingFiltrado, filtroInfluencer, totais.investimento]);
+  const totaisAntExibidos = useMemo(() => {
+    const totalAnt = filtroInfluencer === "todos" ? totaisAnt.investimento : undefined;
+    return calculaTotais(rankingAntFiltrado, totalAnt);
+  }, [rankingAntFiltrado, filtroInfluencer, totaisAnt.investimento]);
 
   // ── TAXAS DO FUNIL ────────────────────────────────────────────────────────────
   const pctViewAcesso  = totaisExibidos.views > 0    ? ((totaisExibidos.acessos   / totaisExibidos.views)    * 100).toFixed(1) + "%" : "—";

@@ -6,18 +6,20 @@ import { supabase } from "./supabase";
  * Usa RPC no servidor para incluir corretamente pagamentos_agentes.
  *
  * @param periodo - { inicio, fim } no formato ISO YYYY-MM-DD
- * @param filtros - influencerIds e/ou operadora_slug opcionais
- * @returns total e mapa por influencer_id (para ranking)
+ * @param filtros - influencerIds, operadora_slug, includeAgentes (default true)
+ * @returns total, porInfluencer e agentes (quando includeAgentes)
  */
 export async function buscarInvestimentoPago(
   periodo: { inicio: string; fim: string },
-  filtros?: { influencerIds?: string[]; operadora_slug?: string }
+  filtros?: { influencerIds?: string[]; operadora_slug?: string; includeAgentes?: boolean }
 ): Promise<{
   total: number;
   porInfluencer: Record<string, number>;
+  agentes?: number;
 }> {
   const { inicio, fim } = periodo;
   const influencerIds = filtros?.influencerIds;
+  const includeAgentes = filtros?.includeAgentes !== false;
   const operadoraSlug = filtros?.operadora_slug && filtros.operadora_slug !== "todas"
     ? filtros.operadora_slug
     : null;
@@ -27,18 +29,21 @@ export async function buscarInvestimentoPago(
     p_fim: fim,
     p_operadora_slug: operadoraSlug,
     p_influencer_ids: influencerIds?.length ? influencerIds : null,
+    p_include_agentes: includeAgentes,
   });
 
   if (!error && data && typeof data === "object") {
-    const total = Number((data as { total?: number }).total) || 0;
-    const pi = (data as { por_influencer?: Record<string, number> }).por_influencer;
+    const d = data as { total?: number; por_influencer?: Record<string, number>; agentes?: number };
+    const total = Number(d.total) || 0;
+    const pi = d.por_influencer;
     const porInfluencer: Record<string, number> = {};
     if (pi && typeof pi === "object") {
       for (const [k, v] of Object.entries(pi)) {
         porInfluencer[k] = Number(v) || 0;
       }
     }
-    return { total, porInfluencer };
+    const agentes = includeAgentes && typeof d.agentes === "number" ? Number(d.agentes) : undefined;
+    return { total, porInfluencer, agentes };
   }
 
   if (error) console.warn("[investimentoPago] RPC get_investimento_pago:", error.message);
@@ -73,8 +78,7 @@ export async function buscarInvestimentoPago(
     .eq("status", "pago")
     .in("ciclo_id", cicloIds);
   if (operadoraSlug) qAg = qAg.eq("operadora_slug", operadoraSlug);
-
-  const { data: ags } = await qAg;
+  const { data: ags } = includeAgentes ? await qAg : { data: null };
 
   const porInfluencer: Record<string, number> = {};
   let totalInf = 0;
@@ -84,6 +88,7 @@ export async function buscarInvestimentoPago(
     porInfluencer[id] = (porInfluencer[id] ?? 0) + t;
     totalInf += t;
   }
-  const totalAg = (ags || []).reduce((s, a) => s + (Number(a.total) || 0), 0);
-  return { total: totalInf + totalAg, porInfluencer };
+  const totalAg = includeAgentes ? (ags || []).reduce((s, a) => s + (Number(a.total) || 0), 0) : 0;
+  const total = totalInf + totalAg;
+  return { total, porInfluencer, agentes: includeAgentes ? totalAg : undefined };
 }
