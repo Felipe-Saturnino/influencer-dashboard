@@ -154,6 +154,7 @@ function gerarHTML(
   influencersRows: ResultadoInfluencer[],
   mensal: TotaisMensal,
   logoUrl: string,
+  logoUrlDark: string,
 ): string {
 
   const dataHojeFmt   = formatarData(dataHoje)
@@ -285,23 +286,44 @@ function gerarHTML(
       </tbody>
     </table>`
 
+  const logoDarkMode = logoUrl ? `<img src="${logoUrl}" alt="Spin Gaming" width="160" class="header-logo header-logo-dark" style="display:block;margin:0 auto 20px;max-width:160px;" />` : ''
+  const logoLightMode = logoUrlDark ? `<img src="${logoUrlDark}" alt="Spin Gaming" width="160" class="header-logo header-logo-light" style="display:none;margin:0 auto 20px;max-width:160px;" />` : ''
+
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>Relatório Diário — ${dataHojeFmt}</title>
+  <style>
+    /* Dark mode (padrão): fundo escuro, texto branco */
+    .email-header { background-color:#4a2082; background:linear-gradient(135deg,#4a2082 0%,#1e36f8 100%); padding:28px 32px; text-align:center; }
+    .email-header h1, .email-header .subtitle { color:#ffffff !important; }
+    .email-header .subtitle { color:rgba(255,255,255,0.80) !important; }
+    .header-logo-dark { display:block !important; }
+    .header-logo-light { display:none !important; }
+    /* Light mode: fundo claro, texto escuro (Apple Mail, etc.) */
+    @media (prefers-color-scheme: light) {
+      .email-header { background:#f0eef8 !important; background-color:#f0eef8 !important; }
+      .email-header h1 { color:#4a2082 !important; }
+      .email-header .subtitle { color:#6b7280 !important; }
+      .header-logo-dark { display:none !important; }
+      .header-logo-light { display:block !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:24px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0eef8;">
 
   <div style="max-width:740px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(74,32,130,0.13);border:1px solid #e5e7eb;">
 
-    <div style="background:linear-gradient(135deg,#4a2082 0%,#1e36f8 100%);padding:28px 32px;text-align:center;">
-      ${logoUrl ? `<img src="${logoUrl}" alt="Spin Gaming" width="160" style="display:block;margin:0 auto 20px;max-width:160px;" />` : ''}
-      <h1 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:0.04em;text-transform:uppercase;">
+    <div class="email-header">
+      ${logoDarkMode}${logoLightMode}
+      <h1 style="margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;">
         Relatório Diário — Influencers
       </h1>
-      <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.80);letter-spacing:0.02em;">
+      <p class="subtitle" style="margin:0;font-size:13px;letter-spacing:0.02em;">
         ${dataHojeFmt} · Data Intelligence Spin Gaming
       </p>
     </div>
@@ -326,8 +348,8 @@ function gerarHTML(
 
       ${secao(
         '',
-        `<div style="background:#f0eef8;border-radius:10px;padding:18px 20px;border:1px solid #ddd6fe;">
-          <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.6;">
+        `<div style="background:#f0eef8;border-radius:10px;padding:18px 20px;border:1px solid #ddd6fe;text-align:center;">
+          <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.6;text-align:center;">
             Estes são os dados sumarizados do dia. Para informações completas, análises detalhadas e histórico,
             acesse a
             <a href="https://data-intelligence.spingaming.com.br/" style="color:#1e36f8;font-weight:700;text-decoration:none;">
@@ -375,8 +397,11 @@ async function enviarRelatorio(
   const logoUrl = supabaseUrl
     ? `${supabaseUrl}/storage/v1/object/public/logos/Logo%20Spin%20Gaming%20White.png`
     : ''
+  const logoUrlDark = supabaseUrl
+    ? `${supabaseUrl}/storage/v1/object/public/logos/Logo%20Spin%20Gaming.png`
+    : ''
 
-  const html = gerarHTML(dataHoje, dataOntem, agenda, livesRows, influencersRows, mensal, logoUrl)
+  const html = gerarHTML(dataHoje, dataOntem, agenda, livesRows, influencersRows, mensal, logoUrl, logoUrlDark)
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -594,7 +619,7 @@ serve(async (req) => {
     const inicioMes = primeiroDiaMes(dataOntem)
     const fimMes    = ultimoDiaMes(dataOntem)
 
-    const [{ data: metMesRaw }, { data: livesMesRaw }] = await Promise.all([
+    const [{ data: metMesRaw }, { data: livesMesRaw }, { data: ciclosMes }] = await Promise.all([
       supabase
         .from('influencer_metricas')
         .select('influencer_id, registration_count, ftd_count, ggr')
@@ -604,55 +629,27 @@ serve(async (req) => {
         .select('id, influencer_id')
         .eq('status', 'realizada')
         .gte('data', inicioMes).lte('data', fimMes),
+      supabase.from('ciclos_pagamento').select('id').gte('data_fim', inicioMes).lte('data_fim', fimMes),
     ])
 
-    const liveIdsMes = (livesMesRaw ?? []).map((l: { id: string }) => l.id)
-    const horasPorInfMes: Record<string, number> = {}
-
-    if (liveIdsMes.length > 0) {
-      const { data: resMes } = await supabase
-        .from('live_resultados')
-        .select('live_id, duracao_horas, duracao_min')
-        .in('live_id', liveIdsMes)
-
-      const liveToInfMes = new Map(
-        (livesMesRaw ?? []).map((l: { id: string; influencer_id: string }) => [l.id, l.influencer_id])
-      )
-
-      for (const r of (resMes ?? []) as { live_id: string; duracao_horas: number; duracao_min: number }[]) {
-        const infId = liveToInfMes.get(r.live_id)
-        if (!infId) continue
-        horasPorInfMes[infId] = (horasPorInfMes[infId] ?? 0) + (r.duracao_horas ?? 0) + (r.duracao_min ?? 0) / 60
-      }
+    const cicloIds = (ciclosMes ?? []).map((c: { id: string }) => c.id)
+    let investimentoTotal = 0
+    if (cicloIds.length > 0) {
+      const [{ data: pags }, { data: ags }] = await Promise.all([
+        supabase.from('pagamentos').select('total').eq('status', 'pago').in('ciclo_id', cicloIds),
+        supabase.from('pagamentos_agentes').select('total').eq('status', 'pago').in('ciclo_id', cicloIds),
+      ])
+      investimentoTotal =
+        (pags ?? []).reduce((s: number, r: { total: number }) => s + (Number(r.total) || 0), 0) +
+        (ags ?? []).reduce((s: number, r: { total: number }) => s + (Number(r.total) || 0), 0)
     }
 
-    const infIdsMes = [...new Set([
-      ...(metMesRaw ?? []).map((m: { influencer_id: string }) => m.influencer_id),
-      ...Object.keys(horasPorInfMes),
-    ])]
-
-    const cacheHoraMes: Record<string, number> = { ...cacheHoraMap }
-    if (infIdsMes.length > 0) {
-      const novosIds = infIdsMes.filter((id) => !(id in cacheHoraMes))
-      if (novosIds.length > 0) {
-        const { data: perfMes } = await supabase
-          .from('influencer_perfil').select('id, cache_hora').in('id', novosIds)
-        for (const p of (perfMes ?? []) as { id: string; cache_hora: number }[]) {
-          cacheHoraMes[p.id] = p.cache_hora ?? 0
-        }
-      }
-    }
-
-    const mensal: TotaisMensal = { ggrTotal: 0, investimento: 0, roi: null, livesRealizadas: 0, totalRegistros: 0, totalFtds: 0 }
+    const mensal: TotaisMensal = { ggrTotal: 0, investimento: investimentoTotal, roi: null, livesRealizadas: 0, totalRegistros: 0, totalFtds: 0 }
 
     for (const m of (metMesRaw ?? []) as { influencer_id: string; registration_count: number; ftd_count: number; ggr: number }[]) {
       mensal.ggrTotal       += m.ggr               ?? 0
       mensal.totalRegistros += m.registration_count ?? 0
       mensal.totalFtds      += m.ftd_count          ?? 0
-    }
-
-    for (const [infId, horas] of Object.entries(horasPorInfMes)) {
-      mensal.investimento += horas * (cacheHoraMes[infId] ?? 0)
     }
 
     mensal.livesRealizadas = (livesMesRaw ?? []).length
