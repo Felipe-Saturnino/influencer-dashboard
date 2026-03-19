@@ -204,20 +204,10 @@ export default function SocialMediaDashboard() {
   const idxInicial = mesesDisponiveis.findIndex(
     (m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth()
   );
-  const [idxMes, setIdxMes]       = useState(idxInicial >= 0 ? idxInicial : Math.max(0, mesesDisponiveis.length - 1));
+  const [idxMes, setIdxMes]       = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
   const [historico, setHistorico] = useState(false);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
-
-  // Guard: se não houver períodos (ex.: data do sistema antes de Jan/26)
-  if (mesesDisponiveis.length === 0 || !mesSelecionado) {
-    return (
-      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Nenhum período disponível para exibição.
-      </div>
-    );
-  }
-
   const isPrimeiro = idxMes === 0;
   const isUltimo   = idxMes === mesesDisponiveis.length - 1;
 
@@ -226,7 +216,7 @@ export default function SocialMediaDashboard() {
   function toggleHistorico() {
     if (historico) {
       setHistorico(false);
-      setIdxMes(idxInicial >= 0 ? idxInicial : Math.max(0, mesesDisponiveis.length - 1));
+      setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
     } else {
       setHistorico(true);
     }
@@ -235,10 +225,13 @@ export default function SocialMediaDashboard() {
   // Datas do período selecionado
   const { start, end } = useMemo(() => {
     if (historico) {
+      return { start: "2020-01-01", end: hoje.toISOString().slice(0, 10) };
+    }
+    if (!mesSelecionado) {
       return { start: "2026-01-01", end: hoje.toISOString().slice(0, 10) };
     }
     return getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-  }, [historico, mesSelecionado]);
+  }, [historico, idxMes, mesSelecionado]);
 
   const label = historico ? "Todo o período" : (mesSelecionado?.label ?? "");
 
@@ -254,12 +247,13 @@ export default function SocialMediaDashboard() {
   const [campanhasPerf, setCampanhasPerf] = useState<Array<{
     campanha_id: string;
     campanha_nome: string;
-    operadora_slug: string | null;
     visitas: number;
     registros: number;
     ftds: number;
     ftd_total: number;
+    deposit_count?: number;
     deposit_total: number;
+    withdrawal_count?: number;
     withdrawal_total: number;
     utms_count: number;
   }>>([]);
@@ -435,8 +429,9 @@ export default function SocialMediaDashboard() {
     },
   ];
 
-  const carW   = 175 + 12;
-  const carMax = Math.max(0, posts.length - 3);
+  const POST_W    = 260;
+  const POST_GAP  = 14;
+  const carMaxNew = Math.max(0, posts.length - 4);
   const totalFormatos = formatos.reduce((a, f) => a + f.total, 0);
 
   // ── Estilos base ─────────────────────────────────────────────────────────────
@@ -531,14 +526,13 @@ export default function SocialMediaDashboard() {
         <>
           {/* KPIs GERAIS */}
           <div style={card}>
-            <SectionTitle icon={<GiPokerHand size={14} />} sub="· dados do ETL Social KPIs">
+            <SectionTitle icon={<GiPokerHand size={14} />}>
               KPIs de Mídias Sociais
             </SectionTitle>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 12 }}>
-              <KpiCard label="Seguidores totais"  valor={fmtNum(totais.seguidores)}  accentCor={BRAND.roxo}     icon={<GiMicrophone size={15} />} />
-              <KpiCard label="Impressões totais"  valor={fmtNum(totais.impressoes)}  accentCor={BRAND.azul}     icon={<GiStarMedal size={15} />}  />
-              <KpiCard label="Engajamento médio"  valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"} accentCor={BRAND.ciano} icon={<GiPokerHand size={15} />} />
-              <KpiCard label="Cliques para o site" valor={fmtNum(totais.link_clicks)} accentCor={BRAND.verde}   icon={<GiPlayerNext size={15} />} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12 }}>
+              <KpiCard label="Seguidores totais" valor={fmtNum(totais.seguidores)}  accentCor={BRAND.roxo}  icon={<GiMicrophone size={15} />} />
+              <KpiCard label="Impressões totais" valor={fmtNum(totais.impressoes)}  accentCor={BRAND.azul}  icon={<GiStarMedal size={15} />}  />
+              <KpiCard label="Engajamento médio" valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"} accentCor={BRAND.ciano} icon={<GiPokerHand size={15} />} />
             </div>
           </div>
 
@@ -591,31 +585,87 @@ export default function SocialMediaDashboard() {
             </div>
             <div style={{ ...card, marginBottom: 0 }}>
               <SectionTitle icon={<GiPlayerNext size={14} />}>Funil de conversão</SectionTitle>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[
-                  { label: "Cliques",    valor: totais.link_clicks ?? 0,   cor: BRAND.roxo   },
-                  { label: "Acessos",    valor: funilTotais?.visitas ?? 0,  cor: BRAND.azul   },
-                  { label: "Registros",  valor: funilTotais?.registros ?? 0, cor: BRAND.ciano },
-                  { label: "FTDs",       valor: funilTotais?.ftds ?? 0,     cor: BRAND.verde  },
-                ].map((f, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: `1px solid ${t.cardBorder}` }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: f.cor, flexShrink: 0 }} />
-                    <span style={{ color: t.textMuted, flex: 1 }}>{f.label}</span>
-                    <span style={{ fontWeight: 700, color: t.text, minWidth: 48, textAlign: "right" }}>{fmtNum(f.valor)}</span>
+              {(() => {
+                const acessos   = funilTotais?.visitas   ?? 0;
+                const registros = funilTotais?.registros ?? 0;
+                const ftds      = funilTotais?.ftds      ?? 0;
+
+                const pctAcessoReg = acessos   > 0 ? ((registros / acessos)   * 100).toFixed(1) + "%" : "—";
+                const pctRegFTD    = registros > 0 ? ((ftds      / registros)  * 100).toFixed(1) + "%" : "—";
+                const pctAcessoFTD = acessos   > 0 ? ((ftds      / acessos)    * 100).toFixed(1) + "%" : "—";
+
+                const W = 360, stepH = 90, levels = 3;
+                const H = stepH * levels;
+                const widths = [1.0, 0.68, 0.38].map((f) => f * W);
+                const FUNIL_COLORS = [BRAND.roxo, BRAND.azul, BRAND.verde];
+                const FUNIL_STEPS = [
+                  { label: "Acessos",   valor: acessos   },
+                  { label: "Registros", valor: registros },
+                  { label: "FTDs",      valor: ftds      },
+                ];
+
+                const taxas = [
+                  { label: "Acesso → Registro", taxa: pctAcessoReg, color: BRAND.azul,  highlight: false },
+                  { label: "Registro → FTD",    taxa: pctRegFTD,    color: BRAND.verde, highlight: false },
+                  { label: "Acesso → FTD",      taxa: pctAcessoFTD, color: BRAND.verde, highlight: true  },
+                ];
+
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxHeight: 280, display: "block" }} preserveAspectRatio="xMidYMid meet">
+                        <defs>
+                          {FUNIL_STEPS.map((_, i) => (
+                            <linearGradient key={i} id={`ms-fgrad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={FUNIL_COLORS[i]} stopOpacity="0.92" />
+                              <stop offset="100%" stopColor={FUNIL_COLORS[i]} stopOpacity="0.62" />
+                            </linearGradient>
+                          ))}
+                        </defs>
+                        {FUNIL_STEPS.map((step, i) => {
+                          const wTop = widths[i];
+                          const wBot = widths[i + 1] ?? widths[i] * 0.55;
+                          const xTop = (W - wTop) / 2;
+                          const xBot = (W - wBot) / 2;
+                          const yTop = i * stepH;
+                          const yBot = yTop + stepH - 2;
+                          const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
+                          return (
+                            <g key={step.label}>
+                              <path d={path} fill={`url(#ms-fgrad-${i})`} />
+                              <text x={W / 2} y={yTop + stepH / 2 - 7} textAnchor="middle" fill="#fff" fontSize={9} fontFamily={FONT.body} fontWeight={700} letterSpacing="0.09em" style={{ textTransform: "uppercase" }}>
+                                {step.label}
+                              </text>
+                              <text x={W / 2} y={yTop + stepH / 2 + 10} textAnchor="middle" fill="#fff" fontSize={18} fontFamily={FONT.body} fontWeight={800}>
+                                {fmtNum(step.valor)}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 4, fontWeight: 600 }}>
+                        Taxas de Conversão
+                      </div>
+                      {taxas.map((r) => (
+                        <div key={r.label} style={{
+                          padding: "8px 12px", borderRadius: 10,
+                          border: r.highlight ? `1px solid ${r.color}50` : `1px solid ${t.cardBorder}`,
+                          background: r.highlight ? `${r.color}12` : isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
+                        }}>
+                          <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 3 }}>
+                            {r.label}
+                          </div>
+                          <div style={{ fontSize: 16, fontWeight: 800, fontFamily: FONT.body, color: r.highlight ? r.color : t.text }}>
+                            {r.taxa}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-                {funilTotais && funilTotais.ftd_total > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, fontFamily: FONT.body, borderTop: `1px solid ${t.cardBorder}`, marginTop: 4, paddingTop: 10 }}>
-                    <span style={{ color: t.textMuted, flex: 1 }}>R$ FTDs</span>
-                    <span style={{ fontWeight: 700, color: BRAND.verde, minWidth: 80, textAlign: "right" }}>
-                      {funilTotais.ftd_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div style={{ marginTop: 10, fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
-                Cliques: kpi_daily. Acessos/Registros/FTDs: UTMs mapeadas às campanhas.
-              </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -627,24 +677,50 @@ export default function SocialMediaDashboard() {
                 <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
                   <thead>
                     <tr>
-                      {["Campanha","UTMs","Acessos","Registros","FTDs","R$ FTDs"].map((h, i) => (
-                        <th key={h} style={{ ...thStyle, textAlign: i === 0 ? "left" : "right" }}>{h}</th>
+                      {[
+                        { label: "Campanha",      align: "left"  },
+                        { label: "UTMs",           align: "right" },
+                        { label: "Acessos",        align: "right" },
+                        { label: "Registros",      align: "right" },
+                        { label: "# FTDs",         align: "right" },
+                        { label: "R$ FTDs",        align: "right" },
+                        { label: "# Depósitos",    align: "right" },
+                        { label: "R$ Depósitos",   align: "right" },
+                        { label: "# Saques",       align: "right" },
+                        { label: "R$ Saques",      align: "right" },
+                        { label: "R$ GGR",         align: "right" },
+                      ].map((h) => (
+                        <th key={h.label} style={{ ...thStyle, textAlign: h.align as "left" | "right" }}>{h.label}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {campanhasPerf.map((c, i) => (
-                      <tr key={c.campanha_id} style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
-                        <td style={{ ...tdStyle, fontWeight: 600 }}>{c.campanha_nome}</td>
-                        <td style={{ ...tdStyle, textAlign: "right", color: t.textMuted }}>{c.utms_count}</td>
-                        <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.visitas)}</td>
-                        <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.registros)}</td>
-                        <td style={{ ...tdStyle, textAlign: "right", color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
-                        <td style={{ ...tdStyle, textAlign: "right", color: BRAND.verde, fontWeight: 600 }}>
-                          {(c.ftd_total ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                        </td>
-                      </tr>
-                    ))}
+                    {campanhasPerf.map((c, i) => {
+                      const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
+                      return (
+                        <tr key={c.campanha_id} style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
+                          <td style={{ ...tdStyle, fontWeight: 600 }}>{c.campanha_nome}</td>
+                          <td style={{ ...tdStyle, textAlign: "right", color: t.textMuted }}>{c.utms_count}</td>
+                          <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.visitas)}</td>
+                          <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.registros)}</td>
+                          <td style={{ ...tdStyle, textAlign: "right", color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
+                          <td style={{ ...tdStyle, textAlign: "right", color: BRAND.verde, fontWeight: 600 }}>
+                            {(c.ftd_total ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.deposit_count ?? 0)}</td>
+                          <td style={{ ...tdStyle, textAlign: "right" }}>
+                            {(c.deposit_total ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.withdrawal_count ?? 0)}</td>
+                          <td style={{ ...tdStyle, textAlign: "right" }}>
+                            {(c.withdrawal_total ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "right", color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
+                            {ggr.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -661,38 +737,55 @@ export default function SocialMediaDashboard() {
             {posts.length > 0 ? (
               <>
                 <div style={{ overflow: "hidden" }}>
-                  <div style={{ display: "flex", gap: 12, transform: `translateX(-${carIdx * carW}px)`, transition: "transform .3s ease" }}>
+                  <div style={{
+                    display: "flex", gap: POST_GAP,
+                    transform: `translateX(-${carIdx * (POST_W + POST_GAP)}px)`,
+                    transition: "transform .3s ease",
+                  }}>
                     {posts.map((p, i) => (
-                      <div key={i} style={{ flex: "0 0 175px", borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)", overflow: "hidden" }}>
-                        <div style={{ width: "100%", height: 108, display: "flex", alignItems: "center", justifyContent: "center", background: `${p.cor}18`, overflow: "hidden", position: "relative" }}>
+                      <div key={i} style={{
+                        flex: `0 0 ${POST_W}px`, borderRadius: 14,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
+                        overflow: "hidden",
+                      }}>
+                        <div style={{
+                          width: "100%", height: 160,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          background: `${p.cor}18`, overflow: "hidden", position: "relative",
+                        }}>
                           {p.thumbnailUrl && (
-                            <img src={p.thumbnailUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                            <img
+                              src={p.thumbnailUrl} alt=""
+                              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                              loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            />
                           )}
                           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <svg width="44" height="44" viewBox="0 0 44 44">
-                              <rect width="44" height="44" rx="10" fill={p.cor} opacity=".2" />
-                              <text x="22" y="28" textAnchor="middle" fontSize="16" fill={p.cor} fontFamily={FONT.body}>{p.tag}</text>
+                            <svg width="52" height="52" viewBox="0 0 52 52">
+                              <rect width="52" height="52" rx="12" fill={p.cor} opacity=".2" />
+                              <text x="26" y="34" textAnchor="middle" fontSize="20" fill={p.cor} fontFamily={FONT.body}>{p.tag}</text>
                             </svg>
                           </div>
                         </div>
-                        <div style={{ padding: 10 }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 4, color: p.cor }}>
+                        <div style={{ padding: 14 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 6, color: p.cor }}>
                             {p.url ? (
-                              <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none", borderBottom: "1px dotted currentColor" }}>
+                              <a href={p.url} target="_blank" rel="noopener noreferrer"
+                                style={{ color: "inherit", textDecoration: "none", borderBottom: "1px dotted currentColor" }}>
                                 {p.canal} · {p.tipo}
                               </a>
                             ) : <>{p.canal} · {p.tipo}</>}
                           </div>
-                          {/* Truncagem em 2 linhas — verifique após build se WebkitBoxOrient não foi removida */}
                           <div style={{
-                            fontSize: 11, color: t.textMuted, lineHeight: 1.4, marginBottom: 8,
-                            display: "-webkit-box", WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical" as "vertical",
-                            overflow: "hidden", fontFamily: FONT.body,
+                            fontSize: 12, color: t.textMuted, lineHeight: 1.5, marginBottom: 10,
+                            display: "-webkit-box", WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical" as const, overflow: "hidden", fontFamily: FONT.body,
                           }}>
                             {p.resumo || `Post de ${p.date}`}
                           </div>
-                          <div style={{ display: "flex", gap: 10, fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
+                          <div style={{ display: "flex", gap: 10, fontSize: 11, color: t.textMuted, fontFamily: FONT.body, flexWrap: "wrap" as const }}>
                             {p.stats.map((s, j) => <span key={j}>{s}</span>)}
                           </div>
                         </div>
@@ -700,11 +793,33 @@ export default function SocialMediaDashboard() {
                     ))}
                   </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, marginTop: 10 }}>
-                  <button onClick={() => setCarIdx((i) => Math.max(0, i - 1))} style={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
+                  <button
+                    onClick={() => setCarIdx((i) => Math.max(0, i - 1))}
+                    disabled={carIdx === 0}
+                    style={{
+                      width: 34, height: 34, borderRadius: "50%",
+                      border: `1px solid ${t.cardBorder}`, background: "transparent",
+                      color: t.text, cursor: carIdx === 0 ? "not-allowed" : "pointer",
+                      opacity: carIdx === 0 ? 0.35 : 1,
+                      fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "opacity 0.15s",
+                    }}
+                  >
                     ←
                   </button>
-                  <button onClick={() => setCarIdx((i) => Math.min(carMax, i + 1))} style={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <button
+                    onClick={() => setCarIdx((i) => Math.min(carMaxNew, i + 1))}
+                    disabled={carIdx >= carMaxNew}
+                    style={{
+                      width: 34, height: 34, borderRadius: "50%",
+                      border: `1px solid ${t.cardBorder}`, background: "transparent",
+                      color: t.text, cursor: carIdx >= carMaxNew ? "not-allowed" : "pointer",
+                      opacity: carIdx >= carMaxNew ? 0.35 : 1,
+                      fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "opacity 0.15s",
+                    }}
+                  >
                     →
                   </button>
                 </div>

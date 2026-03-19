@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { CicloPagamento, Pagamento, PagamentoStatus } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 
@@ -651,8 +652,6 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
 
     let cicloIds: string[] = [];
     if (periodo) {
-      // Ciclos cujo último dia (data_fim) cai no período. Ex: ciclo 26/02–04/03 → data_fim 04/03 → Março.
-      // Não usa fechado_em nem data de aprovação/pagamento.
       const { data: ciclos } = await supabase
         .from("ciclos_pagamento")
         .select("id")
@@ -665,9 +664,18 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
       }
     }
 
+    // Total pago: usa mesma fonte que os Dashboards (RPC ou fallback) — garante alinhamento
+    if (periodo) {
+      const { total } = await buscarInvestimentoPago(periodo, {
+        influencerIds: filterInfluencers.length > 0 ? filterInfluencers : undefined,
+        operadora_slug: filterOperadora !== "todas" ? filterOperadora : undefined,
+      });
+      setTotalPago(total);
+    }
+
     const pQuery = periodo
-      ? supabase.from("pagamentos").select("total, horas_realizadas, status, operadora_slug").in("ciclo_id", cicloIds)
-      : supabase.from("pagamentos").select("total, horas_realizadas, status, operadora_slug");
+      ? supabase.from("pagamentos").select("influencer_id, total, horas_realizadas, status, operadora_slug").in("ciclo_id", cicloIds)
+      : supabase.from("pagamentos").select("influencer_id, total, horas_realizadas, status, operadora_slug");
 
     const aQuery = periodo
       ? supabase.from("pagamentos_agentes").select("total, status, operadora_slug").in("ciclo_id", cicloIds)
@@ -685,10 +693,12 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
       allAgs = allAgs.filter((a: any) => a.operadora_slug === filterOperadora);
     }
 
-    setTotalPago(
-      [...allPags.filter((p: any) => p.status === "pago"), ...allAgs.filter((a: any) => a.status === "pago")]
-        .reduce((acc: number, x: any) => acc + x.total, 0)
-    );
+    if (!periodo) {
+      setTotalPago(
+        [...allPags.filter((p: any) => p.status === "pago"), ...allAgs.filter((a: any) => a.status === "pago")]
+          .reduce((acc: number, x: any) => acc + x.total, 0)
+      );
+    }
     setPendente(
       [...allPags.filter((p: any) => p.status === "em_analise" || p.status === "a_pagar"), ...allAgs.filter((a: any) => a.status === "em_analise" || a.status === "a_pagar")]
         .reduce((acc: number, x: any) => acc + x.total, 0)
