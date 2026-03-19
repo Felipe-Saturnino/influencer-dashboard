@@ -1,0 +1,34 @@
+# Relatório Diário Diretoria — Execução diária às 9h (horário de Brasília)
+# 9h BRT = 12h UTC
+name: Relatório Diário Diretoria (9h)
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar relatório diário
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Secrets SUPABASE_URL e SUPABASE_ANON_KEY devem estar configurados"
+            exit 1
+          fi
+          RES=$(curl -s -w "\n%{http_code}" -X POST \
+            "$SUPABASE_URL/functions/v1/relatorio-diario-diretoria" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{}")
+          HTTP=$(echo "$RES" | tail -n1)
+          BODY=$(echo "$RES" | head -n-1)
+          echo "HTTP $HTTP"
+          echo "$BODY"
+          if [ "$HTTP" != "200" ]; then
+            exit 1
+          fi
