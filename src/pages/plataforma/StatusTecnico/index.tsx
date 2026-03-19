@@ -26,6 +26,15 @@ interface TechLog {
   created_at: string;
 }
 
+interface PipelineRun {
+  id: string;
+  run_date: string;
+  channel: string;
+  status: string;
+  error_msg: string | null;
+  created_at: string;
+}
+
 interface Integration {
   slug: string;
   nome: string;
@@ -54,8 +63,11 @@ export default function StatusTecnico() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [techLogs, setTechLogs] = useState<TechLog[]>([]);
+  const [pipelineRuns, setPipelineRuns] = useState<PipelineRun[]>([]);
   const [fluxoDados, setFluxoDados] = useState<FluxoDia[]>([]);
   const [registrosHoje, setRegistrosHoje] = useState(0);
+  const [ultimoEmailEnvioAt, setUltimoEmailEnvioAt] = useState<string | null>(null);
+  const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
 
@@ -99,17 +111,27 @@ export default function StatusTecnico() {
       .limit(100);
     setSyncLogs(syncData ?? []);
 
-    // Tech logs com filtro de tempo
-    const horas = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
+    // Tech logs — sempre buscar 48h para alertas; exibir conforme logFiltro
     const desde = new Date();
-    desde.setHours(desde.getHours() - horas);
+    desde.setHours(desde.getHours() - 48);
     const { data: techData } = await supabase
       .from("tech_logs")
       .select("*")
       .gte("created_at", desde.toISOString())
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(100);
     setTechLogs(techData ?? []);
+
+    // Pipeline runs (Social Media) — últimos 7 dias
+    const dataPipelineInicio = new Date();
+    dataPipelineInicio.setDate(dataPipelineInicio.getDate() - 7);
+    const { data: pipelineData } = await supabase
+      .from("pipeline_runs")
+      .select("id, run_date, channel, status, error_msg, created_at")
+      .gte("run_date", dataPipelineInicio.toISOString().split("T")[0])
+      .order("created_at", { ascending: false })
+      .limit(100);
+    setPipelineRuns((pipelineData ?? []) as PipelineRun[]);
 
     // Registros hoje (influencer_metricas)
     const { count } = await supabase
@@ -126,7 +148,7 @@ export default function StatusTecnico() {
     const [resCda, resSocial, resEmails] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
-      supabase.from("email_envios").select("data, tipo, destinatarios_count").gte("data", dataInicioStr),
+      supabase.from("email_envios").select("data, tipo, destinatarios_count, created_at").gte("data", dataInicioStr),
     ]);
 
     const cdaPorData = (resCda.data ?? []).reduce<Record<string, number>>((acc, row) => {
@@ -144,11 +166,19 @@ export default function StatusTecnico() {
       acc[r.data][r.tipo] = (acc[r.data][r.tipo] ?? 0) + r.destinatarios_count;
       return acc;
     }, {});
+    const ultimoEmail = (resEmails.data ?? []).reduce<string | null>((max, row) => {
+      const r = row as { created_at?: string };
+      if (!r.created_at) return max;
+      return !max || r.created_at > max ? r.created_at : max;
+    }, null);
+    setUltimoEmailEnvioAt(ultimoEmail);
+    setEmailEnviosCount((resEmails.data ?? []).length);
 
     const datasSet = new Set<string>([
       ...Object.keys(cdaPorData),
       ...Object.keys(socialPorData),
       ...Object.keys(emailsPorData),
+      hoje,
     ]);
     const fluxoArray: FluxoDia[] = Array.from(datasSet)
       .sort((a, b) => a.localeCompare(b))
@@ -354,41 +384,140 @@ export default function StatusTecnico() {
   };
 
   // KPIs derivados
-  const ultimoSyncOk = syncLogs.find((l) => l.status === "ok");
-  const integracoesAtivas = integrations.filter((int) => {
-    const ultimo = syncLogs.find((l) => l.integracao_slug === int.slug && l.status === "ok");
-    return ultimo && ultimo.executado_em;
-  }).length;
-  const totalSyncs = syncLogs.length;
-  const syncsFalha = syncLogs.filter((l) => l.status === "falha").length;
-  const taxaErro = totalSyncs > 0 ? ((syncsFalha / totalSyncs) * 100).toFixed(1) : "0";
+  const hojeIsoKpi = new Date().toISOString().split("T")[0];
 
-  // Alertas derivados
-  const alertas: Array<{ nivel: "erro" | "aviso"; msg: string; integracao?: string }> = [];
+  // Integrações Ativas: 3 (CDA, Social Media, E-mail) — OK = último Sync (automático ou manual) foi sucesso
+  const ultimoSyncCdaLog = syncLogs.find((l) => l.integracao_slug === "casa_apostas");
+  const cdaStatusOk = ultimoSyncCdaLog?.status === "ok";
+
+  const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
+    if (!max) return r;
+    return new Date(r.created_at) > new Date(max.created_at) ? r : max;
+  }, null);
+  const socialStatusOk = ultimoPipelineRun?.status === "success";
+
+  const ultimoTechLogEmail = techLogs
+    .filter((l) => l.tipo === "relatorio_diretoria")
+    .reduce<string | null>((max, l) => {
+      if (!max) return l.created_at;
+      return l.created_at > max ? l.created_at : max;
+    }, null);
+  const emailStatusOk =
+    !!ultimoEmailEnvioAt &&
+    (!ultimoTechLogEmail || ultimoEmailEnvioAt >= ultimoTechLogEmail);
+
+  const integracoesAtivasCount = [cdaStatusOk, socialStatusOk, emailStatusOk].filter(Boolean).length;
+  const totalIntegracoes = 3;
+
+  // Último Sync: mais recente de qualquer uma das 3
+  const ultimoSyncCda = syncLogs.find((l) => l.integracao_slug === "casa_apostas");
+  const ultimoSyncSocial = pipelineRuns.find((r) => r.status === "success");
+  const timestamps: Array<{ ts: string; label: string }> = [];
+  if (ultimoSyncCda?.executado_em) timestamps.push({ ts: ultimoSyncCda.executado_em, label: "CDA" });
+  if (ultimoSyncSocial?.created_at) timestamps.push({ ts: ultimoSyncSocial.created_at, label: "Social" });
+  if (ultimoEmailEnvioAt) timestamps.push({ ts: ultimoEmailEnvioAt, label: "E-mail" });
+  const ultimoSyncQualquer = timestamps.length > 0 ? timestamps.reduce((a, b) => (a.ts > b.ts ? a : b)) : null;
+
+  // Registros Hoje: soma do fluxo total (CDA + Social Media + E-mails)
+  const fluxoHoje = fluxoDados.find((f) => f.data === hojeIsoKpi);
+  const registrosHojeTotal = fluxoHoje?.total ?? registrosHoje;
+
+  // Taxa de Erro: agregada das 3 (falhas / total tentativas)
+  const cdaTotal = syncLogs.filter((l) => l.integracao_slug === "casa_apostas").length;
+  const cdaFalhas = syncLogs.filter((l) => l.integracao_slug === "casa_apostas" && l.status === "falha").length;
+  const socialTotal = pipelineRuns.length;
+  const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
+  const emailFalhas = techLogs.filter((l) => l.tipo === "relatorio_diretoria").length;
+  const emailTotal = emailEnviosCount + emailFalhas;
+  const totalTentativas = cdaTotal + socialTotal + Math.max(emailTotal, 1);
+  const totalFalhas = cdaFalhas + socialFalhas + emailFalhas;
+  const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
+
+  // Alertas derivados — ordem: CDA, Social Media, E-mail
+  const hojeIso = hojeIsoKpi;
+  const alertas: Array<{ nivel: "erro" | "aviso"; msg: string }> = [];
   const vinteQuatroHoras = new Date();
   vinteQuatroHoras.setHours(vinteQuatroHoras.getHours() - 24);
-  integrations.forEach((int) => {
-    const logs = syncLogs.filter((l) => l.integracao_slug === int.slug);
-    const ultimoOk = logs.find((l) => l.status === "ok");
-    const ultimoFalha = logs.find((l) => l.status === "falha");
-    if (!ultimoOk && ultimoFalha) {
-      alertas.push({ nivel: "erro", msg: "Nenhum sync com sucesso", integracao: int.nome });
-    } else if (ultimoOk) {
-      const exec = new Date(ultimoOk.executado_em);
-      if (exec < vinteQuatroHoras) {
-        alertas.push({ nivel: "aviso", msg: "Último sync há mais de 24h", integracao: int.nome });
-      }
+  const trintaSeisHoras = new Date();
+  trintaSeisHoras.setHours(trintaSeisHoras.getHours() - 36);
+
+  // ── Sync CDA (Casa de Apostas) ──
+  const syncLogsCda = syncLogs.filter((l) => l.integracao_slug === "casa_apostas");
+  const ultimoSyncCdaOk = syncLogsCda.find((l) => l.status === "ok");
+  const ultimoSyncCdaFalha = syncLogsCda.find((l) => l.status === "falha");
+  const taxaErroCda = syncLogsCda.length > 0
+    ? ((syncLogsCda.filter((l) => l.status === "falha").length / syncLogsCda.length) * 100).toFixed(1)
+    : "0";
+
+  if (!ultimoSyncCdaOk && ultimoSyncCdaFalha) {
+    alertas.push({ nivel: "erro", msg: "Nenhum Sync CDA com sucesso" });
+  } else if (ultimoSyncCdaOk) {
+    const exec = new Date(ultimoSyncCdaOk.executado_em);
+    if (exec < vinteQuatroHoras) {
+      alertas.push({ nivel: "aviso", msg: "Sync CDA atrasado" });
     }
-  });
-  if (parseFloat(taxaErro) > 5) {
-    alertas.push({ nivel: "erro", msg: `Taxa de erro acima de 5% (${taxaErro}%)` });
   }
-  if (registrosHoje === 0 && fluxoDados.some((f) => f.total > 0)) {
-    alertas.push({ nivel: "aviso", msg: "Nenhum registro processado hoje" });
+  if (parseFloat(taxaErroCda) > 5) {
+    alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Sync CDA (${taxaErroCda}%)` });
+  }
+  if (registrosHoje === 0 && fluxoDados.some((f) => f.cda > 0)) {
+    alertas.push({ nivel: "aviso", msg: "Sync CDA sem dados recentes" });
+  }
+
+  // ── Sync Social Media ──
+  const pipelineErros24h = pipelineRuns.filter((r) => {
+    const created = new Date(r.created_at);
+    return r.status === "error" && created >= vinteQuatroHoras;
+  });
+  const techLogsSocial24h = techLogs.filter((l) => {
+    const created = new Date(l.created_at);
+    return ["instagram", "facebook", "youtube", "linkedin"].includes(l.tipo) && created >= vinteQuatroHoras;
+  });
+  const ultimoPipelineOk = pipelineRuns.find((r) => r.status === "success");
+  const ontem = new Date();
+  ontem.setDate(ontem.getDate() - 1);
+  const anteontem = new Date();
+  anteontem.setDate(anteontem.getDate() - 2);
+  const ontemIso = ontem.toISOString().split("T")[0];
+  const anteontemIso = anteontem.toISOString().split("T")[0];
+  const socialTemDadosRecentes = fluxoDados.some((f) => (f.data === hojeIso || f.data === ontemIso || f.data === anteontemIso) && f.social > 0);
+  const socialTeveDadosAntes = fluxoDados.some((f) => f.social > 0);
+
+  if (pipelineErros24h.length > 0) {
+    const canais = [...new Set(pipelineErros24h.map((r) => r.channel))].join(", ");
+    alertas.push({ nivel: "erro", msg: `Erro no Sync Social Media${canais ? ` (${canais})` : ""}` });
+  }
+  if (techLogsSocial24h.length > 0) {
+    const canais = [...new Set(techLogsSocial24h.map((l) => l.tipo))].join(", ");
+    alertas.push({ nivel: "erro", msg: `Sync Social Media com erro${canais ? ` (${canais})` : ""}` });
+  }
+  if (socialTeveDadosAntes && !socialTemDadosRecentes) {
+    alertas.push({ nivel: "aviso", msg: "Sync Social Media sem dados recentes" });
+  }
+  if (ultimoPipelineOk) {
+    const exec = new Date(ultimoPipelineOk.created_at);
+    if (exec < trintaSeisHoras) {
+      alertas.push({ nivel: "aviso", msg: "Sync Social Media atrasado" });
+    }
+  } else if (pipelineRuns.length > 0 && socialTeveDadosAntes) {
+    alertas.push({ nivel: "aviso", msg: "Sync Social Media atrasado" });
+  }
+
+  // ── E-mail para diretoria ──
+  const techLogsEmail24h = techLogs.filter((l) => {
+    const created = new Date(l.created_at);
+    return l.tipo === "relatorio_diretoria" && created >= vinteQuatroHoras;
+  });
+  const emailEnviadoHoje = (fluxoDados.find((f) => f.data === hojeIso)?.emails?.relatorio_diretoria ?? 0) > 0;
+
+  if (techLogsEmail24h.length > 0) {
+    alertas.push({ nivel: "erro", msg: "Erro ao enviar E-mail - Relatório de Influencers (Resend)" });
+  }
+  if (!emailEnviadoHoje) {
+    alertas.push({ nivel: "aviso", msg: "E-mail - Relatório de Influencers (Resend) não enviado hoje" });
   }
 
   // Status por integração (última execução)
-  const hojeIso = new Date().toISOString().split("T")[0];
   const statusPorIntegracao = integrations.map((int) => {
     const logsInt = syncLogs.filter((l) => l.integracao_slug === int.slug);
     const ultimo = logsInt[0];
@@ -410,22 +539,27 @@ export default function StatusTecnico() {
     };
   });
 
-  // Linha sintética para Social Media KPIs (não vem de integrations)
+  // Linha Social Media KPIs — dados de pipeline_runs e fluxoDados
+  const fluxoHojeSocial = fluxoDados.find((f) => f.data === hojeIso);
   const socialKpisRow = {
     slug: "social_kpis",
     nome: "Social Media KPIs",
     descricao: "ETL Instagram, Facebook, YouTube, LinkedIn",
     ativo: true,
-    ultimoSync: null as string | null,
-    registrosHoje: 0,
-    erros: 0,
-    status: "ok" as const,
+    ultimoSync: ultimoPipelineRun?.created_at ?? null,
+    registrosHoje: fluxoHojeSocial?.social ?? 0,
+    erros: pipelineRuns.filter((r) => r.status === "error").length,
+    status: (ultimoPipelineRun?.status === "success" ? "ok" : ultimoPipelineRun?.status === "error" ? "falha" : "warning") as "ok" | "warning" | "falha",
     syncTipo: "social" as const,
   };
-  // Linha para ação de envio de e-mail para diretoria
+  // Linha E-mail para diretoria — dados de email_envios e tech_logs
   const emailDiretoriaRow = {
     slug: "email_diretoria",
     nome: "Enviar e-mail para diretoria",
+    ultimoSync: ultimoEmailEnvioAt,
+    registrosHoje: fluxoHojeSocial?.emails?.relatorio_diretoria ?? 0,
+    erros: techLogs.filter((l) => l.tipo === "relatorio_diretoria").length,
+    status: (emailStatusOk ? "ok" : "falha") as "ok" | "warning" | "falha",
     syncTipo: "email" as const,
   };
   const linhasCompletas = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow];
@@ -465,31 +599,37 @@ export default function StatusTecnico() {
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-        <div style={card}>
+        <div style={card} title="CDA, Social Media e E-mail — OK quando o último Sync (automático ou manual) foi sucesso">
           <p style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>
             Integrações Ativas
           </p>
-          <p style={{ fontFamily: FONT.title, fontSize: 28, color: "#059669", margin: 0, fontWeight: 700 }}>
-            {loading ? "—" : `${integracoesAtivas} / ${integrations.length}`}
+          <p style={{ fontFamily: FONT.title, fontSize: 28, color: integracoesAtivasCount === totalIntegracoes ? "#059669" : integracoesAtivasCount > 0 ? "#f59e0b" : "#ef4444", margin: 0, fontWeight: 700 }}>
+            {loading ? "—" : `${integracoesAtivasCount} / ${totalIntegracoes}`}
+          </p>
+          <p style={{ fontFamily: FONT.body, fontSize: 10, color: t.textMuted, margin: "4px 0 0", opacity: 0.8 }}>
+            CDA, Social, E-mail
           </p>
         </div>
-        <div style={card}>
+        <div style={card} title="Mais recente de: sync_logs (CDA), pipeline_runs (Social) ou email_envios (E-mail)">
           <p style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>
             Último Sync
           </p>
           <p style={{ fontFamily: FONT.title, fontSize: 28, color: t.text, margin: 0, fontWeight: 600 }}>
-            {loading ? "—" : ultimoSyncOk ? formatarHora(ultimoSyncOk.executado_em) : "Nunca"}
+            {loading ? "—" : ultimoSyncQualquer ? formatarHora(ultimoSyncQualquer.ts) : "Nunca"}
           </p>
         </div>
-        <div style={card}>
+        <div style={card} title="Soma do fluxo do dia: CDA (influencer_metricas) + Social Media (kpi_daily) + E-mails (destinatários)">
           <p style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>
             Registros Hoje
           </p>
           <p style={{ fontFamily: FONT.title, fontSize: 28, color: "#7c3aed", margin: 0, fontWeight: 700 }}>
-            {loading ? "—" : registrosHoje.toLocaleString("pt-BR")}
+            {loading ? "—" : registrosHojeTotal.toLocaleString("pt-BR")}
+          </p>
+          <p style={{ fontFamily: FONT.body, fontSize: 10, color: t.textMuted, margin: "4px 0 0", opacity: 0.8 }}>
+            CDA + Social + E-mails
           </p>
         </div>
-        <div style={card}>
+        <div style={card} title="Falhas / total tentativas das 3: sync_logs (CDA) + pipeline_runs (Social) + email_envios + tech_logs (E-mail)">
           <p style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>
             Taxa de Erro
           </p>
@@ -501,6 +641,9 @@ export default function StatusTecnico() {
             fontWeight: 700,
           }}>
             {loading ? "—" : `${taxaErro}%`}
+          </p>
+          <p style={{ fontFamily: FONT.body, fontSize: 10, color: t.textMuted, margin: "4px 0 0", opacity: 0.8 }}>
+            Falhas / total (3 fontes)
           </p>
         </div>
       </div>
@@ -571,8 +714,7 @@ export default function StatusTecnico() {
                   <th style={thStyle}>Registros Hoje</th>
                   <th style={thStyle}>Erros</th>
                   <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Sync</th>
-                  <th style={thStyle}>Ações</th>
+                  <th style={thStyle}>Ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -582,7 +724,10 @@ export default function StatusTecnico() {
                   const isEmail = row.syncTipo === "email";
                   const syncExecutandoRow = isCda ? syncExecutando : isSocial ? syncSocialExecutando : false;
                   const onSync = isCda ? executarSync : isSocial ? executarSyncSocial : () => {};
-                  const hasSyncData = "ultimoSync" in row && "registrosHoje" in row && "erros" in row && "status" in row;
+                  const ultimoSync = "ultimoSync" in row ? row.ultimoSync : null;
+                  const registrosHoje = "registrosHoje" in row ? row.registrosHoje : 0;
+                  const erros = "erros" in row ? row.erros : 0;
+                  const status = "status" in row ? row.status : null;
                   return (
                     <tr key={row.slug}>
                       <td style={tdStyle}>
@@ -594,73 +739,73 @@ export default function StatusTecnico() {
                           row.nome
                         )}
                       </td>
-                      <td style={tdStyle}>{hasSyncData && row.ultimoSync ? formatarHora(row.ultimoSync) : "—"}</td>
-                      <td style={tdStyle}>{hasSyncData ? row.registrosHoje.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={tdStyle}>{hasSyncData ? row.erros : "—"}</td>
+                      <td style={tdStyle}>{ultimoSync ? formatarHora(ultimoSync) : "—"}</td>
+                      <td style={tdStyle}>{registrosHoje.toLocaleString("pt-BR")}</td>
+                      <td style={tdStyle}>{erros}</td>
                       <td style={tdStyle}>
-                        {hasSyncData && row.status ? (
+                        {status ? (
                           <span
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
                               gap: 6,
-                              background: row.status === "ok" ? "#05966922" : row.status === "warning" ? "#f59e0b22" : "#ef444422",
-                              color: row.status === "ok" ? "#059669" : row.status === "warning" ? "#f59e0b" : "#ef4444",
+                              background: status === "ok" ? "#05966922" : status === "warning" ? "#f59e0b22" : "#ef444422",
+                              color: status === "ok" ? "#059669" : status === "warning" ? "#f59e0b" : "#ef4444",
                               borderRadius: 8,
                               padding: "4px 12px",
                               fontSize: 12,
                               fontWeight: 600,
                             }}
                           >
-                            {row.status === "ok" && "🟢 OK"}
-                            {row.status === "warning" && "🟡 Warning"}
-                            {row.status === "falha" && "🔴 Falha"}
+                            {status === "ok" && "🟢 OK"}
+                            {status === "warning" && "🟡 Warning"}
+                            {status === "falha" && "🔴 Falha"}
                           </span>
                         ) : (
                           "—"
                         )}
                       </td>
                       <td style={tdStyle}>
-                        {(isCda || isSocial) && (
-                          <button
-                            onClick={onSync}
-                            disabled={syncExecutandoRow || !perm.canView}
-                            style={{
-                              padding: "6px 12px",
-                              borderRadius: 8,
-                              border: "none",
-                              background: syncExecutandoRow ? "#6b7280" : "linear-gradient(135deg, #4a2082, #1e36f8)",
-                              color: "#fff",
-                              fontSize: 12,
-                              fontWeight: 600,
-                              fontFamily: FONT.body,
-                              cursor: syncExecutandoRow ? "not-allowed" : "pointer",
-                            }}
-                          >
-                            {syncExecutandoRow ? "..." : "🔄 Sync"}
-                          </button>
-                        )}
-                      </td>
-                      <td style={tdStyle}>
-                        {isEmail && (
-                          <button
-                            onClick={enviarEmailDiretoria}
-                            disabled={emailEnviando || !perm.canView}
-                            style={{
-                              padding: "6px 12px",
-                              borderRadius: 8,
-                              border: "none",
-                              background: emailEnviando ? "#6b7280" : "#059669",
-                              color: "#fff",
-                              fontSize: 12,
-                              fontWeight: 600,
-                              fontFamily: FONT.body,
-                              cursor: emailEnviando ? "not-allowed" : "pointer",
-                            }}
-                          >
-                            {emailEnviando ? "Enviando..." : "Enviar"}
-                          </button>
-                        )}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          {(isCda || isSocial) && (
+                            <button
+                              onClick={onSync}
+                              disabled={syncExecutandoRow || !perm.canView}
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 8,
+                                border: "none",
+                                background: syncExecutandoRow ? "#6b7280" : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                                color: "#fff",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                fontFamily: FONT.body,
+                                cursor: syncExecutandoRow ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              {syncExecutandoRow ? "..." : "🔄 Sync"}
+                            </button>
+                          )}
+                          {isEmail && (
+                            <button
+                              onClick={enviarEmailDiretoria}
+                              disabled={emailEnviando || !perm.canView}
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 8,
+                                border: "none",
+                                background: emailEnviando ? "#6b7280" : "#059669",
+                                color: "#fff",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                fontFamily: FONT.body,
+                                cursor: emailEnviando ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              {emailEnviando ? "Enviando..." : "Enviar"}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -696,7 +841,7 @@ export default function StatusTecnico() {
           <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Nenhum dado no período.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {fluxoDados.slice(-14).map((f) => {
+            {[...fluxoDados.slice(-14)].reverse().map((f) => {
               const emailTotal = Object.values(f.emails).reduce((s, n) => s + n, 0);
               const pct = (v: number) => (f.total > 0 ? (v / f.total) * 100 : 0);
               const isHover = fluxoHover === f.data;
@@ -833,10 +978,7 @@ export default function StatusTecnico() {
                 }}
               >
                 <span style={{ fontSize: 18 }}>{a.nivel === "erro" ? "🔴" : "🟡"}</span>
-                <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                  {a.msg}
-                  {a.integracao && ` — Integração: ${a.integracao}`}
-                </span>
+                <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.text }}>{a.msg}</span>
               </div>
             ))}
           </div>
@@ -873,21 +1015,26 @@ export default function StatusTecnico() {
         </div>
         {loading ? (
           <p style={{ color: t.textMuted }}>Carregando...</p>
-        ) : techLogs.length === 0 ? (
-          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Nenhum log de erro no período.</p>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Hora</th>
-                  <th style={thStyle}>Integração</th>
-                  <th style={thStyle}>Tipo</th>
-                  <th style={thStyle}>Descrição</th>
-                </tr>
-              </thead>
-              <tbody>
-                {techLogs.map((log) => {
+        ) : (() => {
+          const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
+          const desdeDisplay = new Date();
+          desdeDisplay.setHours(desdeDisplay.getHours() - horasDisplay);
+          const techLogsFiltrados = techLogs.filter((l) => new Date(l.created_at) >= desdeDisplay);
+          return techLogsFiltrados.length === 0 ? (
+            <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Nenhum log de erro no período.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Hora</th>
+                    <th style={thStyle}>Integração</th>
+                    <th style={thStyle}>Tipo</th>
+                    <th style={thStyle}>Descrição</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {techLogsFiltrados.map((log) => {
                   const integracaoLabel =
                     log.integracao_slug
                       ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ?? log.integracao_slug
@@ -901,21 +1048,22 @@ export default function StatusTecnico() {
                         }[log.tipo] ?? (log.tipo.startsWith("relatorio_")
                           ? `E-mail - Relatório ${log.tipo.replace("relatorio_", "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} (Resend)`
                           : log.tipo);
-                  return (
-                    <tr key={log.id}>
-                      <td style={tdStyle}>{formatarHora(log.created_at)}</td>
-                      <td style={tdStyle}>{integracaoLabel}</td>
-                      <td style={tdStyle}>
-                        <code style={{ background: t.bg, padding: "2px 6px", borderRadius: 4, fontSize: 11 }}>{log.tipo}</code>
-                      </td>
-                      <td style={tdStyle}>{log.descricao}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    return (
+                      <tr key={log.id}>
+                        <td style={tdStyle}>{formatarHora(log.created_at)}</td>
+                        <td style={tdStyle}>{integracaoLabel}</td>
+                        <td style={tdStyle}>
+                          <code style={{ background: t.bg, padding: "2px 6px", borderRadius: 4, fontSize: 11 }}>{log.tipo}</code>
+                        </td>
+                        <td style={tdStyle}>{log.descricao}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Configuração de Alertas */}
@@ -939,20 +1087,44 @@ export default function StatusTecnico() {
               </thead>
               <tbody>
                 <tr>
-                  <td style={tdStyle}>Nenhum registro novo</td>
-                  <td style={tdStyle}>24h</td>
+                  <td style={tdStyle}>Nenhum Sync CDA com sucesso</td>
+                  <td style={tdStyle}>Último sync com falha, nenhum OK</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Taxa de erro</td>
+                  <td style={tdStyle}>Sync CDA atrasado</td>
+                  <td style={tdStyle}>&gt; 24h sem sync OK</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Taxa de erro alta no Sync CDA</td>
                   <td style={tdStyle}>&gt; 5%</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Sync atrasado</td>
-                  <td style={tdStyle}>&gt; 1h</td>
+                  <td style={tdStyle}>Sync CDA sem dados recentes</td>
+                  <td style={tdStyle}>Nenhum registro hoje (com histórico)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Integração offline</td>
-                  <td style={tdStyle}>timeout</td>
+                  <td style={tdStyle}>Erro no Sync Social Media</td>
+                  <td style={tdStyle}>pipeline_runs status=error (24h)</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Sync Social Media com erro</td>
+                  <td style={tdStyle}>tech_logs canal (24h)</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Sync Social Media sem dados recentes</td>
+                  <td style={tdStyle}>Sem kpi_daily em 3 dias (com histórico)</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Sync Social Media atrasado</td>
+                  <td style={tdStyle}>&gt; 36h sem pipeline success</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Erro ao enviar E-mail - Relatório de Influencers (Resend)</td>
+                  <td style={tdStyle}>tech_logs relatorio_diretoria (24h)</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>E-mail - Relatório de Influencers (Resend) não enviado hoje</td>
+                  <td style={tdStyle}>Sem email_envios hoje</td>
                 </tr>
               </tbody>
             </table>
