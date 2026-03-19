@@ -664,6 +664,15 @@ serve(async (req) => {
     )
 
     if (!result.ok) {
+      try {
+        await supabase.from('tech_logs').insert({
+          integracao_slug: null,
+          tipo: 'relatorio_diretoria',
+          descricao: result.error ?? 'Erro ao enviar e-mail via Resend',
+        })
+      } catch (e) {
+        console.warn('[relatorio-diario-diretoria] Falha ao registrar tech_log:', e)
+      }
       return new Response(JSON.stringify({ error: result.error }), {
         status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
       })

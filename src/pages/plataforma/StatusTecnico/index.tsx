@@ -887,16 +887,31 @@ export default function StatusTecnico() {
                 </tr>
               </thead>
               <tbody>
-                {techLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td style={tdStyle}>{formatarHora(log.created_at)}</td>
-                    <td style={tdStyle}>{log.integracao_slug ?? "—"}</td>
-                    <td style={tdStyle}>
-                      <code style={{ background: t.bg, padding: "2px 6px", borderRadius: 4, fontSize: 11 }}>{log.tipo}</code>
-                    </td>
-                    <td style={tdStyle}>{log.descricao}</td>
-                  </tr>
-                ))}
+                {techLogs.map((log) => {
+                  const integracaoLabel =
+                    log.integracao_slug
+                      ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ?? log.integracao_slug
+                      : {
+                          instagram: "Social Media (Instagram)",
+                          facebook: "Social Media (Facebook)",
+                          youtube: "Social Media (YouTube)",
+                          linkedin: "Social Media (LinkedIn)",
+                          relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
+                          resend: "E-mail (Resend)",
+                        }[log.tipo] ?? (log.tipo.startsWith("relatorio_")
+                          ? `E-mail - Relatório ${log.tipo.replace("relatorio_", "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} (Resend)`
+                          : log.tipo);
+                  return (
+                    <tr key={log.id}>
+                      <td style={tdStyle}>{formatarHora(log.created_at)}</td>
+                      <td style={tdStyle}>{integracaoLabel}</td>
+                      <td style={tdStyle}>
+                        <code style={{ background: t.bg, padding: "2px 6px", borderRadius: 4, fontSize: 11 }}>{log.tipo}</code>
+                      </td>
+                      <td style={tdStyle}>{log.descricao}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -114,6 +114,14 @@ def log_run(channel: str, status: str, records: int = 0, error: str = None, ms: 
             "duration_ms": ms,
         }
     ).execute()
+    # Registrar erro em tech_logs para exibir em Status Técnico > Logs Recentes
+    if status == "error" and error:
+        try:
+            supabase.table("tech_logs").insert(
+                {"integracao_slug": None, "tipo": channel, "descricao": error[:500]}
+            ).execute()
+        except Exception as e:
+            log.warning("Falha ao registrar tech_log: %s", e)
 
 
 # ------------------------------------------------------------
