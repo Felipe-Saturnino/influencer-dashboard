@@ -48,7 +48,7 @@ export async function buscarInvestimentoPago(
 
   if (errPags) return { total: 0, porInfluencer: {} };
 
-  // Pagamentos de agentes (status = pago)
+  // Pagamentos de agentes (status = pago) — inclui no total para bater com o Financeiro
   let qAg = supabase
     .from("pagamentos_agentes")
     .select("total")
@@ -59,6 +59,7 @@ export async function buscarInvestimentoPago(
     qAg = qAg.eq("operadora_slug", operadoraSlug);
 
   const { data: ags, error: errAgs } = await qAg;
+  if (errAgs) console.warn("[investimentoPago] pagamentos_agentes:", errAgs.message);
 
   const porInfluencer: Record<string, number> = {};
   let totalInf = 0;
