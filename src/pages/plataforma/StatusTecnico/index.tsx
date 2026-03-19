@@ -35,6 +35,9 @@ interface Integration {
 
 interface FluxoDia {
   data: string;
+  cda: number;
+  social: number;
+  emails: Record<string, number>; // tipo -> destinatarios_count
   total: number;
 }
 
@@ -54,6 +57,7 @@ export default function StatusTecnico() {
   const [fluxoDados, setFluxoDados] = useState<FluxoDia[]>([]);
   const [registrosHoje, setRegistrosHoje] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
+  const [fluxoHover, setFluxoHover] = useState<string | null>(null);
 
   const card: React.CSSProperties = {
     background: t.cardBg,
@@ -114,20 +118,53 @@ export default function StatusTecnico() {
       .eq("data", hoje);
     setRegistrosHoje(count ?? 0);
 
-    // Fluxo de dados (últimos 14 dias)
+    // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails
     const dataInicio = new Date();
     dataInicio.setDate(dataInicio.getDate() - 14);
-    const { data: fluxoData } = await supabase
-      .from("influencer_metricas")
-      .select("data")
-      .gte("data", dataInicio.toISOString().split("T")[0]);
-    const agrupado = (fluxoData ?? []).reduce<Record<string, number>>((acc, row) => {
+    const dataInicioStr = dataInicio.toISOString().split("T")[0];
+
+    const [resCda, resSocial, resEmails] = await Promise.all([
+      supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
+      supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
+      supabase.from("email_envios").select("data, tipo, destinatarios_count").gte("data", dataInicioStr),
+    ]);
+
+    const cdaPorData = (resCda.data ?? []).reduce<Record<string, number>>((acc, row) => {
       acc[row.data] = (acc[row.data] ?? 0) + 1;
       return acc;
     }, {});
-    const fluxoArray: FluxoDia[] = Object.entries(agrupado)
-      .map(([data, total]) => ({ data, total }))
-      .sort((a, b) => a.data.localeCompare(b.data));
+    const socialPorData = (resSocial.data ?? []).reduce<Record<string, number>>((acc, row) => {
+      const d = (row as { date: string }).date;
+      acc[d] = (acc[d] ?? 0) + 1;
+      return acc;
+    }, {});
+    const emailsPorData = (resEmails.data ?? []).reduce<Record<string, Record<string, number>>>((acc, row) => {
+      const r = row as { data: string; tipo: string; destinatarios_count: number };
+      if (!acc[r.data]) acc[r.data] = {};
+      acc[r.data][r.tipo] = (acc[r.data][r.tipo] ?? 0) + r.destinatarios_count;
+      return acc;
+    }, {});
+
+    const datasSet = new Set<string>([
+      ...Object.keys(cdaPorData),
+      ...Object.keys(socialPorData),
+      ...Object.keys(emailsPorData),
+    ]);
+    const fluxoArray: FluxoDia[] = Array.from(datasSet)
+      .sort((a, b) => a.localeCompare(b))
+      .map((data) => {
+        const cda = cdaPorData[data] ?? 0;
+        const social = socialPorData[data] ?? 0;
+        const emails = emailsPorData[data] ?? {};
+        const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
+        return {
+          data,
+          cda,
+          social,
+          emails,
+          total: cda + social + emailTotal,
+        };
+      });
     setFluxoDados(fluxoArray);
 
     setLoading(false);
@@ -394,6 +431,10 @@ export default function StatusTecnico() {
   const linhasCompletas = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow];
 
   const maxFluxo = Math.max(...fluxoDados.map((f) => f.total), 1);
+  const fluxoLabel = (k: string) =>
+    ({ cda: "CDA (Casa de Apostas)", social: "Social Media", relatorio_diretoria: "E-mail: Relatório Diretoria" }[k] ?? `E-mail: ${k}`);
+  const fluxoCor = (k: string) =>
+    ({ cda: "#7c3aed", social: "#2563eb", relatorio_diretoria: "#059669" }[k] ?? "#10b981");
   const formatarHora = (iso: string) => {
     const d = new Date(iso);
     const hoje = new Date();
@@ -635,41 +676,136 @@ export default function StatusTecnico() {
         <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
           Fluxo de Dados (últimos 14 dias)
         </h2>
+        <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: "-8px 0 8px" }}>
+          CDA e Social: 1 = 1 registro. E-mail: 1 = cada destinatário.
+        </p>
+        <div style={{ display: "flex", gap: 20, marginBottom: 16, flexWrap: "wrap" }}>
+          <span style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted }}>
+            <span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> CDA
+          </span>
+          <span style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted }}>
+            <span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> Social Media
+          </span>
+          <span style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted }}>
+            <span style={{ color: fluxoCor("relatorio_diretoria"), fontWeight: 600 }}>●</span> E-mail Diretoria
+          </span>
+        </div>
         {loading ? (
           <p style={{ color: t.textMuted }}>Carregando...</p>
         ) : fluxoDados.length === 0 ? (
           <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Nenhum dado no período.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {fluxoDados.slice(-14).map((f) => (
-              <div key={f.data} style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: 100 }}>
-                  {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
-                </span>
+            {fluxoDados.slice(-14).map((f) => {
+              const emailTotal = Object.values(f.emails).reduce((s, n) => s + n, 0);
+              const pct = (v: number) => (f.total > 0 ? (v / f.total) * 100 : 0);
+              const isHover = fluxoHover === f.data;
+              return (
                 <div
-                  style={{
-                    flex: 1,
-                    height: 24,
-                    background: t.bg,
-                    borderRadius: 6,
-                    overflow: "hidden",
-                  }}
+                  key={f.data}
+                  style={{ display: "flex", alignItems: "center", gap: 16, position: "relative" }}
+                  onMouseEnter={() => setFluxoHover(f.data)}
+                  onMouseLeave={() => setFluxoHover(null)}
                 >
+                  <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: 100 }}>
+                    {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                  </span>
                   <div
                     style={{
-                      width: `${(f.total / maxFluxo) * 100}%`,
-                      height: "100%",
-                      background: "linear-gradient(90deg, #7c3aed, #2563eb)",
+                      flex: 1,
+                      height: 24,
+                      background: t.bg,
                       borderRadius: 6,
-                      minWidth: f.total > 0 ? 4 : 0,
+                      overflow: "hidden",
+                      display: "flex",
                     }}
-                  />
+                  >
+                    {f.cda > 0 && (
+                      <div
+                        title={`${fluxoLabel("cda")}: ${f.cda.toLocaleString("pt-BR")}`}
+                        style={{
+                          width: `${pct(f.cda)}%`,
+                          minWidth: f.cda > 0 ? 4 : 0,
+                          height: "100%",
+                          background: fluxoCor("cda"),
+                          transition: "opacity 0.15s",
+                          opacity: isHover ? 1 : 0.9,
+                        }}
+                      />
+                    )}
+                    {f.social > 0 && (
+                      <div
+                        title={`${fluxoLabel("social")}: ${f.social.toLocaleString("pt-BR")}`}
+                        style={{
+                          width: `${pct(f.social)}%`,
+                          minWidth: f.social > 0 ? 4 : 0,
+                          height: "100%",
+                          background: fluxoCor("social"),
+                          transition: "opacity 0.15s",
+                          opacity: isHover ? 1 : 0.9,
+                        }}
+                      />
+                    )}
+                    {Object.entries(f.emails)
+                      .filter(([, n]) => n > 0)
+                      .map(([tipo, n]) => (
+                        <div
+                          key={tipo}
+                          title={`${fluxoLabel(tipo)}: ${n.toLocaleString("pt-BR")}`}
+                          style={{
+                            width: `${pct(n)}%`,
+                            minWidth: 4,
+                            height: "100%",
+                            background: fluxoCor(tipo),
+                            transition: "opacity 0.15s",
+                            opacity: isHover ? 1 : 0.9,
+                          }}
+                        />
+                      ))}
+                  </div>
+                  <span style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 600, color: t.text, minWidth: 60 }}>
+                    {f.total.toLocaleString("pt-BR")}
+                  </span>
+                  {isHover && f.total > 0 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 116,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        marginLeft: 4,
+                        padding: "8px 12px",
+                        background: t.cardBg,
+                        border: `1px solid ${t.cardBorder}`,
+                        borderRadius: 8,
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                        fontSize: 12,
+                        fontFamily: FONT.body,
+                        color: t.text,
+                        zIndex: 10,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {f.cda > 0 && (
+                        <div style={{ padding: "2px 0" }}>
+                          <span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}
+                        </div>
+                      )}
+                      {f.social > 0 && (
+                        <div style={{ padding: "2px 0" }}>
+                          <span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}
+                        </div>
+                      )}
+                      {Object.entries(f.emails).map(([tipo, n]) => (
+                        <div key={tipo} style={{ padding: "2px 0" }}>
+                          <span style={{ color: fluxoCor(tipo), fontWeight: 600 }}>●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 600, color: t.text, minWidth: 60 }}>
-                  {f.total.toLocaleString("pt-BR")}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

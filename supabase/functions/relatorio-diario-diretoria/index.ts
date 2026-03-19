@@ -669,6 +669,17 @@ serve(async (req) => {
       })
     }
 
+    // Registrar envio em email_envios para fluxo de dados (1 = cada destinatário)
+    try {
+      await supabase.from('email_envios').insert({
+        data: dataHoje,
+        tipo: 'relatorio_diretoria',
+        destinatarios_count: destinatarios.length,
+      })
+    } catch (e) {
+      console.warn('[relatorio-diario-diretoria] Falha ao registrar email_envios:', e)
+    }
+
     return new Response(
       JSON.stringify({
         ok: true,
