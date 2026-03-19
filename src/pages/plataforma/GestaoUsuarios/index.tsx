@@ -621,7 +621,7 @@ function ParesAgenciaUI({
               onChange={e => onUpdate(idx, "influencerId", e.target.value)}
             >
               <option value="">Selecione o influencer</option>
-              {influencers.map(i => (
+              {[...influencers].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(i => (
                 <option key={i.id} value={i.id}>{i.nome}</option>
               ))}
             </select>
@@ -632,7 +632,7 @@ function ParesAgenciaUI({
               onChange={e => onUpdate(idx, "operadoraSlug", e.target.value)}
             >
               <option value="">Selecione a operadora</option>
-              {operadoras.map(op => (
+              {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(op => (
                 <option key={op.slug} value={op.slug}>{op.nome}</option>
               ))}
             </select>
@@ -986,7 +986,7 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
             value={role}
             onChange={e => setRole(e.target.value as Role)}
           >
-            {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            {[...ROLES].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>
 
@@ -1168,7 +1168,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
     padding:    "10px 14px",
     borderTop:  `1px solid ${t.cardBorder}`,
   };
-  const secoes = [...new Set(PAGES.map(p => p.secao))];
+  const secoes = [...new Set(PAGES.map(p => p.secao))].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1212,7 +1212,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
           </thead>
           <tbody>
             {secoes.map(secao => {
-              const pagesDaSec = PAGES.filter(p => p.secao === secao);
+              const pagesDaSec = PAGES.filter(p => p.secao === secao).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
               return pagesDaSec.map((page, idx) => (
                 <tr
                   key={page.key}
@@ -1266,7 +1266,7 @@ function AbaPermissoes({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                           }}
                         >
                           <option value="">—</option>
-                          {PERM_OPCOES.map(o => (
+                          {[...PERM_OPCOES].sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "", "pt-BR")).map(o => (
                             <option key={o.value} value={o.value ?? ""}>{o.label}</option>
                           ))}
                         </select>

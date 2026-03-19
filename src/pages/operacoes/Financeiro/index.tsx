@@ -185,7 +185,7 @@ function SelectInput({ value, onChange, options, style }: {
         outline: "none", cursor: "pointer", ...style,
       }}
     >
-      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      {[...options].sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "", "pt-BR")).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   );
 }
@@ -578,7 +578,7 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerOperador
             <label style={labelStyle}>Operadora *</label>
             <select value={operadoraSlug} onChange={e => setOperadoraSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
               <option value="">Selecione...</option>
-              {opcoes.map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+              {[...opcoes].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
             </select>
           </div>
         )}
@@ -1933,9 +1933,12 @@ export default function Financeiro() {
               }}
             >
               <option value="todas">Todas as operadoras</option>
-              {operadorasList.filter((o) => podeVerOperadora(o.slug)).map((o) => (
-                <option key={o.slug} value={o.slug}>{o.nome}</option>
-              ))}
+              {operadorasList
+                .filter((o) => podeVerOperadora(o.slug))
+                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                .map((o) => (
+                  <option key={o.slug} value={o.slug}>{o.nome}</option>
+                ))}
             </select>
           )}
         </div>

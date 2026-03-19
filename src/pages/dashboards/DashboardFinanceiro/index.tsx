@@ -640,7 +640,7 @@ export default function DashboardFinanceiro() {
                 </span>
                 <select value={filtroInfluencer} onChange={(e) => setFiltroInfluencer(e.target.value)} style={selectStyle}>
                   <option value="todos">Todos os influencers</option>
-                  {rows.map((r) => <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>)}
+                  {[...rows].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>)}
                 </select>
               </div>
             )}
@@ -651,9 +651,12 @@ export default function DashboardFinanceiro() {
                 </span>
                 <select value={operadoraFiltro} onChange={(e) => setOperadoraFiltro(e.target.value)} style={selectStyle}>
                   <option value="todas">Todas as operadoras</option>
-                  {operadorasList.filter((o) => podeVerOperadora(o.slug)).map((o) => (
-                    <option key={o.slug} value={o.slug}>{o.nome}</option>
-                  ))}
+                  {operadorasList
+                    .filter((o) => podeVerOperadora(o.slug))
+                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                    .map((o) => (
+                      <option key={o.slug} value={o.slug}>{o.nome}</option>
+                    ))}
                 </select>
               </div>
             )}

@@ -586,6 +586,7 @@ export default function DashboardOverviewInfluencer() {
                 <option value="todos">Todos os influencers</option>
                 {perfis
                   .filter((p) => influencersComDadosIds.includes(p.id) && podeVerInfluencer(p.id))
+                  .sort((a, b) => (a.nome_artistico ?? "").localeCompare(b.nome_artistico ?? "", "pt-BR"))
                   .map((p) => (
                     <option key={p.id} value={p.id}>{p.nome_artistico}</option>
                   ))}
@@ -601,7 +602,7 @@ export default function DashboardOverviewInfluencer() {
                 t={t}
               >
                 <option value="todas">Todas as operadoras</option>
-                {operadorasList.map((o) => (
+                {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
                   <option key={o.slug} value={o.slug}>{o.nome}</option>
                 ))}
               </SelectComIcone>

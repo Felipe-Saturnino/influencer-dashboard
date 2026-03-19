@@ -628,7 +628,7 @@ export default function DashboardConversao() {
                 </span>
                 <select value={filtroInfluencer} onChange={(e) => setFiltroInfluencer(e.target.value)} style={selectStyle}>
                   <option value="todos">Todos os influencers</option>
-                  {rows.map((r) => <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>)}
+                  {[...rows].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>)}
                 </select>
               </div>
             )}
@@ -642,6 +642,7 @@ export default function DashboardConversao() {
                   <option value="todas">Todas as operadoras</option>
                   {operadorasList
                     .filter((o) => podeVerOperadora(o.slug))
+                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
                     .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
                 </select>
               </div>
@@ -665,9 +666,12 @@ export default function DashboardConversao() {
           <select value={compA} onChange={(e) => setCompA(e.target.value)}
             style={{ ...selectStyleSimple, borderColor: compA ? COR_A.border : undefined, width: "100%" }}>
             <option value="">— Selecione —</option>
-            {rowsFiltradosEscopo.filter((r) => r.influencer_id !== compB).map((r) => (
-              <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-            ))}
+            {rowsFiltradosEscopo
+              .filter((r) => r.influencer_id !== compB)
+              .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+              .map((r) => (
+                <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+              ))}
           </select>
 
           {/* Badge "vs" com peso visual */}
@@ -685,9 +689,12 @@ export default function DashboardConversao() {
           <select value={compB} onChange={(e) => setCompB(e.target.value)}
             style={{ ...selectStyleSimple, borderColor: compB ? COR_B.border : undefined, width: "100%" }}>
             <option value="">— Selecione —</option>
-            {rowsFiltradosEscopo.filter((r) => r.influencer_id !== compA).map((r) => (
-              <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-            ))}
+            {rowsFiltradosEscopo
+              .filter((r) => r.influencer_id !== compA)
+              .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+              .map((r) => (
+                <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+              ))}
           </select>
         </div>
 

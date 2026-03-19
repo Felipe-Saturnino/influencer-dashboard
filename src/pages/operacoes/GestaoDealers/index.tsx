@@ -155,20 +155,20 @@ export default function GestaoDealers() {
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <select value={filtroGenero} onChange={(e) => setFiltroGenero(e.target.value)} style={selectStyle}>
             <option value="todos">Todos os gêneros</option>
-            {GENERO_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {[...GENERO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)} style={selectStyle}>
             <option value="todos">Todos os turnos</option>
-            {TURNO_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {[...TURNO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectStyle}>
             <option value="todas">Todas as operadoras</option>
             <option value="nenhuma">Nenhuma operadora</option>
-            {operadoras.map((op) => <option key={op.slug} value={op.slug}>{op.nome}</option>)}
+            {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => <option key={op.slug} value={op.slug}>{op.nome}</option>)}
           </select>
           <select value={filtroJogos} onChange={(e) => setFiltroJogos(e.target.value)} style={selectStyle}>
             <option value="todos">Todos os jogos</option>
-            {JOGOS_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {[...JOGOS_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
       </div>
@@ -608,13 +608,13 @@ function ModalDealer({
           <div>
             <label style={labelStyle}>Gênero</label>
             <select value={genero} onChange={(e) => setGenero(e.target.value as DealerGenero)} style={inputStyle}>
-              {GENERO_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {[...GENERO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div>
             <label style={labelStyle}>Turno</label>
             <select value={turno} onChange={(e) => setTurno(e.target.value as DealerTurno)} style={inputStyle}>
-              {TURNO_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {[...TURNO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
         </div>
@@ -644,7 +644,7 @@ function ModalDealer({
           <label style={labelStyle}>Operadora</label>
           <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={inputStyle}>
             <option value="">Nenhuma</option>
-            {operadoras.map((op) => <option key={op.slug} value={op.slug}>{op.nome}</option>)}
+            {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => <option key={op.slug} value={op.slug}>{op.nome}</option>)}
           </select>
         </div>
 

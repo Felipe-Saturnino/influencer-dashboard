@@ -279,15 +279,15 @@ export default function SocialMediaDashboard() {
         supabase.from("instagram_posts")
           .select("date,type,caption,likes,comments,saves,impressions,permalink,thumbnail_url")
           .gte("date", start).lte("date", end)
-          .order("date", { ascending: false }).limit(100),
+          .order("date", { ascending: false }).limit(500),
         supabase.from("facebook_posts")
           .select("date,type,message,reactions,comments,impressions,permalink,thumbnail_url")
           .gte("date", start).lte("date", end)
-          .order("date", { ascending: false }).limit(100),
+          .order("date", { ascending: false }).limit(500),
         supabase.from("youtube_videos")
           .select("date,type,title,views,likes,comments,video_id")
           .gte("date", start).lte("date", end)
-          .order("date", { ascending: false }).limit(100),
+          .order("date", { ascending: false }).limit(500),
       ]);
 
       if (cancelled) return;

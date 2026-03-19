@@ -46,6 +46,8 @@ Canais sem variáveis configuradas são pulados.
 
 ### 2. Carga histórica (backfill)
 
+**Importante:** O job diário só coleta dados de **ontem**. Para meses passados (ex.: Fevereiro), é obrigatório rodar o backfill manualmente — caso contrário, esses meses ficarão vazios ou com poucos posts.
+
 Para carregar dados de um período passado (~90 dias, ex.: jan/2026 até ontem):
 
 ```powershell
