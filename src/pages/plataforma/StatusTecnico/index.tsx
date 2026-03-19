@@ -385,7 +385,13 @@ export default function StatusTecnico() {
     status: "ok" as const,
     syncTipo: "social" as const,
   };
-  const linhasCompletas = [...statusPorIntegracao, socialKpisRow];
+  // Linha para ação de envio de e-mail para diretoria
+  const emailDiretoriaRow = {
+    slug: "email_diretoria",
+    nome: "Enviar e-mail para diretoria",
+    syncTipo: "email" as const,
+  };
+  const linhasCompletas = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow];
 
   const maxFluxo = Math.max(...fluxoDados.map((f) => f.total), 1);
   const formatarHora = (iso: string) => {
@@ -404,22 +410,6 @@ export default function StatusTecnico() {
       </div>
     );
   }
-
-  const syncBtnStyle = (executando: boolean) =>
-    ({
-      padding: "10px 20px",
-      borderRadius: 12,
-      border: "none",
-      background: executando ? "#6b7280" : "linear-gradient(135deg, #4a2082, #1e36f8)",
-      color: "#fff",
-      fontSize: 14,
-      fontWeight: 700,
-      fontFamily: FONT.body,
-      cursor: executando ? "not-allowed" : "pointer",
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-    }) as React.CSSProperties;
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 28 }}>
@@ -476,22 +466,9 @@ export default function StatusTecnico() {
 
       {/* Status das Integrações */}
       <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, marginBottom: 20 }}>
-          <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: 0 }}>
-            Status das Integrações
-          </h2>
-          <button
-            onClick={enviarEmailDiretoria}
-            disabled={emailEnviando || !perm.canView}
-            style={{
-              ...syncBtnStyle(emailEnviando),
-              padding: "8px 16px",
-              fontSize: 13,
-            }}
-          >
-            {emailEnviando ? "Enviando..." : "📧 Enviar e-mail para diretoria"}
-          </button>
-        </div>
+        <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
+          Status das Integrações
+        </h2>
         {(syncMensagem || syncSocialMensagem || emailMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
             {syncMensagem && (
@@ -554,38 +531,53 @@ export default function StatusTecnico() {
                   <th style={thStyle}>Erros</th>
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Sync</th>
+                  <th style={thStyle}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {linhasCompletas.map((row) => {
                   const isCda = row.syncTipo === "cda";
                   const isSocial = row.syncTipo === "social";
+                  const isEmail = row.syncTipo === "email";
                   const syncExecutandoRow = isCda ? syncExecutando : isSocial ? syncSocialExecutando : false;
                   const onSync = isCda ? executarSync : isSocial ? executarSyncSocial : () => {};
+                  const hasSyncData = "ultimoSync" in row && "registrosHoje" in row && "erros" in row && "status" in row;
                   return (
                     <tr key={row.slug}>
-                      <td style={tdStyle}>{row.nome}</td>
-                      <td style={tdStyle}>{row.ultimoSync ? formatarHora(row.ultimoSync) : "—"}</td>
-                      <td style={tdStyle}>{row.registrosHoje.toLocaleString("pt-BR")}</td>
-                      <td style={tdStyle}>{row.erros}</td>
                       <td style={tdStyle}>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            background: row.status === "ok" ? "#05966922" : row.status === "warning" ? "#f59e0b22" : "#ef444422",
-                            color: row.status === "ok" ? "#059669" : row.status === "warning" ? "#f59e0b" : "#ef4444",
-                            borderRadius: 8,
-                            padding: "4px 12px",
-                            fontSize: 12,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {row.status === "ok" && "🟢 OK"}
-                          {row.status === "warning" && "🟡 Warning"}
-                          {row.status === "falha" && "🔴 Falha"}
-                        </span>
+                        {isEmail ? (
+                          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            📧 {row.nome}
+                          </span>
+                        ) : (
+                          row.nome
+                        )}
+                      </td>
+                      <td style={tdStyle}>{hasSyncData && row.ultimoSync ? formatarHora(row.ultimoSync) : "—"}</td>
+                      <td style={tdStyle}>{hasSyncData ? row.registrosHoje.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={tdStyle}>{hasSyncData ? row.erros : "—"}</td>
+                      <td style={tdStyle}>
+                        {hasSyncData && row.status ? (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              background: row.status === "ok" ? "#05966922" : row.status === "warning" ? "#f59e0b22" : "#ef444422",
+                              color: row.status === "ok" ? "#059669" : row.status === "warning" ? "#f59e0b" : "#ef4444",
+                              borderRadius: 8,
+                              padding: "4px 12px",
+                              fontSize: 12,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {row.status === "ok" && "🟢 OK"}
+                            {row.status === "warning" && "🟡 Warning"}
+                            {row.status === "falha" && "🔴 Falha"}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td style={tdStyle}>
                         {(isCda || isSocial) && (
@@ -605,6 +597,27 @@ export default function StatusTecnico() {
                             }}
                           >
                             {syncExecutandoRow ? "..." : "🔄 Sync"}
+                          </button>
+                        )}
+                      </td>
+                      <td style={tdStyle}>
+                        {isEmail && (
+                          <button
+                            onClick={enviarEmailDiretoria}
+                            disabled={emailEnviando || !perm.canView}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: emailEnviando ? "#6b7280" : "#059669",
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              fontFamily: FONT.body,
+                              cursor: emailEnviando ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            {emailEnviando ? "Enviando..." : "Enviar"}
                           </button>
                         )}
                       </td>
