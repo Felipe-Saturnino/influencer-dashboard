@@ -46,6 +46,8 @@ export default function StatusTecnico() {
   const [syncMensagem, setSyncMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncSocialExecutando, setSyncSocialExecutando] = useState(false);
   const [syncSocialMensagem, setSyncSocialMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [emailEnviando, setEmailEnviando] = useState(false);
+  const [emailMensagem, setEmailMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [techLogs, setTechLogs] = useState<TechLog[]>([]);
@@ -264,6 +266,56 @@ export default function StatusTecnico() {
     }
   };
 
+  const enviarEmailDiretoria = async () => {
+    if (emailEnviando || !perm.canView || perm.canView === "nao") return;
+    setEmailEnviando(true);
+    setEmailMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setEmailMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setEmailEnviando(false);
+        return;
+      }
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("relatorio-diario-diretoria", {
+        body: {},
+      });
+
+      const resData = (resDataRaw ?? {}) as { ok?: boolean; error?: string; destinatarios?: string[] };
+
+      if (invokeError) {
+        setEmailMensagem({
+          tipo: "erro",
+          texto: invokeError.message ?? "Erro ao enviar relatório. Verifique se a Edge Function relatorio-diario-diretoria está implantada.",
+        });
+        setEmailEnviando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        setEmailMensagem({
+          tipo: "erro",
+          texto: resData?.error ?? "Erro ao enviar relatório para a diretoria.",
+        });
+        setEmailEnviando(false);
+        return;
+      }
+
+      const dest = resData?.destinatarios?.length ? ` para ${resData.destinatarios.join(", ")}` : "";
+      setEmailMensagem({
+        tipo: "ok",
+        texto: `Relatório enviado com sucesso${dest}. A diretoria pode acompanhar possíveis erros e o status das integrações.`,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setEmailMensagem({ tipo: "erro", texto: msg });
+    } finally {
+      setEmailEnviando(false);
+    }
+  };
+
   // KPIs derivados
   const ultimoSyncOk = syncLogs.find((l) => l.status === "ok");
   const integracoesAtivas = integrations.filter((int) => {
@@ -317,8 +369,23 @@ export default function StatusTecnico() {
       registrosHoje: regsExibir,
       erros: ultimo?.erros_count ?? 0,
       status,
+      syncTipo: "cda" as const,
     };
   });
+
+  // Linha sintética para Social Media KPIs (não vem de integrations)
+  const socialKpisRow = {
+    slug: "social_kpis",
+    nome: "Social Media KPIs",
+    descricao: "ETL Instagram, Facebook, YouTube, LinkedIn",
+    ativo: true,
+    ultimoSync: null as string | null,
+    registrosHoje: 0,
+    erros: 0,
+    status: "ok" as const,
+    syncTipo: "social" as const,
+  };
+  const linhasCompletas = [...statusPorIntegracao, socialKpisRow];
 
   const maxFluxo = Math.max(...fluxoDados.map((f) => f.total), 1);
   const formatarHora = (iso: string) => {
@@ -338,11 +405,6 @@ export default function StatusTecnico() {
     );
   }
 
-  const syncCardStyle: React.CSSProperties = {
-    ...card,
-    flex: 1,
-    minWidth: 280,
-  };
   const syncBtnStyle = (executando: boolean) =>
     ({
       padding: "10px 20px",
@@ -368,70 +430,6 @@ export default function StatusTecnico() {
         <p style={{ color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
           Acompanhamento de integrações e saúde da plataforma.
         </p>
-      </div>
-
-      {/* Sync Métricas CDA + Sync Social Media KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
-        <div style={syncCardStyle}>
-          <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 8px" }}>
-            Sync Métricas CDA
-          </h2>
-          <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: "0 0 16px" }}>
-            Sincroniza métricas da CDA (integração Casa de Apostas) para influencer_metricas e utm_aliases. Múltiplas UTMs por influencer são somadas.
-          </p>
-          <button onClick={executarSync} disabled={syncExecutando || !perm.canView} style={syncBtnStyle(syncExecutando)}>
-            {syncExecutando ? "Sincronizando..." : "🔄 Executar Sync"}
-          </button>
-          {syncMensagem && (
-            <div
-              style={{
-                marginTop: 12,
-                padding: 12,
-                borderRadius: 10,
-                background: syncMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
-                border: `1px solid ${syncMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
-                color: syncMensagem.tipo === "ok" ? "#059669" : "#ef4444",
-                fontFamily: FONT.body,
-                fontSize: 12,
-              }}
-            >
-              {syncMensagem.tipo === "ok" ? "✅ " : "⚠️ "}
-              {syncMensagem.texto}
-            </div>
-          )}
-        </div>
-        <div style={syncCardStyle}>
-          <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 8px" }}>
-            Sync Social Media KPIs
-          </h2>
-          <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: "0 0 16px" }}>
-            Dispara o ETL de Instagram, Facebook, YouTube e LinkedIn (kpi_daily, posts, vídeos).
-          </p>
-          <button
-            onClick={executarSyncSocial}
-            disabled={syncSocialExecutando || !perm.canView}
-            style={syncBtnStyle(syncSocialExecutando)}
-          >
-            {syncSocialExecutando ? "Disparando..." : "🔄 Executar Sync"}
-          </button>
-          {syncSocialMensagem && (
-            <div
-              style={{
-                marginTop: 12,
-                padding: 12,
-                borderRadius: 10,
-                background: syncSocialMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
-                border: `1px solid ${syncSocialMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
-                color: syncSocialMensagem.tipo === "ok" ? "#059669" : "#ef4444",
-                fontFamily: FONT.body,
-                fontSize: 12,
-              }}
-            >
-              {syncSocialMensagem.tipo === "ok" ? "✅ " : "⚠️ "}
-              {syncSocialMensagem.texto}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* KPIs */}
@@ -478,9 +476,71 @@ export default function StatusTecnico() {
 
       {/* Status das Integrações */}
       <div style={card}>
-        <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
-          Status das Integrações
-        </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, marginBottom: 20 }}>
+          <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: 0 }}>
+            Status das Integrações
+          </h2>
+          <button
+            onClick={enviarEmailDiretoria}
+            disabled={emailEnviando || !perm.canView}
+            style={{
+              ...syncBtnStyle(emailEnviando),
+              padding: "8px 16px",
+              fontSize: 13,
+            }}
+          >
+            {emailEnviando ? "Enviando..." : "📧 Enviar e-mail para diretoria"}
+          </button>
+        </div>
+        {(syncMensagem || syncSocialMensagem || emailMensagem) && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+            {syncMensagem && (
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: syncMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
+                  border: `1px solid ${syncMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
+                  color: syncMensagem.tipo === "ok" ? "#059669" : "#ef4444",
+                  fontFamily: FONT.body,
+                  fontSize: 12,
+                }}
+              >
+                {syncMensagem.tipo === "ok" ? "✅ " : "⚠️ "} Sync CDA: {syncMensagem.texto}
+              </div>
+            )}
+            {syncSocialMensagem && (
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: syncSocialMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
+                  border: `1px solid ${syncSocialMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
+                  color: syncSocialMensagem.tipo === "ok" ? "#059669" : "#ef4444",
+                  fontFamily: FONT.body,
+                  fontSize: 12,
+                }}
+              >
+                {syncSocialMensagem.tipo === "ok" ? "✅ " : "⚠️ "} Sync Social: {syncSocialMensagem.texto}
+              </div>
+            )}
+            {emailMensagem && (
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: emailMensagem.tipo === "ok" ? "#05966922" : "#ef444422",
+                  border: `1px solid ${emailMensagem.tipo === "ok" ? "#059669" : "#ef4444"}`,
+                  color: emailMensagem.tipo === "ok" ? "#059669" : "#ef4444",
+                  fontFamily: FONT.body,
+                  fontSize: 12,
+                }}
+              >
+                {emailMensagem.tipo === "ok" ? "✅ " : "⚠️ "} {emailMensagem.texto}
+              </div>
+            )}
+          </div>
+        )}
         {loading ? (
           <p style={{ color: t.textMuted }}>Carregando...</p>
         ) : (
@@ -493,36 +553,64 @@ export default function StatusTecnico() {
                   <th style={thStyle}>Registros Hoje</th>
                   <th style={thStyle}>Erros</th>
                   <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Sync</th>
                 </tr>
               </thead>
               <tbody>
-                {statusPorIntegracao.map((row) => (
-                  <tr key={row.slug}>
-                    <td style={tdStyle}>{row.nome}</td>
-                    <td style={tdStyle}>{row.ultimoSync ? formatarHora(row.ultimoSync) : "—"}</td>
-                    <td style={tdStyle}>{row.registrosHoje.toLocaleString("pt-BR")}</td>
-                    <td style={tdStyle}>{row.erros}</td>
-                    <td style={tdStyle}>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          background: row.status === "ok" ? "#05966922" : row.status === "warning" ? "#f59e0b22" : "#ef444422",
-                          color: row.status === "ok" ? "#059669" : row.status === "warning" ? "#f59e0b" : "#ef4444",
-                          borderRadius: 8,
-                          padding: "4px 12px",
-                          fontSize: 12,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {row.status === "ok" && "🟢 OK"}
-                        {row.status === "warning" && "🟡 Warning"}
-                        {row.status === "falha" && "🔴 Falha"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {linhasCompletas.map((row) => {
+                  const isCda = row.syncTipo === "cda";
+                  const isSocial = row.syncTipo === "social";
+                  const syncExecutandoRow = isCda ? syncExecutando : isSocial ? syncSocialExecutando : false;
+                  const onSync = isCda ? executarSync : isSocial ? executarSyncSocial : () => {};
+                  return (
+                    <tr key={row.slug}>
+                      <td style={tdStyle}>{row.nome}</td>
+                      <td style={tdStyle}>{row.ultimoSync ? formatarHora(row.ultimoSync) : "—"}</td>
+                      <td style={tdStyle}>{row.registrosHoje.toLocaleString("pt-BR")}</td>
+                      <td style={tdStyle}>{row.erros}</td>
+                      <td style={tdStyle}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            background: row.status === "ok" ? "#05966922" : row.status === "warning" ? "#f59e0b22" : "#ef444422",
+                            color: row.status === "ok" ? "#059669" : row.status === "warning" ? "#f59e0b" : "#ef4444",
+                            borderRadius: 8,
+                            padding: "4px 12px",
+                            fontSize: 12,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {row.status === "ok" && "🟢 OK"}
+                          {row.status === "warning" && "🟡 Warning"}
+                          {row.status === "falha" && "🔴 Falha"}
+                        </span>
+                      </td>
+                      <td style={tdStyle}>
+                        {(isCda || isSocial) && (
+                          <button
+                            onClick={onSync}
+                            disabled={syncExecutandoRow || !perm.canView}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: syncExecutandoRow ? "#6b7280" : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              fontFamily: FONT.body,
+                              cursor: syncExecutandoRow ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            {syncExecutandoRow ? "..." : "🔄 Sync"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
