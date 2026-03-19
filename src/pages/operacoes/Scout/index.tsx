@@ -273,6 +273,9 @@ export default function Scout() {
 
   const prospectosLabel = filtered.length === 1 ? "1 prospecto" : `${filtered.length} prospectos`;
 
+  // Ordem canônica das plataformas para os chips
+  const PLATS_ORDEM = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok", "Discord", "WhatsApp", "Telegram"];
+
   return (
     <div style={{ padding: "24px", maxWidth: "900px", margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
@@ -314,24 +317,35 @@ export default function Scout() {
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>Cobertura de Plataformas</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {[
-                ["Twitch", "YouTube", "Kick", "Instagram"],
-                ["TikTok", "Discord", "WhatsApp", "Telegram"],
-              ].map((linha, i) => (
-                <div key={i} style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                  {linha.map((plat) => (
-                    <div key={plat} style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `3px solid ${PLAT_COLOR[plat]}`, borderRadius: 18, padding: "16px 20px", minWidth: 110, flex: "1 1 110px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-                      <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porPlat[plat] ?? 0}</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                        <PlatLogo plataforma={plat} size={12} isDark={isDark ?? false} />
-                        <span style={{ fontSize: 11, fontWeight: 700, color: PLAT_COLOR[plat], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>{plat}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>
+              Cobertura de Plataformas
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {PLATS_ORDEM.map((plat) => {
+                const count = porPlat[plat] ?? 0;
+                const cor = PLAT_COLOR[plat as Plataforma];
+                return (
+                  <div
+                    key={plat}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 7,
+                      padding: "7px 14px", borderRadius: 20,
+                      background: t.cardBg,
+                      border: `1.5px solid ${cor}55`,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                    }}
+                  >
+                    <PlatLogo plataforma={plat} size={14} isDark={isDark ?? false} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: cor, fontFamily: FONT.body }}>
+                      {plat}
+                    </span>
+                    <span style={{ width: 1, height: 12, background: `${cor}44`, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE }}>
+                      {count}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

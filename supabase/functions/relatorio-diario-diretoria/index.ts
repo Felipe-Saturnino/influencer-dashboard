@@ -664,9 +664,29 @@ serve(async (req) => {
     )
 
     if (!result.ok) {
+      try {
+        await supabase.from('tech_logs').insert({
+          integracao_slug: null,
+          tipo: 'relatorio_diretoria',
+          descricao: result.error ?? 'Erro ao enviar e-mail via Resend',
+        })
+      } catch (e) {
+        console.warn('[relatorio-diario-diretoria] Falha ao registrar tech_log:', e)
+      }
       return new Response(JSON.stringify({ error: result.error }), {
         status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
       })
+    }
+
+    // Registrar envio em email_envios para fluxo de dados (1 = cada destinatário)
+    try {
+      await supabase.from('email_envios').insert({
+        data: dataHoje,
+        tipo: 'relatorio_diretoria',
+        destinatarios_count: destinatarios.length,
+      })
+    } catch (e) {
+      console.warn('[relatorio-diario-diretoria] Falha ao registrar email_envios:', e)
     }
 
     return new Response(
