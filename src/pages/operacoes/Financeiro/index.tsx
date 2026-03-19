@@ -463,10 +463,11 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
 
 // ── MODAL PAGAR ────────────────────────────────────────────────────────────────
 
-function ModalPagar({ row, onClose, onConfirm }: {
+function ModalPagar({ row, onClose, onConfirm, onRetornar }: {
   row: PagamentoRow;
   onClose: () => void;
   onConfirm: (id: string, isAgente: boolean) => Promise<void>;
+  onRetornar: (id: string, isAgente: boolean) => Promise<void>;
 }) {
   const { theme: t } = useApp();
   const [saving, setSaving] = useState(false);
@@ -479,6 +480,18 @@ function ModalPagar({ row, onClose, onConfirm }: {
       await onConfirm(row.id, row.is_agente ?? false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRetornarClick() {
+    setError("");
+    setSaving(true);
+    try {
+      await onRetornar(row.id, row.is_agente ?? false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao retornar. Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -504,8 +517,12 @@ function ModalPagar({ row, onClose, onConfirm }: {
         A data de pagamento será registrada como hoje.
       </p>
       <div style={{ display: "flex", gap: "10px" }}>
-        <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-          Cancelar
+        <button
+          onClick={handleRetornarClick}
+          disabled={saving}
+          style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.text, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+        >
+          {saving ? "⏳ Salvando..." : "↩️ Retornar"}
         </button>
         <button
           onClick={handleConfirm}
@@ -1158,6 +1175,17 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     setRefreshTrigger(t => t + 1);
   }
 
+  async function handleRetornar(id: string, isAgente: boolean) {
+    if (String(id).startsWith("preview_")) {
+      throw new Error("Ciclo ainda aberto.");
+    }
+    const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
+    const { error } = await supabase.from(tb).update({ status: "em_analise", pago_em: null }).eq("id", id).select("id");
+    if (error) throw new Error(error.message);
+    setModalPagar(null);
+    setRefreshTrigger(t => t + 1);
+  }
+
   const kpi = useMemo(() => ({
     em: rows.filter(r => r.status === "em_analise").length,
     ap: rows.filter(r => r.status === "a_pagar").length,
@@ -1364,7 +1392,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         <ModalAnalisar row={modalAnalisar} ciclo={ciclo} onClose={() => setModalAnalisar(null)} onConfirm={handleAprovar} />
       )}
       {modalPagar && (
-        <ModalPagar row={modalPagar} onClose={() => setModalPagar(null)} onConfirm={handlePagar} />
+        <ModalPagar row={modalPagar} onClose={() => setModalPagar(null)} onConfirm={handlePagar} onRetornar={handleRetornar} />
       )}
       {modalAgente && ciclo && (
         <ModalAgente

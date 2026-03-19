@@ -95,9 +95,11 @@ function escopoBloqueado(role: Role) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
+type AbaGestao = "usuarios" | "permissoes" | "operadora";
+
 export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
-  const [aba, setAba] = useState<"usuarios" | "permissoes">("usuarios");
+  const [aba, setAba] = useState<AbaGestao>("usuarios");
 
   if (user?.role !== "admin") {
     return (
@@ -137,8 +139,9 @@ export default function GestaoUsuarios() {
 
       {/* ── ABAS — pill style ── */}
       <div style={{ display: "flex", gap: 8 }}>
-        {(["usuarios", "permissoes"] as const).map(a => {
+        {(["usuarios", "permissoes", "operadora"] as const).map(a => {
           const ativa = aba === a;
+          const label = a === "usuarios" ? "👤 Usuários" : a === "permissoes" ? "🔐 Permissões" : "🏢 Operadora";
           return (
             <button
               key={a}
@@ -156,14 +159,16 @@ export default function GestaoUsuarios() {
                 transition:   "all 0.18s",
               }}
             >
-              {a === "usuarios" ? "👤 Usuários" : "🔐 Permissões"}
+              {label}
             </button>
           );
         })}
       </div>
 
       <div style={card}>
-        {aba === "usuarios" ? <AbaUsuarios t={t} /> : <AbaPermissoes t={t} />}
+        {aba === "usuarios" && <AbaUsuarios t={t} />}
+        {aba === "permissoes" && <AbaPermissoes t={t} />}
+        {aba === "operadora" && <AbaOperadora t={t} />}
       </div>
     </div>
   );
@@ -1102,6 +1107,196 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── ABA OPERADORA ────────────────────────────────────────────────────────────
+// Configura quais páginas cada operador pode acessar por operadora.
+// Só exibe operadoras que o operador já tem em user_scopes.
+
+function AbaOperadora({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
+  const [operadores, setOperadores] = useState<UsuarioCompleto[]>([]);
+  const [operadoras, setOperadoras] = useState<Operadora[]>([]);
+  const [operadorId, setOperadorId] = useState<string>("");
+  const [operadoraPages, setOperadoraPages] = useState<Record<string, Set<string>>>({});
+  const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [salvoOk, setSalvoOk] = useState(false);
+
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    const [{ data: profiles }, { data: scopes }, { data: ops }] = await Promise.all([
+      supabase.from("profiles").select("id, name, email, role").eq("role", "operador").order("name"),
+      supabase.from("user_scopes").select("*"),
+      supabase.from("operadoras").select("*").order("nome"),
+    ]);
+    const lista: UsuarioCompleto[] = (profiles ?? []).map(p => ({
+      ...p,
+      scopes: (scopes ?? []).filter(s => s.user_id === p.id),
+    }));
+    setOperadores(lista);
+    setOperadoras(ops ?? []);
+    setOperadorId(prev => (prev ? prev : lista[0]?.id ?? ""));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const operador = operadores.find(u => u.id === operadorId);
+  const operadorasDoOperador = (operador?.scopes ?? [])
+    .filter(s => s.scope_type === "operadora")
+    .map(s => s.scope_ref);
+
+  useEffect(() => {
+    if (!operadorId) return;
+    supabase.from("user_operadora_pages")
+      .select("operadora_slug, page_key")
+      .eq("user_id", operadorId)
+      .then(({ data }) => {
+        const mapa: Record<string, Set<string>> = {};
+        (data ?? []).forEach(r => {
+          if (!mapa[r.operadora_slug]) mapa[r.operadora_slug] = new Set();
+          mapa[r.operadora_slug].add(r.page_key);
+        });
+        setOperadoraPages(mapa);
+      });
+  }, [operadorId]);
+
+  const togglePage = (operadoraSlug: string, pageKey: string) => {
+    setOperadoraPages(prev => {
+      const next = { ...prev };
+      if (!next[operadoraSlug]) next[operadoraSlug] = new Set();
+      const set = new Set(next[operadoraSlug]);
+      if (set.has(pageKey)) set.delete(pageKey);
+      else set.add(pageKey);
+      next[operadoraSlug] = set;
+      return next;
+    });
+  };
+
+  const isPageChecked = (operadoraSlug: string, pageKey: string) =>
+    operadoraPages[operadoraSlug]?.has(pageKey) ?? false;
+
+  const salvar = async () => {
+    if (!operadorId) return;
+    setSalvando(true); setSalvoOk(false);
+    const toInsert: { user_id: string; operadora_slug: string; page_key: string }[] = [];
+    Object.entries(operadoraPages).forEach(([slug, keys]) => {
+      keys.forEach(pageKey => toInsert.push({ user_id: operadorId, operadora_slug: slug, page_key }));
+    });
+    const { error: delErr } = await supabase.from("user_operadora_pages").delete().eq("user_id", operadorId);
+    if (delErr) { setSalvando(false); alert(`Erro ao salvar: ${delErr.message}`); return; }
+    if (toInsert.length > 0) {
+      const { error: insErr } = await supabase.from("user_operadora_pages").insert(toInsert);
+      if (insErr) { setSalvando(false); alert(`Erro ao salvar: ${insErr.message}`); return; }
+    }
+    setSalvando(false); setSalvoOk(true);
+    setTimeout(() => setSalvoOk(false), 2500);
+  };
+
+  const thStyle: React.CSSProperties = {
+    fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted,
+    textTransform: "uppercase", letterSpacing: "1px", padding: "12px 14px",
+    textAlign: "center", background: "rgba(74,32,130,0.10)",
+  };
+  const tdStyle: React.CSSProperties = {
+    fontFamily: FONT.body, fontSize: 13, color: t.text, padding: "10px 14px",
+    borderTop: `1px solid ${t.cardBorder}`,
+  };
+
+  if (loading) {
+    return <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>;
+  }
+
+  if (operadores.length === 0) {
+    return (
+      <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>
+        Nenhum operador cadastrado. Crie um usuário com perfil Operador na aba Usuários.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>Operador:</span>
+        <select
+          value={operadorId}
+          onChange={e => setOperadorId(e.target.value)}
+          style={{
+            background: t.inputBg ?? t.bg, border: `1px solid ${t.cardBorder}`,
+            borderRadius: 8, padding: "8px 14px", color: t.text, fontFamily: FONT.body,
+            fontSize: 13, minWidth: 220, cursor: "pointer",
+          }}
+        >
+          {operadores.map(u => (
+            <option key={u.id} value={u.id}>{u.name ?? u.email} ({u.email})</option>
+          ))}
+        </select>
+      </div>
+
+      {operadorasDoOperador.length === 0 ? (
+        <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>
+          Este operador não tem operadoras atribuídas. Atribua operadoras na aba Usuários (ao editar o usuário).
+        </div>
+      ) : (
+        <>
+          <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: 0 }}>
+            Marque as páginas que este operador pode acessar em cada operadora. As ações (criar/editar/excluir) vêm da aba Permissões.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {operadorasDoOperador.map(slug => {
+              const op = operadoras.find(o => o.slug === slug);
+              const nome = op?.nome ?? slug;
+              const pagesDaOp = PAGES.filter(p => p.key !== "gestao_usuarios");
+              return (
+                <div key={slug} style={{
+                  border: `1px solid ${t.cardBorder}`, borderRadius: 12, overflow: "hidden",
+                  borderLeft: `4px solid ${BRAND.roxoVivo}`,
+                }}>
+                  <div style={{
+                    padding: "12px 16px", background: "rgba(74,32,130,0.12)",
+                    fontFamily: FONT.body, fontWeight: 700, fontSize: 14, color: t.text,
+                  }}>
+                    {nome}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8, padding: 16 }}>
+                    {pagesDaOp.map(p => (
+                      <label key={p.key} style={{
+                        display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+                        fontFamily: FONT.body, fontSize: 13, color: t.text,
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={isPageChecked(slug, p.key)}
+                          onChange={() => togglePage(slug, p.key)}
+                          style={{ width: 16, height: 16, accentColor: BRAND.roxoVivo }}
+                        />
+                        {p.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+            {salvoOk && (
+              <span style={{ display: "flex", alignItems: "center", gap: 6, color: BRAND.verde, fontFamily: FONT.body, fontSize: 13 }}>
+                <ShieldCheck size={14} /> Páginas salvas com sucesso
+              </span>
+            )}
+            <button onClick={salvar} disabled={salvando} style={{
+              background: salvando ? BRAND.cinza : BRAND.gradiente, color: "#fff", border: "none",
+              borderRadius: 10, padding: "10px 22px", cursor: salvando ? "not-allowed" : "pointer",
+              fontFamily: FONT.body, fontSize: 13, fontWeight: 600, opacity: salvando ? 0.7 : 1,
+            }}>
+              {salvando ? "Salvando..." : "Salvar páginas"}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

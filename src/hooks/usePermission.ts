@@ -24,8 +24,8 @@ function podeExecutar(val: PermissaoValor): boolean {
 const CACHE: Record<string, Permissoes> = {};
 
 export function usePermission(pageKey: PageKey): Permissoes {
-  const { user } = useApp();
-  const cacheKey = `${user?.role ?? "none"}:${pageKey}`;
+  const { user, permissions } = useApp();
+  const cacheKey = user?.role === "operador" ? `operador:${user.id}:${pageKey}` : `${user?.role ?? "none"}:${pageKey}`;
 
   const [perm, setPerm] = useState<Permissoes>(
     CACHE[cacheKey] ?? { canView: null, canCriar: null, canEditar: null, canExcluir: null, loading: true, canCriarOk: false, canEditarOk: false, canExcluirOk: false }
@@ -34,6 +34,41 @@ export function usePermission(pageKey: PageKey): Permissoes {
   useEffect(() => {
     if (!user) {
       setPerm({ canView: "nao", canCriar: null, canEditar: null, canExcluir: null, loading: false, canCriarOk: false, canEditarOk: false, canExcluirOk: false });
+      return;
+    }
+
+    const cvFromContext = permissions[pageKey];
+    const operadorCanView = user.role === "operador" && (cvFromContext === "sim" || cvFromContext === "proprios");
+
+    if (user.role === "operador") {
+      const cv = cvFromContext === "sim" || cvFromContext === "proprios" ? cvFromContext : "nao";
+      if (CACHE[cacheKey]) {
+        setPerm(CACHE[cacheKey]);
+        return;
+      }
+      supabase
+        .from("role_permissions")
+        .select("can_criar, can_editar, can_excluir")
+        .eq("role", "operador")
+        .eq("page_key", pageKey)
+        .single()
+        .then(({ data }) => {
+          const cc = (operadorCanView ? (data?.can_criar as PermissaoValor) : null) ?? null;
+          const ce = (operadorCanView ? (data?.can_editar as PermissaoValor) : null) ?? null;
+          const cx = (operadorCanView ? (data?.can_excluir as PermissaoValor) : null) ?? null;
+          const result: Permissoes = {
+            canView: cv,
+            canCriar: cc,
+            canEditar: ce,
+            canExcluir: cx,
+            loading: false,
+            canCriarOk: podeExecutar(cc),
+            canEditarOk: podeExecutar(ce),
+            canExcluirOk: podeExecutar(cx),
+          };
+          CACHE[cacheKey] = result;
+          setPerm(result);
+        });
       return;
     }
 
@@ -66,7 +101,7 @@ export function usePermission(pageKey: PageKey): Permissoes {
         CACHE[cacheKey] = result;
         setPerm(result);
       });
-  }, [user, pageKey, cacheKey]);
+  }, [user, pageKey, cacheKey, permissions]);
 
   return perm;
 }

@@ -217,6 +217,10 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
   const [nome, setNome] = useState(editando?.nome ?? "");
   const [slug, setSlug] = useState(editando?.slug ?? "");
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
+  const [corPrimaria, setCorPrimaria] = useState(editando?.cor_primaria ?? "");
+  const [corSecundaria, setCorSecundaria] = useState(editando?.cor_secundaria ?? "");
+  const [corAccent, setCorAccent] = useState(editando?.cor_accent ?? "");
+  const [logoUrl, setLogoUrl] = useState(editando?.logo_url ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -242,13 +246,19 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
 
     setSalvando(true);
     try {
+      const brand = {
+        cor_primaria:   corPrimaria.trim() || null,
+        cor_secundaria: corSecundaria.trim() || null,
+        cor_accent:     corAccent.trim() || null,
+        logo_url:       logoUrl.trim() || null,
+      };
       if (editando) {
-        const { error } = await supabase.from("operadoras").update({ nome, ativo }).eq("slug", editando.slug);
+        const { error } = await supabase.from("operadoras").update({ nome, ativo, ...brand }).eq("slug", editando.slug);
         if (error) throw error;
       } else {
         const { data: existe } = await supabase.from("operadoras").select("slug").eq("slug", slug).maybeSingle();
         if (existe) { setErro("Este slug já está em uso. Tente um nome diferente."); setSalvando(false); return; }
-        const { error } = await supabase.from("operadoras").insert({ slug, nome, ativo: true });
+        const { error } = await supabase.from("operadoras").insert({ slug, nome, ativo: true, ...brand });
         if (error) throw error;
       }
       onSalvo();
@@ -325,6 +335,41 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
               value={slug}
               readOnly
             />
+          </div>
+        )}
+
+        {/* Brandguide — cores exibidas para operadores desta operadora */}
+        {editando && (
+          <div style={{ ...fieldStyle, padding: 16, background: "rgba(74,32,130,0.08)", borderRadius: 12, border: `1px solid ${t.cardBorder}` }}>
+            <div style={{ ...labelStyle, marginBottom: 12 }}>Brandguide (operadores)</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Cor principal</label>
+                <input type="color" value={corPrimaria || "#7c3aed"} onChange={e => setCorPrimaria(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corPrimaria} onChange={e => setCorPrimaria(e.target.value)} placeholder="#7c3aed"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Cor secundária</label>
+                <input type="color" value={corSecundaria || "#4a2082"} onChange={e => setCorSecundaria(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corSecundaria} onChange={e => setCorSecundaria(e.target.value)} placeholder="#4a2082"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Cor accent</label>
+                <input type="color" value={corAccent || "#1e36f8"} onChange={e => setCorAccent(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corAccent} onChange={e => setCorAccent(e.target.value)} placeholder="#1e36f8"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={{ ...labelStyle, fontSize: 10 }}>URL do logo (opcional)</label>
+                <input type="url" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://..."
+                  style={inputStyle} />
+              </div>
+            </div>
           </div>
         )}
 

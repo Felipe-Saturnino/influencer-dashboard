@@ -185,10 +185,28 @@ export interface Dealer {
 // ─── OPERADORA ───────────────────────────────────────────────────────────────
 // ✅ Novo tipo — espelha a tabela public.operadoras
 export interface Operadora {
-  slug:      string;
-  nome:      string;
-  ativo:     boolean;
-  criado_em?: string;
+  slug:           string;
+  nome:           string;
+  ativo:          boolean;
+  criado_em?:     string;
+  /** Brandguide: cor principal (ex: #7c3aed) */
+  cor_primaria?:  string | null;
+  /** Brandguide: cor secundária */
+  cor_secundaria?: string | null;
+  /** Brandguide: cor de destaque */
+  cor_accent?:    string | null;
+  /** Brandguide: URL do logo */
+  logo_url?:      string | null;
+}
+
+// ─── USER OPERADORA PAGES ────────────────────────────────────────────────────
+/** Páginas que um operador pode acessar por operadora */
+export interface UserOperadoraPage {
+  id:             string;
+  user_id:        string;
+  operadora_slug: string;
+  page_key:       PageKey;
+  created_at?:    string;
 }
 
 // ─── INFLUENCER OPERADORA ────────────────────────────────────────────────────

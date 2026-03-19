@@ -49,6 +49,22 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 const ESCOPOS_VAZIOS: EscoposVisiveis = { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: false };
 
+const BRAND_DEFAULTS = {
+  primary:   "#7c3aed",
+  secondary: "#4a2082",
+  accent:    "#1e36f8",
+  danger:    "#e84025",
+  success:   "#22c55e",
+} as const;
+
+function aplicarBrandguide(vars: Partial<Record<keyof typeof BRAND_DEFAULTS, string | null>>) {
+  const root = document.documentElement.style;
+  (Object.keys(BRAND_DEFAULTS) as (keyof typeof BRAND_DEFAULTS)[]).forEach((k) => {
+    const v = vars[k];
+    root.setProperty(`--brand-${k}`, v ?? BRAND_DEFAULTS[k]);
+  });
+}
+
 // ─── Carrega escopos visíveis por role e user_scopes (Etapa 7) ─────────────────
 async function carregarEscoposVisiveis(
   userId: string,
@@ -109,7 +125,12 @@ async function carregarEscoposVisiveis(
 }
 
 // ─── Carrega can_view de todas as páginas para o role do usuário ──────────────
-async function carregarPermissoes(role: User["role"]): Promise<PermissoesMapa> {
+// Para operador: intersecta com user_operadora_pages (só vê páginas liberadas por operadora)
+async function carregarPermissoes(
+  role: User["role"],
+  userId?: string,
+  operadorasVisiveis?: string[]
+): Promise<PermissoesMapa> {
   const { data } = await supabase
     .from("role_permissions")
     .select("page_key, can_view")
@@ -137,6 +158,26 @@ async function carregarPermissoes(role: User["role"]): Promise<PermissoesMapa> {
     mapa.dash_overview_influencer = "sim";
   }
 
+  // Operador: só vê páginas que estão em user_operadora_pages para suas operadoras
+  if (role === "operador") {
+    if (!operadorasVisiveis || operadorasVisiveis.length === 0) {
+      ALL_PAGE_KEYS.forEach((k) => { mapa[k] = "nao"; });
+    } else if (userId) {
+      const { data: opPages } = await supabase
+        .from("user_operadora_pages")
+        .select("page_key")
+        .eq("user_id", userId)
+        .in("operadora_slug", operadorasVisiveis);
+      const pagesPermitidas = new Set((opPages ?? []).map((r) => r.page_key));
+      ALL_PAGE_KEYS.forEach((k) => {
+        const cv = mapa[k];
+        if (cv === "sim" || cv === "proprios") {
+          if (!pagesPermitidas.has(k)) mapa[k] = "nao";
+        }
+      });
+    }
+  }
+
   return mapa;
 }
 
@@ -151,17 +192,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const theme = isDark ? DARK_THEME : LIGHT_THEME;
 
+  // Brandguide: operador vê cores da operadora; demais roles usam default
+  useEffect(() => {
+    if (!user || user.role !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
+      aplicarBrandguide({});
+      return;
+    }
+    const slug = escoposVisiveis.operadorasVisiveis[0];
+    supabase.from("operadoras").select("cor_primaria, cor_secundaria, cor_accent").eq("slug", slug).single()
+      .then(({ data }) => {
+        if (data?.cor_primaria || data?.cor_secundaria || data?.cor_accent) {
+          aplicarBrandguide({
+            primary:   data.cor_primaria   ?? null,
+            secondary: data.cor_secundaria ?? null,
+            accent:    data.cor_accent    ?? null,
+          });
+        } else {
+          aplicarBrandguide({});
+        }
+      })
+      .catch(() => aplicarBrandguide({}));
+  }, [user?.id, user?.role, escoposVisiveis.operadorasVisiveis]);
+
   // Wrapper de setUser que também carrega permissões e escopos
   async function setUser(u: User | null) {
     setUserState(u);
     if (u) {
       try {
-        const [perms, escopos] = await Promise.all([
-          carregarPermissoes(u.role),
-          carregarEscoposVisiveis(u.id, u.role),
-        ]);
-        setPermissions(perms);
+        const escopos = await carregarEscoposVisiveis(u.id, u.role);
         setEscoposVisiveis(escopos);
+        const perms = await carregarPermissoes(
+          u.role,
+          u.role === "operador" ? u.id : undefined,
+          u.role === "operador" ? escopos.operadorasVisiveis : undefined
+        );
+        setPermissions(perms);
       } catch (err) {
         console.error("Erro ao carregar permissões/escopos após login:", err);
         setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
@@ -201,12 +266,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const u = profile as User;
             setUserState(u);
             try {
-              const [perms, escopos] = await Promise.all([
-                carregarPermissoes(u.role),
-                carregarEscoposVisiveis(u.id, u.role),
-              ]);
-              setPermissions(perms);
+              const escopos = await carregarEscoposVisiveis(u.id, u.role);
               setEscoposVisiveis(escopos);
+              const perms = await carregarPermissoes(
+                u.role,
+                u.role === "operador" ? u.id : undefined,
+                u.role === "operador" ? escopos.operadorasVisiveis : undefined
+              );
+              setPermissions(perms);
             } catch (err) {
               console.error("Erro ao carregar permissões/escopos:", err);
               setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);

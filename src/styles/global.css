@@ -1,3 +1,13 @@
+/* ─── Brandguide: variáveis CSS (default Spin Gaming) ───────────────────────────
+   Operadores veem cores da operadora; demais roles usam estes valores. */
+:root {
+  --brand-primary:    #7c3aed;
+  --brand-secondary:  #4a2082;
+  --brand-accent:     #1e36f8;
+  --brand-danger:     #e84025;
+  --brand-success:    #22c55e;
+}
+
 /* Scrollbar da sidebar */
 aside *::-webkit-scrollbar {
   width: 6px;
