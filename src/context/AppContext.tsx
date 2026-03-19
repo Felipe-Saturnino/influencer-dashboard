@@ -199,8 +199,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     const slug = escoposVisiveis.operadorasVisiveis[0];
-    supabase.from("operadoras").select("cor_primaria, cor_secundaria, cor_accent").eq("slug", slug).single()
-      .then(({ data }) => {
+    void (async () => {
+      try {
+        const { data } = await supabase.from("operadoras").select("cor_primaria, cor_secundaria, cor_accent").eq("slug", slug).single();
         if (data?.cor_primaria || data?.cor_secundaria || data?.cor_accent) {
           aplicarBrandguide({
             primary:   data.cor_primaria   ?? null,
@@ -210,8 +211,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } else {
           aplicarBrandguide({});
         }
-      })
-      .catch(() => aplicarBrandguide({}));
+      } catch {
+        aplicarBrandguide({});
+      }
+    })();
   }, [user?.id, user?.role, escoposVisiveis.operadorasVisiveis]);
 
   // Wrapper de setUser que também carrega permissões e escopos

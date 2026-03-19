@@ -1183,7 +1183,7 @@ function AbaOperadora({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
     setSalvando(true); setSalvoOk(false);
     const toInsert: { user_id: string; operadora_slug: string; page_key: string }[] = [];
     Object.entries(operadoraPages).forEach(([slug, keys]) => {
-      keys.forEach(pageKey => toInsert.push({ user_id: operadorId, operadora_slug: slug, page_key }));
+      keys.forEach(pageKey => toInsert.push({ user_id: operadorId, operadora_slug: slug, page_key: pageKey }));
     });
     const { error: delErr } = await supabase.from("user_operadora_pages").delete().eq("user_id", operadorId);
     if (delErr) { setSalvando(false); alert(`Erro ao salvar: ${delErr.message}`); return; }
