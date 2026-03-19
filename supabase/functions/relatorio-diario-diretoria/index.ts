@@ -2,10 +2,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Edge Function: relatorio-diario-diretoria
-// Envia e-mail diário às 9h BRT: agenda do dia + consolidado de resultados do dia anterior.
-// Destinatários: RELATORIO_DIRETORIA_DESTINATARIOS (vírgula) ou body.destinatarios
+// Envia e-mail diário: agenda do dia + consolidado do dia anterior + acumulado mensal.
 
-// ── Tipos ────────────────────────────────────────────────────
+// ── Tipos ─────────────────────────────────────────────────────────────────────
 
 interface LiveAgenda {
   horario: string
@@ -14,18 +13,36 @@ interface LiveAgenda {
   link?: string
 }
 
-interface ResultadoInfluencer {
+interface ResultadoLive {
   nome: string
-  lives: number
   horas: number
-  views: number
+  mediaViews: number
   acessos: number
   registros: number
   ftds: number
-  depositos_qtd: number
   depositos_valor: number
   ggr: number
 }
+
+interface ResultadoInfluencer {
+  nome: string
+  depositos_qtd: number
+  depositos_valor: number
+  saques_qtd: number
+  saques_valor: number
+  ggr: number
+}
+
+interface TotaisMensal {
+  ggrTotal: number
+  investimento: number
+  roi: number | null
+  livesRealizadas: number
+  totalRegistros: number
+  totalFtds: number
+}
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get('origin') || '*'
@@ -36,6 +53,8 @@ function corsHeaders(req: Request) {
     'Access-Control-Max-Age': '86400',
   }
 }
+
+// ── Helpers de data ───────────────────────────────────────────────────────────
 
 function hojeISO(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
@@ -49,9 +68,28 @@ function ontemISO(): string {
 
 function formatarData(iso: string): string {
   const [y, m, d] = iso.split('-')
-  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
   return `${parseInt(d, 10)} ${meses[parseInt(m, 10) - 1]} ${y}`
 }
+
+function mesExtenso(iso: string): string {
+  const [y, m] = iso.split('-')
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                 'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+  return `${meses[parseInt(m, 10) - 1]} ${y}`
+}
+
+function primeiroDiaMes(iso: string): string {
+  const [y, m] = iso.split('-')
+  return `${y}-${m}-01`
+}
+function ultimoDiaMes(iso: string): string {
+  const [y, m] = iso.split('-')
+  const ultimo = new Date(parseInt(y), parseInt(m), 0).getDate()
+  return `${y}-${m}-${String(ultimo).padStart(2, '0')}`
+}
+
+// ── Helpers de formatação ─────────────────────────────────────────────────────
 
 function fmtNum(n: number): string {
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
@@ -63,129 +101,282 @@ function fmtMoeda(n: number): string {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-// ── Enviar e-mail via Resend ───────────────────────────────
+function fmtHoras(h: number): string {
+  const hh = Math.floor(h)
+  const mm = Math.round((h - hh) * 60)
+  return `${hh}h${mm > 0 ? String(mm).padStart(2,'0') + 'm' : ''}`
+}
+
+// ── Estilos de e-mail reutilizáveis ───────────────────────────────────────────
+
+const TH = `padding:10px 14px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;background:#f9fafb;border-bottom:2px solid #e5e7eb;`
+const TD = `padding:10px 14px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#111827;`
+const TD_R = `${TD}text-align:right;`
+const TD_C = `${TD}text-align:center;`
+
+function trStyle(i: number): string {
+  return i % 2 === 1 ? 'background:#f9f7ff;' : 'background:#ffffff;'
+}
+
+function corGGR(v: number): string {
+  return v >= 0 ? '#166534' : '#e84025'
+}
+
+// ── Construtor de bloco de seção ──────────────────────────────────────────────
+
+function secao(titulo: string, conteudo: string, borderTop = true): string {
+  return `
+  <div style="padding:28px 32px;${borderTop ? 'border-top:1px solid #e5e7eb;' : ''}">
+    ${titulo}
+    ${conteudo}
+  </div>`
+}
+
+function subtitulo(txt: string): string {
+  return `<p style="margin:0 0 16px;font-size:13px;color:#6b7280;font-style:italic;">${txt}</p>`
+}
+
+function tituloSecao(txt: string): string {
+  return `<h2 style="margin:0 0 4px;font-size:17px;font-weight:800;color:#111827;letter-spacing:0.02em;">${txt}</h2>`
+}
+
+function tituloSubSecao(txt: string): string {
+  return `<h3 style="margin:20px 0 4px;font-size:13px;font-weight:700;color:#4a2082;text-transform:uppercase;letter-spacing:0.08em;">${txt}</h3>`
+}
+
+// ── Geração do HTML do e-mail ─────────────────────────────────────────────────
+
+function gerarHTML(
+  dataHoje: string,
+  dataOntem: string,
+  agenda: LiveAgenda[],
+  livesRows: ResultadoLive[],
+  influencersRows: ResultadoInfluencer[],
+  mensal: TotaisMensal,
+  logoUrl: string,
+): string {
+
+  const dataHojeFmt   = formatarData(dataHoje)
+  const dataOntemFmt  = formatarData(dataOntem)
+  const mesFmt        = mesExtenso(dataOntem)
+
+  const linhasAgenda = agenda.length === 0
+    ? `<tr><td colspan="4" style="${TD}color:#9ca3af;font-style:italic;">Nenhuma live agendada para hoje.</td></tr>`
+    : agenda
+        .sort((a, b) => (a.horario || '').localeCompare(b.horario || ''))
+        .map((l, i) => `
+          <tr style="${trStyle(i)}">
+            <td style="${TD}font-weight:700;color:#4a2082;">${(l.horario || '').slice(0, 5)}</td>
+            <td style="${TD}font-weight:600;">${l.influencer_name}</td>
+            <td style="${TD}color:#6b7280;">${l.plataforma}</td>
+            <td style="${TD_R}">${l.link
+              ? `<a href="${l.link.startsWith('http') ? l.link : 'https://' + l.link}" style="color:#1e36f8;font-weight:600;text-decoration:none;">Abrir →</a>`
+              : '—'
+            }</td>
+          </tr>`)
+        .join('')
+
+  const tabelaAgenda = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+      <thead>
+        <tr>
+          <th style="${TH}text-align:left;">Horário</th>
+          <th style="${TH}text-align:left;">Influencer</th>
+          <th style="${TH}text-align:left;">Plataforma</th>
+          <th style="${TH}text-align:right;">Link</th>
+        </tr>
+      </thead>
+      <tbody>${linhasAgenda}</tbody>
+    </table>
+    <p style="margin:12px 0 0;font-size:12px;color:#9ca3af;font-style:italic;">
+      ⚠️ Os horários informados são previstos e podem sofrer alterações ou atrasos ao longo do dia.
+    </p>`
+
+  const linhasLives = livesRows.length === 0
+    ? `<tr><td colspan="8" style="${TD}color:#9ca3af;font-style:italic;">Nenhuma live realizada no dia anterior.</td></tr>`
+    : livesRows
+        .sort((a, b) => b.ggr - a.ggr)
+        .map((r, i) => `
+          <tr style="${trStyle(i)}">
+            <td style="${TD}font-weight:600;">${r.nome}</td>
+            <td style="${TD_R}">${fmtHoras(r.horas)}</td>
+            <td style="${TD_R}">${r.mediaViews > 0 ? fmtNum(r.mediaViews) : '—'}</td>
+            <td style="${TD_R}">${fmtNum(r.acessos)}</td>
+            <td style="${TD_R}">${fmtNum(r.registros)}</td>
+            <td style="${TD_R}">${fmtNum(r.ftds)}</td>
+            <td style="${TD_R}">${fmtMoeda(r.depositos_valor)}</td>
+            <td style="${TD_R}font-weight:700;color:${corGGR(r.ggr)};">${fmtMoeda(r.ggr)}</td>
+          </tr>`)
+        .join('')
+
+  const tabelaLives = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+      <thead>
+        <tr>
+          <th style="${TH}text-align:left;">Influencer</th>
+          <th style="${TH}text-align:right;">Horas</th>
+          <th style="${TH}text-align:right;">Média de Views</th>
+          <th style="${TH}text-align:right;">Acessos</th>
+          <th style="${TH}text-align:right;">Reg.</th>
+          <th style="${TH}text-align:right;">FTDs</th>
+          <th style="${TH}text-align:right;">Depósitos</th>
+          <th style="${TH}text-align:right;">GGR</th>
+        </tr>
+      </thead>
+      <tbody>${linhasLives}</tbody>
+    </table>`
+
+  const linhasInfluencers = influencersRows.length === 0
+    ? `<tr><td colspan="6" style="${TD}color:#9ca3af;font-style:italic;">Nenhum resultado adicional no dia anterior.</td></tr>`
+    : influencersRows
+        .sort((a, b) => b.ggr - a.ggr)
+        .map((r, i) => `
+          <tr style="${trStyle(i)}">
+            <td style="${TD}font-weight:600;">${r.nome}</td>
+            <td style="${TD_C}">${fmtNum(r.depositos_qtd)}</td>
+            <td style="${TD_R}">${fmtMoeda(r.depositos_valor)}</td>
+            <td style="${TD_C}">${fmtNum(r.saques_qtd)}</td>
+            <td style="${TD_R}">${fmtMoeda(r.saques_valor)}</td>
+            <td style="${TD_R}font-weight:700;color:${corGGR(r.ggr)};">${fmtMoeda(r.ggr)}</td>
+          </tr>`)
+        .join('')
+
+  const tabelaInfluencers = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+      <thead>
+        <tr>
+          <th style="${TH}text-align:left;">Influencer</th>
+          <th style="${TH}text-align:center;"># Depósitos</th>
+          <th style="${TH}text-align:right;">R$ Depósitos</th>
+          <th style="${TH}text-align:center;"># Saques</th>
+          <th style="${TH}text-align:right;">R$ Saques</th>
+          <th style="${TH}text-align:right;">GGR</th>
+        </tr>
+      </thead>
+      <tbody>${linhasInfluencers}</tbody>
+    </table>`
+
+  const roiStr = mensal.investimento > 0 && mensal.roi !== null
+    ? `${mensal.roi >= 0 ? '+' : ''}${mensal.roi.toFixed(1)}%`
+    : '—'
+  const roiCor = mensal.roi !== null && mensal.roi >= 0 ? '#166534' : '#e84025'
+
+  const tabelaMensal = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+      <thead>
+        <tr>
+          <th style="${TH}text-align:right;">GGR Total</th>
+          <th style="${TH}text-align:right;">Investimento</th>
+          <th style="${TH}text-align:right;">ROI Geral</th>
+          <th style="${TH}text-align:center;">Lives Realizadas</th>
+          <th style="${TH}text-align:center;">Registros</th>
+          <th style="${TH}text-align:center;">FTDs</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#ffffff;">
+          <td style="${TD_R}font-weight:700;color:${corGGR(mensal.ggrTotal)};">${fmtMoeda(mensal.ggrTotal)}</td>
+          <td style="${TD_R}">${fmtMoeda(mensal.investimento)}</td>
+          <td style="${TD_R}font-weight:700;color:${roiCor};">${roiStr}</td>
+          <td style="${TD_C}font-weight:600;">${mensal.livesRealizadas}</td>
+          <td style="${TD_C}">${fmtNum(mensal.totalRegistros)}</td>
+          <td style="${TD_C}font-weight:600;">${fmtNum(mensal.totalFtds)}</td>
+        </tr>
+      </tbody>
+    </table>`
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Relatório Diário — ${dataHojeFmt}</title>
+</head>
+<body style="margin:0;padding:24px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0eef8;">
+
+  <div style="max-width:740px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(74,32,130,0.13);border:1px solid #e5e7eb;">
+
+    <div style="background:linear-gradient(135deg,#4a2082 0%,#1e36f8 100%);padding:28px 32px;text-align:center;">
+      ${logoUrl ? `<img src="${logoUrl}" alt="Spin Gaming" width="160" style="display:block;margin:0 auto 20px;max-width:160px;" />` : ''}
+      <h1 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:0.04em;text-transform:uppercase;">
+        Relatório Diário — Influencers
+      </h1>
+      <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.80);letter-spacing:0.02em;">
+        ${dataHojeFmt} · Data Intelligence Spin Gaming
+      </p>
+    </div>
+
+    <div style="background:#ffffff;">
+
+      ${secao(
+        tituloSecao('📅 Agenda do dia'),
+        subtitulo(`Lives agendadas para hoje (${dataHojeFmt})`) + tabelaAgenda,
+        false
+      )}
+
+      ${secao(
+        tituloSecao(`📊 Consolidado de Resultados — ${dataOntemFmt}`),
+        tituloSubSecao('Resultado das Lives do dia anterior') +
+        tabelaLives +
+        tituloSubSecao('Resultado de Influencers do dia anterior') +
+        tabelaInfluencers +
+        tituloSubSecao(`Resultados de Influencers — ${mesFmt}`) +
+        tabelaMensal
+      )}
+
+      ${secao(
+        '',
+        `<div style="background:#f0eef8;border-radius:10px;padding:18px 20px;border:1px solid #ddd6fe;">
+          <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.6;">
+            Estes são os dados sumarizados do dia. Para informações completas, análises detalhadas e histórico,
+            acesse a
+            <a href="https://data-intelligence.spingaming.com.br/" style="color:#1e36f8;font-weight:700;text-decoration:none;">
+              Data Intelligence Spin Gaming
+            </a>.
+          </p>
+        </div>`
+      )}
+
+    </div>
+
+    <div style="background:#f9f7ff;padding:14px 32px;border-top:1px solid #e5e7eb;">
+      <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
+        Data Intelligence Spin Gaming · Relatório automático ·
+        Enviado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>`
+}
+
+// ── Enviar via Resend ─────────────────────────────────────────────────────────
 
 async function enviarRelatorio(
   destinatarios: string[],
   dataHoje: string,
   dataOntem: string,
   agenda: LiveAgenda[],
-  resultados: ResultadoInfluencer[],
-  totais: { lives: number; horas: number; views: number; acessos: number; registros: number; ftds: number; depositos_valor: number; ggr: number }
+  livesRows: ResultadoLive[],
+  influencersRows: ResultadoInfluencer[],
+  mensal: TotaisMensal,
 ): Promise<{ ok: boolean; error?: string }> {
+
   const resendKey = Deno.env.get('RESEND_API_KEY')
   if (!resendKey) return { ok: false, error: 'RESEND_API_KEY não configurada' }
 
-  const from = Deno.env.get('RESEND_FROM') || 'Acquisition Hub <onboarding@resend.dev>'
-  const dataHojeFmt = formatarData(dataHoje)
-  const dataOntemFmt = formatarData(dataOntem)
+  const fromEnv = (Deno.env.get('RESEND_FROM') ?? '').trim()
+  const from = fromEnv && /@[\w.-]+\.[a-z]{2,}/i.test(fromEnv)
+    ? fromEnv
+    : 'Acquisition Hub <onboarding@resend.dev>'
 
-  const linhasAgenda =
-    agenda.length === 0
-      ? '<tr><td colspan="3" style="padding:12px;color:#666;font-style:italic;">Nenhuma live agendada.</td></tr>'
-      : agenda
-          .sort((a, b) => (a.horario || '').localeCompare(b.horario || ''))
-          .map(
-            (l) => `
-      <tr>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-weight:600;">${(l.horario || '').slice(0, 5)}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;">${l.influencer_name} · ${l.plataforma}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;">${l.link ? `<a href="${l.link.startsWith('http') ? l.link : 'https://' + l.link}" style="color:#2563eb;">Abrir</a>` : '—'}</td>
-      </tr>
-    `
-          )
-          .join('')
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+  const logoUrl = supabaseUrl
+    ? `${supabaseUrl}/storage/v1/object/public/logos/Logo%20Spin%20Gaming%20White.png`
+    : ''
 
-  const linhasResultados =
-    resultados.length === 0
-      ? '<tr><td colspan="9" style="padding:16px;color:#666;font-style:italic;">Nenhum dado do dia anterior.</td></tr>'
-      : resultados
-          .sort((a, b) => b.ggr - a.ggr)
-          .map(
-            (r) => `
-      <tr>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-weight:600;">${r.nome}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:center;">${r.lives}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;">${r.horas.toFixed(1)}h</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;">${fmtNum(r.views)}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;">${fmtNum(r.acessos)}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;">${fmtNum(r.registros)}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;">${fmtNum(r.ftds)}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;">${fmtMoeda(r.depositos_valor)}</td>
-        <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${fmtMoeda(r.ggr)}</td>
-      </tr>
-    `
-          )
-          .join('')
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Relatório Diário — ${dataHojeFmt}</title>
-</head>
-<body style="margin:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;padding:24px;">
-  <div style="max-width:720px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.05);">
-    
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#4a2082,#1e36f8);color:#fff;padding:24px 28px;">
-      <h1 style="margin:0;font-size:20px;font-weight:700;letter-spacing:0.02em;">Relatório Diário — Diretoria</h1>
-      <p style="margin:8px 0 0;font-size:14px;opacity:0.9;">${dataHojeFmt} · Acquisition Hub</p>
-    </div>
-
-    <!-- Agenda do dia -->
-    <div style="padding:24px 28px;border-bottom:1px solid #e5e7eb;">
-      <h2 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#111;">📅 Agenda do dia</h2>
-      <p style="margin:0 0 12px;font-size:13px;color:#6b7280;">Lives agendadas para hoje (${dataHojeFmt})</p>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead>
-          <tr style="background:#f9fafb;">
-            <th style="padding:10px 14px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;">Horário</th>
-            <th style="padding:10px 14px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;">Influencer · Plataforma</th>
-            <th style="padding:10px 14px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;">Link</th>
-          </tr>
-        </thead>
-        <tbody>${linhasAgenda}</tbody>
-      </table>
-    </div>
-
-    <!-- Consolidado do dia anterior -->
-    <div style="padding:24px 28px;">
-      <h2 style="margin:0 0 16px;font-size:16px;font-weight:700;color:#111;">📊 Consolidado — ${dataOntemFmt}</h2>
-      <p style="margin:0 0 16px;font-size:13px;color:#6b7280;">Resultados de influencers do dia anterior</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead>
-          <tr style="background:#f9fafb;">
-            <th style="padding:10px 14px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;">Influencer</th>
-            <th style="padding:10px 14px;text-align:center;font-size:11px;color:#6b7280;text-transform:uppercase;">Lives</th>
-            <th style="padding:10px 14px;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;">Horas</th>
-            <th style="padding:10px 14px;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;">Views</th>
-            <th style="padding:10px 14px;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;">Acessos</th>
-            <th style="padding:10px 14px;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;">Reg.</th>
-            <th style="padding:10px 14px;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;">FTDs</th>
-            <th style="padding:10px 14px;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;">Depósitos</th>
-            <th style="padding:10px 14px;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;">GGR</th>
-          </tr>
-        </thead>
-        <tbody>${linhasResultados}</tbody>
-      </table>
-      
-      <!-- Totais -->
-      <div style="margin-top:20px;padding:16px 20px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">
-        <p style="margin:0;font-size:13px;font-weight:700;color:#166534;">Totais: ${totais.lives} lives · ${totais.horas.toFixed(1)}h · ${fmtNum(totais.views)} views · ${fmtNum(totais.ftds)} FTDs · ${fmtMoeda(totais.depositos_valor)} depósitos · <strong>${fmtMoeda(totais.ggr)} GGR</strong></p>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div style="padding:16px 28px;background:#f9fafb;font-size:11px;color:#9ca3af;">
-      Acquisition Hub — Relatório automático · Enviado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
-    </div>
-  </div>
-</body>
-</html>
-  `
+  const html = gerarHTML(dataHoje, dataOntem, agenda, livesRows, influencersRows, mensal, logoUrl)
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -193,7 +384,7 @@ async function enviarRelatorio(
     body: JSON.stringify({
       from,
       to: destinatarios,
-      subject: `Relatório Diário — ${dataHojeFmt} | Agenda + Consolidado ${dataOntemFmt}`,
+      subject: `Relatório Diário - ${formatarData(dataHoje)} | Influencers`,
       html,
     }),
   })
@@ -203,32 +394,24 @@ async function enviarRelatorio(
   return { ok: false, error: `Resend ${res.status}: ${errText}` }
 }
 
-// ── Handler ───────────────────────────────────────────────────
+// ── Handler principal ─────────────────────────────────────────────────────────
 
 serve(async (req) => {
   const cors = corsHeaders(req)
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: cors })
-  }
-
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
   if (req.method !== 'POST' && req.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'Método não permitido' }), {
-      status: 405,
-      headers: { ...cors, 'Content-Type': 'application/json' },
+      status: 405, headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
   try {
     let body: { destinatarios?: string[] } = {}
     if (req.method === 'POST') {
-      try {
-        body = (await req.json()) as { destinatarios?: string[] }
-      } catch {
-        /* ok */
-      }
+      try { body = (await req.json()) as { destinatarios?: string[] } } catch { /* ok */ }
     }
 
-    let destinatarios: string[] = body.destinatarios?.filter((e) => typeof e === 'string' && e.includes('@')) ?? []
+    let destinatarios = body.destinatarios?.filter((e) => typeof e === 'string' && e.includes('@')) ?? []
     if (destinatarios.length === 0) {
       const envDest = Deno.env.get('RELATORIO_DIRETORIA_DESTINATARIOS')
       if (envDest) {
@@ -237,9 +420,7 @@ serve(async (req) => {
     }
     if (destinatarios.length === 0) {
       return new Response(
-        JSON.stringify({
-          error: 'Configure RELATORIO_DIRETORIA_DESTINATARIOS (Supabase Secrets) ou envie destinatarios no body.',
-        }),
+        JSON.stringify({ error: 'Configure RELATORIO_DIRETORIA_DESTINATARIOS ou envie destinatarios no body.' }),
         { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } }
       )
     }
@@ -249,10 +430,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const dataHoje = hojeISO()
+    const dataHoje  = hojeISO()
     const dataOntem = ontemISO()
 
-    // 1. Agenda do dia (lives agendadas)
     const { data: livesHoje } = await supabase
       .from('lives')
       .select('id, horario, plataforma, link, influencer_id')
@@ -262,43 +442,54 @@ serve(async (req) => {
 
     const infIdsAgenda = [...new Set((livesHoje ?? []).map((l: { influencer_id: string }) => l.influencer_id))]
     let nameMap: Record<string, string> = {}
+
     if (infIdsAgenda.length > 0) {
       const { data: profs } = await supabase.from('profiles').select('id, name').in('id', infIdsAgenda)
-      for (const p of (profs ?? []) as { id: string; name?: string }[]) {
-        nameMap[p.id] = p.name ?? ''
-      }
+      for (const p of (profs ?? []) as { id: string; name?: string }[]) nameMap[p.id] = p.name ?? ''
     }
 
-    const agenda: LiveAgenda[] = (livesHoje ?? []).map((l: { horario: string; influencer_id: string; plataforma: string; link?: string }) => ({
+    const agenda: LiveAgenda[] = (livesHoje ?? []).map((l: {
+      horario: string; influencer_id: string; plataforma: string; link?: string
+    }) => ({
       horario: l.horario ?? '',
       influencer_name: nameMap[l.influencer_id] ?? '—',
       plataforma: l.plataforma ?? '',
       link: l.link,
     }))
 
-    // 2. Métricas do dia anterior (influencer_metricas)
     const { data: metricasRaw } = await supabase
       .from('influencer_metricas')
-      .select('influencer_id, visit_count, registration_count, ftd_count, deposit_count, deposit_total, withdrawal_total, ggr')
+      .select('influencer_id, visit_count, registration_count, ftd_count, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr')
       .eq('data', dataOntem)
 
-    const metricasPorInf = new Map<
-      string,
-      { visits: number; regs: number; ftds: number; depQtd: number; depVal: number; wd: number; ggr: number }
-    >()
-    for (const m of metricasRaw ?? []) {
-      const cur = metricasPorInf.get(m.influencer_id) ?? { visits: 0, regs: 0, ftds: 0, depQtd: 0, depVal: 0, wd: 0, ggr: 0 }
-      cur.visits += m.visit_count ?? 0
-      cur.regs += m.registration_count ?? 0
-      cur.ftds += m.ftd_count ?? 0
-      cur.depQtd += m.deposit_count ?? 0
-      cur.depVal += m.deposit_total ?? 0
-      cur.wd += m.withdrawal_total ?? 0
-      cur.ggr += m.ggr ?? 0
+    type MetRow = {
+      influencer_id: string
+      visit_count: number; registration_count: number; ftd_count: number
+      deposit_count: number; deposit_total: number
+      withdrawal_count: number; withdrawal_total: number; ggr: number
+    }
+
+    const metricasPorInf = new Map<string, {
+      visits: number; regs: number; ftds: number
+      depQtd: number; depVal: number
+      wdQtd: number; wdVal: number; ggr: number
+    }>()
+
+    for (const m of (metricasRaw ?? []) as MetRow[]) {
+      const cur = metricasPorInf.get(m.influencer_id) ?? {
+        visits: 0, regs: 0, ftds: 0, depQtd: 0, depVal: 0, wdQtd: 0, wdVal: 0, ggr: 0,
+      }
+      cur.visits   += m.visit_count        ?? 0
+      cur.regs     += m.registration_count ?? 0
+      cur.ftds     += m.ftd_count          ?? 0
+      cur.depQtd   += m.deposit_count      ?? 0
+      cur.depVal   += m.deposit_total      ?? 0
+      cur.wdQtd    += m.withdrawal_count   ?? 0
+      cur.wdVal    += m.withdrawal_total   ?? 0
+      cur.ggr      += m.ggr               ?? 0
       metricasPorInf.set(m.influencer_id, cur)
     }
 
-    // 3. Lives realizadas + resultados do dia anterior
     const { data: livesOntem } = await supabase
       .from('lives')
       .select('id, influencer_id')
@@ -306,76 +497,178 @@ serve(async (req) => {
       .eq('status', 'realizada')
 
     const liveIds = (livesOntem ?? []).map((l: { id: string }) => l.id)
-    let resultadosMap: Record<string, { duracao_horas: number; duracao_min: number; viewsSum: number; liveComViews: number }> = {}
+
+    const resultadosMap: Record<string, {
+      duracao_horas: number; duracao_min: number; viewsSum: number; liveComViews: number
+    }> = {}
+
     if (liveIds.length > 0) {
       const { data: resData } = await supabase
         .from('live_resultados')
         .select('live_id, duracao_horas, duracao_min, media_views')
         .in('live_id', liveIds)
-      const liveToRes = new Map((resData ?? []).map((r: { live_id: string }) => [r.live_id, r]))
-      const liveToInf = new Map((livesOntem ?? []).map((l: { id: string; influencer_id: string }) => [l.id, l.influencer_id]))
-      for (const [lid, res] of liveToRes) {
-        const infId = liveToInf.get(lid)
+
+      const liveToInf = new Map(
+        (livesOntem ?? []).map((l: { id: string; influencer_id: string }) => [l.id, l.influencer_id])
+      )
+
+      for (const res of (resData ?? []) as {
+        live_id: string; duracao_horas: number; duracao_min: number; media_views: number
+      }[]) {
+        const infId = liveToInf.get(res.live_id)
         if (!infId) continue
         const cur = resultadosMap[infId] ?? { duracao_horas: 0, duracao_min: 0, viewsSum: 0, liveComViews: 0 }
         cur.duracao_horas += res.duracao_horas ?? 0
-        cur.duracao_min += res.duracao_min ?? 0
-        if (res.media_views) {
-          cur.viewsSum += res.media_views
-          cur.liveComViews += 1
-        }
+        cur.duracao_min   += res.duracao_min   ?? 0
+        if (res.media_views) { cur.viewsSum += res.media_views; cur.liveComViews += 1 }
         resultadosMap[infId] = cur
       }
     }
 
-    const infIdsAll = [...new Set([...metricasPorInf.keys(), ...Object.keys(resultadosMap)])]
+    const infIdsAll = [...new Set([
+      ...metricasPorInf.keys(),
+      ...Object.keys(resultadosMap),
+      ...(livesOntem ?? []).map((l: { influencer_id: string }) => l.influencer_id),
+    ])]
+
     if (infIdsAll.length > 0) {
-      const { data: perfis } = await supabase.from('influencer_perfil').select('id, nome_artistico').in('id', infIdsAll)
-      for (const p of (perfis ?? []) as { id: string; nome_artistico?: string }[]) {
+      const [profRes, perfRes] = await Promise.all([
+        supabase.from('profiles').select('id, name').in('id', infIdsAll),
+        supabase.from('influencer_perfil').select('id, nome_artistico, cache_hora').in('id', infIdsAll),
+      ])
+      for (const p of (profRes.data ?? []) as { id: string; name?: string }[]) {
+        if (!nameMap[p.id]) nameMap[p.id] = p.name ?? ''
+      }
+      for (const p of (perfRes.data ?? []) as { id: string; nome_artistico?: string }[]) {
         if (!nameMap[p.id]) nameMap[p.id] = p.nome_artistico ?? ''
       }
     }
 
-    const resultados: ResultadoInfluencer[] = infIdsAll.map((id) => {
-      const m = metricasPorInf.get(id) ?? { visits: 0, regs: 0, ftds: 0, depQtd: 0, depVal: 0, wd: 0, ggr: 0 }
-      const r = resultadosMap[id] ?? { duracao_horas: 0, duracao_min: 0, viewsSum: 0, liveComViews: 0 }
-      const livesCount = (livesOntem ?? []).filter((l: { influencer_id: string }) => l.influencer_id === id).length
-      const horas = r.duracao_horas + r.duracao_min / 60
-      const views = r.liveComViews > 0 ? Math.round(r.viewsSum / r.liveComViews) : 0
-      return {
-        nome: nameMap[id] ?? '—',
-        lives: livesCount,
-        horas,
-        views,
-        acessos: m.visits,
-        registros: m.regs,
-        ftds: m.ftds,
-        depositos_qtd: m.depQtd,
-        depositos_valor: m.depVal,
-        ggr: m.ggr,
+    const cacheHoraMap: Record<string, number> = {}
+    if (infIdsAll.length > 0) {
+      const { data: perfData } = await supabase
+        .from('influencer_perfil').select('id, cache_hora').in('id', infIdsAll)
+      for (const p of (perfData ?? []) as { id: string; cache_hora: number }[]) {
+        cacheHoraMap[p.id] = p.cache_hora ?? 0
       }
-    })
+    }
 
-    const totais = resultados.reduce(
-      (acc, r) => ({
-        lives: acc.lives + r.lives,
-        horas: acc.horas + r.horas,
-        views: acc.views + r.views,
-        acessos: acc.acessos + r.acessos,
-        registros: acc.registros + r.registros,
-        ftds: acc.ftds + r.ftds,
-        depositos_valor: acc.depositos_valor + r.depositos_valor,
-        ggr: acc.ggr + r.ggr,
-      }),
-      { lives: 0, horas: 0, views: 0, acessos: 0, registros: 0, ftds: 0, depositos_valor: 0, ggr: 0 }
+    const infComLive = new Set(
+      (livesOntem ?? []).map((l: { influencer_id: string }) => l.influencer_id)
     )
 
-    const result = await enviarRelatorio(destinatarios, dataHoje, dataOntem, agenda, resultados, totais)
+    const livesRows: ResultadoLive[] = []
+    const influencersRows: ResultadoInfluencer[] = []
+
+    for (const id of infIdsAll) {
+      const m = metricasPorInf.get(id) ?? { visits: 0, regs: 0, ftds: 0, depQtd: 0, depVal: 0, wdQtd: 0, wdVal: 0, ggr: 0 }
+      const r = resultadosMap[id] ?? { duracao_horas: 0, duracao_min: 0, viewsSum: 0, liveComViews: 0 }
+      const nome = nameMap[id] ?? '—'
+
+      if (infComLive.has(id)) {
+        livesRows.push({
+          nome,
+          horas: r.duracao_horas + r.duracao_min / 60,
+          mediaViews: r.liveComViews > 0 ? Math.round(r.viewsSum / r.liveComViews) : 0,
+          acessos: m.visits,
+          registros: m.regs,
+          ftds: m.ftds,
+          depositos_valor: m.depVal,
+          ggr: m.ggr,
+        })
+      } else {
+        const temKpi = m.depQtd > 0 || m.depVal > 0 || m.wdQtd > 0 || m.wdVal > 0 || m.ggr !== 0
+        if (temKpi) {
+          influencersRows.push({
+            nome,
+            depositos_qtd: m.depQtd,
+            depositos_valor: m.depVal,
+            saques_qtd: m.wdQtd,
+            saques_valor: m.wdVal,
+            ggr: m.ggr,
+          })
+        }
+      }
+    }
+
+    const inicioMes = primeiroDiaMes(dataOntem)
+    const fimMes    = ultimoDiaMes(dataOntem)
+
+    const [{ data: metMesRaw }, { data: livesMesRaw }] = await Promise.all([
+      supabase
+        .from('influencer_metricas')
+        .select('influencer_id, registration_count, ftd_count, ggr')
+        .gte('data', inicioMes).lte('data', fimMes),
+      supabase
+        .from('lives')
+        .select('id, influencer_id')
+        .eq('status', 'realizada')
+        .gte('data', inicioMes).lte('data', fimMes),
+    ])
+
+    const liveIdsMes = (livesMesRaw ?? []).map((l: { id: string }) => l.id)
+    const horasPorInfMes: Record<string, number> = {}
+
+    if (liveIdsMes.length > 0) {
+      const { data: resMes } = await supabase
+        .from('live_resultados')
+        .select('live_id, duracao_horas, duracao_min')
+        .in('live_id', liveIdsMes)
+
+      const liveToInfMes = new Map(
+        (livesMesRaw ?? []).map((l: { id: string; influencer_id: string }) => [l.id, l.influencer_id])
+      )
+
+      for (const r of (resMes ?? []) as { live_id: string; duracao_horas: number; duracao_min: number }[]) {
+        const infId = liveToInfMes.get(r.live_id)
+        if (!infId) continue
+        horasPorInfMes[infId] = (horasPorInfMes[infId] ?? 0) + (r.duracao_horas ?? 0) + (r.duracao_min ?? 0) / 60
+      }
+    }
+
+    const infIdsMes = [...new Set([
+      ...(metMesRaw ?? []).map((m: { influencer_id: string }) => m.influencer_id),
+      ...Object.keys(horasPorInfMes),
+    ])]
+
+    const cacheHoraMes: Record<string, number> = { ...cacheHoraMap }
+    if (infIdsMes.length > 0) {
+      const novosIds = infIdsMes.filter((id) => !(id in cacheHoraMes))
+      if (novosIds.length > 0) {
+        const { data: perfMes } = await supabase
+          .from('influencer_perfil').select('id, cache_hora').in('id', novosIds)
+        for (const p of (perfMes ?? []) as { id: string; cache_hora: number }[]) {
+          cacheHoraMes[p.id] = p.cache_hora ?? 0
+        }
+      }
+    }
+
+    const mensal: TotaisMensal = { ggrTotal: 0, investimento: 0, roi: null, livesRealizadas: 0, totalRegistros: 0, totalFtds: 0 }
+
+    for (const m of (metMesRaw ?? []) as { influencer_id: string; registration_count: number; ftd_count: number; ggr: number }[]) {
+      mensal.ggrTotal       += m.ggr               ?? 0
+      mensal.totalRegistros += m.registration_count ?? 0
+      mensal.totalFtds      += m.ftd_count          ?? 0
+    }
+
+    for (const [infId, horas] of Object.entries(horasPorInfMes)) {
+      mensal.investimento += horas * (cacheHoraMes[infId] ?? 0)
+    }
+
+    mensal.livesRealizadas = (livesMesRaw ?? []).length
+
+    if (mensal.investimento > 0) {
+      mensal.roi = ((mensal.ggrTotal - mensal.investimento) / mensal.investimento) * 100
+    }
+
+    const result = await enviarRelatorio(
+      destinatarios, dataHoje, dataOntem,
+      agenda, livesRows, influencersRows, mensal
+    )
 
     if (!result.ok) {
       return new Response(JSON.stringify({ error: result.error }), {
-        status: 500,
-        headers: { ...cors, 'Content-Type': 'application/json' },
+        status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
 
@@ -384,17 +677,20 @@ serve(async (req) => {
         ok: true,
         data_agenda: dataHoje,
         data_consolidado: dataOntem,
+        mes_consolidado: mesExtenso(dataOntem),
         total_agenda: agenda.length,
-        total_influencers: resultados.length,
+        total_lives_rows: livesRows.length,
+        total_influencer_rows: influencersRows.length,
+        mensal,
         destinatarios,
       }),
       { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }
     )
+
   } catch (e) {
     console.error('[relatorio-diario-diretoria] Erro:', e)
     return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500,
-      headers: { ...cors, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 })
