@@ -138,6 +138,12 @@ serve(async (req) => {
   const { email, nome, role, scopeInfluencers, scopeOperadoras, scopePares } = body
   const loginUrl = (body.loginUrl ?? '').trim() || 'https://acquisition-hub.vercel.app'  // fallback
 
+  // Garantir arrays (evita "forEach is not a function" quando vem string/objeto/undefined)
+  const toStrArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+  const scopeInfluencersArr = toStrArr(scopeInfluencers)
+  const scopeOperadorasArr = toStrArr(scopeOperadoras)
+  const scopeParesArr = toStrArr(scopePares)
+
   if (!email?.trim() || !nome?.trim() || !role?.trim()) {
     return new Response(JSON.stringify({ error: 'E-mail, nome e perfil são obrigatórios' }), {
       status: 400,
@@ -148,19 +154,19 @@ serve(async (req) => {
   const bloqueado = ROLES_BLOQUEADOS.includes(role)
 
   // Validações por role
-  if (role === 'influencer' && (!scopeOperadoras || scopeOperadoras.length === 0)) {
+  if (role === 'influencer' && scopeOperadorasArr.length === 0) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o influencer' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
-  if (role === 'operador' && (!scopeOperadoras || scopeOperadoras.length === 0)) {
+  if (role === 'operador' && scopeOperadorasArr.length === 0) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos uma operadora para o operador' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
-  if (role === 'agencia' && (!scopePares || scopePares.length === 0)) {
+  if (role === 'agencia' && scopeParesArr.length === 0) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos um par influencer+operadora para a agência' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
@@ -210,14 +216,14 @@ serve(async (req) => {
     if (!bloqueado) {
       const novasLinhas: { user_id: string; scope_type: string; scope_ref: string }[] = []
       if (role === 'agencia') {
-        (scopePares ?? []).forEach((par: string) =>
+        scopeParesArr.forEach((par) =>
           novasLinhas.push({ user_id: uid, scope_type: 'agencia_par', scope_ref: par })
         )
       } else {
-        (scopeInfluencers ?? []).forEach((ref: string) =>
+        scopeInfluencersArr.forEach((ref) =>
           novasLinhas.push({ user_id: uid, scope_type: 'influencer', scope_ref: ref })
         )
-        (scopeOperadoras ?? []).forEach((ref: string) =>
+        scopeOperadorasArr.forEach((ref) =>
           novasLinhas.push({ user_id: uid, scope_type: 'operadora', scope_ref: ref })
         )
       }
@@ -237,8 +243,8 @@ serve(async (req) => {
           },
           { onConflict: 'id', ignoreDuplicates: false }
         )
-        if (scopeOperadoras?.length) {
-          for (const slug of scopeOperadoras) {
+        if (scopeOperadorasArr.length > 0) {
+          for (const slug of scopeOperadorasArr) {
             await supabase.from('influencer_operadoras').upsert(
               { influencer_id: uid, operadora_slug: slug, ativo: true },
               { onConflict: 'influencer_id,operadora_slug', ignoreDuplicates: true }
