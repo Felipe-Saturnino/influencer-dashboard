@@ -19,12 +19,13 @@ export async function buscarInvestimentoPago(
   const influencerIds = filtros?.influencerIds;
   const operadoraSlug = filtros?.operadora_slug;
 
-  // Ciclos que se sobrepõem ao período: data_inicio <= fim AND data_fim >= inicio
+  // Ciclos cujo último dia (data_fim) cai no período — igual ao KPI do Financeiro.
+  // Ex: ciclo 26/02–04/03 → data_fim 04/03 → entra em Março.
   const { data: ciclos, error: errCiclos } = await supabase
     .from("ciclos_pagamento")
     .select("id")
-    .lte("data_inicio", fim)
-    .gte("data_fim", inicio);
+    .gte("data_fim", inicio)
+    .lte("data_fim", fim);
 
   if (errCiclos || !ciclos?.length) {
     return { total: 0, porInfluencer: {} };
