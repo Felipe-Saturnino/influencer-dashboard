@@ -769,12 +769,14 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
       const scopeParesParaApi = role === "agencia"
         ? paresAgencia.filter(p => p.influencerId && p.operadoraSlug).map(p => `${p.influencerId}:${p.operadoraSlug}`)
         : scopePares;
+      const scopeInfluencersArr = Array.isArray(scopeInfluencers) ? scopeInfluencers : [];
+      const scopeOperadorasArr = Array.isArray(scopeOperadoras) ? scopeOperadoras : [];
 
       if (editando) {
         const res = await fetch("/api/atualizar-perfil", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token ?? ""}` },
-          body: JSON.stringify({ userId: uid, name: nome.trim(), role, scopeInfluencers, scopeOperadoras, scopePares: scopeParesParaApi }),
+          body: JSON.stringify({ userId: uid, name: nome.trim(), role, scopeInfluencers: scopeInfluencersArr, scopeOperadoras: scopeOperadorasArr, scopePares: scopeParesParaApi }),
         });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as any)?.error ?? `Erro ${res.status}`);
@@ -784,7 +786,7 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
         const res = await fetch("/api/criar-usuario", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token ?? ""}` },
-          body: JSON.stringify({ email: email.trim().toLowerCase(), nome: nome.trim(), role, scopeInfluencers, scopeOperadoras, scopePares: scopeParesParaApi, loginUrl }),
+          body: JSON.stringify({ email: email.trim().toLowerCase(), nome: nome.trim(), role, scopeInfluencers: scopeInfluencersArr, scopeOperadoras: scopeOperadorasArr, scopePares: scopeParesParaApi, loginUrl }),
         });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as any)?.error ?? `Erro ${res.status}`);
