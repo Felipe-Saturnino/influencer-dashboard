@@ -811,6 +811,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     await carregarDados(c);
   }
 
+  const OPERADORA_PADRAO = "casa_apostas";
+
   async function gerarPagamentosDoCiclo(c: CicloPagamento) {
     const { data: lives } = await supabase
       .from("lives")
@@ -819,7 +821,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       .gte("data", c.data_inicio)
       .lte("data", c.data_fim);
 
-    const livesFiltradas = ((lives ?? []) as any[]).filter((l: any) => podeVerInfluencer(l.influencer_id) && l.operadora_slug);
+    const livesFiltradas = ((lives ?? []) as any[]).filter((l: any) => podeVerInfluencer(l.influencer_id));
     const liveIds = livesFiltradas.map((l: any) => l.id);
     let resultados: { live_id: string; duracao_horas: number; duracao_min: number }[] = [];
     if (liveIds.length > 0) {
@@ -832,7 +834,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     for (const live of livesFiltradas) {
       const res = resultados.find((r) => r.live_id === live.id);
       if (res) {
-        const k = key(live.influencer_id, live.operadora_slug);
+        const opSlug = live.operadora_slug?.trim() || OPERADORA_PADRAO;
+        const k = key(live.influencer_id, opSlug);
         const horas = (res.duracao_horas ?? 0) + (res.duracao_min ?? 0) / 60;
         horasPorPar[k] = (horasPorPar[k] ?? 0) + horas;
       }
@@ -871,7 +874,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       .gte("data", c.data_inicio)
       .lte("data", c.data_fim);
 
-    const livesFiltradas = (lives ?? []).filter((l: any) => podeVerInfluencer(l.influencer_id) && l.operadora_slug);
+    const livesFiltradas = (lives ?? []).filter((l: any) => podeVerInfluencer(l.influencer_id));
     if (livesFiltradas.length === 0) { setRows([]); return; }
 
     const liveIds = livesFiltradas.map((l: any) => l.id);
@@ -886,7 +889,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     for (const live of livesFiltradas as any[]) {
       const res = resultados.find((r) => String(r.live_id) === String(live.id));
       if (res) {
-        const k = key(live.influencer_id, live.operadora_slug);
+        const opSlug = live.operadora_slug?.trim() || OPERADORA_PADRAO;
+        const k = key(live.influencer_id, opSlug);
         if (!horasPorPar[k]) horasPorPar[k] = { horas: 0, qtd: 0 };
         const horas = (res.duracao_horas ?? 0) + (res.duracao_min ?? 0) / 60;
         horasPorPar[k].horas += horas;
@@ -953,6 +957,45 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         .lte("data", c.data_fim),
     ]);
 
+    // Sincroniza lives validadas após o fechamento: cria pagamentos faltantes (em_analise) sem alterar os existentes
+    const existentesKeys = new Set((pags ?? []).map((p: any) => `${p.influencer_id}::${p.operadora_slug}`));
+    const livesSemPagamento = (livesCiclo ?? []).filter((l: any) => {
+      if (!podeVerInfluencer(l.influencer_id)) return false;
+      const opSlug = l.operadora_slug?.trim() || OPERADORA_PADRAO;
+      return !existentesKeys.has(`${l.influencer_id}::${opSlug}`);
+    });
+    let pagsFinais = pags ?? [];
+    if (livesSemPagamento.length > 0) {
+      const liveIdsSync = livesSemPagamento.map((l: any) => l.id);
+      const { data: resSync } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", liveIdsSync);
+      const horasPorPar: Record<string, number> = {};
+      const keySync = (inf: string, op: string) => `${inf}::${op}`;
+      for (const live of livesSemPagamento as any[]) {
+        const res = (resSync ?? []).find((r: any) => String(r.live_id) === String(live.id));
+        if (res) {
+          const opSlug = live.operadora_slug?.trim() || OPERADORA_PADRAO;
+          const k = keySync(live.influencer_id, opSlug);
+          const horas = (res.duracao_horas ?? 0) + (res.duracao_min ?? 0) / 60;
+          horasPorPar[k] = (horasPorPar[k] ?? 0) + horas;
+        }
+      }
+      for (const [parKey, horas] of Object.entries(horasPorPar)) {
+        const [influencer_id, operadora_slug] = parKey.split("::");
+        const { data: perfil } = await supabase.from("influencer_perfil").select("cache_hora").eq("id", influencer_id).single();
+        const cache_hora = perfil?.cache_hora ?? 0;
+        const total = Math.round(horas * cache_hora * 100) / 100;
+        await supabase.from("pagamentos").upsert({
+          ciclo_id: c.id, influencer_id, operadora_slug,
+          horas_realizadas: Math.round(horas * 100) / 100,
+          cache_hora, total, status: "em_analise",
+        }, { onConflict: "ciclo_id,influencer_id,operadora_slug" });
+      }
+      if (Object.keys(horasPorPar).length > 0) {
+        const { data: pagsAtual } = await supabase.from("pagamentos").select("*").eq("ciclo_id", c.id).order("total", { ascending: false });
+        pagsFinais = pagsAtual ?? pagsFinais;
+      }
+    }
+
     const liveIds = (livesCiclo ?? []).map((l: any) => l.id);
     let resultados: { live_id: string }[] = [];
     if (liveIds.length > 0) {
@@ -962,16 +1005,17 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     const qtdPorPar: Record<string, number> = {};
     const key = (inf: string, op: string) => `${inf}::${op}`;
     for (const l of (livesCiclo ?? []) as any[]) {
-      if (!l.operadora_slug || !podeVerInfluencer(l.influencer_id)) continue;
+      if (!podeVerInfluencer(l.influencer_id)) continue;
+      const opSlug = l.operadora_slug?.trim() || OPERADORA_PADRAO;
       const temRes = resultados.some((r) => String(r.live_id) === String(l.id));
       if (temRes) {
-        const k = key(l.influencer_id, l.operadora_slug);
+        const k = key(l.influencer_id, opSlug);
         qtdPorPar[k] = (qtdPorPar[k] ?? 0) + 1;
       }
     }
 
     // Busca nomes separadamente para evitar falha silenciosa de FK
-    const influencerIds = [...new Set((pags ?? []).map((p: any) => p.influencer_id))];
+    const influencerIds = [...new Set(pagsFinais.map((p: any) => p.influencer_id))];
     const nomeMap: Record<string, string> = {};
     if (influencerIds.length > 0) {
       const [{ data: perfis }, { data: profiles }] = await Promise.all([
@@ -984,7 +1028,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       }
     }
 
-    let pagsFiltrados = (pags ?? []).filter((p: any) => podeVerInfluencer(p.influencer_id));
+    let pagsFiltrados = pagsFinais.filter((p: any) => podeVerInfluencer(p.influencer_id));
     if (filterInfluencers.length > 0) pagsFiltrados = pagsFiltrados.filter((p: any) => filterInfluencers.includes(p.influencer_id));
     if (filterOperadora && filterOperadora !== "todas") {
       pagsFiltrados = pagsFiltrados.filter((p: any) => p.operadora_slug === filterOperadora);
@@ -1803,13 +1847,15 @@ export default function Financeiro() {
           resIds = new Set((resData ?? []).map((r: { live_id: string }) => String(r.live_id)));
         }
 
+        const OPERADORA_PADRAO = "casa_apostas";
         for (const c of abertos) {
-          const temVisible = (lives ?? []).some((l: any) =>
-            l.data >= (c.data_inicio || "") && l.data <= (c.data_fim || "") &&
-            resIds.has(String(l.id)) &&
-            podeVerInfluencer(l.influencer_id) &&
-            l.operadora_slug && podeVerOperadora(l.operadora_slug)
-          );
+          const temVisible = (lives ?? []).some((l: any) => {
+            const opSlug = l.operadora_slug?.trim() || OPERADORA_PADRAO;
+            return l.data >= (c.data_inicio || "") && l.data <= (c.data_fim || "") &&
+              resIds.has(String(l.id)) &&
+              podeVerInfluencer(l.influencer_id) &&
+              podeVerOperadora(opSlug);
+          });
           if (temVisible) ciclosVisiveis.push(c);
         }
       }
