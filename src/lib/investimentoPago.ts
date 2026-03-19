@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 /**
  * Busca o investimento apenas de pagamentos com status "pago",
  * alinhado ao que é exibido no Financeiro (valores revisados e efetivamente pagos).
+ * Usa RPC no servidor para incluir corretamente pagamentos_agentes.
  *
  * @param periodo - { inicio, fim } no formato ISO YYYY-MM-DD
  * @param filtros - influencerIds e/ou operadora_slug opcionais
@@ -17,10 +18,32 @@ export async function buscarInvestimentoPago(
 }> {
   const { inicio, fim } = periodo;
   const influencerIds = filtros?.influencerIds;
-  const operadoraSlug = filtros?.operadora_slug;
+  const operadoraSlug = filtros?.operadora_slug && filtros.operadora_slug !== "todas"
+    ? filtros.operadora_slug
+    : null;
 
-  // Ciclos cujo último dia (data_fim) cai no período — igual ao KPI do Financeiro.
-  // Ex: ciclo 26/02–04/03 → data_fim 04/03 → entra em Março.
+  const { data, error } = await supabase.rpc("get_investimento_pago", {
+    p_inicio: inicio,
+    p_fim: fim,
+    p_operadora_slug: operadoraSlug,
+    p_influencer_ids: influencerIds?.length ? influencerIds : null,
+  });
+
+  if (!error && data && typeof data === "object") {
+    const total = Number((data as { total?: number }).total) || 0;
+    const pi = (data as { por_influencer?: Record<string, number> }).por_influencer;
+    const porInfluencer: Record<string, number> = {};
+    if (pi && typeof pi === "object") {
+      for (const [k, v] of Object.entries(pi)) {
+        porInfluencer[k] = Number(v) || 0;
+      }
+    }
+    return { total, porInfluencer };
+  }
+
+  if (error) console.warn("[investimentoPago] RPC get_investimento_pago:", error.message);
+
+  // Fallback: consulta client-side (pode ter divergência com agentes se RPC não estiver aplicado)
   const { data: ciclos, error: errCiclos } = await supabase
     .from("ciclos_pagamento")
     .select("id")
@@ -33,47 +56,34 @@ export async function buscarInvestimentoPago(
 
   const cicloIds = ciclos.map((c: { id: string }) => c.id);
 
-  // Pagamentos de influencers (status = pago)
   let qPag = supabase
     .from("pagamentos")
     .select("influencer_id, total")
     .eq("status", "pago")
     .in("ciclo_id", cicloIds);
-
   if (influencerIds?.length) qPag = qPag.in("influencer_id", influencerIds);
-  if (operadoraSlug && operadoraSlug !== "todas")
-    qPag = qPag.eq("operadora_slug", operadoraSlug);
+  if (operadoraSlug) qPag = qPag.eq("operadora_slug", operadoraSlug);
 
   const { data: pags, error: errPags } = await qPag;
-
   if (errPags) return { total: 0, porInfluencer: {} };
 
-  // Pagamentos de agentes (status = pago) — inclui no total para bater com o Financeiro
   let qAg = supabase
     .from("pagamentos_agentes")
     .select("total")
     .eq("status", "pago")
     .in("ciclo_id", cicloIds);
+  if (operadoraSlug) qAg = qAg.eq("operadora_slug", operadoraSlug);
 
-  if (operadoraSlug && operadoraSlug !== "todas")
-    qAg = qAg.eq("operadora_slug", operadoraSlug);
-
-  const { data: ags, error: errAgs } = await qAg;
-  if (errAgs) console.warn("[investimentoPago] pagamentos_agentes:", errAgs.message);
+  const { data: ags } = await qAg;
 
   const porInfluencer: Record<string, number> = {};
   let totalInf = 0;
-
   for (const p of pags || []) {
     const t = Number(p.total) || 0;
     const id = p.influencer_id as string;
     porInfluencer[id] = (porInfluencer[id] ?? 0) + t;
     totalInf += t;
   }
-
   const totalAg = (ags || []).reduce((s, a) => s + (Number(a.total) || 0), 0);
-  const total = totalInf + totalAg;
-
-  // Agentes não têm influencer_id; o total geral inclui, mas porInfluencer não
-  return { total, porInfluencer };
+  return { total: totalInf + totalAg, porInfluencer };
 }
