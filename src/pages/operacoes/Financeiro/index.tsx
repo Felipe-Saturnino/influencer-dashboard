@@ -651,10 +651,12 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
 
     let cicloIds: string[] = [];
     if (periodo) {
+      // Ciclos cujo último dia (data_fim) cai no período. Ex: ciclo 26/02–04/03 → data_fim 04/03 → Março.
+      // Não usa fechado_em nem data de aprovação/pagamento.
       const { data: ciclos } = await supabase
         .from("ciclos_pagamento")
         .select("id")
-        .gte("data_inicio", periodo.inicio)
+        .gte("data_fim", periodo.inicio)
         .lte("data_fim", periodo.fim);
       cicloIds = (ciclos ?? []).map((c: any) => c.id);
       if (cicloIds.length === 0) {
@@ -1387,9 +1389,10 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
     const periodo = periodoDoMes(mes);
     let cicloIds: string[] = [];
     if (periodo) {
+      // Ciclos cujo último dia (data_fim) cai no período. Não usa fechado_em nem data de aprovação/pagamento.
       const { data: ciclos } = await supabase
         .from("ciclos_pagamento").select("id")
-        .gte("data_inicio", periodo.inicio)
+        .gte("data_fim", periodo.inicio)
         .lte("data_fim", periodo.fim);
       cicloIds = (ciclos ?? []).map((c: any) => c.id);
     }
