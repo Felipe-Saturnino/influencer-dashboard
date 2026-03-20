@@ -358,7 +358,7 @@ export default function Agenda() {
                     </span>
                   )}
                 </div>
-                <div style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}>
+                <div className="agenda-day-scroll" style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}>
                   {dayLives.slice(0, 3).map(l => <LiveChip key={l.id} live={l} />)}
                   {dayLives.length > 3 && <span style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 3}</span>}
                 </div>

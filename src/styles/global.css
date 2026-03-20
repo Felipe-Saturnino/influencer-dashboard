@@ -16,14 +16,25 @@ html, body {
 /* Background por tema — data-theme é definido pelo AppContext */
 [data-theme="dark"] {
   background: #0f0f1a;
+  color-scheme: dark;
 }
 [data-theme="dark"] body,
 [data-theme="dark"] #root {
   background: #0f0f1a;
 }
 
+/* Select/option em Dark mode — evita dropdown branco com texto branco */
+[data-theme="dark"] select {
+  color-scheme: dark;
+}
+[data-theme="dark"] select option {
+  background: #1a1a2e;
+  color: #ffffff;
+}
+
 [data-theme="light"] {
   background: #f4f4f8;
+  color-scheme: light;
 }
 [data-theme="light"] body,
 [data-theme="light"] #root {
@@ -68,6 +79,38 @@ html, body {
   --brand-danger:     #e84025;
   --brand-success:    #22c55e;
   --brand-fontFamily: "Inter", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Scrollbar das células do calendário (Agenda) — track escuro no Dark mode */
+.agenda-day-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.agenda-day-scroll::-webkit-scrollbar-track {
+  background: #1a1a2e;
+  border-radius: 3px;
+}
+.agenda-day-scroll::-webkit-scrollbar-thumb {
+  background: #3a3a5c;
+  border-radius: 3px;
+}
+.agenda-day-scroll::-webkit-scrollbar-thumb:hover {
+  background: #5a5a8c;
+}
+[data-theme="light"] .agenda-day-scroll::-webkit-scrollbar-track {
+  background: #e8e8f0;
+}
+[data-theme="light"] .agenda-day-scroll::-webkit-scrollbar-thumb {
+  background: #c0c0d8;
+}
+[data-theme="light"] .agenda-day-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a0a0b8;
+}
+
+/* Grid da aba Operadora — responsivo em telas estreitas */
+@media (max-width: 900px) {
+  .operadora-secoes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+  }
 }
 
 /* Scrollbar da sidebar */
