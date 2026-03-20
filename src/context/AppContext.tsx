@@ -27,8 +27,9 @@ export interface EscoposVisiveis {
 
 /** Brand da operadora (operador): logo, fonte e cores aplicadas via CSS vars */
 export interface OperadoraBrand {
-  logo_url: string | null;
-  font_url:  string | null;
+  logo_url:      string | null;
+  font_url:      string | null;
+  cor_background: string | null;
 }
 
 interface AppContextValue {
@@ -239,7 +240,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         const logo = (data?.logo_url ?? "").trim() || null;
         const font = (data?.font_url ?? "").trim() || null;
-        setOperadoraBrand({ logo_url: logo, font_url: font });
+        const bg = (data?.cor_background ?? "").trim() || null;
+        setOperadoraBrand({ logo_url: logo, font_url: font, cor_background: bg });
       } catch {
         aplicarBrandguide({});
         setOperadoraBrand(null);

@@ -31,20 +31,28 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
     fontFamily: "var(--brand-fontFamily, 'Inter', sans-serif)",
   };
 
+  const sidebarBg = operadoraBrand?.cor_background ?? t.sidebar;
+
   return (
     <aside style={{
       width: "240px", height: "100vh", flexShrink: 0,
       position: "fixed", top: 0, left: 0,
-      background: t.sidebar, display: "flex", flexDirection: "column",
+      background: sidebarBg, display: "flex", flexDirection: "column",
       padding: "0px 16px 24px", borderRight: `1px solid ${t.sidebarBorder}`,
       boxSizing: "border-box", zIndex: 100,
     }}>
-      {/* LOGO — operador vê logo da operadora; demais veem Spin Gaming */}
-      <div style={{ marginBottom: "4px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+      {/* LOGO — operador vê logo da operadora; demais veem Spin Gaming. Regra: mantém dentro do esquadro */}
+      <div style={{
+        marginBottom: "4px", display: "flex", justifyContent: "center", alignItems: "center",
+        flexShrink: 0, width: "100%", maxHeight: 96, overflow: "hidden",
+      }}>
         <img
           src={logoUrl}
           alt={operadoraBrand ? "Operadora" : "Spin Gaming"}
-          style={{ height: "96px", objectFit: "contain", display: "block" }}
+          style={{
+            maxWidth: "100%", maxHeight: 96, width: "auto", height: "auto",
+            objectFit: "contain", display: "block",
+          }}
           onError={(e) => { (e.target as HTMLImageElement).src = LOGO_DEFAULT; }}
         />
       </div>
