@@ -27,7 +27,8 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
     display: "flex", alignItems: "center", gap: "10px",
     width: "100%", padding: "11px 14px", borderRadius: "12px", border: "none",
     cursor: "pointer", fontSize: "13px", fontWeight: 500, textAlign: "left",
-    background: "transparent", color: "#e5dce1", fontFamily: FONT.body,
+    background: "transparent", color: "#e5dce1",
+    fontFamily: "var(--brand-fontFamily, 'Inter', sans-serif)",
   };
 
   return (

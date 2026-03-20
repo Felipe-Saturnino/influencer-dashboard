@@ -4,7 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { Operadora } from "../../../types";
-import { X, Pencil, AlertCircle } from "lucide-react";
+import { X, Pencil, AlertCircle, Upload } from "lucide-react";
 import { GiShield } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -220,8 +220,18 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
   const [corPrimaria, setCorPrimaria] = useState(editando?.cor_primaria ?? "");
   const [corSecundaria, setCorSecundaria] = useState(editando?.cor_secundaria ?? "");
   const [corAccent, setCorAccent] = useState(editando?.cor_accent ?? "");
+  const [corBackground, setCorBackground] = useState(editando?.cor_background ?? "");
+  const [corTextos, setCorTextos] = useState(editando?.cor_textos ?? "");
+  const [corIcones, setCorIcones] = useState(editando?.cor_icones ?? "");
+  const [corAdicional1, setCorAdicional1] = useState(editando?.cor_adicional_1 ?? "");
+  const [corAdicional2, setCorAdicional2] = useState(editando?.cor_adicional_2 ?? "");
+  const [corAdicional3, setCorAdicional3] = useState(editando?.cor_adicional_3 ?? "");
+  const [corAdicional4, setCorAdicional4] = useState(editando?.cor_adicional_4 ?? "");
   const [logoUrl, setLogoUrl] = useState(editando?.logo_url ?? "");
+  const [fontUrl, setFontUrl] = useState(editando?.font_url ?? "");
   const [salvando, setSalvando] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFont, setUploadingFont] = useState(false);
   const [erro, setErro] = useState("");
 
   // Gera slug automaticamente a partir do nome — invisível ao usuário na criação
@@ -238,6 +248,66 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
     }
   }, [nome, editando]);
 
+  // Sincroniza campos de brand quando abre para outra operadora
+  useEffect(() => {
+    if (editando) {
+      setCorPrimaria(editando.cor_primaria ?? "");
+      setCorSecundaria(editando.cor_secundaria ?? "");
+      setCorAccent(editando.cor_accent ?? "");
+      setCorBackground(editando.cor_background ?? "");
+      setCorTextos(editando.cor_textos ?? "");
+      setCorIcones(editando.cor_icones ?? "");
+      setCorAdicional1(editando.cor_adicional_1 ?? "");
+      setCorAdicional2(editando.cor_adicional_2 ?? "");
+      setCorAdicional3(editando.cor_adicional_3 ?? "");
+      setCorAdicional4(editando.cor_adicional_4 ?? "");
+      setLogoUrl(editando.logo_url ?? "");
+      setFontUrl(editando.font_url ?? "");
+    }
+  }, [editando?.slug]);
+
+  const BUCKET = "operadoras-brand";
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editando?.slug) return;
+    setUploadingLogo(true);
+    setErro("");
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `${editando.slug}/logo.${ext}`;
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      setLogoUrl(publicUrl);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Erro ao enviar logo.");
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleUploadFont = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editando?.slug) return;
+    setUploadingFont(true);
+    setErro("");
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "woff2";
+      const path = `${editando.slug}/font.${ext}`;
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      setFontUrl(publicUrl);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Erro ao enviar fonte.");
+    } finally {
+      setUploadingFont(false);
+      e.target.value = "";
+    }
+  };
+
   const salvar = async () => {
     setErro("");
     if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
@@ -247,10 +317,18 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
     setSalvando(true);
     try {
       const brand = {
-        cor_primaria:   corPrimaria.trim() || null,
-        cor_secundaria: corSecundaria.trim() || null,
-        cor_accent:     corAccent.trim() || null,
-        logo_url:       logoUrl.trim() || null,
+        cor_primaria:     corPrimaria.trim() || null,
+        cor_secundaria:   corSecundaria.trim() || null,
+        cor_accent:       corAccent.trim() || null,
+        cor_background:   corBackground.trim() || null,
+        cor_textos:       corTextos.trim() || null,
+        cor_icones:       corIcones.trim() || null,
+        cor_adicional_1:  corAdicional1.trim() || null,
+        cor_adicional_2:  corAdicional2.trim() || null,
+        cor_adicional_3:  corAdicional3.trim() || null,
+        cor_adicional_4:  corAdicional4.trim() || null,
+        logo_url:         logoUrl.trim() || null,
+        font_url:         fontUrl.trim() || null,
       };
       if (editando) {
         const { error } = await supabase.from("operadoras").update({ nome, ativo, ...brand }).eq("slug", editando.slug);
@@ -340,34 +418,118 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
 
         {/* Brandguide — cores exibidas para operadores desta operadora */}
         {editando && (
-          <div style={{ ...fieldStyle, padding: 16, background: "rgba(74,32,130,0.08)", borderRadius: 12, border: `1px solid ${t.cardBorder}` }}>
+          <div style={{ ...fieldStyle, padding: 16, background: "rgba(74,32,130,0.08)", borderRadius: 12, border: `1px solid ${t.cardBorder}`, maxHeight: 420, overflowY: "auto" }}>
             <div style={{ ...labelStyle, marginBottom: 12 }}>Brandguide (operadores)</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Cor principal</label>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Primária</label>
                 <input type="color" value={corPrimaria || "#7c3aed"} onChange={e => setCorPrimaria(e.target.value)}
                   style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
                 <input type="text" value={corPrimaria} onChange={e => setCorPrimaria(e.target.value)} placeholder="#7c3aed"
                   style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
               </div>
               <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Cor secundária</label>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Secundária</label>
                 <input type="color" value={corSecundaria || "#4a2082"} onChange={e => setCorSecundaria(e.target.value)}
                   style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
                 <input type="text" value={corSecundaria} onChange={e => setCorSecundaria(e.target.value)} placeholder="#4a2082"
                   style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
               </div>
               <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Cor accent</label>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Accent</label>
                 <input type="color" value={corAccent || "#1e36f8"} onChange={e => setCorAccent(e.target.value)}
                   style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
                 <input type="text" value={corAccent} onChange={e => setCorAccent(e.target.value)} placeholder="#1e36f8"
                   style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
               </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Background</label>
+                <input type="color" value={corBackground || "#0f0f1a"} onChange={e => setCorBackground(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corBackground} onChange={e => setCorBackground(e.target.value)} placeholder="#0f0f1a"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Textos</label>
+                <input type="color" value={corTextos || "#ffffff"} onChange={e => setCorTextos(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corTextos} onChange={e => setCorTextos(e.target.value)} placeholder="#ffffff"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Ícones</label>
+                <input type="color" value={corIcones || "#70cae4"} onChange={e => setCorIcones(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corIcones} onChange={e => setCorIcones(e.target.value)} placeholder="#70cae4"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Adicional 1</label>
+                <input type="color" value={corAdicional1 || "#1e36f8"} onChange={e => setCorAdicional1(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corAdicional1} onChange={e => setCorAdicional1(e.target.value)} placeholder="#1e36f8"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Adicional 2</label>
+                <input type="color" value={corAdicional2 || "#22c55e"} onChange={e => setCorAdicional2(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corAdicional2} onChange={e => setCorAdicional2(e.target.value)} placeholder="#22c55e"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Adicional 3</label>
+                <input type="color" value={corAdicional3 || "#f59e0b"} onChange={e => setCorAdicional3(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corAdicional3} onChange={e => setCorAdicional3(e.target.value)} placeholder="#f59e0b"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Adicional 4</label>
+                <input type="color" value={corAdicional4 || "#e84025"} onChange={e => setCorAdicional4(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corAdicional4} onChange={e => setCorAdicional4(e.target.value)} placeholder="#e84025"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ ...labelStyle, fontSize: 10 }}>URL do logo (opcional)</label>
-                <input type="url" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://..."
+                <label style={{ ...labelStyle, fontSize: 10 }}>Logo (opcional)</label>
+                <input type="url" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="URL ou envie um arquivo"
                   style={inputStyle} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <label style={{
+                    display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
+                    background: "rgba(74,32,130,0.15)", border: `1px solid ${t.cardBorder}`,
+                    borderRadius: 8, cursor: uploadingLogo ? "not-allowed" : "pointer",
+                    fontSize: 12, fontFamily: FONT.body, color: t.text,
+                  }}>
+                    <Upload size={14} />
+                    {uploadingLogo ? "Enviando..." : "Enviar logo (PNG, JPG, SVG)"}
+                    <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden disabled={uploadingLogo} onChange={handleUploadLogo} />
+                  </label>
+                  {logoUrl && (
+                    <a href={logoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
+                  )}
+                </div>
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Fonte customizada (opcional)</label>
+                <input type="url" value={fontUrl} onChange={e => setFontUrl(e.target.value)} placeholder="URL ou envie .woff2, .woff, .ttf"
+                  style={inputStyle} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <label style={{
+                    display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
+                    background: "rgba(74,32,130,0.15)", border: `1px solid ${t.cardBorder}`,
+                    borderRadius: 8, cursor: uploadingFont ? "not-allowed" : "pointer",
+                    fontSize: 12, fontFamily: FONT.body, color: t.text,
+                  }}>
+                    <Upload size={14} />
+                    {uploadingFont ? "Enviando..." : "Enviar fonte (WOFF2, WOFF, TTF)"}
+                    <input type="file" accept=".woff2,.woff,.ttf,font/woff2,font/woff,font/ttf" hidden disabled={uploadingFont} onChange={handleUploadFont} />
+                  </label>
+                  {fontUrl && (
+                    <a href={fontUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
+                  )}
+                </div>
               </div>
             </div>
           </div>

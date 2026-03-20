@@ -190,13 +190,26 @@ export interface Operadora {
   ativo:          boolean;
   criado_em?:     string;
   /** Brandguide: cor principal (ex: #7c3aed) */
-  cor_primaria?:  string | null;
+  cor_primaria?:    string | null;
   /** Brandguide: cor secundária */
-  cor_secundaria?: string | null;
+  cor_secundaria?:  string | null;
   /** Brandguide: cor de destaque */
-  cor_accent?:    string | null;
+  cor_accent?:      string | null;
+  /** Brandguide: cor de fundo */
+  cor_background?:  string | null;
+  /** Brandguide: cor dos textos */
+  cor_textos?:      string | null;
+  /** Brandguide: cor dos ícones */
+  cor_icones?:      string | null;
+  /** Brandguide: cores adicionais (uso livre) */
+  cor_adicional_1?: string | null;
+  cor_adicional_2?: string | null;
+  cor_adicional_3?: string | null;
+  cor_adicional_4?: string | null;
   /** Brandguide: URL do logo */
-  logo_url?:      string | null;
+  logo_url?:        string | null;
+  /** Brandguide: URL da fonte customizada (.woff2, .woff, .ttf) */
+  font_url?:        string | null;
 }
 
 // ─── OPERADORA PAGES ─────────────────────────────────────────────────────────

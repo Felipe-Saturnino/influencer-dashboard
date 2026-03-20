@@ -4,8 +4,16 @@
   --brand-primary:    #7c3aed;
   --brand-secondary:  #4a2082;
   --brand-accent:     #1e36f8;
+  --brand-background: #0f0f1a;
+  --brand-text:       #ffffff;
+  --brand-icon:       #70cae4;
+  --brand-extra1:     #1e36f8;
+  --brand-extra2:     #22c55e;
+  --brand-extra3:     #f59e0b;
+  --brand-extra4:     #e84025;
   --brand-danger:     #e84025;
   --brand-success:    #22c55e;
+  --brand-fontFamily: "Inter", "Helvetica Neue", Arial, sans-serif;
 }
 
 /* Scrollbar da sidebar */

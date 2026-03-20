@@ -25,9 +25,10 @@ export interface EscoposVisiveis {
   vêTodosInfluencers?: boolean;   // true = executivo, vê todos os influencers
 }
 
-/** Brand da operadora (operador): logo e cores aplicadas via CSS vars */
+/** Brand da operadora (operador): logo, fonte e cores aplicadas via CSS vars */
 export interface OperadoraBrand {
   logo_url: string | null;
+  font_url:  string | null;
 }
 
 interface AppContextValue {
@@ -57,11 +58,19 @@ const AppContext = createContext<AppContextValue | null>(null);
 const ESCOPOS_VAZIOS: EscoposVisiveis = { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: false };
 
 const BRAND_DEFAULTS = {
-  primary:   "#7c3aed",
-  secondary: "#4a2082",
-  accent:    "#1e36f8",
-  danger:    "#e84025",
-  success:   "#22c55e",
+  primary:     "#7c3aed",
+  secondary:   "#4a2082",
+  accent:      "#1e36f8",
+  background:  "#0f0f1a",
+  text:        "#ffffff",
+  icon:        "#70cae4",
+  extra1:      "#1e36f8",
+  extra2:      "#22c55e",
+  extra3:      "#f59e0b",
+  extra4:      "#e84025",
+  danger:      "#e84025",
+  success:     "#22c55e",
+  fontFamily:  "'Inter', 'Helvetica Neue', Arial, sans-serif",
 } as const;
 
 function aplicarBrandguide(vars: Partial<Record<keyof typeof BRAND_DEFAULTS, string | null>>) {
@@ -208,23 +217,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const slug = escoposVisiveis.operadorasVisiveis[0];
     void (async () => {
       try {
-        const { data } = await supabase.from("operadoras").select("cor_primaria, cor_secundaria, cor_accent, logo_url").eq("slug", slug).single();
-        if (data?.cor_primaria || data?.cor_secundaria || data?.cor_accent) {
+        const { data } = await supabase.from("operadoras").select(
+          "cor_primaria, cor_secundaria, cor_accent, cor_background, cor_textos, cor_icones, cor_adicional_1, cor_adicional_2, cor_adicional_3, cor_adicional_4, logo_url, font_url"
+        ).eq("slug", slug).single();
+        const hasBrand = data?.cor_primaria || data?.cor_secundaria || data?.cor_accent || data?.cor_background || data?.cor_textos || data?.cor_icones;
+        if (hasBrand) {
           aplicarBrandguide({
-            primary:   data.cor_primaria   ?? null,
-            secondary: data.cor_secundaria ?? null,
-            accent:    data.cor_accent    ?? null,
+            primary:    data?.cor_primaria    ?? null,
+            secondary:  data?.cor_secundaria  ?? null,
+            accent:     data?.cor_accent      ?? null,
+            background: data?.cor_background  ?? null,
+            text:       data?.cor_textos      ?? null,
+            icon:       data?.cor_icones      ?? null,
+            extra1:     data?.cor_adicional_1 ?? null,
+            extra2:     data?.cor_adicional_2 ?? null,
+            extra3:     data?.cor_adicional_3 ?? null,
+            extra4:     data?.cor_adicional_4 ?? null,
           });
         } else {
           aplicarBrandguide({});
         }
-        setOperadoraBrand({ logo_url: (data?.logo_url ?? "").trim() || null });
+        const logo = (data?.logo_url ?? "").trim() || null;
+        const font = (data?.font_url ?? "").trim() || null;
+        setOperadoraBrand({ logo_url: logo, font_url: font });
       } catch {
         aplicarBrandguide({});
         setOperadoraBrand(null);
       }
     })();
   }, [user?.id, user?.role, escoposVisiveis.operadorasVisiveis]);
+
+  // Fonte customizada: injeta @font-face e aplica --brand-fontFamily quando operador tem font_url
+  useEffect(() => {
+    const id = "operadora-brand-font";
+    const existing = document.getElementById(id);
+    if (existing) existing.remove();
+    const root = document.documentElement.style;
+    if (!operadoraBrand?.font_url) {
+      root.setProperty("--brand-fontFamily", BRAND_DEFAULTS.fontFamily);
+      return;
+    }
+    const url = operadoraBrand.font_url;
+    const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "woff2";
+    const format = ext === "woff2" ? "woff2" : ext === "woff" ? "woff" : "truetype";
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = `@font-face{font-family:"OperadoraBrandFont";src:url("${url}") format("${format}");font-display:swap;}`;
+    document.head.appendChild(style);
+    root.setProperty("--brand-fontFamily", '"OperadoraBrandFont", "Inter", sans-serif');
+    return () => {
+      document.getElementById(id)?.remove();
+      root.setProperty("--brand-fontFamily", BRAND_DEFAULTS.fontFamily);
+    };
+  }, [operadoraBrand?.font_url]);
 
   // Wrapper de setUser que também carrega permissões e escopos
   async function setUser(u: User | null) {
