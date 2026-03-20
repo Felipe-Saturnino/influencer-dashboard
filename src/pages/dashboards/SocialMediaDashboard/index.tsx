@@ -100,25 +100,31 @@ function SectionTitle({
   icon,
   children,
   sub,
+  useBrand,
 }: {
   icon: React.ReactNode;
   children: React.ReactNode;
   sub?: string;
+  useBrand?: boolean;
 }) {
   const { theme: t } = useApp();
+  const titleColor = useBrand ? "var(--brand-primary)" : t.text;
+  const iconBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)" : "rgba(74,32,130,0.18)";
+  const iconBorder = useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)" : "1px solid rgba(74,32,130,0.30)";
+  const iconColor = useBrand ? "var(--brand-primary)" : BRAND.ciano;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: "rgba(74,32,130,0.18)",
-        border: "1px solid rgba(74,32,130,0.30)",
+        background: iconBg,
+        border: iconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: BRAND.ciano, flexShrink: 0,
+        color: iconColor, flexShrink: 0,
       }}>
         {icon}
       </span>
       <span style={{
-        fontSize: 14, fontWeight: 800, color: t.text,
+        fontSize: 14, fontWeight: 800, color: titleColor,
         fontFamily: FONT_TITLE,
         letterSpacing: "0.05em", textTransform: "uppercase" as const,
       }}>
@@ -139,33 +145,43 @@ function KpiCard({
   valor,
   delta,
   up,
+  accentVar,
   accentCor,
   icon,
+  useBrand,
+  cardBg,
 }: {
   label: string;
   valor: string;
   delta?: string | null;
   up?: boolean;
+  accentVar?: string;
   accentCor: string;
   icon: React.ReactNode;
+  useBrand?: boolean;
+  cardBg?: string;
 }) {
   const { theme: t } = useApp();
+  const barBg = useBrand && accentVar ? `linear-gradient(90deg, var(${accentVar}), transparent)` : `linear-gradient(90deg, ${accentCor}, transparent)`;
+  const iconBoxBg = useBrand && accentVar ? `color-mix(in srgb, var(${accentVar}) 10%, transparent)` : `${accentCor}20`;
+  const iconBoxBorder = useBrand && accentVar ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)` : `1px solid ${accentCor}40`;
+  const iconBoxColor = useBrand && accentVar ? `var(${accentVar})` : accentCor;
   return (
     <div style={{
       borderRadius: 14,
       border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg,
+      background: cardBg ?? t.cardBg,
       overflow: "hidden",
     }}>
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentCor}, transparent)` }} />
+      <div style={{ height: 3, background: barBg }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{
             width: 30, height: 30, borderRadius: 8,
-            background: `${accentCor}20`,
-            border: `1px solid ${accentCor}40`,
+            background: iconBoxBg,
+            border: iconBoxBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: accentCor, flexShrink: 0, fontSize: 15,
+            color: iconBoxColor, flexShrink: 0, fontSize: 15,
           }}>
             {icon}
           </span>
@@ -436,8 +452,10 @@ export default function SocialMediaDashboard() {
   const totalFormatos = formatos.reduce((a, f) => a + f.total, 0);
 
   // ── Estilos base ─────────────────────────────────────────────────────────────
+  const useBrand = user?.role === "operador" && !!operadoraBrand;
+  const blockBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
   const card: React.CSSProperties = {
-    background: t.cardBg,
+    background: blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -482,7 +500,7 @@ export default function SocialMediaDashboard() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: user?.role === "operador" && operadoraBrand?.cor_background && t.isDark ? operadoraBrand.cor_background : t.cardBg,
+          background: blockBg,
           padding: "12px 20px",
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: 10, flexWrap: "wrap" as const,
@@ -528,13 +546,13 @@ export default function SocialMediaDashboard() {
         <>
           {/* KPIs GERAIS */}
           <div style={card}>
-            <SectionTitle icon={<GiPokerHand size={14} />}>
+            <SectionTitle icon={<GiPokerHand size={14} />} useBrand={useBrand}>
               KPIs de Mídias Sociais
             </SectionTitle>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12 }}>
-              <KpiCard label="Seguidores totais" valor={fmtNum(totais.seguidores)}  accentCor={BRAND.roxo}  icon={<GiMicrophone size={15} />} />
-              <KpiCard label="Impressões totais" valor={fmtNum(totais.impressoes)}  accentCor={BRAND.azul}  icon={<GiStarMedal size={15} />}  />
-              <KpiCard label="Engajamento médio" valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"} accentCor={BRAND.ciano} icon={<GiPokerHand size={15} />} />
+              <KpiCard label="Seguidores totais" valor={fmtNum(totais.seguidores)}  accentVar="--brand-extra1" accentCor={BRAND.roxo}  icon={<GiMicrophone size={15} />} useBrand={useBrand} cardBg={blockBg} />
+              <KpiCard label="Impressões totais" valor={fmtNum(totais.impressoes)}  accentVar="--brand-extra2" accentCor={BRAND.azul}  icon={<GiStarMedal size={15} />}  useBrand={useBrand} cardBg={blockBg} />
+              <KpiCard label="Engajamento médio" valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"} accentVar="--brand-extra3" accentCor={BRAND.ciano} icon={<GiPokerHand size={15} />} useBrand={useBrand} cardBg={blockBg} />
             </div>
           </div>
 
@@ -545,7 +563,7 @@ export default function SocialMediaDashboard() {
               const stats  = cfg.stats(byCh);
               const engVal = byCh.length ? (byCh[byCh.length - 1]?.engagement_rate ?? 0) * 100 : 0;
               return (
-                <div key={cfg.channel} style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: t.cardBg, overflow: "hidden" }}>
+                <div key={cfg.channel} style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: blockBg, overflow: "hidden" }}>
                   <div style={{ height: 3, background: cfg.cor }} />
                   <div style={{ padding: "14px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${t.cardBorder}` }}>
@@ -570,7 +588,7 @@ export default function SocialMediaDashboard() {
           {/* Engajamento por formato + Funil */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div style={{ ...card, marginBottom: 0 }}>
-              <SectionTitle icon={<GiStarMedal size={14} />}>Engajamento por formato</SectionTitle>
+              <SectionTitle icon={<GiStarMedal size={14} />} useBrand={useBrand}>Engajamento por formato</SectionTitle>
               {formatos.length > 0 ? (
                 formatos.map((f, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === formatos.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
@@ -586,7 +604,7 @@ export default function SocialMediaDashboard() {
               )}
             </div>
             <div style={{ ...card, marginBottom: 0 }}>
-              <SectionTitle icon={<GiPlayerNext size={14} />}>Funil de conversão</SectionTitle>
+              <SectionTitle icon={<GiPlayerNext size={14} />} useBrand={useBrand}>Funil de conversão</SectionTitle>
               {(() => {
                 const acessos   = funilTotais?.visitas   ?? 0;
                 const registros = funilTotais?.registros ?? 0;
