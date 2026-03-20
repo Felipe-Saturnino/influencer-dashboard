@@ -393,8 +393,10 @@ export default function MesasSpin() {
   }, [historico, dailyData, monthlyData]);
 
   // ── Estilos base ─────────────────────────────────────────────────────────────
+  const useBrand = user?.role === "operador" && !!operadoraBrand;
+  const blockBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
   const card: React.CSSProperties = {
-    background: t.cardBg,
+    background: blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
