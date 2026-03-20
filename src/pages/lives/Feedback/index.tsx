@@ -173,7 +173,7 @@ interface LiveComObs extends Omit<Live, "observacao"> {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Feedback() {
   const { theme: t, isDark } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("feedback");
 
   const [periodo,           setPeriodo]           = useState<Periodo>("semana");
@@ -202,6 +202,7 @@ export default function Feedback() {
       .order("data", { ascending: false })
       .order("horario", { ascending: true });
 
+    if (operadoraSlugsForcado?.length) baseQuery = baseQuery.in("operadora_slug", operadoraSlugsForcado);
     if (influencerFiltros.length > 0) baseQuery = baseQuery.in("influencer_id", influencerFiltros);
 
     const { data: allData } = await baseQuery;
@@ -239,7 +240,7 @@ export default function Feedback() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [periodo, statusFiltro, influencerFiltros, podeVerInfluencer]);
+  useEffect(() => { loadData(); }, [periodo, statusFiltro, influencerFiltros, podeVerInfluencer, operadoraSlugsForcado]);
 
   useEffect(() => {
     supabase.from("operadoras").select("slug, nome").order("nome")
@@ -247,14 +248,16 @@ export default function Feedback() {
   }, []);
 
   const livesAllFiltered = useMemo(() => {
+    if (operadoraSlugsForcado?.length) return livesAll.filter((l) => l.operadora_slug && operadoraSlugsForcado.includes(l.operadora_slug));
     if (!filterOperadora || filterOperadora === "todas") return livesAll;
     return livesAll.filter((l) => l.operadora_slug === filterOperadora);
-  }, [livesAll, filterOperadora]);
+  }, [livesAll, filterOperadora, operadoraSlugsForcado]);
 
   const livesFiltered = useMemo(() => {
+    if (operadoraSlugsForcado?.length) return lives.filter((l) => l.operadora_slug && operadoraSlugsForcado.includes(l.operadora_slug));
     if (!filterOperadora || filterOperadora === "todas") return lives;
     return lives.filter((l) => l.operadora_slug === filterOperadora);
-  }, [lives, filterOperadora]);
+  }, [lives, filterOperadora, operadoraSlugsForcado]);
 
   // ── Cálculos dos quadros ──────────────────────────────────────────────────
   const totalLives         = livesAllFiltered.length;

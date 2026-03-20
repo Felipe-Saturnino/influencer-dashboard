@@ -458,7 +458,7 @@ function FunilVisual({ values, taxas }: {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_overview");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -471,6 +471,8 @@ export default function DashboardOverview() {
 
   const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
   const [filtroOperadora, setFiltroOperadora]   = useState<string>("todas");
+
+  const operadoraSlugParaApi = operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined);
   const [operadorasList, setOperadorasList]     = useState<{ slug: string; nome: string }[]>([]);
   const [operadoraInfMap, setOperadoraInfMap]   = useState<Record<string, string[]>>({});
   const [statusFiltro, setStatusFiltro]         = useState<StatusLabel | null>(null);
@@ -514,13 +516,14 @@ export default function DashboardOverview() {
         let q = supabase.from("influencer_metricas")
           .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data")
           .gte("data", ini).lte("data", fim);
-        if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
+        if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+        else if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
         const { data } = await q;
         const metricas = data || [];
         if (!incluirAliases) return metricas;
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          operadora_slug: operadoraSlugParaApi,
           dataInicio: ini,
           dataFim: fim,
         });
@@ -528,9 +531,9 @@ export default function DashboardOverview() {
       }
 
       async function buscaLives(ini: string, fim: string): Promise<LiveData[]> {
-        const { data } = await supabase.from("lives")
-          .select("id, influencer_id, status, plataforma, data")
-          .eq("status", "realizada").gte("data", ini).lte("data", fim);
+        let q = supabase.from("lives").select("id, influencer_id, status, plataforma, data").eq("status", "realizada").gte("data", ini).lte("data", fim);
+        if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+        const { data } = await q;
         return data || [];
       }
 
@@ -592,12 +595,13 @@ export default function DashboardOverview() {
       if (historico) {
         periodo = { inicio: "2020-01-01", fim: fmt(new Date()) };
         let qM = supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
-        if (filtroOperadora !== "todas") qM = qM.eq("operadora_slug", filtroOperadora);
+        if (operadoraSlugsForcado?.length) qM = qM.in("operadora_slug", operadoraSlugsForcado);
+        else if (filtroOperadora !== "todas") qM = qM.eq("operadora_slug", filtroOperadora);
         const { data: mAll } = await qM;
         let mRaw = mAll || [];
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          operadora_slug: operadoraSlugParaApi,
           dataInicio: periodo.inicio,
           dataFim: periodo.fim,
         });
@@ -613,7 +617,7 @@ export default function DashboardOverview() {
       }
 
       const investimentoPago = await buscarInvestimentoPago(periodo, {
-        operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+        operadora_slug: operadoraSlugParaApi,
       });
       const rows = montaRanking(metricas, lives, resultados, investimentoPago.porInfluencer);
       const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
@@ -624,7 +628,7 @@ export default function DashboardOverview() {
         const periodoAnt = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
         const [investAnt, mA, lA] = await Promise.all([
           buscarInvestimentoPago(periodoAnt, {
-            operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+            operadora_slug: operadoraSlugParaApi,
           }),
           buscaMetricas(periodoAnt.inicio, periodoAnt.fim, false),
           buscaLives(periodoAnt.inicio, periodoAnt.fim),
@@ -641,31 +645,33 @@ export default function DashboardOverview() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, mesSelecionado, podeVerInfluencer, filtroOperadora]);
+  }, [historico, idxMes, mesSelecionado, podeVerInfluencer, filtroOperadora, operadoraSlugsForcado, operadoraSlugParaApi]);
 
-  // ── RANKING FILTRADO ──────────────────────────────────────────────────────────
+  const idsOperadoraEfetiva = useMemo(() => {
+    if (operadoraSlugsForcado?.length) {
+      const set = new Set<string>();
+      operadoraSlugsForcado.forEach(slug => (operadoraInfMap[slug] ?? []).forEach(id => set.add(id)));
+      return set;
+    }
+    if (filtroOperadora !== "todas") return new Set(operadoraInfMap[filtroOperadora] ?? []);
+    return null;
+  }, [operadoraSlugsForcado, filtroOperadora, operadoraInfMap]);
+
   const rankingFiltrado = useMemo(() => {
     let r = ranking;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (filtroOperadora !== "todas") {
-      const ids = operadoraInfMap[filtroOperadora] ?? [];
-      r = r.filter((row) => ids.includes(row.influencer_id));
-    }
+    if (idsOperadoraEfetiva) r = r.filter((row) => idsOperadoraEfetiva.has(row.influencer_id));
     if (statusFiltro) r = r.filter((row) => row.statusLabel === statusFiltro);
     return r;
-  }, [ranking, filtroInfluencer, filtroOperadora, statusFiltro, operadoraInfMap]);
+  }, [ranking, filtroInfluencer, idsOperadoraEfetiva, statusFiltro]);
 
-  // Mesmo filtro aplicado ao período anterior (para comparativo MTD)
   const rankingAntFiltrado = useMemo(() => {
     let r = rankingAnt;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (filtroOperadora !== "todas") {
-      const ids = operadoraInfMap[filtroOperadora] ?? [];
-      r = r.filter((row) => ids.includes(row.influencer_id));
-    }
+    if (idsOperadoraEfetiva) r = r.filter((row) => idsOperadoraEfetiva.has(row.influencer_id));
     if (statusFiltro) r = r.filter((row) => row.statusLabel === statusFiltro);
     return r;
-  }, [rankingAnt, filtroInfluencer, filtroOperadora, statusFiltro, operadoraInfMap]);
+  }, [rankingAnt, filtroInfluencer, idsOperadoraEfetiva, statusFiltro]);
 
   // Totais exibidos nos KPIs e Funil (respeitam filtros de influencer/operadora/status)
   // Com filtro por influencer: desconsiderar Agentes (soma só das rows). Sem filtro: usar totais (inclui Agentes)

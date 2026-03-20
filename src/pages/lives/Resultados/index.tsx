@@ -56,7 +56,7 @@ function fmtData(iso: string): string {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Resultados() {
   const { theme: t, isDark } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("resultados");
 
   const [lives,          setLives]          = useState<Live[]>([]);
@@ -79,13 +79,9 @@ export default function Resultados() {
 
   async function loadData() {
     setLoading(true);
-    const { data: livesData } = await supabase
-      .from("lives")
-      .select("*, profiles!lives_influencer_id_fkey(name)")
-      .lt("data", todayISO)
-      .eq("status", "agendada")
-      .order("data", { ascending: false })
-      .order("horario", { ascending: true });
+    let q = supabase.from("lives").select("*, profiles!lives_influencer_id_fkey(name)").lt("data", todayISO).eq("status", "agendada").order("data", { ascending: false }).order("horario", { ascending: true });
+    if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+    const { data: livesData } = await q;
 
     if (livesData) {
       const mapped = livesData.map((l: { profiles?: { name: string }; [k: string]: unknown }) => ({ ...l, influencer_name: l.profiles?.name })) as Live[];
@@ -116,7 +112,7 @@ export default function Resultados() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [podeVerInfluencer]);
+  useEffect(() => { loadData(); }, [podeVerInfluencer, operadoraSlugsForcado]);
 
   useEffect(() => {
     supabase.from("profiles").select("id, name").eq("role", "influencer")
@@ -132,10 +128,12 @@ export default function Resultados() {
     let out = lives;
     if (filterInfluencers.length > 0)
       out = out.filter((l) => filterInfluencers.includes(l.influencer_id));
-    if (filterOperadora && filterOperadora !== "todas")
+    if (operadoraSlugsForcado?.length)
+      out = out.filter((l) => l.operadora_slug && operadoraSlugsForcado.includes(l.operadora_slug));
+    else if (filterOperadora && filterOperadora !== "todas")
       out = out.filter((l) => l.operadora_slug === filterOperadora);
     return out;
-  }, [lives, filterInfluencers, filterOperadora]);
+  }, [lives, filterInfluencers, filterOperadora, operadoraSlugsForcado]);
 
   // ── LiveCard ─────────────────────────────────────────────────────────────────
   function LiveCard({ live }: { live: Live }) {

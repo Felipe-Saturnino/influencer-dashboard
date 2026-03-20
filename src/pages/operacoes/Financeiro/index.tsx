@@ -646,13 +646,14 @@ interface BlocoFiltros {
   podeVerOperadora: (slug: string) => boolean;
   filterInfluencers: string[];
   filterOperadora: string;
+  filtroOp: string[] | null;
   operadoraInfMap: Record<string, string[]>;
   operadorasList: { slug: string; nome: string }[];
 }
 
 function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
-  const { podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap } = filtros;
+  const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap } = filtros;
   const OPCOES = useMemo(() => gerarMeses(), []);
 
   const [mes, setMes] = useState("");
@@ -685,7 +686,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     if (periodo) {
       const { total } = await buscarInvestimentoPago(periodo, {
         influencerIds: filterInfluencers.length > 0 ? filterInfluencers : undefined,
-        operadora_slug: filterOperadora !== "todas" ? filterOperadora : undefined,
+        operadora_slug: filtroOp?.length ? filtroOp[0] : (filterOperadora !== "todas" ? filterOperadora : undefined),
       });
       setTotalPago(total);
     }
@@ -702,11 +703,15 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
 
     let allPags = (pags ?? []).filter((p: any) => podeVerInfluencer(p.influencer_id));
     if (filterInfluencers.length > 0) allPags = allPags.filter((p: any) => filterInfluencers.includes(p.influencer_id));
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      allPags = allPags.filter((p: any) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       allPags = allPags.filter((p: any) => p.operadora_slug === filterOperadora);
     }
     let allAgs = user?.role === "influencer" ? [] : (agentes ?? []);
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      allAgs = allAgs.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       allAgs = allAgs.filter((a: any) => a.operadora_slug === filterOperadora);
     }
 
@@ -782,7 +787,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 }) {
   const { theme: t, user } = useApp();
   const perm = usePermission("financeiro");
-  const { podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList } = filtros;
+  const { podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap, operadorasList } = filtros;
 
   const cicloAtualAberto = ciclos.find(c => !c.fechado_em && cicloAberto(c));
   const [cicloId, setCicloId] = useState<string>(cicloAtualAberto?.id ?? ciclos[0]?.id ?? "");
@@ -917,7 +922,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
     let parKeys = Object.keys(horasPorPar);
     if (filterInfluencers.length > 0) parKeys = parKeys.filter((k) => filterInfluencers.includes(k.split("::")[0]));
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      parKeys = parKeys.filter((k) => filtroOp.some(op => k.endsWith(`::${op}`)));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       parKeys = parKeys.filter((k) => k.endsWith(`::${filterOperadora}`));
     }
     const ids = [...new Set(parKeys.map((k) => k.split("::")[0]))];
@@ -1047,7 +1054,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
     let pagsFiltrados = pagsFinais.filter((p: any) => podeVerInfluencer(p.influencer_id));
     if (filterInfluencers.length > 0) pagsFiltrados = pagsFiltrados.filter((p: any) => filterInfluencers.includes(p.influencer_id));
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      pagsFiltrados = pagsFiltrados.filter((p: any) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       pagsFiltrados = pagsFiltrados.filter((p: any) => p.operadora_slug === filterOperadora);
     }
 
@@ -1068,7 +1077,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     });
 
     let agentesFiltrados = user?.role === "influencer" ? [] : (agentes ?? []);
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      agentesFiltrados = agentesFiltrados.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       agentesFiltrados = agentesFiltrados.filter((a: any) => a.operadora_slug === filterOperadora);
     }
     const linhasAg: PagamentoRow[] = agentesFiltrados.map((a: any) => ({
@@ -1412,7 +1423,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
 function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
-  const { podeVerInfluencer, filterInfluencers, filterOperadora } = filtros;
+  const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp } = filtros;
 
   const OPCOES_MESES = useMemo(() => [{ value: "", label: "Todos os meses" }, ...gerarMeses().slice(1)], []);
   const OPCOES_STATUS = [
@@ -1445,7 +1456,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const [historico, setHistorico] = useState<Record<string, any[]>>({});
   const [loadingHist, setLoadingHist] = useState<string | null>(null);
 
-  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora]);
+  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp]);
 
   async function carregar() {
     setLoading(true);
@@ -1493,7 +1504,12 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
       pagamentosData = pags ?? [];
       agentesData = agts ?? [];
     }
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      pagamentosData = pagamentosData.filter((p: any) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
+      agentesData = agentesData.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
+      const infIdsComPag = [...new Set(pagamentosData.map((p: any) => p.influencer_id))];
+      perfisFiltrados = perfisFiltrados.filter((p) => infIdsComPag.includes(p.id));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       pagamentosData = pagamentosData.filter((p: any) => p.operadora_slug === filterOperadora);
       agentesData = agentesData.filter((a: any) => a.operadora_slug === filterOperadora);
       const infIdsComPag = [...new Set(pagamentosData.map((p: any) => p.influencer_id))];
@@ -1733,7 +1749,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
 export default function Financeiro() {
   const { theme: t, user } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("financeiro");
 
   const [ciclos, setCiclos] = useState<CicloPagamento[]>([]);
@@ -1749,14 +1765,17 @@ export default function Financeiro() {
     [influencerList, podeVerInfluencer]
   );
 
+  const filterOperadoraEfetivo = operadoraSlugsForcado?.length ? operadoraSlugsForcado[0] : filterOperadora;
+  const filtroOp = operadoraSlugsForcado?.length ? operadoraSlugsForcado : (filterOperadora !== "todas" ? [filterOperadora] : null);
   const filtros: BlocoFiltros = useMemo(() => ({
     podeVerInfluencer,
     podeVerOperadora,
     filterInfluencers,
-    filterOperadora,
+    filterOperadora: filterOperadoraEfetivo,
+    filtroOp,
     operadoraInfMap,
     operadorasList,
-  }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList]);
+  }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadoraEfetivo, filtroOp, operadoraInfMap, operadorasList]);
 
   useEffect(() => { carregarCiclos(); }, [escoposVisiveis]);
 

@@ -723,11 +723,13 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     setScopePares(scopes.filter(s => s.scope_type === "agencia_par").map(s => s.scope_ref));
   }, [editando]);
 
+  // Limpa escopos apenas quando o usuário muda o perfil manualmente (não ao carregar editando)
   useEffect(() => {
+    if (editando && role === editando.role) return;
     setScopeInfluencers([]);
     setScopeOperadoras([]);
     setScopePares([]);
-  }, [role]);
+  }, [role, editando]);
 
   // Pares Agência: sync ao carregar editando (agência) ou ao mudar role para agência
   useEffect(() => {
@@ -751,6 +753,10 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     val: string
   ) => setList(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
 
+  // Operador: seleção única — ao escolher outra operadora, substitui a anterior
+  const selectOperadoraUnica = (slug: string) =>
+    setScopeOperadoras(prev => (prev.includes(slug) ? prev : [slug]));
+
   const salvar = async () => {
     setErro("");
     if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
@@ -759,7 +765,10 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
       setErro("Selecione pelo menos uma operadora para o influencer."); return;
     }
     if (role === "operador" && scopeOperadoras.length === 0) {
-      setErro("Selecione pelo menos uma operadora para o operador."); return;
+      setErro("Selecione uma operadora para o operador."); return;
+    }
+    if (role === "operador" && scopeOperadoras.length > 1) {
+      setErro("O perfil Operador permite apenas uma operadora."); return;
     }
     const paresValidos = role === "agencia"
       ? paresAgencia.filter(p => p.influencerId && p.operadoraSlug)
@@ -775,7 +784,9 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
         ? paresAgencia.filter(p => p.influencerId && p.operadoraSlug).map(p => `${p.influencerId}:${p.operadoraSlug}`)
         : scopePares;
       const scopeInfluencersArr = Array.isArray(scopeInfluencers) ? scopeInfluencers : [];
-      const scopeOperadorasArr = Array.isArray(scopeOperadoras) ? scopeOperadoras : [];
+      const scopeOperadorasArr = role === "operador"
+        ? (Array.isArray(scopeOperadoras) ? scopeOperadoras : []).slice(0, 1)
+        : (Array.isArray(scopeOperadoras) ? scopeOperadoras : []);
 
       if (editando) {
         const res = await fetch("/api/atualizar-perfil", {
@@ -857,6 +868,72 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
     setParesAgencia(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : [{ influencerId: "", operadoraSlug: "" }]);
   const updateParAgencia = (idx: number, field: "influencerId" | "operadoraSlug", val: string) =>
     setParesAgencia(prev => prev.map((p, i) => i === idx ? { ...p, [field]: val } : p));
+
+  // ── SINGLE-SELECT (Operador: apenas 1 operadora) ──
+  const SingleSelectOperadora = ({
+    label,
+    items,
+    selected,
+    onSelect,
+    cor = BRAND.roxoVivo,
+    obrigatorio = false,
+  }: {
+    label: string;
+    items: { value: string; label: string }[];
+    selected: string[];
+    onSelect: (v: string) => void;
+    cor?: string;
+    obrigatorio?: boolean;
+  }) => (
+    <div style={field}>
+      <label style={labelStyle}>
+        {label}
+        {obrigatorio && <span style={{ color: BRAND.vermelho, marginLeft: 4 }}>*</span>}
+        <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6 }}>(seleção única)</span>
+      </label>
+      <div style={{
+        border:     `1px solid ${t.cardBorder}`,
+        borderRadius: 8,
+        padding:    10,
+        display:    "flex",
+        flexWrap:   "wrap",
+        gap:        8,
+        maxHeight:  160,
+        overflowY:  "auto",
+        background: t.bg,
+      }}>
+        {items.map(op => {
+          const sel = selected.includes(op.value);
+          return (
+            <button
+              key={op.value}
+              type="button"
+              onClick={() => onSelect(op.value)}
+              style={{
+                border:      `1px solid ${sel ? cor : t.cardBorder}`,
+                background:  sel ? cor + "22" : "transparent",
+                color:       sel ? cor : t.text,
+                borderRadius: 20,
+                padding:     "5px 12px",
+                cursor:      "pointer",
+                fontFamily:  FONT.body,
+                fontSize:    12,
+                fontWeight:  sel ? 700 : 400,
+                transition:  "all 0.15s",
+              }}
+            >
+              {op.label}
+            </button>
+          );
+        })}
+      </div>
+      {selected.length > 0 && (
+        <p style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, marginTop: 4 }}>
+          Operadora selecionada: {items.find(i => i.value === selected[0])?.label ?? selected[0]}
+        </p>
+      )}
+    </div>
+  );
 
   // ── MULTI-SELECT COMPONENT ──
   const MultiSelect = ({
@@ -1040,7 +1117,7 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
           <>
             {(role !== "executivo" && role !== "operador") && (
               <MultiSelect
-                label={`Influencers${role === "operador" ? "" : " (opcional)"}`}
+                label="Influencers (opcional)"
                 obrigatorio={false}
                 cor={roleBadgeColor("operador")}
                 items={influencers.map(i => ({ value: i.id, label: i.nome }))}
@@ -1048,14 +1125,25 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
                 onToggle={v => toggleItem(scopeInfluencers, setScopeInfluencers, v)}
               />
             )}
-            <MultiSelect
-              label={`Operadoras${role === "operador" ? "" : " (opcional)"}`}
-              obrigatorio={role === "operador"}
-              cor={roleBadgeColor("operador")}
-              items={operadoras.map(o => ({ value: o.slug, label: o.nome }))}
-              selected={scopeOperadoras}
-              onToggle={v => toggleItem(scopeOperadoras, setScopeOperadoras, v)}
-            />
+            {role === "operador" ? (
+              <SingleSelectOperadora
+                label="Operadora atribuída"
+                obrigatorio
+                cor={roleBadgeColor("operador")}
+                items={operadoras.map(o => ({ value: o.slug, label: o.nome }))}
+                selected={scopeOperadoras}
+                onSelect={selectOperadoraUnica}
+              />
+            ) : (
+              <MultiSelect
+                label="Operadoras (opcional)"
+                obrigatorio={false}
+                cor={roleBadgeColor("executivo")}
+                items={operadoras.map(o => ({ value: o.slug, label: o.nome }))}
+                selected={scopeOperadoras}
+                onToggle={v => toggleItem(scopeOperadoras, setScopeOperadoras, v)}
+              />
+            )}
           </>
         )}
 
@@ -1112,13 +1200,11 @@ function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuari
 }
 
 // ─── ABA OPERADORA ────────────────────────────────────────────────────────────
-// Configura quais páginas cada operador pode acessar por operadora.
-// Só exibe operadoras que o operador já tem em user_scopes.
+// Configura quais páginas cada operadora permite. Todos os operadores com escopo
+// na mesma operadora veem o mesmo menu.
 
 function AbaOperadora({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
-  const [operadores, setOperadores] = useState<UsuarioCompleto[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
-  const [operadorId, setOperadorId] = useState<string>("");
   const [operadoraPages, setOperadoraPages] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -1126,42 +1212,21 @@ function AbaOperadora({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [{ data: profiles }, { data: scopes }, { data: ops }] = await Promise.all([
-      supabase.from("profiles").select("id, name, email, role").eq("role", "operador").order("name"),
-      supabase.from("user_scopes").select("*"),
+    const [{ data: ops }, { data: opPages }] = await Promise.all([
       supabase.from("operadoras").select("*").order("nome"),
+      supabase.from("operadora_pages").select("operadora_slug, page_key"),
     ]);
-    const lista: UsuarioCompleto[] = (profiles ?? []).map(p => ({
-      ...p,
-      scopes: (scopes ?? []).filter(s => s.user_id === p.id),
-    }));
-    setOperadores(lista);
     setOperadoras(ops ?? []);
-    setOperadorId(prev => (prev ? prev : lista[0]?.id ?? ""));
+    const mapa: Record<string, Set<string>> = {};
+    (opPages ?? []).forEach(r => {
+      if (!mapa[r.operadora_slug]) mapa[r.operadora_slug] = new Set();
+      mapa[r.operadora_slug].add(r.page_key);
+    });
+    setOperadoraPages(mapa);
     setLoading(false);
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
-
-  const operador = operadores.find(u => u.id === operadorId);
-  const operadorasDoOperador = (operador?.scopes ?? [])
-    .filter(s => s.scope_type === "operadora")
-    .map(s => s.scope_ref);
-
-  useEffect(() => {
-    if (!operadorId) return;
-    supabase.from("user_operadora_pages")
-      .select("operadora_slug, page_key")
-      .eq("user_id", operadorId)
-      .then(({ data }) => {
-        const mapa: Record<string, Set<string>> = {};
-        (data ?? []).forEach(r => {
-          if (!mapa[r.operadora_slug]) mapa[r.operadora_slug] = new Set();
-          mapa[r.operadora_slug].add(r.page_key);
-        });
-        setOperadoraPages(mapa);
-      });
-  }, [operadorId]);
 
   const togglePage = (operadoraSlug: string, pageKey: string) => {
     setOperadoraPages(prev => {
@@ -1179,78 +1244,45 @@ function AbaOperadora({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
     operadoraPages[operadoraSlug]?.has(pageKey) ?? false;
 
   const salvar = async () => {
-    if (!operadorId) return;
     setSalvando(true); setSalvoOk(false);
-    const toInsert: { user_id: string; operadora_slug: string; page_key: string }[] = [];
-    Object.entries(operadoraPages).forEach(([slug, keys]) => {
-      keys.forEach(pageKey => toInsert.push({ user_id: operadorId, operadora_slug: slug, page_key: pageKey }));
-    });
-    const { error: delErr } = await supabase.from("user_operadora_pages").delete().eq("user_id", operadorId);
-    if (delErr) { setSalvando(false); alert(`Erro ao salvar: ${delErr.message}`); return; }
-    if (toInsert.length > 0) {
-      const { error: insErr } = await supabase.from("user_operadora_pages").insert(toInsert);
-      if (insErr) { setSalvando(false); alert(`Erro ao salvar: ${insErr.message}`); return; }
+    for (const slug of operadoras.map(o => o.slug)) {
+      const { error: delErr } = await supabase.from("operadora_pages").delete().eq("operadora_slug", slug);
+      if (delErr) { setSalvando(false); alert(`Erro ao salvar: ${delErr.message}`); return; }
+      const keys = operadoraPages[slug];
+      if (keys?.size) {
+        const toInsert = [...keys].map(pageKey => ({ operadora_slug: slug, page_key: pageKey }));
+        const { error: insErr } = await supabase.from("operadora_pages").insert(toInsert);
+        if (insErr) { setSalvando(false); alert(`Erro ao salvar: ${insErr.message}`); return; }
+      }
     }
     setSalvando(false); setSalvoOk(true);
     setTimeout(() => setSalvoOk(false), 2500);
-  };
-
-  const thStyle: React.CSSProperties = {
-    fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted,
-    textTransform: "uppercase", letterSpacing: "1px", padding: "12px 14px",
-    textAlign: "center", background: "rgba(74,32,130,0.10)",
-  };
-  const tdStyle: React.CSSProperties = {
-    fontFamily: FONT.body, fontSize: 13, color: t.text, padding: "10px 14px",
-    borderTop: `1px solid ${t.cardBorder}`,
   };
 
   if (loading) {
     return <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>;
   }
 
-  if (operadores.length === 0) {
+  if (operadoras.length === 0) {
     return (
       <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>
-        Nenhum operador cadastrado. Crie um usuário com perfil Operador na aba Usuários.
+        Nenhuma operadora cadastrada. Cadastre operadoras em Gestão de Operadoras.
       </div>
     );
   }
 
+  const pagesDaOp = PAGES.filter(p => p.key !== "gestao_usuarios");
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>Operador:</span>
-        <select
-          value={operadorId}
-          onChange={e => setOperadorId(e.target.value)}
-          style={{
-            background: t.inputBg ?? t.bg, border: `1px solid ${t.cardBorder}`,
-            borderRadius: 8, padding: "8px 14px", color: t.text, fontFamily: FONT.body,
-            fontSize: 13, minWidth: 220, cursor: "pointer",
-          }}
-        >
-          {operadores.map(u => (
-            <option key={u.id} value={u.id}>{u.name ?? u.email} ({u.email})</option>
-          ))}
-        </select>
-      </div>
-
-      {operadorasDoOperador.length === 0 ? (
-        <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>
-          Este operador não tem operadoras atribuídas. Atribua operadoras na aba Usuários (ao editar o usuário).
-        </div>
-      ) : (
-        <>
-          <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: 0 }}>
-            Marque as páginas que este operador pode acessar em cada operadora. As ações (criar/editar/excluir) vêm da aba Permissões.
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            {operadorasDoOperador.map(slug => {
-              const op = operadoras.find(o => o.slug === slug);
-              const nome = op?.nome ?? slug;
-              const pagesDaOp = PAGES.filter(p => p.key !== "gestao_usuarios");
-              return (
+      <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: 0 }}>
+        Marque as páginas que operadores de cada operadora podem acessar. Todos os operadores com escopo na mesma operadora veem o mesmo menu. As ações (criar/editar/excluir) vêm da aba Permissões.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        {operadoras.map(op => {
+          const slug = op.slug;
+          const nome = op.nome ?? slug;
+          return (
                 <div key={slug} style={{
                   border: `1px solid ${t.cardBorder}`, borderRadius: 12, overflow: "hidden",
                   borderLeft: `4px solid ${BRAND.roxoVivo}`,
@@ -1278,25 +1310,23 @@ function AbaOperadora({ t }: { t: ReturnType<typeof useApp>["theme"] }) {
                     ))}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
-            {salvoOk && (
-              <span style={{ display: "flex", alignItems: "center", gap: 6, color: BRAND.verde, fontFamily: FONT.body, fontSize: 13 }}>
-                <ShieldCheck size={14} /> Páginas salvas com sucesso
-              </span>
-            )}
-            <button onClick={salvar} disabled={salvando} style={{
-              background: salvando ? BRAND.cinza : BRAND.gradiente, color: "#fff", border: "none",
-              borderRadius: 10, padding: "10px 22px", cursor: salvando ? "not-allowed" : "pointer",
-              fontFamily: FONT.body, fontSize: 13, fontWeight: 600, opacity: salvando ? 0.7 : 1,
-            }}>
-              {salvando ? "Salvando..." : "Salvar páginas"}
-            </button>
-          </div>
-        </>
-      )}
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+        {salvoOk && (
+          <span style={{ display: "flex", alignItems: "center", gap: 6, color: BRAND.verde, fontFamily: FONT.body, fontSize: 13 }}>
+            <ShieldCheck size={14} /> Páginas salvas com sucesso
+          </span>
+        )}
+        <button onClick={salvar} disabled={salvando} style={{
+          background: salvando ? BRAND.cinza : BRAND.gradiente, color: "#fff", border: "none",
+          borderRadius: 10, padding: "10px 22px", cursor: salvando ? "not-allowed" : "pointer",
+          fontFamily: FONT.body, fontSize: 13, fontWeight: 600, opacity: salvando ? 0.7 : 1,
+        }}>
+          {salvando ? "Salvando..." : "Salvar páginas"}
+        </button>
+      </div>
     </div>
   );
 }

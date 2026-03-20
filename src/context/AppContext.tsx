@@ -125,10 +125,9 @@ async function carregarEscoposVisiveis(
 }
 
 // ─── Carrega can_view de todas as páginas para o role do usuário ──────────────
-// Para operador: intersecta com user_operadora_pages (só vê páginas liberadas por operadora)
+// Para operador: intersecta com operadora_pages (páginas liberadas por operadora)
 async function carregarPermissoes(
   role: User["role"],
-  userId?: string,
   operadorasVisiveis?: string[]
 ): Promise<PermissoesMapa> {
   const { data } = await supabase
@@ -158,15 +157,14 @@ async function carregarPermissoes(
     mapa.dash_overview_influencer = "sim";
   }
 
-  // Operador: só vê páginas que estão em user_operadora_pages para suas operadoras
+  // Operador: só vê páginas que estão em operadora_pages para suas operadoras
   if (role === "operador") {
     if (!operadorasVisiveis || operadorasVisiveis.length === 0) {
       ALL_PAGE_KEYS.forEach((k) => { mapa[k] = "nao"; });
-    } else if (userId) {
+    } else {
       const { data: opPages } = await supabase
-        .from("user_operadora_pages")
+        .from("operadora_pages")
         .select("page_key")
-        .eq("user_id", userId)
         .in("operadora_slug", operadorasVisiveis);
       const pagesPermitidas = new Set((opPages ?? []).map((r) => r.page_key));
       ALL_PAGE_KEYS.forEach((k) => {
@@ -226,7 +224,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setEscoposVisiveis(escopos);
         const perms = await carregarPermissoes(
           u.role,
-          u.role === "operador" ? u.id : undefined,
           u.role === "operador" ? escopos.operadorasVisiveis : undefined
         );
         setPermissions(perms);
@@ -273,7 +270,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
               setEscoposVisiveis(escopos);
               const perms = await carregarPermissoes(
                 u.role,
-                u.role === "operador" ? u.id : undefined,
                 u.role === "operador" ? escopos.operadorasVisiveis : undefined
               );
               setPermissions(perms);

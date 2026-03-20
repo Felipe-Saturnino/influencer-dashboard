@@ -174,7 +174,7 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
   const { theme: t, isDark } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("agenda");
 
   const [view,    setView]    = useState<ViewMode>("mes");
@@ -198,11 +198,9 @@ export default function Agenda() {
   );
   async function loadLives() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("lives")
-      .select("*, profiles!lives_influencer_id_fkey(name)")
-      .order("data",    { ascending: true })
-      .order("horario", { ascending: true });
+    let q = supabase.from("lives").select("*, profiles!lives_influencer_id_fkey(name)").order("data", { ascending: true }).order("horario", { ascending: true });
+    if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+    const { data, error } = await q;
     if (!error && data) {
       const mapped = data.map((l: any) => ({ ...l, influencer_name: l.profiles?.name }));
       setLives(mapped.filter((l: Live) => podeVerInfluencer(l.influencer_id)));
@@ -210,7 +208,7 @@ export default function Agenda() {
     setLoading(false);
   }
 
-  useEffect(() => { loadLives(); }, [podeVerInfluencer]);
+  useEffect(() => { loadLives(); }, [podeVerInfluencer, operadoraSlugsForcado]);
 
   useEffect(() => {
     if (showFiltroInfluencer || showFiltroOperadora) {
@@ -224,6 +222,7 @@ export default function Agenda() {
     }
   }, [showFiltroInfluencer, showFiltroOperadora]);
 
+  const operadoraEfetiva = operadoraSlugsForcado ?? (filterOperadora !== "todas" ? [filterOperadora] : null);
   function livesForDay(date: Date): Live[] {
     const iso = toISO(date);
     return lives.filter(l => {
@@ -231,7 +230,7 @@ export default function Agenda() {
       if (filterStatus && l.status !== filterStatus) return false;
       if (filterPlat   && l.plataforma !== filterPlat) return false;
       if (filterInfluencers.length > 0 && !filterInfluencers.includes(l.influencer_id)) return false;
-      if (filterOperadora !== "todas" && l.operadora_slug !== filterOperadora) return false;
+      if (operadoraEfetiva && (!l.operadora_slug || !operadoraEfetiva.includes(l.operadora_slug))) return false;
       return true;
     });
   }

@@ -199,11 +199,10 @@ export interface Operadora {
   logo_url?:      string | null;
 }
 
-// ─── USER OPERADORA PAGES ────────────────────────────────────────────────────
-/** Páginas que um operador pode acessar por operadora */
-export interface UserOperadoraPage {
+// ─── OPERADORA PAGES ─────────────────────────────────────────────────────────
+/** Páginas que operadores de cada operadora podem acessar (todos veem o mesmo) */
+export interface OperadoraPage {
   id:             string;
-  user_id:        string;
   operadora_slug: string;
   page_key:       PageKey;
   created_at?:    string;
