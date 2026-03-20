@@ -91,7 +91,11 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
     );
   }
 
+  const ordemSecoes = ["Dashboards", "Lives", "Operações", "Plataforma", "Geral"];
   const pagesDaOp = PAGES.filter((p) => p.key !== "gestao_usuarios");
+  const secoes = [...new Set(pagesDaOp.map((p) => p.secao))].sort(
+    (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR")
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -125,28 +129,63 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                gap: 8,
-                padding: 16,
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: 0,
+                padding: 0,
               }}
             >
-              {pagesDaOp.map((p) => (
-                <label
-                  key={p.key}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    cursor: "pointer",
-                    fontFamily: FONT.body,
-                    fontSize: 13,
-                    color: t.text,
-                  }}
-                >
-                  <Checkbox checked={isPageChecked(op.slug, p.key)} onChange={() => togglePage(op.slug, p.key)} />
-                  {p.label}
-                </label>
-              ))}
+              {secoes.map((secao, secaoIdx) => {
+                const pagesDaSec = pagesDaOp.filter((p) => p.secao === secao).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+                if (pagesDaSec.length === 0) return null;
+                return (
+                  <div
+                    key={secao}
+                    style={{
+                      borderRight: secaoIdx < secoes.length - 1 ? `1px solid ${t.cardBorder}` : undefined,
+                      borderBottom: `1px solid ${t.cardBorder}`,
+                      padding: 0,
+                      minWidth: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "10px 14px",
+                        background: "rgba(74,32,130,0.08)",
+                        borderBottom: `2px solid ${t.cardBorder}`,
+                        fontFamily: FONT.body,
+                        fontWeight: 700,
+                        fontSize: 11,
+                        color: t.textMuted,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.8px",
+                      }}
+                    >
+                      {secao}
+                    </div>
+                    <div style={{ padding: "8px 12px" }}>
+                      {pagesDaSec.map((p, idx) => (
+                        <label
+                          key={p.key}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            cursor: "pointer",
+                            fontFamily: FONT.body,
+                            fontSize: 13,
+                            color: t.text,
+                            padding: "6px 4px",
+                            borderBottom: idx < pagesDaSec.length - 1 ? `1px solid ${t.cardBorder}` : "none",
+                          }}
+                        >
+                          <Checkbox checked={isPageChecked(op.slug, p.key)} onChange={() => togglePage(op.slug, p.key)} />
+                          {p.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}

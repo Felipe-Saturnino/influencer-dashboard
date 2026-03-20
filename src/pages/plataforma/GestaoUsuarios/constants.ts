@@ -18,7 +18,7 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "admin", label: "Administrador" },
   { value: "gestor", label: "Gestor" },
   { value: "executivo", label: "Executivo" },
-  { value: "influencer", label: "Influencer" },
+  { value: "influencer", label: "Influenciador" },
   { value: "operador", label: "Operador" },
   { value: "agencia", label: "Agência" },
 ];
@@ -53,7 +53,8 @@ export const PAGES: {
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
-export const ROLES_PERMISSOES: Role[] = ["admin", "gestor", "executivo", "influencer", "operador", "agencia"];
+/** Ordem: Administrador, Executivo, Gestor, Operador, Agência, Influenciador */
+export const ROLES_PERMISSOES: Role[] = ["admin", "executivo", "gestor", "operador", "agencia", "influencer"];
 
 export const PERM_OPCOES: { value: PermissaoValor; label: string }[] = [
   { value: "sim", label: "Sim" },

@@ -83,7 +83,10 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
     padding: "10px 14px",
     borderTop: `1px solid ${t.cardBorder}`,
   };
-  const secoes = [...new Set(PAGES.map((p) => p.secao))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const ordemSecoes = ["Dashboards", "Lives", "Operações", "Plataforma", "Geral"];
+  const secoes = [...new Set(PAGES.map((p) => p.secao))].sort(
+    (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR")
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -127,10 +130,16 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
             </tr>
           </thead>
           <tbody>
-            {secoes.map((secao) => {
+            {secoes.map((secao, secaoIdx) => {
               const pagesDaSec = PAGES.filter((p) => p.secao === secao).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
-              return pagesDaSec.map((page, idx) => (
-                <tr key={page.key} style={{ background: idx % 2 !== 0 ? "rgba(74,32,130,0.06)" : "transparent" }}>
+              const isUltimaSecao = secaoIdx === secoes.length - 1;
+              return pagesDaSec.map((page, idx) => {
+                const isUltimaLinhaDaSecao = idx === pagesDaSec.length - 1;
+                const borderInferior = isUltimaLinhaDaSecao && !isUltimaSecao
+                  ? `3px solid ${t.cardBorder}`
+                  : undefined;
+                return (
+                <tr key={page.key} style={{ background: idx % 2 !== 0 ? "rgba(74,32,130,0.06)" : "transparent", borderBottom: borderInferior }}>
                   {idx === 0 && (
                     <td
                       rowSpan={pagesDaSec.length}
@@ -144,6 +153,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
                         verticalAlign: "middle",
                         borderRight: `1px solid ${t.cardBorder}`,
                         borderLeft: `3px solid ${BRAND.roxo}`,
+                        borderBottom: !isUltimaSecao ? `3px solid ${t.cardBorder}` : undefined,
                         background: "rgba(74,32,130,0.10)",
                         paddingLeft: 12,
                       }}
@@ -151,7 +161,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
                       {secao}
                     </td>
                   )}
-                  <td style={tdStyle}>{page.label}</td>
+                  <td style={{ ...tdStyle, borderBottom: borderInferior }}>{page.label}</td>
                   {(["can_view", "can_criar", "can_editar", "can_excluir"] as const).map((campo) => {
                     const temAcao =
                       campo === "can_view"
@@ -163,13 +173,13 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
                             : page.hasExcluir;
                     if (!temAcao)
                       return (
-                        <td key={campo} style={{ ...tdStyle, textAlign: "center", color: t.textMuted, opacity: 0.3 }}>
+                        <td key={campo} style={{ ...tdStyle, textAlign: "center", color: t.textMuted, opacity: 0.3, borderBottom: borderInferior }}>
                           —
                         </td>
                       );
                     const val = (perms[page.key]?.[campo] as PermissaoValor) ?? null;
                     return (
-                      <td key={campo} style={{ ...tdStyle, textAlign: "center" }}>
+                      <td key={campo} style={{ ...tdStyle, textAlign: "center", borderBottom: borderInferior }}>
                         <select
                           value={val ?? ""}
                           onChange={(e) => setPerm(page.key, campo, (e.target.value as PermissaoValor) || null)}
@@ -198,7 +208,8 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
                     );
                   })}
                 </tr>
-              ));
+              );
+              });
             })}
           </tbody>
         </table>
