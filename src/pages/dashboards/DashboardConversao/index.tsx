@@ -370,7 +370,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_conversao");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -423,24 +423,26 @@ export default function DashboardConversao() {
         ? { inicio: "2020-01-01", fim: new Date().toISOString().split("T")[0] }
         : getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
       if (!historico && mesSelecionado) qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
-      if (filtroOperadora !== "todas") qMetricas = qMetricas.eq("operadora_slug", filtroOperadora);
+      if (operadoraSlugsForcado?.length) qMetricas = qMetricas.in("operadora_slug", operadoraSlugsForcado);
+      else if (filtroOperadora !== "todas") qMetricas = qMetricas.eq("operadora_slug", filtroOperadora);
       const { data: metricasData } = await qMetricas;
       let metricas = (metricasData || []) as { influencer_id: string; visit_count: number; registration_count: number; ftd_count: number }[];
       if (historico) {
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
           dataInicio: inicio,
           dataFim: fim,
         });
         metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
       }
 
-      let qLives = supabase.from("lives").select("id, influencer_id, status, plataforma, data").eq("status", "realizada");
+      let qLives = supabase.from("lives").select("id, influencer_id, status, plataforma, data, operadora_slug").eq("status", "realizada");
       if (!historico && mesSelecionado) {
         const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
         qLives = qLives.gte("data", inicio).lte("data", fim);
       }
+      if (operadoraSlugsForcado?.length) qLives = qLives.in("operadora_slug", operadoraSlugsForcado);
       const { data: livesData } = await qLives;
       const lives = livesData || [];
 
@@ -497,18 +499,22 @@ export default function DashboardConversao() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, mesSelecionado, podeVerInfluencer]);
+  }, [historico, idxMes, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
   const rowsFiltradosEscopo = useMemo(() => {
     let r = rows;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (filtroOperadora !== "todas") {
+    if (operadoraSlugsForcado?.length) {
+      const ids = new Set<string>();
+      operadoraSlugsForcado.forEach((slug) => (operadoraInfMap[slug] ?? []).forEach((id) => ids.add(id)));
+      r = r.filter((row) => ids.has(row.influencer_id));
+    } else if (filtroOperadora !== "todas") {
       const ids = operadoraInfMap[filtroOperadora] ?? [];
       r = r.filter((row) => ids.includes(row.influencer_id));
     }
     return r;
-  }, [rows, filtroInfluencer, filtroOperadora, operadoraInfMap]);
+  }, [rows, filtroInfluencer, filtroOperadora, operadoraInfMap, operadoraSlugsForcado]);
 
   const rowA = rowsFiltradosEscopo.find((r) => r.influencer_id === compA) || null;
   const rowB = rowsFiltradosEscopo.find((r) => r.influencer_id === compB) || null;

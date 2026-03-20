@@ -267,7 +267,7 @@ function PieTooltip({ active, payload, total, cardBg, cardBorder, text }: {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardFinanceiro() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_financeiro");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -279,6 +279,7 @@ export default function DashboardFinanceiro() {
   const [loading, setLoading]       = useState(true);
   const [filtroInfluencer, setFiltroInfluencer] = useState("todos");
   const [operadoraFiltro, setOperadoraFiltro]   = useState("todas");
+  const operadoraForApi = operadoraSlugsForcado?.[0] ?? (operadoraFiltro !== "todas" ? operadoraFiltro : null);
   const [rows, setRows]             = useState<FinanceiroRow[]>([]);
   const [totais, setTotais]         = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
   const [totaisAnt, setTotaisAnt]   = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
@@ -330,14 +331,14 @@ export default function DashboardFinanceiro() {
           p_mes: historico ? null : mesSelecionado?.mes ?? null,
           p_influencer_id: filtroInfluencer === "todos" ? null : filtroInfluencer,
           p_historico: historico,
-          p_operadora_slug: operadoraFiltro === "todas" ? null : operadoraFiltro,
+          p_operadora_slug: operadoraForApi,
         });
         if (!rpcErr && rpcData) {
           metricas = rpcData;
           if (historico) {
             const { buscarMetricasDeAliases } = await import("../../../lib/metricasAliases");
             const aliasesSinteticas = await buscarMetricasDeAliases({
-              operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+              operadora_slug: operadoraForApi ?? undefined,
               influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
               dataInicio: periodoInicio,
               dataFim: periodoFim,
@@ -358,7 +359,8 @@ export default function DashboardFinanceiro() {
           qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
         }
         if (filtroInfluencer !== "todos") qMetricas = qMetricas.eq("influencer_id", filtroInfluencer);
-        if (operadoraFiltro !== "todas")  qMetricas = qMetricas.eq("operadora_slug", operadoraFiltro);
+        if (operadoraSlugsForcado?.length) qMetricas = qMetricas.in("operadora_slug", operadoraSlugsForcado);
+        else if (operadoraFiltro !== "todas") qMetricas = qMetricas.eq("operadora_slug", operadoraFiltro);
         const { data: metricasData } = await qMetricas;
         const raw: { influencer_id: string; ftd_count: number; ftd_total: number; deposit_count: number; deposit_total: number; withdrawal_count: number; withdrawal_total: number; ggr: number }[] = metricasData || [];
         const mapaAgreg = new Map<string, MetricaRow>();
@@ -373,7 +375,7 @@ export default function DashboardFinanceiro() {
         if (historico) {
           const { buscarMetricasDeAliases } = await import("../../../lib/metricasAliases");
           const aliasesSinteticas = await buscarMetricasDeAliases({
-            operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+            operadora_slug: operadoraForApi ?? undefined,
             influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
             dataInicio: periodoInicio,
             dataFim: periodoFim,
@@ -402,7 +404,8 @@ export default function DashboardFinanceiro() {
         qLives = qLives.gte("data", inicio).lte("data", fim);
       }
       if (filtroInfluencer !== "todos") qLives = qLives.eq("influencer_id", filtroInfluencer);
-      if (operadoraFiltro !== "todas")  qLives = qLives.eq("operadora_slug", operadoraFiltro);
+      if (operadoraSlugsForcado?.length) qLives = qLives.in("operadora_slug", operadoraSlugsForcado);
+      else if (operadoraFiltro !== "todas") qLives = qLives.eq("operadora_slug", operadoraFiltro);
       const { data: livesData } = await qLives;
       const lives = livesData || [];
       const liveIds = lives.map((l: { id: string }) => l.id);
@@ -421,7 +424,7 @@ export default function DashboardFinanceiro() {
         { inicio: periodoInicio, fim: periodoFim },
         {
           influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
-          operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+          operadora_slug: operadoraForApi ?? undefined,
           includeAgentes: filtroInfluencer === "todos",
         }
       );
@@ -477,14 +480,15 @@ export default function DashboardFinanceiro() {
             { inicio: periodoAnt.inicio, fim: periodoAnt.fim },
             {
               influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
-              operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+              operadora_slug: operadoraForApi ?? undefined,
               includeAgentes: filtroInfluencer === "todos",
             }
           ),
           (async () => {
             let qA = supabase.from("influencer_metricas").select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug").gte("data", periodoAnt.inicio).lte("data", periodoAnt.fim);
             if (filtroInfluencer !== "todos") qA = qA.eq("influencer_id", filtroInfluencer);
-            if (operadoraFiltro !== "todas")  qA = qA.eq("operadora_slug", operadoraFiltro);
+            if (operadoraSlugsForcado?.length) qA = qA.in("operadora_slug", operadoraSlugsForcado);
+            else if (operadoraFiltro !== "todas") qA = qA.eq("operadora_slug", operadoraFiltro);
             const { data } = await qA;
             return data || [];
           })(),
@@ -518,14 +522,19 @@ export default function DashboardFinanceiro() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer]);
+  }, [historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado, operadoraForApi]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
   const rowsParaExibir = useMemo(() => {
+    if (operadoraSlugsForcado?.length) {
+      const ids = new Set<string>();
+      operadoraSlugsForcado.forEach((slug) => (operadoraInfMap[slug] ?? []).forEach((id) => ids.add(id)));
+      return rows.filter((r) => ids.has(r.influencer_id));
+    }
     if (operadoraFiltro === "todas") return rows;
     const ids = operadoraInfMap[operadoraFiltro] ?? [];
     return rows.filter((r) => ids.includes(r.influencer_id));
-  }, [rows, operadoraFiltro, operadoraInfMap]);
+  }, [rows, operadoraFiltro, operadoraInfMap, operadoraSlugsForcado]);
 
   const totaisExibir = useMemo(() => {
     const tFTDs = rowsParaExibir.reduce((s,r) => s+r.ftds, 0);

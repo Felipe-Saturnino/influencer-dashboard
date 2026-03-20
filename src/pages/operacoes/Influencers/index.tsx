@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -273,6 +274,7 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
   const { theme: t, user, isDark, escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
+  const { operadoraSlugsForcado, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("influencers");
   const showManagementUI = user?.role !== "influencer";
   // "proprios": ações apenas em registros do escopo do usuário
@@ -397,7 +399,10 @@ export default function Influencers() {
     )) return false;
     if (filterStatus !== "todos" && (p?.status ?? "ativo") !== filterStatus) return false;
     if (filterPlat !== "todas" && !(p?.canais ?? []).includes(filterPlat as Plataforma)) return false;
-    if (filterOp !== "todas") {
+    if (operadoraSlugsForcado?.length) {
+      const temOp = inf.operadoras?.some((o) => operadoraSlugsForcado.includes(o.operadora_slug));
+      if (!temOp) return false;
+    } else if (filterOp !== "todas") {
       const temOp = inf.operadoras?.some((o) => o.operadora_slug === filterOp);
       if (!temOp) return false;
     }
@@ -561,12 +566,14 @@ export default function Influencers() {
               <option value="todas">Todas as plataformas</option>
               {PLATAFORMAS.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
-            <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)} style={selectStyle}>
-              <option value="todas">Todas as operadoras</option>
-              {operadorasNoEscopo.map((o) => (
-                <option key={o.slug} value={o.slug}>{o.nome}</option>
-              ))}
-            </select>
+            {showFiltroOperadora && (
+              <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)} style={selectStyle}>
+                <option value="todas">Todas as operadoras</option>
+                {operadorasNoEscopo.map((o) => (
+                  <option key={o.slug} value={o.slug}>{o.nome}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {cacheMax > 0 && (
@@ -672,7 +679,7 @@ export default function Influencers() {
                       })}
                     </div>
                   )}
-                  {opsAtivas.length > 0 && (
+                  {opsAtivas.length > 0 && user?.role !== "operador" && (
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {opsAtivas.map((o) => (
                         <span key={o.operadora_slug} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${BRAND.amarelo}22`, color: BRAND.amarelo, fontWeight: 600, fontFamily: FONT.body }}>

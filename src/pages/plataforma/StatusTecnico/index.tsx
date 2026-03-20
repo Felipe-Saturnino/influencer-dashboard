@@ -762,7 +762,7 @@ export default function StatusTecnico() {
                   return (
                     <tr key={row.slug} style={{ background: rowBg }}>
                       <td style={tdStyle}>
-                        {isEmail ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}>📧 {row.nome}</span> : row.nome}
+                        {row.nome}
                       </td>
                       <td style={tdStyle}>{ultimoSync ? formatarHora(ultimoSync) : "—"}</td>
                       <td style={tdStyle}>{(registrosHojeR as number).toLocaleString("pt-BR")}</td>
