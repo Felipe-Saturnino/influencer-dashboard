@@ -1,5 +1,10 @@
 /* ─── Brandguide: variáveis CSS (default Spin Gaming) ───────────────────────────
-   Operadores veem cores da operadora; demais roles usam estes valores. */
+   Operadores veem cores da operadora; demais roles usam estes valores.
+   Tipografia: operador com font_url usa fonte customizada; senão Spin (Inter). */
+html, body {
+  font-family: var(--brand-fontFamily, "Inter", "Helvetica Neue", Arial, sans-serif);
+}
+
 :root {
   --brand-primary:    #7c3aed;
   --brand-secondary:  #4a2082;

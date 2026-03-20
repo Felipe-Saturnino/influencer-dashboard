@@ -272,7 +272,7 @@ function cel(v: number, isBRL = false) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverviewInfluencer() {
-  const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
+  const { theme: t, user, operadoraBrand, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("dash_overview_influencer");
 
@@ -528,6 +528,7 @@ export default function DashboardOverviewInfluencer() {
   const ticketSaque = totais.saques_qtd > 0 ? fmtBRL(totais.saques_valor / totais.saques_qtd) : "—";
   const ggrPorJogador = totais.ftds > 0 ? fmtBRL(totais.ggr / totais.ftds) : "—";
 
+  const filterBlockBg = user?.role === "operador" && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
   const card: React.CSSProperties = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   const thStyle: React.CSSProperties = { textAlign: "left", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: t.textMuted, padding: "10px 12px", background: "rgba(74,32,130,0.10)", borderBottom: `1px solid ${t.cardBorder}`, fontFamily: FONT.body, whiteSpace: "nowrap", fontWeight: 700 };
@@ -545,7 +546,7 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 1: Filtros ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ ...card, padding: "14px 20px" }}>
+        <div style={{ ...card, padding: "14px 20px", background: filterBlockBg }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             {/* Navegação de mês */}

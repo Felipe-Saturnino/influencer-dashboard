@@ -369,7 +369,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
-  const { theme: t } = useApp();
+  const { theme: t, user, operadoraBrand } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_conversao");
 
@@ -598,7 +598,12 @@ export default function DashboardConversao() {
 
       {/* ══ BLOCO 1: FILTROS (padrão Overview) ══════════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: t.cardBg, padding: "12px 20px" }}>
+        <div style={{
+          borderRadius: 14,
+          border: `1px solid ${t.cardBorder}`,
+          background: user?.role === "operador" && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg,
+          padding: "12px 20px",
+        }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             <button style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}

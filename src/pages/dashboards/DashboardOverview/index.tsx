@@ -723,6 +723,7 @@ export default function DashboardOverview() {
   const useBrand = user?.role === "operador" && !!operadoraBrand;
   const isOperadorDark = useBrand && t.isDark;
   const kpiCardBg = isOperadorDark ? "var(--brand-background)" : undefined;
+  const filterBlockBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
   const card: React.CSSProperties = {
     background: isOperadorDark ? "var(--brand-background)" : t.cardBg,
     border: `1px solid ${t.cardBorder}`,
@@ -805,7 +806,7 @@ export default function DashboardOverview() {
         <div style={{
           borderRadius: 14,
           border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
+          background: filterBlockBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>

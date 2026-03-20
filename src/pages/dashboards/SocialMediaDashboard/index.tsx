@@ -195,7 +195,7 @@ function KpiCard({
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function SocialMediaDashboard() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t, isDark, user, operadoraBrand } = useApp();
   const perm = usePermission("dash_midias_sociais");
 
   // ── Navegação por meses (padrão Overview) ─────────────────────────────────
@@ -482,7 +482,8 @@ export default function SocialMediaDashboard() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg, padding: "12px 20px",
+          background: user?.role === "operador" && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg,
+          padding: "12px 20px",
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: 10, flexWrap: "wrap" as const,
         }}>

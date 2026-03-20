@@ -256,7 +256,7 @@ function PlaceholderBloco({ label }: { label: string }) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function MesasSpin() {
-  const { theme: t } = useApp();
+  const { theme: t, user, operadoraBrand } = useApp();
   const perm = usePermission("mesas_spin");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -442,7 +442,8 @@ export default function MesasSpin() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg, padding: "12px 20px",
+          background: user?.role === "operador" && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg,
+          padding: "12px 20px",
         }}>
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
