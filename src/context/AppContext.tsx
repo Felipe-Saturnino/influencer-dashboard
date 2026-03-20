@@ -210,6 +210,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const effectiveIsDark = user?.role === "operador" ? true : isDark;
   const theme = effectiveIsDark ? DARK_THEME : LIGHT_THEME;
 
+  // data-theme no html para background full-viewport e scrollbar (evita linhas brancas)
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", effectiveIsDark ? "dark" : "light");
+  }, [effectiveIsDark]);
+
   // Brandguide: operador vê cores e logo da operadora; demais roles usam default
   useEffect(() => {
     if (!user || user.role !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
