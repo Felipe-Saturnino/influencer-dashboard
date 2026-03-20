@@ -413,14 +413,22 @@ export default function Influencers() {
     return true;
   });
 
+  // Base para quadros: mesmo filtro de operadora que a lista (operador vê só sua operadora)
+  const listNoEscopo = list.filter((i) => {
+    if (!podeVerInfluencer(i.id)) return false;
+    if (operadoraSlugsForcado?.length) {
+      const temOp = i.operadoras?.some((o) => operadoraSlugsForcado.includes(o.operadora_slug));
+      if (!temOp) return false;
+    }
+    return true;
+  });
+
   // ── CORREÇÃO 2: apenas influencers ATIVOS no escopo entram no quadro de incompletos ──
-  const incompletos = list.filter((i) =>
-    podeVerInfluencer(i.id) &&
+  const incompletos = listNoEscopo.filter((i) =>
     (i.perfil?.status ?? "ativo") === "ativo" &&
     isPerfilIncompleto(i.perfil, i.perfil?.nome_artistico ?? i.name ?? "")
   );
 
-  const listNoEscopo = list.filter((i) => podeVerInfluencer(i.id));
   const porStatus: Record<StatusInfluencer, number> = { ativo: 0, inativo: 0, cancelado: 0 };
   const porPlat: Record<string, number> = {};
   listNoEscopo.forEach((inf) => {
