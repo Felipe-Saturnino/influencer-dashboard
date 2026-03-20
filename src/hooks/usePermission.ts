@@ -25,7 +25,10 @@ const CACHE: Record<string, Permissoes> = {};
 
 export function usePermission(pageKey: PageKey): Permissoes {
   const { user, permissions } = useApp();
-  const cacheKey = user?.role === "operador" ? `operador:${user.id}:${pageKey}` : `${user?.role ?? "none"}:${pageKey}`;
+  const cvFromContext = permissions[pageKey];
+  const cacheKey = user?.role === "operador"
+    ? `operador:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
+    : `${user?.role ?? "none"}:${pageKey}`;
 
   const [perm, setPerm] = useState<Permissoes>(
     CACHE[cacheKey] ?? { canView: null, canCriar: null, canEditar: null, canExcluir: null, loading: true, canCriarOk: false, canEditarOk: false, canExcluirOk: false }
@@ -37,13 +40,14 @@ export function usePermission(pageKey: PageKey): Permissoes {
       return;
     }
 
-    const cvFromContext = permissions[pageKey];
-    const operadorCanView = user.role === "operador" && (cvFromContext === "sim" || cvFromContext === "proprios");
+    const cvFromContextVal = permissions[pageKey];
+    const operadorCanView = user.role === "operador" && (cvFromContextVal === "sim" || cvFromContextVal === "proprios");
 
     if (user.role === "operador") {
-      const cv = cvFromContext === "sim" || cvFromContext === "proprios" ? cvFromContext : "nao";
-      if (CACHE[cacheKey]) {
-        setPerm(CACHE[cacheKey]);
+      const cv = cvFromContextVal === "sim" || cvFromContextVal === "proprios" ? cvFromContextVal : "nao";
+      const cached = CACHE[cacheKey];
+      if (cached && cached.canView === cv) {
+        setPerm(cached);
         return;
       }
       supabase
