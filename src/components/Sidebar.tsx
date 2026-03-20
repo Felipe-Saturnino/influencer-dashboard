@@ -14,8 +14,11 @@ const ICON_COLOR_INACTIVE = "#c4b5d4";
 // Cor do ícone ativo — branco puro, máximo contraste sobre gradiente
 const ICON_COLOR_ACTIVE    = "#ffffff";
 
+const LOGO_DEFAULT = "/Logo Spin Gaming White.png";
+
 export default function Sidebar({ activePage, onNavigate }: Props) {
-  const { theme: t, permissions } = useApp();
+  const { theme: t, permissions, operadoraBrand } = useApp();
+  const logoUrl = operadoraBrand?.logo_url || LOGO_DEFAULT;
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Dashboards: true, Lives: true, "Operações": true, Plataforma: true,
   });
@@ -35,12 +38,13 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
       padding: "0px 16px 24px", borderRight: `1px solid ${t.sidebarBorder}`,
       boxSizing: "border-box", zIndex: 100,
     }}>
-      {/* LOGO */}
+      {/* LOGO — operador vê logo da operadora; demais veem Spin Gaming */}
       <div style={{ marginBottom: "4px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
         <img
-          src="/Logo Spin Gaming White.png"
-          alt="Spin Gaming"
+          src={logoUrl}
+          alt={operadoraBrand ? "Operadora" : "Spin Gaming"}
           style={{ height: "96px", objectFit: "contain", display: "block" }}
+          onError={(e) => { (e.target as HTMLImageElement).src = LOGO_DEFAULT; }}
         />
       </div>
 
@@ -108,10 +112,10 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
                       style={{
                         ...btnBase,
                         background: active
-                          ? `linear-gradient(135deg, ${BASE_COLORS.purple}cc, ${BASE_COLORS.blue}cc)`
+                          ? "linear-gradient(135deg, color-mix(in srgb, var(--brand-primary) 80%, transparent), color-mix(in srgb, var(--brand-accent) 80%, transparent))"
                           : "transparent",
                         color:     active ? "white" : "#e5dce1",
-                        boxShadow: active ? `0 4px 16px ${BASE_COLORS.purple}44` : "none",
+                        boxShadow: active ? "0 4px 16px color-mix(in srgb, var(--brand-primary) 27%, transparent)" : "none",
                       }}
                     >
                       <Icon size={15} color={iconColor} />

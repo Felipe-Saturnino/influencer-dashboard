@@ -25,6 +25,11 @@ export interface EscoposVisiveis {
   vêTodosInfluencers?: boolean;   // true = executivo, vê todos os influencers
 }
 
+/** Brand da operadora (operador): logo e cores aplicadas via CSS vars */
+export interface OperadoraBrand {
+  logo_url: string | null;
+}
+
 interface AppContextValue {
   // Auth
   user:        User | null;
@@ -39,6 +44,8 @@ interface AppContextValue {
   podeVerInfluencer: (id: string) => boolean;
   /** [] = sem restrição. true se pode ver a operadora. */
   podeVerOperadora: (slug: string) => boolean;
+  /** Brand da operadora (operador): logo_url para Sidebar; cores via --brand-* */
+  operadoraBrand: OperadoraBrand | null;
   // Theme
   theme:    Theme;
   isDark:   boolean;
@@ -187,19 +194,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa
   );
   const [escoposVisiveis, setEscoposVisiveis] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
+  const [operadoraBrand, setOperadoraBrand] = useState<OperadoraBrand | null>(null);
 
   const theme = isDark ? DARK_THEME : LIGHT_THEME;
 
-  // Brandguide: operador vê cores da operadora; demais roles usam default
+  // Brandguide: operador vê cores e logo da operadora; demais roles usam default
   useEffect(() => {
     if (!user || user.role !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
       aplicarBrandguide({});
+      setOperadoraBrand(null);
       return;
     }
     const slug = escoposVisiveis.operadorasVisiveis[0];
     void (async () => {
       try {
-        const { data } = await supabase.from("operadoras").select("cor_primaria, cor_secundaria, cor_accent").eq("slug", slug).single();
+        const { data } = await supabase.from("operadoras").select("cor_primaria, cor_secundaria, cor_accent, logo_url").eq("slug", slug).single();
         if (data?.cor_primaria || data?.cor_secundaria || data?.cor_accent) {
           aplicarBrandguide({
             primary:   data.cor_primaria   ?? null,
@@ -209,8 +218,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } else {
           aplicarBrandguide({});
         }
+        setOperadoraBrand({ logo_url: (data?.logo_url ?? "").trim() || null });
       } catch {
         aplicarBrandguide({});
+        setOperadoraBrand(null);
       }
     })();
   }, [user?.id, user?.role, escoposVisiveis.operadorasVisiveis]);
@@ -300,6 +311,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user, setUser, checking,
       permissions, setPermissions,
       escoposVisiveis, podeVerInfluencer, podeVerOperadora,
+      operadoraBrand,
       theme, isDark, setIsDark,
     }}>
       {children}
