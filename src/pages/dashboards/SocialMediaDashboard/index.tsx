@@ -482,7 +482,7 @@ export default function SocialMediaDashboard() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: user?.role === "operador" && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg,
+          background: user?.role === "operador" && operadoraBrand?.cor_background && t.isDark ? operadoraBrand.cor_background : t.cardBg,
           padding: "12px 20px",
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: 10, flexWrap: "wrap" as const,

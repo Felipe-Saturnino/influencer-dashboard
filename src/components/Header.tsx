@@ -54,7 +54,7 @@ export default function Header({ activePage, onNavigate, onLogout }: Props) {
     transition: "background 0.12s",
   };
 
-  const headerBg = user?.role === "operador" && operadoraBrand?.cor_background
+  const headerBg = user?.role === "operador" && operadoraBrand?.cor_background && t.isDark
     ? operadoraBrand.cor_background
     : t.headerBg;
 

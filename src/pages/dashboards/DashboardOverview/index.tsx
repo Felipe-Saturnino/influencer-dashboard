@@ -723,7 +723,7 @@ export default function DashboardOverview() {
   const useBrand = user?.role === "operador" && !!operadoraBrand;
   const isOperadorDark = useBrand && t.isDark;
   const kpiCardBg = isOperadorDark ? "var(--brand-background)" : undefined;
-  const filterBlockBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
+  const filterBlockBg = useBrand && operadoraBrand?.cor_background && t.isDark ? operadoraBrand.cor_background : t.cardBg;
   const card: React.CSSProperties = {
     background: isOperadorDark ? "var(--brand-background)" : t.cardBg,
     border: `1px solid ${t.cardBorder}`,

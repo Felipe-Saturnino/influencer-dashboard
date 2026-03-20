@@ -206,7 +206,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [escoposVisiveis, setEscoposVisiveis] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
   const [operadoraBrand, setOperadoraBrand] = useState<OperadoraBrand | null>(null);
 
-  const theme = isDark ? DARK_THEME : LIGHT_THEME;
+  // Operador: sempre modo Dark (brand da operadora); demais roles escolhem tema
+  const effectiveIsDark = user?.role === "operador" ? true : isDark;
+  const theme = effectiveIsDark ? DARK_THEME : LIGHT_THEME;
 
   // Brandguide: operador vê cores e logo da operadora; demais roles usam default
   useEffect(() => {
@@ -353,13 +355,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const podeVerOperadora = (slug: string) =>
     escoposVisiveis.semRestricaoEscopo === true || escoposVisiveis.operadorasVisiveis.includes(slug);
 
+  const setTheme = (v: boolean) => {
+    if (user?.role === "operador") return; // Operador travado em Dark
+    setIsDark(v);
+  };
+
   return (
     <AppContext.Provider value={{
       user, setUser, checking,
       permissions, setPermissions,
       escoposVisiveis, podeVerInfluencer, podeVerOperadora,
       operadoraBrand,
-      theme, isDark, setIsDark,
+      theme, isDark: effectiveIsDark, setIsDark: setTheme,
     }}>
       {children}
     </AppContext.Provider>

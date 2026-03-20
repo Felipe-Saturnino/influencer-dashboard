@@ -601,7 +601,7 @@ export default function DashboardConversao() {
         <div style={{
           borderRadius: 14,
           border: `1px solid ${t.cardBorder}`,
-          background: user?.role === "operador" && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg,
+          background: user?.role === "operador" && operadoraBrand?.cor_background && t.isDark ? operadoraBrand.cor_background : t.cardBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
