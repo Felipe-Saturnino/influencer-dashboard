@@ -191,23 +191,28 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
 }
 
 // ─── COMPONENTE: SECTION TITLE ────────────────────────────────────────────────
-function SectionTitle({ icon, children, sub }: {
+function SectionTitle({ icon, children, sub, useBrand }: {
   icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
+  useBrand?: boolean;
 }) {
   const { theme: t } = useApp();
+  const titleColor = useBrand ? "var(--brand-primary)" : t.text;
+  const iconBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)" : "rgba(74,32,130,0.18)";
+  const iconBorder = useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)" : "1px solid rgba(74,32,130,0.30)";
+  const iconColor = useBrand ? "var(--brand-primary)" : BRAND.ciano;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: `rgba(74,32,130,0.18)`,
-        border: `1px solid rgba(74,32,130,0.30)`,
+        background: iconBg,
+        border: iconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: BRAND.ciano, flexShrink: 0,
+        color: iconColor, flexShrink: 0,
       }}>
         {icon}
       </span>
       <span style={{
-        fontSize: 14, fontWeight: 800, color: t.text,
+        fontSize: 14, fontWeight: 800, color: titleColor,
         fontFamily: FONT_TITLE,
         letterSpacing: "0.05em", textTransform: "uppercase" as const,
       }}>
@@ -223,10 +228,11 @@ function SectionTitle({ icon, children, sub }: {
 }
 
 // ─── KPI CARD ─────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHistorico, subValue }: {
-  label: string; value: string; icon: React.ReactNode; accentColor: string;
-  atual: number; anterior: number; isBRL?: boolean; isHistorico?: boolean;
+function KpiCard({ label, value, icon, accentVar, accentColor, useBrand, atual, anterior, isBRL, isHistorico, subValue, cardBg }: {
+  label: string; value: string; icon: React.ReactNode; accentVar: string; accentColor: string;
+  useBrand?: boolean; atual: number; anterior: number; isBRL?: boolean; isHistorico?: boolean;
   subValue?: { label: string; value: string };
+  cardBg?: string;
 }) {
   const { theme: t } = useApp();
   const diff     = atual - anterior;
@@ -234,25 +240,30 @@ function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHi
   const up       = diff >= 0;
   const isCusto  = label.toLowerCase().includes("custo") || label.toLowerCase().includes("invest");
   const positivo = isCusto ? !up : up;
-  const corSeta  = positivo ? BRAND.verde : BRAND.vermelho;
+  const corSeta  = positivo ? "var(--brand-success)" : "var(--brand-danger)";
+
+  const barBg = useBrand ? `linear-gradient(90deg, var(${accentVar}), transparent)` : `linear-gradient(90deg, ${accentColor}, transparent)`;
+  const iconBoxBg = useBrand ? `color-mix(in srgb, var(${accentVar}) 10%, transparent)` : `${accentColor}18`;
+  const iconBoxBorder = useBrand ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)` : `1px solid ${accentColor}35`;
+  const iconBoxColor = useBrand ? `var(${accentVar})` : accentColor;
 
   return (
     <div style={{
       borderRadius: 14,
       border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg,
+      background: cardBg ?? t.cardBg,
       overflow: "hidden",
       transition: "box-shadow 0.2s",
     }}>
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
+      <div style={{ height: 3, background: barBg }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{
             width: 30, height: 30, borderRadius: 8,
-            background: `${accentColor}18`,
-            border: `1px solid ${accentColor}35`,
+            background: iconBoxBg,
+            border: iconBoxBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: accentColor, flexShrink: 0,
+            color: iconBoxColor, flexShrink: 0,
           }}>
             {icon}
           </span>
@@ -287,13 +298,20 @@ function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHi
 }
 
 // ─── KPI CARD DEPÓSITOS ────────────────────────────────────────────────────────
-function KpiCardDepositos({ atual, anterior, isHistorico }: {
+function KpiCardDepositos({ atual, anterior, isHistorico, cardBg, useBrand }: {
   atual: { qtd: number; valor: number };
   anterior: { qtd: number; valor: number };
   isHistorico?: boolean;
+  cardBg?: string;
+  useBrand?: boolean;
 }) {
   const { theme: t } = useApp();
+  const accentVar = "--brand-extra3";
   const accentColor = BRAND.transacao;
+  const barBg = useBrand ? `linear-gradient(90deg, var(${accentVar}), transparent)` : `linear-gradient(90deg, ${accentColor}, transparent)`;
+  const iconBoxBg = useBrand ? `color-mix(in srgb, var(${accentVar}) 10%, transparent)` : `${accentColor}18`;
+  const iconBoxBorder = useBrand ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)` : `1px solid ${accentColor}35`;
+  const iconBoxColor = useBrand ? `var(${accentVar})` : accentColor;
   const diffQtd = atual.qtd - anterior.qtd;
   const pctQtd  = anterior.qtd !== 0 ? (diffQtd / Math.abs(anterior.qtd)) * 100 : null;
   const upQtd   = diffQtd >= 0;
@@ -304,16 +322,17 @@ function KpiCardDepositos({ atual, anterior, isHistorico }: {
   return (
     <div style={{
       borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg, overflow: "hidden",
+      background: cardBg ?? t.cardBg, overflow: "hidden",
     }}>
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
+      <div style={{ height: 3, background: barBg }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{
             width: 30, height: 30, borderRadius: 8,
-            background: `${accentColor}18`, border: `1px solid ${accentColor}35`,
+            background: iconBoxBg,
+            border: iconBoxBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: accentColor,
+            color: iconBoxColor,
           }}>
             <GiCardPlay size={16} />
           </span>
@@ -327,7 +346,7 @@ function KpiCardDepositos({ atual, anterior, isHistorico }: {
             <div style={{ fontSize: 20, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>{atual.qtd.toLocaleString("pt-BR")}</div>
             {!isHistorico && (
               <div style={{ fontSize: 10, fontFamily: FONT.body }}>
-                <span style={{ color: upQtd ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
+                <span style={{ color: upQtd ? "var(--brand-success)" : "var(--brand-danger)", fontWeight: 700 }}>
                   {upQtd ? "↑" : "↓"} {pctQtd !== null ? `${Math.abs(pctQtd).toFixed(0)}%` : "—"}
                 </span>
               </div>
@@ -338,7 +357,7 @@ function KpiCardDepositos({ atual, anterior, isHistorico }: {
             <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>{fmtBRL(atual.valor)}</div>
             {!isHistorico && (
               <div style={{ fontSize: 10, fontFamily: FONT.body }}>
-                <span style={{ color: upVal ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
+                <span style={{ color: upVal ? "var(--brand-success)" : "var(--brand-danger)", fontWeight: 700 }}>
                   {upVal ? "↑" : "↓"} {pctVal !== null ? `${Math.abs(pctVal).toFixed(0)}%` : "—"}
                 </span>
               </div>
@@ -352,6 +371,7 @@ function KpiCardDepositos({ atual, anterior, isHistorico }: {
 
 // ─── FUNIL DE CONVERSÃO (visual em SVG) ───────────────────────────────────────
 const FUNIL_COLORS = ["#4a2082", "#1e36f8", "#70cae4", "#22c55e"] as const;
+const FUNIL_VARS = ["--brand-extra1", "--brand-extra2", "--brand-extra3", "--brand-extra4"] as const;
 const FUNIL_STEPS = [
   { key: "views",      label: "Views (média)" },
   { key: "acessos",    label: "Acessos"       },
@@ -359,9 +379,10 @@ const FUNIL_STEPS = [
   { key: "ftds",       label: "FTDs"          },
 ] as const;
 
-function FunilVisual({ values, taxas }: {
+function FunilVisual({ values, taxas, useBrand }: {
   values: number[];
   taxas: string[];
+  useBrand?: boolean;
 }) {
   const { theme: t } = useApp();
   const W = 420, H = 340;
@@ -369,6 +390,8 @@ function FunilVisual({ values, taxas }: {
   const stepH = H / levels;
   // Larguras: nível 0 = W total, nível 3 = W * 0.32 (fixo pois estático)
   const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
+
+  const getStepColor = (i: number) => useBrand ? `var(${FUNIL_VARS[i]})` : FUNIL_COLORS[i];
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "stretch", minHeight: 340 }}>
@@ -382,7 +405,7 @@ function FunilVisual({ values, taxas }: {
           const xBot = (W - wBot) / 2;
           const yTop = i * stepH;
           const yBot = yTop + stepH - 2; // 2px gap
-          const col = FUNIL_COLORS[i];
+          const col = getStepColor(i);
           // Trapezoid path
           const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
           return (
@@ -424,32 +447,37 @@ function FunilVisual({ values, taxas }: {
           Taxas de Conversão
         </div>
         {[
-          { label: "View → Acesso",     taxa: taxas[0], color: FUNIL_COLORS[1] },
-          { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2] },
-          { label: "Registro → FTD",    taxa: taxas[2], color: FUNIL_COLORS[3] },
-          { label: "Acesso → FTD",      taxa: taxas[3], color: FUNIL_COLORS[3], highlight: true },
-          { label: "View → FTD",        taxa: taxas[4], color: FUNIL_COLORS[0], highlight: true },
-        ].map((r) => (
+          { label: "View → Acesso",     taxa: taxas[0], color: FUNIL_COLORS[1], colorVar: FUNIL_VARS[1] },
+          { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2], colorVar: FUNIL_VARS[2] },
+          { label: "Registro → FTD",    taxa: taxas[2], color: FUNIL_COLORS[3], colorVar: FUNIL_VARS[3] },
+          { label: "Acesso → FTD",      taxa: taxas[3], color: FUNIL_COLORS[3], colorVar: FUNIL_VARS[3], highlight: true },
+          { label: "View → FTD",        taxa: taxas[4], color: FUNIL_COLORS[0], colorVar: FUNIL_VARS[0], highlight: true },
+        ].map((r) => {
+          const col = useBrand ? `var(${r.colorVar})` : r.color;
+          const border = r.highlight
+            ? (useBrand ? `1px solid color-mix(in srgb, var(${r.colorVar}) 32%, transparent)` : `1px solid ${r.color}50`)
+            : `1px solid ${t.cardBorder}`;
+          const bg = r.highlight
+            ? (useBrand ? `color-mix(in srgb, var(${r.colorVar}) 8%, transparent)` : `${r.color}12`)
+            : "rgba(255,255,255,0.02)";
+          return (
           <div key={r.label} style={{
             padding: "6px 10px", borderRadius: 8,
-            border: r.highlight
-              ? `1px solid ${r.color}50`
-              : `1px solid ${t.cardBorder}`,
-            background: r.highlight
-              ? `${r.color}12`
-              : "rgba(255,255,255,0.02)",
+            border,
+            background: bg,
           }}>
             <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 2 }}>
               {r.label}
             </div>
             <div style={{
               fontSize: 14, fontWeight: 800, fontFamily: FONT.body,
-              color: r.highlight ? r.color : t.text,
+              color: r.highlight ? col : t.text,
             }}>
               {r.taxa}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -457,7 +485,7 @@ function FunilVisual({ values, taxas }: {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
-  const { theme: t } = useApp();
+  const { theme: t, user, operadoraBrand } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_overview");
 
@@ -692,8 +720,11 @@ export default function DashboardOverview() {
   const pctViewFTD     = totaisExibidos.views > 0    ? ((totaisExibidos.ftds      / totaisExibidos.views)    * 100).toFixed(1) + "%" : "—";
 
   // ── ESTILOS BASE ──────────────────────────────────────────────────────────────
+  const useBrand = user?.role === "operador" && !!operadoraBrand;
+  const isOperadorDark = useBrand && t.isDark;
+  const kpiCardBg = isOperadorDark ? "var(--brand-background)" : undefined;
   const card: React.CSSProperties = {
-    background: t.cardBg,
+    background: isOperadorDark ? "var(--brand-background)" : t.cardBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -862,7 +893,7 @@ export default function DashboardOverview() {
 
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPokerHand size={15} />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}>
+        <SectionTitle icon={<GiPokerHand size={15} />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined} useBrand={useBrand}>
           KPIs Executivos
         </SectionTitle>
 
@@ -871,21 +902,27 @@ export default function DashboardOverview() {
           <KpiCard
             label="GGR Total" value={fmtBRL(totaisExibidos.ggr)}
             icon={<GiPokerHand size={16} />}
-            accentColor={BRAND.receita}
+            accentVar="--brand-extra1" accentColor={BRAND.receita}
+            useBrand={useBrand}
             atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico}
+            cardBg={kpiCardBg}
           />
           <KpiCard
             label="Investimento" value={fmtBRL(totaisExibidos.investimento)}
             icon={<GiCoins size={16} />}
-            accentColor={BRAND.custo}
+            accentVar="--brand-extra4" accentColor={BRAND.custo}
+            useBrand={useBrand}
             atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico}
+            cardBg={kpiCardBg}
           />
           <KpiCard
             label="ROI Geral"
             value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"}
             icon={<GiTrophy size={16} />}
-            accentColor={BRAND.verde}
+            accentVar="--brand-extra2" accentColor={BRAND.verde}
+            useBrand={useBrand}
             atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico}
+            cardBg={kpiCardBg}
           />
         </div>
 
@@ -894,25 +931,33 @@ export default function DashboardOverview() {
           <KpiCard
             label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")}
             icon={<GiFilmProjector size={16} />}
-            accentColor={BRAND.operacao}
+            accentVar="--brand-extra2" accentColor={BRAND.operacao}
+            useBrand={useBrand}
             atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico}
+            cardBg={kpiCardBg}
           />
           <KpiCard
             label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)}
             icon={<GiSandsOfTime size={16} />}
-            accentColor={BRAND.operacao}
+            accentVar="--brand-extra2" accentColor={BRAND.operacao}
+            useBrand={useBrand}
             atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico}
+            cardBg={kpiCardBg}
           />
           <KpiCard
             label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")}
             icon={<GiMicrophone size={16} />}
-            accentColor={BRAND.operacao}
+            accentVar="--brand-extra2" accentColor={BRAND.operacao}
+            useBrand={useBrand}
             atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico}
+            cardBg={kpiCardBg}
           />
           <KpiCardDepositos
             atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }}
             anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }}
             isHistorico={historico}
+            cardBg={kpiCardBg}
+            useBrand={useBrand}
           />
         </div>
 
@@ -921,45 +966,54 @@ export default function DashboardOverview() {
           <KpiCard
             label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")}
             icon={<GiPlayerNext size={16} />}
-            accentColor={BRAND.transacao}
+            accentVar="--brand-extra3" accentColor={BRAND.transacao}
+            useBrand={useBrand}
             atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico}
+            cardBg={kpiCardBg}
           />
           <KpiCard
             label="Custo por Registro"
             value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"}
             icon={<GiReceiveMoney size={16} />}
-            accentColor={BRAND.custo}
+            accentVar="--brand-extra4" accentColor={BRAND.custo}
+            useBrand={useBrand}
             atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico}
+            cardBg={kpiCardBg}
           />
           <KpiCard
             label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")}
             icon={<GiTrophy size={16} />}
-            accentColor={BRAND.transacao}
+            accentVar="--brand-extra3" accentColor={BRAND.transacao}
+            useBrand={useBrand}
             atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico}
+            cardBg={kpiCardBg}
           />
           <KpiCard
             label="Custo por FTD"
             value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"}
             icon={<GiPayMoney size={16} />}
-            accentColor={BRAND.custo}
+            accentVar="--brand-extra4" accentColor={BRAND.custo}
+            useBrand={useBrand}
             atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico}
+            cardBg={kpiCardBg}
           />
         </div>
       </div>
 
       {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPlayerNext size={15} />}>Funil de Conversão</SectionTitle>
+        <SectionTitle icon={<GiPlayerNext size={15} />} useBrand={useBrand}>Funil de Conversão</SectionTitle>
         <FunilVisual
           values={[totaisExibidos.views, totaisExibidos.acessos, totaisExibidos.registros, totaisExibidos.ftds]}
           taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
+          useBrand={useBrand}
         />
       </div>
 
       {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiTrophy size={15} />}>Ranking de Influencers</SectionTitle>
+          <SectionTitle icon={<GiTrophy size={15} />} useBrand={useBrand}>Ranking de Influencers</SectionTitle>
 
           {/* Filtros de status */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>

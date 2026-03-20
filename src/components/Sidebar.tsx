@@ -43,14 +43,14 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
     }}>
       {/* LOGO — operador vê logo da operadora; demais veem Spin Gaming. Regra: mantém dentro do esquadro */}
       <div style={{
-        marginBottom: "4px", display: "flex", justifyContent: "center", alignItems: "center",
-        flexShrink: 0, width: "100%", maxHeight: 96, overflow: "hidden",
+        marginBottom: 16, paddingTop: 12, display: "flex", justifyContent: "center", alignItems: "center",
+        flexShrink: 0, width: "100%", maxHeight: 64, overflow: "hidden",
       }}>
         <img
           src={logoUrl}
           alt={operadoraBrand ? "Operadora" : "Spin Gaming"}
           style={{
-            maxWidth: "100%", maxHeight: 96, width: "auto", height: "auto",
+            maxWidth: "100%", maxHeight: 64, width: "auto", height: "auto",
             objectFit: "contain", display: "block",
           }}
           onError={(e) => { (e.target as HTMLImageElement).src = LOGO_DEFAULT; }}
