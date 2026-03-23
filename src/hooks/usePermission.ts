@@ -76,7 +76,7 @@ export function usePermission(pageKey: PageKey): Permissoes {
       return;
     }
 
-    // Sempre busca do DB para refletir o que está em Gestão de Usuários (sem cache persistente)
+    // Busca do DB: apenas o que está em Gestão de Usuários (role_permissions)
     supabase
       .from("role_permissions")
       .select("can_view, can_criar, can_editar, can_excluir")
