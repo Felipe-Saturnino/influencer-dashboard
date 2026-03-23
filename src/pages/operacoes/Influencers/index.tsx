@@ -12,6 +12,7 @@ import {
   GiMicrophone, GiPodium, GiWarPick, GiTwoCoins,
   GiPokerHand, GiCheckMark, GiShield,
 } from "react-icons/gi";
+import OperadoraTag from "../../../components/OperadoraTag";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -288,6 +289,7 @@ export default function Influencers() {
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
 
   const operadorasNoEscopo = operadorasList.filter((o) => podeVerOperadora(o.slug));
+  const opsColorMap = Object.fromEntries(operadorasList.map((o) => [o.slug, o.cor_primaria?.trim() || BRAND.roxoVivo]));
   const [loading,        setLoading]        = useState(true);
   const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar"; inf?: Influencer } | null>(null);
 
@@ -764,9 +766,13 @@ export default function Influencers() {
                   {opsAtivas.length > 0 && user?.role !== "operador" && (
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {opsAtivas.map((o) => (
-                        <span key={o.operadora_slug} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${BRAND.amarelo}22`, color: BRAND.amarelo, fontWeight: 600, fontFamily: FONT.body }}>
-                          <GiPokerHand size={11} /> {o.operadora_nome ?? o.operadora_slug}
-                        </span>
+                        <OperadoraTag
+                          key={o.operadora_slug}
+                          label={o.operadora_nome ?? o.operadora_slug}
+                          corPrimaria={opsColorMap[o.operadora_slug]}
+                          dark={isDark ?? false}
+                          icon={<GiPokerHand size={11} />}
+                        />
                       ))}
                     </div>
                   )}
@@ -947,13 +953,14 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }:
                 const vinculo = influencer.operadoras?.find((o) => o.operadora_slug === op.slug);
                 const ativo = !!vinculo?.ativo;
                 const id = vinculo?.id_operadora;
+                const opColor = op.cor_primaria?.trim() || BRAND.roxoVivo;
                 return (
-                  <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 35%, transparent)" : BRAND.roxoVivo + "55") : t.cardBorder}`, background: ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.roxoVivo}08`) : "transparent" }}>
+                  <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `${opColor}55` : t.cardBorder}`, background: ativo ? `${opColor}12` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
-                        <GiPokerHand size={13} style={{ color: BRAND.amarelo }} /> {op.nome}
+                        <GiPokerHand size={13} style={{ color: opColor }} /> {op.nome}
                       </span>
-                      <span style={{ padding: "4px 12px", borderRadius: 20, border: `1px solid ${ativo ? b.accent : t.cardBorder}`, background: ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (t.inputBg ?? t.cardBg), color: ativo ? b.accent : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
+                      <span style={{ padding: "4px 12px", borderRadius: 20, border: `1px solid ${ativo ? opColor : t.cardBorder}`, background: ativo ? `${opColor}22` : (t.inputBg ?? t.cardBg), color: ativo ? opColor : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
                         {ativo ? "Ativo" : "Inativo"}
                       </span>
                     </div>
@@ -1210,14 +1217,15 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
               operadorasList.map((op) => {
                 const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
                 const ativo = st.ativo;
+                const opColor = op.cor_primaria?.trim() || BRAND.roxoVivo;
                 return (
-                  <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 35%, transparent)" : BRAND.roxoVivo + "55") : t.cardBorder}`, background: ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.roxoVivo}08`) : "transparent" }}>
+                  <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `${opColor}55` : t.cardBorder}`, background: ativo ? `${opColor}12` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? 12 : 0 }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
-                        <GiPokerHand size={13} style={{ color: BRAND.amarelo }} /> {op.nome}
+                        <GiPokerHand size={13} style={{ color: opColor }} /> {op.nome}
                       </span>
                       <button onClick={() => setOp(op.slug, { ativo: !ativo })}
-                        style={{ padding: "5px 14px", borderRadius: 20, border: `1px solid ${ativo ? b.accent : t.cardBorder}`, background: ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (t.inputBg ?? t.cardBg), color: ativo ? b.accent : t.textMuted, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
+                        style={{ padding: "5px 14px", borderRadius: 20, border: `1px solid ${ativo ? opColor : t.cardBorder}`, background: ativo ? `${opColor}22` : (t.inputBg ?? t.cardBg), color: ativo ? opColor : t.textMuted, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
                         {ativo ? "Ativo" : "Inativo"}
                       </button>
                     </div>
