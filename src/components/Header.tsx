@@ -11,6 +11,7 @@ interface Props {
 }
 
 function getSectionForPage(pageKey: string): string | null {
+  if (pageKey === "home") return "Bem-vindo";
   for (const sec of MENU) {
     if (sec.items.some(i => i.key === pageKey)) return sec.section.toUpperCase();
   }

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
 // Layout
@@ -8,7 +7,8 @@ import Header  from "./components/Header";
 import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
 import Configuracoes          from "./pages/geral/Configuracoes";
-import Ajuda         from "./pages/geral/Ajuda";
+import Ajuda                  from "./pages/geral/Ajuda";
+import Home                   from "./pages/geral/Home";
 // Páginas — dashboards
 import DashboardOverview          from "./pages/dashboards/DashboardOverview";
 import DashboardOverviewInfluencer from "./pages/dashboards/DashboardOverviewInfluencer";
@@ -35,6 +35,7 @@ import StatusTecnico from "./pages/plataforma/StatusTecnico";
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, React.FC> = {
+  home:                     Home,
   dash_overview:             DashboardOverview,
   dash_overview_influencer:  DashboardOverviewInfluencer,
   dash_conversao:            DashboardConversao,
@@ -60,10 +61,9 @@ const PAGE_MAP: Record<string, React.FC> = {
 
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
 function AppLayout({ onLogout }: { onLogout: () => void }) {
-  const { user, theme: t } = useApp();
-  const [activePage, setActivePage] = useState("dash_overview");
+  const { user, theme: t, activePage, setActivePage } = useApp();
   if (!user) return null;
-  const PageComponent = PAGE_MAP[activePage] ?? DashboardOverview;
+  const PageComponent = PAGE_MAP[activePage] ?? Home;
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: t.bg }}>
       <Sidebar activePage={activePage} onNavigate={setActivePage} />

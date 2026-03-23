@@ -13,6 +13,7 @@ export interface User {
 
 // ─── PAGE KEYS ───────────────────────────────────────────────────────────────
 export type PageKey =
+  | "home"
   | "dash_overview"
   | "dash_overview_influencer"
   | "dash_conversao"

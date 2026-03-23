@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
+  "home",
   "dash_overview", "dash_overview_influencer", "dash_conversao", "dash_financeiro", "mesas_spin", "dash_midias_sociais",
   "agenda", "resultados", "feedback",
   "influencers", "scout", "financeiro", "gestao_links", "campanhas", "gestao_dealers",
@@ -39,6 +40,9 @@ interface AppContextValue {
   user:        User | null;
   setUser:     (u: User | null) => void;
   checking:    boolean;
+  // Navegação (página ativa no layout)
+  activePage:  string;
+  setActivePage: (page: string) => void;
   // Permissões de menu
   permissions: PermissoesMapa;
   setPermissions: (p: PermissoesMapa) => void;
@@ -203,6 +207,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user,           setUserState]    = useState<User | null>(null);
   const [checking,       setChecking]    = useState(true);
   const [isDark,         setIsDark]      = useState(false);
+  const [activePage,     setActivePage]   = useState("home");
   const [permissions,    setPermissions]  = useState<PermissoesMapa>(
     Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa
   );
@@ -296,6 +301,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Wrapper de setUser que também carrega permissões e escopos
   async function setUser(u: User | null) {
     setUserState(u);
+    if (u) setActivePage("home"); // Ao fazer login, volta para a página Home
     if (u) {
       try {
         const escopos = await carregarEscoposVisiveis(u.id, u.role);
@@ -381,6 +387,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       user, setUser, checking,
+      activePage, setActivePage,
       permissions, setPermissions,
       escoposVisiveis, podeVerInfluencer, podeVerOperadora,
       operadoraBrand,
