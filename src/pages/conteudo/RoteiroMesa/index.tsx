@@ -6,7 +6,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { Pencil, Plus, X, Check, BookOpen, Megaphone } from "lucide-react";
+import { Plus, X, Check, BookOpen, Megaphone, Trash2 } from "lucide-react";
 import { GiNotebook, GiShield } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -671,9 +671,9 @@ function ModalNovoRoteiro({ operadoraSlug, operadorasList, onClose, onSalvo, dar
 }
 
 // ─── ITEM DE SUGESTÃO ─────────────────────────────────────────────────────────
-function SugestaoItem({ sugestao, podeEditar, onEdit, dark, operadoraNome }: {
-  sugestao: RoteiroSugestao; podeEditar: boolean;
-  onEdit: (s: RoteiroSugestao) => void;
+function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome }: {
+  sugestao: RoteiroSugestao; podeExcluir: boolean;
+  onExcluir: (s: RoteiroSugestao) => void;
   dark: boolean; operadoraNome?: string;
 }) {
   const tipo      = sugestao.tipo ?? "script";
@@ -698,9 +698,9 @@ function SugestaoItem({ sugestao, podeEditar, onEdit, dark, operadoraNome }: {
           <TagChip label={cfg.label} bg={cfg.tagBg} color={cfg.tagColor(dark)} border={cfg.tagBorder} />
         </div>
       </div>
-      {podeEditar && (
-        <button onClick={() => onEdit(sugestao)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Editar sugestão" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? (dark ? "rgba(124,58,237,0.3)" : "rgba(74,32,130,0.2)") : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? (dark ? "rgba(124,58,237,0.15)" : "rgba(74,32,130,0.08)") : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? (dark ? "#b08aee" : "#4a2082") : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
-          <Pencil size={13} />
+      {podeExcluir && (
+        <button onClick={() => onExcluir(sugestao)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Excluir sugestão" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+          <Trash2 size={13} />
         </button>
       )}
     </div>
@@ -708,9 +708,9 @@ function SugestaoItem({ sugestao, podeEditar, onEdit, dark, operadoraNome }: {
 }
 
 // ─── ITEM DE CAMPANHA ─────────────────────────────────────────────────────────
-function CampanhaItem({ campanha, podeEditar, onEdit, dark, operadoraNome }: {
-  campanha: RoteiroCampanha; podeEditar: boolean;
-  onEdit: (c: RoteiroCampanha) => void;
+function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome }: {
+  campanha: RoteiroCampanha; podeExcluir: boolean;
+  onExcluir: (c: RoteiroCampanha) => void;
   dark: boolean; operadoraNome?: string;
 }) {
   const [hover,    setHover]    = useState(false);
@@ -744,9 +744,9 @@ function CampanhaItem({ campanha, podeEditar, onEdit, dark, operadoraNome }: {
           )}
         </div>
       </div>
-      {podeEditar && (
-        <button onClick={() => onEdit(campanha)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Editar campanha" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? "rgba(112,202,228,0.35)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? "rgba(112,202,228,0.10)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? cianoText : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
-          <Pencil size={13} />
+      {podeExcluir && (
+        <button onClick={() => onExcluir(campanha)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Excluir campanha" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+          <Trash2 size={13} />
         </button>
       )}
     </div>
@@ -754,14 +754,20 @@ function CampanhaItem({ campanha, podeEditar, onEdit, dark, operadoraNome }: {
 }
 
 // ─── BLOCO DE SUGESTÕES ───────────────────────────────────────────────────────
-function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeEditar, podeAdicionar, onCarregar, dark, operadorasList }: {
+function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeAdicionar, onCarregar, dark, operadorasList }: {
   bloco: BlocoRoteiro; operadoraSlug: string | null;
-  sugestoes: RoteiroSugestao[]; podeEditar: boolean; podeAdicionar: boolean;
+  sugestoes: RoteiroSugestao[]; podeExcluir: boolean; podeAdicionar: boolean;
   onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string }[];
 }) {
   const { theme: t } = useApp();
-  const [modalEditando,  setModalEditando]  = useState<RoteiroSugestao | null>(null);
   const [modalAdicionar, setModalAdicionar] = useState(false);
+
+  const handleExcluir = async (s: RoteiroSugestao) => {
+    if (!window.confirm("Excluir este roteiro?")) return;
+    const { error } = await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", s.id);
+    if (!error) onCarregar();
+  };
+
   const label = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
   const cfg   = BLOCO_CONFIG[bloco];
   if (!operadoraSlug) return null;
@@ -798,27 +804,32 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeEditar, podeAdici
             </div>
           ) : (
             sugestoes.map((s) => (
-              <SugestaoItem key={s.id} sugestao={s} podeEditar={podeEditar} onEdit={setModalEditando} dark={dark} operadoraNome={operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === s.operadora_slug)?.nome : undefined} />
+              <SugestaoItem key={s.id} sugestao={s} podeExcluir={podeExcluir} onExcluir={handleExcluir} dark={dark} operadoraNome={operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === s.operadora_slug)?.nome : undefined} />
             ))
           )}
         </div>
       </div>
-      {modalEditando && <ModalSugestao operadoraSlug={modalEditando.operadora_slug} bloco={bloco} editando={modalEditando} onClose={() => setModalEditando(null)} onSalvo={onCarregar} />}
       {modalAdicionar && operadoraSlug !== "todas" && <ModalSugestao operadoraSlug={operadoraSlug} bloco={bloco} editando={null} onClose={() => setModalAdicionar(false)} onSalvo={() => { setModalAdicionar(false); onCarregar(); }} />}
     </>
   );
 }
 
 // ─── BLOCO DE CAMPANHAS ───────────────────────────────────────────────────────
-function BlocoCampanhas({ operadoraSlug, campanhas, podeEditar, podeAdicionar, onCarregar, dark, operadorasList }: {
+function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeAdicionar, onCarregar, dark, operadorasList }: {
   operadoraSlug: string | null; campanhas: RoteiroCampanha[];
-  podeEditar: boolean; podeAdicionar: boolean;
+  podeExcluir: boolean; podeAdicionar: boolean;
   onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string }[];
 }) {
   const { theme: t } = useApp();
-  const [modalEditando,  setModalEditando]  = useState<RoteiroCampanha | null>(null);
   const [modalAdicionar, setModalAdicionar] = useState(false);
   const cianoTitle = dark ? "#70cae4" : "#0f6a8a";
+
+  const handleExcluir = async (c: RoteiroCampanha) => {
+    if (!window.confirm("Excluir esta campanha?")) return;
+    const { error } = await supabase.from("roteiro_mesa_campanhas").delete().eq("id", c.id);
+    if (!error) onCarregar();
+  };
+
   if (!operadoraSlug) return null;
 
   return (
@@ -854,12 +865,11 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeEditar, podeAdicionar, o
             </div>
           ) : (
             campanhas.map((c) => (
-              <CampanhaItem key={c.id} campanha={c} podeEditar={podeEditar} onEdit={setModalEditando} dark={dark} operadoraNome={operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === c.operadora_slug)?.nome : undefined} />
+              <CampanhaItem key={c.id} campanha={c} podeExcluir={podeExcluir} onExcluir={handleExcluir} dark={dark} operadoraNome={operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === c.operadora_slug)?.nome : undefined} />
             ))
           )}
         </div>
       </div>
-      {modalEditando && <ModalCampanha operadoraSlug={modalEditando.operadora_slug} editando={modalEditando} onClose={() => setModalEditando(null)} onSalvo={onCarregar} />}
       {modalAdicionar && operadoraSlug !== "todas" && <ModalCampanha operadoraSlug={operadoraSlug} editando={null} onClose={() => setModalAdicionar(false)} onSalvo={() => { setModalAdicionar(false); onCarregar(); }} />}
     </>
   );
@@ -1017,7 +1027,7 @@ export default function RoteiroMesa() {
                   <div style={{ width: 1, height: 24, background: t.cardBorder, flexShrink: 0 }} />
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button onClick={() => setModalRoteiros(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: "none", cursor: "pointer", background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
-                      <Plus size={14} />+ Roteiros
+                      <Plus size={14} />Roteiros
                     </button>
                     <button onClick={() => setModalCampanha(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: `1.5px solid ${BRAND.ciano}`, background: "rgba(112,202,228,0.12)", color: BRAND.ciano, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
                       <Megaphone size={14} />Nova Campanha
@@ -1078,7 +1088,7 @@ export default function RoteiroMesa() {
                 key={key} bloco={key}
                 operadoraSlug={operadoraSlugSelecionada}
                 sugestoes={sugestoesPorBloco(key)}
-                podeEditar={perm.canEditarOk}
+                podeExcluir={perm.canExcluirOk}
                 podeAdicionar={perm.canEditarOk && operadoraSlugSelecionada !== "todas"}
                 onCarregar={carregarDados}
                 dark={dark}
@@ -1088,7 +1098,7 @@ export default function RoteiroMesa() {
             <BlocoCampanhas
               operadoraSlug={operadoraSlugSelecionada}
               campanhas={filtrarCampanhas(campanhas)}
-              podeEditar={perm.canEditarOk}
+              podeExcluir={perm.canExcluirOk}
               podeAdicionar={perm.canEditarOk && operadoraSlugSelecionada !== "todas"}
               onCarregar={carregarDados}
               dark={dark}
