@@ -9,13 +9,11 @@ interface Props {
   icon: React.ReactNode;
   accentVar: string;
   accentColor: string;
-  useBrand?: boolean;
   atual: number;
   anterior: number;
   isBRL?: boolean;
   isHistorico?: boolean;
   subValue?: { label: string; value: string };
-  cardBg?: string;
 }
 
 export default function KpiCard({
@@ -24,13 +22,11 @@ export default function KpiCard({
   icon,
   accentVar,
   accentColor,
-  useBrand,
   atual,
   anterior,
   isBRL,
   isHistorico,
   subValue,
-  cardBg,
 }: Props) {
   const { theme: t } = useApp();
   const diff = atual - anterior;
@@ -41,24 +37,17 @@ export default function KpiCard({
   const positivo = isCusto ? !up : up;
   const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
 
-  const barBg = useBrand
-    ? `linear-gradient(90deg, var(--brand-secondary), transparent)`
-    : `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = useBrand
-    ? `color-mix(in srgb, var(--brand-secondary) 10%, transparent)`
-    : `${accentColor}18`;
-  const iconBoxBorder = useBrand
-    ? `1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)`
-    : `1px solid ${accentColor}35`;
-  const iconBoxColor = useBrand ? "var(--brand-secondary)" : accentColor;
-  const valueColor = useBrand ? "var(--brand-accent)" : t.text;
+  const barBg = `linear-gradient(90deg, ${accentColor}, transparent)`;
+  const iconBoxBg = `${accentColor}18`;
+  const iconBoxBorder = `1px solid ${accentColor}35`;
+  const iconBoxColor = accentColor;
 
   return (
     <div
       style={{
         borderRadius: 14,
         border: `1px solid ${t.cardBorder}`,
-        background: cardBg ?? t.cardBg,
+        background: t.cardBg,
         overflow: "hidden",
         transition: "box-shadow 0.2s",
       }}
@@ -106,7 +95,7 @@ export default function KpiCard({
           style={{
             fontSize: 22,
             fontWeight: 800,
-            color: valueColor,
+            color: t.text,
             fontFamily: FONT.body,
             marginBottom: subValue ? 4 : 6,
             lineHeight: 1.1,

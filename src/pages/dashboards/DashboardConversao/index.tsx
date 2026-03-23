@@ -102,14 +102,14 @@ function getAcao(row: ConversaoRow): AcaoInfo {
 }
 
 // ─── SECTION TITLE (mesmo padrão do Overview) ─────────────────────────────────
-function SectionTitle({ icon, children, sub, useBrand }: {
-  icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode; useBrand?: boolean;
+function SectionTitle({ icon, children, sub }: {
+  icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
 }) {
   const { theme: t } = useApp();
-  const titleColor = useBrand ? "var(--brand-primary)" : t.text;
-  const iconBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)" : "rgba(74,32,130,0.18)";
-  const iconBorder = useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)" : "1px solid rgba(74,32,130,0.30)";
-  const iconColor = useBrand ? "var(--brand-primary)" : BRAND.ciano;
+  const titleColor = t.text;
+  const iconBg = "rgba(74,32,130,0.18)";
+  const iconBorder = "1px solid rgba(74,32,130,0.30)";
+  const iconColor = BRAND.ciano;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
@@ -373,7 +373,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
-  const { theme: t, user, operadoraBrand } = useApp();
+  const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_conversao");
 
@@ -533,10 +533,8 @@ export default function DashboardConversao() {
   const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
 
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
-  const useBrand = user?.role === "operador" && !!operadoraBrand;
-  const blockBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
   const card: React.CSSProperties = {
-    background: blockBg,
+    background: t.cardBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -607,7 +605,7 @@ export default function DashboardConversao() {
         <div style={{
           borderRadius: 14,
           border: `1px solid ${t.cardBorder}`,
-          background: blockBg,
+          background: t.cardBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -676,7 +674,7 @@ export default function DashboardConversao() {
 
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiConvergenceTarget size={14} />} useBrand={useBrand}>Comparativo de Funil</SectionTitle>
+        <SectionTitle icon={<GiConvergenceTarget size={14} />}>Comparativo de Funil</SectionTitle>
 
         {/* Selects com badge "vs" estilizado */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", marginBottom: 16 }}>
@@ -740,7 +738,7 @@ export default function DashboardConversao() {
 
       {/* ══ BLOCO 3: PÓDIO FTD/HORA ═════════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPodium size={14} />} useBrand={useBrand}>
+        <SectionTitle icon={<GiPodium size={14} />}>
           Ranking FTD/Hora — Eficiência por Influencer
         </SectionTitle>
         <p style={{ margin: "-8px 0 20px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
@@ -756,7 +754,7 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 4: COMPARATIVO DE TAXAS ═══════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiSpeedometer size={14} />} useBrand={useBrand}>Comparativo de Taxas</SectionTitle>
+          <SectionTitle icon={<GiSpeedometer size={14} />}>Comparativo de Taxas</SectionTitle>
 
           {/* Filtros de ação */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>

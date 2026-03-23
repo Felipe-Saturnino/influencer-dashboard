@@ -132,50 +132,17 @@ function SelectComIcone({
 }
 
 // ─── RATE CARD (específico do OverviewInfluencer) ──────────────────────────────
-function RateCard({ label, value, highlight, useBrand }: {
-  label: string; value: string; highlight?: boolean | "purple"; useBrand?: boolean;
+function RateCard({ label, value, highlight }: {
+  label: string; value: string; highlight?: boolean | "purple";
 }) {
   const { theme: t } = useApp();
-  const highlightColor = highlight
-    ? (useBrand ? "var(--brand-accent)" : highlight === "purple" ? BRAND.roxoVivo : BRAND.azul)
-    : null;
+  const highlightColor = highlight ? (highlight === "purple" ? BRAND.roxoVivo : BRAND.azul) : null;
 
   return (
     <div style={{ padding: "10px 14px", borderRadius: 10, border: highlightColor ? `1px solid ${highlightColor}44` : `1px solid ${t.cardBorder}`, background: highlightColor ? `${highlightColor}12` : "transparent" }}>
       <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.08em", fontWeight: 700 }}>{label}</div>
       <div style={{ fontSize: 16, fontWeight: 800, color: highlightColor ?? t.text, margin: "5px 0 0", fontFamily: FONT.body }}>{value}</div>
     </div>
-  );
-}
-
-// ─── BRAND CARD (faixa colorida no topo quando operadora) ─────────────────────
-function BrandCard({
-  children, useBrand, style, defaultPadding = true,
-}: { children: React.ReactNode; useBrand?: boolean; style?: React.CSSProperties; defaultPadding?: boolean }) {
-  const { theme: t, operadoraBrand } = useApp();
-  const blockBg_local = useBrand ? "var(--brand-background)" : t.cardBg;
-  return (
-    <div style={{
-      background: blockBg_local, border: `1px solid ${t.cardBorder}`, borderRadius: 18,
-      overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)", ...style,
-    }}>
-      {useBrand && (
-        <div style={{ height: 3, background: "var(--brand-secondary)" }} />
-      )}
-      {defaultPadding ? <div style={{ padding: 20 }}>{children}</div> : children}
-    </div>
-  );
-}
-
-// ─── BRAND DIVIDER ───────────────────────────────────────────────────────────
-function BrandDivider({ useBrand }: { useBrand?: boolean }) {
-  if (!useBrand) return null;
-  return (
-    <div style={{
-      height: 1, marginBottom: 14,
-      background: "linear-gradient(90deg, var(--brand-secondary) 0%, transparent 100%)",
-      opacity: 0.25, borderRadius: 1,
-    }} />
   );
 }
 
@@ -186,7 +153,7 @@ function cel(v: number, isBRL = false) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverviewInfluencer() {
-  const { theme: t, user, operadoraBrand, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
+  const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("dash_overview_influencer");
 
@@ -442,33 +409,16 @@ export default function DashboardOverviewInfluencer() {
   const ticketSaque = totais.saques_qtd > 0 ? fmtBRL(totais.saques_valor / totais.saques_qtd) : "—";
   const ggrPorJogador = totais.ftds > 0 ? fmtBRL(totais.ggr / totais.ftds) : "—";
 
-  const useBrand = user?.role === "operador" && !!operadoraBrand;
-  const blockBg = useBrand ? "var(--brand-background)" : t.cardBg;
-  const card: React.CSSProperties = { background: blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
-
-  useEffect(() => {
-    if (!useBrand || !operadoraBrand) return;
-    const tituloOriginal = document.title;
-    document.title = operadoraBrand.nome ? `${operadoraBrand.nome} — Dashboard Influencer` : tituloOriginal;
-    if (operadoraBrand.logo_url) {
-      const link = (document.querySelector("link[rel~='icon']") as HTMLLinkElement | null)
-        ?? (() => { const el = document.createElement("link"); el.rel = "icon"; document.head.appendChild(el); return el; })();
-      const faviconOriginal = link.href;
-      link.href = operadoraBrand.logo_url;
-      return () => { document.title = tituloOriginal; link.href = faviconOriginal; };
-    }
-    return () => { document.title = tituloOriginal; };
-  }, [useBrand, operadoraBrand]);
+  const card: React.CSSProperties = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   const thStyle: React.CSSProperties = {
     textAlign: "left", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase",
     color: t.textMuted, padding: "10px 12px",
-    background: useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : "rgba(74,32,130,0.10)",
+    background: "rgba(74,32,130,0.10)",
     borderBottom: `1px solid ${t.cardBorder}`, fontFamily: FONT.body, whiteSpace: "nowrap", fontWeight: 700,
   };
-  const zebraStripe = (i: number) =>
-    i % 2 === 1 ? (useBrand ? "color-mix(in srgb, var(--brand-secondary) 6%, transparent)" : "rgba(74,32,130,0.06)") : "transparent";
-  const totalRowBg = useBrand ? "color-mix(in srgb, var(--brand-secondary) 12%, transparent)" : "rgba(74,32,130,0.12)";
+  const zebraStripe = (i: number) => i % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent";
+  const totalRowBg = "rgba(74,32,130,0.12)";
   const tdStyle: React.CSSProperties = { padding: "10px 12px", fontSize: 13, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", borderBottom: `1px solid ${t.cardBorder}` };
 
   const isPrimeiro = idxMes === 0;
@@ -485,8 +435,8 @@ export default function DashboardOverviewInfluencer() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 20%, transparent)" : `1px solid ${t.cardBorder}`,
-          background: blockBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.cardBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -495,7 +445,7 @@ export default function DashboardOverviewInfluencer() {
             <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
               <ChevronLeft size={14} />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: useBrand ? "var(--brand-primary)" : t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
@@ -508,13 +458,9 @@ export default function DashboardOverviewInfluencer() {
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
-                border: historico
-                  ? `1px solid ${useBrand ? "var(--brand-accent)" : BRAND.roxoVivo}`
-                  : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`
-                  : "transparent",
-                color: historico ? (useBrand ? "var(--brand-accent)" : BRAND.roxoVivo) : t.textMuted,
+                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
+                background: historico ? `${BRAND.roxoVivo}18` : "transparent",
+                color: historico ? BRAND.roxoVivo : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
@@ -566,57 +512,49 @@ export default function DashboardOverviewInfluencer() {
       </div>
 
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
-      <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
-        <SectionTitle icon={<GiPodiumWinner size={14} />} sub={!historico ? "· MTD vs mês anterior" : undefined} useBrand={useBrand}>KPIs Executivos</SectionTitle>
+      <div style={{ ...card, marginBottom: 14 }}>
+        <SectionTitle icon={<GiPodiumWinner size={14} />} sub={!historico ? "· MTD vs mês anterior" : undefined}>KPIs Executivos</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard label="GGR Total"    value={fmtBRL(totais.ggr)}         icon={<GiMoneyStack  size={16} color={BRAND.roxo}    />} accentVar="--brand-extra1" accentColor={BRAND.roxo}    useBrand={useBrand} cardBg={blockBg} atual={totais.ggr}         anterior={totaisAnt.ggr}         isBRL isHistorico={historico} />
-          <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney size={16} color={BRAND.azul}    />} accentVar="--brand-extra4" accentColor={BRAND.azul}    useBrand={useBrand} cardBg={blockBg} atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
-          <KpiCard label="ROI"          value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"} icon={<GiStarMedal size={16} color={BRAND.verde} />} accentVar="--brand-extra2" accentColor={BRAND.verde} useBrand={useBrand} cardBg={blockBg} atual={totais.roi} anterior={totaisAnt.roi} isHistorico={historico} />
+          <KpiCard label="GGR Total" value={fmtBRL(totais.ggr)} icon={<GiMoneyStack size={16} color={BRAND.roxo} />} accentVar="--brand-extra1" accentColor={BRAND.roxo} atual={totais.ggr} anterior={totaisAnt.ggr} isBRL isHistorico={historico} />
+          <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney size={16} color={BRAND.azul} />} accentVar="--brand-extra4" accentColor={BRAND.azul} atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
+          <KpiCard label="ROI" value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"} icon={<GiStarMedal size={16} color={BRAND.verde} />} accentVar="--brand-extra2" accentColor={BRAND.verde} atual={totais.roi} anterior={totaisAnt.roi} isHistorico={historico} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard label="Qtd de Lives"     value={totais.lives.toLocaleString("pt-BR")} icon={<GiClapperboard size={16} color={BRAND.azul} />} accentVar="--brand-extra2" accentColor={BRAND.azul} useBrand={useBrand} cardBg={blockBg} atual={totais.lives} anterior={totaisAnt.lives} isHistorico={historico} />
-          <KpiCard label="Horas Realizadas" value={fmtHoras(totais.horas)}               icon={<GiSandsOfTime  size={16} color={BRAND.azul} />} accentVar="--brand-extra2" accentColor={BRAND.azul} useBrand={useBrand} cardBg={blockBg} atual={totais.horas} anterior={totaisAnt.horas} isHistorico={historico} />
-          <KpiCard label="Média de Views"   value={totais.views > 0 ? totais.views.toLocaleString("pt-BR") : "—"} icon={<GiEyeball size={16} color={BRAND.azul} />} accentVar="--brand-extra2" accentColor={BRAND.azul} useBrand={useBrand} cardBg={blockBg} atual={totais.views} anterior={totaisAnt.views} isHistorico={historico} />
+          <KpiCard label="Qtd de Lives" value={totais.lives.toLocaleString("pt-BR")} icon={<GiClapperboard size={16} color={BRAND.azul} />} accentVar="--brand-extra2" accentColor={BRAND.azul} atual={totais.lives} anterior={totaisAnt.lives} isHistorico={historico} />
+          <KpiCard label="Horas Realizadas" value={fmtHoras(totais.horas)} icon={<GiSandsOfTime size={16} color={BRAND.azul} />} accentVar="--brand-extra2" accentColor={BRAND.azul} atual={totais.horas} anterior={totaisAnt.horas} isHistorico={historico} />
+          <KpiCard label="Média de Views" value={totais.views > 0 ? totais.views.toLocaleString("pt-BR") : "—"} icon={<GiEyeball size={16} color={BRAND.azul} />} accentVar="--brand-extra2" accentColor={BRAND.azul} atual={totais.views} anterior={totaisAnt.views} isHistorico={historico} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          <KpiCard label="Registros" value={totais.registros.toLocaleString("pt-BR")}    icon={<GiPerson   size={16} color={BRAND.roxo}    />} accentVar="--brand-extra3" accentColor={BRAND.roxo}    useBrand={useBrand} cardBg={blockBg} atual={totais.registros}     anterior={totaisAnt.registros}     isHistorico={historico} subValue={subValueReg} />
-          <KpiCard label="FTDs"      value={totais.ftds.toLocaleString("pt-BR")}         icon={<GiTrophy   size={16} color={BRAND.roxo}    />} accentVar="--brand-extra3" accentColor={BRAND.roxo}    useBrand={useBrand} cardBg={blockBg} atual={totais.ftds}          anterior={totaisAnt.ftds}          isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }} />
-          <KpiCard label="Depósitos" value={totais.depositos_qtd.toLocaleString("pt-BR")} icon={<GiCardPlay size={16} color={BRAND.amarelo} />} accentVar="--brand-extra3" accentColor={BRAND.amarelo} useBrand={useBrand} cardBg={blockBg} atual={totais.depositos_qtd} anterior={totaisAnt.depositos_qtd} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.depositos_valor) }} />
-          <KpiCard label="Saques"    value={totais.saques_qtd.toLocaleString("pt-BR")}   icon={<GiCash     size={16} color={BRAND.amarelo} />} accentVar="--brand-extra4" accentColor={BRAND.amarelo} useBrand={useBrand} cardBg={blockBg} atual={totais.saques_qtd}    anterior={totaisAnt.saques_qtd}    isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.saques_valor) }} />
+          <KpiCard label="Registros" value={totais.registros.toLocaleString("pt-BR")} icon={<GiPerson size={16} color={BRAND.roxo} />} accentVar="--brand-extra3" accentColor={BRAND.roxo} atual={totais.registros} anterior={totaisAnt.registros} isHistorico={historico} subValue={subValueReg} />
+          <KpiCard label="FTDs" value={totais.ftds.toLocaleString("pt-BR")} icon={<GiTrophy size={16} color={BRAND.roxo} />} accentVar="--brand-extra3" accentColor={BRAND.roxo} atual={totais.ftds} anterior={totaisAnt.ftds} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }} />
+          <KpiCard label="Depósitos" value={totais.depositos_qtd.toLocaleString("pt-BR")} icon={<GiCardPlay size={16} color={BRAND.amarelo} />} accentVar="--brand-extra3" accentColor={BRAND.amarelo} atual={totais.depositos_qtd} anterior={totaisAnt.depositos_qtd} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.depositos_valor) }} />
+          <KpiCard label="Saques" value={totais.saques_qtd.toLocaleString("pt-BR")} icon={<GiCash size={16} color={BRAND.amarelo} />} accentVar="--brand-extra4" accentColor={BRAND.amarelo} atual={totais.saques_qtd} anterior={totaisAnt.saques_qtd} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.saques_valor) }} />
         </div>
-      </BrandCard>
-      <BrandDivider useBrand={useBrand} />
+      </div>
 
-      {/* ─── BLOCO 3: Funil de Conversão (formato Overview) ────────────────────── */}
-      <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
-        <SectionTitle icon={<GiFunnel size={14} />} useBrand={useBrand}>Funil de Conversão</SectionTitle>
-        <FunilVisual
-          values={[totais.views, totais.acessos, totais.registros, totais.ftds]}
-          taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
-          useBrand={useBrand}
-          logoUrl={useBrand ? (operadoraBrand?.logo_url ?? undefined) : undefined}
-        />
-      </BrandCard>
-      <BrandDivider useBrand={useBrand} />
+      {/* ─── BLOCO 3: Funil de Conversão ───────────────────────────────────────── */}
+      <div style={{ ...card, marginBottom: 14 }}>
+        <SectionTitle icon={<GiFunnel size={14} />}>Funil de Conversão</SectionTitle>
+        <FunilVisual values={[totais.views, totais.acessos, totais.registros, totais.ftds]} taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]} />
+      </div>
 
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
-      <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
-        <SectionTitle icon={<GiSpeedometer size={14} />} useBrand={useBrand}>Eficiência</SectionTitle>
+      <div style={{ ...card, marginBottom: 14 }}>
+        <SectionTitle icon={<GiSpeedometer size={14} />}>Eficiência</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-          <RateCard label="FTD/Hora"              value={ftdPorHora} />
-          <RateCard label="Ticket Médio FTD"      value={ticketFTD} />
+          <RateCard label="FTD/Hora" value={ftdPorHora} />
+          <RateCard label="Ticket Médio FTD" value={ticketFTD} />
           <RateCard label="Ticket Médio Depósito" value={ticketDep} />
-          <RateCard label="Ticket Médio Saque"    value={ticketSaque} />
-          <RateCard label="GGR por Jogador"     value={ggrPorJogador} highlight={true} useBrand={useBrand} />
+          <RateCard label="Ticket Médio Saque" value={ticketSaque} />
+          <RateCard label="GGR por Jogador" value={ggrPorJogador} highlight={true} />
         </div>
-      </BrandCard>
-      <BrandDivider useBrand={useBrand} />
+      </div>
 
       {/* ─── BLOCO 5: Comparativo Diário ──────────────────────────────────────── */}
       {!historico && mesSelecionado && diasData.length > 0 && (
-        <BrandCard useBrand={useBrand} style={{ marginBottom: 0 }} defaultPadding={false}>
+        <div style={{ ...card, padding: 0, overflow: "hidden", marginBottom: 0 }}>
           <div style={{ padding: "20px 20px 16px" }}>
-            <SectionTitle icon={<GiCalendar size={14} />} useBrand={useBrand}>Comparativo Diário</SectionTitle>
+            <SectionTitle icon={<GiCalendar size={14} />}>Comparativo Diário</SectionTitle>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -679,7 +617,7 @@ export default function DashboardOverviewInfluencer() {
               </tbody>
             </table>
           </div>
-        </BrandCard>
+        </div>
       )}
     </div>
   );

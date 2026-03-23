@@ -178,11 +178,10 @@ function MarginBadge({ value }: { value: number | null }) {
 
 // ─── KPI CARD ─────────────────────────────────────────────────────────────────
 function KpiCard({
-  label, value, icon, accentVar, accentColor, useBrand, cardBg,
+  label, value, icon, accentVar, accentColor,
   atual, anterior, isBRL, isPct, isHistorico,
 }: {
   label: string; value: string; icon: React.ReactNode; accentVar?: string; accentColor: string;
-  useBrand?: boolean; cardBg?: string;
   atual: number; anterior: number; isBRL?: boolean; isPct?: boolean; isHistorico?: boolean;
 }) {
   const { theme: t } = useApp();
@@ -191,16 +190,16 @@ function KpiCard({
   const up = diff >= 0;
   const neutral = Math.abs(diff) < 0.001;
 
-  const barBg = useBrand && accentVar ? `linear-gradient(90deg, var(${accentVar}), transparent)` : `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = useBrand && accentVar ? `color-mix(in srgb, var(${accentVar}) 10%, transparent)` : `${accentColor}18`;
-  const iconBoxBorder = useBrand && accentVar ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)` : `1px solid ${accentColor}35`;
-  const iconBoxColor = useBrand && accentVar ? `var(${accentVar})` : accentColor;
+  const barBg = `linear-gradient(90deg, ${accentColor}, transparent)`;
+  const iconBoxBg = `${accentColor}18`;
+  const iconBoxBorder = `1px solid ${accentColor}35`;
+  const iconBoxColor = accentColor;
 
   return (
     <div style={{
       borderRadius: 14,
       border: `1px solid ${t.cardBorder}`,
-      background: cardBg ?? t.cardBg,
+      background: t.cardBg,
       overflow: "hidden",
       transition: "box-shadow 0.2s",
     }}>
@@ -261,12 +260,12 @@ function KpiCard({
 }
 
 // ─── SECTION HEADER ───────────────────────────────────────────────────────────
-function SectionHeader({ icon, title, sub, useBrand }: { icon: React.ReactNode; title: string; sub?: string; useBrand?: boolean }) {
+function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
   const { theme: t } = useApp();
-  const titleColor = useBrand ? "var(--brand-primary)" : t.text;
-  const iconBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)" : "rgba(74,32,130,0.18)";
-  const iconBorder = useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)" : "1px solid rgba(74,32,130,0.30)";
-  const iconColor = useBrand ? "var(--brand-primary)" : BRAND.ciano;
+  const titleColor = t.text;
+  const iconBg = "rgba(74,32,130,0.18)";
+  const iconBorder = "1px solid rgba(74,32,130,0.30)";
+  const iconColor = BRAND.ciano;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
@@ -312,7 +311,7 @@ function PlaceholderBloco({ label }: { label: string }) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function MesasSpin() {
-  const { theme: t, user, operadoraBrand } = useApp();
+  const { theme: t } = useApp();
   const perm = usePermission("mesas_spin");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -439,10 +438,8 @@ export default function MesasSpin() {
   }, [historico, dailyData, monthlyData]);
 
   // ── Estilos base ─────────────────────────────────────────────────────────────
-  const useBrand = user?.role === "operador" && !!operadoraBrand;
-  const blockBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
   const card: React.CSSProperties = {
-    background: blockBg,
+    background: t.cardBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -492,7 +489,7 @@ export default function MesasSpin() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: blockBg,
+          background: t.cardBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -526,9 +523,9 @@ export default function MesasSpin() {
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
-                border: historico ? `1px solid ${useBrand ? "var(--brand-primary)" : BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-                background: historico ? (useBrand ? "color-mix(in srgb, var(--brand-primary) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
-                color: historico ? (useBrand ? "var(--brand-primary)" : BRAND.roxoVivo) : t.textMuted,
+                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
+                background: historico ? `${BRAND.roxoVivo}18` : "transparent",
+                color: historico ? BRAND.roxoVivo : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
@@ -566,7 +563,6 @@ export default function MesasSpin() {
           icon={<GiPokerHand size={15} />}
           title="KPIs Principais"
           sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
-          useBrand={useBrand}
         />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12 }}>
           <KpiCard
@@ -574,7 +570,6 @@ export default function MesasSpin() {
             value={kpisAtual.bets.toLocaleString("pt-BR")}
             icon={<GiTrophy size={16} />}
             accentVar="--brand-extra1" accentColor={BRAND.ciano}
-            useBrand={useBrand} cardBg={blockBg}
             atual={kpisAtual.bets}
             anterior={kpisAnt.bets}
             isHistorico={historico}
@@ -584,7 +579,6 @@ export default function MesasSpin() {
             value={fmtBRLCompact(kpisAtual.turnover)}
             icon={<GiCoins size={16} />}
             accentVar="--brand-extra2" accentColor={BRAND.azul}
-            useBrand={useBrand} cardBg={blockBg}
             atual={kpisAtual.turnover}
             anterior={kpisAnt.turnover}
             isBRL
@@ -595,7 +589,6 @@ export default function MesasSpin() {
             value={fmtBRLCompact(kpisAtual.ggr)}
             icon={<GiPokerHand size={16} />}
             accentVar="--brand-extra1" accentColor={BRAND.roxoVivo}
-            useBrand={useBrand} cardBg={blockBg}
             atual={kpisAtual.ggr}
             anterior={kpisAnt.ggr}
             isBRL
@@ -606,7 +599,6 @@ export default function MesasSpin() {
             value={fmtPct(kpisAtual.margin_pct)}
             icon={<TrendingUp size={16} />}
             accentVar="--brand-extra1" accentColor={BRAND.amarelo}
-            useBrand={useBrand} cardBg={blockBg}
             atual={kpisAtual.margin_pct}
             anterior={kpisAnt.margin_pct}
             isPct
@@ -617,7 +609,6 @@ export default function MesasSpin() {
             value={kpisAtual.uap.toLocaleString("pt-BR")}
             icon={<GiPerson size={16} />}
             accentVar="--brand-extra3" accentColor={BRAND.verde}
-            useBrand={useBrand} cardBg={blockBg}
             atual={kpisAtual.uap}
             anterior={kpisAnt.uap}
             isHistorico={historico}
@@ -627,7 +618,6 @@ export default function MesasSpin() {
             value={fmtBRL(kpisAtual.arpu)}
             icon={<GiCoins size={14} />}
             accentVar="--brand-extra4" accentColor={BRAND.rosa}
-            useBrand={useBrand} cardBg={blockBg}
             atual={kpisAtual.arpu}
             anterior={kpisAnt.arpu}
             isBRL
@@ -651,7 +641,6 @@ export default function MesasSpin() {
           icon={<GiCalendar size={15} />}
           title={historico ? "Comparativo Mensal" : `Detalhamento Diário · ${mesSelecionado?.label}`}
           sub={historico ? "· consolidado mês a mês" : "· dia a dia do mês selecionado"}
-          useBrand={useBrand}
         />
 
         {loading ? (

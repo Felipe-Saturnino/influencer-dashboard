@@ -5,7 +5,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
-import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
+import { BRAND } from "../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
@@ -130,7 +130,7 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
-  const { theme: t, user, operadoraBrand } = useApp();
+  const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_overview");
 
@@ -365,26 +365,13 @@ export default function DashboardOverview() {
   const pctViewFTD     = totaisExibidos.views > 0    ? ((totaisExibidos.ftds      / totaisExibidos.views)    * 100).toFixed(1) + "%" : "—";
 
   // ── ESTILOS BASE ──────────────────────────────────────────────────────────────
-  const useBrand = user?.role === "operador" && !!operadoraBrand;
-  const kpiCardBg = useBrand ? "var(--brand-background)" : undefined;
-  const filterBlockBg = useBrand ? "var(--brand-background)" : t.cardBg;
   const card: React.CSSProperties = {
-    background: useBrand ? "var(--brand-background)" : t.cardBg,
+    background: t.cardBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
     boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
-
-  const cardWithStrip: React.CSSProperties = {
-    ...card,
-    overflow: "hidden",
-    padding: 0,
-  };
-
-  const cardStrip = useBrand ? (
-    <div style={{ height: 3, background: "var(--brand-secondary)" }} />
-  ) : null;
 
   const thStyle: React.CSSProperties = {
     textAlign: "left",
@@ -395,15 +382,13 @@ export default function DashboardOverview() {
     fontWeight: 600,
     padding: "10px 12px",
     borderBottom: `1px solid ${t.cardBorder}`,
-    background: useBrand
-      ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)"
-      : "rgba(74,32,130,0.10)",
+    background: "rgba(74,32,130,0.10)",
     fontFamily: FONT.body,
     whiteSpace: "nowrap",
   };
 
   const zebraStripe = (i: number) =>
-    i % 2 === 0 ? "transparent" : useBrand ? "color-mix(in srgb, var(--brand-secondary) 6%, transparent)" : "rgba(74,32,130,0.06)";
+    i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)";
 
   const tdStyle: React.CSSProperties = {
     padding: "10px 12px",
@@ -464,8 +449,8 @@ export default function DashboardOverview() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 20%, transparent)" : `1px solid ${t.cardBorder}`,
-          background: filterBlockBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.cardBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -479,8 +464,8 @@ export default function DashboardOverview() {
 
             <span style={{
               fontSize: 18, fontWeight: 800,
-              color: useBrand ? "var(--brand-primary)" : t.text,
-              fontFamily: FONT_TITLE,
+              color: t.text,
+              fontFamily: FONT.body,
               minWidth: 180, textAlign: "center",
             }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
@@ -501,12 +486,12 @@ export default function DashboardOverview() {
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
                 border: historico
-                  ? `1px solid ${useBrand ? "var(--brand-accent)" : BRAND.roxoVivo}`
+                  ? `1px solid ${BRAND.roxoVivo}`
                   : `1px solid ${t.cardBorder}`,
                 background: historico
-                  ? useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)"
+                  ? "rgba(124,58,237,0.15)"
                   : "transparent",
-                color: historico ? (useBrand ? "var(--brand-accent)" : BRAND.roxoVivo) : t.textMuted,
+                color: historico ? BRAND.roxoVivo : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
@@ -558,137 +543,45 @@ export default function DashboardOverview() {
       </div>
 
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
-      <div style={{ ...cardWithStrip, marginBottom: 14 }}>
-        {cardStrip}
-        <div style={{ padding: 20 }}>
-        <SectionTitle icon={<GiPokerHand size={15} />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined} useBrand={useBrand}>
+      <div style={{ ...card, marginBottom: 14 }}>
+        <SectionTitle icon={<GiPokerHand size={15} />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}>
           KPIs Executivos
         </SectionTitle>
 
-        {/* Linha 1: Receita — GGR / Investimento / ROI */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard
-            label="GGR Total" value={fmtBRL(totaisExibidos.ggr)}
-            icon={<GiPokerHand size={16} />}
-            accentVar="--brand-extra1" accentColor={BRAND.receita}
-            useBrand={useBrand}
-            atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
-          <KpiCard
-            label="Investimento" value={fmtBRL(totaisExibidos.investimento)}
-            icon={<GiCoins size={16} />}
-            accentVar="--brand-extra4" accentColor={BRAND.custo}
-            useBrand={useBrand}
-            atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
-          <KpiCard
-            label="ROI Geral"
-            value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"}
-            icon={<GiTrophy size={16} />}
-            accentVar="--brand-extra2" accentColor={BRAND.verde}
-            useBrand={useBrand}
-            atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
+          <KpiCard label="GGR Total" value={fmtBRL(totaisExibidos.ggr)} icon={<GiPokerHand size={16} />} accentVar="--brand-extra1" accentColor={BRAND.receita} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
+          <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<GiCoins size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
+          <KpiCard label="ROI Geral" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<GiTrophy size={16} />} accentVar="--brand-extra2" accentColor={BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
         </div>
 
-        {/* Linha 2: Operação — Lives / Horas / Influencers + Depósitos */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard
-            label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")}
-            icon={<GiFilmProjector size={16} />}
-            accentVar="--brand-extra2" accentColor={BRAND.operacao}
-            useBrand={useBrand}
-            atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
-          <KpiCard
-            label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)}
-            icon={<GiSandsOfTime size={16} />}
-            accentVar="--brand-extra2" accentColor={BRAND.operacao}
-            useBrand={useBrand}
-            atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
-          <KpiCard
-            label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")}
-            icon={<GiMicrophone size={16} />}
-            accentVar="--brand-extra2" accentColor={BRAND.operacao}
-            useBrand={useBrand}
-            atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
-          <KpiCardDepositos
-            atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }}
-            anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }}
-            isHistorico={historico}
-            cardBg={kpiCardBg}
-            useBrand={useBrand}
-          />
+          <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<GiFilmProjector size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
+          <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<GiSandsOfTime size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
+          <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<GiMicrophone size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
+          <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico} />
         </div>
 
-        {/* Linha 3: Transação — Registros / Custo Reg / FTDs / Custo FTD */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          <KpiCard
-            label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")}
-            icon={<GiPlayerNext size={16} />}
-            accentVar="--brand-extra3" accentColor={BRAND.transacao}
-            useBrand={useBrand}
-            atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
-          <KpiCard
-            label="Custo por Registro"
-            value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"}
-            icon={<GiReceiveMoney size={16} />}
-            accentVar="--brand-extra4" accentColor={BRAND.custo}
-            useBrand={useBrand}
-            atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
-          <KpiCard
-            label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")}
-            icon={<GiTrophy size={16} />}
-            accentVar="--brand-extra3" accentColor={BRAND.transacao}
-            useBrand={useBrand}
-            atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
-          <KpiCard
-            label="Custo por FTD"
-            value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"}
-            icon={<GiPayMoney size={16} />}
-            accentVar="--brand-extra4" accentColor={BRAND.custo}
-            useBrand={useBrand}
-            atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico}
-            cardBg={kpiCardBg}
-          />
-        </div>
+          <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<GiPlayerNext size={16} />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
+          <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<GiReceiveMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
+          <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<GiTrophy size={16} />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
+          <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<GiPayMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
         </div>
       </div>
 
       {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
-      <div style={{ ...cardWithStrip, marginBottom: 14 }}>
-        {cardStrip}
-        <div style={{ padding: 20 }}>
-        <SectionTitle icon={<GiPlayerNext size={15} />} useBrand={useBrand}>Funil de Conversão</SectionTitle>
+      <div style={{ ...card, marginBottom: 14 }}>
+        <SectionTitle icon={<GiPlayerNext size={15} />}>Funil de Conversão</SectionTitle>
         <FunilVisual
           values={[totaisExibidos.views, totaisExibidos.acessos, totaisExibidos.registros, totaisExibidos.ftds]}
           taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
-          useBrand={useBrand}
-          logoUrl={useBrand ? operadoraBrand?.logo_url ?? undefined : undefined}
         />
-        </div>
       </div>
 
       {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
-      <div style={cardWithStrip}>
-        {cardStrip}
-        <div style={{ padding: 20 }}>
+      <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiTrophy size={15} />} useBrand={useBrand}>Ranking de Influencers</SectionTitle>
+          <SectionTitle icon={<GiTrophy size={15} />}>Ranking de Influencers</SectionTitle>
 
           {/* Filtros de status */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -781,7 +674,6 @@ export default function DashboardOverview() {
             </table>
           </div>
         )}
-        </div>
       </div>
     </div>
   );

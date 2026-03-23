@@ -12,8 +12,6 @@ const FUNIL_STEPS = [
 interface Props {
   values: number[];
   taxas: string[];
-  useBrand?: boolean;
-  logoUrl?: string;
   /** Prefixo único para IDs de gradiente (evita colisão quando há múltiplos funis na página) */
   idPrefix?: string;
 }
@@ -21,8 +19,6 @@ interface Props {
 export default function FunilVisual({
   values,
   taxas,
-  useBrand,
-  logoUrl,
   idPrefix = "fgrad",
 }: Props) {
   const { theme: t } = useApp();
@@ -31,8 +27,7 @@ export default function FunilVisual({
   const levels = 4;
   const stepH = H / levels;
   const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
-  const getStepColor = (i: number) =>
-    useBrand ? "var(--brand-secondary)" : FUNIL_COLORS[i];
+  const getStepColor = (i: number) => FUNIL_COLORS[i];
 
   return (
     <div
@@ -111,17 +106,6 @@ export default function FunilVisual({
               </g>
             );
           })}
-          {logoUrl && (
-            <image
-              href={logoUrl}
-              x={W / 2 - 24}
-              y={H - 56}
-              width={48}
-              height={48}
-              preserveAspectRatio="xMidYMid meet"
-              style={{ opacity: 0.18 }}
-            />
-          )}
         </svg>
       </div>
 
@@ -153,7 +137,7 @@ export default function FunilVisual({
           { label: "Acesso → FTD", taxa: taxas[3], color: FUNIL_COLORS[3], highlight: true },
           { label: "View → FTD", taxa: taxas[4], color: FUNIL_COLORS[0], highlight: true },
         ].map((r) => {
-          const highlightColor = useBrand ? "var(--brand-accent)" : r.color;
+          const highlightColor = r.color;
           const border = (r as { highlight?: boolean }).highlight
             ? `1px solid color-mix(in srgb, ${highlightColor} 32%, transparent)`
             : `1px solid ${t.cardBorder}`;

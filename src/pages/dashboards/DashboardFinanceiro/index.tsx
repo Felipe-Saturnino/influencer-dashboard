@@ -152,15 +152,14 @@ function getPerfilJogador(pvi: number): PerfilJogador {
 }
 
 // ─── SECTION TITLE (padrão Overview / Conversão) ──────────────────────────────
-function SectionTitle({ icon, children, sub, useBrand }: {
+function SectionTitle({ icon, children, sub }: {
   icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
-  useBrand?: boolean;
 }) {
   const { theme: t } = useApp();
-  const titleColor = useBrand ? "var(--brand-primary)" : t.text;
-  const iconBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)" : "rgba(74,32,130,0.18)";
-  const iconBorder = useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)" : "1px solid rgba(74,32,130,0.30)";
-  const iconColor = useBrand ? "var(--brand-primary)" : BRAND.ciano;
+  const titleColor = t.text;
+  const iconBg = "rgba(74,32,130,0.18)";
+  const iconBorder = "1px solid rgba(74,32,130,0.30)";
+  const iconColor = BRAND.ciano;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
@@ -189,11 +188,10 @@ function SectionTitle({ icon, children, sub, useBrand }: {
 }
 
 // ─── KPI CARD (padrão unificado com Overview) ─────────────────────────────────
-function KpiCard({ label, value, subValue, icon, accentVar, accentColor, useBrand, cardBg, atual, anterior, isHistorico, isBRL, isInverso }: {
+function KpiCard({ label, value, subValue, icon, accentVar, accentColor, atual, anterior, isHistorico, isBRL, isInverso }: {
   label: string; value: string;
   subValue?: { label: string; value: string };
   icon: React.ReactNode; accentVar: string; accentColor: string;
-  useBrand?: boolean; cardBg?: string;
   atual: number; anterior: number;
   isHistorico?: boolean; isBRL?: boolean;
   isInverso?: boolean;
@@ -205,16 +203,16 @@ function KpiCard({ label, value, subValue, icon, accentVar, accentColor, useBran
   const positivo = isInverso ? !up : up;
   const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
 
-  const barBg = useBrand ? `linear-gradient(90deg, var(${accentVar}), transparent)` : `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = useBrand ? `color-mix(in srgb, var(${accentVar}) 10%, transparent)` : `${accentColor}18`;
-  const iconBoxBorder = useBrand ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)` : `1px solid ${accentColor}35`;
-  const iconBoxColor = useBrand ? `var(${accentVar})` : accentColor;
+  const barBg = `linear-gradient(90deg, ${accentColor}, transparent)`;
+  const iconBoxBg = `${accentColor}18`;
+  const iconBoxBorder = `1px solid ${accentColor}35`;
+  const iconBoxColor = accentColor;
 
   return (
     <div style={{
       borderRadius: 14,
       border: `1px solid ${t.cardBorder}`,
-      background: cardBg ?? t.cardBg,
+      background: t.cardBg,
       overflow: "hidden",
     }}>
       <div style={{ height: 3, background: barBg }} />
@@ -277,7 +275,7 @@ function PieTooltip({ active, payload, total, cardBg, cardBorder, text }: {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardFinanceiro() {
-  const { theme: t, user, operadoraBrand } = useApp();
+  const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_financeiro");
 
@@ -583,10 +581,8 @@ export default function DashboardFinanceiro() {
   const pieTotal = useMemo(() => pieInvestimento.reduce((s, d) => s + d.value, 0), [pieInvestimento]);
 
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
-  const useBrand = user?.role === "operador" && !!operadoraBrand;
-  const blockBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
   const card: React.CSSProperties = {
-    background: blockBg, border: `1px solid ${t.cardBorder}`,
+    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
@@ -634,7 +630,7 @@ export default function DashboardFinanceiro() {
         <div style={{
           borderRadius: 14,
           border: `1px solid ${t.cardBorder}`,
-          background: blockBg,
+          background: t.cardBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -701,7 +697,6 @@ export default function DashboardFinanceiro() {
         <SectionTitle
           icon={<GiPokerHand size={14} />}
           sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
-          useBrand={useBrand}
         >
           KPIs Financeiros
         </SectionTitle>
@@ -712,7 +707,6 @@ export default function DashboardFinanceiro() {
             label="FTD" value={fmtBRL(totaisExibir.ftd_total)}
             subValue={{ label: "ticket médio", value: totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ftd_ticket_medio) : "—" }}
             icon={<GiTrophy size={14} />} accentVar="--brand-extra1" accentColor={BRAND.roxo}
-            useBrand={useBrand} cardBg={blockBg}
             atual={totaisExibir.ftd_total} anterior={totaisAnt.ftd_total}
             isHistorico={historico} isBRL
           />
@@ -720,7 +714,6 @@ export default function DashboardFinanceiro() {
             label="Depósitos" value={fmtBRL(totaisExibir.depositos)}
             subValue={{ label: "ticket médio", value: totaisExibir.deposit_count > 0 ? fmtBRL(totaisExibir.deposito_ticket_medio) : "—" }}
             icon={<GiCardPlay size={14} />} accentVar="--brand-extra3" accentColor={BRAND.ciano}
-            useBrand={useBrand} cardBg={blockBg}
             atual={totaisExibir.depositos} anterior={totaisAnt.depositos}
             isHistorico={historico} isBRL
           />
@@ -728,7 +721,6 @@ export default function DashboardFinanceiro() {
             label="Saques" value={fmtBRL(totaisExibir.saques)}
             subValue={{ label: "ticket médio", value: totaisExibir.saque_ticket_medio > 0 ? fmtBRL(totaisExibir.saque_ticket_medio) : "—" }}
             icon={<GiPayMoney size={14} />} accentVar="--brand-extra4" accentColor={BRAND.vermelho}
-            useBrand={useBrand} cardBg={blockBg}
             atual={totaisExibir.saques} anterior={totaisAnt.saques}
             isHistorico={historico} isBRL isInverso
           />
@@ -740,7 +732,6 @@ export default function DashboardFinanceiro() {
             label="WD Ratio"
             value={totaisExibir.depositos > 0 ? `${totaisExibir.wd_ratio.toFixed(1)}%` : "—"}
             icon={<GiScales size={14} />} accentVar="--brand-extra4" accentColor={BRAND.vermelho}
-            useBrand={useBrand} cardBg={blockBg}
             atual={totaisExibir.wd_ratio} anterior={totaisAnt.wd_ratio}
             isHistorico={historico} isInverso
           />
@@ -748,7 +739,6 @@ export default function DashboardFinanceiro() {
             label="GGR por Jogador"
             value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ggr_por_jogador) : "—"}
             icon={<GiDiceSixFacesFour size={14} />} accentVar="--brand-extra1" accentColor={BRAND.roxo}
-            useBrand={useBrand} cardBg={blockBg}
             atual={totaisExibir.ggr_por_jogador} anterior={totaisAnt.ggr_por_jogador}
             isHistorico={historico} isBRL
           />
@@ -756,7 +746,6 @@ export default function DashboardFinanceiro() {
             label="PVI"
             value={totaisExibir.pvi > 0 ? `${totaisExibir.pvi}%` : "—"}
             icon={<GiSpeedometer size={14} />} accentVar="--brand-extra2" accentColor={BRAND.verde}
-            useBrand={useBrand} cardBg={blockBg}
             atual={totaisExibir.pvi} anterior={totaisAnt.pvi}
             isHistorico={historico}
           />
@@ -765,7 +754,7 @@ export default function DashboardFinanceiro() {
 
       {/* ══ BLOCO 3: INVESTIMENTO POR INFLUENCER ════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiCoins size={14} />} useBrand={useBrand}>Investimento por Influencer</SectionTitle>
+        <SectionTitle icon={<GiCoins size={14} />}>Investimento por Influencer</SectionTitle>
 
         {loading || pieInvestimento.length === 0 ? (
           <div style={{ minHeight: 360, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>
@@ -782,7 +771,7 @@ export default function DashboardFinanceiro() {
                       <Cell key={i} fill={entry.color} stroke="none" />
                     ))}
                   </Pie>
-                  <Tooltip content={<PieTooltip total={pieTotal} cardBg={blockBg} cardBorder={t.cardBorder} text={t.text} />} />
+                  <Tooltip content={<PieTooltip total={pieTotal} cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -816,7 +805,7 @@ export default function DashboardFinanceiro() {
       {/* ══ BLOCO 4: RANKING FINANCEIRO ══════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiWhiteTower size={14} />} useBrand={useBrand}>Ranking Financeiro</SectionTitle>
+          <SectionTitle icon={<GiWhiteTower size={14} />}>Ranking Financeiro</SectionTitle>
           {/* Legenda de perfis */}
           <div style={{ display: "flex", gap: 6, fontSize: 11, flexWrap: "wrap" }}>
             {(["Whales","Core","Recreativos","Caçadores de Bônus"] as PerfilJogador[]).map((p) => {

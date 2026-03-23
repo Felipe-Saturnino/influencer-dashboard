@@ -8,30 +8,19 @@ interface Props {
   atual: { qtd: number; valor: number };
   anterior: { qtd: number; valor: number };
   isHistorico?: boolean;
-  cardBg?: string;
-  useBrand?: boolean;
 }
 
 export default function KpiCardDepositos({
   atual,
   anterior,
   isHistorico,
-  cardBg,
-  useBrand,
 }: Props) {
   const { theme: t } = useApp();
   const accentColor = BRAND.transacao;
-  const barBg = useBrand
-    ? `linear-gradient(90deg, var(--brand-secondary), transparent)`
-    : `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = useBrand
-    ? `color-mix(in srgb, var(--brand-secondary) 10%, transparent)`
-    : `${accentColor}18`;
-  const iconBoxBorder = useBrand
-    ? `1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)`
-    : `1px solid ${accentColor}35`;
-  const iconBoxColor = useBrand ? "var(--brand-secondary)" : accentColor;
-  const valueColor = useBrand ? "var(--brand-accent)" : t.text;
+  const barBg = `linear-gradient(90deg, ${accentColor}, transparent)`;
+  const iconBoxBg = `${accentColor}18`;
+  const iconBoxBorder = `1px solid ${accentColor}35`;
+  const iconBoxColor = accentColor;
   const diffQtd = atual.qtd - anterior.qtd;
   const pctQtd =
     anterior.qtd !== 0 ? (diffQtd / Math.abs(anterior.qtd)) * 100 : null;
@@ -46,7 +35,7 @@ export default function KpiCardDepositos({
       style={{
         borderRadius: 14,
         border: `1px solid ${t.cardBorder}`,
-        background: cardBg ?? t.cardBg,
+        background: t.cardBg,
         overflow: "hidden",
       }}
     >
@@ -106,7 +95,7 @@ export default function KpiCardDepositos({
               style={{
                 fontSize: 20,
                 fontWeight: 800,
-                color: valueColor,
+                color: t.text,
                 fontFamily: FONT.body,
                 marginBottom: 4,
               }}
@@ -144,7 +133,7 @@ export default function KpiCardDepositos({
               style={{
                 fontSize: 14,
                 fontWeight: 800,
-                color: valueColor,
+                color: t.text,
                 fontFamily: FONT.body,
                 marginBottom: 4,
               }}
