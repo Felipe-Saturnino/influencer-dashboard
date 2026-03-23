@@ -3,6 +3,7 @@ import { useApp } from "../../context/AppContext";
 import { FONT } from "../../constants/theme";
 import { BRAND } from "../../lib/dashboardConstants";
 import { fmtBRL } from "../../lib/dashboardHelpers";
+import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 
 interface Props {
   atual: { qtd: number; valor: number };
@@ -16,11 +17,13 @@ export default function KpiCardDepositos({
   isHistorico,
 }: Props) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const accentColor = BRAND.transacao;
-  const barBg = `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = `${accentColor}18`;
-  const iconBoxBorder = `1px solid ${accentColor}35`;
-  const iconBoxColor = accentColor;
+  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
+  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
+  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentColor}18`;
+  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentColor}35`;
+  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
   const diffQtd = atual.qtd - anterior.qtd;
   const pctQtd =
     anterior.qtd !== 0 ? (diffQtd / Math.abs(anterior.qtd)) * 100 : null;
@@ -35,7 +38,7 @@ export default function KpiCardDepositos({
       style={{
         borderRadius: 14,
         border: `1px solid ${t.cardBorder}`,
-        background: t.cardBg,
+        background: brand.blockBg,
         overflow: "hidden",
       }}
     >

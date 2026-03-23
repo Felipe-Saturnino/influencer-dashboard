@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -106,23 +107,20 @@ function SectionTitle({ icon, children, sub }: {
   icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
 }) {
   const { theme: t } = useApp();
-  const titleColor = t.text;
-  const iconBg = "rgba(74,32,130,0.18)";
-  const iconBorder = "1px solid rgba(74,32,130,0.30)";
-  const iconColor = BRAND.ciano;
+  const brand = useDashboardBrand();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: iconBg,
-        border: iconBorder,
+        background: brand.primaryIconBg,
+        border: brand.primaryIconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: iconColor, flexShrink: 0,
+        color: brand.primaryIconColor, flexShrink: 0,
       }}>
         {icon}
       </span>
       <span style={{
-        fontSize: 14, fontWeight: 800, color: titleColor,
+        fontSize: 14, fontWeight: 800, color: brand.primary,
         fontFamily: FONT_TITLE,
         letterSpacing: "0.05em", textTransform: "uppercase" as const,
       }}>
@@ -532,9 +530,11 @@ export default function DashboardConversao() {
   ];
   const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
 
+  const brand = useDashboardBrand();
+
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
-    background: t.cardBg,
+    background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -605,7 +605,7 @@ export default function DashboardConversao() {
         <div style={{
           borderRadius: 14,
           border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -628,9 +628,9 @@ export default function DashboardConversao() {
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
-              border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-              background: historico ? "rgba(124,58,237,0.15)" : "transparent",
-              color: historico ? BRAND.roxoVivo : t.textMuted,
+              border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
               <GiCalendar size={14} /> Histórico

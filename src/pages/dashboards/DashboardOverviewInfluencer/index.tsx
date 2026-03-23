@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -136,10 +137,20 @@ function RateCard({ label, value, highlight }: {
   label: string; value: string; highlight?: boolean | "purple";
 }) {
   const { theme: t } = useApp();
-  const highlightColor = highlight ? (highlight === "purple" ? BRAND.roxoVivo : BRAND.azul) : null;
+  const brand = useDashboardBrand();
+  const highlightColor = highlight
+    ? (brand.useBrand ? "var(--brand-accent)" : (highlight === "purple" ? BRAND.roxoVivo : BRAND.azul))
+    : null;
+
+  const border = highlightColor
+    ? (brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-accent) 28%, transparent)" : `1px solid ${highlightColor}44`)
+    : `1px solid ${t.cardBorder}`;
+  const bg = highlightColor
+    ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${highlightColor}12`)
+    : "transparent";
 
   return (
-    <div style={{ padding: "10px 14px", borderRadius: 10, border: highlightColor ? `1px solid ${highlightColor}44` : `1px solid ${t.cardBorder}`, background: highlightColor ? `${highlightColor}12` : "transparent" }}>
+    <div style={{ padding: "10px 14px", borderRadius: 10, border, background: bg }}>
       <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.08em", fontWeight: 700 }}>{label}</div>
       <div style={{ fontSize: 16, fontWeight: 800, color: highlightColor ?? t.text, margin: "5px 0 0", fontFamily: FONT.body }}>{value}</div>
     </div>
@@ -409,7 +420,8 @@ export default function DashboardOverviewInfluencer() {
   const ticketSaque = totais.saques_qtd > 0 ? fmtBRL(totais.saques_valor / totais.saques_qtd) : "—";
   const ggrPorJogador = totais.ftds > 0 ? fmtBRL(totais.ggr / totais.ftds) : "—";
 
-  const card: React.CSSProperties = { background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
+  const brand = useDashboardBrand();
+  const card: React.CSSProperties = { background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   const thStyle: React.CSSProperties = {
     textAlign: "left", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase",
@@ -436,7 +448,7 @@ export default function DashboardOverviewInfluencer() {
         <div style={{
           borderRadius: 14,
           border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -458,9 +470,9 @@ export default function DashboardOverviewInfluencer() {
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
-                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-                background: historico ? `${BRAND.roxoVivo}18` : "transparent",
-                color: historico ? BRAND.roxoVivo : t.textMuted,
+                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+                background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
+                color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}

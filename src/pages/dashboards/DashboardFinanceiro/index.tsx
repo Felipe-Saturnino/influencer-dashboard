@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -156,23 +157,20 @@ function SectionTitle({ icon, children, sub }: {
   icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
 }) {
   const { theme: t } = useApp();
-  const titleColor = t.text;
-  const iconBg = "rgba(74,32,130,0.18)";
-  const iconBorder = "1px solid rgba(74,32,130,0.30)";
-  const iconColor = BRAND.ciano;
+  const brand = useDashboardBrand();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: iconBg,
-        border: iconBorder,
+        background: brand.primaryIconBg,
+        border: brand.primaryIconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: iconColor, flexShrink: 0,
+        color: brand.primaryIconColor, flexShrink: 0,
       }}>
         {icon}
       </span>
       <span style={{
-        fontSize: 14, fontWeight: 800, color: titleColor,
+        fontSize: 14, fontWeight: 800, color: brand.primary,
         fontFamily: FONT_TITLE,
         letterSpacing: "0.05em", textTransform: "uppercase" as const,
       }}>
@@ -197,22 +195,24 @@ function KpiCard({ label, value, subValue, icon, accentVar, accentColor, atual, 
   isInverso?: boolean;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const diff    = atual - anterior;
   const pct     = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
   const up      = diff >= 0;
   const positivo = isInverso ? !up : up;
   const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
 
-  const barBg = `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = `${accentColor}18`;
-  const iconBoxBorder = `1px solid ${accentColor}35`;
-  const iconBoxColor = accentColor;
+  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
+  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
+  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentColor}18`;
+  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentColor}35`;
+  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
 
   return (
     <div style={{
       borderRadius: 14,
       border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg,
+      background: brand.blockBg,
       overflow: "hidden",
     }}>
       <div style={{ height: 3, background: barBg }} />
@@ -580,9 +580,11 @@ export default function DashboardFinanceiro() {
 
   const pieTotal = useMemo(() => pieInvestimento.reduce((s, d) => s + d.value, 0), [pieInvestimento]);
 
+  const brand = useDashboardBrand();
+
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+    background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
@@ -630,7 +632,7 @@ export default function DashboardFinanceiro() {
         <div style={{
           borderRadius: 14,
           border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -649,9 +651,9 @@ export default function DashboardFinanceiro() {
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
-              border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-              background: historico ? "rgba(124,58,237,0.15)" : "transparent",
-              color: historico ? BRAND.roxoVivo : t.textMuted,
+              border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
               <GiCalendar size={14} /> Histórico
@@ -771,7 +773,7 @@ export default function DashboardFinanceiro() {
                       <Cell key={i} fill={entry.color} stroke="none" />
                     ))}
                   </Pie>
-                  <Tooltip content={<PieTooltip total={pieTotal} cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} />
+                  <Tooltip content={<PieTooltip total={pieTotal} cardBg={brand.blockBg} cardBorder={t.cardBorder} text={t.text} />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

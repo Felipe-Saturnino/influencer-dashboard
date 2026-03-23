@@ -1,6 +1,7 @@
 import { useApp } from "../../context/AppContext";
 import { FONT } from "../../constants/theme";
-import { BRAND, FONT_TITLE } from "../../lib/dashboardConstants";
+import { FONT_TITLE } from "../../lib/dashboardConstants";
+import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 
 interface Props {
   icon: React.ReactNode;
@@ -10,6 +11,7 @@ interface Props {
 
 export default function SectionTitle({ icon, children, sub }: Props) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
@@ -18,12 +20,12 @@ export default function SectionTitle({ icon, children, sub }: Props) {
           width: 28,
           height: 28,
           borderRadius: 8,
-          background: "rgba(74,32,130,0.18)",
-          border: "1px solid rgba(74,32,130,0.30)",
+          background: brand.primaryIconBg,
+          border: brand.primaryIconBorder,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: BRAND.ciano,
+          color: brand.primaryIconColor,
           flexShrink: 0,
         }}
       >
@@ -33,7 +35,7 @@ export default function SectionTitle({ icon, children, sub }: Props) {
         style={{
           fontSize: 14,
           fontWeight: 800,
-          color: t.text,
+          color: brand.primary,
           fontFamily: FONT_TITLE,
           letterSpacing: "0.05em",
           textTransform: "uppercase" as const,

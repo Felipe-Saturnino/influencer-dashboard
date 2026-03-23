@@ -1,7 +1,7 @@
 import { useApp } from "../../context/AppContext";
 import { FONT } from "../../constants/theme";
-import { BRAND } from "../../lib/dashboardConstants";
 import { fmtBRL } from "../../lib/dashboardHelpers";
+import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 
 interface Props {
   label: string;
@@ -29,6 +29,7 @@ export default function KpiCard({
   subValue,
 }: Props) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const diff = atual - anterior;
   const pct = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
   const up = diff >= 0;
@@ -37,17 +38,19 @@ export default function KpiCard({
   const positivo = isCusto ? !up : up;
   const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
 
-  const barBg = `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = `${accentColor}18`;
-  const iconBoxBorder = `1px solid ${accentColor}35`;
-  const iconBoxColor = accentColor;
+  // Secundária: faixa e ícones dos KPIs
+  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
+  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
+  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentColor}18`;
+  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentColor}35`;
+  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
 
   return (
     <div
       style={{
         borderRadius: 14,
         border: `1px solid ${t.cardBorder}`,
-        background: t.cardBg,
+        background: brand.blockBg,
         overflow: "hidden",
         transition: "box-shadow 0.2s",
       }}

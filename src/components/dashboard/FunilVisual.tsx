@@ -1,6 +1,7 @@
 import { useApp } from "../../context/AppContext";
 import { FONT } from "../../constants/theme";
 import { FUNIL_COLORS } from "../../lib/dashboardConstants";
+import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 
 const FUNIL_STEPS = [
   { key: "views", label: "Views (média)" },
@@ -22,6 +23,7 @@ export default function FunilVisual({
   idPrefix = "fgrad",
 }: Props) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const W = 420;
   const H = 340;
   const levels = 4;
@@ -134,8 +136,8 @@ export default function FunilVisual({
           { label: "View → Acesso", taxa: taxas[0], color: FUNIL_COLORS[1] },
           { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2] },
           { label: "Registro → FTD", taxa: taxas[2], color: FUNIL_COLORS[3] },
-          { label: "Acesso → FTD", taxa: taxas[3], color: FUNIL_COLORS[3], highlight: true },
-          { label: "View → FTD", taxa: taxas[4], color: FUNIL_COLORS[0], highlight: true },
+          { label: "Acesso → FTD", taxa: taxas[3], color: brand.useBrand ? "var(--brand-accent)" : FUNIL_COLORS[3], highlight: true },
+          { label: "View → FTD", taxa: taxas[4], color: brand.useBrand ? "var(--brand-accent)" : FUNIL_COLORS[0], highlight: true },
         ].map((r) => {
           const highlightColor = r.color;
           const border = (r as { highlight?: boolean }).highlight

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -106,23 +107,20 @@ function SectionTitle({
   sub?: string;
 }) {
   const { theme: t } = useApp();
-  const titleColor = t.text;
-  const iconBg = "rgba(74,32,130,0.18)";
-  const iconBorder = "1px solid rgba(74,32,130,0.30)";
-  const iconColor = BRAND.ciano;
+  const brand = useDashboardBrand();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: iconBg,
-        border: iconBorder,
+        background: brand.primaryIconBg,
+        border: brand.primaryIconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: iconColor, flexShrink: 0,
+        color: brand.primaryIconColor, flexShrink: 0,
       }}>
         {icon}
       </span>
       <span style={{
-        fontSize: 14, fontWeight: 800, color: titleColor,
+        fontSize: 14, fontWeight: 800, color: brand.primary,
         fontFamily: FONT_TITLE,
         letterSpacing: "0.05em", textTransform: "uppercase" as const,
       }}>
@@ -156,15 +154,17 @@ function KpiCard({
   icon: React.ReactNode;
 }) {
   const { theme: t } = useApp();
-  const barBg = `linear-gradient(90deg, ${accentCor}, transparent)`;
-  const iconBoxBg = `${accentCor}20`;
-  const iconBoxBorder = `1px solid ${accentCor}40`;
-  const iconBoxColor = accentCor;
+  const brand = useDashboardBrand();
+  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentCor;
+  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
+  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentCor}20`;
+  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentCor}40`;
+  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentCor;
   return (
     <div style={{
       borderRadius: 14,
       border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg,
+      background: brand.blockBg,
       overflow: "hidden",
     }}>
       <div style={{ height: 3, background: barBg }} />
@@ -445,9 +445,11 @@ export default function SocialMediaDashboard() {
   const carMaxNew = Math.max(0, posts.length - 2);
   const totalFormatos = formatos.reduce((a, f) => a + f.total, 0);
 
+  const brand = useDashboardBrand();
+
   // ── Estilos base ─────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
-    background: t.cardBg,
+    background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -492,7 +494,7 @@ export default function SocialMediaDashboard() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
+          background: brand.blockBg,
           padding: "12px 20px",
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: 10, flexWrap: "wrap" as const,
@@ -512,9 +514,9 @@ export default function SocialMediaDashboard() {
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
-              border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-              background: historico ? "rgba(124,58,237,0.15)" : "transparent",
-              color: historico ? BRAND.roxoVivo : t.textMuted,
+              border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400,
               transition: "all 0.15s",
             }}
@@ -555,7 +557,7 @@ export default function SocialMediaDashboard() {
               const stats  = cfg.stats(byCh);
               const engVal = byCh.length ? (byCh[byCh.length - 1]?.engagement_rate ?? 0) * 100 : 0;
               return (
-                <div key={cfg.channel} style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: t.cardBg, overflow: "hidden" }}>
+                <div key={cfg.channel} style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, overflow: "hidden" }}>
                   <div style={{ height: 3, background: cfg.cor }} />
                   <div style={{ padding: "14px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${t.cardBorder}` }}>
