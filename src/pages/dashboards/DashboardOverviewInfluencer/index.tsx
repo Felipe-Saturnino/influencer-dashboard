@@ -220,42 +220,82 @@ function KpiCard({ label, value, icon, accentVar, accentColor, useBrand, cardBg,
   );
 }
 
-// ─── FUNIL VISUAL ─────────────────────────────────────────────────────────────
-function FunilVisual({ steps, useBrand, logoUrl }: {
-  steps: { label: string; value: number }[];
+// ─── FUNIL DE CONVERSÃO (formato Overview — SVG centralizado + Taxas) ──────────
+const FUNIL_COLORS = ["#4a2082", "#1e36f8", "#70cae4", "#22c55e"] as const;
+const FUNIL_VARS = ["--brand-extra1", "--brand-extra2", "--brand-extra3", "--brand-extra4"] as const;
+const FUNIL_STEPS = [
+  { key: "views",      label: "Views (média)" },
+  { key: "acessos",    label: "Acessos"       },
+  { key: "registros",  label: "Registros"     },
+  { key: "ftds",       label: "FTDs"          },
+] as const;
+
+function FunilVisual({ values, taxas, useBrand, logoUrl }: {
+  values: number[];
+  taxas: string[];
   useBrand?: boolean;
   logoUrl?: string;
 }) {
-  const CORES_SPIN = [BRAND.roxoVivo, BRAND.azul, BRAND.ciano, BRAND.verde];
-  const CORES_BRAND_VARS = ["--brand-extra1", "--brand-extra2", "--brand-extra3", "--brand-extra4"];
-  const getCor = (i: number) => useBrand ? `var(${CORES_BRAND_VARS[i] ?? "--brand-primary"})` : (CORES_SPIN[i] ?? BRAND.roxo);
+  const { theme: t } = useApp();
+  const W = 420, H = 340;
+  const levels = 4;
+  const stepH = H / levels;
+  const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
+  const getStepColor = (i: number) => useBrand ? `var(${FUNIL_VARS[i]})` : FUNIL_COLORS[i];
+
   return (
-    <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 0, width: "100%", maxWidth: 380 }}>
-      {steps.map((step, i) => {
-        const larguraTopo = 100 - i * 10;
-        const larguraBase = 100 - (i + 1) * 10;
-        const clipTop = `${(100 - larguraTopo) / 2}%`;
-        const clipBase = `${(100 - larguraBase) / 2}%`;
-        return (
-          <div key={step.label} style={{
-            width: "100%", height: 88,
-            background: getCor(i),
-            clipPath: `polygon(${clipTop} 0%, ${100 - parseFloat(clipTop)}% 0%, ${100 - parseFloat(clipBase)}% 100%, ${clipBase} 100%)`,
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
-          }}>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "rgba(255,255,255,0.85)", fontFamily: FONT.body }}>{step.label}</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: "#fff", fontFamily: FONT_TITLE, lineHeight: 1 }}>{step.value.toLocaleString("pt-BR")}</span>
-          </div>
-        );
-      })}
-      {logoUrl && (
-        <div style={{
-          position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)",
-          pointerEvents: "none",
-        }}>
-          <img src={logoUrl} alt="" style={{ width: 36, height: 36, objectFit: "contain", opacity: 0.18 }} />
-        </div>
-      )}
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "stretch", minHeight: 340 }}>
+      {/* SVG Funil — centralizado na coluna esquerda */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ maxHeight: 340, display: "block" }} preserveAspectRatio="xMidYMid meet">
+        {FUNIL_STEPS.map((step, i) => {
+          const wTop = widths[i];
+          const wBot = widths[i + 1] ?? widths[i] * 0.7;
+          const xTop = (W - wTop) / 2;
+          const xBot = (W - wBot) / 2;
+          const yTop = i * stepH;
+          const yBot = yTop + stepH - 2;
+          const col = getStepColor(i);
+          const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
+          return (
+            <g key={step.key}>
+              <defs>
+                <linearGradient id={`fgrad-inf-${i}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={col} stopOpacity="0.85" />
+                  <stop offset="100%" stopColor={col} stopOpacity="0.55" />
+                </linearGradient>
+              </defs>
+              <path d={path} fill={`url(#fgrad-inf-${i})`} />
+              <text x={W / 2} y={yTop + stepH / 2 - 6} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={10} fontFamily={FONT.body} fontWeight={600} letterSpacing="0.08em" style={{ textTransform: "uppercase" }}>{step.label}</text>
+              <text x={W / 2} y={yTop + stepH / 2 + 9} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={16} fontFamily={FONT.body} fontWeight={800}>{values[i]?.toLocaleString("pt-BR") ?? "—"}</text>
+            </g>
+          );
+        })}
+        {logoUrl && <image href={logoUrl} x={W / 2 - 24} y={H - 56} width={48} height={48} preserveAspectRatio="xMidYMid meet" style={{ opacity: 0.18 }} />}
+      </svg>
+      </div>
+
+      {/* Taxas de conversão */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, justifyContent: "center" }}>
+        <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 6, fontWeight: 600 }}>Taxas de Conversão</div>
+        {[
+          { label: "View → Acesso",     taxa: taxas[0], color: FUNIL_COLORS[1], colorVar: FUNIL_VARS[1] },
+          { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2], colorVar: FUNIL_VARS[2] },
+          { label: "Registro → FTD",    taxa: taxas[2], color: FUNIL_COLORS[3], colorVar: FUNIL_VARS[3] },
+          { label: "Acesso → FTD",      taxa: taxas[3], color: FUNIL_COLORS[3], colorVar: FUNIL_VARS[3], highlight: true },
+          { label: "View → FTD",        taxa: taxas[4], color: FUNIL_COLORS[0], colorVar: FUNIL_VARS[0], highlight: true },
+        ].map((r) => {
+          const highlightColor = useBrand ? "var(--brand-primary)" : r.color;
+          const border = r.highlight ? `1px solid color-mix(in srgb, ${highlightColor} 32%, transparent)` : `1px solid ${t.cardBorder}`;
+          const bg = r.highlight ? `color-mix(in srgb, ${highlightColor} 8%, transparent)` : "rgba(255,255,255,0.02)";
+          return (
+            <div key={r.label} style={{ padding: "6px 10px", borderRadius: 8, border, background: bg }}>
+              <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 2 }}>{r.label}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, fontFamily: FONT.body, color: r.highlight ? highlightColor : t.text }}>{r.taxa}</div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -753,33 +793,15 @@ export default function DashboardOverviewInfluencer() {
       </BrandCard>
       <BrandDivider useBrand={useBrand} />
 
-      {/* ─── BLOCO 3: Funil de Conversão ──────────────────────────────────────── */}
+      {/* ─── BLOCO 3: Funil de Conversão (formato Overview) ────────────────────── */}
       <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
         <SectionTitle icon={<GiFunnel size={14} />} title="Funil de Conversão" useBrand={useBrand} />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
-
-          <FunilVisual
-            steps={[
-              { label: "Views (média)", value: totais.views },
-              { label: "Acessos",       value: totais.acessos },
-              { label: "Registros",     value: totais.registros },
-              { label: "FTDs",          value: totais.ftds },
-            ]}
-            useBrand={useBrand}
-            logoUrl={useBrand ? (operadoraBrand?.logo_url ?? undefined) : undefined}
-          />
-
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: t.textMuted, fontFamily: FONT.body, marginBottom: 10 }}>Taxas de Conversão</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <RateCard label="View → Acesso"     value={pctViewAcesso} />
-              <RateCard label="Acesso → Registro" value={pctAcessoReg} />
-              <RateCard label="Registro → FTD"    value={pctRegFTD} />
-              <RateCard label="Acesso → FTD"     value={pctAcessoFTD} highlight={true}   useBrand={useBrand} />
-              <RateCard label="View → FTD"       value={pctViewFTD}   highlight="purple" useBrand={useBrand} />
-            </div>
-          </div>
-        </div>
+        <FunilVisual
+          values={[totais.views, totais.acessos, totais.registros, totais.ftds]}
+          taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
+          useBrand={useBrand}
+          logoUrl={useBrand ? (operadoraBrand?.logo_url ?? undefined) : undefined}
+        />
       </BrandCard>
       <BrandDivider useBrand={useBrand} />
 
