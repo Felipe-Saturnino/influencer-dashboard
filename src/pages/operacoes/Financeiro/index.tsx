@@ -1446,7 +1446,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const [agentesRow, setAgentesRow] = useState<AgentesRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
-  const [historico, setHistorico] = useState<Record<string, any[]>>({});
+  const [historicoPagamentos, setHistoricoPagamentos] = useState<Record<string, any[]>>({});
   const [loadingHist, setLoadingHist] = useState<string | null>(null);
 
   useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp]);
@@ -1549,7 +1549,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   async function toggleExpand(id: string) {
     if (expandido === id) { setExpandido(null); return; }
     setExpandido(id);
-    if (historico[id]) return;
+    if (historicoPagamentos[id]) return;
     setLoadingHist(id);
     const { data } = await supabase
       .from("pagamentos")
@@ -1557,7 +1557,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
       .eq("influencer_id", id)
       .order("criado_em", { ascending: false })
       .limit(12);
-    if (data) setHistorico(prev => ({ ...prev, [id]: data }));
+    if (data) setHistoricoPagamentos(prev => ({ ...prev, [id]: data }));
     setLoadingHist(null);
   }
 
@@ -1615,7 +1615,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                 </tr>
               ) : filtered.map(row => {
                 const isOpen = expandido === row.influencer_id;
-                const hist = historico[row.influencer_id] ?? [];
+                const hist = historicoPagamentos[row.influencer_id] ?? [];
                 const sl = STATUS_INFLUENCER[row.statusInfluencer] ?? { label: row.statusInfluencer, color: "#94a3b8" };
 
                 return (
