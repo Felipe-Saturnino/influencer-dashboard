@@ -64,10 +64,10 @@ const BLOCOS: { key: BlocoRoteiro; label: string }[] = [
 ];
 
 const JOGOS: { key: JogoTag; label: string }[] = [
-  { key: "todos",     label: "Todos"     },
-  { key: "blackjack", label: "BlackJack" },
-  { key: "roleta",    label: "Roleta"    },
-  { key: "baccarat",  label: "Baccarat"  },
+  { key: "todos",     label: "Todos os Jogos" },
+  { key: "blackjack", label: "BlackJack"      },
+  { key: "roleta",    label: "Roleta"         },
+  { key: "baccarat",  label: "Baccarat"       },
 ];
 
 const TIPOS: { key: TipoSugestao; label: string }[] = [
@@ -192,7 +192,221 @@ function FilterChip({ label, active, activeColor, activeBg, activeBorder, onClic
   );
 }
 
-// ─── MODAL ROTEIRO ────────────────────────────────────────────────────────────
+// ─── MODAL "+ ROTEIROS" (adicionar roteiro do bloco de filtro) ─────────────────
+function ModalRoteirosNovo({ operadoraSlugInicial, operadoraLocked, operadorasList, onClose, onSalvo }: {
+  operadoraSlugInicial: string;
+  operadoraLocked: boolean;
+  operadorasList: { slug: string; nome: string }[];
+  onClose: () => void; onSalvo: () => void;
+}) {
+  const { theme: t, isDark } = useApp();
+  const dark = isDark ?? false;
+  const [operadoraSlug, setOperadoraSlug] = useState(operadoraSlugInicial && operadoraSlugInicial !== "todas" ? operadoraSlugInicial : (operadorasList[0]?.slug ?? ""));
+  const [tipo,       setTipo]       = useState<TipoSugestao>("script");
+  const [momento,    setMomento]    = useState<BlocoRoteiro>("abertura");
+  const [jogos,      setJogos]      = useState<JogoTag[]>(["todos"]);
+  const [texto,      setTexto]      = useState("");
+  const [saving,     setSaving]    = useState(false);
+
+  const toggleJogo = (jogo: JogoTag) => {
+    if (jogo === "todos") { setJogos(["todos"]); return; }
+    setJogos((prev) => {
+      const sem  = prev.filter((j) => j !== "todos");
+      const next = sem.includes(jogo) ? sem.filter((j) => j !== jogo) : [...sem, jogo];
+      return next.length === 0 ? ["todos"] : next;
+    });
+  };
+
+  const handleSalvar = async () => {
+    if (!texto.trim()) return;
+    const opSlug = operadoraLocked || operadoraSlugInicial !== "todas" ? operadoraSlugInicial : operadoraSlug;
+    if (!opSlug || opSlug === "todas") return;
+    setSaving(true);
+    const payload = { texto: texto.trim(), tipo, jogos, ordem: 0 };
+    const { error } = await supabase.from("roteiro_mesa_sugestoes").insert({ operadora_slug: opSlug, bloco: momento, ...payload });
+    if (error) console.error("[RoteiroMesa] insert roteiro:", error.message);
+    setSaving(false); onSalvo(); onClose();
+  };
+
+  const opSlugEfetivo = operadoraLocked || operadoraSlugInicial !== "todas" ? operadoraSlugInicial : operadoraSlug;
+  const podeSalvar = !!texto.trim() && opSlugEfetivo && opSlugEfetivo !== "todas";
+
+  const inp = { width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, boxSizing: "border-box" as const, outline: "none" };
+  const lbl = { fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body, display: "block" };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }} onClick={onClose}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "24px 24px 20px", maxWidth: 500, width: "92%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.azul, flexShrink: 0 }} />
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>+ Roteiros</h3>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}><X size={16} /></button>
+        </div>
+
+        {!operadoraLocked && operadorasList.length > 1 && (
+          <>
+            <label style={lbl}>Operadora</label>
+            <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={{ ...inp, marginBottom: 18, cursor: "pointer" }}>
+              <option value="">Selecione uma operadora...</option>
+              {operadorasList.map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+            </select>
+          </>
+        )}
+
+        <label style={lbl}>Tipo</label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+          {TIPOS.map(({ key, label }) => {
+            const cfg = TIPO_CONFIG[key]; const isActive = tipo === key;
+            return (
+              <button key={key} onClick={() => setTipo(key)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${isActive ? cfg.tagBorder : t.cardBorder}`, background: isActive ? cfg.tagBg : "transparent", color: isActive ? cfg.tagColor(dark) : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <label style={lbl}>Momento</label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+          {BLOCOS.map(({ key, label }) => {
+            const cfg = BLOCO_CONFIG[key]; const isActive = momento === key;
+            return (
+              <button key={key} onClick={() => setMomento(key)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${isActive ? cfg.accent + "80" : t.cardBorder}`, background: isActive ? cfg.accent + "18" : "transparent", color: isActive ? cfg.accent : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <label style={lbl}>Aplicável ao(s) Jogo(s)</label>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+          {JOGOS.map(({ key, label }) => {
+            const cfg = JOGO_TAG_CONFIG[key]; const isActive = jogos.includes(key);
+            return (
+              <button key={key} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? cfg.border : t.cardBorder}`, background: isActive ? cfg.bg : "transparent", color: isActive ? cfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>
+                {isActive && <Check size={10} />}{label}
+              </button>
+            );
+          })}
+        </div>
+
+        <label style={lbl}>Texto</label>
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='Descreva o roteiro...' rows={4} style={{ ...inp, resize: "vertical", minHeight: 100 }} />
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
+          <button onClick={handleSalvar} disabled={!podeSalvar || saving} style={{ padding: "8px 20px", borderRadius: 10, border: "none", background: BRAND.azul, color: "#fff", fontFamily: FONT.body, fontSize: 13, fontWeight: 700, cursor: podeSalvar && !saving ? "pointer" : "not-allowed", opacity: podeSalvar && !saving ? 1 : 0.55, transition: "opacity 0.15s" }}>
+            {saving ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MODAL "NOVA CAMPANHA" (do bloco de filtro) ─────────────────────────────────
+function ModalNovaCampanhaFiltro({ operadoraSlugInicial, operadoraLocked, operadorasList, onClose, onSalvo }: {
+  operadoraSlugInicial: string;
+  operadoraLocked: boolean;
+  operadorasList: { slug: string; nome: string }[];
+  onClose: () => void; onSalvo: () => void;
+}) {
+  const { theme: t, isDark } = useApp();
+  const dark = isDark ?? false;
+  const [operadoraSlug, setOperadoraSlug] = useState(operadoraSlugInicial && operadoraSlugInicial !== "todas" ? operadoraSlugInicial : (operadorasList[0]?.slug ?? ""));
+  const [jogos,        setJogos]        = useState<JogoTag[]>(["todos"]);
+  const [dataInicio,   setDataInicio]  = useState("");
+  const [dataFim,      setDataFim]    = useState("");
+  const [texto,        setTexto]       = useState("");
+  const [saving,       setSaving]      = useState(false);
+
+  const toggleJogo = (jogo: JogoTag) => {
+    if (jogo === "todos") { setJogos(["todos"]); return; }
+    setJogos((prev) => {
+      const sem  = prev.filter((j) => j !== "todos");
+      const next = sem.includes(jogo) ? sem.filter((j) => j !== jogo) : [...sem, jogo];
+      return next.length === 0 ? ["todos"] : next;
+    });
+  };
+
+  const handleSalvar = async () => {
+    if (!texto.trim()) return;
+    const opSlug = operadoraLocked || operadoraSlugInicial !== "todas" ? operadoraSlugInicial : operadoraSlug;
+    if (!opSlug || opSlug === "todas") return;
+    setSaving(true);
+    const titulo = texto.trim().slice(0, 60) || "Nova campanha";
+    const payload = { titulo, texto: texto.trim(), jogos, data_inicio: dataInicio || null, data_fim: dataFim || null, ativo: true, ordem: 0 };
+    const { error } = await supabase.from("roteiro_mesa_campanhas").insert({ operadora_slug: opSlug, ...payload });
+    if (error) console.error("[RoteiroMesa] insert campanha:", error.message);
+    setSaving(false); onSalvo(); onClose();
+  };
+
+  const opSlugEfetivo = operadoraLocked || operadoraSlugInicial !== "todas" ? operadoraSlugInicial : operadoraSlug;
+  const podeSalvar = !!texto.trim() && opSlugEfetivo && opSlugEfetivo !== "todas";
+
+  const inp = { width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, boxSizing: "border-box" as const, outline: "none" };
+  const lbl = { fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body, display: "block" };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }} onClick={onClose}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "24px 24px 20px", maxWidth: 520, width: "92%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.ciano, flexShrink: 0 }} />
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>Nova Campanha</h3>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}><X size={16} /></button>
+        </div>
+
+        {!operadoraLocked && operadorasList.length > 1 && (
+          <>
+            <label style={lbl}>Operadora</label>
+            <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={{ ...inp, marginBottom: 18, cursor: "pointer" }}>
+              <option value="">Selecione uma operadora...</option>
+              {operadorasList.map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+            </select>
+          </>
+        )}
+
+        <label style={lbl}>Aplicável ao(s) Jogo(s)</label>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+          {JOGOS.map(({ key, label }) => {
+            const cfg = JOGO_TAG_CONFIG[key]; const isActive = jogos.includes(key);
+            return (
+              <button key={key} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? cfg.border : t.cardBorder}`, background: isActive ? cfg.bg : "transparent", color: isActive ? cfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>
+                {isActive && <Check size={10} />}{label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+          <div>
+            <label style={lbl}>Data de início</label>
+            <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} style={inp} />
+          </div>
+          <div>
+            <label style={lbl}>Data de fim</label>
+            <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} style={inp} />
+          </div>
+        </div>
+
+        <label style={lbl}>Texto</label>
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='Descreva a campanha...' rows={4} style={{ ...inp, resize: "vertical", minHeight: 100 }} />
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
+          <button onClick={handleSalvar} disabled={!podeSalvar || saving} style={{ padding: "8px 20px", borderRadius: 10, border: "none", background: BRAND.ciano, color: "#0f6a8a", fontFamily: FONT.body, fontSize: 13, fontWeight: 700, cursor: podeSalvar && !saving ? "pointer" : "not-allowed", opacity: podeSalvar && !saving ? 1 : 0.55, transition: "opacity 0.15s" }}>
+            {saving ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MODAL ROTEIRO (editar / adicionar de dentro do bloco) ──────────────────────
 function ModalSugestao({ operadoraSlug, bloco, editando, onClose, onSalvo }: {
   operadoraSlug: string; bloco: BlocoRoteiro;
   editando: RoteiroSugestao | null;
@@ -667,6 +881,8 @@ export default function RoteiroMesa() {
   const [campanhas,       setCampanhas]       = useState<RoteiroCampanha[]>([]);
   const [loading,         setLoading]         = useState(true);
   const [modalNovo,       setModalNovo]       = useState(false);
+  const [modalRoteiros,   setModalRoteiros]   = useState(false);
+  const [modalCampanha,   setModalCampanha]   = useState(false);
 
   const mostrarFiltroOp =
     showFiltroOperadora || (operadoraSlugsForcado != null && operadoraSlugsForcado.length > 1);
@@ -769,35 +985,19 @@ export default function RoteiroMesa() {
           </h1>
         </div>
 
-        {podeAdicionarGlobal && (
-          <button
-            onClick={() => setModalNovo(true)}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "10px 20px", borderRadius: 10, border: "none",
-              cursor: "pointer",
-              background: brand.useBrand
-                ? "var(--brand-accent)"
-                : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-              color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
-            }}
-          >
-            <Plus size={14} />
-            Novo Roteiro
-          </button>
-        )}
       </div>
 
       {/* ── BLOCO DE FILTROS — padrão Agenda de Lives ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, padding: "12px 20px" }}>
 
-          {/* Linha 1: Operadora */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 60 }}>
-              Operadora
-            </span>
-            {mostrarFiltroOp && opcoesFiltro.length > 0 ? (
+          {/* Linha 1: Operadora + Botões + Roteiros / Nova Campanha */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", flex: 1 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 60 }}>
+                Operadora
+              </span>
+              {mostrarFiltroOp && opcoesFiltro.length > 0 ? (
               <select
                 value={filtroOperadora}
                 onChange={(e) => setFiltroOperadora(e.target.value)}
@@ -825,6 +1025,34 @@ export default function RoteiroMesa() {
               <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
                 Nenhuma operadora disponível no seu escopo.
               </span>
+            )}
+            </div>
+            {podeAdicionarGlobal && (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setModalRoteiros(true)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "8px 16px", borderRadius: 10, border: "none",
+                    cursor: "pointer",
+                    background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                    color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
+                  }}
+                >
+                  <Plus size={14} />+ Roteiros
+                </button>
+                <button
+                  onClick={() => setModalCampanha(true)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "8px 16px", borderRadius: 10, border: `1.5px solid ${BRAND.ciano}`,
+                    background: "rgba(112,202,228,0.12)", color: BRAND.ciano,
+                    fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+                  }}
+                >
+                  <Megaphone size={14} />Nova Campanha
+                </button>
+              </div>
             )}
           </div>
 
@@ -906,7 +1134,27 @@ export default function RoteiroMesa() {
         )
       )}
 
-      {/* Modal global */}
+      {/* Modais do bloco de filtro */}
+      {modalRoteiros && (
+        <ModalRoteirosNovo
+          operadoraSlugInicial={operadoraSlugSelecionada ?? ""}
+          operadoraLocked={!!operadoraSlugsForcado?.length}
+          operadorasList={opcoesFiltro}
+          onClose={() => setModalRoteiros(false)}
+          onSalvo={() => { setModalRoteiros(false); carregarDados(); }}
+        />
+      )}
+      {modalCampanha && (
+        <ModalNovaCampanhaFiltro
+          operadoraSlugInicial={operadoraSlugSelecionada ?? ""}
+          operadoraLocked={!!operadoraSlugsForcado?.length}
+          operadorasList={opcoesFiltro}
+          onClose={() => setModalCampanha(false)}
+          onSalvo={() => { setModalCampanha(false); carregarDados(); }}
+        />
+      )}
+
+      {/* Modal global (legado - Novo Roteiro) */}
       {modalNovo && (
         <ModalNovoRoteiro
           operadoraSlug={slugParaModal}
