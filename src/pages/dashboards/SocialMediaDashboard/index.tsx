@@ -490,11 +490,11 @@ export default function SocialMediaDashboard() {
   return (
     <div style={{ background: t.bg, minHeight: "100vh", padding: "20px 24px 48px", fontFamily: FONT.body, color: t.text }}>
 
-      {/* Barra de navegação */}
+      {/* Barra de navegação — primária transparente */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
-          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          borderRadius: 14, border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: 10, flexWrap: "wrap" as const,
