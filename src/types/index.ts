@@ -31,6 +31,7 @@ export type PageKey =
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
   | "gestao_dealers"
   | "status_tecnico"
+  | "roteiro_mesa"
   | "configuracoes"
   | "ajuda";
 

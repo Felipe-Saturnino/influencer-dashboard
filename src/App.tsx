@@ -27,6 +27,7 @@ import Financeiro  from "./pages/operacoes/Financeiro";
 import GestaoLinks from "./pages/operacoes/GestaoLinks";
 import Campanhas from "./pages/operacoes/Campanhas";
 import GestaoDealers from "./pages/operacoes/GestaoDealers";
+import RoteiroMesa from "./pages/conteudo/RoteiroMesa";
 // Páginas — plataforma
 import GestaoUsuarios from "./pages/plataforma/GestaoUsuarios";
 import GestaoOperadoras from "./pages/plataforma/GestaoOperadoras";
@@ -49,6 +50,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   gestao_links:     GestaoLinks,
   campanhas:        Campanhas,
   gestao_dealers:   GestaoDealers,
+  roteiro_mesa:     RoteiroMesa,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
   status_tecnico:   StatusTecnico,

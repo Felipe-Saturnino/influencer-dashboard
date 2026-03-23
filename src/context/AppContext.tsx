@@ -9,6 +9,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "agenda", "resultados", "feedback",
   "influencers", "scout", "financeiro", "gestao_links", "campanhas", "gestao_dealers",
   "gestao_usuarios", "gestao_operadoras", "status_tecnico",
+  "roteiro_mesa",
   "configuracoes", "ajuda",
 ];
 

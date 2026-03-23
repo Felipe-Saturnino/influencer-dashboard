@@ -18,6 +18,7 @@ import {
   GiDiceSixFacesFour,
   GiShare,
   GiMegaphone,
+  GiNotebook,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -60,6 +61,12 @@ export const MENU: MenuSection[] = [
       { key: "financeiro",      label: "Financeiro",       icon: GiCash        },
       { key: "gestao_links",    label: "Gestão de Links",  icon: GiLinkedRings },
       { key: "campanhas",      label: "Campanhas",       icon: GiMegaphone },
+    ],
+  },
+  {
+    section: "Conteúdo",
+    items: [
+      { key: "roteiro_mesa", label: "Roteiro de Mesa", icon: GiNotebook },
     ],
   },
   {
