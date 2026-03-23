@@ -5,8 +5,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { Pencil, Plus, X, Check } from "lucide-react";
-import { GiNotebook } from "react-icons/gi";
+import { Pencil, Plus, X, Check, BookOpen } from "lucide-react";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -19,7 +18,7 @@ const BRAND = {
   roxo: "#4a2082",
   roxoLight: "rgba(74,32,130,0.15)",
   roxoBorder: "rgba(74,32,130,0.35)",
-  roxoVivo: "#7c3aed",
+  roxoAcao: "#4a2082",
   ciano: "#70cae4",
   cianoLight: "rgba(112,202,228,0.1)",
   cianoBorder: "rgba(112,202,228,0.25)",
@@ -75,9 +74,9 @@ const BLOCO_CONFIG: Record<BlocoRoteiro, { accent: string; titleColor: (dark: bo
     btnBg: BRAND.vermelho,
   },
   fechamento: {
-    accent: BRAND.roxoVivo,
+    accent: BRAND.roxo,
     titleColor: (dark) => (dark ? "#b08aee" : "#4a2082"),
-    btnBg: BRAND.roxoVivo,
+    btnBg: BRAND.roxoAcao,
   },
 };
 
@@ -95,49 +94,65 @@ const TIPO_CONFIG: Record<TipoSugestao, {
     borderColor: "rgba(30,54,248,0.45)",
     bgColor: (dark) => (dark ? "rgba(30,54,248,0.06)" : "rgba(30,54,248,0.04)"),
     textColor: (dark) => (dark ? "#d0d0ee" : "#1a1a3e"),
-    tagBg: "rgba(30,54,248,0.1)",
-    tagColor: (dark) => (dark ? "#7b95ff" : "#1e36f8"),
-    tagBorder: "rgba(30,54,248,0.25)",
+    tagBg: "rgba(30,54,248,0.12)",
+    tagColor: (dark) => (dark ? "#7b95ff" : "#1631c4"),
+    tagBorder: "rgba(30,54,248,0.3)",
     label: "Script",
   },
   orientacao: {
     borderColor: "rgba(255,255,255,0.1)",
     bgColor: (dark) => (dark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.02)"),
     textColor: (dark) => (dark ? "#9898be" : "#4a4a6a"),
-    tagBg: "rgba(107,114,128,0.1)",
-    tagColor: (dark) => (dark ? "#9898be" : "#4a4a6a"),
-    tagBorder: "rgba(107,114,128,0.2)",
+    tagBg: "rgba(107,114,128,0.15)",
+    tagColor: (dark) => (dark ? "#b0b0cc" : "#3a3a5a"),
+    tagBorder: "rgba(107,114,128,0.3)",
     label: "Orientação",
   },
   alerta: {
     borderColor: "rgba(232,64,37,0.4)",
     bgColor: (dark) => (dark ? "rgba(232,64,37,0.06)" : "rgba(232,64,37,0.04)"),
     textColor: (dark) => (dark ? "#ff9980" : "#c73520"),
-    tagBg: "rgba(232,64,37,0.1)",
-    tagColor: (dark) => (dark ? "#ff8570" : "#c73520"),
-    tagBorder: "rgba(232,64,37,0.25)",
+    tagBg: "rgba(232,64,37,0.12)",
+    tagColor: (dark) => (dark ? "#ff8570" : "#b02a14"),
+    tagBorder: "rgba(232,64,37,0.3)",
     label: "Alerta",
   },
 };
 
 // ─── CONFIG VISUAL POR JOGO ───────────────────────────────────────────────────
 const JOGO_TAG_CONFIG: Record<JogoTag, { bg: string; color: (dark: boolean) => string; border: string }> = {
-  todos: { bg: "rgba(74,32,130,0.12)", color: (d) => (d ? "#b08aee" : "#4a2082"), border: "rgba(74,32,130,0.25)" },
-  blackjack: { bg: "rgba(30,54,248,0.1)", color: (d) => (d ? "#7b95ff" : "#1e36f8"), border: "rgba(30,54,248,0.25)" },
-  roleta: { bg: "rgba(232,64,37,0.1)", color: (d) => (d ? "#ff8570" : "#c73520"), border: "rgba(232,64,37,0.25)" },
-  baccarat: { bg: "rgba(112,202,228,0.1)", color: (d) => (d ? "#70cae4" : "#1a7fa0"), border: "rgba(112,202,228,0.25)" },
+  todos: {
+    bg: "rgba(74,32,130,0.15)",
+    color: (d) => (d ? "#b08aee" : "#3a1868"),
+    border: "rgba(74,32,130,0.3)",
+  },
+  blackjack: {
+    bg: "rgba(30,54,248,0.12)",
+    color: (d) => (d ? "#7b95ff" : "#1631c4"),
+    border: "rgba(30,54,248,0.3)",
+  },
+  roleta: {
+    bg: "rgba(232,64,37,0.12)",
+    color: (d) => (d ? "#ff8570" : "#b02a14"),
+    border: "rgba(232,64,37,0.3)",
+  },
+  baccarat: {
+    bg: "rgba(112,202,228,0.12)",
+    color: (d) => (d ? "#70cae4" : "#0f6a8a"),
+    border: "rgba(112,202,228,0.3)",
+  },
 };
 
-// ─── TAG CHIP ─────────────────────────────────────────────────────────────────
+// ─── TAG CHIP ──────────────────────────────────────────────────────────────────
 function TagChip({ label, bg, color, border }: { label: string; bg: string; color: string; border: string }) {
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: 700,
-        padding: "2px 7px",
+        padding: "3px 8px",
         borderRadius: 20,
         textTransform: "uppercase",
         letterSpacing: "0.06em",
@@ -153,7 +168,7 @@ function TagChip({ label, bg, color, border }: { label: string; bg: string; colo
   );
 }
 
-// ─── FILTER CHIP (nos blocos de filtro) ───────────────────────────────────────
+// ─── FILTER CHIP ──────────────────────────────────────────────────────────────
 function FilterChip({
   label,
   active,
@@ -175,11 +190,11 @@ function FilterChip({
     <button
       onClick={onClick}
       style={{
-        padding: "5px 12px",
+        padding: "5px 13px",
         borderRadius: 20,
-        border: `1.5px solid ${active ? activeBorder : dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+        border: `1.5px solid ${active ? activeBorder : dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
         background: active ? activeBg : "transparent",
-        color: active ? activeColor : dark ? "#7c7c9e" : "#888",
+        color: active ? activeColor : dark ? "#7c7c9e" : "#666",
         fontSize: 11,
         fontWeight: 700,
         fontFamily: FONT.body,
@@ -263,6 +278,7 @@ function ModalSugestao({
 
   const blocoLabel = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
   const blocoAccent = BLOCO_CONFIG[bloco].accent;
+  const salvarBtnBg = BRAND.azul;
 
   return (
     <div
@@ -293,16 +309,37 @@ function ModalSugestao({
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 4, height: 20, borderRadius: 2, background: blocoAccent, flexShrink: 0 }} />
-            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <h3 style={{
+              margin: 0,
+              fontSize: 13,
+              fontWeight: 700,
+              color: t.text,
+              fontFamily: FONT_TITLE,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}>
               {editando ? "Editar" : "Adicionar"} — {blocoLabel}
             </h3>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: t.textMuted,
+              cursor: "pointer",
+              padding: 4,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             <X size={16} />
           </button>
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Tipo</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+          Tipo
+        </p>
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
           {TIPOS.map(({ key, label }) => {
             const cfg = TIPO_CONFIG[key];
@@ -332,7 +369,9 @@ function ModalSugestao({
           })}
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Aplicável a</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+          Aplicável a
+        </p>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {JOGOS.map(({ key, label }) => {
             const cfg = JOGO_TAG_CONFIG[key];
@@ -364,11 +403,19 @@ function ModalSugestao({
           })}
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Texto</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+          Texto
+        </p>
         <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          placeholder={tipo === "script" ? '"Olá Jogadores, meu nome é [Nome]..."' : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o dealer..."}
+          placeholder={
+            tipo === "script"
+              ? '"Olá Jogadores, meu nome é [Nome]..."'
+              : tipo === "alerta"
+              ? "Descreva o alerta ou regra operacional..."
+              : "Descreva a orientação para o dealer..."
+          }
           rows={4}
           style={{
             width: "100%",
@@ -387,7 +434,20 @@ function ModalSugestao({
         />
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: "transparent",
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
             Cancelar
           </button>
           <button
@@ -397,7 +457,7 @@ function ModalSugestao({
               padding: "8px 20px",
               borderRadius: 10,
               border: "none",
-              background: blocoAccent,
+              background: salvarBtnBg,
               color: "#fff",
               fontFamily: FONT.body,
               fontSize: 13,
@@ -440,7 +500,7 @@ function SugestaoItem({
         display: "flex",
         alignItems: "flex-start",
         gap: 10,
-        padding: "11px 13px",
+        padding: "12px 14px",
         borderRadius: 10,
         border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`,
         borderLeft: `3px solid ${cfg.borderColor}`,
@@ -449,22 +509,44 @@ function SugestaoItem({
       }}
     >
       {tipo === "script" && (
-        <span style={{ fontSize: 22, color: "rgba(30,54,248,0.3)", flexShrink: 0, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: -2, userSelect: "none" }}>"</span>
+        <span style={{
+          fontSize: 22,
+          color: "rgba(30,54,248,0.3)",
+          flexShrink: 0,
+          fontFamily: "Georgia, serif",
+          lineHeight: 1.1,
+          marginTop: -2,
+          userSelect: "none",
+        }}>
+          "
+        </span>
       )}
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-        <span style={{ fontFamily: FONT.body, fontSize: tipo === "script" ? 14 : 13, color: cfg.textColor(dark), lineHeight: 1.55 }}>
+        <span style={{
+          fontFamily: FONT.body,
+          fontSize: tipo === "script" ? 14 : 13,
+          color: cfg.textColor(dark),
+          lineHeight: 1.55,
+        }}>
           {sugestao.texto}
         </span>
 
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {operadoraNome && (
-            <TagChip label={operadoraNome} bg="rgba(74,32,130,0.12)" color={dark ? "#b08aee" : "#4a2082"} border="rgba(74,32,130,0.25)" />
+            <TagChip
+              label={operadoraNome}
+              bg="rgba(74,32,130,0.12)"
+              color={dark ? "#b08aee" : "#3a1868"}
+              border="rgba(74,32,130,0.25)"
+            />
           )}
           {jogosList.map((jogo) => {
             const jcfg = JOGO_TAG_CONFIG[jogo as JogoTag];
             const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
-            return jcfg ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color(dark)} border={jcfg.border} /> : null;
+            return jcfg
+              ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color(dark)} border={jcfg.border} />
+              : null;
           })}
           <TagChip label={cfg.label} bg={cfg.tagBg} color={cfg.tagColor(dark)} border={cfg.tagBorder} />
         </div>
@@ -475,14 +557,20 @@ function SugestaoItem({
           onClick={() => onEdit(sugestao)}
           onMouseEnter={() => setHoverEdit(true)}
           onMouseLeave={() => setHoverEdit(false)}
-          title="Editar"
+          title="Editar sugestão"
           style={{
-            width: 30,
-            height: 30,
-            borderRadius: 7,
-            border: "none",
-            background: hoverEdit ? (dark ? "rgba(124,58,237,0.15)" : "rgba(74,32,130,0.08)") : "transparent",
-            color: hoverEdit ? (dark ? "#b08aee" : "#4a2082") : dark ? "#5a5a7e" : "#aaa",
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            border: hoverEdit
+              ? `1px solid ${dark ? "rgba(124,58,237,0.3)" : "rgba(74,32,130,0.2)"}`
+              : `1px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
+            background: hoverEdit
+              ? (dark ? "rgba(124,58,237,0.15)" : "rgba(74,32,130,0.08)")
+              : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
+            color: hoverEdit
+              ? (dark ? "#b08aee" : "#4a2082")
+              : (dark ? "#8888aa" : "#777"),
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
@@ -491,7 +579,7 @@ function SugestaoItem({
             transition: "all 0.15s",
           }}
         >
-          <Pencil size={14} />
+          <Pencil size={13} />
         </button>
       )}
     </div>
@@ -549,10 +637,25 @@ function BlocoSugestoes({
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 4, height: 20, borderRadius: 2, background: cfg.accent, flexShrink: 0 }} />
-            <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: cfg.titleColor(dark), fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            <h3 style={{
+              margin: 0,
+              fontSize: 12,
+              fontWeight: 700,
+              color: cfg.titleColor(dark),
+              fontFamily: FONT_TITLE,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+            }}>
               {label}
             </h3>
-            <span style={{ fontSize: 11, color: t.textMuted, background: "rgba(74,32,130,0.08)", borderRadius: 10, padding: "2px 8px", fontFamily: FONT.body }}>
+            <span style={{
+              fontSize: 11,
+              color: t.textMuted,
+              background: dark ? "rgba(74,32,130,0.1)" : "rgba(74,32,130,0.07)",
+              borderRadius: 10,
+              padding: "2px 8px",
+              fontFamily: FONT.body,
+            }}>
               {sugestoes.length} {sugestoes.length === 1 ? "item" : "itens"}
             </span>
           </div>
@@ -584,20 +687,40 @@ function BlocoSugestoes({
 
         <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
           {sugestoes.length === 0 ? (
-            <div style={{ padding: "28px 16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-              <GiNotebook size={28} color={t.textMuted} />
+            <div style={{
+              padding: "32px 16px",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 12,
+            }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: dark
+                  ? "linear-gradient(135deg, rgba(30,54,248,0.15) 0%, rgba(74,32,130,0.15) 100%)"
+                  : "linear-gradient(135deg, rgba(30,54,248,0.08) 0%, rgba(74,32,130,0.08) 100%)",
+                border: `1px solid ${cfg.accent}30`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <BookOpen size={20} color={cfg.accent} strokeWidth={1.5} />
+              </div>
               <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
-                Nenhuma sugestão cadastrada.
+                Nenhuma sugestão cadastrada para este bloco.
               </p>
               {podeAdicionar && (
                 <button
                   onClick={() => setModalAdicionar(true)}
                   style={{
-                    marginTop: 4,
-                    padding: "7px 16px",
+                    marginTop: 2,
+                    padding: "8px 18px",
                     borderRadius: 8,
-                    border: `1.5px dashed ${cfg.accent}`,
-                    background: "transparent",
+                    border: `1.5px solid ${cfg.accent}`,
+                    background: `${cfg.accent}10`,
                     color: cfg.titleColor(dark),
                     fontSize: 12,
                     fontWeight: 700,
@@ -606,6 +729,7 @@ function BlocoSugestoes({
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
+                    transition: "background 0.15s",
                   }}
                 >
                   <Plus size={12} />
@@ -621,7 +745,11 @@ function BlocoSugestoes({
                 podeEditar={podeEditar}
                 onEdit={setModalEditando}
                 dark={dark}
-                operadoraNome={operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === s.operadora_slug)?.nome : undefined}
+                operadoraNome={
+                  operadoraSlug === "todas"
+                    ? operadorasList.find((o) => o.slug === s.operadora_slug)?.nome
+                    : undefined
+                }
               />
             ))
           )}
@@ -629,7 +757,13 @@ function BlocoSugestoes({
       </div>
 
       {modalEditando && (
-        <ModalSugestao operadoraSlug={modalEditando.operadora_slug} bloco={bloco} editando={modalEditando} onClose={() => setModalEditando(null)} onSalvo={onCarregar} />
+        <ModalSugestao
+          operadoraSlug={modalEditando.operadora_slug}
+          bloco={bloco}
+          editando={modalEditando}
+          onClose={() => setModalEditando(null)}
+          onSalvo={onCarregar}
+        />
       )}
       {modalAdicionar && operadoraSlug !== "todas" && (
         <ModalSugestao
@@ -647,6 +781,197 @@ function BlocoSugestoes({
   );
 }
 
+// ─── MODAL NOVO ROTEIRO ──────────────────────────────────────────────────────
+function ModalNovoRoteiro({
+  operadoraSlug,
+  operadorasList,
+  onClose,
+  onSalvo,
+  dark,
+}: {
+  operadoraSlug: string;
+  operadorasList: { slug: string; nome: string }[];
+  onClose: () => void;
+  onSalvo: () => void;
+  dark: boolean;
+}) {
+  const { theme: t } = useApp();
+  const [blocoSelecionado, setBlocoSelecionado] = useState<BlocoRoteiro>("abertura");
+  const [opSelecionada, setOpSelecionada] = useState<string>(
+    operadoraSlug !== "todas" ? operadoraSlug : (operadorasList[0]?.slug ?? "")
+  );
+
+  const cfg = BLOCO_CONFIG[blocoSelecionado];
+  const [confirmar, setConfirmar] = useState(false);
+
+  if (confirmar && opSelecionada) {
+    return (
+      <ModalSugestao
+        operadoraSlug={opSelecionada}
+        bloco={blocoSelecionado}
+        editando={null}
+        onClose={onClose}
+        onSalvo={onSalvo}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.65)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        backdropFilter: "blur(2px)",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: t.cardBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: 18,
+          padding: "24px 24px 20px",
+          maxWidth: 440,
+          width: "92%",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.azul, flexShrink: 0 }} />
+            <h3 style={{
+              margin: 0,
+              fontSize: 13,
+              fontWeight: 700,
+              color: t.text,
+              fontFamily: FONT_TITLE,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}>
+              Novo Roteiro
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {operadoraSlug === "todas" && operadorasList.length > 1 && (
+          <>
+            <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+              Operadora
+            </p>
+            <select
+              value={opSelecionada}
+              onChange={(e) => setOpSelecionada(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: `1.5px solid ${opSelecionada ? BRAND.roxo + "80" : t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontSize: 13,
+                fontWeight: 500,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+                outline: "none",
+                marginBottom: 18,
+              }}
+            >
+              <option value="">Selecione uma operadora...</option>
+              {operadorasList.map((o) => (
+                <option key={o.slug} value={o.slug}>{o.nome}</option>
+              ))}
+            </select>
+          </>
+        )}
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 10px", fontFamily: FONT.body }}>
+          Bloco
+        </p>
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {BLOCOS.map(({ key, label }) => {
+            const bcfg = BLOCO_CONFIG[key];
+            const isActive = blocoSelecionado === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setBlocoSelecionado(key)}
+                style={{
+                  flex: 1,
+                  padding: "10px 4px",
+                  borderRadius: 10,
+                  border: `1.5px solid ${isActive ? bcfg.accent + "80" : t.cardBorder}`,
+                  background: isActive ? bcfg.accent + "12" : "transparent",
+                  color: isActive ? bcfg.titleColor(dark) : t.textMuted,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                  textAlign: "center",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  transition: "all 0.15s",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: "transparent",
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => setConfirmar(true)}
+            disabled={!opSelecionada}
+            style={{
+              padding: "8px 20px",
+              borderRadius: 10,
+              border: "none",
+              background: BRAND.azul,
+              color: "#fff",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: opSelecionada ? "pointer" : "not-allowed",
+              opacity: opSelecionada ? 1 : 0.5,
+              transition: "opacity 0.15s",
+            }}
+          >
+            Continuar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function RoteiroMesa() {
   const { theme: t, podeVerOperadora, isDark } = useApp();
@@ -660,8 +985,10 @@ export default function RoteiroMesa() {
   const [filtroTipo, setFiltroTipo] = useState<TipoSugestao | "todos">("todos");
   const [sugestoes, setSugestoes] = useState<RoteiroSugestao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalNovoRoteiro, setModalNovoRoteiro] = useState(false);
 
-  const mostrarFiltroOp = showFiltroOperadora || (operadoraSlugsForcado != null && operadoraSlugsForcado.length > 1);
+  const mostrarFiltroOp =
+    showFiltroOperadora || (operadoraSlugsForcado != null && operadoraSlugsForcado.length > 1);
 
   const operadoraSlugSelecionada: string | null =
     operadoraSlugsForcado?.length === 1
@@ -679,7 +1006,11 @@ export default function RoteiroMesa() {
       return;
     }
     setLoading(true);
-    let query = supabase.from("roteiro_mesa_sugestoes").select("*").order("bloco").order("ordem");
+    let query = supabase
+      .from("roteiro_mesa_sugestoes")
+      .select("*")
+      .order("bloco")
+      .order("ordem");
     if (operadoraSlugSelecionada !== "todas") {
       query = query.eq("operadora_slug", operadoraSlugSelecionada);
     }
@@ -720,58 +1051,122 @@ export default function RoteiroMesa() {
   const filtrarSugestoes = (lista: RoteiroSugestao[]) =>
     lista.filter((s) => {
       const jogosList = s.jogos ?? ["todos"];
-      const passaJogo = filtroJogo === "todos" || jogosList.includes(filtroJogo) || jogosList.includes("todos");
+      const passaJogo =
+        filtroJogo === "todos" || jogosList.includes(filtroJogo) || jogosList.includes("todos");
       const passaTipo = filtroTipo === "todos" || (s.tipo ?? "script") === filtroTipo;
       return passaJogo && passaTipo;
     });
 
-  const sugestoesPorBloco = (bloco: BlocoRoteiro) => filtrarSugestoes(sugestoes.filter((s) => s.bloco === bloco));
+  const sugestoesPorBloco = (bloco: BlocoRoteiro) =>
+    filtrarSugestoes(sugestoes.filter((s) => s.bloco === bloco));
+
+  const podeAdicionarGlobal =
+    perm.canEditarOk &&
+    !!operadoraSlugSelecionada &&
+    operadoraSlugSelecionada !== "todas";
+
+  const slugParaModal =
+    operadoraSlugSelecionada && operadoraSlugSelecionada !== "todas"
+      ? operadoraSlugSelecionada
+      : "todas";
 
   return (
     <div style={{ padding: "20px 24px 48px" }}>
 
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 28 }}>
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
-            background: "linear-gradient(180deg, #2d1b4e 0%, #0a0a0f 100%)",
-            border: `1px solid ${BRAND.roxoBorder}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            marginTop: 2,
-          }}
-        >
-          <GiNotebook size={20} color="#fff" />
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              background: "linear-gradient(135deg, #e84025 0%, #4a2082 60%, #1e36f8 100%)",
+              border: `1px solid ${BRAND.azulBorder}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              marginTop: 2,
+              boxShadow: dark
+                ? "0 4px 16px rgba(30,54,248,0.2)"
+                : "0 4px 16px rgba(30,54,248,0.12)",
+            }}
+          >
+            <BookOpen size={20} color="#fff" strokeWidth={1.8} />
+          </div>
+          <div>
+            <h1 style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: t.text,
+              fontFamily: FONT_TITLE,
+              margin: "0 0 4px",
+              letterSpacing: "0.5px",
+              textTransform: "uppercase",
+            }}>
+              Roteiro de Mesa
+            </h1>
+            <p style={{ color: t.textMuted, margin: 0, fontFamily: FONT.body, fontSize: 13 }}>
+              Scripts, orientações e alertas para cada momento da mesa.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: "0 0 4px", letterSpacing: "0.5px", textTransform: "uppercase" }}>
-            Roteiro de Mesa
-          </h1>
-          <p style={{ color: t.textMuted, margin: 0, fontFamily: FONT.body, fontSize: 13 }}>
-            Sugestões de texto para abertura, durante o jogo e fechamento.
-          </p>
-        </div>
+
+        {podeAdicionarGlobal && (
+          <button
+            onClick={() => setModalNovoRoteiro(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "9px 18px",
+              borderRadius: 10,
+              border: "none",
+              background: BRAND.azul,
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+              letterSpacing: "0.02em",
+              flexShrink: 0,
+              marginTop: 4,
+              boxShadow: "0 4px 14px rgba(30,54,248,0.35)",
+              transition: "opacity 0.15s, box-shadow 0.15s",
+            }}
+          >
+            <Plus size={14} />
+            Novo Roteiro
+          </button>
+        )}
       </div>
 
       <div
         style={{
           marginBottom: 24,
-          padding: "16px 20px",
           background: t.cardBg,
           border: `1px solid ${t.cardBorder}`,
           borderRadius: 16,
           boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
+          overflow: "hidden",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 72 }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          padding: "14px 20px",
+          flexWrap: "wrap",
+        }}>
+          <span style={{
+            fontSize: 10,
+            fontWeight: 700,
+            color: t.textMuted,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            fontFamily: FONT.body,
+            minWidth: 60,
+          }}>
             Operadora
           </span>
 
@@ -782,9 +1177,12 @@ export default function RoteiroMesa() {
               style={{
                 padding: "6px 14px",
                 borderRadius: 8,
-                border: `1.5px solid ${filtroOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                background: filtroOperadora !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
-                color: filtroOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                border: `1.5px solid ${filtroOperadora !== "todas" ? BRAND.roxo + "80" : t.cardBorder}`,
+                background:
+                  filtroOperadora !== "todas"
+                    ? BRAND.roxo + "18"
+                    : (t.inputBg ?? t.cardBg),
+                color: filtroOperadora !== "todas" ? (dark ? "#b08aee" : BRAND.roxo) : t.textMuted,
                 fontSize: 13,
                 fontWeight: 600,
                 fontFamily: FONT.body,
@@ -794,7 +1192,9 @@ export default function RoteiroMesa() {
                 minWidth: 180,
               }}
             >
-              {!operadoraSlugsForcado?.length && <option value="todas">Todas as operadoras</option>}
+              {!operadoraSlugsForcado?.length && (
+                <option value="todas">Todas as operadoras</option>
+              )}
               {[...opcoesFiltro]
                 .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
                 .map((o) => (
@@ -812,10 +1212,24 @@ export default function RoteiroMesa() {
           )}
         </div>
 
-        <div style={{ height: 1, background: t.cardBorder }} />
+        <div style={{ height: 1, background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", margin: "0 20px" }} />
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 72 }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          padding: "14px 20px",
+          flexWrap: "wrap",
+        }}>
+          <span style={{
+            fontSize: 10,
+            fontWeight: 700,
+            color: t.textMuted,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            fontFamily: FONT.body,
+            minWidth: 60,
+          }}>
             Jogo
           </span>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -837,17 +1251,31 @@ export default function RoteiroMesa() {
           </div>
         </div>
 
-        <div style={{ height: 1, background: t.cardBorder }} />
+        <div style={{ height: 1, background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", margin: "0 20px" }} />
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 72 }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          padding: "14px 20px",
+          flexWrap: "wrap",
+        }}>
+          <span style={{
+            fontSize: 10,
+            fontWeight: 700,
+            color: t.textMuted,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            fontFamily: FONT.body,
+            minWidth: 60,
+          }}>
             Tipo
           </span>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <FilterChip
               label="Todos"
               active={filtroTipo === "todos"}
-              activeColor={dark ? "#b08aee" : "#4a2082"}
+              activeColor={dark ? "#b08aee" : "#3a1868"}
               activeBg="rgba(74,32,130,0.15)"
               activeBorder={BRAND.roxoBorder}
               onClick={() => setFiltroTipo("todos")}
@@ -875,7 +1303,7 @@ export default function RoteiroMesa() {
       {!operadoraSlugSelecionada && opcoesFiltro.length > 0 && (
         <div
           style={{
-            padding: "40px 24px",
+            padding: "48px 24px",
             textAlign: "center",
             background: t.cardBg,
             border: `1px solid ${t.cardBorder}`,
@@ -883,10 +1311,23 @@ export default function RoteiroMesa() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 10,
+            gap: 12,
           }}
         >
-          <GiNotebook size={32} color={t.textMuted} />
+          <div style={{
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            background: dark
+              ? "linear-gradient(135deg, rgba(30,54,248,0.15) 0%, rgba(74,32,130,0.15) 100%)"
+              : "linear-gradient(135deg, rgba(30,54,248,0.08) 0%, rgba(74,32,130,0.08) 100%)",
+            border: `1px solid ${BRAND.azulBorder}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            <BookOpen size={22} color={dark ? "#7b95ff" : BRAND.azul} strokeWidth={1.5} />
+          </div>
           <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 14, margin: 0 }}>
             Selecione uma operadora para ver e gerenciar os roteiros.
           </p>
@@ -915,6 +1356,19 @@ export default function RoteiroMesa() {
             ))}
           </div>
         ))}
+
+      {modalNovoRoteiro && (
+        <ModalNovoRoteiro
+          operadoraSlug={slugParaModal}
+          operadorasList={opcoesFiltro}
+          dark={dark}
+          onClose={() => setModalNovoRoteiro(false)}
+          onSalvo={() => {
+            setModalNovoRoteiro(false);
+            carregarSugestoes();
+          }}
+        />
+      )}
     </div>
   );
 }

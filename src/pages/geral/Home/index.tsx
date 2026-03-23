@@ -23,7 +23,6 @@ import {
   GiSpyglass,
   GiDiceSixFacesFour,
   GiShare,
-  GiTheaterCurtains,
 } from "react-icons/gi";
 import { ArrowRight } from "lucide-react";
 
@@ -89,7 +88,6 @@ const PAGE_ICONS: Record<string, React.ComponentType<{ size?: number; color?: st
   gestao_links: GiLinkedRings,
   campanhas: GiMegaphone,
   gestao_dealers: GiCardRandom,
-  casting_dealers: GiTheaterCurtains,
   roteiro_mesa: GiNotebook,
   gestao_usuarios: GiShield,
   gestao_operadoras: GiFactory,

@@ -48,7 +48,6 @@ const Financeiro  = lazyWithRetry(() => import("./pages/operacoes/Financeiro"));
 const GestaoLinks = lazyWithRetry(() => import("./pages/operacoes/GestaoLinks"));
 const Campanhas = lazyWithRetry(() => import("./pages/operacoes/Campanhas"));
 const GestaoDealers = lazyWithRetry(() => import("./pages/operacoes/GestaoDealers"));
-const CastingDealers = lazyWithRetry(() => import("./pages/operacoes/CastingDealers"));
 const RoteiroMesa = lazyWithRetry(() => import("./pages/conteudo/RoteiroMesa"));
 const GestaoUsuarios = lazyWithRetry(() => import("./pages/plataforma/GestaoUsuarios"));
 const GestaoOperadoras = lazyWithRetry(() => import("./pages/plataforma/GestaoOperadoras"));
@@ -72,7 +71,6 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   gestao_links:     GestaoLinks,
   campanhas:        Campanhas,
   gestao_dealers:   GestaoDealers,
-  casting_dealers:  CastingDealers,
   roteiro_mesa:     RoteiroMesa,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
