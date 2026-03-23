@@ -10,6 +10,7 @@ import {
   GiTrophy,
   GiPerson,
   GiCalendar,
+  GiShield,
 } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -111,6 +112,51 @@ function fmtPct(v: number | null) {
 }
 
 const KPIS_ZERO = { bets: 0, turnover: 0, ggr: 0, uap: 0, margin_pct: 0, arpu: 0 };
+
+// ─── SELECT COM ÍCONE (padrão Dashboard Influencer) ───────────────────────────
+function SelectComIcone({
+  icon, value, onChange, children, t,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+  t: any;
+}) {
+  return (
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+      <span style={{
+        position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+        pointerEvents: "none", display: "flex", alignItems: "center",
+        color: t.textMuted, zIndex: 1,
+      }}>
+        {icon}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          padding: "6px 28px 6px 30px",
+          borderRadius: 999,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.inputBg ?? t.cardBg,
+          color: t.text,
+          fontSize: 13,
+          fontFamily: FONT.body,
+          cursor: "pointer",
+          outline: "none",
+          appearance: "none" as const,
+        }}
+      >
+        {children}
+      </select>
+      <span style={{
+        position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+        pointerEvents: "none", color: t.textMuted, fontSize: 10, lineHeight: 1,
+      }}>▾</span>
+    </div>
+  );
+}
 
 // ─── BADGE MARGEM ─────────────────────────────────────────────────────────────
 function MarginBadge({ value }: { value: number | null }) {
@@ -428,14 +474,6 @@ export default function MesasSpin() {
     display: "flex", alignItems: "center", justifyContent: "center",
   };
 
-  const selectStyle: React.CSSProperties = {
-    padding: "5px 12px", borderRadius: 8,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.cardBg, color: t.text,
-    fontFamily: FONT.body, fontSize: 13, cursor: "pointer",
-    outline: "none",
-  };
-
   // ── Permissão ────────────────────────────────────────────────────────────────
   if (perm.canView === "nao") {
     return (
@@ -449,7 +487,7 @@ export default function MesasSpin() {
     <div style={{ padding: "20px 24px 64px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          BLOCO 1 — FILTROS
+          BLOCO 1 — FILTROS (padrão Overview Influencer)
       ══════════════════════════════════════════════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
@@ -457,74 +495,65 @@ export default function MesasSpin() {
           background: blockBg,
           padding: "12px 20px",
         }}>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            gap: 12, flexWrap: "wrap",
-          }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
-            {/* Carrossel de meses */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button
-                style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.3 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
-                onClick={irMesAnterior}
-                disabled={historico || isPrimeiro}
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span style={{
-                fontSize: 17, fontWeight: 800, color: t.text,
-                fontFamily: FONT.body, minWidth: 190, textAlign: "center",
-              }}>
-                {historico ? "Todo o período" : mesSelecionado?.label}
+            {/* Navegação de mês — centralizada */}
+            <button
+              style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              onClick={irMesAnterior}
+              disabled={historico || isPrimeiro}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span style={{
+              fontSize: 18, fontWeight: 800, color: t.text,
+              fontFamily: FONT.body, minWidth: 180, textAlign: "center",
+            }}>
+              {historico ? "Todo o período" : mesSelecionado?.label}
+            </span>
+            <button
+              style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              onClick={irMesProximo}
+              disabled={historico || isUltimo}
+            >
+              <ChevronRight size={14} />
+            </button>
+
+            {/* Botão Histórico — padrão Overview */}
+            <button
+              onClick={toggleHistorico}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+                fontFamily: FONT.body, fontSize: 13,
+                border: historico ? `1px solid ${useBrand ? "var(--brand-primary)" : BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
+                background: historico ? (useBrand ? "color-mix(in srgb, var(--brand-primary) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
+                color: historico ? (useBrand ? "var(--brand-primary)" : BRAND.roxoVivo) : t.textMuted,
+                fontWeight: historico ? 700 : 400,
+                transition: "all 0.15s",
+              }}
+            >
+              <GiCalendar size={15} /> Histórico
+            </button>
+
+            {/* Filtro Operadora — SelectComIcone (padrão Dashboard Influencer) */}
+            <SelectComIcone
+              icon={<GiShield size={15} />}
+              value={operadoraSel}
+              onChange={setOperadoraSel}
+              t={t}
+            >
+              <option value="todas">Todas as operadoras</option>
+              {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
+                <option key={op.slug} value={op.slug}>{op.nome}</option>
+              ))}
+            </SelectComIcone>
+
+            {loading && (
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
+                <Clock size={12} /> Carregando...
               </span>
-              <button
-                style={{ ...btnNav, opacity: historico || isUltimo ? 0.3 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
-                onClick={irMesProximo}
-                disabled={historico || isUltimo}
-              >
-                <ChevronRight size={14} />
-              </button>
-
-              {/* Botão Histórico */}
-              <button
-                onClick={toggleHistorico}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-                  fontFamily: FONT.body, fontSize: 13,
-                  border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-                  background: historico ? `rgba(124,58,237,0.15)` : "transparent",
-                  color: historico ? BRAND.roxoVivo : t.textMuted,
-                  fontWeight: historico ? 700 : 400,
-                  transition: "all 0.15s",
-                }}
-              >
-                <GiCalendar size={15} /> Histórico
-              </button>
-            </div>
-
-            {/* Filtro operadora */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                Operadora:
-              </span>
-              <select
-                value={operadoraSel}
-                onChange={(e) => setOperadoraSel(e.target.value)}
-                style={selectStyle}
-              >
-                <option value="todas">Todas</option>
-                {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
-                  <option key={op.slug} value={op.slug}>{op.nome}</option>
-                ))}
-              </select>
-
-              {loading && (
-                <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                  <Clock size={12} /> Carregando...
-                </span>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
