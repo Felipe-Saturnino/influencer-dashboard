@@ -5,7 +5,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
-import { BRAND } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
@@ -368,7 +368,9 @@ export default function DashboardOverview() {
   const useBrand = user?.role === "operador" && !!operadoraBrand;
   const isOperadorDark = useBrand && t.isDark;
   const kpiCardBg = isOperadorDark ? "var(--brand-background)" : undefined;
-  const filterBlockBg = useBrand && operadoraBrand?.cor_background && t.isDark ? operadoraBrand.cor_background : t.cardBg;
+  const filterBlockBg = useBrand
+    ? "color-mix(in srgb, var(--brand-primary) 6%, var(--brand-background, transparent))"
+    : t.cardBg;
   const card: React.CSSProperties = {
     background: isOperadorDark ? "var(--brand-background)" : t.cardBg,
     border: `1px solid ${t.cardBorder}`,
@@ -465,7 +467,7 @@ export default function DashboardOverview() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
+          border: useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent)" : `1px solid ${t.cardBorder}`,
           background: filterBlockBg,
           padding: "12px 20px",
         }}>
@@ -479,7 +481,9 @@ export default function DashboardOverview() {
             </button>
 
             <span style={{
-              fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body,
+              fontSize: 18, fontWeight: 800,
+              color: useBrand ? "var(--brand-primary)" : t.text,
+              fontFamily: FONT_TITLE,
               minWidth: 180, textAlign: "center",
             }}>
               {historico ? "Todo o período" : mesSelecionado?.label}

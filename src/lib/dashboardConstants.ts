@@ -1,6 +1,6 @@
 /** Constantes compartilhadas entre dashboards (Overview, OverviewInfluencer, etc.) */
-
-export const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+/** FONT_TITLE usa var(--brand-fontFamily) quando operador tem fonte customizada */
+export const FONT_TITLE = "var(--brand-fontFamily, 'NHD Bold', 'nhd-bold', sans-serif)";
 
 export const BRAND = {
   roxo: "#4a2082",

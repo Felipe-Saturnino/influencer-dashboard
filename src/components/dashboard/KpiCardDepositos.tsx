@@ -32,6 +32,7 @@ export default function KpiCardDepositos({
     ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)`
     : `1px solid ${accentColor}35`;
   const iconBoxColor = useBrand ? `var(${accentVar})` : accentColor;
+  const valueColor = useBrand ? "var(--brand-primary)" : t.text;
   const diffQtd = atual.qtd - anterior.qtd;
   const pctQtd =
     anterior.qtd !== 0 ? (diffQtd / Math.abs(anterior.qtd)) * 100 : null;
@@ -106,7 +107,7 @@ export default function KpiCardDepositos({
               style={{
                 fontSize: 20,
                 fontWeight: 800,
-                color: t.text,
+                color: valueColor,
                 fontFamily: FONT.body,
                 marginBottom: 4,
               }}
@@ -144,7 +145,7 @@ export default function KpiCardDepositos({
               style={{
                 fontSize: 14,
                 fontWeight: 800,
-                color: t.text,
+                color: valueColor,
                 fontFamily: FONT.body,
                 marginBottom: 4,
               }}

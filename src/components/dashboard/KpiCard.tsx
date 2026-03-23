@@ -51,6 +51,7 @@ export default function KpiCard({
     ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)`
     : `1px solid ${accentColor}35`;
   const iconBoxColor = useBrand ? `var(${accentVar})` : accentColor;
+  const valueColor = useBrand ? "var(--brand-primary)" : t.text;
 
   return (
     <div
@@ -105,7 +106,7 @@ export default function KpiCard({
           style={{
             fontSize: 22,
             fontWeight: 800,
-            color: t.text,
+            color: valueColor,
             fontFamily: FONT.body,
             marginBottom: subValue ? 4 : 6,
             lineHeight: 1.1,
