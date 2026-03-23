@@ -6,7 +6,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle } from "lucide-react";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, X, Check } from "lucide-react";
 import { GiNotebook, GiShield } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 
@@ -178,6 +178,207 @@ function TagChip({ label, bg, color, border }: { label: string; bg: string; colo
   );
 }
 
+// ─── MODAL ROTEIRO (+ Roteiro) ───────────────────────────────────────────────
+function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, podeVerOperadora }: {
+  operadoraSlug: string;
+  operadorasList: { slug: string; nome: string }[];
+  bloco: BlocoRoteiro;
+  onClose: () => void;
+  onSalvo: () => void;
+  podeVerOperadora: (slug: string) => boolean;
+}) {
+  const { theme: t, user, isDark } = useApp();
+  const dark = isDark ?? false;
+  const mostraCampoOperadora = user?.role === "gestor" || user?.role === "admin";
+  const [tipo, setTipo] = useState<TipoSugestao>("script");
+  const [jogos, setJogos] = useState<JogoTag[]>(["todos"]);
+  const [texto, setTexto] = useState("");
+  const [operadoraSlugModal, setOperadoraSlugModal] = useState(operadoraSlug === "todas" ? "" : operadoraSlug);
+  const [saving, setSaving] = useState(false);
+
+  const operadorasFiltradas = operadorasList.filter((o) => podeVerOperadora(o.slug));
+  const operadoraFinal = mostraCampoOperadora ? operadoraSlugModal : operadoraSlug;
+
+  const toggleJogo = (jogo: JogoTag) => {
+    if (jogo === "todos") { setJogos(["todos"]); return; }
+    setJogos((prev) => {
+      const sem = prev.filter((j) => j !== "todos");
+      const next = sem.includes(jogo) ? sem.filter((j) => j !== jogo) : [...sem, jogo];
+      return next.length === 0 ? ["todos"] : next;
+    });
+  };
+
+  const handleSalvar = async () => {
+    if (!texto.trim() || !operadoraFinal || operadoraFinal === "todas") return;
+    setSaving(true);
+    const payload = { texto: texto.trim(), tipo, jogos, updated_at: new Date().toISOString() };
+    const { error } = await supabase.from("roteiro_mesa_sugestoes").insert({ operadora_slug: operadoraFinal, bloco, ordem: 0, ...payload });
+    if (error) console.error("[RoteiroMesa] insert roteiro:", error.message);
+    setSaving(false);
+    if (!error) { onSalvo(); onClose(); }
+  };
+
+  const podeSalvar = texto.trim().length > 0 && operadoraFinal && operadoraFinal !== "todas";
+  const blocoLabel = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
+  const cfg = BLOCO_CONFIG[bloco];
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }} onClick={onClose}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "24px 24px 20px", maxWidth: 500, width: "92%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: cfg.accent, flexShrink: 0 }} />
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>Novo Roteiro — {blocoLabel}</h3>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}><X size={16} /></button>
+        </div>
+
+        {mostraCampoOperadora && operadorasFiltradas.length > 0 && (
+          <>
+            <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Operadora *</p>
+            <select value={operadoraSlugModal} onChange={(e) => setOperadoraSlugModal(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontFamily: FONT.body, fontSize: 13, marginBottom: 18, outline: "none" }}>
+              <option value="">Selecione a operadora</option>
+              {[...operadorasFiltradas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
+                <option key={o.slug} value={o.slug}>{o.nome}</option>
+              ))}
+            </select>
+          </>
+        )}
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Tipo *</p>
+        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+          {TIPOS.map(({ key, label }) => {
+            const tcfg = TIPO_CONFIG[key];
+            const isActive = tipo === key;
+            return (
+              <button key={key} onClick={() => setTipo(key)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${isActive ? tcfg.tagBorder : t.cardBorder}`, background: isActive ? tcfg.tagBg : "transparent", color: isActive ? tcfg.tagColor(dark) : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}>{label}</button>
+            );
+          })}
+        </div>
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Jogos *</p>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+          {JOGOS.map(({ key, label }) => {
+            const jcfg = JOGO_TAG_CONFIG[key];
+            const isActive = jogos.includes(key);
+            return (
+              <button key={key} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} />}{label}</button>
+            );
+          })}
+        </div>
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Texto *</p>
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "script" ? "Olá Jogadores, meu nome é [Nome]..." : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o dealer..."} rows={4} style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", outline: "none", marginBottom: 18 }} />
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
+          <button onClick={handleSalvar} disabled={!podeSalvar || saving} style={{ padding: "8px 20px", borderRadius: 10, border: "none", background: BRAND.azul, color: "#fff", fontFamily: FONT.body, fontSize: 13, fontWeight: 700, cursor: podeSalvar && !saving ? "pointer" : "not-allowed", opacity: podeSalvar && !saving ? 1 : 0.55 }}>{saving ? "Salvando..." : "Salvar"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MODAL CAMPANHA (Nova Campanha) ───────────────────────────────────────────
+function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVerOperadora }: {
+  operadoraSlug: string;
+  operadorasList: { slug: string; nome: string }[];
+  onClose: () => void;
+  onSalvo: () => void;
+  podeVerOperadora: (slug: string) => boolean;
+}) {
+  const { theme: t, user, isDark } = useApp();
+  const dark = isDark ?? false;
+  const mostraCampoOperadora = user?.role === "gestor" || user?.role === "admin";
+  const [titulo, setTitulo] = useState("");
+  const [jogos, setJogos] = useState<JogoTag[]>(["todos"]);
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [texto, setTexto] = useState("");
+  const [operadoraSlugModal, setOperadoraSlugModal] = useState(operadoraSlug === "todas" ? "" : operadoraSlug);
+  const [saving, setSaving] = useState(false);
+
+  const operadorasFiltradas = operadorasList.filter((o) => podeVerOperadora(o.slug));
+  const operadoraFinal = mostraCampoOperadora ? operadoraSlugModal : operadoraSlug;
+
+  const toggleJogo = (jogo: JogoTag) => {
+    if (jogo === "todos") { setJogos(["todos"]); return; }
+    setJogos((prev) => {
+      const sem = prev.filter((j) => j !== "todos");
+      const next = sem.includes(jogo) ? sem.filter((j) => j !== jogo) : [...sem, jogo];
+      return next.length === 0 ? ["todos"] : next;
+    });
+  };
+
+  const handleSalvar = async () => {
+    if (!titulo.trim() || !texto.trim() || !dataInicio || !dataFim || !operadoraFinal || operadoraFinal === "todas") return;
+    setSaving(true);
+    const payload = { titulo: titulo.trim(), texto: texto.trim(), jogos, data_inicio: dataInicio, data_fim: dataFim, ativo: true, updated_at: new Date().toISOString() };
+    const { error } = await supabase.from("roteiro_mesa_campanhas").insert({ operadora_slug: operadoraFinal, ordem: 0, ...payload });
+    if (error) console.error("[RoteiroMesa] insert campanha:", error.message);
+    setSaving(false);
+    if (!error) { onSalvo(); onClose(); }
+  };
+
+  const podeSalvar = titulo.trim().length > 0 && texto.trim().length > 0 && dataInicio && dataFim && operadoraFinal && operadoraFinal !== "todas";
+  const inp = { width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, boxSizing: "border-box" as const, outline: "none" };
+  const lbl = { fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body, display: "block" };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }} onClick={onClose}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "24px 24px 20px", maxWidth: 520, width: "92%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.ciano, flexShrink: 0 }} />
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>Nova Campanha</h3>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}><X size={16} /></button>
+        </div>
+
+        {mostraCampoOperadora && operadorasFiltradas.length > 0 && (
+          <>
+            <label style={lbl}>Operadora *</label>
+            <select value={operadoraSlugModal} onChange={(e) => setOperadoraSlugModal(e.target.value)} style={{ ...inp, marginBottom: 18 }}>
+              <option value="">Selecione a operadora</option>
+              {[...operadorasFiltradas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
+                <option key={o.slug} value={o.slug}>{o.nome}</option>
+              ))}
+            </select>
+          </>
+        )}
+
+        <label style={lbl}>Título *</label>
+        <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder='Ex: "Cashback na Mesa X — Blaze"' style={{ ...inp, marginBottom: 18 }} />
+
+        <p style={lbl}>Jogos *</p>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+          {JOGOS.map(({ key, label }) => {
+            const jcfg = JOGO_TAG_CONFIG[key];
+            const isActive = jogos.includes(key);
+            return (
+              <button key={key} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? jcfg.border : t.cardBorder}`, background: isActive ? jcfg.bg : "transparent", color: isActive ? jcfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>{isActive && <Check size={10} />}{label}</button>
+            );
+          })}
+        </div>
+
+        <p style={lbl}>Data início *</p>
+        <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} style={{ ...inp, marginBottom: 18 }} />
+
+        <p style={lbl}>Data fim *</p>
+        <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} style={{ ...inp, marginBottom: 18 }} />
+
+        <label style={lbl}>Texto *</label>
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='O que o dealer deve falar...' rows={4} style={{ ...inp, resize: "vertical", marginBottom: 18 }} />
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
+          <button onClick={handleSalvar} disabled={!podeSalvar || saving} style={{ padding: "8px 20px", borderRadius: 10, border: "none", background: BRAND.ciano, color: "#0f6a8a", fontFamily: FONT.body, fontSize: 13, fontWeight: 700, cursor: podeSalvar && !saving ? "pointer" : "not-allowed", opacity: podeSalvar && !saving ? 1 : 0.55 }}>{saving ? "Salvando..." : "Salvar"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── FILTER CHIP ─────────────────────────────────────────────────────────────
 function FilterChip({ label, active, activeColor, activeBg, activeBorder, onClick, dark }: {
   label: string; active: boolean;
@@ -289,12 +490,14 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
 }
 
 // ─── BLOCO DE SUGESTÕES ───────────────────────────────────────────────────────
-function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, onCarregar, dark, operadorasList }: {
+function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora }: {
   bloco: BlocoRoteiro; operadoraSlug: string | null;
-  sugestoes: RoteiroSugestao[]; podeExcluir: boolean;
+  sugestoes: RoteiroSugestao[]; podeExcluir: boolean; podeCriar: boolean;
   onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; cor_primaria?: string | null }[];
+  podeVerOperadora: (slug: string) => boolean;
 }) {
   const { theme: t } = useApp();
+  const [modalAberto, setModalAberto] = useState(false);
 
   const handleExcluir = async (s: RoteiroSugestao) => {
     if (!window.confirm("Excluir este roteiro?")) return;
@@ -307,16 +510,22 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, onCarreg
   if (!operadoraSlug) return null;
 
   return (
-    <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${t.cardBorder}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 4, height: 20, borderRadius: 2, background: cfg.accent, flexShrink: 0 }} />
-          <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: cfg.titleColor(dark), fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.1em" }}>{label}</h3>
-          <span style={{ fontSize: 11, color: t.textMuted, background: dark ? "rgba(74,32,130,0.10)" : "rgba(74,32,130,0.06)", borderRadius: 10, padding: "2px 8px", fontFamily: FONT.body }}>
-            {sugestoes.length} {sugestoes.length === 1 ? "item" : "itens"}
-          </span>
+    <>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${t.cardBorder}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: cfg.accent, flexShrink: 0 }} />
+            <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: cfg.titleColor(dark), fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.1em" }}>{label}</h3>
+            <span style={{ fontSize: 11, color: t.textMuted, background: dark ? "rgba(74,32,130,0.10)" : "rgba(74,32,130,0.06)", borderRadius: 10, padding: "2px 8px", fontFamily: FONT.body }}>
+              {sugestoes.length} {sugestoes.length === 1 ? "item" : "itens"}
+            </span>
+          </div>
+          {podeCriar && (
+            <button onClick={() => setModalAberto(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: cfg.btnBg, color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
+              <Plus size={12} />+ Roteiro
+            </button>
+          )}
         </div>
-      </div>
       <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
         {sugestoes.length === 0 ? (
           <div style={{ padding: "32px 16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -335,17 +544,21 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, onCarreg
         )}
       </div>
     </div>
+    {modalAberto && <ModalRoteiro operadoraSlug={operadoraSlug} operadorasList={operadorasList} bloco={bloco} onClose={() => setModalAberto(false)} onSalvo={() => { setModalAberto(false); onCarregar(); }} podeVerOperadora={podeVerOperadora} />}
+    </>
   );
 }
 
 // ─── BLOCO DE CAMPANHAS ───────────────────────────────────────────────────────
-function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, onCarregar, dark, operadorasList }: {
+function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora }: {
   operadoraSlug: string | null; campanhas: RoteiroCampanha[];
-  podeExcluir: boolean;
+  podeExcluir: boolean; podeCriar: boolean;
   onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; cor_primaria?: string | null }[];
+  podeVerOperadora: (slug: string) => boolean;
 }) {
   const { theme: t } = useApp();
   const cianoTitle = dark ? "#70cae4" : "#0f6a8a";
+  const [modalAberto, setModalAberto] = useState(false);
 
   const handleExcluir = async (c: RoteiroCampanha) => {
     if (!window.confirm("Excluir esta campanha?")) return;
@@ -356,17 +569,23 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, onCarregar, dar
   if (!operadoraSlug) return null;
 
   return (
-    <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${t.cardBorder}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.ciano, flexShrink: 0 }} />
-          <Megaphone size={14} color={cianoTitle} />
-          <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: cianoTitle, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.1em" }}>Campanhas</h3>
-          <span style={{ fontSize: 11, color: t.textMuted, background: dark ? "rgba(112,202,228,0.08)" : "rgba(112,202,228,0.06)", borderRadius: 10, padding: "2px 8px", fontFamily: FONT.body }}>
-            {campanhas.length} {campanhas.length === 1 ? "item" : "itens"}
-          </span>
+    <>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${t.cardBorder}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.ciano, flexShrink: 0 }} />
+            <Megaphone size={14} color={cianoTitle} />
+            <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: cianoTitle, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.1em" }}>Campanhas</h3>
+            <span style={{ fontSize: 11, color: t.textMuted, background: dark ? "rgba(112,202,228,0.08)" : "rgba(112,202,228,0.06)", borderRadius: 10, padding: "2px 8px", fontFamily: FONT.body }}>
+              {campanhas.length} {campanhas.length === 1 ? "item" : "itens"}
+            </span>
+          </div>
+          {podeCriar && (
+            <button onClick={() => setModalAberto(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: BRAND.ciano, color: "#0f6a8a", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
+              <Plus size={12} />Nova Campanha
+            </button>
+          )}
         </div>
-      </div>
       <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
         {campanhas.length === 0 ? (
           <div style={{ padding: "32px 16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -385,6 +604,8 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, onCarregar, dar
         )}
       </div>
     </div>
+    {modalAberto && <ModalCampanha operadoraSlug={operadoraSlug} operadorasList={operadorasList} onClose={() => setModalAberto(false)} onSalvo={() => { setModalAberto(false); onCarregar(); }} podeVerOperadora={podeVerOperadora} />}
+    </>
   );
 }
 
@@ -576,9 +797,11 @@ export default function RoteiroMesa() {
               operadoraSlug={operadoraSlugSelecionada}
               campanhas={filtrarCampanhas(campanhas)}
               podeExcluir={perm.canExcluirOk}
+              podeCriar={perm.canCriarOk}
               onCarregar={carregarDados}
               dark={dark}
               operadorasList={operadorasList}
+              podeVerOperadora={podeVerOperadora}
             />
             {BLOCOS.map(({ key }) => (
               <BlocoSugestoes
@@ -586,9 +809,11 @@ export default function RoteiroMesa() {
                 operadoraSlug={operadoraSlugSelecionada}
                 sugestoes={sugestoesPorBloco(key)}
                 podeExcluir={perm.canExcluirOk}
+                podeCriar={perm.canCriarOk}
                 onCarregar={carregarDados}
                 dark={dark}
                 operadorasList={operadorasList}
+                podeVerOperadora={podeVerOperadora}
               />
             ))}
           </div>
