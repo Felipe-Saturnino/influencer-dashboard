@@ -19,6 +19,7 @@ import {
   GiShare,
   GiMegaphone,
   GiNotebook,
+  GiTheaterCurtains,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -58,6 +59,7 @@ export const MENU: MenuSection[] = [
     section: "Operações",
     items: [
       { key: "gestao_dealers", label: "Gestão de Dealers", icon: GiCardRandom  },
+      { key: "casting_dealers", label: "Casting de Dealers", icon: GiTheaterCurtains },
       { key: "financeiro",    label: "Financeiro",        icon: GiCash        },
       { key: "campanhas",     label: "Campanhas",          icon: GiMegaphone   },
       { key: "gestao_links",  label: "Gestão de Links",    icon: GiLinkedRings },

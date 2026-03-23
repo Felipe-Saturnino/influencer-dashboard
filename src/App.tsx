@@ -27,6 +27,7 @@ const Financeiro  = lazy(() => import("./pages/operacoes/Financeiro"));
 const GestaoLinks = lazy(() => import("./pages/operacoes/GestaoLinks"));
 const Campanhas = lazy(() => import("./pages/operacoes/Campanhas"));
 const GestaoDealers = lazy(() => import("./pages/operacoes/GestaoDealers"));
+const CastingDealers = lazy(() => import("./pages/operacoes/CastingDealers"));
 const RoteiroMesa = lazy(() => import("./pages/conteudo/RoteiroMesa"));
 const GestaoUsuarios = lazy(() => import("./pages/plataforma/GestaoUsuarios"));
 const GestaoOperadoras = lazy(() => import("./pages/plataforma/GestaoOperadoras"));
@@ -50,6 +51,7 @@ const PAGE_MAP: Record<string, React.LazyExoticComponent<React.ComponentType>> =
   gestao_links:     GestaoLinks,
   campanhas:        Campanhas,
   gestao_dealers:   GestaoDealers,
+  casting_dealers:  CastingDealers,
   roteiro_mesa:     RoteiroMesa,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
