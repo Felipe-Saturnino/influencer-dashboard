@@ -113,11 +113,11 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
       <button
         onClick={() => setOpen(!open)}
         style={{
-          padding: "6px 14px", borderRadius: 20,
-          border: `1.5px solid ${BRAND.roxoVivo}`,
+          padding: "6px 14px", borderRadius: 999,
+          border: `1px solid ${BRAND.roxoVivo}`,
           background: `${BRAND.roxoVivo}22`,
           color: BRAND.roxoVivo,
-          fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
+          fontSize: 13, fontWeight: 600, fontFamily: FONT.body,
           cursor: "pointer", outline: "none",
           display: "flex", alignItems: "center", gap: 6,
           whiteSpace: "nowrap" as const,
@@ -288,12 +288,21 @@ export default function Agenda() {
     background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20,
   };
 
+  const btnNav: React.CSSProperties = {
+    width: 30, height: 30, borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent", color: t.text, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  };
+
   const chipBase = (active: boolean, color = BRAND.roxoVivo): React.CSSProperties => ({
-    padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
-    cursor: "pointer", border: `1.5px solid ${active ? color : t.cardBorder}`,
-    background: active ? `${color}22` : t.inputBg ?? t.cardBg,
+    padding: "6px 14px", borderRadius: 999, fontSize: 13,
+    cursor: "pointer", border: `1px solid ${active ? color : t.cardBorder}`,
+    background: active ? `${color}22` : "transparent",
     color: active ? color : t.textMuted,
-    fontFamily: FONT.body, transition: "all 0.15s",
+    fontFamily: FONT.body, fontWeight: active ? 700 : 400,
+    transition: "all 0.15s",
+    display: "flex", alignItems: "center", gap: 6,
   });
 
   // ── Chip de live no calendário ───────────────────────────────────────────────
@@ -558,51 +567,45 @@ export default function Agenda() {
         )}
       </div>
 
-      {/* ── CARD DE CONTROLES ── */}
-      <div style={{ ...card, marginBottom: 16 }}>
+      {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{
+          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
+          background: t.cardBg,
+          padding: "12px 20px",
+        }}>
+          {/* Linha principal — centralizada */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            <button onClick={prev} style={btnNav}>
+              <ChevronLeft size={14} />
+            </button>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+              {headerTitle()}
+            </span>
+            <button onClick={next} style={btnNav}>
+              <ChevronRight size={14} />
+            </button>
 
-        {/* Linha de navegação */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-          {/* Setas */}
-          <button onClick={prev} style={{ ...chipBase(false), padding: "6px 10px", display: "flex", alignItems: "center" }}>
-            <ChevronLeft size={14} />
-          </button>
-          <span style={{ fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, minWidth: 180, textAlign: "center" }}>
-            {headerTitle()}
-          </span>
-          <button onClick={next} style={{ ...chipBase(false), padding: "6px 10px", display: "flex", alignItems: "center" }}>
-            <ChevronRight size={14} />
-          </button>
+            <button onClick={goToday} style={chipBase(false)}>Hoje</button>
 
-          <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
+            <SingleDropdown
+              value={view}
+              options={VIEW_OPTIONS}
+              onChange={v => setView(v as ViewMode)}
+              icon={<GiCalendar size={13} />}
+              t={t}
+            />
 
-          <button onClick={goToday} style={chipBase(false)}>Hoje</button>
-
-          <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
-
-          <SingleDropdown
-            value={view}
-            options={VIEW_OPTIONS}
-            onChange={v => setView(v as ViewMode)}
-            icon={<GiCalendar size={13} />}
-            t={t}
-          />
-
-          {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-            <>
-              <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
+            {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
               <InfluencerMultiSelect
                 selected={filterInfluencers}
                 onChange={setFilterInfluencers}
                 influencers={influencerListVisiveis}
                 t={t}
               />
-            </>
-          )}
+            )}
 
-          {showFiltroOperadora && operadorasList.length > 0 && (
-            <>
-              <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
+            {showFiltroOperadora && operadorasList.length > 0 && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
                   <GiShield size={13} />
@@ -611,12 +614,12 @@ export default function Agenda() {
                   value={filterOperadora}
                   onChange={(e) => setFilterOperadora(e.target.value)}
                   style={{
-                    padding: "6px 14px 6px 30px", borderRadius: 20,
-                    border: `1.5px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                    background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg),
+                    padding: "6px 14px 6px 30px", borderRadius: 999,
+                    border: `1px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
+                    background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
                     color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
-                    fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                    cursor: "pointer", outline: "none", appearance: "none",
+                    fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                    fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
                   }}
                 >
                   <option value="todas">Todas as operadoras</option>
@@ -626,90 +629,75 @@ export default function Agenda() {
                     .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
                 </select>
               </div>
-            </>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Legendas / Filtros */}
-        <div style={{
-          paddingTop: 14, borderTop: `1px solid ${t.cardBorder}`,
-          display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-        }}>
-
-          {/* Status */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-              Status
-            </span>
-            {Object.entries(STATUS_COLOR).map(([status, color]) => {
-              const active = filterStatus === status;
-              return (
-                <button
-                  key={status}
-                  onClick={() => setFilterStatus(prev => prev === status ? null : status)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "4px 10px", borderRadius: 20, cursor: "pointer",
-                    border: `1.5px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : "transparent",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: active ? color : t.textMuted, fontWeight: active ? 700 : 400, fontFamily: FONT.body }}>
+          {/* Status e Plataforma */}
+          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</span>
+              {Object.entries(STATUS_COLOR).map(([status, color]) => {
+                const active = filterStatus === status;
+                return (
+                  <button
+                    key={status}
+                    onClick={() => setFilterStatus(prev => prev === status ? null : status)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : "transparent",
+                      color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
                     {STATUS_LABEL[status]}
-                  </span>
-                  {active && <span style={{ fontSize: 9, color }}>✕</span>}
-                </button>
-              );
-            })}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Plataforma</span>
+              {Object.entries(PLAT_COLOR).map(([plat, color]) => {
+                const active = filterPlat === plat;
+                return (
+                  <button
+                    key={plat}
+                    onClick={() => setFilterPlat(prev => prev === plat ? null : plat)}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : `${color}11`,
+                      color: active ? color : color + "cc",
+                      fontSize: 12, fontWeight: active ? 700 : 500,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
+                    {plat}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={() => { setFilterStatus(null); setFilterPlat(null); setFilterInfluencers([]); setFilterOperadora("todas"); }}
+                style={{
+                  padding: "5px 14px", borderRadius: 999,
+                  border: `1px solid ${BRAND.vermelho}44`,
+                  background: `${BRAND.vermelho}11`,
+                  color: BRAND.vermelho, fontSize: 12, fontWeight: 600,
+                  fontFamily: FONT.body, cursor: "pointer",
+                }}
+              >
+                ✕ Limpar filtros
+              </button>
+            )}
           </div>
-
-          {/* Plataforma — com logos SVG */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-              Plataforma
-            </span>
-            {Object.entries(PLAT_COLOR).map(([plat, color]) => {
-              const active = filterPlat === plat;
-              return (
-                <button
-                  key={plat}
-                  onClick={() => setFilterPlat(prev => prev === plat ? null : plat)}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "4px 10px", borderRadius: 20, cursor: "pointer",
-                    border: `1.5px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : `${color}11`,
-                    color: active ? color : color + "cc",
-                    fontSize: 11, fontWeight: active ? 700 : 500,
-                    fontFamily: FONT.body, transition: "all 0.15s",
-                  }}
-                >
-                  <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                  {plat}
-                  {active && <span style={{ fontSize: 9 }}>✕</span>}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Limpar filtros */}
-          {hasActiveFilters && (
-            <button
-              onClick={() => { setFilterStatus(null); setFilterPlat(null); setFilterInfluencers([]); setFilterOperadora("todas"); }}
-              style={{
-                padding: "5px 16px", borderRadius: 20,
-                border: `1px solid ${BRAND.vermelho}44`,
-                background: `${BRAND.vermelho}11`,
-                color: BRAND.vermelho,
-                fontSize: 11, fontWeight: 600,
-                fontFamily: FONT.body, cursor: "pointer",
-              }}
-            >
-              ✕ Limpar filtros
-            </button>
-          )}
         </div>
       </div>
 
