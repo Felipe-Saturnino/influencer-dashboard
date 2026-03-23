@@ -27,6 +27,7 @@ export interface EscoposVisiveis {
 
 /** Brand da operadora (operador): logo, fonte e cores aplicadas via CSS vars */
 export interface OperadoraBrand {
+  nome:          string | null;
   logo_url:      string | null;
   font_url:      string | null;
   cor_background: string | null;
@@ -226,7 +227,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         const { data } = await supabase.from("operadoras").select(
-          "cor_primaria, cor_secundaria, cor_accent, cor_background, cor_textos, cor_icones, cor_adicional_1, cor_adicional_2, cor_adicional_3, cor_adicional_4, logo_url, font_url"
+          "nome, cor_primaria, cor_secundaria, cor_accent, cor_background, cor_textos, cor_icones, cor_adicional_1, cor_adicional_2, cor_adicional_3, cor_adicional_4, logo_url, font_url"
         ).eq("slug", slug).single();
         const hasBrand = data?.cor_primaria || data?.cor_secundaria || data?.cor_accent || data?.cor_background || data?.cor_textos || data?.cor_icones;
         if (hasBrand) {
@@ -245,10 +246,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } else {
           aplicarBrandguide({});
         }
+        const nome = (data?.nome ?? "").trim() || null;
         const logo = (data?.logo_url ?? "").trim() || null;
         const font = (data?.font_url ?? "").trim() || null;
         const bg = (data?.cor_background ?? "").trim() || null;
-        setOperadoraBrand({ logo_url: logo, font_url: font, cor_background: bg });
+        setOperadoraBrand({ nome, logo_url: logo, font_url: font, cor_background: bg });
       } catch {
         aplicarBrandguide({});
         setOperadoraBrand(null);

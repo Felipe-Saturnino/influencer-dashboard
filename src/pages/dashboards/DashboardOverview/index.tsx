@@ -195,13 +195,13 @@ function SectionTitle({ icon, children, sub, useBrand }: {
   icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
   useBrand?: boolean;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, operadoraBrand } = useApp();
   const titleColor = useBrand ? "var(--brand-primary)" : t.text;
   const iconBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)" : "rgba(74,32,130,0.18)";
   const iconBorder = useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)" : "1px solid rgba(74,32,130,0.30)";
   const iconColor = useBrand ? "var(--brand-primary)" : BRAND.ciano;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
         background: iconBg,
@@ -222,6 +222,43 @@ function SectionTitle({ icon, children, sub, useBrand }: {
         <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
           {sub}
         </span>
+      )}
+      {useBrand && operadoraBrand && (operadoraBrand.logo_url || operadoraBrand.nome) && (
+        <div style={{
+          marginLeft: "auto",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "3px 10px 3px 6px",
+          borderRadius: 999,
+          border: "1px solid color-mix(in srgb, var(--brand-primary) 28%, transparent)",
+          background: "color-mix(in srgb, var(--brand-primary) 8%, transparent)",
+        }}>
+          {operadoraBrand.logo_url && (
+            <img
+              src={operadoraBrand.logo_url}
+              alt={operadoraBrand.nome ?? ""}
+              style={{
+                width: 16, height: 16,
+                objectFit: "contain",
+                borderRadius: 3,
+                flexShrink: 0,
+              }}
+            />
+          )}
+          {operadoraBrand.nome && (
+            <span style={{
+              fontSize: 10, fontWeight: 700,
+              color: "var(--brand-primary)",
+              fontFamily: FONT.body,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase" as const,
+              whiteSpace: "nowrap" as const,
+            }}>
+              {operadoraBrand.nome}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -379,10 +416,11 @@ const FUNIL_STEPS = [
   { key: "ftds",       label: "FTDs"          },
 ] as const;
 
-function FunilVisual({ values, taxas, useBrand }: {
+function FunilVisual({ values, taxas, useBrand, logoUrl }: {
   values: number[];
   taxas: string[];
   useBrand?: boolean;
+  logoUrl?: string;
 }) {
   const { theme: t } = useApp();
   const W = 420, H = 340;
@@ -438,6 +476,17 @@ function FunilVisual({ values, taxas, useBrand }: {
             </g>
           );
         })}
+        {logoUrl && (
+          <image
+            href={logoUrl}
+            x={W / 2 - 24}
+            y={H - 56}
+            width={48}
+            height={48}
+            preserveAspectRatio="xMidYMid meet"
+            style={{ opacity: 0.18 }}
+          />
+        )}
       </svg>
       </div>
 
@@ -453,12 +502,12 @@ function FunilVisual({ values, taxas, useBrand }: {
           { label: "Acesso → FTD",      taxa: taxas[3], color: FUNIL_COLORS[3], colorVar: FUNIL_VARS[3], highlight: true },
           { label: "View → FTD",        taxa: taxas[4], color: FUNIL_COLORS[0], colorVar: FUNIL_VARS[0], highlight: true },
         ].map((r) => {
-          const col = useBrand ? `var(${r.colorVar})` : r.color;
+          const highlightColor = useBrand ? "var(--brand-primary)" : r.color;
           const border = r.highlight
-            ? (useBrand ? `1px solid color-mix(in srgb, var(${r.colorVar}) 32%, transparent)` : `1px solid ${r.color}50`)
+            ? `1px solid color-mix(in srgb, ${highlightColor} 32%, transparent)`
             : `1px solid ${t.cardBorder}`;
           const bg = r.highlight
-            ? (useBrand ? `color-mix(in srgb, var(${r.colorVar}) 8%, transparent)` : `${r.color}12`)
+            ? `color-mix(in srgb, ${highlightColor} 8%, transparent)`
             : "rgba(255,255,255,0.02)";
           return (
           <div key={r.label} style={{
@@ -471,7 +520,7 @@ function FunilVisual({ values, taxas, useBrand }: {
             </div>
             <div style={{
               fontSize: 14, fontWeight: 800, fontFamily: FONT.body,
-              color: r.highlight ? col : t.text,
+              color: r.highlight ? highlightColor : t.text,
             }}>
               {r.taxa}
             </div>
@@ -732,6 +781,16 @@ export default function DashboardOverview() {
     boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
+  const cardWithStrip: React.CSSProperties = {
+    ...card,
+    overflow: "hidden",
+    padding: 0,
+  };
+
+  const cardStrip = useBrand ? (
+    <div style={{ height: 3, background: "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary, var(--brand-primary)))" }} />
+  ) : null;
+
   const thStyle: React.CSSProperties = {
     textAlign: "left",
     fontSize: 10,
@@ -741,10 +800,15 @@ export default function DashboardOverview() {
     fontWeight: 600,
     padding: "10px 12px",
     borderBottom: `1px solid ${t.cardBorder}`,
-    background: "rgba(74,32,130,0.10)",
+    background: useBrand
+      ? "color-mix(in srgb, var(--brand-primary) 10%, transparent)"
+      : "rgba(74,32,130,0.10)",
     fontFamily: FONT.body,
     whiteSpace: "nowrap",
   };
+
+  const zebraStripe = (i: number) =>
+    i % 2 === 0 ? "transparent" : useBrand ? "color-mix(in srgb, var(--brand-primary) 6%, transparent)" : "rgba(74,32,130,0.06)";
 
   const tdStyle: React.CSSProperties = {
     padding: "10px 12px",
@@ -839,9 +903,13 @@ export default function DashboardOverview() {
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
-                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-                background: historico ? `rgba(124,58,237,0.15)` : "transparent",
-                color: historico ? BRAND.roxoVivo : t.textMuted,
+                border: historico
+                  ? `1px solid ${useBrand ? "var(--brand-primary)" : BRAND.roxoVivo}`
+                  : `1px solid ${t.cardBorder}`,
+                background: historico
+                  ? useBrand ? "color-mix(in srgb, var(--brand-primary) 15%, transparent)" : "rgba(124,58,237,0.15)"
+                  : "transparent",
+                color: historico ? (useBrand ? "var(--brand-primary)" : BRAND.roxoVivo) : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
@@ -893,7 +961,9 @@ export default function DashboardOverview() {
       </div>
 
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={{ ...cardWithStrip, marginBottom: 14 }}>
+        {cardStrip}
+        <div style={{ padding: 20 }}>
         <SectionTitle icon={<GiPokerHand size={15} />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined} useBrand={useBrand}>
           KPIs Executivos
         </SectionTitle>
@@ -999,20 +1069,27 @@ export default function DashboardOverview() {
             cardBg={kpiCardBg}
           />
         </div>
+        </div>
       </div>
 
       {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
+      <div style={{ ...cardWithStrip, marginBottom: 14 }}>
+        {cardStrip}
+        <div style={{ padding: 20 }}>
         <SectionTitle icon={<GiPlayerNext size={15} />} useBrand={useBrand}>Funil de Conversão</SectionTitle>
         <FunilVisual
           values={[totaisExibidos.views, totaisExibidos.acessos, totaisExibidos.registros, totaisExibidos.ftds]}
           taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
           useBrand={useBrand}
+          logoUrl={useBrand ? operadoraBrand?.logo_url ?? undefined : undefined}
         />
+        </div>
       </div>
 
       {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
-      <div style={card}>
+      <div style={cardWithStrip}>
+        {cardStrip}
+        <div style={{ padding: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
           <SectionTitle icon={<GiTrophy size={15} />} useBrand={useBrand}>Ranking de Influencers</SectionTitle>
 
@@ -1079,7 +1156,7 @@ export default function DashboardOverview() {
                   return (
                     <tr
                       key={r.influencer_id}
-                      style={{ background: i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)" }}
+                      style={{ background: zebraStripe(i) }}
                     >
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
                       <td style={tdStyle}>{r.lives}</td>
@@ -1107,6 +1184,7 @@ export default function DashboardOverview() {
             </table>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
