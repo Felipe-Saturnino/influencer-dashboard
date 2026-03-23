@@ -575,7 +575,7 @@ export default function Agenda() {
           padding: "12px 20px",
         }}>
           {/* Linha principal — centralizada */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
             <button onClick={prev} style={btnNav}>
               <ChevronLeft size={14} />
             </button>

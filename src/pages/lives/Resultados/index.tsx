@@ -460,42 +460,50 @@ export default function Resultados() {
         </div>
       </div>
 
-      {/* ── FILTROS ── */}
+      {/* ── FILTROS (padrão Dashboards) ── */}
       {(showFiltroInfluencer || showFiltroOperadora) && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 16 }}>
-          {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-            <InfluencerMultiSelect
-              selected={filterInfluencers}
-              onChange={setFilterInfluencers}
-              influencers={influencerListVisiveis}
-              t={t}
-            />
-          )}
-          {showFiltroOperadora && operadorasList.length > 0 && (
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                <GiShield size={13} />
-              </span>
-              <select
-                value={filterOperadora}
-                onChange={(e) => setFilterOperadora(e.target.value)}
-                style={{
-                  padding: "6px 14px 6px 30px", borderRadius: 20,
-                  border: `1.5px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg),
-                  color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
-                  fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                  cursor: "pointer", outline: "none", appearance: "none",
-                }}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList
-                  .filter((o) => podeVerOperadora(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-              </select>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{
+            borderRadius: 14, border: `1px solid ${t.cardBorder}`,
+            background: t.cardBg,
+            padding: "12px 20px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+              {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
+                <InfluencerMultiSelect
+                  selected={filterInfluencers}
+                  onChange={setFilterInfluencers}
+                  influencers={influencerListVisiveis}
+                  t={t}
+                />
+              )}
+              {showFiltroOperadora && operadorasList.length > 0 && (
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                    <GiShield size={13} />
+                  </span>
+                  <select
+                    value={filterOperadora}
+                    onChange={(e) => setFilterOperadora(e.target.value)}
+                    style={{
+                      padding: "6px 14px 6px 30px", borderRadius: 999,
+                      border: `1px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
+                      background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
+                      color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                      fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                      fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                    }}
+                  >
+                    <option value="todas">Todas as operadoras</option>
+                    {operadorasList
+                      .filter((o) => podeVerOperadora(o.slug))
+                      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                      .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 
