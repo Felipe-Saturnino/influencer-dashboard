@@ -522,7 +522,7 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
           </div>
           {podeCriar && (
             <button onClick={() => setModalAberto(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: cfg.btnBg, color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
-              <Plus size={12} />+ Roteiro
+              <Plus size={12} /> Roteiro
             </button>
           )}
         </div>
