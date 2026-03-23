@@ -147,38 +147,11 @@ export default function FunilVisual({
           Taxas de Conversão
         </div>
         {[
-          {
-            label: "View → Acesso",
-            taxa: taxas[0],
-            color: FUNIL_COLORS[1],
-            colorVar: FUNIL_VARS[1],
-          },
-          {
-            label: "Acesso → Registro",
-            taxa: taxas[1],
-            color: FUNIL_COLORS[2],
-            colorVar: FUNIL_VARS[2],
-          },
-          {
-            label: "Registro → FTD",
-            taxa: taxas[2],
-            color: FUNIL_COLORS[3],
-            colorVar: FUNIL_VARS[3],
-          },
-          {
-            label: "Acesso → FTD",
-            taxa: taxas[3],
-            color: FUNIL_COLORS[3],
-            colorVar: FUNIL_VARS[3],
-            highlight: true,
-          },
-          {
-            label: "View → FTD",
-            taxa: taxas[4],
-            color: FUNIL_COLORS[0],
-            colorVar: FUNIL_VARS[0],
-            highlight: true,
-          },
+          { label: "View → Acesso", taxa: taxas[0], color: FUNIL_COLORS[1] },
+          { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2] },
+          { label: "Registro → FTD", taxa: taxas[2], color: FUNIL_COLORS[3] },
+          { label: "Acesso → FTD", taxa: taxas[3], color: FUNIL_COLORS[3], highlight: true },
+          { label: "View → FTD", taxa: taxas[4], color: FUNIL_COLORS[0], highlight: true },
         ].map((r) => {
           const highlightColor = useBrand ? "var(--brand-accent)" : r.color;
           const border = (r as { highlight?: boolean }).highlight
