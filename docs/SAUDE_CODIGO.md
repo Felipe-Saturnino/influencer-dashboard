@@ -12,7 +12,7 @@
 | **Bundle / Code splitting** | ✅ OK | Chunks por vendor e por página |
 | **Mobile readiness** | ⚠️ Parcial | Layout fixo; 1 breakpoint em CSS |
 | **Otimizações de rede** | ✅ OK | Preconnect para fonts |
-| **Estrutura de código** | ⚠️ Atenção | Alguns arquivos muito grandes |
+| **Estrutura de código** | ✅ Melhorado | Componentes compartilhados extraídos |
 
 ---
 
@@ -53,25 +53,24 @@
 
 ## 3. Arquivos grandes
 
-| Arquivo | Linhas (approx.) | Sugestão |
-|---------|------------------|----------|
-| `DashboardOverview/index.tsx` | ~1190 | Extrair KPIs, Funil e Ranking para subcomponentes |
-| `DashboardOverviewInfluencer/index.tsx` | ~600 | Idem |
-| `DashboardConversao/index.tsx` | ~850 | Idem |
+| Arquivo | Linhas (approx.) | Status |
+|---------|------------------|--------|
+| `DashboardOverview/index.tsx` | ~880 | ✅ KPIs, Funil, helpers extraídos |
+| `DashboardOverviewInfluencer/index.tsx` | ~620 | ✅ Usa componentes compartilhados |
+| `DashboardConversao/index.tsx` | ~850 | Pendente extração |
 
-Benefícios da extração: testes mais simples, manutenção mais fácil e melhor code splitting quando o bundler evoluir.
+Componentes compartilhados criados:
+- `src/components/dashboard/` — KpiCard, KpiCardDepositos, SectionTitle, FunilVisual
+- `src/lib/dashboardConstants.ts` — BRAND, MESES_PT, STATUS_ORDEM, etc.
+- `src/lib/dashboardHelpers.ts` — fmtBRL, fmtHorasTotal, getStatusROI, getMesesDisponiveis, etc.
 
 ---
 
 ## 4. Duplicação entre dashboards
 
-`DashboardOverview` e `DashboardOverviewInfluencer` compartilham:
-
-- `KpiCard`, `SectionTitle`, `FunilVisual`
-- Helpers: `fmtBRL`, `fmtHorasTotal`, `getStatusROI`, etc.
-- Constantes: `BRAND`, `FONT_TITLE`, `MESES_PT`
-
-Recomendação: extrair para `src/components/dashboard/` ou `src/shared/` e importar em ambos.
+**Resolvido** para `DashboardOverview` e `DashboardOverviewInfluencer`:
+- `KpiCard`, `SectionTitle`, `FunilVisual`, `KpiCardDepositos` em `components/dashboard/`
+- Helpers e constantes em `lib/dashboardHelpers.ts` e `lib/dashboardConstants.ts`
 
 ---
 

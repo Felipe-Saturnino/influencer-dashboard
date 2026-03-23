@@ -5,49 +5,43 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
+import { BRAND } from "../../../lib/dashboardConstants";
+import {
+  fmt,
+  fmtBRL,
+  fmtHorasTotal,
+  getMesesDisponiveis,
+  getDatasDoMes,
+  getDatasDoMesMtd,
+  getStatusROI,
+} from "../../../lib/dashboardHelpers";
+import {
+  SectionTitle,
+  KpiCard,
+  KpiCardDepositos,
+  FunilVisual,
+} from "../../../components/dashboard";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
-  GiPokerHand,      // GGR Total — chip de cassino
-  GiCoins,          // Investimento — moedas
-  GiTrophy,         // ROI Geral + FTDs — troféu
-  GiFilmProjector,  // Lives — transmissão
-  GiSandsOfTime,    // Horas Realizadas — ampulheta
-  GiMicrophone,     // Influencers Ativos — microfone
-  GiCardPlay,       // Depósitos — carta/jogo
-  GiPlayerNext,     // Registros — novo jogador
-  GiReceiveMoney,   // Custo por Registro
-  GiPayMoney,       // Custo por FTD
-  GiCalendar,       // Histórico
-  GiStarMedal,      // Filtro Influencer
-  GiShield,         // Filtro Operadora
+  GiPokerHand,
+  GiCoins,
+  GiTrophy,
+  GiFilmProjector,
+  GiSandsOfTime,
+  GiMicrophone,
+  GiPlayerNext,
+  GiReceiveMoney,
+  GiPayMoney,
+  GiCalendar,
+  GiStarMedal,
+  GiShield,
 } from "react-icons/gi";
-// Fonte NHD Bold para títulos
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+import {
+  STATUS_ORDEM,
+  type StatusLabel,
+} from "../../../lib/dashboardConstants";
 
-// ─── BRAND COLORS (Brand Guide Spin Gaming) ───────────────────────────────────
-const BRAND = {
-  // Cores principais
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",    // variante mais viva para accent/glow
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  preto:    "#000000",
-  // Semântica de status (mantida por ser sinalização financeira)
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-  // Categorias de KPI
-  receita:     "#4a2082",   // Roxo  → GGR
-  operacao:    "#1e36f8",   // Azul  → Lives, Horas, Influencers
-  transacao:   "#70cae4",   // Ciano → Depósitos, FTDs, Registros
-  custo:       "#e84025",   // Vermelho → Investimento, Custo/FTD, Custo/Reg
-} as const;
-
-// ─── CONSTANTES ──────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };
-
-const STATUS_ORDEM = ["Rentável", "Atenção", "Não Rentável", "Bônus", "Sem dados"] as const;
-type StatusLabel = typeof STATUS_ORDEM[number];
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Metrica {
@@ -112,63 +106,7 @@ interface TotaisData {
   depositos_qtd: number; depositos_valor: number;
 }
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-const pad = (n: number) => String(n).padStart(2, "0");
-const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-                  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-
-function getMesesDisponiveis() {
-  const hoje = new Date();
-  const lista: { ano: number; mes: number; label: string }[] = [];
-  let { ano, mes } = MES_INICIO;
-  while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
-    lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
-    mes++; if (mes > 11) { mes = 0; ano++; }
-  }
-  return lista;
-}
-
-function getDatasDoMes(ano: number, mes: number) {
-  return { inicio: fmt(new Date(ano, mes, 1)), fim: fmt(new Date(ano, mes + 1, 0)) };
-}
-
-function getDatasDoMesMtd(ano: number, mes: number) {
-  const hoje = new Date();
-  let anoAnt = ano, mesAnt = mes - 1;
-  if (mesAnt < 0) { mesAnt = 11; anoAnt--; }
-  const ultimoDia = new Date(anoAnt, mesAnt + 1, 0).getDate();
-  const dia = Math.min(hoje.getDate(), ultimoDia);
-  return { inicio: fmt(new Date(anoAnt, mesAnt, 1)), fim: fmt(new Date(anoAnt, mesAnt, dia)) };
-}
-
-function fmtBRL(v: number) {
-  const sign = v < 0 ? "-" : "";
-  return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function fmtHorasTotal(horas: number) {
-  const h = Math.floor(horas);
-  const m = Math.round((horas - h) * 60);
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function getStatusROI(roi: number | null, ggr: number, investimento: number): {
-  label: StatusLabel; cor: string; bg: string; border: string; roiStr: string;
-} {
-  if (investimento === 0) {
-    if (ggr > 0)  return { label: "Bônus",      cor: "#a855f7", bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.28)", roiStr: "—" };
-    if (ggr < 0)  return { label: "Atenção",    cor: BRAND.amarelo, bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr: "—" };
-    return              { label: "Sem dados",   cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", roiStr: "—" };
-  }
-  const r = roi ?? 0;
-  const roiStr = `${r >= 0 ? "+" : ""}${r.toFixed(0)}%`;
-  if (r >= 0)   return { label: "Rentável",    cor: BRAND.verde,   bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  roiStr };
-  if (r >= -30) return { label: "Atenção",     cor: BRAND.amarelo, bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr };
-  return              { label: "Não Rentável", cor: BRAND.vermelho, bg: "rgba(232,64,37,0.12)", border: "rgba(232,64,37,0.28)", roiStr };
-}
-
+// ─── HELPERS (calculaTotais específico do Overview) ───────────────────────────
 function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisData {
   const ggr           = rows.reduce((s, r) => s + r.ggr, 0);
   const invest        = totalInvestimento ?? rows.reduce((s, r) => s + r.investimento, 0);
@@ -188,348 +126,6 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
     custoPorFTD: ftds > 0 ? invest / ftds : 0,
     custoPorRegistro: registros > 0 ? invest / registros : 0,
   };
-}
-
-// ─── COMPONENTE: SECTION TITLE ────────────────────────────────────────────────
-function SectionTitle({ icon, children, sub, useBrand }: {
-  icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
-  useBrand?: boolean;
-}) {
-  const { theme: t, operadoraBrand } = useApp();
-  const titleColor = useBrand ? "var(--brand-primary)" : t.text;
-  const iconBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)" : "rgba(74,32,130,0.18)";
-  const iconBorder = useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)" : "1px solid rgba(74,32,130,0.30)";
-  const iconColor = useBrand ? "var(--brand-primary)" : BRAND.ciano;
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-      <span style={{
-        width: 28, height: 28, borderRadius: 8,
-        background: iconBg,
-        border: iconBorder,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: iconColor, flexShrink: 0,
-      }}>
-        {icon}
-      </span>
-      <span style={{
-        fontSize: 14, fontWeight: 800, color: titleColor,
-        fontFamily: FONT_TITLE,
-        letterSpacing: "0.05em", textTransform: "uppercase" as const,
-      }}>
-        {children}
-      </span>
-      {sub && (
-        <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
-          {sub}
-        </span>
-      )}
-      {useBrand && operadoraBrand && (operadoraBrand.logo_url || operadoraBrand.nome) && (
-        <div style={{
-          marginLeft: "auto",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "3px 10px 3px 6px",
-          borderRadius: 999,
-          border: "1px solid color-mix(in srgb, var(--brand-primary) 28%, transparent)",
-          background: "color-mix(in srgb, var(--brand-primary) 8%, transparent)",
-        }}>
-          {operadoraBrand.logo_url && (
-            <img
-              src={operadoraBrand.logo_url}
-              alt={operadoraBrand.nome ?? ""}
-              style={{
-                width: 16, height: 16,
-                objectFit: "contain",
-                borderRadius: 3,
-                flexShrink: 0,
-              }}
-            />
-          )}
-          {operadoraBrand.nome && (
-            <span style={{
-              fontSize: 10, fontWeight: 700,
-              color: "var(--brand-primary)",
-              fontFamily: FONT.body,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase" as const,
-              whiteSpace: "nowrap" as const,
-            }}>
-              {operadoraBrand.nome}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── KPI CARD ─────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, icon, accentVar, accentColor, useBrand, atual, anterior, isBRL, isHistorico, subValue, cardBg }: {
-  label: string; value: string; icon: React.ReactNode; accentVar: string; accentColor: string;
-  useBrand?: boolean; atual: number; anterior: number; isBRL?: boolean; isHistorico?: boolean;
-  subValue?: { label: string; value: string };
-  cardBg?: string;
-}) {
-  const { theme: t } = useApp();
-  const diff     = atual - anterior;
-  const pct      = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
-  const up       = diff >= 0;
-  const isCusto  = label.toLowerCase().includes("custo") || label.toLowerCase().includes("invest");
-  const positivo = isCusto ? !up : up;
-  const corSeta  = positivo ? "var(--brand-success)" : "var(--brand-danger)";
-
-  const barBg = useBrand ? `linear-gradient(90deg, var(${accentVar}), transparent)` : `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = useBrand ? `color-mix(in srgb, var(${accentVar}) 10%, transparent)` : `${accentColor}18`;
-  const iconBoxBorder = useBrand ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)` : `1px solid ${accentColor}35`;
-  const iconBoxColor = useBrand ? `var(${accentVar})` : accentColor;
-
-  return (
-    <div style={{
-      borderRadius: 14,
-      border: `1px solid ${t.cardBorder}`,
-      background: cardBg ?? t.cardBg,
-      overflow: "hidden",
-      transition: "box-shadow 0.2s",
-    }}>
-      <div style={{ height: 3, background: barBg }} />
-      <div style={{ padding: "14px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: iconBoxBg,
-            border: iconBoxBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: iconBoxColor, flexShrink: 0,
-          }}>
-            {icon}
-          </span>
-          <span style={{
-            color: t.textMuted, fontSize: 10, fontFamily: FONT.body,
-            fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const,
-          }}>
-            {label}
-          </span>
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: subValue ? 4 : 6, lineHeight: 1.1 }}>
-          {value}
-        </div>
-        {subValue && (
-          <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
-            <span style={{ color: t.text, fontWeight: 600 }}>{subValue.value}</span> {subValue.label}
-          </div>
-        )}
-        {!isHistorico && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontFamily: FONT.body }}>
-            <span style={{ color: corSeta, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>
-              {up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
-            </span>
-            <span style={{ color: t.textMuted, fontSize: 10 }}>
-              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── KPI CARD DEPÓSITOS ────────────────────────────────────────────────────────
-function KpiCardDepositos({ atual, anterior, isHistorico, cardBg, useBrand }: {
-  atual: { qtd: number; valor: number };
-  anterior: { qtd: number; valor: number };
-  isHistorico?: boolean;
-  cardBg?: string;
-  useBrand?: boolean;
-}) {
-  const { theme: t } = useApp();
-  const accentVar = "--brand-extra3";
-  const accentColor = BRAND.transacao;
-  const barBg = useBrand ? `linear-gradient(90deg, var(${accentVar}), transparent)` : `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = useBrand ? `color-mix(in srgb, var(${accentVar}) 10%, transparent)` : `${accentColor}18`;
-  const iconBoxBorder = useBrand ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)` : `1px solid ${accentColor}35`;
-  const iconBoxColor = useBrand ? `var(${accentVar})` : accentColor;
-  const diffQtd = atual.qtd - anterior.qtd;
-  const pctQtd  = anterior.qtd !== 0 ? (diffQtd / Math.abs(anterior.qtd)) * 100 : null;
-  const upQtd   = diffQtd >= 0;
-  const diffVal = atual.valor - anterior.valor;
-  const pctVal  = anterior.valor !== 0 ? (diffVal / Math.abs(anterior.valor)) * 100 : null;
-  const upVal   = diffVal >= 0;
-
-  return (
-    <div style={{
-      borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-      background: cardBg ?? t.cardBg, overflow: "hidden",
-    }}>
-      <div style={{ height: 3, background: barBg }} />
-      <div style={{ padding: "14px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: iconBoxBg,
-            border: iconBoxBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: iconBoxColor,
-          }}>
-            <GiCardPlay size={16} />
-          </span>
-          <span style={{ color: t.textMuted, fontSize: 10, fontFamily: FONT.body, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const }}>
-            Depósitos
-          </span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Qtd</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>{atual.qtd.toLocaleString("pt-BR")}</div>
-            {!isHistorico && (
-              <div style={{ fontSize: 10, fontFamily: FONT.body }}>
-                <span style={{ color: upQtd ? "var(--brand-success)" : "var(--brand-danger)", fontWeight: 700 }}>
-                  {upQtd ? "↑" : "↓"} {pctQtd !== null ? `${Math.abs(pctQtd).toFixed(0)}%` : "—"}
-                </span>
-              </div>
-            )}
-          </div>
-          <div style={{ borderLeft: `1px solid ${t.cardBorder}`, paddingLeft: 10 }}>
-            <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Volume</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>{fmtBRL(atual.valor)}</div>
-            {!isHistorico && (
-              <div style={{ fontSize: 10, fontFamily: FONT.body }}>
-                <span style={{ color: upVal ? "var(--brand-success)" : "var(--brand-danger)", fontWeight: 700 }}>
-                  {upVal ? "↑" : "↓"} {pctVal !== null ? `${Math.abs(pctVal).toFixed(0)}%` : "—"}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── FUNIL DE CONVERSÃO (visual em SVG) ───────────────────────────────────────
-const FUNIL_COLORS = ["#4a2082", "#1e36f8", "#70cae4", "#22c55e"] as const;
-const FUNIL_VARS = ["--brand-extra1", "--brand-extra2", "--brand-extra3", "--brand-extra4"] as const;
-const FUNIL_STEPS = [
-  { key: "views",      label: "Views (média)" },
-  { key: "acessos",    label: "Acessos"       },
-  { key: "registros",  label: "Registros"     },
-  { key: "ftds",       label: "FTDs"          },
-] as const;
-
-function FunilVisual({ values, taxas, useBrand, logoUrl }: {
-  values: number[];
-  taxas: string[];
-  useBrand?: boolean;
-  logoUrl?: string;
-}) {
-  const { theme: t } = useApp();
-  const W = 420, H = 340;
-  const levels = 4;
-  const stepH = H / levels;
-  // Larguras: nível 0 = W total, nível 3 = W * 0.32 (fixo pois estático)
-  const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
-
-  const getStepColor = (i: number) => useBrand ? `var(${FUNIL_VARS[i]})` : FUNIL_COLORS[i];
-
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "stretch", minHeight: 340 }}>
-      {/* SVG Funil — ocupa metade do espaço */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ maxHeight: 340, display: "block" }} preserveAspectRatio="xMidYMid meet">
-        {FUNIL_STEPS.map((step, i) => {
-          const wTop = widths[i];
-          const wBot = widths[i + 1] ?? widths[i] * 0.7;
-          const xTop = (W - wTop) / 2;
-          const xBot = (W - wBot) / 2;
-          const yTop = i * stepH;
-          const yBot = yTop + stepH - 2; // 2px gap
-          const col = getStepColor(i);
-          // Trapezoid path
-          const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
-          return (
-            <g key={step.key}>
-              {/* Fill com gradiente */}
-              <defs>
-                <linearGradient id={`fgrad-${i}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={col} stopOpacity="0.85" />
-                  <stop offset="100%" stopColor={col} stopOpacity="0.55" />
-                </linearGradient>
-              </defs>
-              <path d={path} fill={`url(#fgrad-${i})`} />
-              {/* Label dentro */}
-              <text
-                x={W / 2} y={yTop + stepH / 2 - 6}
-                textAnchor="middle" dominantBaseline="middle"
-                fill="#fff" fontSize={10} fontFamily={FONT.body}
-                fontWeight={600} letterSpacing="0.08em"
-                style={{ textTransform: "uppercase" }}
-              >
-                {step.label}
-              </text>
-              <text
-                x={W / 2} y={yTop + stepH / 2 + 9}
-                textAnchor="middle" dominantBaseline="middle"
-                fill="#fff" fontSize={16} fontFamily={FONT.body} fontWeight={800}
-              >
-                {values[i]?.toLocaleString("pt-BR") ?? "—"}
-              </text>
-            </g>
-          );
-        })}
-        {logoUrl && (
-          <image
-            href={logoUrl}
-            x={W / 2 - 24}
-            y={H - 56}
-            width={48}
-            height={48}
-            preserveAspectRatio="xMidYMid meet"
-            style={{ opacity: 0.18 }}
-          />
-        )}
-      </svg>
-      </div>
-
-      {/* Taxas de conversão — ocupa a outra metade, cards compactos */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, justifyContent: "center" }}>
-        <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 6, fontWeight: 600 }}>
-          Taxas de Conversão
-        </div>
-        {[
-          { label: "View → Acesso",     taxa: taxas[0], color: FUNIL_COLORS[1], colorVar: FUNIL_VARS[1] },
-          { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2], colorVar: FUNIL_VARS[2] },
-          { label: "Registro → FTD",    taxa: taxas[2], color: FUNIL_COLORS[3], colorVar: FUNIL_VARS[3] },
-          { label: "Acesso → FTD",      taxa: taxas[3], color: FUNIL_COLORS[3], colorVar: FUNIL_VARS[3], highlight: true },
-          { label: "View → FTD",        taxa: taxas[4], color: FUNIL_COLORS[0], colorVar: FUNIL_VARS[0], highlight: true },
-        ].map((r) => {
-          const highlightColor = useBrand ? "var(--brand-primary)" : r.color;
-          const border = r.highlight
-            ? `1px solid color-mix(in srgb, ${highlightColor} 32%, transparent)`
-            : `1px solid ${t.cardBorder}`;
-          const bg = r.highlight
-            ? `color-mix(in srgb, ${highlightColor} 8%, transparent)`
-            : "rgba(255,255,255,0.02)";
-          return (
-          <div key={r.label} style={{
-            padding: "6px 10px", borderRadius: 8,
-            border,
-            background: bg,
-          }}>
-            <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 2 }}>
-              {r.label}
-            </div>
-            <div style={{
-              fontSize: 14, fontWeight: 800, fontFamily: FONT.body,
-              color: r.highlight ? highlightColor : t.text,
-            }}>
-              {r.taxa}
-            </div>
-          </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────

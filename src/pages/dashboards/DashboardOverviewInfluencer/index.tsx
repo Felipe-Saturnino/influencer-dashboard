@@ -6,7 +6,23 @@ import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
-import { ChevronLeft, ChevronRight, Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { BRAND } from "../../../lib/dashboardConstants";
+import {
+  fmt,
+  fmtBRL,
+  fmtHorasTotal,
+  fmtDia,
+  getMesesDisponiveis,
+  getDatasDoMes,
+  getDatasDoMesMtd,
+} from "../../../lib/dashboardHelpers";
+import {
+  SectionTitle,
+  KpiCard,
+  KpiCardDepositos,
+  FunilVisual,
+} from "../../../components/dashboard";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
   GiPodiumWinner, GiFunnel, GiSpeedometer, GiCalendar,
   GiMoneyStack, GiTakeMyMoney, GiStarMedal, GiClapperboard,
@@ -15,61 +31,8 @@ import {
 } from "react-icons/gi";
 
 const GiStarMedalFilter = GiStarMedal;
-
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-} as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
-
-// ─── CONSTANTES ──────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };
-const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-
-const pad = (n: number) => String(n).padStart(2, "0");
-const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-function fmtBRL(v: number) { return (v < 0 ? "-" : "") + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
-function fmtHoras(horas: number) {
-  const h = Math.floor(horas);
-  const m = Math.round((horas - h) * 60);
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-function fmtDia(iso: string) {
-  if (!iso) return "—";
-  const [, m, d] = iso.split("-");
-  return `${d}/${m}`;
-}
-
-function getMesesDisponiveis() {
-  const hoje = new Date();
-  const lista: { ano: number; mes: number; label: string }[] = [];
-  let { ano, mes } = MES_INICIO;
-  while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
-    lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
-    mes++; if (mes > 11) { mes = 0; ano++; }
-  }
-  return lista;
-}
-
-function getDatasDoMes(ano: number, mes: number) {
-  return { inicio: fmt(new Date(ano, mes, 1)), fim: fmt(new Date(ano, mes + 1, 0)) };
-}
-
-function getDatasDoMesMtd(ano: number, mes: number) {
-  let anoAnt = ano, mesAnt = mes - 1;
-  if (mesAnt < 0) { mesAnt = 11; anoAnt--; }
-  const hoje = new Date();
-  const ultimoDia = new Date(anoAnt, mesAnt + 1, 0).getDate();
-  const dia = Math.min(hoje.getDate(), ultimoDia);
-  return { inicio: fmt(new Date(anoAnt, mesAnt, 1)), fim: fmt(new Date(anoAnt, mesAnt, dia)) };
-}
+const fmtHoras = fmtHorasTotal;
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Metrica {
@@ -168,139 +131,7 @@ function SelectComIcone({
   );
 }
 
-// ─── KPI CARD ────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, icon, accentVar, accentColor, useBrand, cardBg, atual, anterior, isBRL, isHistorico, subValue }: {
-  label: string; value: string; icon: React.ReactNode; accentVar?: string; accentColor: string;
-  useBrand?: boolean; cardBg?: string;
-  atual: number; anterior: number; isBRL?: boolean; isHistorico?: boolean;
-  subValue?: { label: string; value: string };
-}) {
-  const { theme: t } = useApp();
-  const diff = atual - anterior;
-  const pct = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
-  const up = diff >= 0;
-  const isCusto = label.toLowerCase().includes("custo");
-  const positivo = isCusto ? !up : up;
-  const corSeta = positivo ? BRAND.verde : BRAND.vermelho;
-
-  const barBg = useBrand && accentVar ? `linear-gradient(90deg, var(${accentVar}), transparent)` : `linear-gradient(90deg, ${accentColor}, transparent)`;
-  const iconBoxBg = useBrand && accentVar ? `color-mix(in srgb, var(${accentVar}) 10%, transparent)` : `${accentColor}20`;
-  const iconBoxBorder = useBrand && accentVar ? `1px solid color-mix(in srgb, var(${accentVar}) 22%, transparent)` : `1px solid ${accentColor}40`;
-  const iconBoxColor = useBrand && accentVar ? `var(${accentVar})` : accentColor;
-
-  return (
-    <div style={{ borderRadius: 16, border: `1px solid ${t.cardBorder}`, background: cardBg ?? t.cardBg, overflow: "hidden" }}>
-      <div style={{ height: 3, background: barBg }} />
-      <div style={{ padding: "14px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{ width: 32, height: 32, borderRadius: 9, background: iconBoxBg, border: iconBoxBorder, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: iconBoxColor }}>
-            {icon}
-          </span>
-          <span style={{ color: t.textMuted, fontSize: 11, fontFamily: FONT.body, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
-            {label}
-          </span>
-        </div>
-        <div style={{ fontSize: 21, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: subValue ? 4 : 6 }}>{value}</div>
-        {subValue && subValue.value !== "—" && (
-          <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
-            <span style={{ color: t.text, fontWeight: 600 }}>{subValue.value}</span> {subValue.label}
-          </div>
-        )}
-        {!isHistorico && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontFamily: FONT.body }}>
-            <span style={{ color: corSeta, fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
-              {up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-              {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
-            </span>
-            <span style={{ color: t.textMuted }}>vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── FUNIL DE CONVERSÃO (formato Overview — SVG centralizado + Taxas) ──────────
-const FUNIL_COLORS = ["#4a2082", "#1e36f8", "#70cae4", "#22c55e"] as const;
-const FUNIL_VARS = ["--brand-extra1", "--brand-extra2", "--brand-extra3", "--brand-extra4"] as const;
-const FUNIL_STEPS = [
-  { key: "views",      label: "Views (média)" },
-  { key: "acessos",    label: "Acessos"       },
-  { key: "registros",  label: "Registros"     },
-  { key: "ftds",       label: "FTDs"          },
-] as const;
-
-function FunilVisual({ values, taxas, useBrand, logoUrl }: {
-  values: number[];
-  taxas: string[];
-  useBrand?: boolean;
-  logoUrl?: string;
-}) {
-  const { theme: t } = useApp();
-  const W = 420, H = 340;
-  const levels = 4;
-  const stepH = H / levels;
-  const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
-  const getStepColor = (i: number) => useBrand ? `var(${FUNIL_VARS[i]})` : FUNIL_COLORS[i];
-
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "stretch", minHeight: 340 }}>
-      {/* SVG Funil — centralizado na coluna esquerda */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ maxHeight: 340, display: "block" }} preserveAspectRatio="xMidYMid meet">
-        {FUNIL_STEPS.map((step, i) => {
-          const wTop = widths[i];
-          const wBot = widths[i + 1] ?? widths[i] * 0.7;
-          const xTop = (W - wTop) / 2;
-          const xBot = (W - wBot) / 2;
-          const yTop = i * stepH;
-          const yBot = yTop + stepH - 2;
-          const col = getStepColor(i);
-          const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
-          return (
-            <g key={step.key}>
-              <defs>
-                <linearGradient id={`fgrad-inf-${i}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={col} stopOpacity="0.85" />
-                  <stop offset="100%" stopColor={col} stopOpacity="0.55" />
-                </linearGradient>
-              </defs>
-              <path d={path} fill={`url(#fgrad-inf-${i})`} />
-              <text x={W / 2} y={yTop + stepH / 2 - 6} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={10} fontFamily={FONT.body} fontWeight={600} letterSpacing="0.08em" style={{ textTransform: "uppercase" }}>{step.label}</text>
-              <text x={W / 2} y={yTop + stepH / 2 + 9} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize={16} fontFamily={FONT.body} fontWeight={800}>{values[i]?.toLocaleString("pt-BR") ?? "—"}</text>
-            </g>
-          );
-        })}
-        {logoUrl && <image href={logoUrl} x={W / 2 - 24} y={H - 56} width={48} height={48} preserveAspectRatio="xMidYMid meet" style={{ opacity: 0.18 }} />}
-      </svg>
-      </div>
-
-      {/* Taxas de conversão */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, justifyContent: "center" }}>
-        <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 6, fontWeight: 600 }}>Taxas de Conversão</div>
-        {[
-          { label: "View → Acesso",     taxa: taxas[0], color: FUNIL_COLORS[1], colorVar: FUNIL_VARS[1] },
-          { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2], colorVar: FUNIL_VARS[2] },
-          { label: "Registro → FTD",    taxa: taxas[2], color: FUNIL_COLORS[3], colorVar: FUNIL_VARS[3] },
-          { label: "Acesso → FTD",      taxa: taxas[3], color: FUNIL_COLORS[3], colorVar: FUNIL_VARS[3], highlight: true },
-          { label: "View → FTD",        taxa: taxas[4], color: FUNIL_COLORS[0], colorVar: FUNIL_VARS[0], highlight: true },
-        ].map((r) => {
-          const highlightColor = useBrand ? "var(--brand-primary)" : r.color;
-          const border = r.highlight ? `1px solid color-mix(in srgb, ${highlightColor} 32%, transparent)` : `1px solid ${t.cardBorder}`;
-          const bg = r.highlight ? `color-mix(in srgb, ${highlightColor} 8%, transparent)` : "rgba(255,255,255,0.02)";
-          return (
-            <div key={r.label} style={{ padding: "6px 10px", borderRadius: 8, border, background: bg }}>
-              <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 2 }}>{r.label}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, fontFamily: FONT.body, color: r.highlight ? highlightColor : t.text }}>{r.taxa}</div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── RATE CARD ────────────────────────────────────────────────────────────────
+// ─── RATE CARD (específico do OverviewInfluencer) ──────────────────────────────
 function RateCard({ label, value, highlight, useBrand }: {
   label: string; value: string; highlight?: boolean | "purple"; useBrand?: boolean;
 }) {
@@ -313,43 +144,6 @@ function RateCard({ label, value, highlight, useBrand }: {
     <div style={{ padding: "10px 14px", borderRadius: 10, border: highlightColor ? `1px solid ${highlightColor}44` : `1px solid ${t.cardBorder}`, background: highlightColor ? `${highlightColor}12` : "transparent" }}>
       <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.08em", fontWeight: 700 }}>{label}</div>
       <div style={{ fontSize: 16, fontWeight: 800, color: highlightColor ?? t.text, margin: "5px 0 0", fontFamily: FONT.body }}>{value}</div>
-    </div>
-  );
-}
-
-// ─── SECTION TITLE ────────────────────────────────────────────────────────────
-function SectionTitle({ icon, title, subtitle, useBrand }: { icon: React.ReactNode; title: string; subtitle?: string; useBrand?: boolean }) {
-  const { theme: t, operadoraBrand } = useApp();
-  const titleColor = useBrand ? "var(--brand-primary)" : t.text;
-  const iconBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)" : "rgba(74,32,130,0.18)";
-  const iconBorder = useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)" : "1px solid rgba(74,32,130,0.30)";
-  const iconColor = useBrand ? "var(--brand-primary)" : BRAND.ciano;
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, flexWrap: "wrap" as const }}>
-      <div style={{ width: 32, height: 32, borderRadius: 9, background: iconBg, border: iconBorder, display: "flex", alignItems: "center", justifyContent: "center", color: iconColor, flexShrink: 0 }}>
-        {icon}
-      </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" as const }}>
-        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: titleColor, fontFamily: FONT_TITLE, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{title}</h3>
-        {subtitle && <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body }}>· {subtitle}</span>}
-      </div>
-      {useBrand && operadoraBrand && (operadoraBrand.logo_url || operadoraBrand.nome) && (
-        <div style={{
-          marginLeft: "auto", display: "flex", alignItems: "center", gap: 6,
-          padding: "3px 10px 3px 6px", borderRadius: 999,
-          border: "1px solid color-mix(in srgb, var(--brand-primary) 28%, transparent)",
-          background: "color-mix(in srgb, var(--brand-primary) 8%, transparent)",
-        }}>
-          {operadoraBrand.logo_url && (
-            <img src={operadoraBrand.logo_url} alt={operadoraBrand.nome ?? ""} style={{ width: 16, height: 16, objectFit: "contain", borderRadius: 3, flexShrink: 0 }} />
-          )}
-          {operadoraBrand.nome && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--brand-primary)", fontFamily: FONT.body, letterSpacing: "0.06em", textTransform: "uppercase" as const, whiteSpace: "nowrap" as const }}>
-              {operadoraBrand.nome}
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -773,7 +567,7 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
       <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
-        <SectionTitle icon={<GiPodiumWinner size={14} />} title="KPIs Executivos" subtitle={!historico ? "MTD vs mês anterior" : undefined} useBrand={useBrand} />
+        <SectionTitle icon={<GiPodiumWinner size={14} />} sub={!historico ? "· MTD vs mês anterior" : undefined} useBrand={useBrand}>KPIs Executivos</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
           <KpiCard label="GGR Total"    value={fmtBRL(totais.ggr)}         icon={<GiMoneyStack  size={16} color={BRAND.roxo}    />} accentVar="--brand-extra1" accentColor={BRAND.roxo}    useBrand={useBrand} cardBg={blockBg} atual={totais.ggr}         anterior={totaisAnt.ggr}         isBRL isHistorico={historico} />
           <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney size={16} color={BRAND.azul}    />} accentVar="--brand-extra4" accentColor={BRAND.azul}    useBrand={useBrand} cardBg={blockBg} atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
@@ -795,7 +589,7 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 3: Funil de Conversão (formato Overview) ────────────────────── */}
       <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
-        <SectionTitle icon={<GiFunnel size={14} />} title="Funil de Conversão" useBrand={useBrand} />
+        <SectionTitle icon={<GiFunnel size={14} />} useBrand={useBrand}>Funil de Conversão</SectionTitle>
         <FunilVisual
           values={[totais.views, totais.acessos, totais.registros, totais.ftds]}
           taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
@@ -807,7 +601,7 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
       <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
-        <SectionTitle icon={<GiSpeedometer size={14} />} title="Eficiência" useBrand={useBrand} />
+        <SectionTitle icon={<GiSpeedometer size={14} />} useBrand={useBrand}>Eficiência</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
           <RateCard label="FTD/Hora"              value={ftdPorHora} />
           <RateCard label="Ticket Médio FTD"      value={ticketFTD} />
@@ -822,7 +616,7 @@ export default function DashboardOverviewInfluencer() {
       {!historico && mesSelecionado && diasData.length > 0 && (
         <BrandCard useBrand={useBrand} style={{ marginBottom: 0 }} defaultPadding={false}>
           <div style={{ padding: "20px 20px 16px" }}>
-            <SectionTitle icon={<GiCalendar size={14} />} title="Comparativo Diário" useBrand={useBrand} />
+            <SectionTitle icon={<GiCalendar size={14} />} useBrand={useBrand}>Comparativo Diário</SectionTitle>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
