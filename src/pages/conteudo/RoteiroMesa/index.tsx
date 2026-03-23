@@ -410,7 +410,7 @@ export default function RoteiroMesa() {
   );
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 900, margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
         <div

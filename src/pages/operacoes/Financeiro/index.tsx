@@ -1972,7 +1972,7 @@ export default function Financeiro() {
 
   if (ciclos.length === 0) {
     return (
-      <div style={{ padding: "28px 32px", maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ padding: "20px 24px 48px" }}>
         <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
         <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos de influencers.</p>
         <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
@@ -1998,7 +1998,7 @@ export default function Financeiro() {
   }
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: "1100px", margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
       <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
       <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
 

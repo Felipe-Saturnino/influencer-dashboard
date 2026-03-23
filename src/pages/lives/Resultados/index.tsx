@@ -437,7 +437,7 @@ export default function Resultados() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
 
       {/* ── HEADER — padrão NHD Bold + ícone container ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
