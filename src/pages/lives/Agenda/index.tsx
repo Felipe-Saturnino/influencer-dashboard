@@ -302,18 +302,18 @@ export default function Agenda() {
       <div
         onClick={() => setModal({ open: true, live })}
         style={{
-          display: "flex", alignItems: "center", gap: 5,
-          padding: "3px 6px", borderRadius: 7, cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "5px 8px", borderRadius: 8, cursor: "pointer",
           background: `${PLAT_COLOR[live.plataforma]}22`,
           border: `1px solid ${PLAT_COLOR[live.plataforma]}44`,
-          marginBottom: 3,
+          marginBottom: 4,
         }}
       >
         <span style={{
-          width: 7, height: 7, borderRadius: "50%",
+          width: 8, height: 8, borderRadius: "50%",
           background: STATUS_COLOR[live.status], flexShrink: 0,
         }} />
-        <span style={{ fontSize: 10, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {live.horario.slice(0, 5)}{live.influencer_name ? ` · ${live.influencer_name}` : ""}
         </span>
       </div>
@@ -333,7 +333,7 @@ export default function Agenda() {
             </div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "110px", gap: 4 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "220px", gap: 4 }}>
           {cells.map((date, i) => {
             if (!date) return <div key={i} />;
             const dayLives = livesForDay(date);
@@ -342,7 +342,7 @@ export default function Agenda() {
                 key={i}
                 onClick={() => { setCurrent(date); setView("dia"); }}
                 style={{
-                  height: 110, padding: 6, borderRadius: 10, cursor: "pointer",
+                  height: 220, padding: 8, borderRadius: 10, cursor: "pointer",
                   display: "flex", flexDirection: "column", overflow: "hidden",
                   boxSizing: "border-box", transition: "background 0.15s",
                   ...dayStyle(date, todayISO),
@@ -359,8 +359,8 @@ export default function Agenda() {
                   )}
                 </div>
                 <div className="agenda-day-scroll" style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}>
-                  {dayLives.slice(0, 3).map(l => <LiveChip key={l.id} live={l} />)}
-                  {dayLives.length > 3 && <span style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 3}</span>}
+                  {dayLives.slice(0, 8).map(l => <LiveChip key={l.id} live={l} />)}
+                  {dayLives.length > 8 && <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 8}</span>}
                 </div>
               </div>
             );
