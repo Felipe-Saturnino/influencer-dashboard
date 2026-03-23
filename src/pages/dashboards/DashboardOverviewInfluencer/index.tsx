@@ -31,7 +31,7 @@ const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── CONSTANTES ──────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };
-const MESES_PT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
