@@ -691,7 +691,7 @@ export default function SocialMediaDashboard() {
 
           {/* Campanhas — Performance */}
           <div style={card}>
-            <SectionTitle icon={<GiShield size={14} />}>Campanhas — Performance de conversão</SectionTitle>
+            <SectionTitle icon={<GiShield size={14} />} useBrand={useBrand}>Campanhas — Performance de conversão</SectionTitle>
             {campanhasPerf.length > 0 ? (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
@@ -753,7 +753,7 @@ export default function SocialMediaDashboard() {
 
           {/* Carrossel postagens */}
           <div style={card}>
-            <SectionTitle icon={<GiFilmProjector size={14} />}>Postagens recentes</SectionTitle>
+            <SectionTitle icon={<GiFilmProjector size={14} />} useBrand={useBrand}>Postagens recentes</SectionTitle>
             {posts.length > 0 ? (
               <>
                 <div style={{ overflow: "hidden" }}>
