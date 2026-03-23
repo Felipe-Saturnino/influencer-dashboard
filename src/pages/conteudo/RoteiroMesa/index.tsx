@@ -3,31 +3,32 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { Pencil, Plus, X, Check, BookOpen } from "lucide-react";
+import { Pencil, Plus, X, Check, BookOpen, Megaphone } from "lucide-react";
+import { GiNotebook } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
-  azul: "#1e36f8",
-  azulLight: "rgba(30,54,248,0.12)",
-  azulBorder: "rgba(30,54,248,0.3)",
-  vermelho: "#e84025",
-  vermelhoLight: "rgba(232,64,37,0.1)",
-  vermelhoBorder: "rgba(232,64,37,0.3)",
-  roxo: "#4a2082",
-  roxoLight: "rgba(74,32,130,0.15)",
-  roxoBorder: "rgba(74,32,130,0.35)",
-  roxoAcao: "#4a2082",
-  ciano: "#70cae4",
-  cianoLight: "rgba(112,202,228,0.1)",
-  cianoBorder: "rgba(112,202,228,0.25)",
+  azul:           "#1e36f8",
+  azulLight:      "rgba(30,54,248,0.12)",
+  azulBorder:     "rgba(30,54,248,0.30)",
+  vermelho:       "#e84025",
+  vermelhoLight:  "rgba(232,64,37,0.10)",
+  vermelhoBorder: "rgba(232,64,37,0.30)",
+  roxo:           "#4a2082",
+  roxoLight:      "rgba(74,32,130,0.12)",
+  roxoBorder:     "rgba(74,32,130,0.30)",
+  ciano:          "#70cae4",
+  cianoLight:     "rgba(112,202,228,0.12)",
+  cianoBorder:    "rgba(112,202,228,0.30)",
 } as const;
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";
 export type TipoSugestao = "script" | "orientacao" | "alerta";
-export type JogoTag = "todos" | "blackjack" | "roleta" | "baccarat";
+export type JogoTag      = "todos" | "blackjack" | "roleta" | "baccarat";
 
 export interface RoteiroSugestao {
   id: string;
@@ -41,432 +42,238 @@ export interface RoteiroSugestao {
   updated_at?: string;
 }
 
+export interface RoteiroCampanha {
+  id: string;
+  operadora_slug: string;
+  titulo: string;
+  texto: string;
+  jogos?: JogoTag[];
+  data_inicio?: string;
+  data_fim?: string;
+  ativo: boolean;
+  ordem: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 const BLOCOS: { key: BlocoRoteiro; label: string }[] = [
-  { key: "abertura", label: "Abertura" },
+  { key: "abertura",     label: "Abertura"       },
   { key: "durante_jogo", label: "Durante o Jogo" },
-  { key: "fechamento", label: "Fechamento" },
+  { key: "fechamento",   label: "Fechamento"     },
 ];
 
 const JOGOS: { key: JogoTag; label: string }[] = [
-  { key: "todos", label: "Todos" },
+  { key: "todos",     label: "Todos"     },
   { key: "blackjack", label: "BlackJack" },
-  { key: "roleta", label: "Roleta" },
-  { key: "baccarat", label: "Baccarat" },
+  { key: "roleta",    label: "Roleta"    },
+  { key: "baccarat",  label: "Baccarat"  },
 ];
 
 const TIPOS: { key: TipoSugestao; label: string }[] = [
-  { key: "script", label: "Script" },
+  { key: "script",     label: "Script"     },
   { key: "orientacao", label: "Orientação" },
-  { key: "alerta", label: "Alerta" },
+  { key: "alerta",     label: "Alerta"     },
 ];
 
 // ─── CONFIG VISUAL POR BLOCO ─────────────────────────────────────────────────
-const BLOCO_CONFIG: Record<BlocoRoteiro, { accent: string; titleColor: (dark: boolean) => string; btnBg: string }> = {
+const BLOCO_CONFIG: Record<BlocoRoteiro, {
+  accent: string;
+  titleColor: (dark: boolean) => string;
+  btnBg: string;
+  emptyGradient: (dark: boolean) => string;
+}> = {
   abertura: {
-    accent: BRAND.azul,
-    titleColor: (dark) => (dark ? "#7b95ff" : "#1e36f8"),
-    btnBg: BRAND.azul,
+    accent:        BRAND.azul,
+    titleColor:    (d) => d ? "#7b95ff" : "#1631c4",
+    btnBg:         BRAND.azul,
+    emptyGradient: (d) => d
+      ? "linear-gradient(135deg,rgba(30,54,248,0.12) 0%,rgba(74,32,130,0.12) 100%)"
+      : "linear-gradient(135deg,rgba(30,54,248,0.06) 0%,rgba(74,32,130,0.06) 100%)",
   },
   durante_jogo: {
-    accent: BRAND.vermelho,
-    titleColor: (dark) => (dark ? "#ff8570" : "#c73520"),
-    btnBg: BRAND.vermelho,
+    accent:        BRAND.vermelho,
+    titleColor:    (d) => d ? "#ff8570" : "#b02a14",
+    btnBg:         BRAND.vermelho,
+    emptyGradient: (d) => d
+      ? "linear-gradient(135deg,rgba(232,64,37,0.12) 0%,rgba(74,32,130,0.08) 100%)"
+      : "linear-gradient(135deg,rgba(232,64,37,0.06) 0%,rgba(74,32,130,0.04) 100%)",
   },
   fechamento: {
-    accent: BRAND.roxo,
-    titleColor: (dark) => (dark ? "#b08aee" : "#4a2082"),
-    btnBg: BRAND.roxoAcao,
+    accent:        BRAND.roxo,
+    titleColor:    (d) => d ? "#b08aee" : "#3a1868",
+    btnBg:         BRAND.roxo,
+    emptyGradient: (d) => d
+      ? "linear-gradient(135deg,rgba(74,32,130,0.15) 0%,rgba(30,54,248,0.08) 100%)"
+      : "linear-gradient(135deg,rgba(74,32,130,0.07) 0%,rgba(30,54,248,0.04) 100%)",
   },
 };
 
 // ─── CONFIG VISUAL POR TIPO ───────────────────────────────────────────────────
 const TIPO_CONFIG: Record<TipoSugestao, {
   borderColor: string;
-  bgColor: (dark: boolean) => string;
-  textColor: (dark: boolean) => string;
-  tagBg: string;
-  tagColor: (dark: boolean) => string;
-  tagBorder: string;
-  label: string;
+  bgColor:     (dark: boolean) => string;
+  textColor:   (dark: boolean) => string;
+  tagBg:       string;
+  tagColor:    (dark: boolean) => string;
+  tagBorder:   string;
+  label:       string;
 }> = {
   script: {
     borderColor: "rgba(30,54,248,0.45)",
-    bgColor: (dark) => (dark ? "rgba(30,54,248,0.06)" : "rgba(30,54,248,0.04)"),
-    textColor: (dark) => (dark ? "#d0d0ee" : "#1a1a3e"),
-    tagBg: "rgba(30,54,248,0.12)",
-    tagColor: (dark) => (dark ? "#7b95ff" : "#1631c4"),
-    tagBorder: "rgba(30,54,248,0.3)",
-    label: "Script",
+    bgColor:     (d) => d ? "rgba(30,54,248,0.06)" : "rgba(30,54,248,0.03)",
+    textColor:   (d) => d ? "#d0d0ee" : "#1a1a3e",
+    tagBg:       "rgba(30,54,248,0.12)",
+    tagColor:    (d) => d ? "#7b95ff" : "#1631c4",
+    tagBorder:   "rgba(30,54,248,0.30)",
+    label:       "Script",
   },
   orientacao: {
-    borderColor: "rgba(255,255,255,0.1)",
-    bgColor: (dark) => (dark ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.02)"),
-    textColor: (dark) => (dark ? "#9898be" : "#4a4a6a"),
-    tagBg: "rgba(107,114,128,0.15)",
-    tagColor: (dark) => (dark ? "#b0b0cc" : "#3a3a5a"),
-    tagBorder: "rgba(107,114,128,0.3)",
-    label: "Orientação",
+    borderColor: "rgba(255,255,255,0.10)",
+    bgColor:     (d) => d ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.02)",
+    textColor:   (d) => d ? "#9898be" : "#4a4a6a",
+    tagBg:       "rgba(107,114,128,0.15)",
+    tagColor:    (d) => d ? "#b0b0cc" : "#3a3a5a",
+    tagBorder:   "rgba(107,114,128,0.30)",
+    label:       "Orientação",
   },
   alerta: {
-    borderColor: "rgba(232,64,37,0.4)",
-    bgColor: (dark) => (dark ? "rgba(232,64,37,0.06)" : "rgba(232,64,37,0.04)"),
-    textColor: (dark) => (dark ? "#ff9980" : "#c73520"),
-    tagBg: "rgba(232,64,37,0.12)",
-    tagColor: (dark) => (dark ? "#ff8570" : "#b02a14"),
-    tagBorder: "rgba(232,64,37,0.3)",
-    label: "Alerta",
+    borderColor: "rgba(232,64,37,0.40)",
+    bgColor:     (d) => d ? "rgba(232,64,37,0.06)" : "rgba(232,64,37,0.03)",
+    textColor:   (d) => d ? "#ff9980" : "#b02a14",
+    tagBg:       "rgba(232,64,37,0.12)",
+    tagColor:    (d) => d ? "#ff8570" : "#b02a14",
+    tagBorder:   "rgba(232,64,37,0.30)",
+    label:       "Alerta",
   },
 };
 
 // ─── CONFIG VISUAL POR JOGO ───────────────────────────────────────────────────
-const JOGO_TAG_CONFIG: Record<JogoTag, { bg: string; color: (dark: boolean) => string; border: string }> = {
-  todos: {
-    bg: "rgba(74,32,130,0.15)",
-    color: (d) => (d ? "#b08aee" : "#3a1868"),
-    border: "rgba(74,32,130,0.3)",
-  },
-  blackjack: {
-    bg: "rgba(30,54,248,0.12)",
-    color: (d) => (d ? "#7b95ff" : "#1631c4"),
-    border: "rgba(30,54,248,0.3)",
-  },
-  roleta: {
-    bg: "rgba(232,64,37,0.12)",
-    color: (d) => (d ? "#ff8570" : "#b02a14"),
-    border: "rgba(232,64,37,0.3)",
-  },
-  baccarat: {
-    bg: "rgba(112,202,228,0.12)",
-    color: (d) => (d ? "#70cae4" : "#0f6a8a"),
-    border: "rgba(112,202,228,0.3)",
-  },
+const JOGO_TAG_CONFIG: Record<JogoTag, { bg: string; color: (d: boolean) => string; border: string }> = {
+  todos:     { bg: "rgba(74,32,130,0.12)",   color: (d) => d ? "#b08aee" : "#3a1868", border: "rgba(74,32,130,0.28)"   },
+  blackjack: { bg: "rgba(30,54,248,0.12)",   color: (d) => d ? "#7b95ff" : "#1631c4", border: "rgba(30,54,248,0.28)"   },
+  roleta:    { bg: "rgba(232,64,37,0.12)",   color: (d) => d ? "#ff8570" : "#b02a14", border: "rgba(232,64,37,0.28)"   },
+  baccarat:  { bg: "rgba(112,202,228,0.12)", color: (d) => d ? "#70cae4" : "#0f6a8a", border: "rgba(112,202,228,0.28)" },
 };
 
-// ─── TAG CHIP ──────────────────────────────────────────────────────────────────
+// ─── TAG CHIP ─────────────────────────────────────────────────────────────────
 function TagChip({ label, bg, color, border }: { label: string; bg: string; color: string; border: string }) {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        fontSize: 11,
-        fontWeight: 700,
-        padding: "3px 8px",
-        borderRadius: 20,
-        textTransform: "uppercase",
-        letterSpacing: "0.06em",
-        background: bg,
-        color,
-        border: `1px solid ${border}`,
-        whiteSpace: "nowrap",
-        fontFamily: FONT.body,
-      }}
-    >
+    <span style={{
+      display: "inline-flex", alignItems: "center",
+      fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+      textTransform: "uppercase", letterSpacing: "0.06em",
+      background: bg, color, border: `1px solid ${border}`,
+      whiteSpace: "nowrap", fontFamily: FONT.body,
+    }}>
       {label}
     </span>
   );
 }
 
-// ─── FILTER CHIP ──────────────────────────────────────────────────────────────
-function FilterChip({
-  label,
-  active,
-  activeColor,
-  activeBg,
-  activeBorder,
-  onClick,
-  dark,
-}: {
-  label: string;
-  active: boolean;
-  activeColor: string;
-  activeBg: string;
-  activeBorder: string;
-  onClick: () => void;
-  dark: boolean;
+// ─── FILTER CHIP ─────────────────────────────────────────────────────────────
+function FilterChip({ label, active, activeColor, activeBg, activeBorder, onClick, dark }: {
+  label: string; active: boolean;
+  activeColor: string; activeBg: string; activeBorder: string;
+  onClick: () => void; dark: boolean;
 }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "5px 13px",
-        borderRadius: 20,
-        border: `1.5px solid ${active ? activeBorder : dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
-        background: active ? activeBg : "transparent",
-        color: active ? activeColor : dark ? "#7c7c9e" : "#666",
-        fontSize: 11,
-        fontWeight: 700,
-        fontFamily: FONT.body,
-        textTransform: "uppercase",
-        letterSpacing: "0.06em",
-        cursor: "pointer",
-        transition: "all 0.15s ease",
-        whiteSpace: "nowrap",
-      }}
-    >
+    <button onClick={onClick} style={{
+      padding: "5px 13px", borderRadius: 20,
+      border: `1.5px solid ${active ? activeBorder : dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
+      background: active ? activeBg : "transparent",
+      color: active ? activeColor : dark ? "#7c7c9e" : "#666",
+      fontSize: 11, fontWeight: 700, fontFamily: FONT.body,
+      textTransform: "uppercase", letterSpacing: "0.06em",
+      cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
+    }}>
       {label}
     </button>
   );
 }
 
-// ─── MODAL ADICIONAR/EDITAR ───────────────────────────────────────────────────
-function ModalSugestao({
-  operadoraSlug,
-  bloco,
-  editando,
-  onClose,
-  onSalvo,
-}: {
-  operadoraSlug: string;
-  bloco: BlocoRoteiro;
+// ─── MODAL ROTEIRO ────────────────────────────────────────────────────────────
+function ModalSugestao({ operadoraSlug, bloco, editando, onClose, onSalvo }: {
+  operadoraSlug: string; bloco: BlocoRoteiro;
   editando: RoteiroSugestao | null;
-  onClose: () => void;
-  onSalvo: () => void;
+  onClose: () => void; onSalvo: () => void;
 }) {
   const { theme: t, isDark } = useApp();
   const dark = isDark ?? false;
-
-  const [texto, setTexto] = useState(editando?.texto ?? "");
-  const [tipo, setTipo] = useState<TipoSugestao>(editando?.tipo ?? "script");
-  const [jogos, setJogos] = useState<JogoTag[]>(editando?.jogos ?? ["todos"]);
+  const [texto,  setTexto]  = useState(editando?.texto ?? "");
+  const [tipo,   setTipo]   = useState<TipoSugestao>(editando?.tipo ?? "script");
+  const [jogos,  setJogos]  = useState<JogoTag[]>(editando?.jogos ?? ["todos"]);
   const [saving, setSaving] = useState(false);
 
   const toggleJogo = (jogo: JogoTag) => {
-    if (jogo === "todos") {
-      setJogos(["todos"]);
-      return;
-    }
+    if (jogo === "todos") { setJogos(["todos"]); return; }
     setJogos((prev) => {
-      const sem = prev.filter((j) => j !== "todos");
-      return sem.includes(jogo) ? sem.filter((j) => j !== jogo) || ["todos"] : [...sem, jogo];
+      const sem  = prev.filter((j) => j !== "todos");
+      const next = sem.includes(jogo) ? sem.filter((j) => j !== jogo) : [...sem, jogo];
+      return next.length === 0 ? ["todos"] : next;
     });
   };
-
-  useEffect(() => {
-    if (jogos.length === 0) setJogos(["todos"]);
-  }, [jogos]);
 
   const handleSalvar = async () => {
     if (!texto.trim()) return;
     setSaving(true);
-    const payload = {
-      texto: texto.trim(),
-      tipo,
-      jogos,
-      updated_at: new Date().toISOString(),
-    };
+    const payload = { texto: texto.trim(), tipo, jogos, updated_at: new Date().toISOString() };
     if (editando) {
-      const { error } = await supabase
-        .from("roteiro_mesa_sugestoes")
-        .update(payload)
-        .eq("id", editando.id);
-      if (error) console.error("[RoteiroMesa] Erro ao atualizar:", error.message);
+      const { error } = await supabase.from("roteiro_mesa_sugestoes").update(payload).eq("id", editando.id);
+      if (error) console.error("[RoteiroMesa] update:", error.message);
     } else {
-      const { error } = await supabase.from("roteiro_mesa_sugestoes").insert({
-        operadora_slug: operadoraSlug,
-        bloco,
-        ordem: 0,
-        ...payload,
-      });
-      if (error) console.error("[RoteiroMesa] Erro ao inserir:", error.message);
+      const { error } = await supabase.from("roteiro_mesa_sugestoes").insert({ operadora_slug: operadoraSlug, bloco, ordem: 0, ...payload });
+      if (error) console.error("[RoteiroMesa] insert:", error.message);
     }
-    setSaving(false);
-    onSalvo();
-    onClose();
+    setSaving(false); onSalvo(); onClose();
   };
 
-  const blocoLabel = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
+  const blocoLabel  = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
   const blocoAccent = BLOCO_CONFIG[bloco].accent;
-  const salvarBtnBg = BRAND.azul;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.65)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-        backdropFilter: "blur(2px)",
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 18,
-          padding: "24px 24px 20px",
-          maxWidth: 500,
-          width: "92%",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }} onClick={onClose}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "24px 24px 20px", maxWidth: 500, width: "92%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 4, height: 20, borderRadius: 2, background: blocoAccent, flexShrink: 0 }} />
-            <h3 style={{
-              margin: 0,
-              fontSize: 13,
-              fontWeight: 700,
-              color: t.text,
-              fontFamily: FONT_TITLE,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               {editando ? "Editar" : "Adicionar"} — {blocoLabel}
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: t.textMuted,
-              cursor: "pointer",
-              padding: 4,
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <X size={16} />
-          </button>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}><X size={16} /></button>
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
-          Tipo
-        </p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Tipo</p>
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
           {TIPOS.map(({ key, label }) => {
-            const cfg = TIPO_CONFIG[key];
-            const isActive = tipo === key;
+            const cfg = TIPO_CONFIG[key]; const isActive = tipo === key;
             return (
-              <button
-                key={key}
-                onClick={() => setTipo(key)}
-                style={{
-                  flex: 1,
-                  padding: "8px 4px",
-                  borderRadius: 10,
-                  border: `1.5px solid ${isActive ? cfg.tagBorder : t.cardBorder}`,
-                  background: isActive ? cfg.tagBg : "transparent",
-                  color: isActive ? cfg.tagColor(dark) : t.textMuted,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                  textAlign: "center",
-                  transition: "all 0.15s",
-                }}
-              >
+              <button key={key} onClick={() => setTipo(key)} style={{ flex: 1, padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${isActive ? cfg.tagBorder : t.cardBorder}`, background: isActive ? cfg.tagBg : "transparent", color: isActive ? cfg.tagColor(dark) : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}>
                 {label}
               </button>
             );
           })}
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
-          Aplicável a
-        </p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Aplicável a</p>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {JOGOS.map(({ key, label }) => {
-            const cfg = JOGO_TAG_CONFIG[key];
-            const isActive = jogos.includes(key);
+            const cfg = JOGO_TAG_CONFIG[key]; const isActive = jogos.includes(key);
             return (
-              <button
-                key={key}
-                onClick={() => toggleJogo(key)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 20,
-                  border: `1.5px solid ${isActive ? cfg.border : t.cardBorder}`,
-                  background: isActive ? cfg.bg : "transparent",
-                  color: isActive ? cfg.color(dark) : t.textMuted,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  transition: "all 0.15s",
-                }}
-              >
-                {isActive && <Check size={10} />}
-                {label}
+              <button key={key} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? cfg.border : t.cardBorder}`, background: isActive ? cfg.bg : "transparent", color: isActive ? cfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>
+                {isActive && <Check size={10} />}{label}
               </button>
             );
           })}
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
-          Texto
-        </p>
-        <textarea
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          placeholder={
-            tipo === "script"
-              ? '"Olá Jogadores, meu nome é [Nome]..."'
-              : tipo === "alerta"
-              ? "Descreva o alerta ou regra operacional..."
-              : "Descreva a orientação para o dealer..."
-          }
-          rows={4}
-          style={{
-            width: "100%",
-            padding: "11px 13px",
-            borderRadius: 10,
-            border: `1px solid ${t.inputBorder ?? t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg,
-            color: t.inputText ?? t.text,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            lineHeight: 1.5,
-            resize: "vertical",
-            boxSizing: "border-box",
-            outline: "none",
-          }}
-        />
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Texto</p>
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "script" ? '"Olá Jogadores, meu nome é [Nome]..."' : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o dealer..."} rows={4} style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", outline: "none" }} />
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: "transparent",
-              color: t.textMuted,
-              fontFamily: FONT.body,
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSalvar}
-            disabled={!texto.trim() || saving}
-            style={{
-              padding: "8px 20px",
-              borderRadius: 10,
-              border: "none",
-              background: salvarBtnBg,
-              color: "#fff",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: texto.trim() && !saving ? "pointer" : "not-allowed",
-              opacity: texto.trim() && !saving ? 1 : 0.55,
-              transition: "opacity 0.15s",
-            }}
-          >
+          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
+          <button onClick={handleSalvar} disabled={!texto.trim() || saving} style={{ padding: "8px 20px", borderRadius: 10, border: "none", background: BRAND.azul, color: "#fff", fontFamily: FONT.body, fontSize: 13, fontWeight: 700, cursor: texto.trim() && !saving ? "pointer" : "not-allowed", opacity: texto.trim() && !saving ? 1 : 0.55, transition: "opacity 0.15s" }}>
             {saving ? "Salvando..." : "Salvar"}
           </button>
         </div>
@@ -475,495 +282,172 @@ function ModalSugestao({
   );
 }
 
-// ─── ITEM DE SUGESTÃO ─────────────────────────────────────────────────────────
-function SugestaoItem({
-  sugestao,
-  podeEditar,
-  onEdit,
-  dark,
-  operadoraNome,
-}: {
-  sugestao: RoteiroSugestao;
-  podeEditar: boolean;
-  onEdit: (s: RoteiroSugestao) => void;
-  dark: boolean;
-  operadoraNome?: string;
+// ─── MODAL CAMPANHA ───────────────────────────────────────────────────────────
+function ModalCampanha({ operadoraSlug, editando, onClose, onSalvo }: {
+  operadoraSlug: string;
+  editando: RoteiroCampanha | null;
+  onClose: () => void; onSalvo: () => void;
 }) {
-  const tipo = sugestao.tipo ?? "script";
-  const jogosList = sugestao.jogos ?? ["todos"];
-  const cfg = TIPO_CONFIG[tipo];
-  const [hoverEdit, setHoverEdit] = useState(false);
+  const { theme: t, isDark } = useApp();
+  const dark = isDark ?? false;
+  const [titulo,     setTitulo]     = useState(editando?.titulo ?? "");
+  const [texto,      setTexto]      = useState(editando?.texto ?? "");
+  const [jogos,      setJogos]      = useState<JogoTag[]>(editando?.jogos ?? ["todos"]);
+  const [dataInicio, setDataInicio] = useState(editando?.data_inicio ?? "");
+  const [dataFim,    setDataFim]    = useState(editando?.data_fim ?? "");
+  const [ativo,      setAtivo]      = useState(editando?.ativo ?? true);
+  const [saving,     setSaving]     = useState(false);
+
+  const toggleJogo = (jogo: JogoTag) => {
+    if (jogo === "todos") { setJogos(["todos"]); return; }
+    setJogos((prev) => {
+      const sem  = prev.filter((j) => j !== "todos");
+      const next = sem.includes(jogo) ? sem.filter((j) => j !== jogo) : [...sem, jogo];
+      return next.length === 0 ? ["todos"] : next;
+    });
+  };
+
+  const handleSalvar = async () => {
+    if (!titulo.trim() || !texto.trim()) return;
+    setSaving(true);
+    const payload = { titulo: titulo.trim(), texto: texto.trim(), jogos, data_inicio: dataInicio || null, data_fim: dataFim || null, ativo, updated_at: new Date().toISOString() };
+    if (editando) {
+      const { error } = await supabase.from("roteiro_mesa_campanhas").update(payload).eq("id", editando.id);
+      if (error) console.error("[RoteiroMesa] campanha update:", error.message);
+    } else {
+      const { error } = await supabase.from("roteiro_mesa_campanhas").insert({ operadora_slug: operadoraSlug, ordem: 0, ...payload });
+      if (error) console.error("[RoteiroMesa] campanha insert:", error.message);
+    }
+    setSaving(false); onSalvo(); onClose();
+  };
+
+  const inp = { width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, boxSizing: "border-box" as const, outline: "none" };
+  const lbl = { fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body, display: "block" };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 10,
-        padding: "12px 14px",
-        borderRadius: 10,
-        border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`,
-        borderLeft: `3px solid ${cfg.borderColor}`,
-        background: cfg.bgColor(dark),
-        transition: "background 0.15s",
-      }}
-    >
-      {tipo === "script" && (
-        <span style={{
-          fontSize: 22,
-          color: "rgba(30,54,248,0.3)",
-          flexShrink: 0,
-          fontFamily: "Georgia, serif",
-          lineHeight: 1.1,
-          marginTop: -2,
-          userSelect: "none",
-        }}>
-          "
-        </span>
-      )}
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }} onClick={onClose}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "24px 24px 20px", maxWidth: 520, width: "92%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.ciano, flexShrink: 0 }} />
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>{editando ? "Editar" : "Nova"} Campanha</h3>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}><X size={16} /></button>
+        </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-        <span style={{
-          fontFamily: FONT.body,
-          fontSize: tipo === "script" ? 14 : 13,
-          color: cfg.textColor(dark),
-          lineHeight: 1.55,
-        }}>
-          {sugestao.texto}
-        </span>
+        <label style={lbl}>Título da Campanha</label>
+        <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder='Ex: "Cashback na Mesa X — Blaze"' style={{ ...inp, marginBottom: 18 }} />
 
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {operadoraNome && (
-            <TagChip
-              label={operadoraNome}
-              bg="rgba(74,32,130,0.12)"
-              color={dark ? "#b08aee" : "#3a1868"}
-              border="rgba(74,32,130,0.25)"
-            />
-          )}
-          {jogosList.map((jogo) => {
-            const jcfg = JOGO_TAG_CONFIG[jogo as JogoTag];
-            const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
-            return jcfg
-              ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color(dark)} border={jcfg.border} />
-              : null;
+        <p style={lbl}>Aplicável a</p>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+          {JOGOS.map(({ key, label }) => {
+            const cfg = JOGO_TAG_CONFIG[key]; const isActive = jogos.includes(key);
+            return (
+              <button key={key} onClick={() => toggleJogo(key)} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${isActive ? cfg.border : t.cardBorder}`, background: isActive ? cfg.bg : "transparent", color: isActive ? cfg.color(dark) : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}>
+                {isActive && <Check size={10} />}{label}
+              </button>
+            );
           })}
-          <TagChip label={cfg.label} bg={cfg.tagBg} color={cfg.tagColor(dark)} border={cfg.tagBorder} />
+        </div>
+
+        <label style={lbl}>O que o dealer deve falar</label>
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='"Para quem entrar na mesa X hoje da Blaze, poderá ter Cashback de 10%!"' rows={4} style={{ ...inp, resize: "vertical", marginBottom: 18 }} />
+
+        <p style={lbl}>Período (opcional)</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+          <div>
+            <p style={{ ...lbl, fontSize: 9, marginBottom: 5 }}>Data início</p>
+            <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} style={inp} />
+          </div>
+          <div>
+            <p style={{ ...lbl, fontSize: 9, marginBottom: 5 }}>Data fim</p>
+            <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} style={inp} />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <button onClick={() => setAtivo(!ativo)} style={{ width: 38, height: 22, borderRadius: 11, border: "none", cursor: "pointer", background: ativo ? BRAND.ciano : (isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"), position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+            <span style={{ position: "absolute", top: 3, left: ativo ? 19 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.25)" }} />
+          </button>
+          <span style={{ fontSize: 12, color: ativo ? BRAND.ciano : t.textMuted, fontFamily: FONT.body, fontWeight: 600 }}>{ativo ? "Campanha ativa" : "Campanha inativa"}</span>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
+          <button onClick={handleSalvar} disabled={!titulo.trim() || !texto.trim() || saving} style={{ padding: "8px 20px", borderRadius: 10, border: "none", background: BRAND.ciano, color: "#0f6a8a", fontFamily: FONT.body, fontSize: 13, fontWeight: 700, cursor: titulo.trim() && texto.trim() && !saving ? "pointer" : "not-allowed", opacity: titulo.trim() && texto.trim() && !saving ? 1 : 0.55, transition: "opacity 0.15s" }}>
+            {saving ? "Salvando..." : "Salvar"}
+          </button>
         </div>
       </div>
-
-      {podeEditar && (
-        <button
-          onClick={() => onEdit(sugestao)}
-          onMouseEnter={() => setHoverEdit(true)}
-          onMouseLeave={() => setHoverEdit(false)}
-          title="Editar sugestão"
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 8,
-            border: hoverEdit
-              ? `1px solid ${dark ? "rgba(124,58,237,0.3)" : "rgba(74,32,130,0.2)"}`
-              : `1px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
-            background: hoverEdit
-              ? (dark ? "rgba(124,58,237,0.15)" : "rgba(74,32,130,0.08)")
-              : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
-            color: hoverEdit
-              ? (dark ? "#b08aee" : "#4a2082")
-              : (dark ? "#8888aa" : "#777"),
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            transition: "all 0.15s",
-          }}
-        >
-          <Pencil size={13} />
-        </button>
-      )}
     </div>
   );
 }
 
-// ─── BLOCO DE SUGESTÕES ───────────────────────────────────────────────────────
-function BlocoSugestoes({
-  bloco,
-  operadoraSlug,
-  sugestoes,
-  podeEditar,
-  podeAdicionar,
-  onCarregar,
-  dark,
-  operadorasList,
-}: {
-  bloco: BlocoRoteiro;
-  operadoraSlug: string | null;
-  sugestoes: RoteiroSugestao[];
-  podeEditar: boolean;
-  podeAdicionar: boolean;
-  onCarregar: () => void;
-  dark: boolean;
-  operadorasList: { slug: string; nome: string }[];
-}) {
-  const { theme: t } = useApp();
-  const [modalEditando, setModalEditando] = useState<RoteiroSugestao | null>(null);
-  const [modalAdicionar, setModalAdicionar] = useState(false);
+// ─── MODAL SELEÇÃO DE BLOCO ───────────────────────────────────────────────────
+type BlocoOuCampanha = BlocoRoteiro | "campanha";
 
-  const label = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
-  const cfg = BLOCO_CONFIG[bloco];
-
-  if (!operadoraSlug) return null;
-
-  return (
-    <>
-      <div
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 16,
-          overflow: "hidden",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "14px 18px",
-            borderBottom: `1px solid ${t.cardBorder}`,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 4, height: 20, borderRadius: 2, background: cfg.accent, flexShrink: 0 }} />
-            <h3 style={{
-              margin: 0,
-              fontSize: 12,
-              fontWeight: 700,
-              color: cfg.titleColor(dark),
-              fontFamily: FONT_TITLE,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-            }}>
-              {label}
-            </h3>
-            <span style={{
-              fontSize: 11,
-              color: t.textMuted,
-              background: dark ? "rgba(74,32,130,0.1)" : "rgba(74,32,130,0.07)",
-              borderRadius: 10,
-              padding: "2px 8px",
-              fontFamily: FONT.body,
-            }}>
-              {sugestoes.length} {sugestoes.length === 1 ? "item" : "itens"}
-            </span>
-          </div>
-
-          {podeAdicionar && (
-            <button
-              onClick={() => setModalAdicionar(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "6px 13px",
-                borderRadius: 8,
-                border: "none",
-                background: cfg.btnBg,
-                color: "#fff",
-                fontSize: 11,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-                letterSpacing: "0.02em",
-              }}
-            >
-              <Plus size={12} />
-              Adicionar
-            </button>
-          )}
-        </div>
-
-        <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-          {sugestoes.length === 0 ? (
-            <div style={{
-              padding: "32px 16px",
-              textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 12,
-            }}>
-              <div style={{
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                background: dark
-                  ? "linear-gradient(135deg, rgba(30,54,248,0.15) 0%, rgba(74,32,130,0.15) 100%)"
-                  : "linear-gradient(135deg, rgba(30,54,248,0.08) 0%, rgba(74,32,130,0.08) 100%)",
-                border: `1px solid ${cfg.accent}30`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                <BookOpen size={20} color={cfg.accent} strokeWidth={1.5} />
-              </div>
-              <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
-                Nenhuma sugestão cadastrada para este bloco.
-              </p>
-              {podeAdicionar && (
-                <button
-                  onClick={() => setModalAdicionar(true)}
-                  style={{
-                    marginTop: 2,
-                    padding: "8px 18px",
-                    borderRadius: 8,
-                    border: `1.5px solid ${cfg.accent}`,
-                    background: `${cfg.accent}10`,
-                    color: cfg.titleColor(dark),
-                    fontSize: 12,
-                    fontWeight: 700,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    transition: "background 0.15s",
-                  }}
-                >
-                  <Plus size={12} />
-                  Criar primeira sugestão
-                </button>
-              )}
-            </div>
-          ) : (
-            sugestoes.map((s) => (
-              <SugestaoItem
-                key={s.id}
-                sugestao={s}
-                podeEditar={podeEditar}
-                onEdit={setModalEditando}
-                dark={dark}
-                operadoraNome={
-                  operadoraSlug === "todas"
-                    ? operadorasList.find((o) => o.slug === s.operadora_slug)?.nome
-                    : undefined
-                }
-              />
-            ))
-          )}
-        </div>
-      </div>
-
-      {modalEditando && (
-        <ModalSugestao
-          operadoraSlug={modalEditando.operadora_slug}
-          bloco={bloco}
-          editando={modalEditando}
-          onClose={() => setModalEditando(null)}
-          onSalvo={onCarregar}
-        />
-      )}
-      {modalAdicionar && operadoraSlug !== "todas" && (
-        <ModalSugestao
-          operadoraSlug={operadoraSlug}
-          bloco={bloco}
-          editando={null}
-          onClose={() => setModalAdicionar(false)}
-          onSalvo={() => {
-            setModalAdicionar(false);
-            onCarregar();
-          }}
-        />
-      )}
-    </>
-  );
-}
-
-// ─── MODAL NOVO ROTEIRO ──────────────────────────────────────────────────────
-function ModalNovoRoteiro({
-  operadoraSlug,
-  operadorasList,
-  onClose,
-  onSalvo,
-  dark,
-}: {
+function ModalNovoRoteiro({ operadoraSlug, operadorasList, onClose, onSalvo, dark }: {
   operadoraSlug: string;
   operadorasList: { slug: string; nome: string }[];
-  onClose: () => void;
-  onSalvo: () => void;
-  dark: boolean;
+  onClose: () => void; onSalvo: () => void; dark: boolean;
 }) {
   const { theme: t } = useApp();
-  const [blocoSelecionado, setBlocoSelecionado] = useState<BlocoRoteiro>("abertura");
-  const [opSelecionada, setOpSelecionada] = useState<string>(
-    operadoraSlug !== "todas" ? operadoraSlug : (operadorasList[0]?.slug ?? "")
-  );
+  const [etapa,    setEtapa]    = useState<"bloco" | "roteiro" | "campanha">("bloco");
+  const [bloco,    setBloco]    = useState<BlocoOuCampanha>("abertura");
+  const [opSlug,   setOpSlug]   = useState<string>(operadoraSlug !== "todas" ? operadoraSlug : (operadorasList[0]?.slug ?? ""));
 
-  const cfg = BLOCO_CONFIG[blocoSelecionado];
-  const [confirmar, setConfirmar] = useState(false);
+  const OPCOES: { key: BlocoOuCampanha; label: string; accent: string; icon: React.ReactNode }[] = [
+    { key: "abertura",     label: "Abertura",       accent: BRAND.azul,    icon: <BookOpen size={14} />  },
+    { key: "durante_jogo", label: "Durante o Jogo", accent: BRAND.vermelho, icon: <BookOpen size={14} /> },
+    { key: "fechamento",   label: "Fechamento",     accent: BRAND.roxo,    icon: <BookOpen size={14} />  },
+    { key: "campanha",     label: "Campanha",       accent: BRAND.ciano,   icon: <Megaphone size={14} />},
+  ];
 
-  if (confirmar && opSelecionada) {
-    return (
-      <ModalSugestao
-        operadoraSlug={opSelecionada}
-        bloco={blocoSelecionado}
-        editando={null}
-        onClose={onClose}
-        onSalvo={onSalvo}
-      />
-    );
+  if (etapa === "roteiro" && bloco !== "campanha") {
+    return <ModalSugestao operadoraSlug={opSlug} bloco={bloco as BlocoRoteiro} editando={null} onClose={onClose} onSalvo={onSalvo} />;
+  }
+  if (etapa === "campanha") {
+    return <ModalCampanha operadoraSlug={opSlug} editando={null} onClose={onClose} onSalvo={onSalvo} />;
   }
 
+  const accentAtual = OPCOES.find((o) => o.key === bloco)?.accent ?? BRAND.azul;
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.65)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-        backdropFilter: "blur(2px)",
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 18,
-          padding: "24px 24px 20px",
-          maxWidth: 440,
-          width: "92%",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }} onClick={onClose}>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "24px 24px 20px", maxWidth: 440, width: "92%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.azul, flexShrink: 0 }} />
-            <h3 style={{
-              margin: 0,
-              fontSize: 13,
-              fontWeight: 700,
-              color: t.text,
-              fontFamily: FONT_TITLE,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}>
-              Novo Roteiro
-            </h3>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>Novo Roteiro</h3>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}
-          >
-            <X size={16} />
-          </button>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}><X size={16} /></button>
         </div>
 
         {operadoraSlug === "todas" && operadorasList.length > 1 && (
           <>
-            <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
-              Operadora
-            </p>
-            <select
-              value={opSelecionada}
-              onChange={(e) => setOpSelecionada(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                borderRadius: 10,
-                border: `1.5px solid ${opSelecionada ? BRAND.roxo + "80" : t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontSize: 13,
-                fontWeight: 500,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-                outline: "none",
-                marginBottom: 18,
-              }}
-            >
+            <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Operadora</p>
+            <select value={opSlug} onChange={(e) => setOpSlug(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: 10, border: `1.5px solid ${opSlug ? BRAND.roxo + "80" : t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13, fontWeight: 500, fontFamily: FONT.body, cursor: "pointer", outline: "none", marginBottom: 18 }}>
               <option value="">Selecione uma operadora...</option>
-              {operadorasList.map((o) => (
-                <option key={o.slug} value={o.slug}>{o.nome}</option>
-              ))}
+              {operadorasList.map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
             </select>
           </>
         )}
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 10px", fontFamily: FONT.body }}>
-          Bloco
-        </p>
-        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {BLOCOS.map(({ key, label }) => {
-            const bcfg = BLOCO_CONFIG[key];
-            const isActive = blocoSelecionado === key;
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 10px", fontFamily: FONT.body }}>Tipo de roteiro</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+          {OPCOES.map(({ key, label, accent, icon }) => {
+            const isActive = bloco === key;
             return (
-              <button
-                key={key}
-                onClick={() => setBlocoSelecionado(key)}
-                style={{
-                  flex: 1,
-                  padding: "10px 4px",
-                  borderRadius: 10,
-                  border: `1.5px solid ${isActive ? bcfg.accent + "80" : t.cardBorder}`,
-                  background: isActive ? bcfg.accent + "12" : "transparent",
-                  color: isActive ? bcfg.titleColor(dark) : t.textMuted,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                  textAlign: "center",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  transition: "all 0.15s",
-                }}
-              >
-                {label}
+              <button key={key} onClick={() => setBloco(key)} style={{ padding: "12px 10px", borderRadius: 10, border: `1.5px solid ${isActive ? accent + "80" : t.cardBorder}`, background: isActive ? accent + "12" : "transparent", color: isActive ? accent : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                {icon}{label}
               </button>
             );
           })}
         </div>
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: "transparent",
-              color: t.textMuted,
-              fontFamily: FONT.body,
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => setConfirmar(true)}
-            disabled={!opSelecionada}
-            style={{
-              padding: "8px 20px",
-              borderRadius: 10,
-              border: "none",
-              background: BRAND.azul,
-              color: "#fff",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: opSelecionada ? "pointer" : "not-allowed",
-              opacity: opSelecionada ? 1 : 0.5,
-              transition: "opacity 0.15s",
-            }}
-          >
+          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
+          <button onClick={() => bloco === "campanha" ? setEtapa("campanha") : setEtapa("roteiro")} disabled={!opSlug} style={{ padding: "8px 20px", borderRadius: 10, border: "none", background: accentAtual, color: bloco === "campanha" ? "#0f6a8a" : "#fff", fontFamily: FONT.body, fontSize: 13, fontWeight: 700, cursor: opSlug ? "pointer" : "not-allowed", opacity: opSlug ? 1 : 0.5, transition: "opacity 0.15s" }}>
             Continuar
           </button>
         </div>
@@ -972,20 +456,217 @@ function ModalNovoRoteiro({
   );
 }
 
+// ─── ITEM DE SUGESTÃO ─────────────────────────────────────────────────────────
+function SugestaoItem({ sugestao, podeEditar, onEdit, dark, operadoraNome }: {
+  sugestao: RoteiroSugestao; podeEditar: boolean;
+  onEdit: (s: RoteiroSugestao) => void;
+  dark: boolean; operadoraNome?: string;
+}) {
+  const tipo      = sugestao.tipo ?? "script";
+  const jogosList = sugestao.jogos ?? ["todos"];
+  const cfg       = TIPO_CONFIG[tipo];
+  const [hover,   setHover] = useState(false);
+
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, borderLeft: `3px solid ${cfg.borderColor}`, background: cfg.bgColor(dark), transition: "background 0.15s" }}>
+      {tipo === "script" && (
+        <span style={{ fontSize: 22, color: "rgba(30,54,248,0.3)", flexShrink: 0, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: -2, userSelect: "none" }}>"</span>
+      )}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+        <span style={{ fontFamily: FONT.body, fontSize: tipo === "script" ? 14 : 13, color: cfg.textColor(dark), lineHeight: 1.55 }}>{sugestao.texto}</span>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {operadoraNome && <TagChip label={operadoraNome} bg="rgba(74,32,130,0.12)" color={dark ? "#b08aee" : "#3a1868"} border="rgba(74,32,130,0.25)" />}
+          {jogosList.map((jogo) => {
+            const jcfg = JOGO_TAG_CONFIG[jogo as JogoTag];
+            const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
+            return jcfg ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color(dark)} border={jcfg.border} /> : null;
+          })}
+          <TagChip label={cfg.label} bg={cfg.tagBg} color={cfg.tagColor(dark)} border={cfg.tagBorder} />
+        </div>
+      </div>
+      {podeEditar && (
+        <button onClick={() => onEdit(sugestao)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Editar sugestão" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? (dark ? "rgba(124,58,237,0.3)" : "rgba(74,32,130,0.2)") : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? (dark ? "rgba(124,58,237,0.15)" : "rgba(74,32,130,0.08)") : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? (dark ? "#b08aee" : "#4a2082") : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+          <Pencil size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── ITEM DE CAMPANHA ─────────────────────────────────────────────────────────
+function CampanhaItem({ campanha, podeEditar, onEdit, dark, operadoraNome }: {
+  campanha: RoteiroCampanha; podeEditar: boolean;
+  onEdit: (c: RoteiroCampanha) => void;
+  dark: boolean; operadoraNome?: string;
+}) {
+  const [hover,    setHover]    = useState(false);
+  const cianoText = dark ? "#70cae4" : "#0f6a8a";
+  const formatDate = (d?: string) => {
+    if (!d) return null;
+    const [y, m, day] = d.split("-");
+    return `${day}/${m}/${y}`;
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, borderLeft: `3px solid ${BRAND.ciano}`, background: dark ? "rgba(112,202,228,0.05)" : "rgba(112,202,228,0.03)", transition: "background 0.15s" }}>
+      <div style={{ flexShrink: 0, marginTop: 1 }}>
+        <Megaphone size={16} color={campanha.ativo ? BRAND.ciano : (dark ? "#555" : "#bbb")} />
+      </div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 700, color: campanha.ativo ? cianoText : (dark ? "#555" : "#aaa") }}>{campanha.titulo}</span>
+          {!campanha.ativo && <TagChip label="Inativa" bg="rgba(107,114,128,0.12)" color={dark ? "#666" : "#888"} border="rgba(107,114,128,0.20)" />}
+        </div>
+        <span style={{ fontFamily: FONT.body, fontSize: 13, color: dark ? "#9898be" : "#4a4a6a", lineHeight: 1.55, fontStyle: "italic" }}>"{campanha.texto}"</span>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {operadoraNome && <TagChip label={operadoraNome} bg="rgba(74,32,130,0.12)" color={dark ? "#b08aee" : "#3a1868"} border="rgba(74,32,130,0.25)" />}
+          {(campanha.jogos ?? ["todos"]).map((jogo) => {
+            const jcfg = JOGO_TAG_CONFIG[jogo as JogoTag];
+            const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
+            return jcfg ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color(dark)} border={jcfg.border} /> : null;
+          })}
+          {(campanha.data_inicio || campanha.data_fim) && (
+            <TagChip label={`${formatDate(campanha.data_inicio) ?? "?"} → ${formatDate(campanha.data_fim) ?? "?"}`} bg="rgba(112,202,228,0.10)" color={cianoText} border="rgba(112,202,228,0.25)" />
+          )}
+        </div>
+      </div>
+      {podeEditar && (
+        <button onClick={() => onEdit(campanha)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Editar campanha" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? "rgba(112,202,228,0.35)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? "rgba(112,202,228,0.10)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? cianoText : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+          <Pencil size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── BLOCO DE SUGESTÕES ───────────────────────────────────────────────────────
+function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeEditar, podeAdicionar, onCarregar, dark, operadorasList }: {
+  bloco: BlocoRoteiro; operadoraSlug: string | null;
+  sugestoes: RoteiroSugestao[]; podeEditar: boolean; podeAdicionar: boolean;
+  onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string }[];
+}) {
+  const { theme: t } = useApp();
+  const [modalEditando,  setModalEditando]  = useState<RoteiroSugestao | null>(null);
+  const [modalAdicionar, setModalAdicionar] = useState(false);
+  const label = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
+  const cfg   = BLOCO_CONFIG[bloco];
+  if (!operadoraSlug) return null;
+
+  return (
+    <>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${t.cardBorder}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: cfg.accent, flexShrink: 0 }} />
+            <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: cfg.titleColor(dark), fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.1em" }}>{label}</h3>
+            <span style={{ fontSize: 11, color: t.textMuted, background: dark ? "rgba(74,32,130,0.10)" : "rgba(74,32,130,0.06)", borderRadius: 10, padding: "2px 8px", fontFamily: FONT.body }}>
+              {sugestoes.length} {sugestoes.length === 1 ? "item" : "itens"}
+            </span>
+          </div>
+          {podeAdicionar && (
+            <button onClick={() => setModalAdicionar(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: cfg.btnBg, color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
+              <Plus size={12} />Adicionar
+            </button>
+          )}
+        </div>
+        <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+          {sugestoes.length === 0 ? (
+            <div style={{ padding: "32px 16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: cfg.emptyGradient(dark), border: `1px solid ${cfg.accent}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <BookOpen size={20} color={cfg.accent} strokeWidth={1.5} />
+              </div>
+              <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>Nenhuma sugestão cadastrada para este bloco.</p>
+              {podeAdicionar && (
+                <button onClick={() => setModalAdicionar(true)} style={{ marginTop: 2, padding: "8px 18px", borderRadius: 8, border: `1.5px solid ${cfg.accent}`, background: `${cfg.accent}10`, color: cfg.titleColor(dark), fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "background 0.15s" }}>
+                  <Plus size={12} />Criar primeira sugestão
+                </button>
+              )}
+            </div>
+          ) : (
+            sugestoes.map((s) => (
+              <SugestaoItem key={s.id} sugestao={s} podeEditar={podeEditar} onEdit={setModalEditando} dark={dark} operadoraNome={operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === s.operadora_slug)?.nome : undefined} />
+            ))
+          )}
+        </div>
+      </div>
+      {modalEditando && <ModalSugestao operadoraSlug={modalEditando.operadora_slug} bloco={bloco} editando={modalEditando} onClose={() => setModalEditando(null)} onSalvo={onCarregar} />}
+      {modalAdicionar && operadoraSlug !== "todas" && <ModalSugestao operadoraSlug={operadoraSlug} bloco={bloco} editando={null} onClose={() => setModalAdicionar(false)} onSalvo={() => { setModalAdicionar(false); onCarregar(); }} />}
+    </>
+  );
+}
+
+// ─── BLOCO DE CAMPANHAS ───────────────────────────────────────────────────────
+function BlocoCampanhas({ operadoraSlug, campanhas, podeEditar, podeAdicionar, onCarregar, dark, operadorasList }: {
+  operadoraSlug: string | null; campanhas: RoteiroCampanha[];
+  podeEditar: boolean; podeAdicionar: boolean;
+  onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string }[];
+}) {
+  const { theme: t } = useApp();
+  const [modalEditando,  setModalEditando]  = useState<RoteiroCampanha | null>(null);
+  const [modalAdicionar, setModalAdicionar] = useState(false);
+  const cianoTitle = dark ? "#70cae4" : "#0f6a8a";
+  if (!operadoraSlug) return null;
+
+  return (
+    <>
+      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${t.cardBorder}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.ciano, flexShrink: 0 }} />
+            <Megaphone size={14} color={cianoTitle} />
+            <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: cianoTitle, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.1em" }}>Campanhas</h3>
+            <span style={{ fontSize: 11, color: t.textMuted, background: dark ? "rgba(112,202,228,0.08)" : "rgba(112,202,228,0.06)", borderRadius: 10, padding: "2px 8px", fontFamily: FONT.body }}>
+              {campanhas.length} {campanhas.length === 1 ? "item" : "itens"}
+            </span>
+          </div>
+          {podeAdicionar && (
+            <button onClick={() => setModalAdicionar(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: BRAND.ciano, color: "#0f6a8a", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
+              <Plus size={12} />Adicionar
+            </button>
+          )}
+        </div>
+        <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+          {campanhas.length === 0 ? (
+            <div style={{ padding: "32px 16px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: dark ? "linear-gradient(135deg,rgba(112,202,228,0.12) 0%,rgba(74,32,130,0.10) 100%)" : "linear-gradient(135deg,rgba(112,202,228,0.07) 0%,rgba(74,32,130,0.05) 100%)", border: `1px solid ${BRAND.ciano}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Megaphone size={20} color={BRAND.ciano} strokeWidth={1.5} />
+              </div>
+              <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>Nenhuma campanha cadastrada.</p>
+              {podeAdicionar && (
+                <button onClick={() => setModalAdicionar(true)} style={{ marginTop: 2, padding: "8px 18px", borderRadius: 8, border: `1.5px solid ${BRAND.ciano}`, background: `${BRAND.ciano}10`, color: cianoTitle, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "background 0.15s" }}>
+                  <Plus size={12} />Criar primeira campanha
+                </button>
+              )}
+            </div>
+          ) : (
+            campanhas.map((c) => (
+              <CampanhaItem key={c.id} campanha={c} podeEditar={podeEditar} onEdit={setModalEditando} dark={dark} operadoraNome={operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === c.operadora_slug)?.nome : undefined} />
+            ))
+          )}
+        </div>
+      </div>
+      {modalEditando && <ModalCampanha operadoraSlug={modalEditando.operadora_slug} editando={modalEditando} onClose={() => setModalEditando(null)} onSalvo={onCarregar} />}
+      {modalAdicionar && operadoraSlug !== "todas" && <ModalCampanha operadoraSlug={operadoraSlug} editando={null} onClose={() => setModalAdicionar(false)} onSalvo={() => { setModalAdicionar(false); onCarregar(); }} />}
+    </>
+  );
+}
+
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function RoteiroMesa() {
   const { theme: t, podeVerOperadora, isDark } = useApp();
+  const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("roteiro_mesa");
   const dark = isDark ?? false;
 
-  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
+  const [operadorasList,  setOperadorasList]  = useState<{ slug: string; nome: string }[]>([]);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
-  const [filtroJogo, setFiltroJogo] = useState<JogoTag | "todos">("todos");
-  const [filtroTipo, setFiltroTipo] = useState<TipoSugestao | "todos">("todos");
-  const [sugestoes, setSugestoes] = useState<RoteiroSugestao[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalNovoRoteiro, setModalNovoRoteiro] = useState(false);
+  const [filtroJogo,      setFiltroJogo]      = useState<JogoTag | "todos">("todos");
+  const [filtroTipo,      setFiltroTipo]      = useState<TipoSugestao | "todos">("todos");
+  const [sugestoes,       setSugestoes]       = useState<RoteiroSugestao[]>([]);
+  const [campanhas,       setCampanhas]       = useState<RoteiroCampanha[]>([]);
+  const [loading,         setLoading]         = useState(true);
+  const [modalNovo,       setModalNovo]       = useState(false);
 
   const mostrarFiltroOp =
     showFiltroOperadora || (operadoraSlugsForcado != null && operadoraSlugsForcado.length > 1);
@@ -999,36 +680,27 @@ export default function RoteiroMesa() {
           : operadoraSlugsForcado[0]
         : filtroOperadora;
 
-  const carregarSugestoes = useCallback(async () => {
-    if (!operadoraSlugSelecionada) {
-      setSugestoes([]);
-      setLoading(false);
-      return;
-    }
+  const carregarDados = useCallback(async () => {
+    if (!operadoraSlugSelecionada) { setSugestoes([]); setCampanhas([]); setLoading(false); return; }
     setLoading(true);
-    let query = supabase
-      .from("roteiro_mesa_sugestoes")
-      .select("*")
-      .order("bloco")
-      .order("ordem");
-    if (operadoraSlugSelecionada !== "todas") {
-      query = query.eq("operadora_slug", operadoraSlugSelecionada);
-    }
-    const { data } = await query;
-    setSugestoes((data ?? []) as RoteiroSugestao[]);
+
+    let qSug = supabase.from("roteiro_mesa_sugestoes").select("*").order("bloco").order("ordem");
+    if (operadoraSlugSelecionada !== "todas") qSug = qSug.eq("operadora_slug", operadoraSlugSelecionada);
+    const { data: dataSug } = await qSug;
+    setSugestoes((dataSug ?? []) as RoteiroSugestao[]);
+
+    let qCamp = supabase.from("roteiro_mesa_campanhas").select("*").order("ordem");
+    if (operadoraSlugSelecionada !== "todas") qCamp = qCamp.eq("operadora_slug", operadoraSlugSelecionada);
+    const { data: dataCamp } = await qCamp;
+    setCampanhas((dataCamp ?? []) as RoteiroCampanha[]);
+
     setLoading(false);
   }, [operadoraSlugSelecionada]);
 
-  useEffect(() => {
-    carregarSugestoes();
-  }, [carregarSugestoes]);
+  useEffect(() => { carregarDados(); }, [carregarDados]);
 
   useEffect(() => {
-    supabase
-      .from("operadoras")
-      .select("slug, nome")
-      .eq("ativo", true)
-      .order("nome")
+    supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome")
       .then(({ data }) => setOperadorasList(data ?? []));
   }, []);
 
@@ -1051,19 +723,22 @@ export default function RoteiroMesa() {
   const filtrarSugestoes = (lista: RoteiroSugestao[]) =>
     lista.filter((s) => {
       const jogosList = s.jogos ?? ["todos"];
-      const passaJogo =
-        filtroJogo === "todos" || jogosList.includes(filtroJogo) || jogosList.includes("todos");
+      const passaJogo = filtroJogo === "todos" || jogosList.includes(filtroJogo) || jogosList.includes("todos");
       const passaTipo = filtroTipo === "todos" || (s.tipo ?? "script") === filtroTipo;
       return passaJogo && passaTipo;
+    });
+
+  const filtrarCampanhas = (lista: RoteiroCampanha[]) =>
+    lista.filter((c) => {
+      const jogosList = c.jogos ?? ["todos"];
+      return filtroJogo === "todos" || jogosList.includes(filtroJogo) || jogosList.includes("todos");
     });
 
   const sugestoesPorBloco = (bloco: BlocoRoteiro) =>
     filtrarSugestoes(sugestoes.filter((s) => s.bloco === bloco));
 
   const podeAdicionarGlobal =
-    perm.canEditarOk &&
-    !!operadoraSlugSelecionada &&
-    operadoraSlugSelecionada !== "todas";
+    perm.canEditarOk && !!operadoraSlugSelecionada && operadoraSlugSelecionada !== "todas";
 
   const slugParaModal =
     operadoraSlugSelecionada && operadoraSlugSelecionada !== "todas"
@@ -1073,66 +748,38 @@ export default function RoteiroMesa() {
   return (
     <div style={{ padding: "20px 24px 48px" }}>
 
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 28 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 12,
-              background: "linear-gradient(135deg, #e84025 0%, #4a2082 60%, #1e36f8 100%)",
-              border: `1px solid ${BRAND.azulBorder}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              marginTop: 2,
-              boxShadow: dark
-                ? "0 4px 16px rgba(30,54,248,0.2)"
-                : "0 4px 16px rgba(30,54,248,0.12)",
-            }}
-          >
-            <BookOpen size={20} color="#fff" strokeWidth={1.8} />
-          </div>
-          <div>
-            <h1 style={{
-              fontSize: 22,
-              fontWeight: 700,
-              color: t.text,
-              fontFamily: FONT_TITLE,
-              margin: "0 0 4px",
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-            }}>
-              Roteiro de Mesa
-            </h1>
-            <p style={{ color: t.textMuted, margin: 0, fontFamily: FONT.body, fontSize: 13 }}>
-              Scripts, orientações e alertas para cada momento da mesa.
-            </p>
-          </div>
+      {/* ── HEADER — idêntico ao padrão Agenda de Lives ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            width: 32, height: 32, borderRadius: 9,
+            background: brand.primaryIconBg,
+            border: brand.primaryIconBorder,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: brand.primaryIconColor, flexShrink: 0,
+          }}>
+            <GiNotebook size={16} />
+          </span>
+          <h1 style={{
+            fontSize: 18, fontWeight: 800, color: brand.primary,
+            fontFamily: FONT_TITLE, margin: 0,
+            letterSpacing: "0.05em", textTransform: "uppercase",
+          }}>
+            Roteiro de Mesa
+          </h1>
         </div>
 
         {podeAdicionarGlobal && (
           <button
-            onClick={() => setModalNovoRoteiro(true)}
+            onClick={() => setModalNovo(true)}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              padding: "9px 18px",
-              borderRadius: 10,
-              border: "none",
-              background: BRAND.azul,
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 700,
-              fontFamily: FONT.body,
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "10px 20px", borderRadius: 10, border: "none",
               cursor: "pointer",
-              letterSpacing: "0.02em",
-              flexShrink: 0,
-              marginTop: 4,
-              boxShadow: "0 4px 14px rgba(30,54,248,0.35)",
-              transition: "opacity 0.15s, box-shadow 0.15s",
+              background: brand.useBrand
+                ? "var(--brand-accent)"
+                : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
             }}
           >
             <Plus size={14} />
@@ -1141,191 +788,85 @@ export default function RoteiroMesa() {
         )}
       </div>
 
-      <div
-        style={{
-          marginBottom: 24,
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 16,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          padding: "14px 20px",
-          flexWrap: "wrap",
-        }}>
-          <span style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: t.textMuted,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            fontFamily: FONT.body,
-            minWidth: 60,
-          }}>
-            Operadora
-          </span>
+      {/* ── BLOCO DE FILTROS — padrão Agenda de Lives ── */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, padding: "12px 20px" }}>
 
-          {mostrarFiltroOp && opcoesFiltro.length > 0 ? (
-            <select
-              value={filtroOperadora}
-              onChange={(e) => setFiltroOperadora(e.target.value)}
-              style={{
-                padding: "6px 14px",
-                borderRadius: 8,
-                border: `1.5px solid ${filtroOperadora !== "todas" ? BRAND.roxo + "80" : t.cardBorder}`,
-                background:
-                  filtroOperadora !== "todas"
-                    ? BRAND.roxo + "18"
+          {/* Linha 1: Operadora */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 60 }}>
+              Operadora
+            </span>
+            {mostrarFiltroOp && opcoesFiltro.length > 0 ? (
+              <select
+                value={filtroOperadora}
+                onChange={(e) => setFiltroOperadora(e.target.value)}
+                style={{
+                  padding: "6px 14px", borderRadius: 999,
+                  border: `1px solid ${filtroOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                  background: filtroOperadora !== "todas"
+                    ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxo}18`)
                     : (t.inputBg ?? t.cardBg),
-                color: filtroOperadora !== "todas" ? (dark ? "#b08aee" : BRAND.roxo) : t.textMuted,
-                fontSize: 13,
-                fontWeight: 600,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-                outline: "none",
-                appearance: "none",
-                minWidth: 180,
-              }}
-            >
-              {!operadoraSlugsForcado?.length && (
-                <option value="todas">Todas as operadoras</option>
-              )}
-              {[...opcoesFiltro]
-                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                .map((o) => (
-                  <option key={o.slug} value={o.slug}>{o.nome}</option>
-                ))}
-            </select>
-          ) : operadoraSlugsForcado?.length ? (
-            <span style={{ fontSize: 13, color: t.text, fontFamily: FONT.body, fontWeight: 600 }}>
-              {operadorasList.find((o) => o.slug === operadoraSlugSelecionada)?.nome ?? operadoraSlugSelecionada}
-            </span>
-          ) : (
-            <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-              Nenhuma operadora disponível no seu escopo.
-            </span>
-          )}
-        </div>
-
-        <div style={{ height: 1, background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", margin: "0 20px" }} />
-
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          padding: "14px 20px",
-          flexWrap: "wrap",
-        }}>
-          <span style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: t.textMuted,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            fontFamily: FONT.body,
-            minWidth: 60,
-          }}>
-            Jogo
-          </span>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {JOGOS.map(({ key, label }) => {
-              const jcfg = JOGO_TAG_CONFIG[key];
-              return (
-                <FilterChip
-                  key={key}
-                  label={label}
-                  active={filtroJogo === key}
-                  activeColor={jcfg.color(dark)}
-                  activeBg={jcfg.bg}
-                  activeBorder={jcfg.border}
-                  onClick={() => setFiltroJogo(key)}
-                  dark={dark}
-                />
-              );
-            })}
+                  color: filtroOperadora !== "todas" ? brand.accent : t.textMuted,
+                  fontSize: 13, fontWeight: filtroOperadora !== "todas" ? 700 : 400,
+                  fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                }}
+              >
+                {!operadoraSlugsForcado?.length && <option value="todas">Todas as operadoras</option>}
+                {[...opcoesFiltro]
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+              </select>
+            ) : operadoraSlugsForcado?.length ? (
+              <span style={{ fontSize: 13, color: t.text, fontFamily: FONT.body, fontWeight: 600 }}>
+                {operadorasList.find((o) => o.slug === operadoraSlugSelecionada)?.nome ?? operadoraSlugSelecionada}
+              </span>
+            ) : (
+              <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                Nenhuma operadora disponível no seu escopo.
+              </span>
+            )}
           </div>
-        </div>
 
-        <div style={{ height: 1, background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", margin: "0 20px" }} />
+          {/* Divisor */}
+          <div style={{ margin: "12px 0", borderTop: `1px solid ${t.cardBorder}` }} />
 
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          padding: "14px 20px",
-          flexWrap: "wrap",
-        }}>
-          <span style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: t.textMuted,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            fontFamily: FONT.body,
-            minWidth: 60,
-          }}>
-            Tipo
-          </span>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <FilterChip
-              label="Todos"
-              active={filtroTipo === "todos"}
-              activeColor={dark ? "#b08aee" : "#3a1868"}
-              activeBg="rgba(74,32,130,0.15)"
-              activeBorder={BRAND.roxoBorder}
-              onClick={() => setFiltroTipo("todos")}
-              dark={dark}
-            />
-            {TIPOS.map(({ key, label }) => {
-              const cfg = TIPO_CONFIG[key];
-              return (
-                <FilterChip
-                  key={key}
-                  label={label}
-                  active={filtroTipo === key}
-                  activeColor={cfg.tagColor(dark)}
-                  activeBg={cfg.tagBg}
-                  activeBorder={cfg.tagBorder}
-                  onClick={() => setFiltroTipo(key)}
-                  dark={dark}
-                />
-              );
-            })}
+          {/* Linha 2: Jogo + separador + Tipo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 32 }}>Jogo</span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {JOGOS.map(({ key, label }) => {
+                  const jcfg = JOGO_TAG_CONFIG[key];
+                  return (
+                    <FilterChip key={key} label={label} active={filtroJogo === key} activeColor={jcfg.color(dark)} activeBg={jcfg.bg} activeBorder={jcfg.border} onClick={() => setFiltroJogo(key)} dark={dark} />
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ width: 1, height: 24, background: t.cardBorder, flexShrink: 0 }} />
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 26 }}>Tipo</span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <FilterChip label="Todos" active={filtroTipo === "todos"} activeColor={dark ? "#b08aee" : "#3a1868"} activeBg="rgba(74,32,130,0.15)" activeBorder={BRAND.roxoBorder} onClick={() => setFiltroTipo("todos")} dark={dark} />
+                {TIPOS.map(({ key, label }) => {
+                  const cfg = TIPO_CONFIG[key];
+                  return (
+                    <FilterChip key={key} label={label} active={filtroTipo === key} activeColor={cfg.tagColor(dark)} activeBg={cfg.tagBg} activeBorder={cfg.tagBorder} onClick={() => setFiltroTipo(key)} dark={dark} />
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* ── ESTADO: SEM OPERADORA ── */}
       {!operadoraSlugSelecionada && opcoesFiltro.length > 0 && (
-        <div
-          style={{
-            padding: "48px 24px",
-            textAlign: "center",
-            background: t.cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 16,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <div style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
-            background: dark
-              ? "linear-gradient(135deg, rgba(30,54,248,0.15) 0%, rgba(74,32,130,0.15) 100%)"
-              : "linear-gradient(135deg, rgba(30,54,248,0.08) 0%, rgba(74,32,130,0.08) 100%)",
-            border: `1px solid ${BRAND.azulBorder}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
+        <div style={{ padding: "48px 24px", textAlign: "center", background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: dark ? "linear-gradient(135deg,rgba(30,54,248,0.15) 0%,rgba(74,32,130,0.15) 100%)" : "linear-gradient(135deg,rgba(30,54,248,0.07) 0%,rgba(74,32,130,0.07) 100%)", border: `1px solid ${BRAND.azulBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <BookOpen size={22} color={dark ? "#7b95ff" : BRAND.azul} strokeWidth={1.5} />
           </div>
           <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 14, margin: 0 }}>
@@ -1334,39 +875,45 @@ export default function RoteiroMesa() {
         </div>
       )}
 
-      {operadoraSlugSelecionada &&
-        (loading ? (
-          <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
-            Carregando...
-          </div>
+      {/* ── BLOCOS DE CONTEÚDO ── */}
+      {operadoraSlugSelecionada && (
+        loading ? (
+          <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>Carregando...</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {BLOCOS.map(({ key }) => (
               <BlocoSugestoes
-                key={key}
-                bloco={key}
+                key={key} bloco={key}
                 operadoraSlug={operadoraSlugSelecionada}
                 sugestoes={sugestoesPorBloco(key)}
                 podeEditar={perm.canEditarOk}
                 podeAdicionar={perm.canEditarOk && operadoraSlugSelecionada !== "todas"}
-                onCarregar={carregarSugestoes}
+                onCarregar={carregarDados}
                 dark={dark}
                 operadorasList={operadorasList}
               />
             ))}
+            <BlocoCampanhas
+              operadoraSlug={operadoraSlugSelecionada}
+              campanhas={filtrarCampanhas(campanhas)}
+              podeEditar={perm.canEditarOk}
+              podeAdicionar={perm.canEditarOk && operadoraSlugSelecionada !== "todas"}
+              onCarregar={carregarDados}
+              dark={dark}
+              operadorasList={operadorasList}
+            />
           </div>
-        ))}
+        )
+      )}
 
-      {modalNovoRoteiro && (
+      {/* Modal global */}
+      {modalNovo && (
         <ModalNovoRoteiro
           operadoraSlug={slugParaModal}
           operadorasList={opcoesFiltro}
           dark={dark}
-          onClose={() => setModalNovoRoteiro(false)}
-          onSalvo={() => {
-            setModalNovoRoteiro(false);
-            carregarSugestoes();
-          }}
+          onClose={() => setModalNovo(false)}
+          onSalvo={() => { setModalNovo(false); carregarDados(); }}
         />
       )}
     </div>
