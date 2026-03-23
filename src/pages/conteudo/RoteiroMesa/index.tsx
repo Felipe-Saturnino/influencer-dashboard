@@ -6,7 +6,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { Plus, X, Check, BookOpen, Megaphone, Trash2 } from "lucide-react";
+import { Plus, X, Check, BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle } from "lucide-react";
 import { GiNotebook, GiShield } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 
@@ -147,6 +147,12 @@ const TIPO_CONFIG: Record<TipoSugestao, {
     tagBorder:   "rgba(232,64,37,0.30)",
     label:       "Alerta",
   },
+};
+
+const TIPO_ICON: Record<TipoSugestao, typeof FileText> = {
+  script:      FileText,
+  orientacao:  Info,
+  alerta:      AlertTriangle,
 };
 
 // ─── CONFIG VISUAL POR JOGO ───────────────────────────────────────────────────
@@ -394,9 +400,14 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
   const jogosList = sugestao.jogos ?? ["todos"];
   const cfg       = TIPO_CONFIG[tipo];
   const [hover,   setHover] = useState(false);
+  const IconComponent = TIPO_ICON[tipo];
+  const isOrientacao = tipo === "orientacao";
+  const rowBg = isOrientacao
+    ? (dark ? "rgba(150,150,170,0.08)" : "rgba(0,0,0,0.04)")
+    : cfg.bgColor(dark);
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, borderLeft: `3px solid ${cfg.borderColor}`, background: cfg.bgColor(dark), transition: "background 0.15s" }}>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, borderLeft: `3px solid ${cfg.borderColor}`, background: rowBg, transition: "background 0.15s" }}>
       {tipo === "script" && (
         <span style={{ fontSize: 22, color: "rgba(30,54,248,0.3)", flexShrink: 0, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: -2, userSelect: "none" }}>"</span>
       )}
@@ -409,14 +420,19 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
             const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
             return jcfg ? <TagChip key={jogo} label={jogoLabel} bg={jcfg.bg} color={jcfg.color(dark)} border={jcfg.border} /> : null;
           })}
-          <TagChip label={cfg.label} bg={cfg.tagBg} color={cfg.tagColor(dark)} border={cfg.tagBorder} />
         </div>
       </div>
-      {podeExcluir && (
-        <button onClick={() => onExcluir(sugestao)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Excluir sugestão" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
-          <Trash2 size={13} />
-        </button>
-      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <IconComponent size={18} color={cfg.tagColor(dark)} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: cfg.tagColor(dark), textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: FONT.body }}>{cfg.label}</span>
+        </div>
+        {podeExcluir && (
+          <button onClick={() => onExcluir(sugestao)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Excluir sugestão" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+            <Trash2 size={13} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
