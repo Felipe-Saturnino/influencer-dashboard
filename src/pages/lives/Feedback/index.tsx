@@ -5,10 +5,10 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
-import { X, Pencil, Trash2, Calendar, User } from "lucide-react";
+import { X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   GiStarMedal, GiShield, GiPencil,
-  GiChatBubble,
+  GiChatBubble, GiCalendar,
 } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -34,28 +34,43 @@ function PlatLogo({ plataforma, size = 20, isDark }: { plataforma: string; size?
   return <img src={src} alt={plataforma} width={size} height={size} onError={() => setErr(true)} style={{ display: "block", flexShrink: 0 }} />;
 }
 
-// ─── PERÍODO ──────────────────────────────────────────────────────────────────
-type Periodo = "semana" | "mes" | "todos";
+// ─── CARROSSEL DE SEMANAS (a partir de 01/12/2025) ────────────────────────────
+const MESES_ABREV = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
-function getRange(periodo: Periodo): { start: string; end: string } {
-  const now = new Date();
-  const toISO = (d: Date) => d.toISOString().split("T")[0];
-  const end = toISO(now);
-  if (periodo === "semana") {
-    const sun = new Date(now); sun.setDate(now.getDate() - now.getDay());
-    return { start: toISO(sun), end };
+function getSemanasDisponiveis(): { start: Date; end: Date; label: string }[] {
+  const lista: { start: Date; end: Date; label: string }[] = [];
+  const inicioRef = new Date(2025, 10, 30); // domingo 30/11/2025 (semana com 01/12)
+  const hoje = new Date();
+  let dom = new Date(inicioRef);
+  while (dom <= hoje) {
+    const sab = new Date(dom);
+    sab.setDate(dom.getDate() + 6);
+    const label = `${dom.getDate()} ${MESES_ABREV[dom.getMonth()]} – ${sab.getDate()} ${MESES_ABREV[sab.getMonth()]} ${sab.getFullYear()}`;
+    lista.push({ start: new Date(dom), end: sab, label });
+    dom.setDate(dom.getDate() + 7);
   }
-  if (periodo === "mes") {
-    return { start: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`, end };
-  }
-  return { start: "2000-01-01", end };
+  return lista;
 }
 
-const PERIODOS: { value: Periodo; label: string }[] = [
-  { value: "semana", label: "Semana" },
-  { value: "mes",    label: "Mês"    },
-  { value: "todos",  label: "Tudo"   },
-];
+function getRangeSemana(semana: { start: Date; end: Date } | null, historico: boolean): { start: string; end: string } {
+  const toISO = (d: Date) => d.toISOString().split("T")[0];
+  const now = new Date();
+  if (historico) return { start: "2000-01-01", end: toISO(now) };
+  if (!semana) return { start: toISO(now), end: toISO(now) };
+  return { start: toISO(semana.start), end: toISO(semana.end) };
+}
+
+// ─── STATUS (padrão Agenda: legenda + cores) ───────────────────────────────────
+const STATUS_COLOR: Record<string, string> = {
+  realizada:     BRAND.verde,
+  nao_realizada: BRAND.vermelho,
+  todos:         BRAND.ciano,
+};
+const STATUS_LABEL: Record<string, string> = {
+  realizada:     "Realizada",
+  nao_realizada: "Não Realizada",
+  todos:         "Todos",
+};
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function fmtData(iso: string): string {
@@ -176,8 +191,14 @@ export default function Feedback() {
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("feedback");
 
-  const [periodo,           setPeriodo]           = useState<Periodo>("semana");
-  const [statusFiltro,      setStatusFiltro]      = useState<LiveStatus | "todos">("todos");
+  const semanasDisponiveis = useMemo(() => getSemanasDisponiveis(), []);
+  const hoje = new Date();
+  const idxInicial = semanasDisponiveis.findIndex(
+    (s) => s.start <= hoje && s.end >= hoje
+  );
+  const [idxSemana,   setIdxSemana]   = useState(idxInicial >= 0 ? idxInicial : semanasDisponiveis.length - 1);
+  const [historico,   setHistorico]   = useState(false);
+  const [statusFiltro, setStatusFiltro] = useState<LiveStatus | "todos">("todos");
   const [influencerFiltros, setInfluencerFiltros] = useState<string[]>([]);
   const [filterOperadora,   setFilterOperadora]   = useState<string>("todas");
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
@@ -190,9 +211,11 @@ export default function Feedback() {
   const [livesAll,          setLivesAll]          = useState<LiveComObs[]>([]);
   const [resultadosAll,     setResultadosAll]     = useState<Record<string, LiveResultado>>({});
 
+  const semanaSelecionada = semanasDisponiveis[idxSemana];
+
   async function loadData() {
     setLoading(true);
-    const { start, end } = getRange(periodo);
+    const { start, end } = getRangeSemana(semanaSelecionada ?? null, historico);
 
     let baseQuery = supabase
       .from("lives")
@@ -240,7 +263,7 @@ export default function Feedback() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [periodo, statusFiltro, influencerFiltros, podeVerInfluencer, operadoraSlugsForcado]);
+  useEffect(() => { loadData(); }, [idxSemana, historico, semanaSelecionada, statusFiltro, influencerFiltros, podeVerInfluencer, operadoraSlugsForcado]);
 
   useEffect(() => {
     supabase.from("operadoras").select("slug, nome").order("nome")
@@ -286,15 +309,14 @@ export default function Feedback() {
   }
 
   // ── Estilos (padrão Agenda) ───────────────────────────────────────────────
-  const filterBtn = (active: boolean, color: string = BRAND.roxoVivo): React.CSSProperties => ({
-    padding: "6px 14px", borderRadius: 999, fontSize: 13,
-    cursor: "pointer", border: `1px solid ${active ? color : t.cardBorder}`,
-    background: active ? `${color}22` : "transparent",
-    color: active ? color : t.textMuted,
-    fontFamily: FONT.body, fontWeight: active ? 700 : 400,
-    transition: "all 0.15s",
-    display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const,
-  });
+  const btnNav: React.CSSProperties = {
+    width: 30, height: 30, borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent", color: t.text, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  };
+  const isPrimeiro = idxSemana === 0;
+  const isUltimo = idxSemana === semanasDisponiveis.length - 1;
 
   const statBox = (color: string): React.CSSProperties => ({
     flex: 1, textAlign: "center" as const, padding: "10px 8px",
@@ -465,64 +487,116 @@ export default function Feedback() {
         </div>
       </div>
 
-      {/* ── BLOCO DE FILTROS (padrão Agenda) — acima dos cards ── */}
+      {/* ── BLOCO DE FILTROS (carrossel de semanas + Histórico + Status padrão Agenda) ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
           background: t.cardBg,
           padding: "12px 20px",
         }}>
-          {/* Linha 1: Período e Status */}
+          {/* Linha 1: Carrossel de semanas e Histórico */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            {PERIODOS.map(p => (
-              <button key={p.value} onClick={() => setPeriodo(p.value)} style={filterBtn(periodo === p.value)}>
-                {p.label}
-              </button>
-            ))}
-            <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", BRAND.verde)}>
-              Realizada
+            <button
+              style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              onClick={() => { setHistorico(false); setIdxSemana((i) => Math.max(0, i - 1)); }}
+              disabled={historico || isPrimeiro}
+            >
+              <ChevronLeft size={14} />
             </button>
-            <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", BRAND.vermelho)}>
-              Não Realizada
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 200, textAlign: "center" }}>
+              {historico ? "Todo o período" : semanaSelecionada?.label}
+            </span>
+            <button
+              style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              onClick={() => { setHistorico(false); setIdxSemana((i) => Math.min(semanasDisponiveis.length - 1, i + 1)); }}
+              disabled={historico || isUltimo}
+            >
+              <ChevronRight size={14} />
             </button>
-            <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", BRAND.ciano)}>
-              Todos
+            <button
+              onClick={() => {
+                if (historico) {
+                  setHistorico(false);
+                  setIdxSemana(idxInicial >= 0 ? idxInicial : semanasDisponiveis.length - 1);
+                } else {
+                  setHistorico(true);
+                }
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+                fontFamily: FONT.body, fontSize: 13,
+                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
+                background: historico ? `${BRAND.roxoVivo}18` : "transparent",
+                color: historico ? BRAND.roxoVivo : t.textMuted,
+                fontWeight: historico ? 700 : 400,
+                transition: "all 0.15s",
+              }}
+            >
+              <GiCalendar size={15} /> Histórico
             </button>
           </div>
 
-          {/* Linha 2: Influencer e Operadoras */}
-          {(showFiltroInfluencer && influencers.length > 0) || (showFiltroOperadora && operadorasList.length > 0) ? (
-            <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-              {showFiltroInfluencer && influencers.length > 0 && (
-                <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} />
-              )}
-              {showFiltroOperadora && operadorasList.length > 0 && (
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                    <GiShield size={13} />
-                  </span>
-                  <select
-                    value={filterOperadora}
-                    onChange={(e) => setFilterOperadora(e.target.value)}
+          {/* Linha 2: Status (padrão Agenda — legenda + cores) + Influencer + Operadoras */}
+          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", justifyContent: "center" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</span>
+              {(["realizada", "nao_realizada", "todos"] as const).map((status) => {
+                const active = statusFiltro === status;
+                const color = STATUS_COLOR[status];
+                return (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFiltro(status)}
                     style={{
-                      padding: "6px 14px 6px 30px", borderRadius: 999,
-                      border: `1px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                      background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
-                      color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
-                      fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                      fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : "transparent",
+                      color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
+                      fontFamily: FONT.body, transition: "all 0.15s",
                     }}
                   >
-                    <option value="todas">Todas as operadoras</option>
-                    {operadorasList
-                      .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
-                      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                      .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-                  </select>
-                </div>
-              )}
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    {STATUS_LABEL[status]}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
             </div>
-          ) : null}
+            {(showFiltroInfluencer && influencers.length > 0) || (showFiltroOperadora && operadorasList.length > 0) ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+                {showFiltroInfluencer && influencers.length > 0 && (
+                  <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} />
+                )}
+                {showFiltroOperadora && operadorasList.length > 0 && (
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                      <GiShield size={13} />
+                    </span>
+                    <select
+                      value={filterOperadora}
+                      onChange={(e) => setFilterOperadora(e.target.value)}
+                      style={{
+                        padding: "6px 14px 6px 30px", borderRadius: 999,
+                        border: `1px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
+                        background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
+                        color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                        fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                        fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                      }}
+                    >
+                      <option value="todas">Todas as operadoras</option>
+                      {operadorasList
+                        .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                        .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
