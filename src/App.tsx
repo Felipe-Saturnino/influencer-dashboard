@@ -1,6 +1,7 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
+import ErrorBoundary from "./components/ErrorBoundary";
 // Layout (sempre carregados — usados em toda sessão)
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
@@ -8,33 +9,53 @@ import Header  from "./components/Header";
 import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
 
+// Helper: retry automático em falhas de carregamento de chunk (ex.: rede instável)
+function lazyWithRetry<T extends ComponentType>(
+  importFn: () => Promise<{ default: T }>,
+  retries = 2,
+  delay = 1000,
+) {
+  return lazy(async () => {
+    let lastErr: unknown;
+    for (let i = 0; i <= retries; i++) {
+      try {
+        return await importFn();
+      } catch (e) {
+        lastErr = e;
+        if (i < retries) await new Promise((r) => setTimeout(r, delay * (i + 1)));
+      }
+    }
+    throw lastErr;
+  });
+}
+
 // Páginas do layout — lazy loading (carregadas sob demanda para reduzir bundle inicial)
-const Home                   = lazy(() => import("./pages/geral/Home"));
-const Configuracoes          = lazy(() => import("./pages/geral/Configuracoes"));
-const Ajuda                  = lazy(() => import("./pages/geral/Ajuda"));
-const DashboardOverview          = lazy(() => import("./pages/dashboards/DashboardOverview"));
-const DashboardOverviewInfluencer = lazy(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
-const DashboardConversao         = lazy(() => import("./pages/dashboards/DashboardConversao"));
-const DashboardFinanceiro        = lazy(() => import("./pages/dashboards/DashboardFinanceiro"));
-const MesasSpin                 = lazy(() => import("./pages/dashboards/MesasSpin"));
-const SocialMediaDashboard      = lazy(() => import("./pages/dashboards/SocialMediaDashboard"));
-const Agenda     = lazy(() => import("./pages/lives/Agenda"));
-const Resultados = lazy(() => import("./pages/lives/Resultados"));
-const Feedback   = lazy(() => import("./pages/lives/Feedback"));
-const Influencers = lazy(() => import("./pages/operacoes/Influencers"));
-const Scout = lazy(() => import("./pages/operacoes/Scout"));
-const Financeiro  = lazy(() => import("./pages/operacoes/Financeiro"));
-const GestaoLinks = lazy(() => import("./pages/operacoes/GestaoLinks"));
-const Campanhas = lazy(() => import("./pages/operacoes/Campanhas"));
-const GestaoDealers = lazy(() => import("./pages/operacoes/GestaoDealers"));
-const CastingDealers = lazy(() => import("./pages/operacoes/CastingDealers"));
-const RoteiroMesa = lazy(() => import("./pages/conteudo/RoteiroMesa"));
-const GestaoUsuarios = lazy(() => import("./pages/plataforma/GestaoUsuarios"));
-const GestaoOperadoras = lazy(() => import("./pages/plataforma/GestaoOperadoras"));
-const StatusTecnico = lazy(() => import("./pages/plataforma/StatusTecnico"));
+const Home                   = lazyWithRetry(() => import("./pages/geral/Home"));
+const Configuracoes          = lazyWithRetry(() => import("./pages/geral/Configuracoes"));
+const Ajuda                  = lazyWithRetry(() => import("./pages/geral/Ajuda"));
+const DashboardOverview          = lazyWithRetry(() => import("./pages/dashboards/DashboardOverview"));
+const DashboardOverviewInfluencer = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
+const DashboardConversao         = lazyWithRetry(() => import("./pages/dashboards/DashboardConversao"));
+const DashboardFinanceiro        = lazyWithRetry(() => import("./pages/dashboards/DashboardFinanceiro"));
+const MesasSpin                 = lazyWithRetry(() => import("./pages/dashboards/MesasSpin"));
+const SocialMediaDashboard      = lazyWithRetry(() => import("./pages/dashboards/SocialMediaDashboard"));
+const Agenda     = lazyWithRetry(() => import("./pages/lives/Agenda"));
+const Resultados = lazyWithRetry(() => import("./pages/lives/Resultados"));
+const Feedback   = lazyWithRetry(() => import("./pages/lives/Feedback"));
+const Influencers = lazyWithRetry(() => import("./pages/operacoes/Influencers"));
+const Scout = lazyWithRetry(() => import("./pages/operacoes/Scout"));
+const Financeiro  = lazyWithRetry(() => import("./pages/operacoes/Financeiro"));
+const GestaoLinks = lazyWithRetry(() => import("./pages/operacoes/GestaoLinks"));
+const Campanhas = lazyWithRetry(() => import("./pages/operacoes/Campanhas"));
+const GestaoDealers = lazyWithRetry(() => import("./pages/operacoes/GestaoDealers"));
+const CastingDealers = lazyWithRetry(() => import("./pages/operacoes/CastingDealers"));
+const RoteiroMesa = lazyWithRetry(() => import("./pages/conteudo/RoteiroMesa"));
+const GestaoUsuarios = lazyWithRetry(() => import("./pages/plataforma/GestaoUsuarios"));
+const GestaoOperadoras = lazyWithRetry(() => import("./pages/plataforma/GestaoOperadoras"));
+const StatusTecnico = lazyWithRetry(() => import("./pages/plataforma/StatusTecnico"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
-const PAGE_MAP: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
+const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   home:                     Home,
   dash_overview:             DashboardOverview,
   dash_overview_influencer:  DashboardOverviewInfluencer,
@@ -60,10 +81,10 @@ const PAGE_MAP: Record<string, React.LazyExoticComponent<React.ComponentType>> =
   ajuda:            Ajuda,
 };
 
-const PageLoadingFallback = () => (
+const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }) => (
   <div style={{
     flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-    background: "inherit", minHeight: 200,
+    background, minHeight: 200,
     color: "#e5dce1", fontSize: 14, fontFamily: "Inter, sans-serif",
   }}>
     ⏳ Carregando...
@@ -73,6 +94,7 @@ const PageLoadingFallback = () => (
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
 function AppLayout({ onLogout }: { onLogout: () => void }) {
   const { user, theme: t, activePage, setActivePage } = useApp();
+  const [retryKey, setRetryKey] = useState(0);
   if (!user) return null;
   const PageComponent = PAGE_MAP[activePage] ?? Home;
   return (
@@ -80,10 +102,12 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
       <Sidebar activePage={activePage} onNavigate={setActivePage} />
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginLeft: "240px", minHeight: "100vh" }}>
         <Header activePage={activePage} onNavigate={setActivePage} onLogout={onLogout} />
-        <div className="main-content" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-          <Suspense fallback={<PageLoadingFallback />}>
-            <PageComponent />
-          </Suspense>
+        <div className="main-content" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", background: t.bg }}>
+          <ErrorBoundary background={t.bg} onReset={() => setRetryKey((k) => k + 1)}>
+            <Suspense fallback={<PageLoadingFallback background={t.bg} />}>
+              <PageComponent key={`${activePage}-${retryKey}`} />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </main>
     </div>
