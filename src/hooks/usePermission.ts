@@ -76,11 +76,7 @@ export function usePermission(pageKey: PageKey): Permissoes {
       return;
     }
 
-    if (CACHE[cacheKey]) {
-      setPerm(CACHE[cacheKey]);
-      return;
-    }
-
+    // Sempre busca do DB para refletir o que está em Gestão de Usuários (sem cache persistente)
     supabase
       .from("role_permissions")
       .select("can_view, can_criar, can_editar, can_excluir")

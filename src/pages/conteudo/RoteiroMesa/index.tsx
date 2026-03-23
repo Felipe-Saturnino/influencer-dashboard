@@ -783,7 +783,7 @@ export default function RoteiroMesa() {
               operadoraSlug={operadoraSlugSelecionada}
               campanhas={filtrarCampanhas(campanhas)}
               podeExcluir={perm.canExcluirOk}
-              podeAdicionar={perm.canEditarOk && operadoraSlugSelecionada !== "todas"}
+              podeAdicionar={(perm.canCriarOk || perm.canEditarOk) && operadoraSlugSelecionada !== "todas"}
               onCarregar={carregarDados}
               dark={dark}
               operadorasList={operadorasList}
@@ -794,7 +794,7 @@ export default function RoteiroMesa() {
                 operadoraSlug={operadoraSlugSelecionada}
                 sugestoes={sugestoesPorBloco(key)}
                 podeExcluir={perm.canExcluirOk}
-                podeAdicionar={perm.canEditarOk && operadoraSlugSelecionada !== "todas"}
+                podeAdicionar={(perm.canCriarOk || perm.canEditarOk) && operadoraSlugSelecionada !== "todas"}
                 onCarregar={carregarDados}
                 dark={dark}
                 operadorasList={operadorasList}
