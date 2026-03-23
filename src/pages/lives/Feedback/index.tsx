@@ -520,65 +520,63 @@ export default function Feedback() {
         </div>
       )}
 
-      {/* ── FILTROS ── */}
-      <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, marginBottom: 10, alignItems: "center" }}>
-        {/* Período */}
-        {PERIODOS.map(p => (
-          <button key={p.value} onClick={() => setPeriodo(p.value)} style={filterBtn(periodo === p.value)}>
-            {p.label}
+      {/* ── FILTROS ──
+          Linha 1: Período / Status
+          Linha 2: Influencer / Operadoras */}
+      <div style={{ marginBottom: 24 }}>
+        {/* Linha 1: Período e Status */}
+        <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
+          {PERIODOS.map(p => (
+            <button key={p.value} onClick={() => setPeriodo(p.value)} style={filterBtn(periodo === p.value)}>
+              {p.label}
+            </button>
+          ))}
+          <div style={{ width: 1.5, alignSelf: "stretch", minHeight: 28, background: t.cardBorder, borderRadius: 2, margin: "0 4px", flexShrink: 0 }} />
+          <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", BRAND.verde)}>
+            Realizada
           </button>
-        ))}
-
-        <div style={{ width: 1.5, alignSelf: "stretch", minHeight: 28, background: t.cardBorder, borderRadius: 2, margin: "0 4px", flexShrink: 0 }} />
-
-        {/* Status */}
-        <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", BRAND.verde)}>
-          Realizada
-        </button>
-        <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", BRAND.vermelho)}>
-          Não Realizada
-        </button>
-        <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", BRAND.ciano)}>
-          Todos
-        </button>
-
-        {/* Operadora */}
-        {showFiltroOperadora && operadorasList.length > 0 && (
-          <>
-            <div style={{ width: 1.5, alignSelf: "stretch", minHeight: 28, background: t.cardBorder, borderRadius: 2, margin: "0 4px", flexShrink: 0 }} />
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                <GiShield size={13} />
-              </span>
-              <select
-                value={filterOperadora}
-                onChange={(e) => setFilterOperadora(e.target.value)}
-                style={{
-                  padding: "7px 14px 7px 30px", borderRadius: 20,
-                  border: `1.5px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg),
-                  color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
-                  fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                  cursor: "pointer", outline: "none", appearance: "none",
-                }}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList
-                  .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-              </select>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Dropdown influencer */}
-      {showFiltroInfluencer && influencers.length > 0 && (
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-          <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} />
+          <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", BRAND.vermelho)}>
+            Não Realizada
+          </button>
+          <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", BRAND.ciano)}>
+            Todos
+          </button>
         </div>
-      )}
+
+        {/* Linha 2: Influencer e Operadoras */}
+        {(showFiltroInfluencer && influencers.length > 0) || (showFiltroOperadora && operadorasList.length > 0) ? (
+          <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+            {showFiltroInfluencer && influencers.length > 0 && (
+              <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} />
+            )}
+            {showFiltroOperadora && operadorasList.length > 0 && (
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                  <GiShield size={13} />
+                </span>
+                <select
+                  value={filterOperadora}
+                  onChange={(e) => setFilterOperadora(e.target.value)}
+                  style={{
+                    padding: "7px 14px 7px 30px", borderRadius: 20,
+                    border: `1.5px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
+                    background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg),
+                    color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                    fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
+                    cursor: "pointer", outline: "none", appearance: "none",
+                  }}
+                >
+                  <option value="todas">Todas as operadoras</option>
+                  {operadorasList
+                    .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </div>
 
       {/* Contador */}
       {!loading && livesFiltered.length > 0 && (
