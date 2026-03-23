@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -82,10 +83,11 @@ function fmtData(iso: string): string {
 // ─── DROPDOWN INFLUENCER ──────────────────────────────────────────────────────
 interface DropdownItem { id: string; name: string; }
 
-function InfluencerDropdown({ items, selected, onChange }: {
-  items: DropdownItem[]; selected: string[]; onChange: (next: string[]) => void;
+function InfluencerDropdown({ items, selected, onChange, accent }: {
+  items: DropdownItem[]; selected: string[]; onChange: (next: string[]) => void; accent?: string;
 }) {
   const { theme: t, isDark } = useApp();
+  const accentColor = accent ?? BRAND.azul;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -114,9 +116,9 @@ function InfluencerDropdown({ items, selected, onChange }: {
         onClick={() => setOpen(o => !o)}
         style={{
           width: "100%", padding: "7px 14px", borderRadius: 999,
-          border: `1px solid ${isActive ? BRAND.azul : t.cardBorder}`,
-          background: isActive ? `${BRAND.azul}18` : (t.inputBg ?? t.cardBg),
-          color: isActive ? BRAND.azul : t.textMuted,
+          border: `1px solid ${isActive ? accentColor : t.cardBorder}`,
+          background: isActive ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}18`) : (t.inputBg ?? t.cardBg),
+          color: isActive ? accentColor : t.textMuted,
           fontSize: 13, fontWeight: isActive ? 700 : 400, cursor: "pointer", fontFamily: FONT.body,
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
           transition: "all 0.15s",
@@ -155,13 +157,13 @@ function InfluencerDropdown({ items, selected, onChange }: {
                 <div key={inf.id} onClick={() => toggle(inf.id)} style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "8px 14px", cursor: "pointer",
-                  background: ativo ? `${BRAND.azul}18` : "transparent",
+                  background: ativo ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}18`) : "transparent",
                   transition: "background 0.1s",
                 }}>
                   <div style={{
                     width: 16, height: 16, borderRadius: 5, flexShrink: 0,
-                    border: `2px solid ${ativo ? BRAND.azul : t.cardBorder}`,
-                    background: ativo ? BRAND.azul : "transparent",
+                    border: `2px solid ${ativo ? accentColor : t.cardBorder}`,
+                    background: ativo ? accentColor : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     transition: "all 0.15s",
                   }}>
@@ -188,6 +190,7 @@ interface LiveComObs extends Omit<Live, "observacao"> {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Feedback() {
   const { theme: t, isDark } = useApp();
+  const brand = useDashboardBrand();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("feedback");
 
@@ -337,7 +340,7 @@ export default function Feedback() {
 
     return (
       <div style={{
-        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+        background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
         borderRadius: 16, padding: 20, marginBottom: 10,
         borderLeft: `6px solid ${statusColor}`,
       }}>
@@ -466,19 +469,19 @@ export default function Feedback() {
   return (
     <div style={{ padding: "20px 24px 48px" }}>
 
-      {/* ── HEADER — padrão NHD Bold + ícone container ── */}
+      {/* ── HEADER — cor primária ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
         <span style={{
           width: 32, height: 32, borderRadius: 9,
-          background: "rgba(74,32,130,0.18)",
-          border: "1px solid rgba(74,32,130,0.30)",
+          background: brand.primaryIconBg,
+          border: brand.primaryIconBorder,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: BRAND.ciano, flexShrink: 0,
+          color: brand.primaryIconColor, flexShrink: 0,
         }}>
           <GiChatBubble size={16} />
         </span>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Feedback de Lives
           </h1>
           <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
@@ -491,7 +494,7 @@ export default function Feedback() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           {/* Linha 1: Carrossel de semanas e Histórico */}
@@ -526,9 +529,9 @@ export default function Feedback() {
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
-                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-                background: historico ? `${BRAND.roxoVivo}18` : "transparent",
-                color: historico ? BRAND.roxoVivo : t.textMuted,
+                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+                background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
+                color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
@@ -567,7 +570,7 @@ export default function Feedback() {
             {(showFiltroInfluencer && influencers.length > 0) || (showFiltroOperadora && operadorasList.length > 0) ? (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
                 {showFiltroInfluencer && influencers.length > 0 && (
-                  <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} />
+                  <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} accent={brand.accent} />
                 )}
                 {showFiltroOperadora && operadorasList.length > 0 && (
                   <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -579,9 +582,9 @@ export default function Feedback() {
                       onChange={(e) => setFilterOperadora(e.target.value)}
                       style={{
                         padding: "6px 14px 6px 30px", borderRadius: 999,
-                        border: `1px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                        background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
-                        color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                        border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                        background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
+                        color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
                         fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
                         fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
                       }}
@@ -604,7 +607,7 @@ export default function Feedback() {
       {!loading && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
           {/* Total de lives */}
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
             <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>
               {totalLives}
             </div>
@@ -623,9 +626,9 @@ export default function Feedback() {
             </div>
           </div>
 
-          {/* Horas realizadas */}
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
-            <div style={{ fontSize: 28, fontWeight: 900, color: BRAND.roxoVivo, fontFamily: FONT_TITLE, lineHeight: 1 }}>
+          {/* Horas realizadas — accent */}
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
+            <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>
               {horasInt}h{minutosRest > 0 ? ` ${minutosRest}m` : ""}
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 4 }}>
@@ -638,9 +641,9 @@ export default function Feedback() {
             </div>
           </div>
 
-          {/* Média de views */}
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
-            <div style={{ fontSize: 28, fontWeight: 900, color: BRAND.azul, fontFamily: FONT_TITLE, lineHeight: 1 }}>
+          {/* Média de views — accent */}
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
+            <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>
               {mediaViews > 0 ? mediaViews.toLocaleString("pt-BR") : "—"}
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 4 }}>
@@ -660,7 +663,7 @@ export default function Feedback() {
         <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
           {livesFiltered.length} live(s) encontrada(s)
           {influencerFiltros.length > 0 && (
-            <span style={{ marginLeft: 8, color: BRAND.azul, fontWeight: 600 }}>
+            <span style={{ marginLeft: 8, color: brand.accent, fontWeight: 600 }}>
               · {influencerFiltros.length} influencer(s) selecionado(s)
             </span>
           )}
@@ -671,7 +674,7 @@ export default function Feedback() {
       {loading ? (
         <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
       ) : livesFiltered.length === 0 ? (
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
           Nenhuma live encontrada para o período selecionado.
         </div>
       ) : (
@@ -686,6 +689,7 @@ export default function Feedback() {
           operadorasList={operadorasList}
           t={t}
           isDark={isDark ?? false}
+          brand={brand}
           onClose={() => setEditando(null)}
           onSalvo={() => { setEditando(null); loadData(); }}
         />
@@ -695,10 +699,11 @@ export default function Feedback() {
 }
 
 // ─── MODAL EDITAR FEEDBACK ────────────────────────────────────────────────────
-function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSalvo }: {
+function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, brand, onClose, onSalvo }: {
   live: LiveComObs; res?: LiveResultado;
   operadorasList: { slug: string; nome: string }[];
   t: ReturnType<typeof useApp>["theme"]; isDark: boolean;
+  brand: ReturnType<typeof useDashboardBrand>;
   onClose: () => void; onSalvo: () => void;
 }) {
   const [observacao,   setObservacao]   = useState(live.observacao ?? "");
@@ -762,19 +767,19 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSa
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
+      <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
 
-        {/* Cabeçalho */}
+        {/* Cabeçalho — primária */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{
               width: 28, height: 28, borderRadius: 8,
-              background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
-              display: "flex", alignItems: "center", justifyContent: "center", color: BRAND.ciano,
+              background: brand.primaryIconBg, border: brand.primaryIconBorder,
+              display: "flex", alignItems: "center", justifyContent: "center", color: brand.primaryIconColor,
             }}>
               <GiPencil size={13} />
             </span>
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Editar Feedback
             </h2>
           </div>
@@ -872,7 +877,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSa
           </button>
           <button onClick={handleSave} disabled={saving} style={{
             padding: "10px 20px", borderRadius: 10, border: "none",
-            background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+            background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
             color: "#fff", cursor: saving ? "not-allowed" : "pointer",
             fontFamily: FONT.body, fontSize: 13, fontWeight: 600, opacity: saving ? 0.7 : 1,
           }}>

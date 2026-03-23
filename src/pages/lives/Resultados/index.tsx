@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -56,6 +57,7 @@ function fmtData(iso: string): string {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Resultados() {
   const { theme: t, isDark } = useApp();
+  const brand = useDashboardBrand();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("resultados");
 
@@ -142,7 +144,7 @@ export default function Resultados() {
 
     return (
       <div style={{
-        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+        background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
         borderRadius: 16, padding: 20, marginBottom: 12,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
@@ -197,7 +199,7 @@ export default function Resultados() {
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "8px 16px", borderRadius: 10, border: "none",
                 cursor: "pointer",
-                background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                 color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
               }}
             >
@@ -279,14 +281,14 @@ export default function Resultados() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{
                 width: 28, height: 28, borderRadius: 8,
-                background: "rgba(74,32,130,0.18)",
-                border: "1px solid rgba(74,32,130,0.30)",
+                background: brand.primaryIconBg,
+                border: brand.primaryIconBorder,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: BRAND.ciano,
+                color: brand.primaryIconColor,
               }}>
                 <GiCheckMark size={13} />
               </span>
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
                 Validar Live
               </h2>
             </div>
@@ -414,7 +416,7 @@ export default function Resultados() {
               width: "100%", padding: 13, borderRadius: 10, border: "none",
               cursor: saving ? "not-allowed" : "pointer",
               opacity: saving ? 0.7 : 1,
-              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             }}
@@ -439,19 +441,19 @@ export default function Resultados() {
   return (
     <div style={{ padding: "20px 24px 48px" }}>
 
-      {/* ── HEADER — padrão NHD Bold + ícone container ── */}
+      {/* ── HEADER — cor primária ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
         <span style={{
           width: 32, height: 32, borderRadius: 9,
-          background: "rgba(74,32,130,0.18)",
-          border: "1px solid rgba(74,32,130,0.30)",
+          background: brand.primaryIconBg,
+          border: brand.primaryIconBorder,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: BRAND.ciano, flexShrink: 0,
+          color: brand.primaryIconColor, flexShrink: 0,
         }}>
           <GiNotebook size={16} />
         </span>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Resultado de Lives
           </h1>
           <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
@@ -465,7 +467,7 @@ export default function Resultados() {
         <div style={{ marginBottom: 14 }}>
           <div style={{
             borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-            background: t.cardBg,
+            background: brand.blockBg,
             padding: "12px 20px",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
@@ -487,9 +489,9 @@ export default function Resultados() {
                     onChange={(e) => setFilterOperadora(e.target.value)}
                     style={{
                       padding: "6px 14px 6px 30px", borderRadius: 999,
-                      border: `1px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                      background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
-                      color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                      border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                      background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
+                      color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
                       fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
                       fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
                     }}
@@ -514,7 +516,7 @@ export default function Resultados() {
         </div>
       ) : livesFiltered.length === 0 ? (
         <div style={{
-          background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
           borderRadius: 16, padding: 48,
           textAlign: "center", color: t.textMuted, fontFamily: FONT.body,
         }}>

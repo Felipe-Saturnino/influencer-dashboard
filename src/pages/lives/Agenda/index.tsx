@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -94,9 +95,10 @@ interface SingleDropdownProps {
   t: any;
 }
 
-function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownProps) {
+function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDropdownProps & { accent?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const accentColor = accent ?? BRAND.roxoVivo;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -114,9 +116,9 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
         onClick={() => setOpen(!open)}
         style={{
           padding: "6px 14px", borderRadius: 999,
-          border: `1px solid ${BRAND.roxoVivo}`,
-          background: `${BRAND.roxoVivo}22`,
-          color: BRAND.roxoVivo,
+          border: `1px solid ${accentColor}`,
+          background: accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}22`,
+          color: accentColor,
           fontSize: 13, fontWeight: 600, fontFamily: FONT.body,
           cursor: "pointer", outline: "none",
           display: "flex", alignItems: "center", gap: 6,
@@ -144,8 +146,8 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
                 style={{
                   width: "100%", padding: "8px 12px", borderRadius: 8,
                   border: "none",
-                  background: selected ? `${BRAND.roxoVivo}22` : "transparent",
-                  color: selected ? BRAND.roxoVivo : t.text,
+                  background: selected ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}22`) : "transparent",
+                  color: selected ? accentColor : t.text,
                   fontSize: 12, fontFamily: FONT.body,
                   cursor: "pointer", textAlign: "left",
                   display: "flex", alignItems: "center", gap: 8,
@@ -154,8 +156,8 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
               >
                 <span style={{
                   width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-                  border: `1.5px solid ${selected ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: selected ? BRAND.roxoVivo : "transparent",
+                  border: `1.5px solid ${selected ? accentColor : t.cardBorder}`,
+                  background: selected ? accentColor : "transparent",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 8, color: "#fff",
                 }}>
@@ -174,6 +176,7 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
   const { theme: t, isDark } = useApp();
+  const brand = useDashboardBrand();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("agenda");
 
@@ -285,7 +288,7 @@ export default function Agenda() {
   }
 
   const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20,
+    background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20,
   };
 
   const btnNav: React.CSSProperties = {
@@ -362,7 +365,7 @@ export default function Agenda() {
                     {date.getDate()}
                   </span>
                   {dayLives.length > 0 && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: BRAND.azul, borderRadius: 10, padding: "1px 6px", fontFamily: FONT.body }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 10, padding: "1px 6px", fontFamily: FONT.body }}>
                       {dayLives.length}
                     </span>
                   )}
@@ -395,7 +398,7 @@ export default function Agenda() {
                   {date.getDate()}
                 </div>
                 {dayLives.length > 0 && (
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: BRAND.azul, borderRadius: 10, padding: "1px 8px", display: "inline-block", fontFamily: FONT.body, marginTop: 2 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 10, padding: "1px 8px", display: "inline-block", fontFamily: FONT.body, marginTop: 2 }}>
                     {dayLives.length} live{dayLives.length > 1 ? "s" : ""}
                   </div>
                 )}
@@ -427,7 +430,7 @@ export default function Agenda() {
             {DAYS[current.getDay()]}
           </span>
           {dayLives.length > 0 && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: BRAND.azul, borderRadius: 12, padding: "2px 10px", marginLeft: 10, fontFamily: FONT.body }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 12, padding: "2px 10px", marginLeft: 10, fontFamily: FONT.body }}>
               {dayLives.length} live{dayLives.length > 1 ? "s" : ""}
             </span>
           )}
@@ -529,19 +532,19 @@ export default function Agenda() {
 
       {/* ── HEADER ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        {/* Título — padrão NHD Bold + ícone container */}
+        {/* Título — cor primária */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{
             width: 32, height: 32, borderRadius: 9,
-            background: "rgba(74,32,130,0.18)",
-            border: "1px solid rgba(74,32,130,0.30)",
+            background: brand.primaryIconBg,
+            border: brand.primaryIconBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: BRAND.ciano, flexShrink: 0,
+            color: brand.primaryIconColor, flexShrink: 0,
           }}>
             <GiFilmProjector size={16} />
           </span>
           <h1 style={{
-            fontSize: 18, fontWeight: 800, color: t.text,
+            fontSize: 18, fontWeight: 800, color: brand.primary,
             fontFamily: FONT_TITLE, margin: 0,
             letterSpacing: "0.05em", textTransform: "uppercase",
           }}>
@@ -549,7 +552,7 @@ export default function Agenda() {
           </h1>
         </div>
 
-        {/* Botão Nova Live — gradiente oficial */}
+        {/* Botão Nova Live — cor accent */}
         {perm.canCriarOk && (
           <button
             onClick={() => setModal({ open: true })}
@@ -557,7 +560,7 @@ export default function Agenda() {
               display: "flex", alignItems: "center", gap: 6,
               padding: "10px 20px", borderRadius: 10, border: "none",
               cursor: "pointer",
-              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
             }}
           >
@@ -571,7 +574,7 @@ export default function Agenda() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           {/* Linha principal — centralizada */}
@@ -594,6 +597,7 @@ export default function Agenda() {
               onChange={v => setView(v as ViewMode)}
               icon={<GiCalendar size={13} />}
               t={t}
+              accent={brand.accent}
             />
 
             {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
@@ -615,9 +619,9 @@ export default function Agenda() {
                   onChange={(e) => setFilterOperadora(e.target.value)}
                   style={{
                     padding: "6px 14px 6px 30px", borderRadius: 999,
-                    border: `1px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                    background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
-                    color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                    border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                    background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
+                    color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
                     fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
                     fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
                   }}
