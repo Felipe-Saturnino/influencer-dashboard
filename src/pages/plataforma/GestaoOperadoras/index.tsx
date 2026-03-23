@@ -514,7 +514,7 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={{ ...labelStyle, fontSize: 10 }}>Fonte customizada (opcional)</label>
-                <input type="url" value={fontUrl} onChange={e => setFontUrl(e.target.value)} placeholder="URL ou envie .woff2, .woff, .ttf"
+                <input type="url" value={fontUrl} onChange={e => setFontUrl(e.target.value)} placeholder="URL ou envie .woff2, .woff, .ttf, .otf"
                   style={inputStyle} />
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
                   <label style={{
@@ -524,8 +524,8 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
                     fontSize: 12, fontFamily: FONT.body, color: t.text,
                   }}>
                     <Upload size={14} />
-                    {uploadingFont ? "Enviando..." : "Enviar fonte (WOFF2, WOFF, TTF)"}
-                    <input type="file" accept=".woff2,.woff,.ttf,font/woff2,font/woff,font/ttf" hidden disabled={uploadingFont} onChange={handleUploadFont} />
+                    {uploadingFont ? "Enviando..." : "Enviar fonte (WOFF2, WOFF, TTF, OTF)"}
+                    <input type="file" accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf" hidden disabled={uploadingFont} onChange={handleUploadFont} />
                   </label>
                   {fontUrl && (
                     <a href={fontUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
