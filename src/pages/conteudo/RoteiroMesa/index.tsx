@@ -953,7 +953,7 @@ export default function RoteiroMesa() {
     filtrarSugestoes(sugestoes.filter((s) => s.bloco === bloco));
 
   const podeAdicionarGlobal =
-    perm.canEditarOk && !!operadoraSlugSelecionada && operadoraSlugSelecionada !== "todas";
+    perm.canEditarOk && (operadoraSlugSelecionada !== "todas" || opcoesFiltro.length > 0);
 
   const slugParaModal =
     operadoraSlugSelecionada && operadoraSlugSelecionada !== "todas"
