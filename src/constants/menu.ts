@@ -37,30 +37,30 @@ export const MENU: MenuSection[] = [
     section: "Dashboards",
     items: [
       { key: "dash_overview",            label: "Overview",            icon: GiHistogram          },
-      { key: "dash_overview_influencer", label: "Overview Influencer", icon: GiMicrophone         },
       { key: "dash_conversao",           label: "Conversão",           icon: GiConvergenceTarget  },
       { key: "dash_financeiro",          label: "Financeiro",          icon: GiMoneyStack         },
-      { key: "mesas_spin",               label: "Mesas Spin",          icon: GiDiceSixFacesFour   },
       { key: "dash_midias_sociais",      label: "Mídias Sociais",      icon: GiShare              },
+      { key: "mesas_spin",               label: "Mesas Spin",          icon: GiDiceSixFacesFour   },
+      { key: "dash_overview_influencer", label: "Overview Influencer", icon: GiMicrophone         },
     ],
   },
   {
     section: "Lives",
     items: [
-      { key: "agenda",     label: "Agenda",     icon: GiCalendar     },
-      { key: "resultados", label: "Resultados", icon: GiPodium       },
-      { key: "feedback",   label: "Feedback",   icon: GiConversation },
+      { key: "agenda",     label: "Agenda",      icon: GiCalendar     },
+      { key: "resultados", label: "Resultados",  icon: GiPodium       },
+      { key: "feedback",   label: "Feedback",    icon: GiConversation },
+      { key: "influencers", label: "Influencers", icon: GiStarMedal   },
+      { key: "scout",      label: "Scout",       icon: GiSpyglass    },
     ],
   },
   {
     section: "Operações",
     items: [
-      { key: "influencers",     label: "Influencers",       icon: GiStarMedal   },
-      { key: "scout",           label: "Scout",            icon: GiSpyglass    },
-      { key: "gestao_dealers",  label: "Gestão de Dealers", icon: GiCardRandom  },
-      { key: "financeiro",      label: "Financeiro",       icon: GiCash        },
-      { key: "gestao_links",    label: "Gestão de Links",  icon: GiLinkedRings },
-      { key: "campanhas",      label: "Campanhas",       icon: GiMegaphone },
+      { key: "gestao_dealers", label: "Gestão de Dealers", icon: GiCardRandom  },
+      { key: "financeiro",    label: "Financeiro",        icon: GiCash        },
+      { key: "campanhas",     label: "Campanhas",          icon: GiMegaphone   },
+      { key: "gestao_links",  label: "Gestão de Links",    icon: GiLinkedRings },
     ],
   },
   {
@@ -72,8 +72,8 @@ export const MENU: MenuSection[] = [
   {
     section: "Plataforma",
     items: [
-      { key: "gestao_usuarios",   label: "Gestão de Usuários",   icon: GiShield    },
-      { key: "gestao_operadoras", label: "Gestão de Operadoras", icon: GiFactory   },
+      { key: "gestao_usuarios",   label: "Gestão de Usuários",   icon: GiShield     },
+      { key: "gestao_operadoras", label: "Gestão de Operadoras", icon: GiFactory    },
       { key: "status_tecnico",    label: "Status Técnico",       icon: GiRadarSweep },
     ],
   },

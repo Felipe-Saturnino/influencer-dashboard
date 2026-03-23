@@ -20,7 +20,7 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
   const { theme: t, permissions, operadoraBrand } = useApp();
   const logoUrl = operadoraBrand?.logo_url || LOGO_DEFAULT;
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    Dashboards: true, Lives: true, "Operações": true, Plataforma: true,
+    Dashboards: true, Lives: true, Operações: true, Conteúdo: true, Plataforma: true,
   });
 
   const btnBase: React.CSSProperties = {
