@@ -422,11 +422,13 @@ function SugestaoItem({
   podeEditar,
   onEdit,
   dark,
+  operadoraNome,
 }: {
   sugestao: RoteiroSugestao;
   podeEditar: boolean;
   onEdit: (s: RoteiroSugestao) => void;
   dark: boolean;
+  operadoraNome?: string;
 }) {
   const tipo = sugestao.tipo ?? "script";
   const jogosList = sugestao.jogos ?? ["todos"];
@@ -457,6 +459,9 @@ function SugestaoItem({
         </span>
 
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {operadoraNome && (
+            <TagChip label={operadoraNome} bg="rgba(74,32,130,0.12)" color={dark ? "#b08aee" : "#4a2082"} border="rgba(74,32,130,0.25)" />
+          )}
           {jogosList.map((jogo) => {
             const jcfg = JOGO_TAG_CONFIG[jogo as JogoTag];
             const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
@@ -500,15 +505,19 @@ function BlocoSugestoes({
   operadoraSlug,
   sugestoes,
   podeEditar,
+  podeAdicionar,
   onCarregar,
   dark,
+  operadorasList,
 }: {
   bloco: BlocoRoteiro;
   operadoraSlug: string | null;
   sugestoes: RoteiroSugestao[];
   podeEditar: boolean;
+  podeAdicionar: boolean;
   onCarregar: () => void;
   dark: boolean;
+  operadorasList: { slug: string; nome: string }[];
 }) {
   const { theme: t } = useApp();
   const [modalEditando, setModalEditando] = useState<RoteiroSugestao | null>(null);
@@ -549,7 +558,7 @@ function BlocoSugestoes({
             </span>
           </div>
 
-          {podeEditar && (
+          {podeAdicionar && (
             <button
               onClick={() => setModalAdicionar(true)}
               style={{
@@ -581,7 +590,7 @@ function BlocoSugestoes({
               <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
                 Nenhuma sugestão cadastrada.
               </p>
-              {podeEditar && (
+              {podeAdicionar && (
                 <button
                   onClick={() => setModalAdicionar(true)}
                   style={{
@@ -607,16 +616,23 @@ function BlocoSugestoes({
             </div>
           ) : (
             sugestoes.map((s) => (
-              <SugestaoItem key={s.id} sugestao={s} podeEditar={podeEditar} onEdit={setModalEditando} dark={dark} />
+              <SugestaoItem
+                key={s.id}
+                sugestao={s}
+                podeEditar={podeEditar}
+                onEdit={setModalEditando}
+                dark={dark}
+                operadoraNome={operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === s.operadora_slug)?.nome : undefined}
+              />
             ))
           )}
         </div>
       </div>
 
       {modalEditando && (
-        <ModalSugestao operadoraSlug={operadoraSlug} bloco={bloco} editando={modalEditando} onClose={() => setModalEditando(null)} onSalvo={onCarregar} />
+        <ModalSugestao operadoraSlug={modalEditando.operadora_slug} bloco={bloco} editando={modalEditando} onClose={() => setModalEditando(null)} onSalvo={onCarregar} />
       )}
-      {modalAdicionar && (
+      {modalAdicionar && operadoraSlug !== "todas" && (
         <ModalSugestao
           operadoraSlug={operadoraSlug}
           bloco={bloco}
@@ -648,16 +664,14 @@ export default function RoteiroMesa() {
 
   const mostrarFiltroOp = showFiltroOperadora || (operadoraSlugsForcado != null && operadoraSlugsForcado.length > 1);
 
-  const operadoraSlugSelecionada =
+  const operadoraSlugSelecionada: string | null =
     operadoraSlugsForcado?.length === 1
       ? operadoraSlugsForcado[0]
       : operadoraSlugsForcado?.length
         ? filtroOperadora !== "todas" && operadoraSlugsForcado.includes(filtroOperadora)
           ? filtroOperadora
           : operadoraSlugsForcado[0]
-        : filtroOperadora !== "todas"
-          ? filtroOperadora
-          : null;
+        : filtroOperadora;
 
   const carregarSugestoes = useCallback(async () => {
     if (!operadoraSlugSelecionada) {
@@ -666,12 +680,11 @@ export default function RoteiroMesa() {
       return;
     }
     setLoading(true);
-    const { data } = await supabase
-      .from("roteiro_mesa_sugestoes")
-      .select("*")
-      .eq("operadora_slug", operadoraSlugSelecionada)
-      .order("bloco")
-      .order("ordem");
+    let query = supabase.from("roteiro_mesa_sugestoes").select("*").order("bloco").order("ordem");
+    if (operadoraSlugSelecionada !== "todas") {
+      query = query.eq("operadora_slug", operadoraSlugSelecionada);
+    }
+    const { data } = await query;
     setSugestoes((data ?? []) as RoteiroSugestao[]);
     setLoading(false);
   }, [operadoraSlugSelecionada]);
@@ -895,8 +908,10 @@ export default function RoteiroMesa() {
                 operadoraSlug={operadoraSlugSelecionada}
                 sugestoes={sugestoesPorBloco(key)}
                 podeEditar={perm.canEditarOk}
+                podeAdicionar={perm.canEditarOk && operadoraSlugSelecionada !== "todas"}
                 onCarregar={carregarSugestoes}
                 dark={dark}
+                operadorasList={operadorasList}
               />
             ))}
           </div>
