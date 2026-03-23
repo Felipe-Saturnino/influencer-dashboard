@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { Pencil, Plus, X, Check } from "lucide-react";
 import { GiNotebook } from "react-icons/gi";
 
@@ -23,8 +24,6 @@ const BRAND = {
   cianoLight: "rgba(112,202,228,0.1)",
   cianoBorder: "rgba(112,202,228,0.25)",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";

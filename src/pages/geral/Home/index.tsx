@@ -1,5 +1,6 @@
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { MENU } from "../../../constants/menu";
 import { Role } from "../../../types";
 import {
@@ -25,7 +26,6 @@ import {
 } from "react-icons/gi";
 import { ArrowRight } from "lucide-react";
 
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 const BRAND = {
   roxo: "#4a2082",
   roxoVivo: "#7c3aed",

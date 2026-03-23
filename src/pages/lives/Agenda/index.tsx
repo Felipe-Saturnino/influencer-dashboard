@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
@@ -22,8 +23,6 @@ const BRAND = {
   ciano:    "#70cae4",
   verde:    "#22c55e",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── LOGOS OFICIAIS DAS PLATAFORMAS (Simple Icons CDN) ───────────────────────
 import { PLAT_LOGO, PLAT_LOGO_DARK, PLAT_COLOR } from "../../../constants/platforms";

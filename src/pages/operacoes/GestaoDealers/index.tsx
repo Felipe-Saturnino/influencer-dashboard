@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
 import { X, Eye, Pencil, MessageSquare, Upload, Trash2 } from "lucide-react";
 import { GiCardRandom } from "react-icons/gi";
@@ -18,8 +19,6 @@ const BRAND = {
   amarelo:  "#f59e0b",
   cinza:    "#6b7280",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const GENERO_OPTS: { value: DealerGenero; label: string }[] = [

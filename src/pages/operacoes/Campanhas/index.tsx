@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { Campanha } from "../../../types";
 import { X, Pencil, AlertCircle } from "lucide-react";
 import { GiMegaphone } from "react-icons/gi";
@@ -17,8 +18,6 @@ const BRAND = {
   verde: "#22c55e",
   cinza: "#6b7280",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Campanhas() {

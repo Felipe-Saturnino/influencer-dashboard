@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { ChevronLeft, ChevronRight, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
@@ -25,8 +26,6 @@ const BRAND = {
   amarelo:   "#f59e0b",
   rosa:      "#ec4899",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface DailyRow {

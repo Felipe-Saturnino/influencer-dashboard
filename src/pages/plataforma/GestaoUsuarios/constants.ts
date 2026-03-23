@@ -1,6 +1,7 @@
 import type { Role, PageKey, PermissaoValor } from "../../../types";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 
-export const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+export { FONT_TITLE };
 
 export const BRAND = {
   roxo: "#4a2082",

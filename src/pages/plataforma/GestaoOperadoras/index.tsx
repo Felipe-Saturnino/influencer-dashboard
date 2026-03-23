@@ -3,6 +3,7 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { Operadora } from "../../../types";
 import { X, Pencil, AlertCircle, Upload } from "lucide-react";
 import { GiShield } from "react-icons/gi";
@@ -16,8 +17,6 @@ const BRAND = {
   verde:    "#22c55e",
   cinza:    "#6b7280",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {

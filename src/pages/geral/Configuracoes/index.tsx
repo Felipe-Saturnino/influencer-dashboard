@@ -4,6 +4,7 @@ import { GiPalette, GiPadlock } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -15,8 +16,6 @@ const BRAND = {
   verde:     "#22c55e",
   gradiente: "linear-gradient(135deg, #4a2082, #1e36f8)",
 };
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 

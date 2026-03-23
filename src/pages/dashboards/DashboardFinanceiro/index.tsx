@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
@@ -47,8 +48,6 @@ const PERFIL_CORES: Record<PerfilJogador, { cor: string; bg: string; border: str
   "Recreativos":        { cor: BRAND.ciano,   bg: "rgba(112,202,228,0.12)",border: "rgba(112,202,228,0.35)"},
   "Caçadores de Bônus": { cor: BRAND.vermelho,bg: "rgba(232,64,37,0.12)",  border: "rgba(232,64,37,0.35)"  },
 };
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };

@@ -4,6 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
@@ -49,8 +50,6 @@ const PODIO_CORES = [
   { bg: "rgba(112,202,228,0.13)", border: "rgba(112,202,228,0.35)", text: "#70cae4" }, // 2º ciano
   { bg: "rgba(74,32,130,0.18)",  border: "rgba(74,32,130,0.40)",  text: "#a78bfa" }, // 3º roxo
 ];
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };
