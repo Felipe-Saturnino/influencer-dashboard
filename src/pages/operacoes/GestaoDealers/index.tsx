@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
@@ -52,6 +53,7 @@ interface DealerObservacao {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoDealers() {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const perm = usePermission("gestao_dealers");
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -119,14 +121,14 @@ export default function GestaoDealers() {
   return (
     <div style={{ padding: "20px 24px 48px" }}>
 
-      {/* ─── Header ─────────────────────────────────────────────────────────── */}
+      {/* ─── Header — primária ───────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <GiCardRandom size={14} color="#fff" />
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: brand.primaryIconBg, border: brand.primaryIconBorder, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: brand.primaryIconColor }}>
+            <GiCardRandom size={14} />
           </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
               Gestão de Dealers
             </h1>
             <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13 }}>
@@ -138,7 +140,7 @@ export default function GestaoDealers() {
           <button
             onClick={() => setModalCriar(true)}
             style={{
-              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff", border: "none", borderRadius: 10,
               padding: "10px 18px", cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
@@ -150,7 +152,7 @@ export default function GestaoDealers() {
       </div>
 
       {/* ─── Bloco 1: Filtros ─────────────────────────────────────────────────── */}
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "18px 20px", marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+      <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "18px 20px", marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>Filtros</div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <select value={filtroGenero} onChange={(e) => setFiltroGenero(e.target.value)} style={selectStyle}>
@@ -176,21 +178,21 @@ export default function GestaoDealers() {
       {/* ─── Bloco 2: Quadros consolidados ───────────────────────────────────── */}
       {!loading && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 24 }}>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.roxoVivo}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Dealers</div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: BRAND.roxoVivo, fontFamily: FONT_TITLE, lineHeight: 1 }}>{totalDealers}</div>
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${brand.accent}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body, marginBottom: 6 }}>Dealers</div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>{totalDealers}</div>
           </div>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.azul}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Turnos</div>
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${brand.secondary}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body, marginBottom: 6 }}>Turnos</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
               {TURNO_OPTS.map((o) => (
-                <span key={o.value} style={{ fontSize: 12, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body }}>
+                <span key={o.value} style={{ fontSize: 12, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>
                   {o.label}: {porTurno[o.value] ?? 0}
                 </span>
               ))}
             </div>
           </div>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.verde}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.verde}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Gênero</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
               {GENERO_OPTS.map((o) => (
@@ -200,7 +202,7 @@ export default function GestaoDealers() {
               ))}
             </div>
           </div>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.amarelo}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.amarelo}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Jogos</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
               {JOGOS_OPTS.map((o) => (
@@ -215,12 +217,12 @@ export default function GestaoDealers() {
 
       {/* ─── Bloco 3: Elenco completo ────────────────────────────────────────── */}
       <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
-        {filtered.length === 1 ? "1 dealer" : `${filtered.length} dealers`}
+        <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> {filtered.length === 1 ? "dealer" : "dealers"}
       </div>
       {loading ? (
         <div style={{ padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum dealer encontrado.</div>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum dealer encontrado.</div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
           {filtered.map((d) => (
@@ -228,6 +230,7 @@ export default function GestaoDealers() {
               key={d.id}
               dealer={d}
               operadoras={operadoras}
+              brand={brand}
               onVer={() => setModalVer(d)}
               onEditar={() => setModalEditar(d)}
               onObservacoes={() => setModalObs(d)}
@@ -250,6 +253,7 @@ export default function GestaoDealers() {
 function DealerCard({
   dealer,
   operadoras,
+  brand,
   onVer,
   onEditar,
   onObservacoes,
@@ -257,6 +261,7 @@ function DealerCard({
 }: {
   dealer: Dealer;
   operadoras: Operadora[];
+  brand: ReturnType<typeof useDashboardBrand>;
   onVer: () => void;
   onEditar: () => void;
   onObservacoes: () => void;
@@ -268,7 +273,7 @@ function DealerCard({
 
   return (
     <div style={{
-      background: t.cardBg,
+      background: brand.blockBg,
       border: `1px solid ${t.cardBorder}`,
       borderRadius: 18,
       overflow: "hidden",

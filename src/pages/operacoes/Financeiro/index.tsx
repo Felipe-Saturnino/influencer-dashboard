@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
@@ -196,6 +197,7 @@ function BtnPrimary({ onClick, children, disabled, style }: {
   onClick: () => void; children: React.ReactNode;
   disabled?: boolean; style?: React.CSSProperties;
 }) {
+  const brand = useDashboardBrand();
   return (
     <button
       onClick={onClick}
@@ -204,7 +206,7 @@ function BtnPrimary({ onClick, children, disabled, style }: {
         padding: "8px 16px", borderRadius: "10px", border: "none",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.6 : 1,
-        background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+        background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
         color: "#fff", fontSize: "12px", fontWeight: 700,
         fontFamily: FONT.body, ...style,
       }}
@@ -237,6 +239,7 @@ function ModalBase({ children, maxWidth = 440, onClose }: {
   children: React.ReactNode; maxWidth?: number; onClose: () => void;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   return (
     <div style={{
       position: "fixed", inset: 0, background: "#00000090",
@@ -244,7 +247,7 @@ function ModalBase({ children, maxWidth = 440, onClose }: {
       zIndex: 1000, padding: "20px",
     }}>
       <div style={{
-        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+        background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
         borderRadius: "20px", padding: "28px",
         width: "100%", maxWidth, maxHeight: "90vh", overflowY: "auto",
       }}>
@@ -265,10 +268,11 @@ function ModalHeader({ title, onClose }: { title: string; onClose: () => void })
 }
 
 function BlocoLabel({ label }: { label: string }) {
+  const brand = useDashboardBrand();
   return (
     <span style={{
       fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px",
-      textTransform: "uppercase", color: BASE_COLORS.purple, fontFamily: FONT.body,
+      textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body,
     }}>
       {label}
     </span>
@@ -657,6 +661,7 @@ interface BlocoFiltros {
 
 function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
   const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
   const mes = historico ? "" : mesFiltro;
 
@@ -744,7 +749,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
 
   return (
     <div style={{
-      background: t.cardBg,
+      background: brand.blockBg,
       border: `1px solid ${t.cardBorder}`,
       borderRadius: "16px",
       padding: "22px",
@@ -788,6 +793,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   filtros: BlocoFiltros;
 }) {
   const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
   const perm = usePermission("financeiro");
   const { podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap, operadorasList } = filtros;
 
@@ -1222,7 +1228,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }));
 
   return (
-    <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
+    <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
 
       {/* Cabeçalho */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
@@ -1425,6 +1431,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
 function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
   const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
   const mes = historico ? "" : mesFiltro;
 
@@ -1576,7 +1583,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   };
 
   return (
-    <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
+    <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginBottom: "18px" }}>
         <BlocoLabel label="👥 CONSOLIDADO DE INFLUENCERS" />
         <input
@@ -1739,6 +1746,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
 export default function Financeiro() {
   const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("financeiro");
 
@@ -1795,9 +1803,9 @@ export default function Financeiro() {
   };
   const chipBase = (active: boolean) => ({
     padding: "6px 14px", borderRadius: 999,
-    border: `1px solid ${active ? BASE_COLORS.purple : t.cardBorder}`,
-    background: active ? `${BASE_COLORS.purple}22` : (t.inputBg ?? t.cardBg),
-    color: active ? BASE_COLORS.purple : t.textMuted,
+    border: `1px solid ${active ? brand.accent : t.cardBorder}`,
+    background: active ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BASE_COLORS.purple}22`) : (t.inputBg ?? t.cardBg),
+    color: active ? brand.accent : t.textMuted,
     fontSize: 13, fontWeight: active ? 700 : 400,
     fontFamily: FONT.body, cursor: "pointer", outline: "none",
   });
@@ -1998,9 +2006,9 @@ export default function Financeiro() {
   if (ciclos.length === 0) {
     return (
       <div style={{ padding: "20px 24px 48px" }}>
-        <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
+        <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: brand.primary }}>💰 Financeiro</h1>
         <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos de influencers.</p>
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
           <div style={{ fontSize: "40px", marginBottom: "16px" }}>📅</div>
           <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>Nenhum ciclo cadastrado</p>
           <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
@@ -2010,7 +2018,7 @@ export default function Financeiro() {
             onClick={() => { carregarCiclos(); }}
             style={{
               padding: "10px 20px", borderRadius: "10px", border: "none",
-              background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
               color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
               cursor: "pointer",
             }}
@@ -2024,14 +2032,14 @@ export default function Financeiro() {
 
   return (
     <div style={{ padding: "20px 24px 48px" }}>
-      <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
+      <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: brand.primary }}>💰 Financeiro</h1>
       <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "14px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
 
       {/* Bloco de filtros (similar Agenda) */}
       <div style={{ marginBottom: 20 }}>
         <div style={{
           borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
@@ -2068,9 +2076,9 @@ export default function Financeiro() {
                   onChange={(e) => setFilterOperadora(e.target.value)}
                   style={{
                     padding: "6px 14px 6px 30px", borderRadius: 999,
-                    border: `1px solid ${filterOperadora !== "todas" ? BASE_COLORS.purple : t.cardBorder}`,
-                    background: filterOperadora !== "todas" ? `${BASE_COLORS.purple}22` : (t.inputBg ?? t.cardBg),
-                    color: filterOperadora !== "todas" ? BASE_COLORS.purple : t.textMuted,
+                    border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                    background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BASE_COLORS.purple}22`) : (t.inputBg ?? t.cardBg),
+                    color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
                     fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
                     fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
                   }}

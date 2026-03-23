@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { Campanha } from "../../../types";
@@ -22,6 +23,7 @@ const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Campanhas() {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const perm = usePermission("campanhas");
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [operadoras, setOperadoras] = useState<{ slug: string; nome: string }[]>([]);
@@ -59,7 +61,7 @@ export default function Campanhas() {
     textTransform: "uppercase",
     letterSpacing: "0.08em",
     fontFamily: FONT.body,
-    background: "rgba(74,32,130,0.10)",
+    background: brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 12%, transparent)" : "rgba(74,32,130,0.10)",
     borderBottom: `1px solid ${t.cardBorder}`,
     whiteSpace: "nowrap",
   };
@@ -82,29 +84,31 @@ export default function Campanhas() {
 
   return (
     <div style={{ padding: "20px 24px 48px" }}>
-      {/* ─── Header ─────────────────────────────────────────────────────────── */}
+      {/* ─── Header — primária ───────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
         <div
           style={{
             width: 28,
             height: 28,
             borderRadius: 8,
-            background: BRAND.roxo,
+            background: brand.primaryIconBg,
+            border: brand.primaryIconBorder,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
             marginTop: 3,
+            color: brand.primaryIconColor,
           }}
         >
-          <GiMegaphone size={14} color="#fff" />
+          <GiMegaphone size={14} />
         </div>
         <div>
           <h1
             style={{
               fontSize: 22,
               fontWeight: 800,
-              color: t.text,
+              color: brand.primary,
               fontFamily: FONT_TITLE,
               margin: 0,
               letterSpacing: "0.5px",
@@ -131,14 +135,14 @@ export default function Campanhas() {
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
-          { label: "Total", valor: campanhas.length, cor: BRAND.roxoVivo },
+          { label: "Total", valor: campanhas.length, cor: brand.accent },
           { label: "Ativas", valor: ativas, cor: "#059669" },
           { label: "Inativas", valor: campanhas.length - ativas, cor: BRAND.cinza },
         ].map((c) => (
           <div
             key={c.label}
             style={{
-              background: t.cardBg,
+              background: brand.blockBg,
               border: `1px solid ${t.cardBorder}`,
               borderLeft: `3px solid ${c.cor}`,
               borderRadius: 18,
@@ -177,7 +181,7 @@ export default function Campanhas() {
       {/* ─── Tabela ──────────────────────────────────────────────────────────── */}
       <div
         style={{
-          background: t.cardBg,
+          background: brand.blockBg,
           border: `1px solid ${t.cardBorder}`,
           borderRadius: 18,
           boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
@@ -202,7 +206,7 @@ export default function Campanhas() {
                 setModalOpen(true);
               }}
               style={{
-                background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                 color: "#fff",
                 border: "none",
                 borderRadius: 10,
@@ -318,6 +322,7 @@ export default function Campanhas() {
       {modalOpen && (
         <ModalCampanha
           t={t}
+          brand={brand}
           editando={editando}
           operadoras={operadoras}
           onClose={() => setModalOpen(false)}
@@ -331,13 +336,14 @@ export default function Campanhas() {
 // ─── Modal ────────────────────────────────────────────────────────────────────
 interface ModalProps {
   t: ReturnType<typeof useApp>["theme"];
+  brand: ReturnType<typeof useDashboardBrand>;
   editando: Campanha | null;
   operadoras: { slug: string; nome: string }[];
   onClose: () => void;
   onSalvo: () => void;
 }
 
-function ModalCampanha({ t, editando, operadoras, onClose, onSalvo }: ModalProps) {
+function ModalCampanha({ t, brand, editando, operadoras, onClose, onSalvo }: ModalProps) {
   const [nome, setNome] = useState(editando?.nome ?? "");
   const [operadoraSlug, setOperadoraSlug] = useState(editando?.operadora_slug ?? "");
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
@@ -420,7 +426,7 @@ function ModalCampanha({ t, editando, operadoras, onClose, onSalvo }: ModalProps
     >
       <div
         style={{
-          background: t.cardBg,
+          background: brand.blockBg,
           borderRadius: 20,
           padding: "28px 32px",
           width: "100%",
@@ -574,7 +580,7 @@ function ModalCampanha({ t, editando, operadoras, onClose, onSalvo }: ModalProps
             onClick={salvar}
             disabled={salvando}
             style={{
-              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff",
               border: "none",
               borderRadius: 10,

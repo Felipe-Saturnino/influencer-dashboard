@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
@@ -274,6 +275,7 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
   const { theme: t, user, isDark, escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
+  const brand = useDashboardBrand();
   const { operadoraSlugsForcado, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("influencers");
   const showManagementUI = user?.role !== "influencer";
@@ -439,7 +441,7 @@ export default function Influencers() {
 
   // ── Styles ──
   const cardStyle: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+    background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: "16px", padding: "18px 20px", marginBottom: "10px",
     display: "flex", alignItems: "center", justifyContent: "space-between",
     gap: "12px", flexWrap: "wrap",
@@ -455,19 +457,19 @@ export default function Influencers() {
   return (
     <div style={{ padding: "20px 24px 48px" }}>
 
-      {/* ── HEADER ── */}
+      {/* ── HEADER — primária ── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{
             width: 32, height: 32, borderRadius: 9,
-            background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+            background: brand.primaryIconBg, border: brand.primaryIconBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: BRAND.ciano, flexShrink: 0,
+            color: brand.primaryIconColor, flexShrink: 0,
           }}>
             <GiMicrophone size={16} />
           </span>
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Influencers
             </h1>
             <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
@@ -480,9 +482,9 @@ export default function Influencers() {
       {/* Quadros resumo (quem gerencia múltiplos) */}
       {showManagementUI && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: t.textMuted, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
-              <GiPodium size={13} style={{ color: BRAND.ciano }} /> Total de Influencers
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: brand.secondary, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
+              <GiPodium size={13} style={{ color: brand.secondary }} /> Total de Influencers
             </div>
             <div style={{ fontSize: 36, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
               {listNoEscopo.length}
@@ -512,7 +514,7 @@ export default function Influencers() {
             )}
           </div>
 
-          <div style={{ background: t.cardBg, border: `1px solid ${BRAND.vermelho}33`, borderRadius: 16, padding: 20 }}>
+          <div style={{ background: brand.blockBg, border: `1px solid ${BRAND.vermelho}33`, borderRadius: 16, padding: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: BRAND.vermelho, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
               <GiWarPick size={13} /> Perfil Incompleto
             </div>
@@ -547,7 +549,7 @@ export default function Influencers() {
         <div style={{ marginBottom: 20 }}>
           <div style={{
             borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-            background: t.cardBg,
+            background: brand.blockBg,
             padding: "12px 20px",
           }}>
             {/* Linha 1: Status / Plataforma / Operadora */}
@@ -607,9 +609,9 @@ export default function Influencers() {
                     <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)}
                       style={{
                         padding: "6px 14px 6px 30px", borderRadius: 999,
-                        border: `1px solid ${filterOp !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                        background: filterOp !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
-                        color: filterOp !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                        border: `1px solid ${filterOp !== "todas" ? brand.accent : t.cardBorder}`,
+                        background: filterOp !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
+                        color: filterOp !== "todas" ? brand.accent : t.textMuted,
                         fontSize: 13, fontWeight: filterOp !== "todas" ? 700 : 400,
                         fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
                       }}
@@ -631,20 +633,20 @@ export default function Influencers() {
                 paddingBottom: 12,
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
-                    <GiTwoCoins size={13} style={{ color: BRAND.ciano }} /> Cachê por Hora — até
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body }}>
+                    <GiTwoCoins size={13} style={{ color: brand.secondary }} /> Cachê por Hora — até
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>
                     {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
                   </span>
                 </div>
                 <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
                   <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
-                  <div style={{ position: "absolute", left: 0, width: `${(cacheLimit / cacheMax) * 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+                  <div style={{ position: "absolute", left: 0, width: `${(cacheLimit / cacheMax) * 100}%`, height: 4, borderRadius: 2, background: brand.useBrand ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
                   <input type="range" min={0} max={cacheMax} step={50} value={cacheLimit}
                     onChange={(e) => setCacheLimit(Number(e.target.value))}
                     style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
-                  <div style={{ position: "absolute", left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+                  <div style={{ position: "absolute", left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
                   <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
@@ -690,7 +692,7 @@ export default function Influencers() {
       {/* Contador */}
       {!loading && showManagementUI && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
-          {filtered.length} influencer(s)
+          <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> influencer(s)
         </div>
       )}
 
@@ -700,7 +702,7 @@ export default function Influencers() {
           Carregando...
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
           Nenhum influencer encontrado.
         </div>
       ) : (
@@ -715,7 +717,7 @@ export default function Influencers() {
               <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-                  background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                  background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body,
                 }}>
@@ -739,7 +741,7 @@ export default function Influencers() {
                   </div>
                   {p?.cache_hora && p.cache_hora > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 5 }}>
-                      <GiTwoCoins size={12} style={{ color: BRAND.ciano }} /> {formatBRL(p.cache_hora)}/h
+                      <GiTwoCoins size={12} style={{ color: brand.secondary }} /> {formatBRL(p.cache_hora)}/h
                     </div>
                   )}
                   {canais.length > 0 && (
@@ -784,7 +786,7 @@ export default function Influencers() {
                   <button onClick={() => setModal({ mode: "editar", inf })} style={{
                     display: "inline-flex", alignItems: "center", gap: 6,
                     padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
-                    background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                    background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                     color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
                   }}>
                     <Pencil size={13} /> Editar
@@ -804,6 +806,7 @@ export default function Influencers() {
           )}
           onClose={() => setModal(null)}
           isDark={isDark}
+          brand={brand}
         />
       )}
       {modal?.mode === "editar" && modal.inf && (
@@ -815,6 +818,7 @@ export default function Influencers() {
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); loadData(); }}
           isDark={isDark}
+          brand={brand}
         />
       )}
     </div>
@@ -822,10 +826,12 @@ export default function Influencers() {
 }
 
 // ─── Modal Visualizar ─────────────────────────────────────────────────────────
-function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
+function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }: {
   influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; isDark?: boolean;
+  brand?: ReturnType<typeof useDashboardBrand>;
 }) {
   const { theme: t } = useApp();
+  const b = brand ?? { blockBg: t.cardBg, accent: "#7c3aed", secondary: "#7c3aed", useBrand: false };
   const p = influencer.perfil;
   const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
@@ -850,7 +856,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
+      <div style={{ background: b.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
@@ -867,15 +873,15 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
           </button>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: `${BRAND.azul}0d`, border: `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
-          <Eye size={13} style={{ color: BRAND.azul, flexShrink: 0 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: b.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.azul}0d`, border: `1px solid ${b.useBrand ? "color-mix(in srgb, var(--brand-accent) 20%, transparent)" : `${BRAND.azul}30`}`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
+          <Eye size={13} style={{ color: b.accent, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura. Dados sensíveis protegidos.</span>
         </div>
 
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {tabs.map((tb) => (
             <button key={tb.key} onClick={() => setTab(tb.key)}
-              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb.key ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb.key ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? b.accent : t.cardBorder}`, background: tab === tb.key ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (t.inputBg ?? t.cardBg), color: tab === tb.key ? b.accent : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
               {tb.label}
             </button>
           ))}
@@ -943,12 +949,12 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
                 const ativo = !!vinculo?.ativo;
                 const id = vinculo?.id_operadora;
                 return (
-                  <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? BRAND.roxoVivo + "55" : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}08` : "transparent" }}>
+                  <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 35%, transparent)" : BRAND.roxoVivo + "55") : t.cardBorder}`, background: ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.roxoVivo}08`) : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
                         <GiPokerHand size={13} style={{ color: BRAND.amarelo }} /> {op.nome}
                       </span>
-                      <span style={{ padding: "4px 12px", borderRadius: 20, border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: ativo ? BRAND.roxoVivo : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
+                      <span style={{ padding: "4px 12px", borderRadius: 20, border: `1px solid ${ativo ? b.accent : t.cardBorder}`, background: ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (t.inputBg ?? t.cardBg), color: ativo ? b.accent : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
                         {ativo ? "Ativo" : "Inativo"}
                       </span>
                     </div>
@@ -967,10 +973,12 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
 // ─── Modal Editar ─────────────────────────────────────────────────────────────
 type OperadorasFormState = Record<string, { ativo: boolean; id_operadora: string }>;
 
-function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
+function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, brand }: {
   influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; onSaved: () => void; isDark?: boolean;
+  brand?: ReturnType<typeof useDashboardBrand>;
 }) {
   const { theme: t, user } = useApp();
+  const b = brand ?? { blockBg: t.cardBg, accent: "#7c3aed", useBrand: false };
   const existing = influencer.perfil;
   // Status e Cachê somente Gestores e Admin podem alterar
   const podeAlterarStatusCache = user?.role === "admin" || user?.role === "gestor";
@@ -1076,7 +1084,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
+      <div style={{ background: b.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
@@ -1096,7 +1104,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {tabs.map((tb) => (
             <button key={tb.key} onClick={() => setTab(tb.key)}
-              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb.key ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb.key ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? b.accent : t.cardBorder}`, background: tab === tb.key ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (t.inputBg ?? t.cardBg), color: tab === tb.key ? b.accent : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
               {tb.label}
             </button>
           ))}
@@ -1204,13 +1212,13 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
                 const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
                 const ativo = st.ativo;
                 return (
-                  <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? BRAND.roxoVivo + "55" : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}08` : "transparent" }}>
+                  <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 35%, transparent)" : BRAND.roxoVivo + "55") : t.cardBorder}`, background: ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.roxoVivo}08`) : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? 12 : 0 }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
                         <GiPokerHand size={13} style={{ color: BRAND.amarelo }} /> {op.nome}
                       </span>
                       <button onClick={() => setOp(op.slug, { ativo: !ativo })}
-                        style={{ padding: "5px 14px", borderRadius: 20, border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: ativo ? BRAND.roxoVivo : t.textMuted, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
+                        style={{ padding: "5px 14px", borderRadius: 20, border: `1px solid ${ativo ? b.accent : t.cardBorder}`, background: ativo ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (t.inputBg ?? t.cardBg), color: ativo ? b.accent : t.textMuted, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
                         {ativo ? "Ativo" : "Inativo"}
                       </button>
                     </div>
@@ -1235,7 +1243,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
         )}
 
         <button onClick={handleSave} disabled={saving}
-          style={{ width: "100%", marginTop: 8, padding: 13, borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          style={{ width: "100%", marginTop: 8, padding: 13, borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: b.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
           {saving ? "Salvando..." : "Salvar Perfil"}
         </button>
       </div>
