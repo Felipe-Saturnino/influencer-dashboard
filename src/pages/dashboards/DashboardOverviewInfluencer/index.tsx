@@ -6,7 +6,7 @@ import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, TrendingUp, TrendingDown } from "lucide-react";
 import {
   GiPodiumWinner, GiFunnel, GiSpeedometer, GiCalendar,
   GiMoneyStack, GiTakeMyMoney, GiStarMedal, GiClapperboard,
@@ -146,7 +146,7 @@ function SelectComIcone({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
-          padding: "6px 12px 6px 30px",
+          padding: "6px 28px 6px 30px",
           borderRadius: 999,
           border: `1px solid ${t.cardBorder}`,
           background: t.inputBg ?? t.cardBg,
@@ -155,11 +155,15 @@ function SelectComIcone({
           fontFamily: FONT.body,
           cursor: "pointer",
           outline: "none",
-          appearance: "auto" as const,
+          appearance: "none" as const,
         }}
       >
         {children}
       </select>
+      <span style={{
+        position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+        pointerEvents: "none", color: t.textMuted, fontSize: 10, lineHeight: 1,
+      }}>▾</span>
     </div>
   );
 }
@@ -217,10 +221,16 @@ function KpiCard({ label, value, icon, accentVar, accentColor, useBrand, cardBg,
 }
 
 // ─── FUNIL VISUAL ─────────────────────────────────────────────────────────────
-function FunilVisual({ steps }: { steps: { label: string; value: number }[] }) {
-  const CORES = [BRAND.roxoVivo, BRAND.azul, BRAND.ciano, BRAND.verde];
+function FunilVisual({ steps, useBrand, logoUrl }: {
+  steps: { label: string; value: number }[];
+  useBrand?: boolean;
+  logoUrl?: string;
+}) {
+  const CORES_SPIN = [BRAND.roxoVivo, BRAND.azul, BRAND.ciano, BRAND.verde];
+  const CORES_BRAND_VARS = ["--brand-extra1", "--brand-extra2", "--brand-extra3", "--brand-extra4"];
+  const getCor = (i: number) => useBrand ? `var(${CORES_BRAND_VARS[i] ?? "--brand-primary"})` : (CORES_SPIN[i] ?? BRAND.roxo);
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, width: "100%", maxWidth: 380 }}>
+    <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 0, width: "100%", maxWidth: 380 }}>
       {steps.map((step, i) => {
         const larguraTopo = 100 - i * 10;
         const larguraBase = 100 - (i + 1) * 10;
@@ -229,7 +239,7 @@ function FunilVisual({ steps }: { steps: { label: string; value: number }[] }) {
         return (
           <div key={step.label} style={{
             width: "100%", height: 88,
-            background: CORES[i] ?? BRAND.roxo,
+            background: getCor(i),
             clipPath: `polygon(${clipTop} 0%, ${100 - parseFloat(clipTop)}% 0%, ${100 - parseFloat(clipBase)}% 100%, ${clipBase} 100%)`,
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
           }}>
@@ -238,14 +248,26 @@ function FunilVisual({ steps }: { steps: { label: string; value: number }[] }) {
           </div>
         );
       })}
+      {logoUrl && (
+        <div style={{
+          position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)",
+          pointerEvents: "none",
+        }}>
+          <img src={logoUrl} alt="" style={{ width: 36, height: 36, objectFit: "contain", opacity: 0.18 }} />
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── RATE CARD ────────────────────────────────────────────────────────────────
-function RateCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean | "purple" }) {
+function RateCard({ label, value, highlight, useBrand }: {
+  label: string; value: string; highlight?: boolean | "purple"; useBrand?: boolean;
+}) {
   const { theme: t } = useApp();
-  const highlightColor = highlight === true ? BRAND.azul : highlight === "purple" ? BRAND.roxoVivo : null;
+  const highlightColor = highlight
+    ? (useBrand ? "var(--brand-primary)" : highlight === "purple" ? BRAND.roxoVivo : BRAND.azul)
+    : null;
 
   return (
     <div style={{ padding: "10px 14px", borderRadius: 10, border: highlightColor ? `1px solid ${highlightColor}44` : `1px solid ${t.cardBorder}`, background: highlightColor ? `${highlightColor}12` : "transparent" }}>
@@ -257,13 +279,13 @@ function RateCard({ label, value, highlight }: { label: string; value: string; h
 
 // ─── SECTION TITLE ────────────────────────────────────────────────────────────
 function SectionTitle({ icon, title, subtitle, useBrand }: { icon: React.ReactNode; title: string; subtitle?: string; useBrand?: boolean }) {
-  const { theme: t } = useApp();
+  const { theme: t, operadoraBrand } = useApp();
   const titleColor = useBrand ? "var(--brand-primary)" : t.text;
   const iconBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)" : "rgba(74,32,130,0.18)";
   const iconBorder = useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent)" : "1px solid rgba(74,32,130,0.30)";
   const iconColor = useBrand ? "var(--brand-primary)" : BRAND.ciano;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18, flexWrap: "wrap" as const }}>
       <div style={{ width: 32, height: 32, borderRadius: 9, background: iconBg, border: iconBorder, display: "flex", alignItems: "center", justifyContent: "center", color: iconColor, flexShrink: 0 }}>
         {icon}
       </div>
@@ -271,7 +293,55 @@ function SectionTitle({ icon, title, subtitle, useBrand }: { icon: React.ReactNo
         <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: titleColor, fontFamily: FONT_TITLE, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>{title}</h3>
         {subtitle && <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body }}>· {subtitle}</span>}
       </div>
+      {useBrand && operadoraBrand && (operadoraBrand.logo_url || operadoraBrand.nome) && (
+        <div style={{
+          marginLeft: "auto", display: "flex", alignItems: "center", gap: 6,
+          padding: "3px 10px 3px 6px", borderRadius: 999,
+          border: "1px solid color-mix(in srgb, var(--brand-primary) 28%, transparent)",
+          background: "color-mix(in srgb, var(--brand-primary) 8%, transparent)",
+        }}>
+          {operadoraBrand.logo_url && (
+            <img src={operadoraBrand.logo_url} alt={operadoraBrand.nome ?? ""} style={{ width: 16, height: 16, objectFit: "contain", borderRadius: 3, flexShrink: 0 }} />
+          )}
+          {operadoraBrand.nome && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--brand-primary)", fontFamily: FONT.body, letterSpacing: "0.06em", textTransform: "uppercase" as const, whiteSpace: "nowrap" as const }}>
+              {operadoraBrand.nome}
+            </span>
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+// ─── BRAND CARD (faixa colorida no topo quando operadora) ─────────────────────
+function BrandCard({
+  children, useBrand, style, defaultPadding = true,
+}: { children: React.ReactNode; useBrand?: boolean; style?: React.CSSProperties; defaultPadding?: boolean }) {
+  const { theme: t, operadoraBrand } = useApp();
+  const blockBg_local = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
+  return (
+    <div style={{
+      background: blockBg_local, border: `1px solid ${t.cardBorder}`, borderRadius: 18,
+      overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)", ...style,
+    }}>
+      {useBrand && (
+        <div style={{ height: 3, background: "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary, var(--brand-primary)))" }} />
+      )}
+      {defaultPadding ? <div style={{ padding: 20 }}>{children}</div> : children}
+    </div>
+  );
+}
+
+// ─── BRAND DIVIDER ───────────────────────────────────────────────────────────
+function BrandDivider({ useBrand }: { useBrand?: boolean }) {
+  if (!useBrand) return null;
+  return (
+    <div style={{
+      height: 1, marginBottom: 14,
+      background: "linear-gradient(90deg, var(--brand-primary) 0%, transparent 100%)",
+      opacity: 0.25, borderRadius: 1,
+    }} />
   );
 }
 
@@ -541,8 +611,30 @@ export default function DashboardOverviewInfluencer() {
   const useBrand = user?.role === "operador" && !!operadoraBrand;
   const blockBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
   const card: React.CSSProperties = { background: blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
+
+  useEffect(() => {
+    if (!useBrand || !operadoraBrand) return;
+    const tituloOriginal = document.title;
+    document.title = operadoraBrand.nome ? `${operadoraBrand.nome} — Dashboard Influencer` : tituloOriginal;
+    if (operadoraBrand.logo_url) {
+      const link = (document.querySelector("link[rel~='icon']") as HTMLLinkElement | null)
+        ?? (() => { const el = document.createElement("link"); el.rel = "icon"; document.head.appendChild(el); return el; })();
+      const faviconOriginal = link.href;
+      link.href = operadoraBrand.logo_url;
+      return () => { document.title = tituloOriginal; link.href = faviconOriginal; };
+    }
+    return () => { document.title = tituloOriginal; };
+  }, [useBrand, operadoraBrand]);
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
-  const thStyle: React.CSSProperties = { textAlign: "left", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: t.textMuted, padding: "10px 12px", background: "rgba(74,32,130,0.10)", borderBottom: `1px solid ${t.cardBorder}`, fontFamily: FONT.body, whiteSpace: "nowrap", fontWeight: 700 };
+  const thStyle: React.CSSProperties = {
+    textAlign: "left", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase",
+    color: t.textMuted, padding: "10px 12px",
+    background: useBrand ? "color-mix(in srgb, var(--brand-primary) 10%, transparent)" : "rgba(74,32,130,0.10)",
+    borderBottom: `1px solid ${t.cardBorder}`, fontFamily: FONT.body, whiteSpace: "nowrap", fontWeight: 700,
+  };
+  const zebraStripe = (i: number) =>
+    i % 2 === 1 ? (useBrand ? "color-mix(in srgb, var(--brand-primary) 6%, transparent)" : "rgba(74,32,130,0.06)") : "transparent";
+  const totalRowBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 12%, transparent)" : "rgba(74,32,130,0.12)";
   const tdStyle: React.CSSProperties = { padding: "10px 12px", fontSize: 13, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", borderBottom: `1px solid ${t.cardBorder}` };
 
   const isPrimeiro = idxMes === 0;
@@ -557,40 +649,50 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 1: Filtros ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ ...card, padding: "14px 20px", background: blockBg }}>
+        <div style={{
+          borderRadius: 14,
+          border: `1px solid ${t.cardBorder}`,
+          background: blockBg,
+          padding: "12px 20px",
+        }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             {/* Navegação de mês */}
             <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-              <ChevronLeft size={16} />
+              <ChevronLeft size={14} />
             </button>
-            <span style={{ fontSize: 16, fontWeight: 700, color: t.text, fontFamily: FONT.body, minWidth: 160, textAlign: "center" }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
-              <ChevronRight size={16} />
+              <ChevronRight size={14} />
             </button>
 
-            {/* Botão Histórico — ícone dentro do botão (referência visual) */}
+            {/* Botão Histórico — padrão Overview */}
             <button
               style={{
-                padding: "6px 16px", borderRadius: 999,
-                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-                background: historico ? `${BRAND.roxoVivo}18` : "transparent",
-                color: historico ? BRAND.roxoVivo : t.textMuted,
-                fontSize: 13, fontWeight: historico ? 700 : 400,
-                cursor: "pointer", fontFamily: FONT.body,
                 display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+                fontFamily: FONT.body, fontSize: 13,
+                border: historico
+                  ? `1px solid ${useBrand ? "var(--brand-primary)" : BRAND.roxoVivo}`
+                  : `1px solid ${t.cardBorder}`,
+                background: historico
+                  ? useBrand ? "color-mix(in srgb, var(--brand-primary) 15%, transparent)" : `${BRAND.roxoVivo}18`
+                  : "transparent",
+                color: historico ? (useBrand ? "var(--brand-primary)" : BRAND.roxoVivo) : t.textMuted,
+                fontWeight: historico ? 700 : 400,
+                transition: "all 0.15s",
               }}
               onClick={toggleHistorico}
             >
-              <GiCalendar size={13} /> Histórico
+              <GiCalendar size={15} /> Histórico
             </button>
 
             {/* Filtro Influencer — ícone dentro do campo (mesmo padrão do Histórico) */}
             {showFiltroInfluencer && (
               <SelectComIcone
-                icon={<GiStarMedalFilter size={13} />}
+                icon={<GiStarMedalFilter size={15} />}
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
                 t={t}
@@ -608,7 +710,7 @@ export default function DashboardOverviewInfluencer() {
             {/* Filtro Operadora — ícone dentro do campo */}
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<GiShield size={13} />}
+                icon={<GiShield size={15} />}
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
                 t={t}
@@ -620,14 +722,18 @@ export default function DashboardOverviewInfluencer() {
               </SelectComIcone>
             )}
 
-            {loading && <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</span>}
+            {loading && (
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
+                <Clock size={12} /> Carregando...
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPodiumWinner size={14} color={BRAND.ciano} />} title="KPIs Executivos" subtitle={!historico ? "MTD vs mês anterior" : undefined} useBrand={useBrand} />
+      <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
+        <SectionTitle icon={<GiPodiumWinner size={14} />} title="KPIs Executivos" subtitle={!historico ? "MTD vs mês anterior" : undefined} useBrand={useBrand} />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
           <KpiCard label="GGR Total"    value={fmtBRL(totais.ggr)}         icon={<GiMoneyStack  size={16} color={BRAND.roxo}    />} accentVar="--brand-extra1" accentColor={BRAND.roxo}    useBrand={useBrand} cardBg={blockBg} atual={totais.ggr}         anterior={totaisAnt.ggr}         isBRL isHistorico={historico} />
           <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney size={16} color={BRAND.azul}    />} accentVar="--brand-extra4" accentColor={BRAND.azul}    useBrand={useBrand} cardBg={blockBg} atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
@@ -644,19 +750,24 @@ export default function DashboardOverviewInfluencer() {
           <KpiCard label="Depósitos" value={totais.depositos_qtd.toLocaleString("pt-BR")} icon={<GiCardPlay size={16} color={BRAND.amarelo} />} accentVar="--brand-extra3" accentColor={BRAND.amarelo} useBrand={useBrand} cardBg={blockBg} atual={totais.depositos_qtd} anterior={totaisAnt.depositos_qtd} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.depositos_valor) }} />
           <KpiCard label="Saques"    value={totais.saques_qtd.toLocaleString("pt-BR")}   icon={<GiCash     size={16} color={BRAND.amarelo} />} accentVar="--brand-extra4" accentColor={BRAND.amarelo} useBrand={useBrand} cardBg={blockBg} atual={totais.saques_qtd}    anterior={totaisAnt.saques_qtd}    isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.saques_valor) }} />
         </div>
-      </div>
+      </BrandCard>
+      <BrandDivider useBrand={useBrand} />
 
       {/* ─── BLOCO 3: Funil de Conversão ──────────────────────────────────────── */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiFunnel size={14} color={BRAND.ciano} />} title="Funil de Conversão" useBrand={useBrand} />
+      <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
+        <SectionTitle icon={<GiFunnel size={14} />} title="Funil de Conversão" useBrand={useBrand} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
 
-          <FunilVisual steps={[
-            { label: "Views (média)", value: totais.views },
-            { label: "Acessos",       value: totais.acessos },
-            { label: "Registros",     value: totais.registros },
-            { label: "FTDs",          value: totais.ftds },
-          ]} />
+          <FunilVisual
+            steps={[
+              { label: "Views (média)", value: totais.views },
+              { label: "Acessos",       value: totais.acessos },
+              { label: "Registros",     value: totais.registros },
+              { label: "FTDs",          value: totais.ftds },
+            ]}
+            useBrand={useBrand}
+            logoUrl={useBrand ? (operadoraBrand?.logo_url ?? undefined) : undefined}
+          />
 
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: t.textMuted, fontFamily: FONT.body, marginBottom: 10 }}>Taxas de Conversão</div>
@@ -664,30 +775,32 @@ export default function DashboardOverviewInfluencer() {
               <RateCard label="View → Acesso"     value={pctViewAcesso} />
               <RateCard label="Acesso → Registro" value={pctAcessoReg} />
               <RateCard label="Registro → FTD"    value={pctRegFTD} />
-              <RateCard label="Acesso → FTD"     value={pctAcessoFTD} highlight={true} />
-              <RateCard label="View → FTD"       value={pctViewFTD}   highlight="purple" />
+              <RateCard label="Acesso → FTD"     value={pctAcessoFTD} highlight={true}   useBrand={useBrand} />
+              <RateCard label="View → FTD"       value={pctViewFTD}   highlight="purple" useBrand={useBrand} />
             </div>
           </div>
         </div>
-      </div>
+      </BrandCard>
+      <BrandDivider useBrand={useBrand} />
 
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiSpeedometer size={14} color={BRAND.ciano} />} title="Eficiência" useBrand={useBrand} />
+      <BrandCard useBrand={useBrand} style={{ marginBottom: 14 }}>
+        <SectionTitle icon={<GiSpeedometer size={14} />} title="Eficiência" useBrand={useBrand} />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
           <RateCard label="FTD/Hora"              value={ftdPorHora} />
           <RateCard label="Ticket Médio FTD"      value={ticketFTD} />
           <RateCard label="Ticket Médio Depósito" value={ticketDep} />
           <RateCard label="Ticket Médio Saque"    value={ticketSaque} />
-          <RateCard label="GGR por Jogador"     value={ggrPorJogador} highlight={true} />
+          <RateCard label="GGR por Jogador"     value={ggrPorJogador} highlight={true} useBrand={useBrand} />
         </div>
-      </div>
+      </BrandCard>
+      <BrandDivider useBrand={useBrand} />
 
       {/* ─── BLOCO 5: Comparativo Diário ──────────────────────────────────────── */}
       {!historico && mesSelecionado && diasData.length > 0 && (
-        <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+        <BrandCard useBrand={useBrand} style={{ marginBottom: 0 }} defaultPadding={false}>
           <div style={{ padding: "20px 20px 16px" }}>
-            <SectionTitle icon={<GiCalendar size={14} color={BRAND.ciano} />} title="Comparativo Diário" useBrand={useBrand} />
+            <SectionTitle icon={<GiCalendar size={14} />} title="Comparativo Diário" useBrand={useBrand} />
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -700,7 +813,7 @@ export default function DashboardOverviewInfluencer() {
               </thead>
               <tbody>
                 {diasData.map((d, i) => (
-                  <tr key={d.data} style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
+                  <tr key={d.data} style={{ background: zebraStripe(i) }}>
                     <td style={tdStyle}>{fmtDia(d.data)}</td>
                     <td style={tdStyle}>{d.duracao > 0 ? fmtHoras(d.duracao) : "—"}</td>
                     <td style={tdStyle}>{cel(d.media_views)}</td>
@@ -730,7 +843,7 @@ export default function DashboardOverviewInfluencer() {
                     ggr: acc.ggr + d.ggr,
                   }), { duracao: 0, acessos: 0, registros: 0, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
                   return (
-                    <tr key="total" style={{ background: "rgba(74,32,130,0.12)", fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
+                    <tr key="total" style={{ background: totalRowBg, fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
                       <td style={tdStyle}>Total</td>
                       <td style={tdStyle}>{tot.duracao > 0 ? fmtHoras(tot.duracao) : "—"}</td>
                       <td style={tdStyle}>—</td>
@@ -750,7 +863,7 @@ export default function DashboardOverviewInfluencer() {
               </tbody>
             </table>
           </div>
-        </div>
+        </BrandCard>
       )}
     </div>
   );
