@@ -243,7 +243,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         const { data } = await supabase.from("operadoras").select(
-          "nome, cor_primaria, cor_secundaria, cor_accent, cor_background, cor_textos, cor_icones, cor_adicional_1, cor_adicional_2, cor_adicional_3, cor_adicional_4, logo_url, font_url"
+          "nome, cor_primaria, cor_secundaria, cor_accent, cor_background, cor_textos, cor_icones, logo_url, font_url"
         ).eq("slug", slug).single();
         const hasBrand = !!(data?.cor_primaria || data?.cor_secundaria || data?.cor_accent || data?.cor_background || data?.cor_textos || data?.cor_icones || (data?.logo_url ?? "").trim());
         if (hasBrand) {
@@ -254,10 +254,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             background: data?.cor_background  ?? null,
             text:       data?.cor_textos      ?? null,
             icon:       data?.cor_icones      ?? null,
-            extra1:     data?.cor_adicional_1 ?? null,
-            extra2:     data?.cor_adicional_2 ?? null,
-            extra3:     data?.cor_adicional_3 ?? null,
-            extra4:     data?.cor_adicional_4 ?? null,
           });
         } else {
           aplicarBrandguide({});

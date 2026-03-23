@@ -203,11 +203,6 @@ export interface Operadora {
   cor_textos?:      string | null;
   /** Brandguide: cor dos ícones */
   cor_icones?:      string | null;
-  /** Brandguide: cores adicionais (uso livre) */
-  cor_adicional_1?: string | null;
-  cor_adicional_2?: string | null;
-  cor_adicional_3?: string | null;
-  cor_adicional_4?: string | null;
   /** Brandguide: URL do logo */
   logo_url?:        string | null;
   /** Brandguide: URL da fonte customizada (.woff2, .woff, .ttf) */

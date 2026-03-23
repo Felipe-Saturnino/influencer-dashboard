@@ -223,10 +223,6 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
   const [corBackground, setCorBackground] = useState(editando?.cor_background ?? "");
   const [corTextos, setCorTextos] = useState(editando?.cor_textos ?? "");
   const [corIcones, setCorIcones] = useState(editando?.cor_icones ?? "");
-  const [corAdicional1, setCorAdicional1] = useState(editando?.cor_adicional_1 ?? "");
-  const [corAdicional2, setCorAdicional2] = useState(editando?.cor_adicional_2 ?? "");
-  const [corAdicional3, setCorAdicional3] = useState(editando?.cor_adicional_3 ?? "");
-  const [corAdicional4, setCorAdicional4] = useState(editando?.cor_adicional_4 ?? "");
   const [logoUrl, setLogoUrl] = useState(editando?.logo_url ?? "");
   const [fontUrl, setFontUrl] = useState(editando?.font_url ?? "");
   const [salvando, setSalvando] = useState(false);
@@ -257,10 +253,6 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
       setCorBackground(editando.cor_background ?? "");
       setCorTextos(editando.cor_textos ?? "");
       setCorIcones(editando.cor_icones ?? "");
-      setCorAdicional1(editando.cor_adicional_1 ?? "");
-      setCorAdicional2(editando.cor_adicional_2 ?? "");
-      setCorAdicional3(editando.cor_adicional_3 ?? "");
-      setCorAdicional4(editando.cor_adicional_4 ?? "");
       setLogoUrl(editando.logo_url ?? "");
       setFontUrl(editando.font_url ?? "");
     }
@@ -332,10 +324,6 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
         cor_background:   corBackground.trim() || null,
         cor_textos:       corTextos.trim() || null,
         cor_icones:       corIcones.trim() || null,
-        cor_adicional_1:  corAdicional1.trim() || null,
-        cor_adicional_2:  corAdicional2.trim() || null,
-        cor_adicional_3:  corAdicional3.trim() || null,
-        cor_adicional_4:  corAdicional4.trim() || null,
         logo_url:         logoUrl.trim() || null,
         font_url:         fontUrl.trim() || null,
       };
@@ -470,34 +458,6 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
                 <input type="color" value={corIcones || "#70cae4"} onChange={e => setCorIcones(e.target.value)}
                   style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
                 <input type="text" value={corIcones} onChange={e => setCorIcones(e.target.value)} placeholder="#70cae4"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Adicional 1</label>
-                <input type="color" value={corAdicional1 || "#1e36f8"} onChange={e => setCorAdicional1(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corAdicional1} onChange={e => setCorAdicional1(e.target.value)} placeholder="#1e36f8"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Adicional 2</label>
-                <input type="color" value={corAdicional2 || "#22c55e"} onChange={e => setCorAdicional2(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corAdicional2} onChange={e => setCorAdicional2(e.target.value)} placeholder="#22c55e"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Adicional 3</label>
-                <input type="color" value={corAdicional3 || "#f59e0b"} onChange={e => setCorAdicional3(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corAdicional3} onChange={e => setCorAdicional3(e.target.value)} placeholder="#f59e0b"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Adicional 4</label>
-                <input type="color" value={corAdicional4 || "#e84025"} onChange={e => setCorAdicional4(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corAdicional4} onChange={e => setCorAdicional4(e.target.value)} placeholder="#e84025"
                   style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
