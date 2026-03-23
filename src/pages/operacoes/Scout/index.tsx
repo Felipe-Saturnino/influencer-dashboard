@@ -265,8 +265,6 @@ export default function Scout() {
     }
   }
 
-  const selectStyle: React.CSSProperties = { flex: 1, minWidth: 120, padding: "8px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", outline: "none" };
-
   if (perm.canView === "nao") {
     return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar a página Scout.</div>;
   }
@@ -304,12 +302,12 @@ export default function Scout() {
 
       {/* Bloco 1: Cards Consolidados */}
       {!loading && (
-        <div style={{ marginBottom: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ marginBottom: 24, display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>Funil de Prospecção</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, width: "100%" }}>
               {STATUS_SCOUT_OPTS.map((s) => (
-                <div key={s} style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `3px solid ${STATUS_SCOUT_COLOR[s]}`, borderRadius: 18, padding: "16px 20px", minWidth: 130, flex: "1 1 130px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
+                <div key={s} style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `3px solid ${STATUS_SCOUT_COLOR[s]}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)", minWidth: 0 }}>
                   <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: STATUS_SCOUT_COLOR[s], fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 6 }}>{STATUS_SCOUT_LABEL[s]}</div>
                 </div>
@@ -320,7 +318,7 @@ export default function Scout() {
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>
               Cobertura de Plataformas
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 12, width: "100%" }}>
               {PLATS_ORDEM.map((plat) => {
                 const count = porPlat[plat] ?? 0;
                 const cor = PLAT_COLOR[plat as Plataforma];
@@ -328,19 +326,20 @@ export default function Scout() {
                   <div
                     key={plat}
                     style={{
-                      display: "inline-flex", alignItems: "center", gap: 7,
-                      padding: "7px 14px", borderRadius: 20,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                      padding: "12px 16px", borderRadius: 18,
                       background: t.cardBg,
                       border: `1.5px solid ${cor}55`,
                       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      minWidth: 0,
                     }}
                   >
                     <PlatLogo plataforma={plat} size={14} isDark={isDark ?? false} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: cor, fontFamily: FONT.body }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: cor, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {plat}
                     </span>
                     <span style={{ width: 1, height: 12, background: `${cor}44`, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0 }}>
                       {count}
                     </span>
                   </div>
@@ -351,70 +350,135 @@ export default function Scout() {
         </div>
       )}
 
-      {/* Bloco 2: Filtros */}
-      <div style={{ marginBottom: "20px" }}>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome ou e-mail..."
-          style={{
-            width: "100%", boxSizing: "border-box", padding: "10px 16px",
-            borderRadius: 12, border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
-            fontFamily: FONT.body, outline: "none", marginBottom: 10,
-          }}
-        />
-        <div style={{ display: "flex", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
-            <option value="todos">Todos os status</option>
-            {[...STATUS_SCOUT_OPTS].sort((a, b) => STATUS_SCOUT_LABEL[a].localeCompare(STATUS_SCOUT_LABEL[b], "pt-BR")).map((s) => (
-              <option key={s} value={s}>{STATUS_SCOUT_LABEL[s]}</option>
-            ))}
-          </select>
-          <select value={filterPlat} onChange={(e) => setFilterPlat(e.target.value)} style={selectStyle}>
-            <option value="todas">Todas as plataformas</option>
-            {[...PLATAFORMAS].sort((a, b) => a.localeCompare(b, "pt-BR")).map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "12px", padding: "14px 18px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
-                <GiTwoCoins size={13} color={BRAND.ciano} /> Cachê por Hora — até
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.roxoVivo, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : formatBRL(cacheLimit) + "/h"}</span>
+      {/* Bloco 2: Filtros (estilo Influencers) */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{
+          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
+          background: t.cardBg,
+          padding: "12px 20px",
+        }}>
+          {/* Linha 1: Status / Plataforma */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
+            {STATUS_SCOUT_OPTS.map((s) => {
+              const active = filterStatus === s;
+              const color = STATUS_SCOUT_COLOR[s];
+              return (
+                <button key={s} onClick={() => setFilterStatus(active ? "todos" : s)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                    border: `1px solid ${active ? color : color + "55"}`,
+                    background: active ? `${color}22` : "transparent",
+                    color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
+                    fontFamily: FONT.body, transition: "all 0.15s",
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                  {STATUS_SCOUT_LABEL[s]}
+                  {active && <span style={{ fontSize: 9 }}>✕</span>}
+                </button>
+              );
+            })}
+            <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
+            {PLATAFORMAS.map((plat) => {
+              const active = filterPlat === plat;
+              const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
+              return (
+                <button key={plat} onClick={() => setFilterPlat(active ? "todas" : plat)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                    border: `1px solid ${active ? color : color + "55"}`,
+                    background: active ? `${color}22` : `${color}11`,
+                    color: active ? color : color + "cc",
+                    fontSize: 12, fontWeight: active ? 700 : 500,
+                    fontFamily: FONT.body, transition: "all 0.15s",
+                  }}
+                >
+                  <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
+                  {plat}
+                  {active && <span style={{ fontSize: 9 }}>✕</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Linha 2: Cachê / Views */}
+          <div style={{
+            paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`,
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18,
+          }}>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
+                  <GiTwoCoins size={13} color={BRAND.ciano} /> Cachê por Hora — até
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.roxoVivo, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : formatBRL(cacheLimit) + "/h"}</span>
+              </div>
+              <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
+                <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
+                <div style={{ position: "absolute", left: 0, width: `${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+                <input type="range" min={0} max={cacheMax || 1} step={50} value={cacheLimit} onChange={(e) => setCacheLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+                <div style={{ position: "absolute", left: `calc(${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
+                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax || 5000)}/h</span>
+              </div>
             </div>
-            <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
-              <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
-              <div style={{ position: "absolute", left: 0, width: `${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
-              <input type="range" min={0} max={cacheMax || 1} step={50} value={cacheLimit} onChange={(e) => setCacheLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
-              <div style={{ position: "absolute", left: `calc(${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
-              <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
-              <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax || 5000)}/h</span>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
+                  <GiEyeball size={13} color={BRAND.ciano} /> Views — até
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body }}>{viewsMax <= 0 || viewsLimit >= viewsMax ? "Todos" : viewsLimit.toLocaleString("pt-BR")}</span>
+              </div>
+              <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
+                <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
+                <div style={{ position: "absolute", left: 0, width: `${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+                <input type="range" min={0} max={viewsMax || 1} step={1000} value={viewsLimit} onChange={(e) => setViewsLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+                <div style={{ position: "absolute", left: `calc(${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>0</span>
+                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{(viewsMax || 100000).toLocaleString("pt-BR")}</span>
+              </div>
             </div>
           </div>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "12px", padding: "14px 18px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
-                <GiEyeball size={13} color={BRAND.ciano} /> Views — até
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body }}>{viewsMax <= 0 || viewsLimit >= viewsMax ? "Todos" : viewsLimit.toLocaleString("pt-BR")}</span>
-            </div>
-            <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
-              <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
-              <div style={{ position: "absolute", left: 0, width: `${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
-              <input type="range" min={0} max={viewsMax || 1} step={1000} value={viewsLimit} onChange={(e) => setViewsLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
-              <div style={{ position: "absolute", left: `calc(${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
-              <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>0</span>
-              <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{(viewsMax || 100000).toLocaleString("pt-BR")}</span>
-            </div>
+
+          {/* Linha 3: Barra de Pesquisa */}
+          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="🔍 Buscar por nome ou e-mail..."
+              style={{
+                width: "100%", boxSizing: "border-box", padding: "10px 16px",
+                borderRadius: 12, border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
+                fontFamily: FONT.body, outline: "none",
+              }}
+            />
           </div>
+
+          {(filterStatus !== "todos" || filterPlat !== "todas" || search || (cacheMax > 0 && cacheLimit < cacheMax) || (viewsMax > 0 && viewsLimit < viewsMax)) && (
+            <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
+              <button
+                onClick={() => { setFilterStatus("todos"); setFilterPlat("todas"); setSearch(""); setCacheLimit(cacheMax); setViewsLimit(viewsMax); }}
+                style={{
+                  padding: "5px 14px", borderRadius: 999,
+                  border: `1px solid ${BRAND.vermelho}44`,
+                  background: `${BRAND.vermelho}11`,
+                  color: BRAND.vermelho, fontSize: 12, fontWeight: 600,
+                  fontFamily: FONT.body, cursor: "pointer",
+                }}
+              >
+                ✕ Limpar filtros
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
