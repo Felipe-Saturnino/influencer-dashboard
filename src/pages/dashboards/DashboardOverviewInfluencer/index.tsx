@@ -137,7 +137,7 @@ function RateCard({ label, value, highlight, useBrand }: {
 }) {
   const { theme: t } = useApp();
   const highlightColor = highlight
-    ? (useBrand ? "var(--brand-primary)" : highlight === "purple" ? BRAND.roxoVivo : BRAND.azul)
+    ? (useBrand ? "var(--brand-accent)" : highlight === "purple" ? BRAND.roxoVivo : BRAND.azul)
     : null;
 
   return (
@@ -153,14 +153,14 @@ function BrandCard({
   children, useBrand, style, defaultPadding = true,
 }: { children: React.ReactNode; useBrand?: boolean; style?: React.CSSProperties; defaultPadding?: boolean }) {
   const { theme: t, operadoraBrand } = useApp();
-  const blockBg_local = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
+  const blockBg_local = useBrand ? "var(--brand-background)" : t.cardBg;
   return (
     <div style={{
       background: blockBg_local, border: `1px solid ${t.cardBorder}`, borderRadius: 18,
       overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)", ...style,
     }}>
       {useBrand && (
-        <div style={{ height: 3, background: "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary, var(--brand-primary)))" }} />
+        <div style={{ height: 3, background: "var(--brand-secondary)" }} />
       )}
       {defaultPadding ? <div style={{ padding: 20 }}>{children}</div> : children}
     </div>
@@ -173,7 +173,7 @@ function BrandDivider({ useBrand }: { useBrand?: boolean }) {
   return (
     <div style={{
       height: 1, marginBottom: 14,
-      background: "linear-gradient(90deg, var(--brand-primary) 0%, transparent 100%)",
+      background: "linear-gradient(90deg, var(--brand-secondary) 0%, transparent 100%)",
       opacity: 0.25, borderRadius: 1,
     }} />
   );
@@ -443,7 +443,7 @@ export default function DashboardOverviewInfluencer() {
   const ggrPorJogador = totais.ftds > 0 ? fmtBRL(totais.ggr / totais.ftds) : "—";
 
   const useBrand = user?.role === "operador" && !!operadoraBrand;
-  const blockBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
+  const blockBg = useBrand ? "var(--brand-background)" : t.cardBg;
   const card: React.CSSProperties = { background: blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
 
   useEffect(() => {
@@ -463,12 +463,12 @@ export default function DashboardOverviewInfluencer() {
   const thStyle: React.CSSProperties = {
     textAlign: "left", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase",
     color: t.textMuted, padding: "10px 12px",
-    background: useBrand ? "color-mix(in srgb, var(--brand-primary) 10%, transparent)" : "rgba(74,32,130,0.10)",
+    background: useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : "rgba(74,32,130,0.10)",
     borderBottom: `1px solid ${t.cardBorder}`, fontFamily: FONT.body, whiteSpace: "nowrap", fontWeight: 700,
   };
   const zebraStripe = (i: number) =>
-    i % 2 === 1 ? (useBrand ? "color-mix(in srgb, var(--brand-primary) 6%, transparent)" : "rgba(74,32,130,0.06)") : "transparent";
-  const totalRowBg = useBrand ? "color-mix(in srgb, var(--brand-primary) 12%, transparent)" : "rgba(74,32,130,0.12)";
+    i % 2 === 1 ? (useBrand ? "color-mix(in srgb, var(--brand-secondary) 6%, transparent)" : "rgba(74,32,130,0.06)") : "transparent";
+  const totalRowBg = useBrand ? "color-mix(in srgb, var(--brand-secondary) 12%, transparent)" : "rgba(74,32,130,0.12)";
   const tdStyle: React.CSSProperties = { padding: "10px 12px", fontSize: 13, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", borderBottom: `1px solid ${t.cardBorder}` };
 
   const isPrimeiro = idxMes === 0;
@@ -485,7 +485,7 @@ export default function DashboardOverviewInfluencer() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
+          border: useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 20%, transparent)" : `1px solid ${t.cardBorder}`,
           background: blockBg,
           padding: "12px 20px",
         }}>
@@ -495,7 +495,7 @@ export default function DashboardOverviewInfluencer() {
             <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
               <ChevronLeft size={14} />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: useBrand ? "var(--brand-primary)" : t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
@@ -509,12 +509,12 @@ export default function DashboardOverviewInfluencer() {
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
                 border: historico
-                  ? `1px solid ${useBrand ? "var(--brand-primary)" : BRAND.roxoVivo}`
+                  ? `1px solid ${useBrand ? "var(--brand-accent)" : BRAND.roxoVivo}`
                   : `1px solid ${t.cardBorder}`,
                 background: historico
-                  ? useBrand ? "color-mix(in srgb, var(--brand-primary) 15%, transparent)" : `${BRAND.roxoVivo}18`
+                  ? useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`
                   : "transparent",
-                color: historico ? (useBrand ? "var(--brand-primary)" : BRAND.roxoVivo) : t.textMuted,
+                color: historico ? (useBrand ? "var(--brand-accent)" : BRAND.roxoVivo) : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}

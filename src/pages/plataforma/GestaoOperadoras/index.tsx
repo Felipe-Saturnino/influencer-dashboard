@@ -289,6 +289,13 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
     }
   };
 
+  const FONT_MIME: Record<string, string> = {
+    woff2: "font/woff2",
+    woff: "font/woff",
+    ttf: "font/ttf",
+    otf: "font/otf",
+  };
+
   const handleUploadFont = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editando?.slug) return;
@@ -297,7 +304,8 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "woff2";
       const path = `${editando.slug}/font.${ext}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+      const contentType = FONT_MIME[ext] ?? "font/woff2";
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
       setFontUrl(publicUrl);

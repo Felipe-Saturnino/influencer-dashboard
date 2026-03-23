@@ -366,13 +366,10 @@ export default function DashboardOverview() {
 
   // ── ESTILOS BASE ──────────────────────────────────────────────────────────────
   const useBrand = user?.role === "operador" && !!operadoraBrand;
-  const isOperadorDark = useBrand && t.isDark;
-  const kpiCardBg = isOperadorDark ? "var(--brand-background)" : undefined;
-  const filterBlockBg = useBrand
-    ? "color-mix(in srgb, var(--brand-primary) 6%, var(--brand-background, transparent))"
-    : t.cardBg;
+  const kpiCardBg = useBrand ? "var(--brand-background)" : undefined;
+  const filterBlockBg = useBrand ? "var(--brand-background)" : t.cardBg;
   const card: React.CSSProperties = {
-    background: isOperadorDark ? "var(--brand-background)" : t.cardBg,
+    background: useBrand ? "var(--brand-background)" : t.cardBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -386,7 +383,7 @@ export default function DashboardOverview() {
   };
 
   const cardStrip = useBrand ? (
-    <div style={{ height: 3, background: "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary, var(--brand-primary)))" }} />
+    <div style={{ height: 3, background: "var(--brand-secondary)" }} />
   ) : null;
 
   const thStyle: React.CSSProperties = {
@@ -399,14 +396,14 @@ export default function DashboardOverview() {
     padding: "10px 12px",
     borderBottom: `1px solid ${t.cardBorder}`,
     background: useBrand
-      ? "color-mix(in srgb, var(--brand-primary) 10%, transparent)"
+      ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)"
       : "rgba(74,32,130,0.10)",
     fontFamily: FONT.body,
     whiteSpace: "nowrap",
   };
 
   const zebraStripe = (i: number) =>
-    i % 2 === 0 ? "transparent" : useBrand ? "color-mix(in srgb, var(--brand-primary) 6%, transparent)" : "rgba(74,32,130,0.06)";
+    i % 2 === 0 ? "transparent" : useBrand ? "color-mix(in srgb, var(--brand-secondary) 6%, transparent)" : "rgba(74,32,130,0.06)";
 
   const tdStyle: React.CSSProperties = {
     padding: "10px 12px",
@@ -467,7 +464,7 @@ export default function DashboardOverview() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent)" : `1px solid ${t.cardBorder}`,
+          border: useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 20%, transparent)" : `1px solid ${t.cardBorder}`,
           background: filterBlockBg,
           padding: "12px 20px",
         }}>
@@ -504,12 +501,12 @@ export default function DashboardOverview() {
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
                 border: historico
-                  ? `1px solid ${useBrand ? "var(--brand-primary)" : BRAND.roxoVivo}`
+                  ? `1px solid ${useBrand ? "var(--brand-accent)" : BRAND.roxoVivo}`
                   : `1px solid ${t.cardBorder}`,
                 background: historico
-                  ? useBrand ? "color-mix(in srgb, var(--brand-primary) 15%, transparent)" : "rgba(124,58,237,0.15)"
+                  ? useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)"
                   : "transparent",
-                color: historico ? (useBrand ? "var(--brand-primary)" : BRAND.roxoVivo) : t.textMuted,
+                color: historico ? (useBrand ? "var(--brand-accent)" : BRAND.roxoVivo) : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}

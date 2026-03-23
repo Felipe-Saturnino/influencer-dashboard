@@ -1,6 +1,6 @@
 import { useApp } from "../../context/AppContext";
 import { FONT } from "../../constants/theme";
-import { FUNIL_COLORS, FUNIL_VARS } from "../../lib/dashboardConstants";
+import { FUNIL_COLORS } from "../../lib/dashboardConstants";
 
 const FUNIL_STEPS = [
   { key: "views", label: "Views (média)" },
@@ -32,7 +32,7 @@ export default function FunilVisual({
   const stepH = H / levels;
   const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
   const getStepColor = (i: number) =>
-    useBrand ? `var(${FUNIL_VARS[i]})` : FUNIL_COLORS[i];
+    useBrand ? "var(--brand-secondary)" : FUNIL_COLORS[i];
 
   return (
     <div
@@ -180,7 +180,7 @@ export default function FunilVisual({
             highlight: true,
           },
         ].map((r) => {
-          const highlightColor = useBrand ? "var(--brand-primary)" : r.color;
+          const highlightColor = useBrand ? "var(--brand-accent)" : r.color;
           const border = (r as { highlight?: boolean }).highlight
             ? `1px solid color-mix(in srgb, ${highlightColor} 32%, transparent)`
             : `1px solid ${t.cardBorder}`;
