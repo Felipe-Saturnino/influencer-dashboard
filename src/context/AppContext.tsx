@@ -119,7 +119,8 @@ async function carregarEscoposVisiveis(
   if (role === "operador") {
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
-      .map((s) => s.scope_ref);
+      .map((s) => s.scope_ref)
+      .sort((a, b) => (a ?? "").localeCompare(b ?? ""));
     return { influencersVisiveis: [], operadorasVisiveis, semRestricaoEscopo: false, vêTodosInfluencers: true };
   }
 
@@ -206,6 +207,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const [escoposVisiveis, setEscoposVisiveis] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
   const [operadoraBrand, setOperadoraBrand] = useState<OperadoraBrand | null>(null);
+  const [brandRefreshKey, setBrandRefreshKey] = useState(0);
+
+  // Refetch brand ao voltar para a aba (ex.: admin atualizou operadora em outra aba)
+  useEffect(() => {
+    if (user?.role !== "operador") return;
+    const onFocus = () => setBrandRefreshKey((k) => k + 1);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [user?.role]);
 
   // Operador: sempre modo Dark (brand da operadora); demais roles escolhem tema
   const effectiveIsDark = user?.role === "operador" ? true : isDark;
@@ -229,7 +239,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const { data } = await supabase.from("operadoras").select(
           "nome, cor_primaria, cor_secundaria, cor_accent, cor_background, cor_textos, cor_icones, cor_adicional_1, cor_adicional_2, cor_adicional_3, cor_adicional_4, logo_url, font_url"
         ).eq("slug", slug).single();
-        const hasBrand = data?.cor_primaria || data?.cor_secundaria || data?.cor_accent || data?.cor_background || data?.cor_textos || data?.cor_icones;
+        const hasBrand = !!(data?.cor_primaria || data?.cor_secundaria || data?.cor_accent || data?.cor_background || data?.cor_textos || data?.cor_icones || (data?.logo_url ?? "").trim());
         if (hasBrand) {
           aplicarBrandguide({
             primary:    data?.cor_primaria    ?? null,
@@ -256,7 +266,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setOperadoraBrand(null);
       }
     })();
-  }, [user?.id, user?.role, escoposVisiveis.operadorasVisiveis]);
+  }, [user?.id, user?.role, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
 
   // Fonte customizada: injeta @font-face e aplica --brand-fontFamily quando operador tem font_url
   useEffect(() => {

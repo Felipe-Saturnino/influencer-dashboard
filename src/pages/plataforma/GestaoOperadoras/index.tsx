@@ -279,7 +279,8 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      setLogoUrl(publicUrl);
+      // Cache-busting: evita que o navegador sirva logo antigo após novo upload
+      setLogoUrl(`${publicUrl}?v=${Date.now()}`);
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Erro ao enviar logo.");
     } finally {
