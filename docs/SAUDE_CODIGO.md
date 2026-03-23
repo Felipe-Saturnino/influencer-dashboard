@@ -29,6 +29,17 @@
 - **Antes**: ~320 KB em um único chunk na carga inicial.
 - **Depois**: carregamento inicial menor; chunks de cada página carregados apenas quando o usuário acessa a tela.
 
+### ChunkLoadError — tela em branco após deploy
+
+Com lazy loading + manualChunks, cada página gera chunks com hash no nome (ex.: `index-XbYaTWD5.js`). Após um novo deploy:
+- Os hashes mudam e os chunks antigos são removidos.
+- Usuários com a app aberta (cache antigo) tentam carregar chunks que não existem mais → 404 → erro.
+
+**Solução implementada:**
+- `ErrorBoundary` detecta ChunkLoadError e recarrega a página automaticamente.
+- Listener global em `main.tsx` para `unhandledrejection` de chunk também dispara reload.
+- O usuário recebe a nova versão sem precisar recarregar manualmente.
+
 ### Dependência pesada
 
 - **recharts** (~494 KB minificado): usado em dashboards. Considerar troca por lib mais leve ou lazy load apenas nas páginas que usam gráficos.

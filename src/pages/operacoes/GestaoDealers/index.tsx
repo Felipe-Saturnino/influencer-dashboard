@@ -8,6 +8,7 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
 import { X, Eye, Pencil, MessageSquare, Upload, Trash2 } from "lucide-react";
 import { GiCardRandom } from "react-icons/gi";
+import OperadoraTag from "../../../components/OperadoraTag";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -72,7 +73,7 @@ export default function GestaoDealers() {
     setLoading(true);
     const [dealersRes, operadorasRes] = await Promise.all([
       supabase.from("dealers").select("*").order("nickname"),
-      supabase.from("operadoras").select("slug, nome").order("nome").eq("ativo", true),
+      supabase.from("operadoras").select("slug, nome, cor_primaria").order("nome").eq("ativo", true),
     ]);
     setDealers((dealersRes.data ?? []) as Dealer[]);
     setOperadoras((operadorasRes.data ?? []) as Operadora[]);
@@ -266,7 +267,7 @@ function DealerCard({
   onObservacoes: () => void;
   canEditar: boolean;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const fotoUrl = (dealer.fotos ?? [])[0];
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
 
@@ -338,9 +339,7 @@ function DealerCard({
             {GENERO_OPTS.find((o) => o.value === dealer.genero)?.label ?? dealer.genero}
           </span>
           {op && (
-            <span style={{ background: `${BRAND.azul}22`, color: BRAND.azul, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, fontFamily: FONT.body }}>
-              {op.nome}
-            </span>
+            <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} dark={isDark ?? false} />
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -365,7 +364,7 @@ function DealerCard({
 
 // ─── Modal Ver ────────────────────────────────────────────────────────────────
 function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras: Operadora[]; onClose: () => void }) {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
   const fotoUrl = (dealer.fotos ?? [])[0];
 
@@ -389,7 +388,7 @@ function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras:
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Gênero</span><br /><span style={{ fontSize: 14, color: t.text }}>{GENERO_OPTS.find((o) => o.value === dealer.genero)?.label}</span></div>
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Turno</span><br /><span style={{ fontSize: 14, color: t.text }}>{TURNO_OPTS.find((o) => o.value === dealer.turno)?.label}</span></div>
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Jogos</span><br /><span style={{ fontSize: 14, color: t.text }}>{(dealer.jogos ?? []).map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label).join(", ") || "—"}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br /><span style={{ fontSize: 14, color: t.text }}>{op?.nome ?? "Nenhuma"}</span></div>
+          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br />{op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} dark={isDark ?? false} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}</div>
           {dealer.perfil_influencer && (
             <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Perfil do Influencer</span><br /><span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span></div>
           )}
