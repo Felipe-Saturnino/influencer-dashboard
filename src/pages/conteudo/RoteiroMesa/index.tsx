@@ -7,7 +7,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { Pencil, Plus, X, Check, BookOpen, Megaphone } from "lucide-react";
-import { GiNotebook } from "react-icons/gi";
+import { GiNotebook, GiShield } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -884,8 +884,7 @@ export default function RoteiroMesa() {
   const [modalRoteiros,   setModalRoteiros]   = useState(false);
   const [modalCampanha,   setModalCampanha]   = useState(false);
 
-  const mostrarFiltroOp =
-    showFiltroOperadora || (operadoraSlugsForcado != null && operadoraSlugsForcado.length > 1);
+  const mostrarFiltroOp = showFiltroOperadora;
 
   const operadoraSlugSelecionada: string | null =
     operadoraSlugsForcado?.length === 1
@@ -987,83 +986,14 @@ export default function RoteiroMesa() {
 
       </div>
 
-      {/* ── BLOCO DE FILTROS — padrão Agenda de Lives ── */}
+      {/* ── BLOCO DE FILTROS — tudo em uma linha, operadora à direita com ícone ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, padding: "12px 20px" }}>
-
-          {/* Linha 1: Operadora + Botões + Roteiros / Nova Campanha */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", flex: 1 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 60 }}>
-                Operadora
-              </span>
-              {mostrarFiltroOp && opcoesFiltro.length > 0 ? (
-              <select
-                value={filtroOperadora}
-                onChange={(e) => setFiltroOperadora(e.target.value)}
-                style={{
-                  padding: "6px 14px", borderRadius: 999,
-                  border: `1px solid ${filtroOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                  background: filtroOperadora !== "todas"
-                    ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxo}18`)
-                    : (t.inputBg ?? t.cardBg),
-                  color: filtroOperadora !== "todas" ? brand.accent : t.textMuted,
-                  fontSize: 13, fontWeight: filtroOperadora !== "todas" ? 700 : 400,
-                  fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
-                }}
-              >
-                {!operadoraSlugsForcado?.length && <option value="todas">Todas as operadoras</option>}
-                {[...opcoesFiltro]
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-              </select>
-            ) : operadoraSlugsForcado?.length ? (
-              <span style={{ fontSize: 13, color: t.text, fontFamily: FONT.body, fontWeight: 600 }}>
-                {operadorasList.find((o) => o.slug === operadoraSlugSelecionada)?.nome ?? operadoraSlugSelecionada}
-              </span>
-            ) : (
-              <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                Nenhuma operadora disponível no seu escopo.
-              </span>
-            )}
-            </div>
-            {podeAdicionarGlobal && (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  onClick={() => setModalRoteiros(true)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "8px 16px", borderRadius: 10, border: "none",
-                    cursor: "pointer",
-                    background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-                    color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
-                  }}
-                >
-                  <Plus size={14} />+ Roteiros
-                </button>
-                <button
-                  onClick={() => setModalCampanha(true)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "8px 16px", borderRadius: 10, border: `1.5px solid ${BRAND.ciano}`,
-                    background: "rgba(112,202,228,0.12)", color: BRAND.ciano,
-                    fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
-                  }}
-                >
-                  <Megaphone size={14} />Nova Campanha
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Divisor */}
-          <div style={{ margin: "12px 0", borderTop: `1px solid ${t.cardBorder}` }} />
-
-          {/* Linha 2: Jogo + separador + Tipo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 32 }}>Jogo</span>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+            {/* Esquerda: Jogo + Tipo + Botões */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>Jogo</span>
                 {JOGOS.map(({ key, label }) => {
                   const jcfg = JOGO_TAG_CONFIG[key];
                   return (
@@ -1071,13 +1001,9 @@ export default function RoteiroMesa() {
                   );
                 })}
               </div>
-            </div>
-
-            <div style={{ width: 1, height: 24, background: t.cardBorder, flexShrink: 0 }} />
-
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, minWidth: 26 }}>Tipo</span>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <div style={{ width: 1, height: 24, background: t.cardBorder, flexShrink: 0 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body }}>Tipo</span>
                 <FilterChip label="Todos" active={filtroTipo === "todos"} activeColor={dark ? "#b08aee" : "#3a1868"} activeBg="rgba(74,32,130,0.15)" activeBorder={BRAND.roxoBorder} onClick={() => setFiltroTipo("todos")} dark={dark} />
                 {TIPOS.map(({ key, label }) => {
                   const cfg = TIPO_CONFIG[key];
@@ -1086,7 +1012,45 @@ export default function RoteiroMesa() {
                   );
                 })}
               </div>
+              {podeAdicionarGlobal && (
+                <>
+                  <div style={{ width: 1, height: 24, background: t.cardBorder, flexShrink: 0 }} />
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button onClick={() => setModalRoteiros(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: "none", cursor: "pointer", background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
+                      <Plus size={14} />+ Roteiros
+                    </button>
+                    <button onClick={() => setModalCampanha(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: `1.5px solid ${BRAND.ciano}`, background: "rgba(112,202,228,0.12)", color: BRAND.ciano, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+                      <Megaphone size={14} />Nova Campanha
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
+            {/* Direita: Operadora (só quando showFiltroOperadora; não aparece para perfil Operador) */}
+            {mostrarFiltroOp && opcoesFiltro.length > 0 && (
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                  <GiShield size={15} />
+                </span>
+                <select
+                  value={filtroOperadora}
+                  onChange={(e) => setFiltroOperadora(e.target.value)}
+                  style={{
+                    padding: "6px 14px 6px 32px", borderRadius: 999,
+                    border: `1px solid ${filtroOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                    background: filtroOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxo}18`) : (t.inputBg ?? t.cardBg),
+                    color: filtroOperadora !== "todas" ? brand.accent : t.textMuted,
+                    fontSize: 13, fontWeight: filtroOperadora !== "todas" ? 700 : 400,
+                    fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                  }}
+                >
+                  {!operadoraSlugsForcado?.length && <option value="todas">Todas as operadoras</option>}
+                  {[...opcoesFiltro]
+                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </div>
