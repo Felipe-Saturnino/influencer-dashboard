@@ -130,7 +130,7 @@ const TIPO_CONFIG: Record<TipoSugestao, {
     label:       "Script",
   },
   orientacao: {
-    borderColor: "rgba(255,255,255,0.10)",
+    borderColor: "rgba(107,114,128,0.55)",
     bgColor:     (d) => d ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.02)",
     textColor:   (d) => d ? "#9898be" : "#4a4a6a",
     tagBg:       "rgba(107,114,128,0.15)",
