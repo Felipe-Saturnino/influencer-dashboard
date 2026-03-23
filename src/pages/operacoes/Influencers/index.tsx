@@ -8,7 +8,7 @@ import type { Operadora, InfluencerOperadora } from "../../../types";
 import { Eye, EyeOff, Pencil, X } from "lucide-react";
 import {
   GiMicrophone, GiPodium, GiWarPick, GiTwoCoins,
-  GiPokerHand, GiCheckMark,
+  GiPokerHand, GiCheckMark, GiShield,
 } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -444,13 +444,6 @@ export default function Influencers() {
     display: "flex", alignItems: "center", justifyContent: "space-between",
     gap: "12px", flexWrap: "wrap",
   };
-  const selectStyle: React.CSSProperties = {
-    flex: 1, padding: "8px 12px", borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
-    color: t.text, fontSize: 12, fontFamily: FONT.body,
-    cursor: "pointer", outline: "none",
-  };
-
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -549,69 +542,149 @@ export default function Influencers() {
         </div>
       )}
 
-      {/* Busca e filtros */}
+      {/* Bloco de filtros consolidado (estilo Agenda, sem carrossel) */}
       {showManagementUI && (
-        <>
-          <input
-            value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome artístico ou e-mail..."
-            style={{
-              width: "100%", boxSizing: "border-box", padding: "10px 16px",
-              borderRadius: 12, border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
-              fontFamily: FONT.body, outline: "none", marginBottom: 10,
-            }}
-          />
+        <div style={{ marginBottom: 20 }}>
+          <div style={{
+            borderRadius: 14, border: `1px solid ${t.cardBorder}`,
+            background: t.cardBg,
+            padding: "12px 20px",
+          }}>
+            {/* Linha 1: Status / Plataforma / Operadora */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
+              {STATUS_OPTS.map((s) => {
+                const active = filterStatus === s;
+                const color = STATUS_COLOR[s];
+                return (
+                  <button key={s} onClick={() => setFilterStatus(active ? "todos" : s)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : "transparent",
+                      color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    {STATUS_LABEL[s]}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
+              <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
+              {PLATAFORMAS.map((plat) => {
+                const active = filterPlat === plat;
+                const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
+                return (
+                  <button key={plat} onClick={() => setFilterPlat(active ? "todas" : plat)}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : `${color}11`,
+                      color: active ? color : color + "cc",
+                      fontSize: 12, fontWeight: active ? 700 : 500,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
+                    {plat}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
+              {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
+                <>
+                  <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Operadora</span>
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                      <GiShield size={13} />
+                    </span>
+                    <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)}
+                      style={{
+                        padding: "6px 14px 6px 30px", borderRadius: 999,
+                        border: `1px solid ${filterOp !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
+                        background: filterOp !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
+                        color: filterOp !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                        fontSize: 13, fontWeight: filterOp !== "todas" ? 700 : 400,
+                        fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                      }}
+                    >
+                      <option value="todas">Todas as operadoras</option>
+                      {operadorasNoEscopo.map((o) => (
+                        <option key={o.slug} value={o.slug}>{o.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
 
-          <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
-              <option value="todos">Todos os status</option>
-              {STATUS_OPTS.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-              ))}
-            </select>
-            <select value={filterPlat} onChange={(e) => setFilterPlat(e.target.value)} style={selectStyle}>
-              <option value="todas">Todas as plataformas</option>
-              {PLATAFORMAS.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-            {showFiltroOperadora && (
-              <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)} style={selectStyle}>
-                <option value="todas">Todas as operadoras</option>
-                {operadorasNoEscopo.map((o) => (
-                  <option key={o.slug} value={o.slug}>{o.nome}</option>
-                ))}
-              </select>
+            {/* Linha 2: Filtro de Cachê */}
+            {cacheMax > 0 && (
+              <div style={{
+                paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`,
+                paddingBottom: 12,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
+                    <GiTwoCoins size={13} style={{ color: BRAND.ciano }} /> Cachê por Hora — até
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
+                    {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
+                  </span>
+                </div>
+                <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
+                  <div style={{ position: "absolute", left: 0, width: `${(cacheLimit / cacheMax) * 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+                  <input type="range" min={0} max={cacheMax} step={50} value={cacheLimit}
+                    onChange={(e) => setCacheLimit(Number(e.target.value))}
+                    style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+                  <div style={{ position: "absolute", left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+                  <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
+                  <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax)}/h</span>
+                </div>
+              </div>
+            )}
+
+            {/* Linha 3: Barra de Pesquisa */}
+            <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+              <input
+                value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="🔍 Buscar por nome artístico ou e-mail..."
+                style={{
+                  width: "100%", boxSizing: "border-box", padding: "10px 16px",
+                  borderRadius: 12, border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
+                  fontFamily: FONT.body, outline: "none",
+                }}
+              />
+            </div>
+
+            {(filterStatus !== "todos" || filterPlat !== "todas" || filterOp !== "todas" || search || (cacheMax > 0 && cacheLimit < cacheMax)) && (
+              <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
+                <button
+                  onClick={() => { setFilterStatus("todos"); setFilterPlat("todas"); setFilterOp("todas"); setSearch(""); setCacheLimit(cacheMax); }}
+                  style={{
+                    padding: "5px 14px", borderRadius: 999,
+                    border: `1px solid ${BRAND.vermelho}44`,
+                    background: `${BRAND.vermelho}11`,
+                    color: BRAND.vermelho, fontSize: 12, fontWeight: 600,
+                    fontFamily: FONT.body, cursor: "pointer",
+                  }}
+                >
+                  ✕ Limpar filtros
+                </button>
+              </div>
             )}
           </div>
-
-          {cacheMax > 0 && (
-            <div style={{
-              background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-              borderRadius: "12px", padding: "14px 18px", marginBottom: "16px",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
-                  <GiTwoCoins size={13} style={{ color: BRAND.ciano }} /> Cachê por Hora — até
-                </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
-                  {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
-                </span>
-              </div>
-              <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
-                <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
-                <div style={{ position: "absolute", left: 0, width: `${(cacheLimit / cacheMax) * 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
-                <input type="range" min={0} max={cacheMax} step={50} value={cacheLimit}
-                  onChange={(e) => setCacheLimit(Number(e.target.value))}
-                  style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
-                <div style={{ position: "absolute", left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
-                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
-                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax)}/h</span>
-              </div>
-            </div>
-          )}
-        </>
+        </div>
       )}
 
       {/* Contador */}
