@@ -121,7 +121,7 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
                       style={{
                         ...btnBase,
                         background: active
-                          ? "linear-gradient(135deg, color-mix(in srgb, var(--brand-primary) 80%, transparent), color-mix(in srgb, var(--brand-accent) 80%, transparent))"
+                          ? "linear-gradient(135deg, color-mix(in srgb, var(--brand-primary) 80%, transparent), color-mix(in srgb, var(--brand-secondary) 80%, transparent))"
                           : "transparent",
                         color:     active ? "white" : "#e5dce1",
                         boxShadow: active ? "0 4px 16px color-mix(in srgb, var(--brand-primary) 27%, transparent)" : "none",
