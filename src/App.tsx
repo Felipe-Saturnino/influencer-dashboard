@@ -1,40 +1,39 @@
+import { Suspense, lazy } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
-// Layout
+// Layout (sempre carregados — usados em toda sessão)
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
-// Páginas — geral
+// Páginas de fluxo inicial (eager — Login e TrocarSenha bloqueiam antes do layout)
 import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
-import Configuracoes          from "./pages/geral/Configuracoes";
-import Ajuda                  from "./pages/geral/Ajuda";
-import Home                   from "./pages/geral/Home";
-// Páginas — dashboards
-import DashboardOverview          from "./pages/dashboards/DashboardOverview";
-import DashboardOverviewInfluencer from "./pages/dashboards/DashboardOverviewInfluencer";
-import DashboardConversao         from "./pages/dashboards/DashboardConversao";
-import DashboardFinanceiro        from "./pages/dashboards/DashboardFinanceiro";
-import MesasSpin                 from "./pages/dashboards/MesasSpin";
-import SocialMediaDashboard      from "./pages/dashboards/SocialMediaDashboard";
-// Páginas — lives
-import Agenda     from "./pages/lives/Agenda";
-import Resultados from "./pages/lives/Resultados";
-import Feedback   from "./pages/lives/Feedback";
-// Páginas — operacoes
-import Influencers from "./pages/operacoes/Influencers";
-import Scout from "./pages/operacoes/Scout";
-import Financeiro  from "./pages/operacoes/Financeiro";
-import GestaoLinks from "./pages/operacoes/GestaoLinks";
-import Campanhas from "./pages/operacoes/Campanhas";
-import GestaoDealers from "./pages/operacoes/GestaoDealers";
-import RoteiroMesa from "./pages/conteudo/RoteiroMesa";
-// Páginas — plataforma
-import GestaoUsuarios from "./pages/plataforma/GestaoUsuarios";
-import GestaoOperadoras from "./pages/plataforma/GestaoOperadoras";
-import StatusTecnico from "./pages/plataforma/StatusTecnico";
+
+// Páginas do layout — lazy loading (carregadas sob demanda para reduzir bundle inicial)
+const Home                   = lazy(() => import("./pages/geral/Home"));
+const Configuracoes          = lazy(() => import("./pages/geral/Configuracoes"));
+const Ajuda                  = lazy(() => import("./pages/geral/Ajuda"));
+const DashboardOverview          = lazy(() => import("./pages/dashboards/DashboardOverview"));
+const DashboardOverviewInfluencer = lazy(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
+const DashboardConversao         = lazy(() => import("./pages/dashboards/DashboardConversao"));
+const DashboardFinanceiro        = lazy(() => import("./pages/dashboards/DashboardFinanceiro"));
+const MesasSpin                 = lazy(() => import("./pages/dashboards/MesasSpin"));
+const SocialMediaDashboard      = lazy(() => import("./pages/dashboards/SocialMediaDashboard"));
+const Agenda     = lazy(() => import("./pages/lives/Agenda"));
+const Resultados = lazy(() => import("./pages/lives/Resultados"));
+const Feedback   = lazy(() => import("./pages/lives/Feedback"));
+const Influencers = lazy(() => import("./pages/operacoes/Influencers"));
+const Scout = lazy(() => import("./pages/operacoes/Scout"));
+const Financeiro  = lazy(() => import("./pages/operacoes/Financeiro"));
+const GestaoLinks = lazy(() => import("./pages/operacoes/GestaoLinks"));
+const Campanhas = lazy(() => import("./pages/operacoes/Campanhas"));
+const GestaoDealers = lazy(() => import("./pages/operacoes/GestaoDealers"));
+const RoteiroMesa = lazy(() => import("./pages/conteudo/RoteiroMesa"));
+const GestaoUsuarios = lazy(() => import("./pages/plataforma/GestaoUsuarios"));
+const GestaoOperadoras = lazy(() => import("./pages/plataforma/GestaoOperadoras"));
+const StatusTecnico = lazy(() => import("./pages/plataforma/StatusTecnico"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
-const PAGE_MAP: Record<string, React.FC> = {
+const PAGE_MAP: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   home:                     Home,
   dash_overview:             DashboardOverview,
   dash_overview_influencer:  DashboardOverviewInfluencer,
@@ -59,6 +58,16 @@ const PAGE_MAP: Record<string, React.FC> = {
   ajuda:            Ajuda,
 };
 
+const PageLoadingFallback = () => (
+  <div style={{
+    flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+    background: "inherit", minHeight: 200,
+    color: "#e5dce1", fontSize: 14, fontFamily: "Inter, sans-serif",
+  }}>
+    ⏳ Carregando...
+  </div>
+);
+
 // ─── APP LAYOUT ──────────────────────────────────────────────────────────────
 function AppLayout({ onLogout }: { onLogout: () => void }) {
   const { user, theme: t, activePage, setActivePage } = useApp();
@@ -69,8 +78,10 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
       <Sidebar activePage={activePage} onNavigate={setActivePage} />
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginLeft: "240px", minHeight: "100vh" }}>
         <Header activePage={activePage} onNavigate={setActivePage} onLogout={onLogout} />
-        <div className="main-content" style={{ flex: 1, overflowY: "auto" }}>
-          <PageComponent />
+        <div className="main-content" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+          <Suspense fallback={<PageLoadingFallback />}>
+            <PageComponent />
+          </Suspense>
         </div>
       </main>
     </div>
