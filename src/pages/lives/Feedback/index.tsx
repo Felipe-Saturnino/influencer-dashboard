@@ -98,11 +98,11 @@ function InfluencerDropdown({ items, selected, onChange }: {
       <button
         onClick={() => setOpen(o => !o)}
         style={{
-          width: "100%", padding: "7px 14px", borderRadius: 20,
-          border: `1.5px solid ${isActive ? BRAND.azul : t.cardBorder}`,
+          width: "100%", padding: "7px 14px", borderRadius: 999,
+          border: `1px solid ${isActive ? BRAND.azul : t.cardBorder}`,
           background: isActive ? `${BRAND.azul}18` : (t.inputBg ?? t.cardBg),
           color: isActive ? BRAND.azul : t.textMuted,
-          fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
+          fontSize: 13, fontWeight: isActive ? 700 : 400, cursor: "pointer", fontFamily: FONT.body,
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
           transition: "all 0.15s",
         }}
@@ -285,15 +285,15 @@ export default function Feedback() {
     if (!error) loadData();
   }
 
-  // ── Estilos ───────────────────────────────────────────────────────────────
+  // ── Estilos (padrão Agenda) ───────────────────────────────────────────────
   const filterBtn = (active: boolean, color: string = BRAND.roxoVivo): React.CSSProperties => ({
-    padding: "7px 16px", borderRadius: 20,
-    border: `1.5px solid ${active ? color : t.cardBorder}`,
-    background: active ? `${color}22` : (t.inputBg ?? t.cardBg),
+    padding: "6px 14px", borderRadius: 999, fontSize: 13,
+    cursor: "pointer", border: `1px solid ${active ? color : t.cardBorder}`,
+    background: active ? `${color}22` : "transparent",
     color: active ? color : t.textMuted,
-    fontSize: 12, fontWeight: 600, cursor: "pointer",
-    fontFamily: FONT.body, whiteSpace: "nowrap" as const,
+    fontFamily: FONT.body, fontWeight: active ? 700 : 400,
     transition: "all 0.15s",
+    display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const,
   });
 
   const statBox = (color: string): React.CSSProperties => ({
@@ -465,6 +465,67 @@ export default function Feedback() {
         </div>
       </div>
 
+      {/* ── BLOCO DE FILTROS (padrão Agenda) — acima dos cards ── */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{
+          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
+          background: t.cardBg,
+          padding: "12px 20px",
+        }}>
+          {/* Linha 1: Período e Status */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+            {PERIODOS.map(p => (
+              <button key={p.value} onClick={() => setPeriodo(p.value)} style={filterBtn(periodo === p.value)}>
+                {p.label}
+              </button>
+            ))}
+            <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", BRAND.verde)}>
+              Realizada
+            </button>
+            <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", BRAND.vermelho)}>
+              Não Realizada
+            </button>
+            <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", BRAND.ciano)}>
+              Todos
+            </button>
+          </div>
+
+          {/* Linha 2: Influencer e Operadoras */}
+          {(showFiltroInfluencer && influencers.length > 0) || (showFiltroOperadora && operadorasList.length > 0) ? (
+            <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+              {showFiltroInfluencer && influencers.length > 0 && (
+                <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} />
+              )}
+              {showFiltroOperadora && operadorasList.length > 0 && (
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                    <GiShield size={13} />
+                  </span>
+                  <select
+                    value={filterOperadora}
+                    onChange={(e) => setFilterOperadora(e.target.value)}
+                    style={{
+                      padding: "6px 14px 6px 30px", borderRadius: 999,
+                      border: `1px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
+                      background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}18` : (t.inputBg ?? t.cardBg),
+                      color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
+                      fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                      fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                    }}
+                  >
+                    <option value="todas">Todas as operadoras</option>
+                    {operadorasList
+                      .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                      .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       {/* ── QUADROS DE RESUMO ── */}
       {!loading && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
@@ -519,64 +580,6 @@ export default function Feedback() {
           </div>
         </div>
       )}
-
-      {/* ── FILTROS ──
-          Linha 1: Período / Status
-          Linha 2: Influencer / Operadoras */}
-      <div style={{ marginBottom: 24 }}>
-        {/* Linha 1: Período e Status */}
-        <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
-          {PERIODOS.map(p => (
-            <button key={p.value} onClick={() => setPeriodo(p.value)} style={filterBtn(periodo === p.value)}>
-              {p.label}
-            </button>
-          ))}
-          <div style={{ width: 1.5, alignSelf: "stretch", minHeight: 28, background: t.cardBorder, borderRadius: 2, margin: "0 4px", flexShrink: 0 }} />
-          <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", BRAND.verde)}>
-            Realizada
-          </button>
-          <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", BRAND.vermelho)}>
-            Não Realizada
-          </button>
-          <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", BRAND.ciano)}>
-            Todos
-          </button>
-        </div>
-
-        {/* Linha 2: Influencer e Operadoras */}
-        {(showFiltroInfluencer && influencers.length > 0) || (showFiltroOperadora && operadorasList.length > 0) ? (
-          <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-            {showFiltroInfluencer && influencers.length > 0 && (
-              <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} />
-            )}
-            {showFiltroOperadora && operadorasList.length > 0 && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={13} />
-                </span>
-                <select
-                  value={filterOperadora}
-                  onChange={(e) => setFilterOperadora(e.target.value)}
-                  style={{
-                    padding: "7px 14px 7px 30px", borderRadius: 20,
-                    border: `1.5px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                    background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg),
-                    color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
-                    fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                    cursor: "pointer", outline: "none", appearance: "none",
-                  }}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
 
       {/* Contador */}
       {!loading && livesFiltered.length > 0 && (
