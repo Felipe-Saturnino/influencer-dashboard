@@ -716,7 +716,7 @@ export default function RoteiroMesa() {
   const sugestoesPorBloco = (bloco: BlocoRoteiro) => filtrarSugestoes(sugestoes.filter((s) => s.bloco === bloco));
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 900, margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
 
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 28 }}>
         <div
