@@ -23,24 +23,26 @@ function sanitizarUtm(val: string): string {
   return s;
 }
 
-/** UTM já emitido para a CDA (Links e Materiais), para restaurar a tela após reload/sessão nova. */
-async function fetchCdaUtmEmitidoParaInfluencer(influencerId: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("utm_aliases")
-    .select("utm_source")
-    .eq("influencer_id", influencerId)
-    .eq("status", "mapeado")
-    .is("campanha_id", null)
-    .or("operadora_slug.eq.casa_apostas,operadora_slug.is.null")
-    .order("mapeado_em", { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
+type ObterUtmEmitidoRpc = { ok: boolean; error?: string; utm_source?: string | null };
 
+/**
+ * UTM já emitido para a CDA (Links e Materiais), via RPC SECURITY DEFINER — o SELECT direto em
+ * utm_aliases costuma ser bloqueado por RLS, por isso o refresh não restaurava o link.
+ */
+async function fetchCdaUtmEmitidoParaInfluencer(pInfluencerId: string | null): Promise<string | null> {
+  const { data, error } = await supabase.rpc("obter_utm_cda_emitido_para_influencer", {
+    p_influencer_id: pInfluencerId,
+  });
   if (error) {
-    console.error("[LinksMateriais] utm emitido existente:", error.message);
+    console.error("[LinksMateriais] obter utm emitido:", error.message);
     return null;
   }
-  const src = typeof data?.utm_source === "string" ? data.utm_source.trim() : "";
+  const res = data as ObterUtmEmitidoRpc | null;
+  if (!res?.ok) {
+    if (res?.error) console.warn("[LinksMateriais] obter utm emitido:", res.error);
+    return null;
+  }
+  const src = typeof res.utm_source === "string" ? res.utm_source.trim() : "";
   return src.length > 0 ? src : null;
 }
 
@@ -102,7 +104,7 @@ export default function LinksMateriais() {
     const nome = (data?.nome_artistico ?? "").trim();
     setNomeArtistico(nome);
 
-    const existente = await fetchCdaUtmEmitidoParaInfluencer(user.id);
+    const existente = await fetchCdaUtmEmitidoParaInfluencer(null);
     if (existente) {
       setEmitido(true);
       setUtmInput(existente);
