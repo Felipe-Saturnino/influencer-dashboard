@@ -5,6 +5,8 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
+import ModalBloqueioAgendaLive from "../../lives/Agenda/ModalBloqueioAgendaLive";
 import { Link2, Copy, Check, AlertCircle, QrCode, Download } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { GiShare } from "react-icons/gi";
@@ -54,7 +56,7 @@ interface InfluencerOpcao {
 }
 
 export default function LinksMateriais() {
-  const { theme: t, user, isDark, podeVerInfluencer } = useApp();
+  const { theme: t, user, isDark, podeVerInfluencer, setActivePage } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("links_materiais");
   const dark = isDark ?? false;
@@ -76,6 +78,11 @@ export default function LinksMateriais() {
   const [copiado, setCopiado] = useState(false);
   const [qrVisivel, setQrVisivel] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [bloqueioEmissao, setBloqueioEmissao] = useState<{
+    perfilIncompleto: boolean;
+    faltaPlaybook: boolean;
+  } | null>(null);
+  const [verificandoGateEmissao, setVerificandoGateEmissao] = useState(false);
 
   const carregarMeuPerfil = useCallback(async () => {
     if (!user?.id || user.role !== "influencer") {
@@ -206,6 +213,20 @@ export default function LinksMateriais() {
       setErro("Selecione o influencer.");
       return;
     }
+
+    if (user.role === "influencer") {
+      setVerificandoGateEmissao(true);
+      try {
+        const gate = await verificarElegibilidadeAgendaLive(user.id);
+        if (gate.perfilIncompleto || gate.faltaPlaybook) {
+          setBloqueioEmissao(gate);
+          return;
+        }
+      } finally {
+        setVerificandoGateEmissao(false);
+      }
+    }
+
     setErro(null);
     setSalvando(true);
     try {
@@ -287,7 +308,11 @@ export default function LinksMateriais() {
   const cardBorder = t.cardBorder;
 
   const emitirDesabilitado =
-    !podeEmitir || aguardandoOpcoes || salvando || (precisaSelecionarInfluencer && influenciadores.length === 0);
+    !podeEmitir ||
+    aguardandoOpcoes ||
+    salvando ||
+    verificandoGateEmissao ||
+    (precisaSelecionarInfluencer && influenciadores.length === 0);
 
   return (
     <div className="app-page-shell">
@@ -545,7 +570,7 @@ export default function LinksMateriais() {
                   color: "#fff",
                 }}
               >
-                {salvando ? "Emitindo…" : "Emitir"}
+                {salvando ? "Emitindo…" : verificandoGateEmissao ? "Verificando…" : "Emitir"}
               </button>
             </div>
           </div>
@@ -732,6 +757,23 @@ export default function LinksMateriais() {
           </div>
         )}
       </section>
+
+      <ModalBloqueioAgendaLive
+        open={bloqueioEmissao !== null}
+        onClose={() => setBloqueioEmissao(null)}
+        perfilIncompleto={bloqueioEmissao?.perfilIncompleto ?? false}
+        faltaPlaybook={bloqueioEmissao?.faltaPlaybook ?? false}
+        segundaPessoa
+        contexto="emitir_link"
+        onIrInfluencers={() => {
+          setBloqueioEmissao(null);
+          setActivePage("influencers");
+        }}
+        onIrPlaybook={() => {
+          setBloqueioEmissao(null);
+          setActivePage("playbook_influencers");
+        }}
+      />
     </div>
   );
 }

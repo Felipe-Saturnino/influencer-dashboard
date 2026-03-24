@@ -10,6 +10,24 @@ const BRAND = {
   vermelho: "#e84025",
 } as const;
 
+export type ModalBloqueioAgendaContexto = "agenda" | "emitir_link";
+
+const TEXTO_POR_CONTEXTO: Record<
+  ModalBloqueioAgendaContexto,
+  { titulo: string; introSegunda: string; introTerceira: string }
+> = {
+  agenda: {
+    titulo: "Agendamento indisponível",
+    introSegunda: "Para agendar uma live na agenda, você precisa:",
+    introTerceira: "Não é possível agendar live para este influencer até que:",
+  },
+  emitir_link: {
+    titulo: "Emissão de link indisponível",
+    introSegunda: "Para emitir o link de rastreamento, você precisa:",
+    introTerceira: "Não é possível emitir o link para este influencer até que:",
+  },
+};
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -17,6 +35,8 @@ interface Props {
   faltaPlaybook: boolean;
   /** true: "você precisa..."; false: "O influencer precisa..." */
   segundaPessoa: boolean;
+  /** Agenda (padrão) ou Links e Materiais — ajusta título e introdução; itens da lista iguais. */
+  contexto?: ModalBloqueioAgendaContexto;
   onIrInfluencers: () => void;
   onIrPlaybook: () => void;
 }
@@ -27,6 +47,7 @@ export default function ModalBloqueioAgendaLive({
   perfilIncompleto,
   faltaPlaybook,
   segundaPessoa,
+  contexto = "agenda",
   onIrInfluencers,
   onIrPlaybook,
 }: Props) {
@@ -34,9 +55,8 @@ export default function ModalBloqueioAgendaLive({
 
   if (!open) return null;
 
-  const intro = segundaPessoa
-    ? "Para agendar uma live na agenda, você precisa:"
-    : "Não é possível agendar live para este influencer até que:";
+  const copy = TEXTO_POR_CONTEXTO[contexto];
+  const intro = segundaPessoa ? copy.introSegunda : copy.introTerceira;
 
   return (
     <div
@@ -92,7 +112,7 @@ export default function ModalBloqueioAgendaLive({
                 lineHeight: 1.3,
               }}
             >
-              Agendamento indisponível
+              {copy.titulo}
             </h2>
           </div>
           <button
