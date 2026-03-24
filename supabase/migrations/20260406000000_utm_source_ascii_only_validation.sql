@@ -1,5 +1,5 @@
--- ─── Corrige INSERT: primeiro_visto / ultimo_visto são tipo date, não text ───
--- (to_char(...) gerava text e quebrava o INSERT). Idempotente: CREATE OR REPLACE.
+-- Validação de utm_source alinhada ao front: apenas a-z, A-Z, 0-9 e _ (sem acentos, URL chars, etc.).
+-- Idempotente para quem já aplicou migrações anteriores da mesma função.
 
 CREATE OR REPLACE FUNCTION public.registrar_utm_alias_tracking_casa_apostas(
   p_utm_source text,

@@ -100,8 +100,8 @@ BEGIN
   IF length(v_utm) > 200 THEN
     RETURN jsonb_build_object('ok', false, 'error', 'Valor muito longo (máximo 200 caracteres).');
   END IF;
-  IF v_utm ~ '[\n\r&=#?]' THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'Use apenas letras, números e espaços (sem &, #, ? ou quebras de linha).');
+  IF v_utm !~ '^[a-zA-Z0-9_]+$' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Use apenas letras (a-z, A-Z), números e underscore (_). Sem acentos, espaços ou caracteres especiais.');
   END IF;
 
   SELECT * INTO v_row FROM utm_aliases WHERE utm_source = v_utm LIMIT 1;

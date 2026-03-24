@@ -13,11 +13,35 @@ const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source="
 const QR_MODULO_PX = 192;
 
 /**
- * utm_source sem espaços: troca espaços ASCII, NBSP e outros separadores Unicode por "_".
- * (Cadastros às vezes usam \u00A0; o \s do JS nem sempre pega.)
+ * utm_source: só letras sem acento (A–Z, a–z), números e _.
+ * Remove acentos (NFD + marcas combinantes), aspas, crase, til, etc.; espaços viram _.
  */
 function sanitizarUtm(val: string): string {
-  return val.replace(/[\s\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF]+/g, "_");
+  let s = val.normalize("NFD").replace(/\p{M}/gu, "");
+  s = s.replace(/[\s\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF]+/g, "_");
+  s = s.replace(/[^a-zA-Z0-9_]/g, "");
+  return s;
+}
+
+/** UTM já emitido para a CDA (Links e Materiais), para restaurar a tela após reload/sessão nova. */
+async function fetchCdaUtmEmitidoParaInfluencer(influencerId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("utm_aliases")
+    .select("utm_source")
+    .eq("influencer_id", influencerId)
+    .eq("status", "mapeado")
+    .is("campanha_id", null)
+    .or("operadora_slug.eq.casa_apostas,operadora_slug.is.null")
+    .order("mapeado_em", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[LinksMateriais] utm emitido existente:", error.message);
+    return null;
+  }
+  const src = typeof data?.utm_source === "string" ? data.utm_source.trim() : "";
+  return src.length > 0 ? src : null;
 }
 
 type RpcResult = { ok: boolean; error?: string; utm_source?: string };
@@ -41,6 +65,7 @@ export default function LinksMateriais() {
   const [emitido, setEmitido] = useState(false);
   const [linkCompleto, setLinkCompleto] = useState("");
   const [loadingPerfil, setLoadingPerfil] = useState(true);
+  const [loadingAliasInfluencer, setLoadingAliasInfluencer] = useState(false);
   const [loadingInfluenciadores, setLoadingInfluenciadores] = useState(false);
   const [influenciadores, setInfluenciadores] = useState<InfluencerOpcao[]>([]);
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
@@ -55,6 +80,8 @@ export default function LinksMateriais() {
       setLoadingPerfil(false);
       setNomeArtistico("");
       setUtmInput("");
+      setEmitido(false);
+      setLinkCompleto("");
       return;
     }
     setLoadingPerfil(true);
@@ -63,28 +90,34 @@ export default function LinksMateriais() {
       .select("nome_artistico")
       .eq("id", user.id)
       .maybeSingle();
-    setLoadingPerfil(false);
     if (error) {
       console.error("[LinksMateriais] perfil:", error.message);
       setNomeArtistico("");
       setUtmInput("");
+      setEmitido(false);
+      setLinkCompleto("");
+      setLoadingPerfil(false);
       return;
     }
     const nome = (data?.nome_artistico ?? "").trim();
     setNomeArtistico(nome);
-    setUtmInput(sanitizarUtm(nome));
+
+    const existente = await fetchCdaUtmEmitidoParaInfluencer(user.id);
+    if (existente) {
+      setEmitido(true);
+      setUtmInput(existente);
+      setLinkCompleto(`${TRACKING_BASE}${encodeURIComponent(existente)}`);
+    } else {
+      setEmitido(false);
+      setLinkCompleto("");
+      setUtmInput(sanitizarUtm(nome));
+    }
+    setLoadingPerfil(false);
   }, [user?.id, user?.role]);
 
   useEffect(() => {
     void carregarMeuPerfil();
   }, [carregarMeuPerfil]);
-
-  /** Garante UTM sanitizado após o perfil (evita NBSP/espaço na 1ª pintura). */
-  useEffect(() => {
-    if (user?.role !== "influencer" || perm.canView === "nao") return;
-    if (loadingPerfil) return;
-    setUtmInput(sanitizarUtm(nomeArtistico));
-  }, [user?.role, loadingPerfil, nomeArtistico, perm.canView]);
 
   useEffect(() => {
     if (!user || user.role === "influencer" || perm.canView === "nao") {
@@ -121,8 +154,33 @@ export default function LinksMateriais() {
 
   useEffect(() => {
     if (user?.role === "influencer") return;
-    const row = influenciadores.find((i) => i.id === influencerSelecionado);
-    if (row) setUtmInput(sanitizarUtm((row.nome_artistico ?? "").trim()));
+    if (!influencerSelecionado) {
+      setEmitido(false);
+      setLinkCompleto("");
+      setUtmInput("");
+      setLoadingAliasInfluencer(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingAliasInfluencer(true);
+    setEmitido(false);
+    setLinkCompleto("");
+    void (async () => {
+      const existente = await fetchCdaUtmEmitidoParaInfluencer(influencerSelecionado);
+      if (cancelled) return;
+      if (existente) {
+        setEmitido(true);
+        setUtmInput(existente);
+        setLinkCompleto(`${TRACKING_BASE}${encodeURIComponent(existente)}`);
+      } else {
+        const row = influenciadores.find((i) => i.id === influencerSelecionado);
+        setUtmInput(sanitizarUtm((row?.nome_artistico ?? "").trim()));
+      }
+      setLoadingAliasInfluencer(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [influencerSelecionado, influenciadores, user?.role]);
 
   useEffect(() => {
@@ -130,7 +188,10 @@ export default function LinksMateriais() {
   }, [linkCompleto]);
 
   const aguardandoOpcoes =
-    user?.role === "influencer" ? loadingPerfil : precisaSelecionarInfluencer && loadingInfluenciadores;
+    user?.role === "influencer"
+      ? loadingPerfil
+      : precisaSelecionarInfluencer &&
+          (loadingInfluenciadores || (!!influencerSelecionado && loadingAliasInfluencer));
 
   async function emitir() {
     if (!podeEmitir || !user?.id) return;
@@ -355,7 +416,12 @@ export default function LinksMateriais() {
           </div>
         )}
 
-        {!emitido ? (
+        {(user?.role === "influencer" && loadingPerfil) ||
+        (user?.role !== "influencer" && !!influencerSelecionado && loadingAliasInfluencer) ? (
+          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+            Carregando link salvo…
+          </p>
+        ) : !emitido ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {precisaSelecionarInfluencer && podeEmitir && influenciadores.length > 0 && (
               <div>
@@ -454,9 +520,7 @@ export default function LinksMateriais() {
                 </div>
               </div>
               <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                {user?.role === "influencer"
-                  ? "O trecho à direita é o utm_source (a partir do nome artístico, com espaços convertidos para _). Não são permitidos espaços."
-                  : "O trecho à direita é o utm_source (a partir do nome artístico do influencer, com espaços convertidos para _). Não são permitidos espaços."}
+                O trecho à direita é o utm_source (a partir do nome artístico cadastrado), você pode editar caso deseje, mas este não pode conter espaços (usar _ no lugar) e nem caracteres especiais (~, ^, ç, etc.).
               </p>
             </div>
 
@@ -486,7 +550,7 @@ export default function LinksMateriais() {
         ) : (
           <div>
             <p style={{ margin: "0 0 10px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-              Link gerado. O UTM foi registrado em <strong>utm_aliases</strong> para o influencer alvo; quem emitiu fica em <strong>mapeado_por</strong>.
+              Link gerado. Use este link para a sua divulgação, ele irá gerar o seu rastreamento.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: 10 }}>
               <div style={{
@@ -660,7 +724,7 @@ export default function LinksMateriais() {
               </div>
 
               <p style={{ margin: "12px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
-                O QR encoda o mesmo link exibido acima. O PNG baixado é o código puro (fundo branco) para uso em stories, posts ou peças; o quadro com gradiente Spin aparece só na tela.
+                O QR leva ao mesmo link exibido acima. Use-o onde achar necessário.
               </p>
             </div>
           </div>
