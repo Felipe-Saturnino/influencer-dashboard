@@ -33,6 +33,7 @@ export type PageKey =
   | "gestao_dealers"
   | "status_tecnico"
   | "roteiro_mesa"
+  | "playbook_influencers"
   | "configuracoes"
   | "ajuda";
 
