@@ -52,7 +52,7 @@ export const PAGES: {
   { key: "status_tecnico", label: "Status Técnico", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Conteúdo", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "playbook_influencers", label: "Playbook Influencers", secao: "Conteúdo", hasCriar: true, hasEditar: true, hasExcluir: false },
-  { key: "links_materiais", label: "Links e Materiais", secao: "Conteúdo", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "links_materiais", label: "Links e Materiais", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "configuracoes", label: "Configurações", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];

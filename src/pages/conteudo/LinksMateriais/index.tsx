@@ -12,28 +12,36 @@ const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source="
 
 type RpcResult = { ok: boolean; error?: string; utm_source?: string };
 
+interface InfluencerOpcao {
+  id: string;
+  nome_artistico: string | null;
+}
+
 export default function LinksMateriais() {
-  const { theme: t, user, isDark } = useApp();
+  const { theme: t, user, isDark, podeVerInfluencer } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("links_materiais");
   const dark = isDark ?? false;
+
+  const precisaSelecionarInfluencer = !!user && user.role !== "influencer";
+  const podeEmitir = perm.canEditarOk && !perm.loading;
 
   const [nomeArtistico, setNomeArtistico] = useState("");
   const [utmInput, setUtmInput] = useState("");
   const [emitido, setEmitido] = useState(false);
   const [linkCompleto, setLinkCompleto] = useState("");
   const [loadingPerfil, setLoadingPerfil] = useState(true);
+  const [loadingInfluenciadores, setLoadingInfluenciadores] = useState(false);
+  const [influenciadores, setInfluenciadores] = useState<InfluencerOpcao[]>([]);
+  const [influencerSelecionado, setInfluencerSelecionado] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
 
-  const podeEmitir = user?.role === "influencer";
-
-  const carregarPerfil = useCallback(async () => {
+  const carregarMeuPerfil = useCallback(async () => {
     if (!user?.id || user.role !== "influencer") {
       setLoadingPerfil(false);
       setNomeArtistico("");
-      setUtmInput("");
       return;
     }
     setLoadingPerfil(true);
@@ -46,7 +54,6 @@ export default function LinksMateriais() {
     if (error) {
       console.error("[LinksMateriais] perfil:", error.message);
       setNomeArtistico("");
-      setUtmInput("");
       return;
     }
     const nome = (data?.nome_artistico ?? "").trim();
@@ -55,8 +62,50 @@ export default function LinksMateriais() {
   }, [user?.id, user?.role]);
 
   useEffect(() => {
-    void carregarPerfil();
-  }, [carregarPerfil]);
+    void carregarMeuPerfil();
+  }, [carregarMeuPerfil]);
+
+  useEffect(() => {
+    if (!user || user.role === "influencer" || perm.canView === "nao") {
+      setInfluenciadores([]);
+      setInfluencerSelecionado("");
+      setLoadingInfluenciadores(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingInfluenciadores(true);
+    void (async () => {
+      const { data, error } = await supabase
+        .from("influencer_perfil")
+        .select("id, nome_artistico")
+        .order("nome_artistico");
+      if (cancelled) return;
+      if (error) {
+        console.error("[LinksMateriais] lista influencers:", error.message);
+        setInfluenciadores([]);
+        setInfluencerSelecionado("");
+        setLoadingInfluenciadores(false);
+        return;
+      }
+      const rows = (data ?? []).filter((r: InfluencerOpcao) => podeVerInfluencer(r.id));
+      setInfluenciadores(rows);
+      if (rows.length === 1) setInfluencerSelecionado(rows[0].id);
+      else setInfluencerSelecionado("");
+      setLoadingInfluenciadores(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, perm.canView, podeVerInfluencer]);
+
+  useEffect(() => {
+    if (user?.role === "influencer") return;
+    const row = influenciadores.find((i) => i.id === influencerSelecionado);
+    if (row) setUtmInput((row.nome_artistico ?? "").trim());
+  }, [influencerSelecionado, influenciadores, user?.role]);
+
+  const aguardandoOpcoes =
+    user?.role === "influencer" ? loadingPerfil : precisaSelecionarInfluencer && loadingInfluenciadores;
 
   async function emitir() {
     if (!podeEmitir || !user?.id) return;
@@ -65,12 +114,18 @@ export default function LinksMateriais() {
       setErro("Preencha o valor do UTM antes de emitir.");
       return;
     }
+    if (precisaSelecionarInfluencer && !influencerSelecionado) {
+      setErro("Selecione o influencer.");
+      return;
+    }
     setErro(null);
     setSalvando(true);
     try {
-      const { data, error } = await supabase.rpc("registrar_utm_alias_tracking_casa_apostas", {
-        p_utm_source: raw,
-      });
+      const payload =
+        user.role === "influencer"
+          ? { p_utm_source: raw, p_influencer_id: null }
+          : { p_utm_source: raw, p_influencer_id: influencerSelecionado };
+      const { data, error } = await supabase.rpc("registrar_utm_alias_tracking_casa_apostas", payload);
       if (error) {
         setErro(error.message || "Não foi possível registrar o UTM.");
         setSalvando(false);
@@ -110,61 +165,86 @@ export default function LinksMateriais() {
     );
   }
 
-  const cardBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-secondary) 8%, transparent)"
+  /** Faixa do link (base + utm): fundo alinhado ao tema / operadora */
+  const linkStripOuterBorder = brand.primaryTransparentBorder;
+  const linkStripBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-primary) 6%, transparent)"
     : dark
-      ? "rgba(255,255,255,0.04)"
-      : "rgba(74,32,130,0.06)";
+      ? "rgba(0,0,0,0.22)"
+      : "rgba(74,32,130,0.05)";
+  const linkStripInputBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-primary) 10%, transparent)"
+    : t.inputBg ?? t.cardBg;
+  const linkStripDivider = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-primary) 22%, transparent)"
+    : t.cardBorder;
+
   const cardBorder = t.cardBorder;
+
+  const emitirDesabilitado =
+    !podeEmitir || aguardandoOpcoes || salvando || (precisaSelecionarInfluencer && influenciadores.length === 0);
 
   return (
     <div className="app-page-shell">
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <span style={{
+            width: 32, height: 32, borderRadius: 9,
+            background: brand.primaryIconBg,
+            border: brand.primaryIconBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            width: 44, height: 44, borderRadius: 12,
-            background: brand.useBrand
-              ? "color-mix(in srgb, var(--brand-primary) 18%, transparent)"
-              : "rgba(124,58,237,0.15)",
-            color: brand.useBrand ? "var(--brand-icon)" : "#a78bfa",
+            color: brand.primaryIconColor, flexShrink: 0,
           }}>
-            <GiShare size={22} />
+            <GiShare size={16} />
           </span>
-          <div>
-            <h1 style={{
-              margin: 0,
-              fontSize: 22,
-              fontWeight: 800,
-              color: t.text,
-              fontFamily: FONT_TITLE,
-              letterSpacing: "-0.02em",
-            }}>
-              Links e Materiais
-            </h1>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-              Gere seu link de rastreamento e mantenha o UTM alinhado à Gestão de Links.
-            </p>
-          </div>
+          <h1 style={{
+            fontSize: 18, fontWeight: 800, color: brand.primary,
+            fontFamily: FONT_TITLE, margin: 0,
+            letterSpacing: "0.05em", textTransform: "uppercase",
+          }}>
+            Links e Materiais
+          </h1>
+        </div>
+        <div style={{
+          marginTop: 4,
+          paddingLeft: 40,
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          fontFamily: FONT.body,
+          fontSize: 13,
+          lineHeight: 1.65,
+          color: t.textMuted,
+        }}>
+          <p style={{ margin: 0 }}>
+            Gere o link de rastreamento e registre o UTM em Gestão de Links. A emissão exige permissão <strong>Editar</strong> nesta página (Gestão de Usuários).
+          </p>
         </div>
       </div>
 
       <section
         style={{
-          background: cardBg,
-          border: `1px solid ${cardBorder}`,
-          borderRadius: 16,
-          padding: 20,
+          background: brand.blockBg,
+          border: brand.primaryTransparentBorder,
+          borderRadius: 14,
+          padding: "16px 20px",
           maxWidth: 960,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-          <Link2 size={18} color={brand.useBrand ? "var(--brand-accent)" : "#1e36f8"} />
+          <span style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: brand.primaryIconBg,
+            border: brand.primaryIconBorder,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: brand.primaryIconColor, flexShrink: 0,
+          }}>
+            <Link2 size={14} strokeWidth={2.25} />
+          </span>
           <h2 style={{
             margin: 0,
-            fontSize: 15,
+            fontSize: 13,
             fontWeight: 700,
-            color: t.text,
+            color: brand.primary,
             fontFamily: FONT_TITLE,
             textTransform: "uppercase",
             letterSpacing: "0.06em",
@@ -173,7 +253,7 @@ export default function LinksMateriais() {
           </h2>
         </div>
 
-        {!podeEmitir && (
+        {!perm.loading && !perm.canEditarOk && (
           <div style={{
             display: "flex",
             alignItems: "flex-start",
@@ -189,9 +269,27 @@ export default function LinksMateriais() {
           }}>
             <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2, color: "#f59e0b" }} />
             <span>
-              A emissão do link com registro automático no UTM está disponível para o perfil <strong>influencer</strong>.
-              Com outro tipo de conta você pode usar o link abaixo manualmente; o mapeamento em Gestão de Links deve ser feito pela equipe.
+              Você pode ver esta página, mas <strong>não tem permissão para emitir</strong> o link. Peça a um administrador para ativar <strong>Editar</strong> em Links e Materiais na Gestão de Usuários.
             </span>
+          </div>
+        )}
+
+        {precisaSelecionarInfluencer && podeEmitir && !loadingInfluenciadores && influenciadores.length === 0 && (
+          <div style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            padding: 12,
+            borderRadius: 12,
+            background: "rgba(245,158,11,0.12)",
+            border: "1px solid rgba(245,158,11,0.35)",
+            color: t.text,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            marginBottom: 16,
+          }}>
+            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2, color: "#f59e0b" }} />
+            <span>Nenhum influencer disponível no seu escopo para emitir o link.</span>
           </div>
         )}
 
@@ -216,64 +314,118 @@ export default function LinksMateriais() {
 
         {!emitido ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                URL base
-              </label>
-              <div style={{
-                padding: "12px 14px",
-                borderRadius: 12,
-                background: dark ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.04)",
-                border: `1px solid ${cardBorder}`,
-                fontFamily: "ui-monospace, monospace",
-                fontSize: 12,
-                color: t.text,
-                wordBreak: "break-all",
-                lineHeight: 1.5,
-              }}>
-                {TRACKING_BASE}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12 }}>
-              <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+            {precisaSelecionarInfluencer && podeEmitir && influenciadores.length > 0 && (
+              <div>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Valor do utm_source
+                  Influencer
                 </label>
-                <input
-                  type="text"
-                  value={utmInput}
-                  onChange={(e) => setUtmInput(e.target.value)}
-                  disabled={!podeEmitir || loadingPerfil || salvando}
-                  placeholder={nomeArtistico || "Ex.: seu nome artístico"}
+                <select
+                  value={influencerSelecionado}
+                  onChange={(e) => setInfluencerSelecionado(e.target.value)}
+                  disabled={!podeEmitir || loadingInfluenciadores || salvando}
                   style={{
                     width: "100%",
+                    maxWidth: 420,
                     boxSizing: "border-box",
                     padding: "12px 14px",
                     borderRadius: 12,
-                    border: `1px solid ${cardBorder}`,
-                    background: t.cardBg,
+                    border: brand.primaryTransparentBorder,
+                    background: brand.primaryTransparentBg,
                     color: t.text,
                     fontSize: 14,
                     fontFamily: FONT.body,
-                    outline: "none",
+                    cursor: "pointer",
                   }}
-                />
-                <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  Pré-preenchido com seu nome artístico quando disponível; você pode ajustar antes de emitir.
-                </p>
+                >
+                  <option value="">Selecione…</option>
+                  {influenciadores.map((inf) => (
+                    <option key={inf.id} value={inf.id}>
+                      {(inf.nome_artistico ?? "").trim() || inf.id.slice(0, 8)}
+                    </option>
+                  ))}
+                </select>
               </div>
+            )}
+
+            <div>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Link (URL base + utm_source)
+              </label>
+              <div
+                style={{
+                  borderRadius: 12,
+                  border: linkStripOuterBorder,
+                  background: linkStripBg,
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "stretch", minHeight: 44, overflowX: "auto" }}>
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      padding: "10px 12px",
+                      fontFamily: "ui-monospace, monospace",
+                      fontSize: 12,
+                      color: t.text,
+                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      lineHeight: 1.4,
+                      background: linkStripBg,
+                    }}
+                  >
+                    {TRACKING_BASE}
+                  </span>
+                  <div
+                    style={{
+                      width: 1,
+                      flexShrink: 0,
+                      background: linkStripDivider,
+                      alignSelf: "stretch",
+                    }}
+                    aria-hidden
+                  />
+                  <input
+                    type="text"
+                    value={utmInput}
+                    onChange={(e) => setUtmInput(e.target.value)}
+                    disabled={!podeEmitir || aguardandoOpcoes || salvando}
+                    placeholder={nomeArtistico || "utm_source"}
+                    aria-label="Valor do utm_source"
+                    style={{
+                      flex: "1 1 140px",
+                      minWidth: 120,
+                      boxSizing: "border-box",
+                      padding: "10px 12px",
+                      border: "none",
+                      background: linkStripInputBg,
+                      color: t.text,
+                      fontSize: 13,
+                      fontFamily: "ui-monospace, monospace",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+              </div>
+              <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                {user?.role === "influencer"
+                  ? "O trecho à direita é o valor de utm_source (pré-preenchido com seu nome artístico quando disponível)."
+                  : "O trecho à direita é o utm_source (pré-preenchido com o nome artístico do influencer selecionado)."}
+              </p>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
               <button
                 type="button"
                 onClick={() => void emitir()}
-                disabled={!podeEmitir || loadingPerfil || salvando}
+                disabled={emitirDesabilitado}
                 style={{
                   flexShrink: 0,
                   padding: "12px 22px",
                   borderRadius: 12,
                   border: "none",
-                  cursor: (!podeEmitir || loadingPerfil || salvando) ? "not-allowed" : "pointer",
-                  opacity: (!podeEmitir || loadingPerfil || salvando) ? 0.55 : 1,
+                  cursor: emitirDesabilitado ? "not-allowed" : "pointer",
+                  opacity: emitirDesabilitado ? 0.55 : 1,
                   fontWeight: 700,
                   fontSize: 14,
                   fontFamily: FONT.body,
@@ -288,7 +440,7 @@ export default function LinksMateriais() {
         ) : (
           <div>
             <p style={{ margin: "0 0 10px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-              Link gerado. Ele já está associado ao seu perfil em <strong>utm_aliases</strong> para rastreio na operação.
+              Link gerado. O UTM foi registrado em <strong>utm_aliases</strong> para o influencer alvo; quem emitiu fica em <strong>mapeado_por</strong>.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: 10 }}>
               <div style={{
@@ -296,8 +448,8 @@ export default function LinksMateriais() {
                 minWidth: 0,
                 padding: "12px 14px",
                 borderRadius: 12,
-                background: dark ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.04)",
-                border: `1px solid ${cardBorder}`,
+                border: linkStripOuterBorder,
+                background: linkStripBg,
                 fontFamily: "ui-monospace, monospace",
                 fontSize: 12,
                 color: t.text,
@@ -317,8 +469,8 @@ export default function LinksMateriais() {
                   gap: 8,
                   padding: "12px 18px",
                   borderRadius: 12,
-                  border: `1px solid ${cardBorder}`,
-                  background: t.cardBg,
+                  border: brand.primaryTransparentBorder,
+                  background: brand.primaryTransparentBg,
                   color: t.text,
                   fontWeight: 600,
                   fontSize: 13,
