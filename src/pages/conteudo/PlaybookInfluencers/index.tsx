@@ -326,7 +326,12 @@ const ConteudoAcesso: React.FC<{ dark: boolean }> = ({ dark }) => (
       "Clique no banner \"MESAS EXCLUSIVAS\"",
       "Ou acesse pelas mesas exibidas logo abaixo do banner",
     ]} />
-    <div style={{ marginTop: 20, borderRadius: 12, overflow: "hidden", border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`, boxShadow: dark ? "0 8px 32px rgba(0,0,0,0.35)" : "0 8px 28px rgba(0,0,0,0.08)" }}>
+    <div style={{
+      marginTop: 20, maxWidth: 560, marginLeft: "auto", marginRight: "auto",
+      borderRadius: 12, overflow: "hidden",
+      border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
+      boxShadow: dark ? "0 8px 32px rgba(0,0,0,0.35)" : "0 8px 28px rgba(0,0,0,0.08)",
+    }}>
       <img
         src="/playbook/mesas-spin-gaming.png"
         alt="Interface do site: banner Mesas Exclusivas Liberadas, atalhos e mesas ao vivo (Roleta e Blackjack exclusivos)"
@@ -341,7 +346,12 @@ const ConteudoAcesso: React.FC<{ dark: boolean }> = ({ dark }) => (
       "Utilize a tag \"Games Global\" para filtrar os jogos",
       "Ou role a barra até encontrar a seção Games Global",
     ]} />
-    <div style={{ marginTop: 20, borderRadius: 12, overflow: "hidden", border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`, boxShadow: dark ? "0 8px 32px rgba(0,0,0,0.35)" : "0 8px 28px rgba(0,0,0,0.08)" }}>
+    <div style={{
+      marginTop: 20, maxWidth: 560, marginLeft: "auto", marginRight: "auto",
+      borderRadius: 12, overflow: "hidden",
+      border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
+      boxShadow: dark ? "0 8px 32px rgba(0,0,0,0.35)" : "0 8px 28px rgba(0,0,0,0.08)",
+    }}>
       <img
         src="/playbook/games-global-slots.png"
         alt="Interface do cassino: aba CASSINO com a seção Games Global e carrossel de slots"
