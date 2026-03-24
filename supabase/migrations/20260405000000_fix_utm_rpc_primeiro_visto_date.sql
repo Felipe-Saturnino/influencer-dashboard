@@ -1,8 +1,5 @@
--- ─── Links e Materiais: emissão de UTM por permissão can_editar ─────────────
--- Remove a restrição por role=influencer na RPC; valida role_permissions.can_editar
--- para page_key = links_materiais. mapeado_por = quem emitiu; influencer_id = alvo.
-
-DROP FUNCTION IF EXISTS public.registrar_utm_alias_tracking_casa_apostas(text);
+-- ─── Corrige INSERT: primeiro_visto / ultimo_visto são tipo date, não text ───
+-- (to_char(...) gerava text e quebrava o INSERT). Idempotente: CREATE OR REPLACE.
 
 CREATE OR REPLACE FUNCTION public.registrar_utm_alias_tracking_casa_apostas(
   p_utm_source text,
@@ -72,7 +69,6 @@ BEGIN
       RETURN jsonb_build_object('ok', false, 'error', 'Permissão "Próprios" não se aplica ao seu perfil para esta página.');
     END IF;
   ELSE
-    -- can_editar = 'sim'
     IF v_role = 'influencer' THEN
       v_target := v_uid;
       IF p_influencer_id IS NOT NULL AND p_influencer_id <> v_uid THEN
@@ -180,13 +176,3 @@ COMMENT ON FUNCTION public.registrar_utm_alias_tracking_casa_apostas(text, uuid)
   'Emite link de afiliado CDA: exige can_editar em links_materiais; grava utm_aliases (influencer alvo + mapeado_por).';
 
 GRANT EXECUTE ON FUNCTION public.registrar_utm_alias_tracking_casa_apostas(text, uuid) TO authenticated;
-
--- Padrão: quem pode editar outras telas operacionais também pode emitir para um influencer escolhido;
--- influencer/agência ficam com "próprios".
-UPDATE role_permissions SET can_editar = 'sim'
-WHERE page_key = 'links_materiais'
-  AND role IN ('admin', 'gestor', 'executivo', 'operador');
-
-UPDATE role_permissions SET can_editar = 'proprios'
-WHERE page_key = 'links_materiais'
-  AND role IN ('influencer', 'agencia');

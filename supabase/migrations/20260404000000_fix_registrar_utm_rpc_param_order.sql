@@ -158,8 +158,8 @@ BEGIN
       0,
       0,
       0,
-      to_char((timezone('UTC', now()))::date, 'YYYY-MM-DD'),
-      to_char((timezone('UTC', now()))::date, 'YYYY-MM-DD'),
+      (timezone('UTC', now()))::date,
+      (timezone('UTC', now()))::date,
       v_uid,
       now(),
       now()

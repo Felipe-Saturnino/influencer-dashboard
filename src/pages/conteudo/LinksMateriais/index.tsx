@@ -12,9 +12,12 @@ import { GiShare } from "react-icons/gi";
 const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source=";
 const QR_MODULO_PX = 192;
 
-/** utm_source não pode conter espaços: qualquer espaço vira "_" */
+/**
+ * utm_source sem espaços: troca espaços ASCII, NBSP e outros separadores Unicode por "_".
+ * (Cadastros às vezes usam \u00A0; o \s do JS nem sempre pega.)
+ */
 function sanitizarUtm(val: string): string {
-  return val.replace(/\s+/g, "_");
+  return val.replace(/[\s\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF]+/g, "_");
 }
 
 type RpcResult = { ok: boolean; error?: string; utm_source?: string };
@@ -51,6 +54,7 @@ export default function LinksMateriais() {
     if (!user?.id || user.role !== "influencer") {
       setLoadingPerfil(false);
       setNomeArtistico("");
+      setUtmInput("");
       return;
     }
     setLoadingPerfil(true);
@@ -63,6 +67,7 @@ export default function LinksMateriais() {
     if (error) {
       console.error("[LinksMateriais] perfil:", error.message);
       setNomeArtistico("");
+      setUtmInput("");
       return;
     }
     const nome = (data?.nome_artistico ?? "").trim();
@@ -73,6 +78,13 @@ export default function LinksMateriais() {
   useEffect(() => {
     void carregarMeuPerfil();
   }, [carregarMeuPerfil]);
+
+  /** Garante UTM sanitizado após o perfil (evita NBSP/espaço na 1ª pintura). */
+  useEffect(() => {
+    if (user?.role !== "influencer" || perm.canView === "nao") return;
+    if (loadingPerfil) return;
+    setUtmInput(sanitizarUtm(nomeArtistico));
+  }, [user?.role, loadingPerfil, nomeArtistico, perm.canView]);
 
   useEffect(() => {
     if (!user || user.role === "influencer" || perm.canView === "nao") {
