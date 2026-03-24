@@ -294,7 +294,6 @@ const ConteudoFunFacts: React.FC<{ dark: boolean }> = ({ dark }) => {
       <p style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.7, marginTop: 0 }}>
         Use esses dados como ganchos durante a live para reforçar o posicionamento da <strong>Spin Gaming</strong>. São opcionais, mas altamente recomendados para engajamento.
       </p>
-      <TituloSecao accent={BRAND.ciano}>Fun Facts</TituloSecao>
       <TituloSecao accent={BRAND.ciano}>Estrutura</TituloSecao>
       <GridFunFacts dark={dark} items={estrutura} />
       <TituloSecao accent={BRAND.ciano}>Operação</TituloSecao>
@@ -660,9 +659,9 @@ export default function PlaybookInfluencers() {
 
   return (
     <div style={{ padding: "20px 24px 48px" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ flex: "1 1 280px", minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 200px" }}>
             <span style={{
               width: 32, height: 32, borderRadius: 9,
               background: brand.primaryIconBg,
@@ -680,64 +679,70 @@ export default function PlaybookInfluencers() {
               Playbook — Influencers
             </h1>
           </div>
-          <div style={{
-            marginTop: 12,
-            marginLeft: 40,
-            maxWidth: 720,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            lineHeight: 1.65,
-            color: t.textMuted,
-          }}>
-            {PLAYBOOK_SUBTITULO_PARAGRAFOS.map((texto, i) => (
-              <p key={i} style={{ margin: i === 0 ? "0 0 10px 0" : 0 }}>
-                {texto}
-              </p>
-            ))}
-          </div>
+
+          {!loadingStats && (
+            exibirAuditoria ? (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "7px 14px", borderRadius: 20,
+                background: dark ? "rgba(30,54,248,0.10)" : "rgba(30,54,248,0.07)",
+                border: "1px solid rgba(30,54,248,0.25)",
+                flexShrink: 0,
+              }}>
+                <ShieldCheck size={14} color={dark ? "#7b95ff" : BRAND.azul} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#7b95ff" : BRAND.azul, fontFamily: FONT.body }}>
+                  {totalConfAll} de {totalInflu} influencers confirmaram tudo
+                </span>
+              </div>
+            ) : user?.role === "influencer" ? (
+              tudoConfirmado ? (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "7px 14px", borderRadius: 20,
+                  background: dark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.07)",
+                  border: "1px solid rgba(34,197,94,0.25)",
+                  flexShrink: 0,
+                }}>
+                  <Check size={14} color={BRAND.verde} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>
+                    Playbook concluído
+                  </span>
+                </div>
+              ) : (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "7px 14px", borderRadius: 20,
+                  background: dark ? "rgba(232,64,37,0.09)" : "rgba(232,64,37,0.06)",
+                  border: "1px solid rgba(232,64,37,0.25)",
+                  flexShrink: 0,
+                }}>
+                  <AlertTriangle size={14} color={BRAND.vermelho} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#ff9980" : BRAND.vermelho, fontFamily: FONT.body }}>
+                    {confirmadosOb} de {totalOb} itens obrigatórios confirmados
+                  </span>
+                </div>
+              )
+            ) : null
+          )}
         </div>
 
-        {!loadingStats && (
-          exibirAuditoria ? (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "7px 14px", borderRadius: 20,
-              background: dark ? "rgba(30,54,248,0.10)" : "rgba(30,54,248,0.07)",
-              border: "1px solid rgba(30,54,248,0.25)",
-            }}>
-              <ShieldCheck size={14} color={dark ? "#7b95ff" : BRAND.azul} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#7b95ff" : BRAND.azul, fontFamily: FONT.body }}>
-                {totalConfAll} de {totalInflu} influencers confirmaram tudo
-              </span>
-            </div>
-          ) : user?.role === "influencer" ? (
-            tudoConfirmado ? (
-              <div style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "7px 14px", borderRadius: 20,
-                background: dark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.07)",
-                border: "1px solid rgba(34,197,94,0.25)",
-              }}>
-                <Check size={14} color={BRAND.verde} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>
-                  Playbook concluído
-                </span>
-              </div>
-            ) : (
-              <div style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "7px 14px", borderRadius: 20,
-                background: dark ? "rgba(232,64,37,0.09)" : "rgba(232,64,37,0.06)",
-                border: "1px solid rgba(232,64,37,0.25)",
-              }}>
-                <AlertTriangle size={14} color={BRAND.vermelho} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#ff9980" : BRAND.vermelho, fontFamily: FONT.body }}>
-                  {confirmadosOb} de {totalOb} itens obrigatórios confirmados
-                </span>
-              </div>
-            )
-          ) : null
-        )}
+        <div style={{
+          marginTop: 12,
+          paddingLeft: 40,
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          fontFamily: FONT.body,
+          fontSize: 13,
+          lineHeight: 1.65,
+          color: t.textMuted,
+        }}>
+          {PLAYBOOK_SUBTITULO_PARAGRAFOS.map((texto, i) => (
+            <p key={i} style={{ margin: i === 0 ? "0 0 10px 0" : 0 }}>
+              {texto}
+            </p>
+          ))}
+        </div>
       </div>
 
       {user?.role === "influencer" && tudoConfirmado && (
