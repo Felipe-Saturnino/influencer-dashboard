@@ -12,6 +12,11 @@ import { GiShare } from "react-icons/gi";
 const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source=";
 const QR_MODULO_PX = 192;
 
+/** utm_source não pode conter espaços: qualquer espaço vira "_" */
+function sanitizarUtm(val: string): string {
+  return val.replace(/\s+/g, "_");
+}
+
 type RpcResult = { ok: boolean; error?: string; utm_source?: string };
 
 interface InfluencerOpcao {
@@ -62,7 +67,7 @@ export default function LinksMateriais() {
     }
     const nome = (data?.nome_artistico ?? "").trim();
     setNomeArtistico(nome);
-    setUtmInput(nome);
+    setUtmInput(sanitizarUtm(nome));
   }, [user?.id, user?.role]);
 
   useEffect(() => {
@@ -105,7 +110,7 @@ export default function LinksMateriais() {
   useEffect(() => {
     if (user?.role === "influencer") return;
     const row = influenciadores.find((i) => i.id === influencerSelecionado);
-    if (row) setUtmInput((row.nome_artistico ?? "").trim());
+    if (row) setUtmInput(sanitizarUtm((row.nome_artistico ?? "").trim()));
   }, [influencerSelecionado, influenciadores, user?.role]);
 
   useEffect(() => {
@@ -117,7 +122,7 @@ export default function LinksMateriais() {
 
   async function emitir() {
     if (!podeEmitir || !user?.id) return;
-    const raw = utmInput.trim();
+    const raw = sanitizarUtm(utmInput).trim();
     if (!raw) {
       setErro("Preencha o valor do UTM antes de emitir.");
       return;
@@ -241,18 +246,19 @@ export default function LinksMateriais() {
           color: t.textMuted,
         }}>
           <p style={{ margin: 0 }}>
-            Gere o link de rastreamento e registre o UTM em Gestão de Links. A emissão exige permissão <strong>Editar</strong> nesta página (Gestão de Usuários).
+            Gere o link de rastreamento e registre o UTM em Gestão de Links.
           </p>
         </div>
       </div>
 
       <section
         style={{
+          boxSizing: "border-box",
+          width: "100%",
           background: brand.blockBg,
           border: brand.primaryTransparentBorder,
           borderRadius: 14,
           padding: "16px 20px",
-          maxWidth: 960,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
@@ -350,7 +356,6 @@ export default function LinksMateriais() {
                   disabled={!podeEmitir || loadingInfluenciadores || salvando}
                   style={{
                     width: "100%",
-                    maxWidth: 420,
                     boxSizing: "border-box",
                     padding: "12px 14px",
                     borderRadius: 12,
@@ -413,9 +418,13 @@ export default function LinksMateriais() {
                   <input
                     type="text"
                     value={utmInput}
-                    onChange={(e) => setUtmInput(e.target.value)}
+                    onChange={(e) => setUtmInput(sanitizarUtm(e.target.value))}
+                    onKeyDown={(e) => {
+                      if (e.key === " ") e.preventDefault();
+                    }}
                     disabled={!podeEmitir || aguardandoOpcoes || salvando}
-                    placeholder={nomeArtistico || "utm_source"}
+                    placeholder={sanitizarUtm(nomeArtistico) || "utm_source"}
+                    autoComplete="off"
                     aria-label="Valor do utm_source"
                     style={{
                       flex: "1 1 140px",
@@ -434,8 +443,8 @@ export default function LinksMateriais() {
               </div>
               <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
                 {user?.role === "influencer"
-                  ? "O trecho à direita é o valor de utm_source (pré-preenchido com seu nome artístico quando disponível)."
-                  : "O trecho à direita é o utm_source (pré-preenchido com o nome artístico do influencer selecionado)."}
+                  ? "O trecho à direita é o utm_source (a partir do nome artístico, com espaços convertidos para _). Não são permitidos espaços."
+                  : "O trecho à direita é o utm_source (a partir do nome artístico do influencer, com espaços convertidos para _). Não são permitidos espaços."}
               </p>
             </div>
 
@@ -638,7 +647,7 @@ export default function LinksMateriais() {
                 )}
               </div>
 
-              <p style={{ margin: "12px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 520, lineHeight: 1.55 }}>
+              <p style={{ margin: "12px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
                 O QR encoda o mesmo link exibido acima. O PNG baixado é o código puro (fundo branco) para uso em stories, posts ou peças; o quadro com gradiente Spin aparece só na tela.
               </p>
             </div>
