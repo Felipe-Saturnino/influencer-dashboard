@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import QRCode from "qrcode";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -6,14 +7,20 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
-import { buildSpinBrandedQrPngBlob, type SpinQrFrameVariant } from "../../../lib/spinQrFrameExport";
+import {
+  buildSpinBrandedQrPngBlob,
+  buildSpinBrandedQrPreviewDataUrl,
+  type SpinQrFrameVariant,
+} from "../../../lib/spinQrFrameExport";
 import ModalBloqueioAgendaLive from "../../lives/Agenda/ModalBloqueioAgendaLive";
 import { Link2, Copy, Check, AlertCircle, QrCode, Download } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { GiShare } from "react-icons/gi";
 
 const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source=";
-const QR_MODULO_PX = 192;
+/** Tamanho do QR na prévia “somente código”. */
+const QR_PREVIA_PX = 176;
+const PREVIA_QUADRO_MAX_W = 280;
 
 /**
  * utm_source: só letras sem acento (A–Z, a–z), números e _.
@@ -77,9 +84,11 @@ export default function LinksMateriais() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
-  const [qrVisivel, setQrVisivel] = useState(false);
-  const [baixandoQuadro, setBaixandoQuadro] = useState<SpinQrFrameVariant | null>(null);
-  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [previewEscuro, setPreviewEscuro] = useState<string | null>(null);
+  const [previewClaro, setPreviewClaro] = useState<string | null>(null);
+  const [carregandoPreviewsQuadro, setCarregandoPreviewsQuadro] = useState(false);
+  type BaixandoQrTipo = null | "plain" | SpinQrFrameVariant;
+  const [baixandoQr, setBaixandoQr] = useState<BaixandoQrTipo>(null);
   const [bloqueioEmissao, setBloqueioEmissao] = useState<{
     perfilIncompleto: boolean;
     faltaPlaybook: boolean;
@@ -195,7 +204,35 @@ export default function LinksMateriais() {
   }, [influencerSelecionado, influenciadores, user?.role]);
 
   useEffect(() => {
-    setQrVisivel(false);
+    if (!linkCompleto) {
+      setPreviewEscuro(null);
+      setPreviewClaro(null);
+      setCarregandoPreviewsQuadro(false);
+      return;
+    }
+    let cancelled = false;
+    setCarregandoPreviewsQuadro(true);
+    setPreviewEscuro(null);
+    setPreviewClaro(null);
+    void (async () => {
+      try {
+        const [esc, cla] = await Promise.all([
+          buildSpinBrandedQrPreviewDataUrl(linkCompleto, "dark", PREVIA_QUADRO_MAX_W),
+          buildSpinBrandedQrPreviewDataUrl(linkCompleto, "light", PREVIA_QUADRO_MAX_W),
+        ]);
+        if (!cancelled) {
+          setPreviewEscuro(esc);
+          setPreviewClaro(cla);
+        }
+      } catch (e) {
+        console.error("[LinksMateriais] preview quadros:", e);
+      } finally {
+        if (!cancelled) setCarregandoPreviewsQuadro(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [linkCompleto]);
 
   const aguardandoOpcoes =
@@ -268,20 +305,29 @@ export default function LinksMateriais() {
     }
   }
 
-  function baixarQrPng() {
-    const canvas = qrCanvasRef.current;
-    if (!canvas) return;
+  async function baixarQrPng() {
+    if (!linkCompleto) return;
+    setErro(null);
     try {
+      setBaixandoQr("plain");
+      const canvas = document.createElement("canvas");
+      await QRCode.toCanvas(canvas, linkCompleto, {
+        width: 512,
+        margin: 2,
+        color: { dark: "#14141a", light: "#ffffff" },
+      });
       const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = url;
-      a.download = "spin-qrcode-link-rastreamento.png";
+      a.download = "spin-qrcode-apenas-codigo.png";
       a.rel = "noopener";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
     } catch {
       setErro("Não foi possível baixar o QR Code. Tente novamente.");
+    } finally {
+      setBaixandoQr(null);
     }
   }
 
@@ -289,7 +335,7 @@ export default function LinksMateriais() {
     if (!linkCompleto) return;
     setErro(null);
     try {
-      setBaixandoQuadro(variant);
+      setBaixandoQr(variant);
       const blob = await buildSpinBrandedQrPngBlob(linkCompleto, variant);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -304,7 +350,7 @@ export default function LinksMateriais() {
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível gerar o PNG com o quadro Spin.");
     } finally {
-      setBaixandoQuadro(null);
+      setBaixandoQr(null);
     }
   }
 
@@ -680,56 +726,58 @@ export default function LinksMateriais() {
                 </h3>
               </div>
 
-              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 20 }}>
-                <button
-                  type="button"
-                  onClick={() => setQrVisivel((v) => !v)}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "12px 18px",
-                    borderRadius: 12,
-                    border: "none",
-                    cursor: "pointer",
-                    fontWeight: 700,
-                    fontSize: 14,
-                    fontFamily: FONT.body,
-                    background: brand.useBrand ? "var(--brand-primary)" : "linear-gradient(135deg, #7c3aed, #1e36f8)",
-                    color: "#fff",
-                  }}
-                >
-                  <QrCode size={18} strokeWidth={2.25} />
-                  {qrVisivel ? "Ocultar QR Code" : "Gerar QR Code"}
-                </button>
-
-                {qrVisivel && (
-                  <div
-                    style={{
-                      padding: 3,
-                      borderRadius: 16,
-                      background: brand.useBrand
-                        ? "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))"
-                        : "linear-gradient(135deg, #7c3aed, #1e36f8)",
-                      boxShadow: dark
-                        ? "0 10px 36px rgba(0,0,0,0.45)"
-                        : "0 10px 28px rgba(74, 32, 130, 0.18)",
-                    }}
-                  >
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 28,
+                  justifyContent: "center",
+                  alignItems: "flex-start",
+                }}
+              >
+                {/* 1 — só QR */}
+                <div style={{
+                  flex: "1 1 240px",
+                  maxWidth: 320,
+                  minWidth: 200,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 12,
+                }}>
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: t.textMuted,
+                    fontFamily: FONT_TITLE,
+                    textAlign: "center",
+                  }}>
+                    Apenas o QR Code
+                  </span>
+                  <div style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: 3,
+                    borderRadius: 16,
+                    background: brand.useBrand
+                      ? "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))"
+                      : "linear-gradient(135deg, #7c3aed, #1e36f8)",
+                    boxShadow: dark ? "0 8px 28px rgba(0,0,0,0.35)" : "0 8px 24px rgba(74, 32, 130, 0.14)",
+                  }}>
                     <div style={{
                       borderRadius: 13,
                       background: "#ffffff",
-                      padding: "18px 20px 16px",
+                      padding: "16px 18px 14px",
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
-                      gap: 12,
-                      minWidth: QR_MODULO_PX + 40,
+                      gap: 10,
                     }}>
                       <QRCodeCanvas
-                        ref={qrCanvasRef}
                         value={linkCompleto}
-                        size={QR_MODULO_PX}
+                        size={QR_PREVIA_PX}
                         level="M"
                         marginSize={4}
                         bgColor="#FFFFFF"
@@ -737,67 +785,93 @@ export default function LinksMateriais() {
                         title="QR Code do link de rastreamento"
                       />
                       <span style={{
-                        fontSize: 9,
+                        fontSize: 8,
                         fontWeight: 800,
-                        letterSpacing: "0.2em",
+                        letterSpacing: "0.18em",
                         color: brand.useBrand ? "var(--brand-primary)" : "#4a2082",
                         fontFamily: FONT_TITLE,
                       }}>
                         SPIN GAMING
                       </span>
-                      <button
-                        type="button"
-                        onClick={baixarQrPng}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 8,
-                          padding: "10px 16px",
-                          borderRadius: 10,
-                          border: brand.useBrand
-                            ? "1px solid color-mix(in srgb, var(--brand-primary) 35%, transparent)"
-                            : "1px solid rgba(124, 58, 237, 0.35)",
-                          background: brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-primary) 8%, #fff)"
-                            : "rgba(124, 58, 237, 0.06)",
-                          color: brand.useBrand ? "var(--brand-primary)" : "#4a2082",
-                          fontWeight: 700,
-                          fontSize: 12,
-                          fontFamily: FONT.body,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Download size={16} strokeWidth={2.25} />
-                        Baixar PNG (só o código)
-                      </button>
                     </div>
                   </div>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => void baixarQrPng()}
+                    disabled={baixandoQr !== null}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 16px",
+                      borderRadius: 10,
+                      border: brand.useBrand
+                        ? "1px solid color-mix(in srgb, var(--brand-primary) 35%, transparent)"
+                        : "1px solid rgba(124, 58, 237, 0.35)",
+                      background: brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-primary) 8%, #fff)"
+                        : "rgba(124, 58, 237, 0.06)",
+                      color: brand.useBrand ? "var(--brand-primary)" : "#4a2082",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      fontFamily: FONT.body,
+                      cursor: baixandoQr !== null ? "wait" : "pointer",
+                      opacity: baixandoQr !== null && baixandoQr !== "plain" ? 0.45 : 1,
+                    }}
+                  >
+                    <Download size={16} strokeWidth={2.25} />
+                    {baixandoQr === "plain" ? "Gerando…" : "Baixar PNG"}
+                  </button>
+                </div>
 
-              <div
-                style={{
-                  marginTop: 18,
-                  paddingTop: 16,
-                  borderTop: `1px solid ${t.cardBorder}`,
-                }}
-              >
-                <p style={{
-                  margin: "0 0 10px",
-                  fontSize: 10,
-                  fontWeight: 800,
-                  letterSpacing: "0.14em",
-                  textTransform: "uppercase",
-                  color: t.textMuted,
-                  fontFamily: FONT_TITLE,
+                {/* 2 — gradiente escuro */}
+                <div style={{
+                  flex: "1 1 240px",
+                  maxWidth: 320,
+                  minWidth: 200,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 12,
                 }}>
-                  Quadro Spin (modelo para stories / posts)
-                </p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: t.textMuted,
+                    fontFamily: FONT_TITLE,
+                    textAlign: "center",
+                  }}>
+                    Gradiente escuro
+                  </span>
+                  <div style={{
+                    width: "100%",
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    background: t.cardBg,
+                    border: `1px solid ${t.cardBorder}`,
+                    minHeight: Math.round((PREVIA_QUADRO_MAX_W * 760) / 600),
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    {carregandoPreviewsQuadro || !previewEscuro ? (
+                      <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, padding: 24 }}>
+                        {carregandoPreviewsQuadro ? "Gerando prévia…" : "—"}
+                      </span>
+                    ) : (
+                      <img
+                        src={previewEscuro}
+                        alt="Quadro Spin gradiente escuro com QR Code"
+                        style={{ width: "100%", height: "auto", display: "block", verticalAlign: "top" }}
+                      />
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => void baixarQuadroSpin("dark")}
-                    disabled={!!baixandoQuadro}
+                    disabled={baixandoQr !== null}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -808,19 +882,65 @@ export default function LinksMateriais() {
                       background: "linear-gradient(160deg, rgba(74, 48, 130, 0.2) 0%, rgba(30, 54, 248, 0.15) 100%)",
                       color: dark ? "#e8e9ff" : "#1e2a6e",
                       fontWeight: 700,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontFamily: FONT.body,
-                      cursor: baixandoQuadro ? "wait" : "pointer",
-                      opacity: baixandoQuadro && baixandoQuadro !== "dark" ? 0.5 : 1,
+                      cursor: baixandoQr !== null ? "wait" : "pointer",
+                      opacity: baixandoQr !== null && baixandoQr !== "dark" ? 0.45 : 1,
                     }}
                   >
-                    <Download size={15} strokeWidth={2.25} />
-                    {baixandoQuadro === "dark" ? "Gerando…" : "PNG gradiente escuro + QR"}
+                    <Download size={16} strokeWidth={2.25} />
+                    {baixandoQr === "dark" ? "Gerando…" : "Baixar PNG"}
                   </button>
+                </div>
+
+                {/* 3 — gradiente claro */}
+                <div style={{
+                  flex: "1 1 240px",
+                  maxWidth: 320,
+                  minWidth: 200,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 12,
+                }}>
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: t.textMuted,
+                    fontFamily: FONT_TITLE,
+                    textAlign: "center",
+                  }}>
+                    Gradiente claro
+                  </span>
+                  <div style={{
+                    width: "100%",
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    background: t.cardBg,
+                    border: `1px solid ${t.cardBorder}`,
+                    minHeight: Math.round((PREVIA_QUADRO_MAX_W * 760) / 600),
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    {carregandoPreviewsQuadro || !previewClaro ? (
+                      <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, padding: 24 }}>
+                        {carregandoPreviewsQuadro ? "Gerando prévia…" : "—"}
+                      </span>
+                    ) : (
+                      <img
+                        src={previewClaro}
+                        alt="Quadro Spin gradiente claro com QR Code"
+                        style={{ width: "100%", height: "auto", display: "block", verticalAlign: "top" }}
+                      />
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => void baixarQuadroSpin("light")}
-                    disabled={!!baixandoQuadro}
+                    disabled={baixandoQr !== null}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -831,20 +951,20 @@ export default function LinksMateriais() {
                       background: "linear-gradient(160deg, rgba(74, 48, 130, 0.18) 0%, rgba(233, 64, 37, 0.12) 100%)",
                       color: dark ? "#fde8e4" : "#7c2d12",
                       fontWeight: 700,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontFamily: FONT.body,
-                      cursor: baixandoQuadro ? "wait" : "pointer",
-                      opacity: baixandoQuadro && baixandoQuadro !== "light" ? 0.5 : 1,
+                      cursor: baixandoQr !== null ? "wait" : "pointer",
+                      opacity: baixandoQr !== null && baixandoQr !== "light" ? 0.45 : 1,
                     }}
                   >
-                    <Download size={15} strokeWidth={2.25} />
-                    {baixandoQuadro === "light" ? "Gerando…" : "PNG gradiente claro + QR"}
+                    <Download size={16} strokeWidth={2.25} />
+                    {baixandoQr === "light" ? "Gerando…" : "Baixar PNG"}
                   </button>
                 </div>
               </div>
 
-              <p style={{ margin: "12px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
-                O QR leva ao mesmo link exibido acima. Você pode baixar só o código (PNG) ou um dos quadros Spin com gradiente, logo e QR prontos para stories e posts.
+              <p style={{ margin: "16px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
+                Cada opção mostra como ficará o arquivo. Os PNG dos quadros são gerados em alta resolução (600×760 px) para stories e posts; o QR “somente código” é baixado em 512 px.
               </p>
             </div>
           </div>

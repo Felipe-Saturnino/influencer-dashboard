@@ -119,13 +119,13 @@ function drawQrCorners(ctx: CanvasRenderingContext2D, bx: number, by: number) {
 }
 
 /**
- * PNG 600×760 — quadro Spin (gradiente dark ou light) + logo + QR real do link.
+ * Canvas 600×760 — quadro Spin (gradiente dark ou light) + logo + QR real do link.
  */
-export async function buildSpinBrandedQrPngBlob(
+export async function renderSpinBrandedQrToCanvas(
   link: string,
   variant: SpinQrFrameVariant,
   baseUrl: string = import.meta.env.BASE_URL || "/"
-): Promise<Blob> {
+): Promise<HTMLCanvasElement> {
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
 
   const canvas = document.createElement("canvas");
@@ -186,6 +186,39 @@ export async function buildSpinBrandedQrPngBlob(
   const pad = (QR_BOX - qrInner) / 2;
   ctx.drawImage(qrCanvas, qrLeft + pad, qrTop + pad);
 
+  return canvas;
+}
+
+/** Pré-visualização na UI (redimensiona o quadro completo). */
+export async function buildSpinBrandedQrPreviewDataUrl(
+  link: string,
+  variant: SpinQrFrameVariant,
+  maxWidth = 280,
+  baseUrl: string = import.meta.env.BASE_URL || "/"
+): Promise<string> {
+  const src = await renderSpinBrandedQrToCanvas(link, variant, baseUrl);
+  const w = Math.round(maxWidth);
+  const h = Math.round((FRAME_H / FRAME_W) * maxWidth);
+  const out = document.createElement("canvas");
+  out.width = w;
+  out.height = h;
+  const octx = out.getContext("2d");
+  if (!octx) throw new Error("Canvas 2D não disponível.");
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(src, 0, 0, w, h);
+  return out.toDataURL("image/png");
+}
+
+/**
+ * PNG 600×760 — quadro Spin (gradiente dark ou light) + logo + QR real do link.
+ */
+export async function buildSpinBrandedQrPngBlob(
+  link: string,
+  variant: SpinQrFrameVariant,
+  baseUrl: string = import.meta.env.BASE_URL || "/"
+): Promise<Blob> {
+  const canvas = await renderSpinBrandedQrToCanvas(link, variant, baseUrl);
   return new Promise((resolve, reject) => {
     canvas.toBlob((b) => {
       if (b) resolve(b);
