@@ -482,7 +482,7 @@ export default function MesasSpin() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 64px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+    <div className="app-page-shell app-page-shell--pb64" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {/* ══════════════════════════════════════════════════════════════════════
           BLOCO 1 — FILTROS (primária transparente)
@@ -565,7 +565,7 @@ export default function MesasSpin() {
           title="KPIs Principais"
           sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
         />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12 }}>
+        <div className="app-grid-kpi-6">
           <KpiCard
             label="Apostas"
             value={kpisAtual.bets.toLocaleString("pt-BR")}

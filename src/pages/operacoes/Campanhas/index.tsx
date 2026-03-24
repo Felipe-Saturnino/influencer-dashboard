@@ -82,7 +82,7 @@ export default function Campanhas() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
       {/* ─── Header — primária ───────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
         <div
@@ -132,7 +132,7 @@ export default function Campanhas() {
       </div>
 
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+      <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
         {[
           { label: "Total", valor: campanhas.length, cor: brand.accent },
           { label: "Ativas", valor: ativas, cor: "#059669" },

@@ -15,7 +15,7 @@ export default function GestaoUsuarios() {
 
   if (user?.role !== "admin") {
     return (
-      <div style={{ padding: "20px 24px 48px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+      <div className="app-page-shell" style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
         Apenas administradores podem acessar a Gestão de Usuários.
       </div>
     );
@@ -36,7 +36,7 @@ export default function GestaoUsuarios() {
   ];
 
   return (
-    <div style={{ padding: "20px 24px 48px", display: "flex", flexDirection: "column", gap: 24 }}>
+    <div className="app-page-shell" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div

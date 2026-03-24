@@ -442,7 +442,7 @@ export default function Influencers() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
 
       {/* ── HEADER — primária ── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
@@ -468,7 +468,7 @@ export default function Influencers() {
 
       {/* Quadros resumo (quem gerencia múltiplos) */}
       {showManagementUI && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+        <div className="app-grid-2" style={{ gap: "16px", marginBottom: "20px" }}>
           <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: brand.secondary, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
               <GiPodium size={13} style={{ color: brand.secondary }} /> Total de Influencers
@@ -845,7 +845,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }:
   );
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
+    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ background: b.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
 
@@ -923,7 +923,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }:
             <div style={row}>
               <SensitiveField value={p?.banco} label="Banco" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
             </div>
-            <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="app-grid-2-tight" style={{ ...row, gap: 12 }}>
               <SensitiveField value={p?.agencia} label="Agência" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
               <SensitiveField value={p?.conta} label="Conta" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
             </div>
@@ -1074,7 +1074,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
   ];
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
+    <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ background: b.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
 
@@ -1181,7 +1181,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
                 <input value={(form[key] as string) ?? ""} onChange={(e) => set(key, e.target.value)} style={inputStyle} placeholder={placeholder} />
               </div>
             ))}
-            <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="app-grid-2-tight" style={{ ...row, gap: 12 }}>
               {[
                 { key: "agencia" as keyof Perfil, label: "Agência", placeholder: "0000" },
                 { key: "conta"   as keyof Perfil, label: "Conta",   placeholder: "00000-0" },

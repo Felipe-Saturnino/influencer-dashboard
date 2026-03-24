@@ -486,7 +486,7 @@ export default function SocialMediaDashboard() {
   }
 
   return (
-    <div style={{ background: t.bg, minHeight: "100vh", padding: "20px 24px 48px", fontFamily: FONT.body, color: t.text }}>
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, color: t.text }}>
 
       {/* Barra de navegação — primária transparente */}
       <div style={{ marginBottom: 14 }}>
@@ -541,7 +541,7 @@ export default function SocialMediaDashboard() {
             <SectionTitle icon={<GiPokerHand size={14} />}>
               KPIs de Mídias Sociais
             </SectionTitle>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12 }}>
+            <div className="app-grid-kpi-3">
               <KpiCard label="Seguidores totais" valor={fmtNum(totais.seguidores)}  accentVar="--brand-extra1" accentCor={BRAND.roxo}  icon={<GiMicrophone size={15} />} />
               <KpiCard label="Impressões totais" valor={fmtNum(totais.impressoes)}  accentVar="--brand-extra2" accentCor={BRAND.azul}  icon={<GiStarMedal size={15} />} />
               <KpiCard label="Engajamento médio" valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"} accentVar="--brand-extra3" accentCor={BRAND.ciano} icon={<GiPokerHand size={15} />} />
@@ -549,7 +549,7 @@ export default function SocialMediaDashboard() {
           </div>
 
           {/* Cards por canal */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12, marginBottom: 14 }}>
+          <div className="app-grid-kpi-3" style={{ marginBottom: 14 }}>
             {channelConfig.map((cfg) => {
               const byCh   = totais.byChannel[cfg.channel] ?? [];
               const stats  = cfg.stats(byCh);
@@ -578,7 +578,7 @@ export default function SocialMediaDashboard() {
           </div>
 
           {/* Engajamento por formato + Funil */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+          <div className="app-grid-2-tight" style={{ marginBottom: 14 }}>
             <div style={{ ...card, marginBottom: 0 }}>
               <SectionTitle icon={<GiStarMedal size={14} />}>Engajamento por formato</SectionTitle>
               {formatos.length > 0 ? (
@@ -623,7 +623,7 @@ export default function SocialMediaDashboard() {
                 ];
 
                 return (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "center" }}>
+                  <div className="app-grid-2" style={{ gap: 20, alignItems: "center" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxHeight: 280, display: "block" }} preserveAspectRatio="xMidYMid meet">
                         <defs>

@@ -181,7 +181,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
       {loading ? (
         <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 16 }}>
           {usuariosPorStatus.map((u: UsuarioCompleto) => {
             const escopoTexto = formatarEscopo(u.scopes ?? [], operadoras);
             const ativo = u.ativo !== false;

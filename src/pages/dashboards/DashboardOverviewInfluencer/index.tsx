@@ -441,7 +441,7 @@ export default function DashboardOverviewInfluencer() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 40px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {/* ─── BLOCO 1: Filtros — primária transparente ───────────────────────────── */}
       <div style={{ marginBottom: 14 }}>
@@ -526,17 +526,17 @@ export default function DashboardOverviewInfluencer() {
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle icon={<GiPodiumWinner size={14} />} sub={!historico ? "· MTD vs mês anterior" : undefined}>KPIs Executivos</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
+        <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
           <KpiCard label="GGR Total" value={fmtBRL(totais.ggr)} icon={<GiMoneyStack size={16} />} accentVar="--brand-extra1" accentColor={BRAND.roxo} atual={totais.ggr} anterior={totaisAnt.ggr} isBRL isHistorico={historico} />
           <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.azul} atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
           <KpiCard label="ROI" value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"} icon={<GiStarMedal size={16} />} accentVar="--brand-extra2" accentColor={BRAND.verde} atual={totais.roi} anterior={totaisAnt.roi} isHistorico={historico} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
+        <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
           <KpiCard label="Qtd de Lives" value={totais.lives.toLocaleString("pt-BR")} icon={<GiClapperboard size={16} />} accentVar="--brand-extra2" accentColor={BRAND.azul} atual={totais.lives} anterior={totaisAnt.lives} isHistorico={historico} />
           <KpiCard label="Horas Realizadas" value={fmtHoras(totais.horas)} icon={<GiSandsOfTime size={16} />} accentVar="--brand-extra2" accentColor={BRAND.azul} atual={totais.horas} anterior={totaisAnt.horas} isHistorico={historico} />
           <KpiCard label="Média de Views" value={totais.views > 0 ? totais.views.toLocaleString("pt-BR") : "—"} icon={<GiEyeball size={16} />} accentVar="--brand-extra2" accentColor={BRAND.azul} atual={totais.views} anterior={totaisAnt.views} isHistorico={historico} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        <div className="app-grid-kpi-4">
           <KpiCard label="Registros" value={totais.registros.toLocaleString("pt-BR")} icon={<GiPerson size={16} />} accentVar="--brand-extra3" accentColor={BRAND.roxo} atual={totais.registros} anterior={totaisAnt.registros} isHistorico={historico} subValue={subValueReg} />
           <KpiCard label="FTDs" value={totais.ftds.toLocaleString("pt-BR")} icon={<GiTrophy size={16} />} accentVar="--brand-extra3" accentColor={BRAND.roxo} atual={totais.ftds} anterior={totaisAnt.ftds} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }} />
           <KpiCard label="Depósitos" value={totais.depositos_qtd.toLocaleString("pt-BR")} icon={<GiCardPlay size={16} />} accentVar="--brand-extra3" accentColor={BRAND.amarelo} atual={totais.depositos_qtd} anterior={totaisAnt.depositos_qtd} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.depositos_valor) }} />
@@ -553,7 +553,7 @@ export default function DashboardOverviewInfluencer() {
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle icon={<GiSpeedometer size={14} />}>Eficiência</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+        <div className="app-grid-kpi-5">
           <RateCard label="FTD/Hora" value={ftdPorHora} />
           <RateCard label="Ticket Médio FTD" value={ticketFTD} />
           <RateCard label="Ticket Médio Depósito" value={ticketDep} />
@@ -568,8 +568,8 @@ export default function DashboardOverviewInfluencer() {
           <div style={{ padding: "20px 20px 16px" }}>
             <SectionTitle icon={<GiCalendar size={14} />}>Comparativo Diário</SectionTitle>
           </div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="app-table-wrap">
+            <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   {["Data","Duração Live","Média Views","Máx Views","Acessos","Registros","# FTDs","R$ FTDs","# Depósitos","R$ Depósitos","# Saques","R$ Saques","R$ GGR"].map((h) => (

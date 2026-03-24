@@ -113,9 +113,9 @@ function ListaOK({ items, dark }: { items: React.ReactNode[]; dark: boolean }) {
   );
 }
 
-function TituloSecao({ children, accent }: { children: React.ReactNode; accent: string }) {
+function TituloSecao({ children, accent, compactTop }: { children: React.ReactNode; accent: string; compactTop?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, marginTop: 24 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, marginTop: compactTop ? 0 : 24 }}>
       <div style={{ width: 3, height: 16, borderRadius: 2, background: accent, flexShrink: 0 }} />
       <h3 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: accent, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.1em" }}>
         {children}
@@ -268,7 +268,7 @@ const FUN_FACT_CARD: CSSProperties = {
 
 function GridFunFacts({ items, dark }: { items: { label: string; value: string }[]; dark: boolean }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10, marginTop: 12 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))", gap: 10, marginTop: 12 }}>
       {items.map((f, i) => (
         <div
           key={i}
@@ -317,48 +317,60 @@ const ConteudoFunFacts: React.FC<{ dark: boolean }> = ({ dark }) => {
   );
 };
 
+const playbookAcessoImgShell = (dark: boolean) => ({
+  borderRadius: 10,
+  overflow: "hidden" as const,
+  border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
+  boxShadow: dark ? "0 4px 20px rgba(0,0,0,0.32)" : "0 4px 16px rgba(0,0,0,0.08)",
+});
+
 const ConteudoAcesso: React.FC<{ dark: boolean }> = ({ dark }) => (
   <div>
-    <TituloSecao accent={BRAND.azul}>
-      <>Mesas <strong>Spin Gaming</strong></>
-    </TituloSecao>
-    <ListaOK dark={dark} items={[
-      "Clique no banner \"MESAS EXCLUSIVAS\"",
-      "Ou acesse pelas mesas exibidas logo abaixo do banner",
-    ]} />
-    <div style={{
-      marginTop: 20, maxWidth: 560, marginLeft: "auto", marginRight: "auto",
-      borderRadius: 12, overflow: "hidden",
-      border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
-      boxShadow: dark ? "0 8px 32px rgba(0,0,0,0.35)" : "0 8px 28px rgba(0,0,0,0.08)",
-    }}>
-      <img
-        src="/playbook/mesas-spin-gaming.png"
-        alt="Interface do site: banner Mesas Exclusivas Liberadas, atalhos e mesas ao vivo (Roleta e Blackjack exclusivos)"
-        loading="lazy"
-        decoding="async"
-        style={{ display: "block", width: "100%", height: "auto" }}
-      />
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 20, alignItems: "flex-start" }}>
+      <div style={{ flex: "0 0 220px", width: 220, maxWidth: "100%" }}>
+        <div style={playbookAcessoImgShell(dark)}>
+          <img
+            src="/playbook/mesas-spin-gaming.png"
+            alt="Interface do site: banner Mesas Exclusivas Liberadas, atalhos e mesas ao vivo (Roleta e Blackjack exclusivos)"
+            loading="lazy"
+            decoding="async"
+            style={{ display: "block", width: "100%", height: "auto" }}
+          />
+        </div>
+      </div>
+      <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+        <TituloSecao accent={BRAND.azul} compactTop>
+          <>Mesas <strong>Spin Gaming</strong></>
+        </TituloSecao>
+        <ListaOK dark={dark} items={[
+          "Clique no banner \"MESAS EXCLUSIVAS\"",
+          "Ou acesse pelas mesas exibidas logo abaixo do banner",
+        ]} />
+      </div>
     </div>
-    <TituloSecao accent={dark ? "#70cae4" : "#0f6a8a"}>Games Global (Slots)</TituloSecao>
-    <ListaOK dark={dark} items={[
-      "Acesse pela aba CASSINO",
-      "Utilize a tag \"Games Global\" para filtrar os jogos",
-      "Ou role a barra até encontrar a seção Games Global",
-    ]} />
-    <div style={{
-      marginTop: 20, maxWidth: 560, marginLeft: "auto", marginRight: "auto",
-      borderRadius: 12, overflow: "hidden",
-      border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
-      boxShadow: dark ? "0 8px 32px rgba(0,0,0,0.35)" : "0 8px 28px rgba(0,0,0,0.08)",
-    }}>
-      <img
-        src="/playbook/games-global-slots.png"
-        alt="Interface do cassino: aba CASSINO com a seção Games Global e carrossel de slots"
-        loading="lazy"
-        decoding="async"
-        style={{ display: "block", width: "100%", height: "auto" }}
-      />
+
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 20, alignItems: "flex-start", marginTop: 32 }}>
+      <div style={{ flex: "0 0 220px", width: 220, maxWidth: "100%" }}>
+        <div style={playbookAcessoImgShell(dark)}>
+          <img
+            src="/playbook/games-global-slots.png"
+            alt="Interface do cassino: aba CASSINO com a seção Games Global e carrossel de slots"
+            loading="lazy"
+            decoding="async"
+            style={{ display: "block", width: "100%", height: "auto" }}
+          />
+        </div>
+      </div>
+      <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+        <TituloSecao accent={dark ? "#70cae4" : "#0f6a8a"} compactTop>
+          Games Global (Slots)
+        </TituloSecao>
+        <ListaOK dark={dark} items={[
+          "Acesse pela aba CASSINO",
+          "Utilize a tag \"Games Global\" para filtrar os jogos",
+          "Ou role a barra até encontrar a seção Games Global",
+        ]} />
+      </div>
     </div>
   </div>
 );
@@ -448,7 +460,7 @@ function PainelAuditoria({
         </span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div className="app-grid-2" style={{ gap: 16 }}>
         <div>
           <div style={{ fontSize: 10, fontWeight: 700, color: BRAND.verde, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, marginBottom: 8 }}>
             Confirmaram ({confirmacoes.length})
@@ -700,7 +712,7 @@ export default function PlaybookInfluencers() {
   const tudoConfirmado = user?.role === "influencer" && confirmadosOb === totalOb && totalOb > 0;
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 200px" }}>

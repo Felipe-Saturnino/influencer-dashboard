@@ -59,7 +59,7 @@ export default function GestaoOperadoras() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
 
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
@@ -81,7 +81,7 @@ export default function GestaoOperadoras() {
       </div>
 
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+      <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
         {[
           { label: "Total",    valor: operadoras.length,            cor: BRAND.roxoVivo },
           { label: "Ativas",   valor: ativas,                       cor: "#059669"      },
@@ -416,7 +416,7 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
         {editando && (
           <div style={{ ...fieldStyle, padding: 16, background: "rgba(74,32,130,0.08)", borderRadius: 12, border: `1px solid ${t.cardBorder}`, maxHeight: 420, overflowY: "auto" }}>
             <div style={{ ...labelStyle, marginBottom: 12 }}>Brandguide (operadores)</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="app-grid-2-tight">
               <div>
                 <label style={{ ...labelStyle, fontSize: 10 }}>Primária</label>
                 <input type="color" value={corPrimaria || "#7c3aed"} onChange={e => setCorPrimaria(e.target.value)}

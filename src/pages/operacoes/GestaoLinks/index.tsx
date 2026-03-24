@@ -219,7 +219,7 @@ export default function GestaoLinks() {
   }
 
   return (
-    <div style={{ padding: "24px 32px" }}>
+    <div className="app-page-shell">
 
       {/* ─── Header — primária ───────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 6 }}>
@@ -399,7 +399,7 @@ export default function GestaoLinks() {
               Associe o UTM <strong style={{ color: BRAND.roxoVivo }}>{aliasSelecionado.utm_source}</strong> a um influencer ou campanha.
             </p>
 
-            <div style={{ background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <div className="app-grid-3" style={{ background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20 }}>
               {[
                 { label: "FTDs",      value: String(aliasSelecionado.total_ftds) },
                 { label: "Depósitos", value: fmt(aliasSelecionado.total_deposit) },

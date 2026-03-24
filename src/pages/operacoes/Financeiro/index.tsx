@@ -1269,7 +1269,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
       {/* KPIs do ciclo (apenas fechado) */}
       {!isAberto && rows.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "20px" }}>
+        <div className="app-grid-kpi-4" style={{ gap: "10px", marginBottom: "20px" }}>
           {[
             { value: kpi.em,             label: "Em análise",   color: "#f59e0b" },
             { value: kpi.ap,             label: "A pagar",      color: "#6b7fff" },
@@ -2005,7 +2005,7 @@ export default function Financeiro() {
 
   if (ciclos.length === 0) {
     return (
-      <div style={{ padding: "20px 24px 48px" }}>
+      <div className="app-page-shell">
         <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: brand.primary }}>💰 Financeiro</h1>
         <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos de influencers.</p>
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
@@ -2031,7 +2031,7 @@ export default function Financeiro() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
       <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: brand.primary }}>💰 Financeiro</h1>
       <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "14px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
 

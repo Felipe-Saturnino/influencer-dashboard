@@ -1,7 +1,8 @@
-import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent } from "react";
+import { Suspense, lazy, useState, useEffect, type ComponentType, type LazyExoticComponent } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { useMediaQuery, MEDIA_MAX_NAV_DRAWER } from "./hooks/useMediaQuery";
 // Layout (sempre carregados — usados em toda sessão)
 import Sidebar from "./components/Sidebar";
 import Header  from "./components/Header";
@@ -95,13 +96,72 @@ const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }
 function AppLayout({ onLogout }: { onLogout: () => void }) {
   const { user, theme: t, activePage, setActivePage } = useApp();
   const [retryKey, setRetryKey] = useState(0);
+  const navDrawer = useMediaQuery(MEDIA_MAX_NAV_DRAWER);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!navDrawer) setMenuOpen(false);
+  }, [navDrawer]);
+
+  useEffect(() => {
+    if (!navDrawer || !menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navDrawer, menuOpen]);
+
+  useEffect(() => {
+    if (!navDrawer || !menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [navDrawer, menuOpen]);
+
   if (!user) return null;
   const PageComponent = PAGE_MAP[activePage] ?? Home;
+
+  const go = (page: string) => {
+    setActivePage(page);
+    setMenuOpen(false);
+  };
+
   return (
     <div className="app-layout-shell" style={{ display: "flex", background: t.bg }}>
-      <Sidebar activePage={activePage} onNavigate={setActivePage} />
-      <main className="app-main-column" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginLeft: "240px" }}>
-        <Header activePage={activePage} onNavigate={setActivePage} onLogout={onLogout} />
+      {navDrawer && menuOpen && (
+        <button
+          type="button"
+          className="app-sidebar-backdrop"
+          aria-label="Fechar menu"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+      <Sidebar
+        activePage={activePage}
+        onNavigate={go}
+        isDrawer={navDrawer}
+        drawerOpen={navDrawer && menuOpen}
+      />
+      <main
+        className={`app-main-column${navDrawer ? " app-main-narrow" : ""}`}
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          marginLeft: navDrawer ? 0 : 240,
+        }}
+      >
+        <Header
+          activePage={activePage}
+          onNavigate={go}
+          onLogout={onLogout}
+          showMenuButton={navDrawer}
+          onMenuClick={() => setMenuOpen((o) => !o)}
+        />
         <div className="main-content" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", background: t.bg }}>
           <ErrorBoundary background={t.bg} onReset={() => setRetryKey((k) => k + 1)}>
             <Suspense fallback={<PageLoadingFallback background={t.bg} />}>
@@ -123,7 +183,17 @@ function Root() {
   }
   if (checking) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", color: "#e5dce1", fontFamily: "Inter, sans-serif" }}>
+      <div
+        className="app-full-viewport-zoomed"
+        style={{
+          background: "#0a0a0f",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#e5dce1",
+          fontFamily: "Inter, sans-serif",
+        }}
+      >
         ⏳ Carregando...
       </div>
     );
@@ -135,10 +205,19 @@ function Root() {
 
 function ConfigError() {
   return (
-    <div style={{
-      minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 24, fontFamily: "Inter, sans-serif", color: "#e5dce1", textAlign: "center",
-    }}>
+    <div
+      className="app-full-viewport-zoomed"
+      style={{
+        background: "#0a0a0f",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        fontFamily: "Inter, sans-serif",
+        color: "#e5dce1",
+        textAlign: "center",
+      }}
+    >
       <div>
         <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
         <h1 style={{ fontSize: 20, marginBottom: 12, color: "#fff" }}>Configuração incompleta</h1>

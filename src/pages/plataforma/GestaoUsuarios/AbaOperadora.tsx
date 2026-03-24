@@ -128,14 +128,16 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
               {op.nome ?? op.slug}
             </div>
 
-            {/* Grid: cada seção ocupa fração igual — repeat(N, 1fr) elimina espaço vazio */}
-            <div
-              className="operadora-secoes-grid"
-              style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(${secoes.length}, 1fr)`,
-              }}
-            >
+            {/* Grid: colunas iguais no desktop; no mobile, app-table-wrap permite rolagem horizontal */}
+            <div className="app-table-wrap">
+              <div
+                className="operadora-secoes-grid"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${secoes.length}, 1fr)`,
+                  minWidth: `max(100%, ${secoes.length * 148}px)`,
+                }}
+              >
               {(() => {
                 const secoesComPaginas = secoes.filter((s) => pagesDaOp.some((p) => p.secao === s));
                 return secoes.map((secao) => {
@@ -197,11 +199,20 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
                   );
                 });
               })()}
+              </div>
             </div>
           </div>
         ))}
       </div>
-      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
         {salvoOk && (
           <span style={{ display: "flex", alignItems: "center", gap: 6, color: BRAND.verde, fontFamily: FONT.body, fontSize: 13 }}>
             <ShieldCheck size={14} /> Páginas salvas com sucesso

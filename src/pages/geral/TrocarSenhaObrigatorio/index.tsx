@@ -84,22 +84,25 @@ export default function TrocarSenhaObrigatorio() {
 
   return (
     <div
+      className="app-auth-screen"
       style={{
-        minHeight: "100vh",
         background: `linear-gradient(135deg, #0a0a0f 0%, #2d1b4e 100%)`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 24,
         fontFamily: FONT.body,
       }}
     >
-      <div style={{ width: "100%", maxWidth: 400 }}>
+      <div style={{ width: "100%", maxWidth: "min(400px, 100%)" }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <img
             src="/Logo Spin Gaming White.png"
             alt="Spin Gaming"
-            style={{ height: 100, objectFit: "contain", marginBottom: 8 }}
+            style={{
+              height: "clamp(72px, 22vw, 100px)",
+              objectFit: "contain",
+              marginBottom: 8,
+            }}
           />
           <div
             style={{
@@ -120,7 +123,7 @@ export default function TrocarSenhaObrigatorio() {
             backdropFilter: "blur(20px)",
             border: "1px solid #1a1a2e",
             borderRadius: 24,
-            padding: 32,
+            padding: "clamp(20px, 5vw, 32px)",
             boxShadow: "0 32px 64px rgba(0,0,0,0.6)",
           }}
         >

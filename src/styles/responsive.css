@@ -1,0 +1,162 @@
+/* Telas full-viewport quando #root usa zoom (global.css): altura de layout precisa ser maior
+   para que, após o zoom, o preenchimento visual cubra 100% da viewport — evita faixa no rodapé. */
+.app-full-viewport-zoomed {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100dvh;
+}
+
+@supports (zoom: 1) {
+  .app-full-viewport-zoomed {
+    min-height: calc(100vh / var(--app-ui-zoom));
+    min-height: calc(100dvh / var(--app-ui-zoom));
+  }
+}
+
+/* Telas de auth (login / senha) */
+.app-auth-screen {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100dvh;
+  padding: clamp(12px, 4vw, 24px);
+}
+
+@supports (zoom: 1) {
+  .app-auth-screen {
+    min-height: calc(100vh / var(--app-ui-zoom));
+    min-height: calc(100dvh / var(--app-ui-zoom));
+  }
+}
+
+/* ─── Shell das páginas logadas (padding fluido + largura segura no mobile) ─── */
+.app-page-shell {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  padding-top: clamp(10px, 2.8vw, 20px);
+  padding-left: clamp(10px, 3.5vw, 24px);
+  padding-right: clamp(10px, 3.5vw, 24px);
+  padding-bottom: clamp(22px, 5.5vw, 48px);
+}
+
+.app-page-shell--pb64 {
+  padding-bottom: clamp(32px, 7vw, 64px);
+}
+
+/* Scroll horizontal suave (tabelas, grids densos) */
+.app-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  margin-left: min(0px, calc(-1 * clamp(10px, 3.5vw, 24px)));
+  margin-right: min(0px, calc(-1 * clamp(10px, 3.5vw, 24px)));
+  padding-left: clamp(10px, 3.5vw, 24px);
+  padding-right: clamp(10px, 3.5vw, 24px);
+}
+
+/* Grids KPI / cards: colapsam para 1 coluna no estreito */
+.app-grid-kpi-3 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.app-grid-kpi-4 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+
+.app-grid-kpi-5 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+}
+
+.app-grid-kpi-6 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+}
+
+/* Duas colunas → 1 no mobile */
+.app-grid-2 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+.app-grid-2-tight {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+/* Três colunas iguais (filtros etc.) */
+.app-grid-3 {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+
+/* Calendário mês/semana: rolagem horizontal em telas estreitas */
+.app-agenda-cal-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+.app-agenda-cal-scroll-inner {
+  min-width: 720px;
+}
+
+@media (max-width: 600px) {
+  .app-agenda-cal-scroll-inner {
+    min-width: 600px;
+  }
+}
+
+/* Tabelas: wrapper padrão */
+.app-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+/* Modal overlay: margens laterais no celular */
+.app-modal-overlay-pad {
+  padding: clamp(8px, 4vw, 20px);
+  box-sizing: border-box;
+}
+
+/* Dashboard Conversão: seletores A vs B */
+.app-conversao-vs-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .app-conversao-vs-row {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+}
+
+.app-conversao-funil-duo {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .app-conversao-funil-duo {
+    flex-direction: column;
+  }
+
+  .app-conversao-funil-divider {
+    display: none;
+  }
+}

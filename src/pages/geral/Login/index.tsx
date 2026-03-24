@@ -51,17 +51,16 @@ export default function Login({ onLogin }: Props) {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
+    <div className="app-auth-screen" style={{
       background: `linear-gradient(135deg, #0a0a0f 0%, #2d1b4e 100%)`,
       display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "16px", fontFamily: FONT.body, position: "relative", overflow: "hidden",
+      fontFamily: FONT.body, position: "relative", overflow: "hidden",
     }}>
       {/* Glows */}
       <div style={{ position: "absolute", top: "-80px", right: "-80px", width: "300px", height: "300px", borderRadius: "50%", background: `radial-gradient(circle, ${BASE_COLORS.purple}44, transparent 70%)`, pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: "-60px", left: "-60px", width: "250px", height: "250px", borderRadius: "50%", background: `radial-gradient(circle, ${BASE_COLORS.blue}33, transparent 70%)`, pointerEvents: "none" }} />
 
-      <div style={{ width: "100%", maxWidth: "400px", position: "relative", zIndex: 1 }}>
+      <div style={{ width: "100%", maxWidth: "min(400px, 100%)", position: "relative", zIndex: 1 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <img src="/Logo Spin Gaming White.png" alt="Spin Gaming" style={{ height: "140px", marginBottom: "6px", objectFit: "contain" }} />
@@ -72,7 +71,7 @@ export default function Login({ onLogin }: Props) {
         </div>
 
         {/* Card */}
-        <div style={{ background: "rgba(15,15,26,0.85)", backdropFilter: "blur(20px)", border: "1px solid #1a1a2e", borderRadius: "24px", padding: "36px", boxShadow: "0 32px 64px rgba(0,0,0,0.6)" }}>
+        <div style={{ background: "rgba(15,15,26,0.85)", backdropFilter: "blur(20px)", border: "1px solid #1a1a2e", borderRadius: "24px", padding: "clamp(20px, 5vw, 36px)", boxShadow: "0 32px 64px rgba(0,0,0,0.6)" }}>
 
           {/* E-mail */}
           <div style={{ marginBottom: "20px" }}>

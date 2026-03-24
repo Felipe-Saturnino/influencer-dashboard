@@ -528,7 +528,7 @@ export default function Ajuda() {
       : CONTEUDO_TROUBLE[paginaSelecionada];
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1100px", margin: "0 auto" }}>
+    <div className="app-page-shell" style={{ maxWidth: "1100px", margin: "0 auto" }}>
 
       {/* ── Header padrão SectionTitle ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>

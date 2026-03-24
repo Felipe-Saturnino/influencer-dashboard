@@ -624,7 +624,7 @@ export default function DashboardFinanceiro() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {/* ══ BLOCO 1: FILTROS — primária transparente ═══════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
@@ -703,7 +703,7 @@ export default function DashboardFinanceiro() {
         </SectionTitle>
 
         {/* Linha 1: FTD / Depósitos / Saques */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
+        <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
           <KpiCard
             label="FTD" value={fmtBRL(totaisExibir.ftd_total)}
             subValue={{ label: "ticket médio", value: totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ftd_ticket_medio) : "—" }}
@@ -728,7 +728,7 @@ export default function DashboardFinanceiro() {
         </div>
 
         {/* Linha 2: WD Ratio / GGR por Jogador / PVI */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        <div className="app-grid-kpi-3">
           <KpiCard
             label="WD Ratio"
             value={totaisExibir.depositos > 0 ? `${totaisExibir.wd_ratio.toFixed(1)}%` : "—"}

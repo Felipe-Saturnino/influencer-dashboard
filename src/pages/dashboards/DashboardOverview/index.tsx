@@ -446,7 +446,7 @@ export default function DashboardOverview() {
   };
 
   return (
-    <div style={{ padding: "20px 24px 48px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {/* ══ BLOCO 1: FILTROS — primária transparente ═══════════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
@@ -551,20 +551,20 @@ export default function DashboardOverview() {
           KPIs Executivos
         </SectionTitle>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
+        <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
           <KpiCard label="GGR Total" value={fmtBRL(totaisExibidos.ggr)} icon={<GiPokerHand size={16} />} accentVar="--brand-extra1" accentColor={BRAND.receita} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
           <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<GiCoins size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
           <KpiCard label="ROI Geral" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<GiTrophy size={16} />} accentVar="--brand-extra2" accentColor={BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 12 }}>
+        <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
           <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<GiFilmProjector size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
           <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<GiSandsOfTime size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
           <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<GiMicrophone size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
           <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico} />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        <div className="app-grid-kpi-4">
           <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<GiPlayerNext size={16} />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
           <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<GiReceiveMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
           <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<GiTrophy size={16} />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
@@ -632,8 +632,8 @@ export default function DashboardOverview() {
         ) : rankingFiltrado.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Nenhum dado encontrado para o período/filtro selecionado.</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
+          <div className="app-table-wrap">
+            <table style={{ width: "100%", minWidth: 720, borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
               <thead>
                 <tr>
                   {["Influencer","Lives","Horas","Views","Acessos","Registros","FTDs","GGR","Invest.","ROI","Status"].map((h) => (

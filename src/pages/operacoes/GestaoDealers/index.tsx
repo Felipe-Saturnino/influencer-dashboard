@@ -266,7 +266,7 @@ export default function GestaoDealers() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
 
       {/* ─── Header — primária ───────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
@@ -528,7 +528,7 @@ export default function GestaoDealers() {
       ) : filtered.length === 0 ? (
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum dealer encontrado.</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
           {filtered.map((d) => (
             <DealerCard
               key={d.id}
@@ -977,7 +977,7 @@ function ModalDealer({
           </label>
         </div>
 
-        <div style={{ ...fieldStyle, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="app-grid-2-tight" style={{ ...fieldStyle, gap: 12 }}>
           <div>
             <label style={labelStyle}>Gênero</label>
             <select value={genero} onChange={(e) => setGenero(e.target.value as DealerGenero)} style={inputStyle}>

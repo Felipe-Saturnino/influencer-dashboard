@@ -371,7 +371,7 @@ export default function Resultados() {
 
               <div style={row}>
                 <label style={labelStyle}>Duração</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="app-grid-2-tight" style={{ gap: 10 }}>
                   <div>
                     <input type="number" min={0} max={24} value={duracaoHoras} onChange={e => setDuracaoHoras(Math.max(0, Math.min(24, Number(e.target.value) || 0)))} style={inputStyle} placeholder="0" />
                     <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>horas</span>
@@ -438,7 +438,7 @@ export default function Resultados() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
 
       {/* ── HEADER — cor primária ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
