@@ -6,6 +6,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
+import { buildSpinBrandedQrPngBlob, type SpinQrFrameVariant } from "../../../lib/spinQrFrameExport";
 import ModalBloqueioAgendaLive from "../../lives/Agenda/ModalBloqueioAgendaLive";
 import { Link2, Copy, Check, AlertCircle, QrCode, Download } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
@@ -77,6 +78,7 @@ export default function LinksMateriais() {
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [qrVisivel, setQrVisivel] = useState(false);
+  const [baixandoQuadro, setBaixandoQuadro] = useState<SpinQrFrameVariant | null>(null);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [bloqueioEmissao, setBloqueioEmissao] = useState<{
     perfilIncompleto: boolean;
@@ -280,6 +282,29 @@ export default function LinksMateriais() {
       document.body.removeChild(a);
     } catch {
       setErro("Não foi possível baixar o QR Code. Tente novamente.");
+    }
+  }
+
+  async function baixarQuadroSpin(variant: SpinQrFrameVariant) {
+    if (!linkCompleto) return;
+    setErro(null);
+    try {
+      setBaixandoQuadro(variant);
+      const blob = await buildSpinBrandedQrPngBlob(linkCompleto, variant);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        variant === "dark" ? "spin-qrcode-quadro-gradiente-escuro.png" : "spin-qrcode-quadro-gradiente-claro.png";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível gerar o PNG com o quadro Spin.");
+    } finally {
+      setBaixandoQuadro(null);
     }
   }
 
@@ -743,15 +768,83 @@ export default function LinksMateriais() {
                         }}
                       >
                         <Download size={16} strokeWidth={2.25} />
-                        Baixar PNG
+                        Baixar PNG (só o código)
                       </button>
                     </div>
                   </div>
                 )}
               </div>
 
+              <div
+                style={{
+                  marginTop: 18,
+                  paddingTop: 16,
+                  borderTop: `1px solid ${t.cardBorder}`,
+                }}
+              >
+                <p style={{
+                  margin: "0 0 10px",
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: t.textMuted,
+                  fontFamily: FONT_TITLE,
+                }}>
+                  Quadro Spin (modelo para stories / posts)
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={() => void baixarQuadroSpin("dark")}
+                    disabled={!!baixandoQuadro}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(30, 54, 248, 0.45)",
+                      background: "linear-gradient(160deg, rgba(74, 48, 130, 0.2) 0%, rgba(30, 54, 248, 0.15) 100%)",
+                      color: dark ? "#e8e9ff" : "#1e2a6e",
+                      fontWeight: 700,
+                      fontSize: 11,
+                      fontFamily: FONT.body,
+                      cursor: baixandoQuadro ? "wait" : "pointer",
+                      opacity: baixandoQuadro && baixandoQuadro !== "dark" ? 0.5 : 1,
+                    }}
+                  >
+                    <Download size={15} strokeWidth={2.25} />
+                    {baixandoQuadro === "dark" ? "Gerando…" : "PNG gradiente escuro + QR"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void baixarQuadroSpin("light")}
+                    disabled={!!baixandoQuadro}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(233, 64, 37, 0.4)",
+                      background: "linear-gradient(160deg, rgba(74, 48, 130, 0.18) 0%, rgba(233, 64, 37, 0.12) 100%)",
+                      color: dark ? "#fde8e4" : "#7c2d12",
+                      fontWeight: 700,
+                      fontSize: 11,
+                      fontFamily: FONT.body,
+                      cursor: baixandoQuadro ? "wait" : "pointer",
+                      opacity: baixandoQuadro && baixandoQuadro !== "light" ? 0.5 : 1,
+                    }}
+                  >
+                    <Download size={15} strokeWidth={2.25} />
+                    {baixandoQuadro === "light" ? "Gerando…" : "PNG gradiente claro + QR"}
+                  </button>
+                </div>
+              </div>
+
               <p style={{ margin: "12px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
-                O QR leva ao mesmo link exibido acima. Use-o onde achar necessário.
+                O QR leva ao mesmo link exibido acima. Você pode baixar só o código (PNG) ou um dos quadros Spin com gradiente, logo e QR prontos para stories e posts.
               </p>
             </div>
           </div>
