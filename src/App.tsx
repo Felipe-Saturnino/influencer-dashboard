@@ -98,9 +98,9 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   if (!user) return null;
   const PageComponent = PAGE_MAP[activePage] ?? Home;
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: t.bg }}>
+    <div className="app-layout-shell" style={{ display: "flex", background: t.bg }}>
       <Sidebar activePage={activePage} onNavigate={setActivePage} />
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginLeft: "240px", minHeight: "100vh" }}>
+      <main className="app-main-column" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginLeft: "240px" }}>
         <Header activePage={activePage} onNavigate={setActivePage} onLogout={onLogout} />
         <div className="main-content" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", background: t.bg }}>
           <ErrorBoundary background={t.bg} onReset={() => setRetryKey((k) => k + 1)}>
