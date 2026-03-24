@@ -26,8 +26,12 @@ export function useDashboardBrand() {
     secondary: useBrand ? "var(--brand-secondary)" : BRAND.roxoVivo,
     // Cor accent → itens em destaque
     accent: useBrand ? "var(--brand-accent)" : BRAND.roxoVivo,
-    // Cor primária transparente → bloco de filtros dos dashboards
-    primaryTransparentBg: useBrand ? "color-mix(in srgb, var(--brand-primary) 10%, transparent)" : "rgba(74,32,130,0.08)",
-    primaryTransparentBorder: useBrand ? "1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent)" : "1px solid rgba(74,32,130,0.25)",
+    // Bloco de filtros: operador = tinta da cor primária; demais perfis = mesmo fundo/borda dos demais blocos Spin (t.cardBg)
+    primaryTransparentBg: useBrand
+      ? "color-mix(in srgb, var(--brand-primary) 10%, transparent)"
+      : t.cardBg,
+    primaryTransparentBorder: useBrand
+      ? "1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent)"
+      : `1px solid ${t.cardBorder}`,
   };
 }

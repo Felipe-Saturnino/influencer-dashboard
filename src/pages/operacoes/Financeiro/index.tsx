@@ -2038,8 +2038,9 @@ export default function Financeiro() {
       {/* Bloco de filtros (similar Agenda) */}
       <div style={{ marginBottom: 20 }}>
         <div style={{
-          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>

@@ -465,8 +465,9 @@ export default function Resultados() {
       {(showFiltroInfluencer || showFiltroOperadora) && (
         <div style={{ marginBottom: 14 }}>
           <div style={{
-            borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
+            borderRadius: 14,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>

@@ -572,8 +572,9 @@ export default function Agenda() {
       {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
-          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           {/* Linha principal — centralizada */}

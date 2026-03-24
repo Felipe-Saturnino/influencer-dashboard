@@ -492,8 +492,9 @@ export default function Feedback() {
       {/* ── BLOCO DE FILTROS (carrossel de semanas + Histórico + Status padrão Agenda) ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
-          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           {/* Linha 1: Carrossel de semanas e Histórico */}
