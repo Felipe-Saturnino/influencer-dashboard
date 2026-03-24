@@ -155,6 +155,10 @@ const TIPO_ICON: Record<TipoSugestao, typeof FileText> = {
   alerta:      AlertTriangle,
 };
 
+/** Coluna fixa ícone + rótulo do tipo: mesmo alinhamento do texto em Script / Alerta / Orientação */
+const ROTEIRO_IDENT_COL_PX = 108;
+const ROTEIRO_TIPO_ICON_SIZE = 20;
+
 // ─── CONFIG VISUAL POR JOGO ───────────────────────────────────────────────────
 const JOGO_TAG_CONFIG: Record<JogoTag, { bg: string; color: (d: boolean) => string; border: string }> = {
   todos:     { bg: "rgba(74,32,130,0.12)",   color: (d) => d ? "#b08aee" : "#3a1868", border: "rgba(74,32,130,0.28)"   },
@@ -417,13 +421,40 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
     : cfg.bgColor(dark);
   const borderRightOrientacao = isOrientacao ? `3px solid ${dark ? "rgba(150,150,170,0.40)" : "rgba(107,114,128,0.35)"}` : undefined;
 
+  const identCol: React.CSSProperties = {
+    width: ROTEIRO_IDENT_COL_PX,
+    minWidth: ROTEIRO_IDENT_COL_PX,
+    maxWidth: ROTEIRO_IDENT_COL_PX,
+    flex: `0 0 ${ROTEIRO_IDENT_COL_PX}px`,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 6,
+    paddingTop: 2,
+    boxSizing: "border-box",
+  };
+
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px", borderRadius: 10, border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, borderLeft: `3px solid ${cfg.borderColor}`, ...(borderRightOrientacao && { borderRight: borderRightOrientacao }), background: rowBg, transition: "background 0.15s" }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
-        <IconComponent size={18} color={cfg.tagColor(dark)} />
-        <span style={{ fontSize: 10, fontWeight: 700, color: cfg.tagColor(dark), textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: FONT.body }}>{cfg.label}</span>
+      <div style={identCol}>
+        <IconComponent size={ROTEIRO_TIPO_ICON_SIZE} color={cfg.tagColor(dark)} strokeWidth={2} aria-hidden />
+        <span style={{
+          fontSize: 9,
+          fontWeight: 700,
+          color: cfg.tagColor(dark),
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          fontFamily: FONT.body,
+          textAlign: "center",
+          lineHeight: 1.2,
+          width: "100%",
+          wordBreak: "break-word",
+        }}>
+          {cfg.label}
+        </span>
       </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
         <span style={{ fontFamily: FONT.body, fontSize: 13, color: cfg.textColor(dark), lineHeight: 1.55 }}>{sugestao.texto}</span>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {operadoraNome && <OperadoraTag label={operadoraNome} corPrimaria={operadoraCor} dark={dark} />}
@@ -458,11 +489,26 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", borderRadius: 10, border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, borderLeft: `3px solid ${BRAND.ciano}`, background: dark ? "rgba(112,202,228,0.05)" : "rgba(112,202,228,0.03)", transition: "background 0.15s" }}>
-      <div style={{ flexShrink: 0, marginTop: 1 }}>
-        <Megaphone size={16} color={campanha.ativo ? BRAND.ciano : (dark ? "#555" : "#bbb")} />
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px", borderRadius: 10, border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, borderLeft: `3px solid ${BRAND.ciano}`, background: dark ? "rgba(112,202,228,0.05)" : "rgba(112,202,228,0.03)", transition: "background 0.15s" }}>
+      <div style={{
+        width: ROTEIRO_IDENT_COL_PX,
+        minWidth: ROTEIRO_IDENT_COL_PX,
+        maxWidth: ROTEIRO_IDENT_COL_PX,
+        flex: `0 0 ${ROTEIRO_IDENT_COL_PX}px`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        gap: 6,
+        paddingTop: 2,
+        boxSizing: "border-box",
+      }}>
+        <Megaphone size={ROTEIRO_TIPO_ICON_SIZE} color={campanha.ativo ? BRAND.ciano : (dark ? "#555" : "#bbb")} strokeWidth={2} aria-hidden />
+        <span style={{ fontSize: 9, fontWeight: 700, color: cianoText, textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: FONT.body, textAlign: "center", lineHeight: 1.2, width: "100%" }}>
+          Campanha
+        </span>
       </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 700, color: campanha.ativo ? cianoText : (dark ? "#555" : "#aaa") }}>{campanha.titulo}</span>
           {!campanha.ativo && <TagChip label="Inativa" bg="rgba(107,114,128,0.12)" color={dark ? "#666" : "#888"} border="rgba(107,114,128,0.20)" />}
