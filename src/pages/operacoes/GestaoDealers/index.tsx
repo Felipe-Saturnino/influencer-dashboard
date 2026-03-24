@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties, type ChangeEvent } from "react";
+import { useState, useEffect, useCallback, useMemo, type CSSProperties, type ChangeEvent } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -59,11 +59,10 @@ function passaFiltroOperadora(d: Dealer, filtroOperadora: string): boolean {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoDealers() {
-  const { theme: t, user, podeVerOperadora, isDark, escoposVisiveis } = useApp();
+  const { theme: t, user, podeVerOperadora, escoposVisiveis } = useApp();
   const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
-  const turnoScrollRef = useRef<HTMLDivElement>(null);
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,6 +131,31 @@ export default function GestaoDealers() {
     (d.jogos ?? []).forEach((j) => { porJogo[j] = (porJogo[j] ?? 0) + 1; });
   });
 
+  const irTurnoAnterior = () => {
+    if (filtroTurno === "todos") {
+      setFiltroTurno(TURNO_OPTS[2].value);
+      return;
+    }
+    const i = TURNO_OPTS.findIndex((o) => o.value === filtroTurno);
+    const prev = i <= 0 ? 2 : i - 1;
+    setFiltroTurno(TURNO_OPTS[prev].value);
+  };
+
+  const irTurnoProximo = () => {
+    if (filtroTurno === "todos") {
+      setFiltroTurno(TURNO_OPTS[0].value);
+      return;
+    }
+    const i = TURNO_OPTS.findIndex((o) => o.value === filtroTurno);
+    const next = i < 0 || i >= 2 ? 0 : i + 1;
+    setFiltroTurno(TURNO_OPTS[next].value);
+  };
+
+  const labelTurnoCarrossel =
+    filtroTurno === "todos"
+      ? "Todos os turnos"
+      : (TURNO_OPTS.find((o) => o.value === filtroTurno)?.label ?? filtroTurno);
+
   const podeCriarDealer =
     perm.canCriarOk &&
     (perm.canCriar !== "proprios" ||
@@ -172,7 +196,18 @@ export default function GestaoDealers() {
     outline: "none",
   };
 
-  const dark = isDark ?? false;
+  const btnNavTurnoStyle: CSSProperties = {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent",
+    color: t.text,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
 
   if (perm.canView === "nao") {
     return (
@@ -215,66 +250,59 @@ export default function GestaoDealers() {
         )}
       </div>
 
-      {/* ─── Bloco filtros: carrossel turnos + operadora (Overview) ───────────── */}
+      {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 200 }}>
-              <button
-                type="button"
-                onClick={() => setFiltroTurno("todos")}
-                style={{
-                  flexShrink: 0, padding: "6px 14px", borderRadius: 999, border: `1.5px solid ${filtroTurno === "todos" ? "rgba(30,54,248,0.35)" : t.cardBorder}`,
-                  background: filtroTurno === "todos" ? "rgba(30,54,248,0.12)" : "transparent",
-                  color: filtroTurno === "todos" ? (dark ? "#7b95ff" : BRAND.azul) : t.textMuted,
-                  fontSize: 11, fontWeight: 700, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", whiteSpace: "nowrap",
-                }}
-              >
-                Todos os turnos
-              </button>
-              <button
-                type="button"
-                aria-label="Anterior"
-                onClick={() => turnoScrollRef.current?.scrollBy({ left: -140, behavior: "smooth" })}
-                style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <div
-                ref={turnoScrollRef}
-                style={{ display: "flex", gap: 8, overflowX: "auto", flex: 1, scrollbarWidth: "thin", WebkitOverflowScrolling: "touch" }}
-              >
-                {TURNO_OPTS.map((o) => {
-                  const ativo = filtroTurno === o.value;
-                  return (
-                    <button
-                      key={o.value}
-                      type="button"
-                      onClick={() => setFiltroTurno(ativo ? "todos" : o.value)}
-                      style={{
-                        flexShrink: 0, padding: "6px 14px", borderRadius: 999,
-                        border: `1.5px solid ${ativo ? "rgba(30,54,248,0.35)" : t.cardBorder}`,
-                        background: ativo ? "rgba(30,54,248,0.12)" : "transparent",
-                        color: ativo ? (dark ? "#7b95ff" : BRAND.azul) : t.textMuted,
-                        fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap",
-                      }}
-                    >
-                      {o.label} <span style={{ opacity: 0.85, fontWeight: 800 }}>({porTurno[o.value] ?? 0})</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                type="button"
-                aria-label="Próximo"
-                onClick={() => turnoScrollRef.current?.scrollBy({ left: 140, behavior: "smooth" })}
-                style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" aria-label="Turno anterior" onClick={irTurnoAnterior} style={btnNavTurnoStyle}>
+              <ChevronLeft size={14} />
+            </button>
+            <span
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: t.text,
+                fontFamily: FONT.body,
+                minWidth: 180,
+                textAlign: "center",
+              }}
+            >
+              {labelTurnoCarrossel}
+            </span>
+            <button type="button" aria-label="Próximo turno" onClick={irTurnoProximo} style={btnNavTurnoStyle}>
+              <ChevronRight size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setFiltroTurno("todos")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 14px",
+                borderRadius: 999,
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                border:
+                  filtroTurno === "todos"
+                    ? `1px solid ${brand.accent}`
+                    : `1px solid ${t.cardBorder}`,
+                background:
+                  filtroTurno === "todos"
+                    ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)")
+                    : "transparent",
+                color: filtroTurno === "todos" ? brand.accent : t.textMuted,
+                fontWeight: filtroTurno === "todos" ? 700 : 400,
+                transition: "all 0.15s",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+              }}
+            >
+              Todos os turnos
+            </button>
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center", flexShrink: 0 }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
                   <GiShield size={15} />
                 </span>
@@ -298,32 +326,29 @@ export default function GestaoDealers() {
           background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16,
           padding: "16px 18px", marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
         }}>
-          <div style={{ minWidth: 120, borderRight: `1px solid ${t.cardBorder}`, paddingRight: 16, flex: "0 0 auto" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Dealers</div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>{totalDealersDestaque}</div>
-            <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4 }}>Turno + operadora</div>
-          </div>
-          <div style={{ flex: "1 1 160px", minWidth: 140, borderRight: `1px solid ${t.cardBorder}`, paddingRight: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>Turnos</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {TURNO_OPTS.map((o) => {
-                const ativo = filtroTurno === o.value;
-                return (
-                  <button key={o.value} type="button" onClick={() => setFiltroTurno(ativo ? "todos" : o.value)} style={{
-                    padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${ativo ? "rgba(30,54,248,0.4)" : t.cardBorder}`,
-                    background: ativo ? "rgba(30,54,248,0.1)" : (t.inputBg ?? "transparent"),
-                    color: ativo ? (dark ? "#7b95ff" : BRAND.azul) : t.text,
-                    fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
-                  }}>
-                    {o.label} · {porTurno[o.value] ?? 0}
-                  </button>
-                );
-              })}
+          <div style={{
+            minWidth: 160,
+            borderRight: `1px solid ${t.cardBorder}`,
+            paddingRight: 16,
+            flex: "0 0 auto",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10 }}>
+              Dealers
+            </div>
+            <div style={{ fontSize: 48, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>
+              {totalDealersDestaque}
             </div>
           </div>
           <div style={{ flex: "1 1 140px", minWidth: 120, borderRight: `1px solid ${t.cardBorder}`, paddingRight: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>Gêneros</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 8, textAlign: "center", width: "100%" }}>
+              Gêneros
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
               {GENERO_OPTS.map((o) => {
                 const ativo = filtroGenero === o.value;
                 return (
@@ -339,8 +364,10 @@ export default function GestaoDealers() {
             </div>
           </div>
           <div style={{ flex: "1 1 200px", minWidth: 160 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>Jogos</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 8, textAlign: "center", width: "100%" }}>
+              Jogos
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
               {JOGOS_OPTS.map((o) => {
                 const ativo = filtroJogos === o.value;
                 return (
