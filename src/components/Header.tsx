@@ -11,6 +11,7 @@ interface Props {
 }
 
 function getSectionForPage(pageKey: string): string | null {
+  if (pageKey === "home") return "Bem-vindo";
   for (const sec of MENU) {
     if (sec.items.some(i => i.key === pageKey)) return sec.section.toUpperCase();
   }
@@ -20,7 +21,7 @@ function getSectionForPage(pageKey: string): string | null {
 const BRAND_VERMELHO = "#e84025";
 
 export default function Header({ activePage, onNavigate, onLogout }: Props) {
-  const { theme: t, user } = useApp();
+  const { theme: t, user, operadoraBrand } = useApp();
   const [open,  setOpen]  = useState(false);
   const [hover, setHover]  = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -54,9 +55,13 @@ export default function Header({ activePage, onNavigate, onLogout }: Props) {
     transition: "background 0.12s",
   };
 
+  const headerBg = user?.role === "operador" && operadoraBrand?.cor_background && t.isDark
+    ? operadoraBrand.cor_background
+    : t.headerBg;
+
   return (
     <header style={{
-      background:    t.headerBg,
+      background:    headerBg,
       borderBottom:  `1px solid ${t.headerBorder}`,
       padding:       "0 32px",
       height:        "60px",

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
@@ -7,6 +8,8 @@ import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { CicloPagamento, Pagamento, PagamentoStatus } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { GiShield } from "react-icons/gi";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
 
@@ -194,6 +197,7 @@ function BtnPrimary({ onClick, children, disabled, style }: {
   onClick: () => void; children: React.ReactNode;
   disabled?: boolean; style?: React.CSSProperties;
 }) {
+  const brand = useDashboardBrand();
   return (
     <button
       onClick={onClick}
@@ -202,7 +206,7 @@ function BtnPrimary({ onClick, children, disabled, style }: {
         padding: "8px 16px", borderRadius: "10px", border: "none",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.6 : 1,
-        background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+        background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
         color: "#fff", fontSize: "12px", fontWeight: 700,
         fontFamily: FONT.body, ...style,
       }}
@@ -235,6 +239,7 @@ function ModalBase({ children, maxWidth = 440, onClose }: {
   children: React.ReactNode; maxWidth?: number; onClose: () => void;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   return (
     <div style={{
       position: "fixed", inset: 0, background: "#00000090",
@@ -242,7 +247,7 @@ function ModalBase({ children, maxWidth = 440, onClose }: {
       zIndex: 1000, padding: "20px",
     }}>
       <div style={{
-        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+        background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
         borderRadius: "20px", padding: "28px",
         width: "100%", maxWidth, maxHeight: "90vh", overflowY: "auto",
       }}>
@@ -263,10 +268,11 @@ function ModalHeader({ title, onClose }: { title: string; onClose: () => void })
 }
 
 function BlocoLabel({ label }: { label: string }) {
+  const brand = useDashboardBrand();
   return (
     <span style={{
       fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px",
-      textTransform: "uppercase", color: BASE_COLORS.purple, fontFamily: FONT.body,
+      textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body,
     }}>
       {label}
     </span>
@@ -463,10 +469,11 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
 
 // ── MODAL PAGAR ────────────────────────────────────────────────────────────────
 
-function ModalPagar({ row, onClose, onConfirm }: {
+function ModalPagar({ row, onClose, onConfirm, onRetornar }: {
   row: PagamentoRow;
   onClose: () => void;
   onConfirm: (id: string, isAgente: boolean) => Promise<void>;
+  onRetornar: (id: string, isAgente: boolean) => Promise<void>;
 }) {
   const { theme: t } = useApp();
   const [saving, setSaving] = useState(false);
@@ -479,6 +486,18 @@ function ModalPagar({ row, onClose, onConfirm }: {
       await onConfirm(row.id, row.is_agente ?? false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRetornarClick() {
+    setError("");
+    setSaving(true);
+    try {
+      await onRetornar(row.id, row.is_agente ?? false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao retornar. Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -504,8 +523,12 @@ function ModalPagar({ row, onClose, onConfirm }: {
         A data de pagamento será registrada como hoje.
       </p>
       <div style={{ display: "flex", gap: "10px" }}>
-        <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-          Cancelar
+        <button
+          onClick={handleRetornarClick}
+          disabled={saving}
+          style={{ flex: 1, padding: "12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.text, fontSize: "13px", fontWeight: 700, fontFamily: FONT.body, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+        >
+          {saving ? "⏳ Salvando..." : "↩️ Retornar"}
         </button>
         <button
           onClick={handleConfirm}
@@ -629,16 +652,19 @@ interface BlocoFiltros {
   podeVerOperadora: (slug: string) => boolean;
   filterInfluencers: string[];
   filterOperadora: string;
+  filtroOp: string[] | null;
   operadoraInfMap: Record<string, string[]>;
   operadorasList: { slug: string; nome: string }[];
+  mesFiltro: string;
+  historico: boolean;
 }
 
 function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
-  const { podeVerInfluencer, filterInfluencers, filterOperadora, operadoraInfMap } = filtros;
-  const OPCOES = useMemo(() => gerarMeses(), []);
+  const brand = useDashboardBrand();
+  const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
+  const mes = historico ? "" : mesFiltro;
 
-  const [mes, setMes] = useState("");
   const [totalPago, setTotalPago] = useState(0);
   const [pendente, setPendente] = useState(0);
   const [horas, setHoras] = useState(0);
@@ -668,7 +694,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     if (periodo) {
       const { total } = await buscarInvestimentoPago(periodo, {
         influencerIds: filterInfluencers.length > 0 ? filterInfluencers : undefined,
-        operadora_slug: filterOperadora !== "todas" ? filterOperadora : undefined,
+        operadora_slug: filtroOp?.length ? filtroOp[0] : (filterOperadora !== "todas" ? filterOperadora : undefined),
       });
       setTotalPago(total);
     }
@@ -685,11 +711,15 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
 
     let allPags = (pags ?? []).filter((p: any) => podeVerInfluencer(p.influencer_id));
     if (filterInfluencers.length > 0) allPags = allPags.filter((p: any) => filterInfluencers.includes(p.influencer_id));
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      allPags = allPags.filter((p: any) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       allPags = allPags.filter((p: any) => p.operadora_slug === filterOperadora);
     }
     let allAgs = user?.role === "influencer" ? [] : (agentes ?? []);
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      allAgs = allAgs.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       allAgs = allAgs.filter((a: any) => a.operadora_slug === filterOperadora);
     }
 
@@ -719,7 +749,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
 
   return (
     <div style={{
-      background: t.cardBg,
+      background: brand.blockBg,
       border: `1px solid ${t.cardBorder}`,
       borderRadius: "16px",
       padding: "22px",
@@ -727,7 +757,6 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
         <BlocoLabel label="📊 KPIs" />
-        <SelectInput value={mes} onChange={setMes} options={OPCOES} />
       </div>
 
       <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -764,8 +793,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   filtros: BlocoFiltros;
 }) {
   const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
   const perm = usePermission("financeiro");
-  const { podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList } = filtros;
+  const { podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap, operadorasList } = filtros;
 
   const cicloAtualAberto = ciclos.find(c => !c.fechado_em && cicloAberto(c));
   const [cicloId, setCicloId] = useState<string>(cicloAtualAberto?.id ?? ciclos[0]?.id ?? "");
@@ -900,7 +930,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
     let parKeys = Object.keys(horasPorPar);
     if (filterInfluencers.length > 0) parKeys = parKeys.filter((k) => filterInfluencers.includes(k.split("::")[0]));
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      parKeys = parKeys.filter((k) => filtroOp.some(op => k.endsWith(`::${op}`)));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       parKeys = parKeys.filter((k) => k.endsWith(`::${filterOperadora}`));
     }
     const ids = [...new Set(parKeys.map((k) => k.split("::")[0]))];
@@ -1030,7 +1062,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
     let pagsFiltrados = pagsFinais.filter((p: any) => podeVerInfluencer(p.influencer_id));
     if (filterInfluencers.length > 0) pagsFiltrados = pagsFiltrados.filter((p: any) => filterInfluencers.includes(p.influencer_id));
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      pagsFiltrados = pagsFiltrados.filter((p: any) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       pagsFiltrados = pagsFiltrados.filter((p: any) => p.operadora_slug === filterOperadora);
     }
 
@@ -1051,7 +1085,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     });
 
     let agentesFiltrados = user?.role === "influencer" ? [] : (agentes ?? []);
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      agentesFiltrados = agentesFiltrados.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       agentesFiltrados = agentesFiltrados.filter((a: any) => a.operadora_slug === filterOperadora);
     }
     const linhasAg: PagamentoRow[] = agentesFiltrados.map((a: any) => ({
@@ -1158,6 +1194,17 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     setRefreshTrigger(t => t + 1);
   }
 
+  async function handleRetornar(id: string, isAgente: boolean) {
+    if (String(id).startsWith("preview_")) {
+      throw new Error("Ciclo ainda aberto.");
+    }
+    const tb = isAgente ? "pagamentos_agentes" : "pagamentos";
+    const { error } = await supabase.from(tb).update({ status: "em_analise", pago_em: null }).eq("id", id).select("id");
+    if (error) throw new Error(error.message);
+    setModalPagar(null);
+    setRefreshTrigger(t => t + 1);
+  }
+
   const kpi = useMemo(() => ({
     em: rows.filter(r => r.status === "em_analise").length,
     ap: rows.filter(r => r.status === "a_pagar").length,
@@ -1181,7 +1228,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }));
 
   return (
-    <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
+    <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
 
       {/* Cabeçalho */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
@@ -1364,7 +1411,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         <ModalAnalisar row={modalAnalisar} ciclo={ciclo} onClose={() => setModalAnalisar(null)} onConfirm={handleAprovar} />
       )}
       {modalPagar && (
-        <ModalPagar row={modalPagar} onClose={() => setModalPagar(null)} onConfirm={handlePagar} />
+        <ModalPagar row={modalPagar} onClose={() => setModalPagar(null)} onConfirm={handlePagar} onRetornar={handleRetornar} />
       )}
       {modalAgente && ciclo && (
         <ModalAgente
@@ -1384,15 +1431,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
 function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const { theme: t, user } = useApp();
-  const { podeVerInfluencer, filterInfluencers, filterOperadora } = filtros;
-
-  const OPCOES_MESES = useMemo(() => [{ value: "", label: "Todos os meses" }, ...gerarMeses().slice(1)], []);
-  const OPCOES_STATUS = [
-    { value: "", label: "Todos os status" },
-    { value: "ativo",     label: "Ativo" },
-    { value: "inativo",   label: "Inativo" },
-    { value: "cancelado", label: "Cancelado" },
-  ];
+  const brand = useDashboardBrand();
+  const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
+  const mes = historico ? "" : mesFiltro;
 
   interface ConRow {
     influencer_id: string;
@@ -1407,17 +1448,15 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
   interface AgentesRow { totalPago: number; pendente: number; ultimoPagamento: string | null; }
 
-  const [mes, setMes] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState("");
   const [busca, setBusca] = useState("");
   const [rows, setRows] = useState<ConRow[]>([]);
   const [agentesRow, setAgentesRow] = useState<AgentesRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
-  const [historico, setHistorico] = useState<Record<string, any[]>>({});
+  const [historicoPagamentos, setHistoricoPagamentos] = useState<Record<string, any[]>>({});
   const [loadingHist, setLoadingHist] = useState<string | null>(null);
 
-  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora]);
+  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp]);
 
   async function carregar() {
     setLoading(true);
@@ -1465,7 +1504,12 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
       pagamentosData = pags ?? [];
       agentesData = agts ?? [];
     }
-    if (filterOperadora && filterOperadora !== "todas") {
+    if (filtroOp?.length) {
+      pagamentosData = pagamentosData.filter((p: any) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
+      agentesData = agentesData.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
+      const infIdsComPag = [...new Set(pagamentosData.map((p: any) => p.influencer_id))];
+      perfisFiltrados = perfisFiltrados.filter((p) => infIdsComPag.includes(p.id));
+    } else if (filterOperadora && filterOperadora !== "todas") {
       pagamentosData = pagamentosData.filter((p: any) => p.operadora_slug === filterOperadora);
       agentesData = agentesData.filter((a: any) => a.operadora_slug === filterOperadora);
       const infIdsComPag = [...new Set(pagamentosData.map((p: any) => p.influencer_id))];
@@ -1512,7 +1556,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   async function toggleExpand(id: string) {
     if (expandido === id) { setExpandido(null); return; }
     setExpandido(id);
-    if (historico[id]) return;
+    if (historicoPagamentos[id]) return;
     setLoadingHist(id);
     const { data } = await supabase
       .from("pagamentos")
@@ -1520,15 +1564,13 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
       .eq("influencer_id", id)
       .order("criado_em", { ascending: false })
       .limit(12);
-    if (data) setHistorico(prev => ({ ...prev, [id]: data }));
+    if (data) setHistoricoPagamentos(prev => ({ ...prev, [id]: data }));
     setLoadingHist(null);
   }
 
-  const filtered = rows.filter(r => {
-    const nomeOk = !busca || r.nome_artistico.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase());
-    const stOk = !statusFiltro || r.statusInfluencer === statusFiltro;
-    return nomeOk && stOk;
-  });
+  const filtered = rows.filter(r =>
+    !busca || r.nome_artistico.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase())
+  );
 
   const th: React.CSSProperties = {
     padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
@@ -1541,22 +1583,21 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   };
 
   return (
-    <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "18px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <BlocoLabel label="👥 CONSOLIDADO DE INFLUENCERS" />
-          {!loading && <span style={{ fontSize: "12px", color: t.textMuted }}>{filtered.length} influencers</span>}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <input
-            value={busca}
-            onChange={e => setBusca(e.target.value)}
-            placeholder="🔍 Buscar..."
-            style={{ padding: "7px 12px", borderRadius: "10px", border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText, fontSize: "12px", fontFamily: FONT.body, outline: "none", width: "180px" }}
-          />
-          <SelectInput value={mes} onChange={setMes} options={OPCOES_MESES} />
-          <SelectInput value={statusFiltro} onChange={setStatusFiltro} options={OPCOES_STATUS} />
-        </div>
+    <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginBottom: "18px" }}>
+        <BlocoLabel label="👥 CONSOLIDADO DE INFLUENCERS" />
+        <input
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          placeholder="🔍 Buscar por nome ou e-mail..."
+          style={{
+            flex: 1, minWidth: 280, maxWidth: 420,
+            padding: "8px 14px", borderRadius: "10px",
+            border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.inputText,
+            fontSize: "13px", fontFamily: FONT.body, outline: "none",
+          }}
+        />
+        {!loading && <span style={{ fontSize: "12px", color: t.textMuted, whiteSpace: "nowrap" }}>{filtered.length} influencers</span>}
       </div>
 
       {loading ? (
@@ -1581,7 +1622,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                 </tr>
               ) : filtered.map(row => {
                 const isOpen = expandido === row.influencer_id;
-                const hist = historico[row.influencer_id] ?? [];
+                const hist = historicoPagamentos[row.influencer_id] ?? [];
                 const sl = STATUS_INFLUENCER[row.statusInfluencer] ?? { label: row.statusInfluencer, color: "#94a3b8" };
 
                 return (
@@ -1705,7 +1746,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
 export default function Financeiro() {
   const { theme: t, user } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const brand = useDashboardBrand();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("financeiro");
 
   const [ciclos, setCiclos] = useState<CicloPagamento[]>([]);
@@ -1721,14 +1763,52 @@ export default function Financeiro() {
     [influencerList, podeVerInfluencer]
   );
 
+  const MESES_OPCOES = useMemo(() => gerarMeses().slice(1), []);
+  const [mesFiltro, setMesFiltro] = useState(MESES_OPCOES[0]?.value ?? "");
+  const [historico, setHistorico] = useState(false);
+
+  const filterOperadoraEfetivo = operadoraSlugsForcado?.length ? operadoraSlugsForcado[0] : filterOperadora;
+  const filtroOp = operadoraSlugsForcado?.length ? operadoraSlugsForcado : (filterOperadora !== "todas" ? [filterOperadora] : null);
   const filtros: BlocoFiltros = useMemo(() => ({
     podeVerInfluencer,
     podeVerOperadora,
     filterInfluencers,
-    filterOperadora,
+    filterOperadora: filterOperadoraEfetivo,
+    filtroOp,
     operadoraInfMap,
     operadorasList,
-  }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, operadoraInfMap, operadorasList]);
+    mesFiltro: historico ? "" : mesFiltro,
+    historico,
+  }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadoraEfetivo, filtroOp, operadoraInfMap, operadorasList, mesFiltro, historico]);
+
+  const ciclosFiltradosPorMes = useMemo(() => {
+    if (historico || !mesFiltro) return ciclos;
+    const periodo = periodoDoMes(mesFiltro);
+    if (!periodo) return ciclos;
+    return ciclos.filter(c => c.data_fim && c.data_fim >= periodo.inicio && c.data_fim <= periodo.fim);
+  }, [ciclos, mesFiltro, historico]);
+
+  const idxMesAtual = MESES_OPCOES.findIndex(m => m.value === mesFiltro);
+  function prevMes() {
+    if (idxMesAtual < MESES_OPCOES.length - 1) setMesFiltro(MESES_OPCOES[idxMesAtual + 1]?.value ?? "");
+  }
+  function nextMes() {
+    if (idxMesAtual > 0) setMesFiltro(MESES_OPCOES[idxMesAtual - 1]?.value ?? "");
+  }
+  const btnNavStyle: React.CSSProperties = {
+    width: 32, height: 32, borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`, background: "transparent",
+    color: t.text, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  };
+  const chipBase = (active: boolean) => ({
+    padding: "6px 14px", borderRadius: 999,
+    border: `1px solid ${active ? brand.accent : t.cardBorder}`,
+    background: active ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BASE_COLORS.purple}22`) : (t.inputBg ?? t.cardBg),
+    color: active ? brand.accent : t.textMuted,
+    fontSize: 13, fontWeight: active ? 700 : 400,
+    fontFamily: FONT.body, cursor: "pointer", outline: "none",
+  });
 
   useEffect(() => { carregarCiclos(); }, [escoposVisiveis]);
 
@@ -1925,10 +2005,10 @@ export default function Financeiro() {
 
   if (ciclos.length === 0) {
     return (
-      <div style={{ padding: "28px 32px", maxWidth: "900px", margin: "0 auto" }}>
-        <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
+      <div style={{ padding: "20px 24px 48px" }}>
+        <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: brand.primary }}>💰 Financeiro</h1>
         <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos de influencers.</p>
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
           <div style={{ fontSize: "40px", marginBottom: "16px" }}>📅</div>
           <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>Nenhum ciclo cadastrado</p>
           <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
@@ -1938,7 +2018,7 @@ export default function Financeiro() {
             onClick={() => { carregarCiclos(); }}
             style={{
               padding: "10px 20px", borderRadius: "10px", border: "none",
-              background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
               color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body,
               cursor: "pointer",
             }}
@@ -1951,47 +2031,75 @@ export default function Financeiro() {
   }
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: "1100px", margin: "0 auto" }}>
-      <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: t.text }}>💰 Financeiro</h1>
-      <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
+    <div style={{ padding: "20px 24px 48px" }}>
+      <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: brand.primary }}>💰 Financeiro</h1>
+      <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "14px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
 
-      {(showFiltroInfluencer || showFiltroOperadora) && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center", marginBottom: "20px" }}>
-          {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-            <InfluencerMultiSelect
-              selected={filterInfluencers}
-              onChange={setFilterInfluencers}
-              influencers={influencerListVisiveis}
-              t={t}
-            />
-          )}
-          {showFiltroOperadora && operadorasList.length > 0 && (
-            <select
-              value={filterOperadora}
-              onChange={(e) => setFilterOperadora(e.target.value)}
-              style={{
-                padding: "6px 14px", borderRadius: "20px",
-                border: `1.5px solid ${filterOperadora !== "todas" ? BASE_COLORS.purple : t.cardBorder}`,
-                background: filterOperadora !== "todas" ? `${BASE_COLORS.purple}22` : t.inputBg,
-                color: filterOperadora !== "todas" ? BASE_COLORS.purple : t.textMuted,
-                fontSize: "12px", fontWeight: 600, fontFamily: FONT.body,
-                cursor: "pointer", outline: "none",
-              }}
-            >
-              <option value="todas">Todas as operadoras</option>
-              {operadorasList
-                .filter((o) => podeVerOperadora(o.slug))
-                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                .map((o) => (
-                  <option key={o.slug} value={o.slug}>{o.nome}</option>
-                ))}
-            </select>
-          )}
+      {/* Bloco de filtros (similar Agenda) */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
+          padding: "12px 20px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+            <button onClick={prevMes} style={btnNavStyle} disabled={idxMesAtual >= MESES_OPCOES.length - 1} title="Mês anterior">
+              <ChevronLeft size={14} />
+            </button>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+              {historico ? "Total" : (MESES_OPCOES.find(m => m.value === mesFiltro)?.label ?? mesFiltro)}
+            </span>
+            <button onClick={nextMes} style={btnNavStyle} disabled={idxMesAtual <= 0} title="Próximo mês">
+              <ChevronRight size={14} />
+            </button>
+
+            <button onClick={() => setHistorico(h => !h)} style={chipBase(historico)}>
+              Histórico
+            </button>
+
+            {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
+              <InfluencerMultiSelect
+                selected={filterInfluencers}
+                onChange={setFilterInfluencers}
+                influencers={influencerListVisiveis}
+                t={t}
+              />
+            )}
+
+            {showFiltroOperadora && operadorasList.length > 0 && (
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                  <GiShield size={13} />
+                </span>
+                <select
+                  value={filterOperadora}
+                  onChange={(e) => setFilterOperadora(e.target.value)}
+                  style={{
+                    padding: "6px 14px 6px 30px", borderRadius: 999,
+                    border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                    background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BASE_COLORS.purple}22`) : (t.inputBg ?? t.cardBg),
+                    color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
+                    fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                    fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                  }}
+                >
+                  <option value="todas">Todas as operadoras</option>
+                  {operadorasList
+                    .filter((o) => podeVerOperadora(o.slug))
+                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                    .map((o) => (
+                      <option key={o.slug} value={o.slug}>{o.nome}</option>
+                    ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
       <BlocoKpis filtros={filtros} />
-      <BlocoCiclos ciclos={ciclos} onRecarregar={carregarCiclos} filtros={filtros} />
+      <BlocoCiclos ciclos={ciclosFiltradosPorMes} onRecarregar={carregarCiclos} filtros={filtros} />
       <BlocoConsolidado filtros={filtros} />
     </div>
   );

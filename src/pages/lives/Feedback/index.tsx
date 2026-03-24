@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
-import { X, Pencil, Trash2, Calendar, User } from "lucide-react";
+import { X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   GiStarMedal, GiShield, GiPencil,
-  GiChatBubble,
+  GiChatBubble, GiCalendar,
 } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -22,8 +24,6 @@ const BRAND = {
   amarelo:  "#f59e0b",
 } as const;
 
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
-
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK } from "../../../constants/platforms";
 
@@ -34,28 +34,43 @@ function PlatLogo({ plataforma, size = 20, isDark }: { plataforma: string; size?
   return <img src={src} alt={plataforma} width={size} height={size} onError={() => setErr(true)} style={{ display: "block", flexShrink: 0 }} />;
 }
 
-// ─── PERÍODO ──────────────────────────────────────────────────────────────────
-type Periodo = "semana" | "mes" | "todos";
+// ─── CARROSSEL DE SEMANAS (a partir de 01/12/2025) ────────────────────────────
+const MESES_ABREV = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
-function getRange(periodo: Periodo): { start: string; end: string } {
-  const now = new Date();
-  const toISO = (d: Date) => d.toISOString().split("T")[0];
-  const end = toISO(now);
-  if (periodo === "semana") {
-    const sun = new Date(now); sun.setDate(now.getDate() - now.getDay());
-    return { start: toISO(sun), end };
+function getSemanasDisponiveis(): { start: Date; end: Date; label: string }[] {
+  const lista: { start: Date; end: Date; label: string }[] = [];
+  const inicioRef = new Date(2025, 10, 30); // domingo 30/11/2025 (semana com 01/12)
+  const hoje = new Date();
+  let dom = new Date(inicioRef);
+  while (dom <= hoje) {
+    const sab = new Date(dom);
+    sab.setDate(dom.getDate() + 6);
+    const label = `${dom.getDate()} ${MESES_ABREV[dom.getMonth()]} – ${sab.getDate()} ${MESES_ABREV[sab.getMonth()]} ${sab.getFullYear()}`;
+    lista.push({ start: new Date(dom), end: sab, label });
+    dom.setDate(dom.getDate() + 7);
   }
-  if (periodo === "mes") {
-    return { start: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`, end };
-  }
-  return { start: "2000-01-01", end };
+  return lista;
 }
 
-const PERIODOS: { value: Periodo; label: string }[] = [
-  { value: "semana", label: "Semana" },
-  { value: "mes",    label: "Mês"    },
-  { value: "todos",  label: "Tudo"   },
-];
+function getRangeSemana(semana: { start: Date; end: Date } | null, historico: boolean): { start: string; end: string } {
+  const toISO = (d: Date) => d.toISOString().split("T")[0];
+  const now = new Date();
+  if (historico) return { start: "2000-01-01", end: toISO(now) };
+  if (!semana) return { start: toISO(now), end: toISO(now) };
+  return { start: toISO(semana.start), end: toISO(semana.end) };
+}
+
+// ─── STATUS (padrão Agenda: legenda + cores) ───────────────────────────────────
+const STATUS_COLOR: Record<string, string> = {
+  realizada:     BRAND.verde,
+  nao_realizada: BRAND.vermelho,
+  todos:         BRAND.ciano,
+};
+const STATUS_LABEL: Record<string, string> = {
+  realizada:     "Realizada",
+  nao_realizada: "Não Realizada",
+  todos:         "Todos",
+};
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function fmtData(iso: string): string {
@@ -67,10 +82,11 @@ function fmtData(iso: string): string {
 // ─── DROPDOWN INFLUENCER ──────────────────────────────────────────────────────
 interface DropdownItem { id: string; name: string; }
 
-function InfluencerDropdown({ items, selected, onChange }: {
-  items: DropdownItem[]; selected: string[]; onChange: (next: string[]) => void;
+function InfluencerDropdown({ items, selected, onChange, accent }: {
+  items: DropdownItem[]; selected: string[]; onChange: (next: string[]) => void; accent?: string;
 }) {
   const { theme: t, isDark } = useApp();
+  const accentColor = accent ?? BRAND.azul;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -98,11 +114,11 @@ function InfluencerDropdown({ items, selected, onChange }: {
       <button
         onClick={() => setOpen(o => !o)}
         style={{
-          width: "100%", padding: "7px 14px", borderRadius: 20,
-          border: `1.5px solid ${isActive ? BRAND.azul : t.cardBorder}`,
-          background: isActive ? `${BRAND.azul}18` : (t.inputBg ?? t.cardBg),
-          color: isActive ? BRAND.azul : t.textMuted,
-          fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
+          width: "100%", padding: "7px 14px", borderRadius: 999,
+          border: `1px solid ${isActive ? accentColor : t.cardBorder}`,
+          background: isActive ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}18`) : (t.inputBg ?? t.cardBg),
+          color: isActive ? accentColor : t.textMuted,
+          fontSize: 13, fontWeight: isActive ? 700 : 400, cursor: "pointer", fontFamily: FONT.body,
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
           transition: "all 0.15s",
         }}
@@ -140,13 +156,13 @@ function InfluencerDropdown({ items, selected, onChange }: {
                 <div key={inf.id} onClick={() => toggle(inf.id)} style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "8px 14px", cursor: "pointer",
-                  background: ativo ? `${BRAND.azul}18` : "transparent",
+                  background: ativo ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}18`) : "transparent",
                   transition: "background 0.1s",
                 }}>
                   <div style={{
                     width: 16, height: 16, borderRadius: 5, flexShrink: 0,
-                    border: `2px solid ${ativo ? BRAND.azul : t.cardBorder}`,
-                    background: ativo ? BRAND.azul : "transparent",
+                    border: `2px solid ${ativo ? accentColor : t.cardBorder}`,
+                    background: ativo ? accentColor : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     transition: "all 0.15s",
                   }}>
@@ -173,11 +189,18 @@ interface LiveComObs extends Omit<Live, "observacao"> {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Feedback() {
   const { theme: t, isDark } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis } = useDashboardFiltros();
+  const brand = useDashboardBrand();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("feedback");
 
-  const [periodo,           setPeriodo]           = useState<Periodo>("semana");
-  const [statusFiltro,      setStatusFiltro]      = useState<LiveStatus | "todos">("todos");
+  const semanasDisponiveis = useMemo(() => getSemanasDisponiveis(), []);
+  const hoje = new Date();
+  const idxInicial = semanasDisponiveis.findIndex(
+    (s) => s.start <= hoje && s.end >= hoje
+  );
+  const [idxSemana,   setIdxSemana]   = useState(idxInicial >= 0 ? idxInicial : semanasDisponiveis.length - 1);
+  const [historico,   setHistorico]   = useState(false);
+  const [statusFiltro, setStatusFiltro] = useState<LiveStatus | "todos">("todos");
   const [influencerFiltros, setInfluencerFiltros] = useState<string[]>([]);
   const [filterOperadora,   setFilterOperadora]   = useState<string>("todas");
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
@@ -190,9 +213,11 @@ export default function Feedback() {
   const [livesAll,          setLivesAll]          = useState<LiveComObs[]>([]);
   const [resultadosAll,     setResultadosAll]     = useState<Record<string, LiveResultado>>({});
 
+  const semanaSelecionada = semanasDisponiveis[idxSemana];
+
   async function loadData() {
     setLoading(true);
-    const { start, end } = getRange(periodo);
+    const { start, end } = getRangeSemana(semanaSelecionada ?? null, historico);
 
     let baseQuery = supabase
       .from("lives")
@@ -202,6 +227,7 @@ export default function Feedback() {
       .order("data", { ascending: false })
       .order("horario", { ascending: true });
 
+    if (operadoraSlugsForcado?.length) baseQuery = baseQuery.in("operadora_slug", operadoraSlugsForcado);
     if (influencerFiltros.length > 0) baseQuery = baseQuery.in("influencer_id", influencerFiltros);
 
     const { data: allData } = await baseQuery;
@@ -239,7 +265,7 @@ export default function Feedback() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [periodo, statusFiltro, influencerFiltros, podeVerInfluencer]);
+  useEffect(() => { loadData(); }, [idxSemana, historico, semanaSelecionada, statusFiltro, influencerFiltros, podeVerInfluencer, operadoraSlugsForcado]);
 
   useEffect(() => {
     supabase.from("operadoras").select("slug, nome").order("nome")
@@ -247,14 +273,16 @@ export default function Feedback() {
   }, []);
 
   const livesAllFiltered = useMemo(() => {
+    if (operadoraSlugsForcado?.length) return livesAll.filter((l) => l.operadora_slug && operadoraSlugsForcado.includes(l.operadora_slug));
     if (!filterOperadora || filterOperadora === "todas") return livesAll;
     return livesAll.filter((l) => l.operadora_slug === filterOperadora);
-  }, [livesAll, filterOperadora]);
+  }, [livesAll, filterOperadora, operadoraSlugsForcado]);
 
   const livesFiltered = useMemo(() => {
+    if (operadoraSlugsForcado?.length) return lives.filter((l) => l.operadora_slug && operadoraSlugsForcado.includes(l.operadora_slug));
     if (!filterOperadora || filterOperadora === "todas") return lives;
     return lives.filter((l) => l.operadora_slug === filterOperadora);
-  }, [lives, filterOperadora]);
+  }, [lives, filterOperadora, operadoraSlugsForcado]);
 
   // ── Cálculos dos quadros ──────────────────────────────────────────────────
   const totalLives         = livesAllFiltered.length;
@@ -282,16 +310,15 @@ export default function Feedback() {
     if (!error) loadData();
   }
 
-  // ── Estilos ───────────────────────────────────────────────────────────────
-  const filterBtn = (active: boolean, color: string = BRAND.roxoVivo): React.CSSProperties => ({
-    padding: "7px 16px", borderRadius: 20,
-    border: `1.5px solid ${active ? color : t.cardBorder}`,
-    background: active ? `${color}22` : (t.inputBg ?? t.cardBg),
-    color: active ? color : t.textMuted,
-    fontSize: 12, fontWeight: 600, cursor: "pointer",
-    fontFamily: FONT.body, whiteSpace: "nowrap" as const,
-    transition: "all 0.15s",
-  });
+  // ── Estilos (padrão Agenda) ───────────────────────────────────────────────
+  const btnNav: React.CSSProperties = {
+    width: 30, height: 30, borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent", color: t.text, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  };
+  const isPrimeiro = idxSemana === 0;
+  const isUltimo = idxSemana === semanasDisponiveis.length - 1;
 
   const statBox = (color: string): React.CSSProperties => ({
     flex: 1, textAlign: "center" as const, padding: "10px 8px",
@@ -312,7 +339,7 @@ export default function Feedback() {
 
     return (
       <div style={{
-        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+        background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
         borderRadius: 16, padding: 20, marginBottom: 10,
         borderLeft: `6px solid ${statusColor}`,
       }}>
@@ -439,21 +466,21 @@ export default function Feedback() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
 
-      {/* ── HEADER — padrão NHD Bold + ícone container ── */}
+      {/* ── HEADER — cor primária ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
         <span style={{
           width: 32, height: 32, borderRadius: 9,
-          background: "rgba(74,32,130,0.18)",
-          border: "1px solid rgba(74,32,130,0.30)",
+          background: brand.primaryIconBg,
+          border: brand.primaryIconBorder,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: BRAND.ciano, flexShrink: 0,
+          color: brand.primaryIconColor, flexShrink: 0,
         }}>
           <GiChatBubble size={16} />
         </span>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Feedback de Lives
           </h1>
           <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
@@ -462,11 +489,125 @@ export default function Feedback() {
         </div>
       </div>
 
+      {/* ── BLOCO DE FILTROS (carrossel de semanas + Histórico + Status padrão Agenda) ── */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
+          padding: "12px 20px",
+        }}>
+          {/* Linha 1: Carrossel de semanas e Histórico */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+            <button
+              style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              onClick={() => { setHistorico(false); setIdxSemana((i) => Math.max(0, i - 1)); }}
+              disabled={historico || isPrimeiro}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 200, textAlign: "center" }}>
+              {historico ? "Todo o período" : semanaSelecionada?.label}
+            </span>
+            <button
+              style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              onClick={() => { setHistorico(false); setIdxSemana((i) => Math.min(semanasDisponiveis.length - 1, i + 1)); }}
+              disabled={historico || isUltimo}
+            >
+              <ChevronRight size={14} />
+            </button>
+            <button
+              onClick={() => {
+                if (historico) {
+                  setHistorico(false);
+                  setIdxSemana(idxInicial >= 0 ? idxInicial : semanasDisponiveis.length - 1);
+                } else {
+                  setHistorico(true);
+                }
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+                fontFamily: FONT.body, fontSize: 13,
+                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+                background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
+                color: historico ? brand.accent : t.textMuted,
+                fontWeight: historico ? 700 : 400,
+                transition: "all 0.15s",
+              }}
+            >
+              <GiCalendar size={15} /> Histórico
+            </button>
+          </div>
+
+          {/* Linha 2: Status (padrão Agenda — legenda + cores) + Influencer + Operadoras */}
+          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", justifyContent: "center" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</span>
+              {(["realizada", "nao_realizada", "todos"] as const).map((status) => {
+                const active = statusFiltro === status;
+                const color = STATUS_COLOR[status];
+                return (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFiltro(status)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : "transparent",
+                      color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    {STATUS_LABEL[status]}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {(showFiltroInfluencer && influencers.length > 0) || (showFiltroOperadora && operadorasList.length > 0) ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+                {showFiltroInfluencer && influencers.length > 0 && (
+                  <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} accent={brand.accent} />
+                )}
+                {showFiltroOperadora && operadorasList.length > 0 && (
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                      <GiShield size={13} />
+                    </span>
+                    <select
+                      value={filterOperadora}
+                      onChange={(e) => setFilterOperadora(e.target.value)}
+                      style={{
+                        padding: "6px 14px 6px 30px", borderRadius: 999,
+                        border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                        background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
+                        color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
+                        fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                        fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                      }}
+                    >
+                      <option value="todas">Todas as operadoras</option>
+                      {operadorasList
+                        .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                        .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
       {/* ── QUADROS DE RESUMO ── */}
       {!loading && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
           {/* Total de lives */}
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
             <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>
               {totalLives}
             </div>
@@ -485,9 +626,9 @@ export default function Feedback() {
             </div>
           </div>
 
-          {/* Horas realizadas */}
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
-            <div style={{ fontSize: 28, fontWeight: 900, color: BRAND.roxoVivo, fontFamily: FONT_TITLE, lineHeight: 1 }}>
+          {/* Horas realizadas — accent */}
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
+            <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>
               {horasInt}h{minutosRest > 0 ? ` ${minutosRest}m` : ""}
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 4 }}>
@@ -500,9 +641,9 @@ export default function Feedback() {
             </div>
           </div>
 
-          {/* Média de views */}
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
-            <div style={{ fontSize: 28, fontWeight: 900, color: BRAND.azul, fontFamily: FONT_TITLE, lineHeight: 1 }}>
+          {/* Média de views — accent */}
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
+            <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>
               {mediaViews > 0 ? mediaViews.toLocaleString("pt-BR") : "—"}
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 4 }}>
@@ -517,72 +658,12 @@ export default function Feedback() {
         </div>
       )}
 
-      {/* ── FILTROS ── */}
-      <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, marginBottom: 10, alignItems: "center" }}>
-        {/* Período */}
-        {PERIODOS.map(p => (
-          <button key={p.value} onClick={() => setPeriodo(p.value)} style={filterBtn(periodo === p.value)}>
-            {p.label}
-          </button>
-        ))}
-
-        <div style={{ width: 1.5, alignSelf: "stretch", minHeight: 28, background: t.cardBorder, borderRadius: 2, margin: "0 4px", flexShrink: 0 }} />
-
-        {/* Status */}
-        <button onClick={() => setStatusFiltro("realizada")} style={filterBtn(statusFiltro === "realizada", BRAND.verde)}>
-          Realizada
-        </button>
-        <button onClick={() => setStatusFiltro("nao_realizada")} style={filterBtn(statusFiltro === "nao_realizada", BRAND.vermelho)}>
-          Não Realizada
-        </button>
-        <button onClick={() => setStatusFiltro("todos")} style={filterBtn(statusFiltro === "todos", BRAND.ciano)}>
-          Todos
-        </button>
-
-        {/* Operadora */}
-        {showFiltroOperadora && operadorasList.length > 0 && (
-          <>
-            <div style={{ width: 1.5, alignSelf: "stretch", minHeight: 28, background: t.cardBorder, borderRadius: 2, margin: "0 4px", flexShrink: 0 }} />
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                <GiShield size={13} />
-              </span>
-              <select
-                value={filterOperadora}
-                onChange={(e) => setFilterOperadora(e.target.value)}
-                style={{
-                  padding: "7px 14px 7px 30px", borderRadius: 20,
-                  border: `1.5px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg),
-                  color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
-                  fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                  cursor: "pointer", outline: "none", appearance: "none",
-                }}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList
-                  .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-              </select>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Dropdown influencer */}
-      {showFiltroInfluencer && influencers.length > 0 && (
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-          <InfluencerDropdown items={influencers} selected={influencerFiltros} onChange={setInfluencerFiltros} />
-        </div>
-      )}
-
       {/* Contador */}
       {!loading && livesFiltered.length > 0 && (
         <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
           {livesFiltered.length} live(s) encontrada(s)
           {influencerFiltros.length > 0 && (
-            <span style={{ marginLeft: 8, color: BRAND.azul, fontWeight: 600 }}>
+            <span style={{ marginLeft: 8, color: brand.accent, fontWeight: 600 }}>
               · {influencerFiltros.length} influencer(s) selecionado(s)
             </span>
           )}
@@ -593,7 +674,7 @@ export default function Feedback() {
       {loading ? (
         <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
       ) : livesFiltered.length === 0 ? (
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
           Nenhuma live encontrada para o período selecionado.
         </div>
       ) : (
@@ -608,6 +689,7 @@ export default function Feedback() {
           operadorasList={operadorasList}
           t={t}
           isDark={isDark ?? false}
+          brand={brand}
           onClose={() => setEditando(null)}
           onSalvo={() => { setEditando(null); loadData(); }}
         />
@@ -617,10 +699,11 @@ export default function Feedback() {
 }
 
 // ─── MODAL EDITAR FEEDBACK ────────────────────────────────────────────────────
-function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSalvo }: {
+function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, brand, onClose, onSalvo }: {
   live: LiveComObs; res?: LiveResultado;
   operadorasList: { slug: string; nome: string }[];
   t: ReturnType<typeof useApp>["theme"]; isDark: boolean;
+  brand: ReturnType<typeof useDashboardBrand>;
   onClose: () => void; onSalvo: () => void;
 }) {
   const [observacao,   setObservacao]   = useState(live.observacao ?? "");
@@ -684,19 +767,19 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSa
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
+      <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
 
-        {/* Cabeçalho */}
+        {/* Cabeçalho — primária */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{
               width: 28, height: 28, borderRadius: 8,
-              background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
-              display: "flex", alignItems: "center", justifyContent: "center", color: BRAND.ciano,
+              background: brand.primaryIconBg, border: brand.primaryIconBorder,
+              display: "flex", alignItems: "center", justifyContent: "center", color: brand.primaryIconColor,
             }}>
               <GiPencil size={13} />
             </span>
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Editar Feedback
             </h2>
           </div>
@@ -794,7 +877,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSa
           </button>
           <button onClick={handleSave} disabled={saving} style={{
             padding: "10px 20px", borderRadius: 10, border: "none",
-            background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+            background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
             color: "#fff", cursor: saving ? "not-allowed" : "pointer",
             fontFamily: FONT.body, fontSize: 13, fontWeight: 600, opacity: saving ? 0.7 : 1,
           }}>

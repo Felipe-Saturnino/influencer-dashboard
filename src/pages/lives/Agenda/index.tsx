@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
@@ -21,8 +23,6 @@ const BRAND = {
   ciano:    "#70cae4",
   verde:    "#22c55e",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── LOGOS OFICIAIS DAS PLATAFORMAS (Simple Icons CDN) ───────────────────────
 import { PLAT_LOGO, PLAT_LOGO_DARK, PLAT_COLOR } from "../../../constants/platforms";
@@ -94,9 +94,10 @@ interface SingleDropdownProps {
   t: any;
 }
 
-function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownProps) {
+function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDropdownProps & { accent?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const accentColor = accent ?? BRAND.roxoVivo;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -113,11 +114,11 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
       <button
         onClick={() => setOpen(!open)}
         style={{
-          padding: "6px 14px", borderRadius: 20,
-          border: `1.5px solid ${BRAND.roxoVivo}`,
-          background: `${BRAND.roxoVivo}22`,
-          color: BRAND.roxoVivo,
-          fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
+          padding: "6px 14px", borderRadius: 999,
+          border: `1px solid ${accentColor}`,
+          background: accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}22`,
+          color: accentColor,
+          fontSize: 13, fontWeight: 600, fontFamily: FONT.body,
           cursor: "pointer", outline: "none",
           display: "flex", alignItems: "center", gap: 6,
           whiteSpace: "nowrap" as const,
@@ -144,8 +145,8 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
                 style={{
                   width: "100%", padding: "8px 12px", borderRadius: 8,
                   border: "none",
-                  background: selected ? `${BRAND.roxoVivo}22` : "transparent",
-                  color: selected ? BRAND.roxoVivo : t.text,
+                  background: selected ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}22`) : "transparent",
+                  color: selected ? accentColor : t.text,
                   fontSize: 12, fontFamily: FONT.body,
                   cursor: "pointer", textAlign: "left",
                   display: "flex", alignItems: "center", gap: 8,
@@ -154,8 +155,8 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
               >
                 <span style={{
                   width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-                  border: `1.5px solid ${selected ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: selected ? BRAND.roxoVivo : "transparent",
+                  border: `1.5px solid ${selected ? accentColor : t.cardBorder}`,
+                  background: selected ? accentColor : "transparent",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 8, color: "#fff",
                 }}>
@@ -174,7 +175,8 @@ function SingleDropdown({ value, options, onChange, icon, t }: SingleDropdownPro
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
   const { theme: t, isDark } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const brand = useDashboardBrand();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("agenda");
 
   const [view,    setView]    = useState<ViewMode>("mes");
@@ -198,11 +200,9 @@ export default function Agenda() {
   );
   async function loadLives() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("lives")
-      .select("*, profiles!lives_influencer_id_fkey(name)")
-      .order("data",    { ascending: true })
-      .order("horario", { ascending: true });
+    let q = supabase.from("lives").select("*, profiles!lives_influencer_id_fkey(name)").order("data", { ascending: true }).order("horario", { ascending: true });
+    if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+    const { data, error } = await q;
     if (!error && data) {
       const mapped = data.map((l: any) => ({ ...l, influencer_name: l.profiles?.name }));
       setLives(mapped.filter((l: Live) => podeVerInfluencer(l.influencer_id)));
@@ -210,7 +210,7 @@ export default function Agenda() {
     setLoading(false);
   }
 
-  useEffect(() => { loadLives(); }, [podeVerInfluencer]);
+  useEffect(() => { loadLives(); }, [podeVerInfluencer, operadoraSlugsForcado]);
 
   useEffect(() => {
     if (showFiltroInfluencer || showFiltroOperadora) {
@@ -224,6 +224,7 @@ export default function Agenda() {
     }
   }, [showFiltroInfluencer, showFiltroOperadora]);
 
+  const operadoraEfetiva = operadoraSlugsForcado ?? (filterOperadora !== "todas" ? [filterOperadora] : null);
   function livesForDay(date: Date): Live[] {
     const iso = toISO(date);
     return lives.filter(l => {
@@ -231,7 +232,7 @@ export default function Agenda() {
       if (filterStatus && l.status !== filterStatus) return false;
       if (filterPlat   && l.plataforma !== filterPlat) return false;
       if (filterInfluencers.length > 0 && !filterInfluencers.includes(l.influencer_id)) return false;
-      if (filterOperadora !== "todas" && l.operadora_slug !== filterOperadora) return false;
+      if (operadoraEfetiva && (!l.operadora_slug || !operadoraEfetiva.includes(l.operadora_slug))) return false;
       return true;
     });
   }
@@ -286,15 +287,24 @@ export default function Agenda() {
   }
 
   const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20,
+    background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20,
+  };
+
+  const btnNav: React.CSSProperties = {
+    width: 30, height: 30, borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent", color: t.text, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
   };
 
   const chipBase = (active: boolean, color = BRAND.roxoVivo): React.CSSProperties => ({
-    padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
-    cursor: "pointer", border: `1.5px solid ${active ? color : t.cardBorder}`,
-    background: active ? `${color}22` : t.inputBg ?? t.cardBg,
+    padding: "6px 14px", borderRadius: 999, fontSize: 13,
+    cursor: "pointer", border: `1px solid ${active ? color : t.cardBorder}`,
+    background: active ? `${color}22` : "transparent",
     color: active ? color : t.textMuted,
-    fontFamily: FONT.body, transition: "all 0.15s",
+    fontFamily: FONT.body, fontWeight: active ? 700 : 400,
+    transition: "all 0.15s",
+    display: "flex", alignItems: "center", gap: 6,
   });
 
   // ── Chip de live no calendário ───────────────────────────────────────────────
@@ -303,18 +313,18 @@ export default function Agenda() {
       <div
         onClick={() => setModal({ open: true, live })}
         style={{
-          display: "flex", alignItems: "center", gap: 5,
-          padding: "3px 6px", borderRadius: 7, cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "5px 8px", borderRadius: 8, cursor: "pointer",
           background: `${PLAT_COLOR[live.plataforma]}22`,
           border: `1px solid ${PLAT_COLOR[live.plataforma]}44`,
-          marginBottom: 3,
+          marginBottom: 4,
         }}
       >
         <span style={{
-          width: 7, height: 7, borderRadius: "50%",
+          width: 8, height: 8, borderRadius: "50%",
           background: STATUS_COLOR[live.status], flexShrink: 0,
         }} />
-        <span style={{ fontSize: 10, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {live.horario.slice(0, 5)}{live.influencer_name ? ` · ${live.influencer_name}` : ""}
         </span>
       </div>
@@ -334,7 +344,7 @@ export default function Agenda() {
             </div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "110px", gap: 4 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "220px", gap: 4 }}>
           {cells.map((date, i) => {
             if (!date) return <div key={i} />;
             const dayLives = livesForDay(date);
@@ -343,7 +353,7 @@ export default function Agenda() {
                 key={i}
                 onClick={() => { setCurrent(date); setView("dia"); }}
                 style={{
-                  height: 110, padding: 6, borderRadius: 10, cursor: "pointer",
+                  height: 220, padding: 8, borderRadius: 10, cursor: "pointer",
                   display: "flex", flexDirection: "column", overflow: "hidden",
                   boxSizing: "border-box", transition: "background 0.15s",
                   ...dayStyle(date, todayISO),
@@ -354,14 +364,14 @@ export default function Agenda() {
                     {date.getDate()}
                   </span>
                   {dayLives.length > 0 && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: BRAND.azul, borderRadius: 10, padding: "1px 6px", fontFamily: FONT.body }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 10, padding: "1px 6px", fontFamily: FONT.body }}>
                       {dayLives.length}
                     </span>
                   )}
                 </div>
-                <div style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}>
-                  {dayLives.slice(0, 3).map(l => <LiveChip key={l.id} live={l} />)}
-                  {dayLives.length > 3 && <span style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 3}</span>}
+                <div className="agenda-day-scroll" style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}>
+                  {dayLives.slice(0, 8).map(l => <LiveChip key={l.id} live={l} />)}
+                  {dayLives.length > 8 && <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 8}</span>}
                 </div>
               </div>
             );
@@ -387,7 +397,7 @@ export default function Agenda() {
                   {date.getDate()}
                 </div>
                 {dayLives.length > 0 && (
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: BRAND.azul, borderRadius: 10, padding: "1px 8px", display: "inline-block", fontFamily: FONT.body, marginTop: 2 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 10, padding: "1px 8px", display: "inline-block", fontFamily: FONT.body, marginTop: 2 }}>
                     {dayLives.length} live{dayLives.length > 1 ? "s" : ""}
                   </div>
                 )}
@@ -419,7 +429,7 @@ export default function Agenda() {
             {DAYS[current.getDay()]}
           </span>
           {dayLives.length > 0 && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: BRAND.azul, borderRadius: 12, padding: "2px 10px", marginLeft: 10, fontFamily: FONT.body }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 12, padding: "2px 10px", marginLeft: 10, fontFamily: FONT.body }}>
               {dayLives.length} live{dayLives.length > 1 ? "s" : ""}
             </span>
           )}
@@ -517,23 +527,23 @@ export default function Agenda() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
 
       {/* ── HEADER ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        {/* Título — padrão NHD Bold + ícone container */}
+        {/* Título — cor primária */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{
             width: 32, height: 32, borderRadius: 9,
-            background: "rgba(74,32,130,0.18)",
-            border: "1px solid rgba(74,32,130,0.30)",
+            background: brand.primaryIconBg,
+            border: brand.primaryIconBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: BRAND.ciano, flexShrink: 0,
+            color: brand.primaryIconColor, flexShrink: 0,
           }}>
             <GiFilmProjector size={16} />
           </span>
           <h1 style={{
-            fontSize: 18, fontWeight: 800, color: t.text,
+            fontSize: 18, fontWeight: 800, color: brand.primary,
             fontFamily: FONT_TITLE, margin: 0,
             letterSpacing: "0.05em", textTransform: "uppercase",
           }}>
@@ -541,7 +551,7 @@ export default function Agenda() {
           </h1>
         </div>
 
-        {/* Botão Nova Live — gradiente oficial */}
+        {/* Botão Nova Live — cor accent */}
         {perm.canCriarOk && (
           <button
             onClick={() => setModal({ open: true })}
@@ -549,7 +559,7 @@ export default function Agenda() {
               display: "flex", alignItems: "center", gap: 6,
               padding: "10px 20px", borderRadius: 10, border: "none",
               cursor: "pointer",
-              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
             }}
           >
@@ -559,51 +569,47 @@ export default function Agenda() {
         )}
       </div>
 
-      {/* ── CARD DE CONTROLES ── */}
-      <div style={{ ...card, marginBottom: 16 }}>
+      {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
+          padding: "12px 20px",
+        }}>
+          {/* Linha principal — centralizada */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+            <button onClick={prev} style={btnNav}>
+              <ChevronLeft size={14} />
+            </button>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+              {headerTitle()}
+            </span>
+            <button onClick={next} style={btnNav}>
+              <ChevronRight size={14} />
+            </button>
 
-        {/* Linha de navegação */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-          {/* Setas */}
-          <button onClick={prev} style={{ ...chipBase(false), padding: "6px 10px", display: "flex", alignItems: "center" }}>
-            <ChevronLeft size={14} />
-          </button>
-          <span style={{ fontSize: 15, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, minWidth: 180, textAlign: "center" }}>
-            {headerTitle()}
-          </span>
-          <button onClick={next} style={{ ...chipBase(false), padding: "6px 10px", display: "flex", alignItems: "center" }}>
-            <ChevronRight size={14} />
-          </button>
+            <button onClick={goToday} style={chipBase(false)}>Hoje</button>
 
-          <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
+            <SingleDropdown
+              value={view}
+              options={VIEW_OPTIONS}
+              onChange={v => setView(v as ViewMode)}
+              icon={<GiCalendar size={13} />}
+              t={t}
+              accent={brand.accent}
+            />
 
-          <button onClick={goToday} style={chipBase(false)}>Hoje</button>
-
-          <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
-
-          <SingleDropdown
-            value={view}
-            options={VIEW_OPTIONS}
-            onChange={v => setView(v as ViewMode)}
-            icon={<GiCalendar size={13} />}
-            t={t}
-          />
-
-          {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-            <>
-              <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
+            {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
               <InfluencerMultiSelect
                 selected={filterInfluencers}
                 onChange={setFilterInfluencers}
                 influencers={influencerListVisiveis}
                 t={t}
               />
-            </>
-          )}
+            )}
 
-          {showFiltroOperadora && operadorasList.length > 0 && (
-            <>
-              <div style={{ width: 1, height: 22, background: t.cardBorder, flexShrink: 0, margin: "0 2px" }} />
+            {showFiltroOperadora && operadorasList.length > 0 && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
                   <GiShield size={13} />
@@ -612,12 +618,12 @@ export default function Agenda() {
                   value={filterOperadora}
                   onChange={(e) => setFilterOperadora(e.target.value)}
                   style={{
-                    padding: "6px 14px 6px 30px", borderRadius: 20,
-                    border: `1.5px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                    background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg),
-                    color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
-                    fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                    cursor: "pointer", outline: "none", appearance: "none",
+                    padding: "6px 14px 6px 30px", borderRadius: 999,
+                    border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                    background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
+                    color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
+                    fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                    fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
                   }}
                 >
                   <option value="todas">Todas as operadoras</option>
@@ -627,90 +633,75 @@ export default function Agenda() {
                     .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
                 </select>
               </div>
-            </>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Legendas / Filtros */}
-        <div style={{
-          paddingTop: 14, borderTop: `1px solid ${t.cardBorder}`,
-          display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-        }}>
-
-          {/* Status */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-              Status
-            </span>
-            {Object.entries(STATUS_COLOR).map(([status, color]) => {
-              const active = filterStatus === status;
-              return (
-                <button
-                  key={status}
-                  onClick={() => setFilterStatus(prev => prev === status ? null : status)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "4px 10px", borderRadius: 20, cursor: "pointer",
-                    border: `1.5px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : "transparent",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: active ? color : t.textMuted, fontWeight: active ? 700 : 400, fontFamily: FONT.body }}>
+          {/* Status e Plataforma */}
+          <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Status</span>
+              {Object.entries(STATUS_COLOR).map(([status, color]) => {
+                const active = filterStatus === status;
+                return (
+                  <button
+                    key={status}
+                    onClick={() => setFilterStatus(prev => prev === status ? null : status)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : "transparent",
+                      color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
                     {STATUS_LABEL[status]}
-                  </span>
-                  {active && <span style={{ fontSize: 9, color }}>✕</span>}
-                </button>
-              );
-            })}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em" }}>Plataforma</span>
+              {Object.entries(PLAT_COLOR).map(([plat, color]) => {
+                const active = filterPlat === plat;
+                return (
+                  <button
+                    key={plat}
+                    onClick={() => setFilterPlat(prev => prev === plat ? null : plat)}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : `${color}11`,
+                      color: active ? color : color + "cc",
+                      fontSize: 12, fontWeight: active ? 700 : 500,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
+                    {plat}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={() => { setFilterStatus(null); setFilterPlat(null); setFilterInfluencers([]); setFilterOperadora("todas"); }}
+                style={{
+                  padding: "5px 14px", borderRadius: 999,
+                  border: `1px solid ${BRAND.vermelho}44`,
+                  background: `${BRAND.vermelho}11`,
+                  color: BRAND.vermelho, fontSize: 12, fontWeight: 600,
+                  fontFamily: FONT.body, cursor: "pointer",
+                }}
+              >
+                ✕ Limpar filtros
+              </button>
+            )}
           </div>
-
-          {/* Plataforma — com logos SVG */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-              Plataforma
-            </span>
-            {Object.entries(PLAT_COLOR).map(([plat, color]) => {
-              const active = filterPlat === plat;
-              return (
-                <button
-                  key={plat}
-                  onClick={() => setFilterPlat(prev => prev === plat ? null : plat)}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "4px 10px", borderRadius: 20, cursor: "pointer",
-                    border: `1.5px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : `${color}11`,
-                    color: active ? color : color + "cc",
-                    fontSize: 11, fontWeight: active ? 700 : 500,
-                    fontFamily: FONT.body, transition: "all 0.15s",
-                  }}
-                >
-                  <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                  {plat}
-                  {active && <span style={{ fontSize: 9 }}>✕</span>}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Limpar filtros */}
-          {hasActiveFilters && (
-            <button
-              onClick={() => { setFilterStatus(null); setFilterPlat(null); setFilterInfluencers([]); setFilterOperadora("todas"); }}
-              style={{
-                padding: "5px 16px", borderRadius: 20,
-                border: `1px solid ${BRAND.vermelho}44`,
-                background: `${BRAND.vermelho}11`,
-                color: BRAND.vermelho,
-                fontSize: 11, fontWeight: 600,
-                fontFamily: FONT.body, cursor: "pointer",
-              }}
-            >
-              ✕ Limpar filtros
-            </button>
-          )}
         </div>
       </div>
 

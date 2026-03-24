@@ -13,6 +13,7 @@ export interface User {
 
 // ─── PAGE KEYS ───────────────────────────────────────────────────────────────
 export type PageKey =
+  | "home"
   | "dash_overview"
   | "dash_overview_influencer"
   | "dash_conversao"
@@ -31,6 +32,7 @@ export type PageKey =
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
   | "gestao_dealers"
   | "status_tecnico"
+  | "roteiro_mesa"
   | "configuracoes"
   | "ajuda";
 
@@ -185,10 +187,35 @@ export interface Dealer {
 // ─── OPERADORA ───────────────────────────────────────────────────────────────
 // ✅ Novo tipo — espelha a tabela public.operadoras
 export interface Operadora {
-  slug:      string;
-  nome:      string;
-  ativo:     boolean;
-  criado_em?: string;
+  slug:           string;
+  nome:           string;
+  ativo:          boolean;
+  criado_em?:     string;
+  /** Brandguide: cor principal (ex: #7c3aed) */
+  cor_primaria?:    string | null;
+  /** Brandguide: cor secundária */
+  cor_secundaria?:  string | null;
+  /** Brandguide: cor de destaque */
+  cor_accent?:      string | null;
+  /** Brandguide: cor de fundo */
+  cor_background?:  string | null;
+  /** Brandguide: cor dos textos */
+  cor_textos?:      string | null;
+  /** Brandguide: cor dos ícones */
+  cor_icones?:      string | null;
+  /** Brandguide: URL do logo */
+  logo_url?:        string | null;
+  /** Brandguide: URL da fonte customizada (.woff2, .woff, .ttf) */
+  font_url?:        string | null;
+}
+
+// ─── OPERADORA PAGES ─────────────────────────────────────────────────────────
+/** Páginas que operadores de cada operadora podem acessar (todos veem o mesmo) */
+export interface OperadoraPage {
+  id:             string;
+  operadora_slug: string;
+  page_key:       PageKey;
+  created_at?:    string;
 }
 
 // ─── INFLUENCER OPERADORA ────────────────────────────────────────────────────

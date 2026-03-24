@@ -5,10 +5,12 @@ import { supabase } from "../lib/supabase";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
+  "home",
   "dash_overview", "dash_overview_influencer", "dash_conversao", "dash_financeiro", "mesas_spin", "dash_midias_sociais",
   "agenda", "resultados", "feedback",
   "influencers", "scout", "financeiro", "gestao_links", "campanhas", "gestao_dealers",
   "gestao_usuarios", "gestao_operadoras", "status_tecnico",
+  "roteiro_mesa",
   "configuracoes", "ajuda",
 ];
 
@@ -25,11 +27,22 @@ export interface EscoposVisiveis {
   vêTodosInfluencers?: boolean;   // true = executivo, vê todos os influencers
 }
 
+/** Brand da operadora (operador): logo, fonte e cores aplicadas via CSS vars */
+export interface OperadoraBrand {
+  nome:          string | null;
+  logo_url:      string | null;
+  font_url:      string | null;
+  cor_background: string | null;
+}
+
 interface AppContextValue {
   // Auth
   user:        User | null;
   setUser:     (u: User | null) => void;
   checking:    boolean;
+  // Navegação (página ativa no layout)
+  activePage:  string;
+  setActivePage: (page: string) => void;
   // Permissões de menu
   permissions: PermissoesMapa;
   setPermissions: (p: PermissoesMapa) => void;
@@ -39,6 +52,8 @@ interface AppContextValue {
   podeVerInfluencer: (id: string) => boolean;
   /** [] = sem restrição. true se pode ver a operadora. */
   podeVerOperadora: (slug: string) => boolean;
+  /** Brand da operadora (operador): logo_url para Sidebar; cores via --brand-* */
+  operadoraBrand: OperadoraBrand | null;
   // Theme
   theme:    Theme;
   isDark:   boolean;
@@ -48,6 +63,30 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 const ESCOPOS_VAZIOS: EscoposVisiveis = { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: false };
+
+const BRAND_DEFAULTS = {
+  primary:     "#7c3aed",
+  secondary:   "#4a2082",
+  accent:      "#1e36f8",
+  background:  "#0f0f1a",
+  text:        "#ffffff",
+  icon:        "#70cae4",
+  extra1:      "#1e36f8",
+  extra2:      "#22c55e",
+  extra3:      "#f59e0b",
+  extra4:      "#e84025",
+  danger:      "#e84025",
+  success:     "#22c55e",
+  fontFamily:  "'Inter', 'Helvetica Neue', Arial, sans-serif",
+} as const;
+
+function aplicarBrandguide(vars: Partial<Record<keyof typeof BRAND_DEFAULTS, string | null>>) {
+  const root = document.documentElement.style;
+  (Object.keys(BRAND_DEFAULTS) as (keyof typeof BRAND_DEFAULTS)[]).forEach((k) => {
+    const v = vars[k];
+    root.setProperty(`--brand-${k}`, v ?? BRAND_DEFAULTS[k]);
+  });
+}
 
 // ─── Carrega escopos visíveis por role e user_scopes (Etapa 7) ─────────────────
 async function carregarEscoposVisiveis(
@@ -85,7 +124,8 @@ async function carregarEscoposVisiveis(
   if (role === "operador") {
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
-      .map((s) => s.scope_ref);
+      .map((s) => s.scope_ref)
+      .sort((a, b) => (a ?? "").localeCompare(b ?? ""));
     return { influencersVisiveis: [], operadorasVisiveis, semRestricaoEscopo: false, vêTodosInfluencers: true };
   }
 
@@ -109,7 +149,11 @@ async function carregarEscoposVisiveis(
 }
 
 // ─── Carrega can_view de todas as páginas para o role do usuário ──────────────
-async function carregarPermissoes(role: User["role"]): Promise<PermissoesMapa> {
+// Para operador: intersecta com operadora_pages (páginas liberadas por operadora)
+async function carregarPermissoes(
+  role: User["role"],
+  operadorasVisiveis?: string[]
+): Promise<PermissoesMapa> {
   const { data } = await supabase
     .from("role_permissions")
     .select("page_key, can_view")
@@ -137,6 +181,25 @@ async function carregarPermissoes(role: User["role"]): Promise<PermissoesMapa> {
     mapa.dash_overview_influencer = "sim";
   }
 
+  // Operador: só vê páginas que estão em operadora_pages para suas operadoras
+  if (role === "operador") {
+    if (!operadorasVisiveis || operadorasVisiveis.length === 0) {
+      ALL_PAGE_KEYS.forEach((k) => { mapa[k] = "nao"; });
+    } else {
+      const { data: opPages } = await supabase
+        .from("operadora_pages")
+        .select("page_key")
+        .in("operadora_slug", operadorasVisiveis);
+      const pagesPermitidas = new Set((opPages ?? []).map((r) => r.page_key));
+      ALL_PAGE_KEYS.forEach((k) => {
+        const cv = mapa[k];
+        if (cv === "sim" || cv === "proprios") {
+          if (!pagesPermitidas.has(k)) mapa[k] = "nao";
+        }
+      });
+    }
+  }
+
   return mapa;
 }
 
@@ -144,24 +207,106 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user,           setUserState]    = useState<User | null>(null);
   const [checking,       setChecking]    = useState(true);
   const [isDark,         setIsDark]      = useState(false);
+  const [activePage,     setActivePage]   = useState("home");
   const [permissions,    setPermissions]  = useState<PermissoesMapa>(
     Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa
   );
   const [escoposVisiveis, setEscoposVisiveis] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
+  const [operadoraBrand, setOperadoraBrand] = useState<OperadoraBrand | null>(null);
+  const [brandRefreshKey, setBrandRefreshKey] = useState(0);
 
-  const theme = isDark ? DARK_THEME : LIGHT_THEME;
+  // Refetch brand ao voltar para a aba (ex.: admin atualizou operadora em outra aba)
+  useEffect(() => {
+    if (user?.role !== "operador") return;
+    const onFocus = () => setBrandRefreshKey((k) => k + 1);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [user?.role]);
+
+  // Operador: sempre modo Dark (brand da operadora); demais roles escolhem tema
+  const effectiveIsDark = user?.role === "operador" ? true : isDark;
+  const theme = effectiveIsDark ? DARK_THEME : LIGHT_THEME;
+
+  // data-theme no html para background full-viewport e scrollbar (evita linhas brancas)
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", effectiveIsDark ? "dark" : "light");
+  }, [effectiveIsDark]);
+
+  // Brandguide: operador vê cores e logo da operadora; demais roles usam default
+  useEffect(() => {
+    if (!user || user.role !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
+      aplicarBrandguide({});
+      setOperadoraBrand(null);
+      return;
+    }
+    const slug = escoposVisiveis.operadorasVisiveis[0];
+    void (async () => {
+      try {
+        const { data } = await supabase.from("operadoras").select(
+          "nome, cor_primaria, cor_secundaria, cor_accent, cor_background, cor_textos, cor_icones, logo_url, font_url"
+        ).eq("slug", slug).single();
+        const hasBrand = !!(data?.cor_primaria || data?.cor_secundaria || data?.cor_accent || data?.cor_background || data?.cor_textos || data?.cor_icones || (data?.logo_url ?? "").trim());
+        if (hasBrand) {
+          aplicarBrandguide({
+            primary:    data?.cor_primaria    ?? null,
+            secondary:  data?.cor_secundaria  ?? null,
+            accent:     data?.cor_accent      ?? null,
+            background: data?.cor_background  ?? null,
+            text:       data?.cor_textos      ?? null,
+            icon:       data?.cor_icones      ?? null,
+          });
+        } else {
+          aplicarBrandguide({});
+        }
+        const nome = (data?.nome ?? "").trim() || null;
+        const logo = (data?.logo_url ?? "").trim() || null;
+        const font = (data?.font_url ?? "").trim() || null;
+        const bg = (data?.cor_background ?? "").trim() || null;
+        setOperadoraBrand({ nome, logo_url: logo, font_url: font, cor_background: bg });
+      } catch {
+        aplicarBrandguide({});
+        setOperadoraBrand(null);
+      }
+    })();
+  }, [user?.id, user?.role, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
+
+  // Fonte customizada: injeta @font-face e aplica --brand-fontFamily quando operador tem font_url
+  useEffect(() => {
+    const id = "operadora-brand-font";
+    const existing = document.getElementById(id);
+    if (existing) existing.remove();
+    const root = document.documentElement.style;
+    if (!operadoraBrand?.font_url) {
+      root.setProperty("--brand-fontFamily", BRAND_DEFAULTS.fontFamily);
+      return;
+    }
+    const url = operadoraBrand.font_url;
+    const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "woff2";
+    const format = ext === "woff2" ? "woff2" : ext === "woff" ? "woff" : "truetype";
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = `@font-face{font-family:"OperadoraBrandFont";src:url("${url}") format("${format}");font-display:swap;}`;
+    document.head.appendChild(style);
+    root.setProperty("--brand-fontFamily", '"OperadoraBrandFont", "Inter", sans-serif');
+    return () => {
+      document.getElementById(id)?.remove();
+      root.setProperty("--brand-fontFamily", BRAND_DEFAULTS.fontFamily);
+    };
+  }, [operadoraBrand?.font_url]);
 
   // Wrapper de setUser que também carrega permissões e escopos
   async function setUser(u: User | null) {
     setUserState(u);
+    if (u) setActivePage("home"); // Ao fazer login, volta para a página Home
     if (u) {
       try {
-        const [perms, escopos] = await Promise.all([
-          carregarPermissoes(u.role),
-          carregarEscoposVisiveis(u.id, u.role),
-        ]);
-        setPermissions(perms);
+        const escopos = await carregarEscoposVisiveis(u.id, u.role);
         setEscoposVisiveis(escopos);
+        const perms = await carregarPermissoes(
+          u.role,
+          u.role === "operador" ? escopos.operadorasVisiveis : undefined
+        );
+        setPermissions(perms);
       } catch (err) {
         console.error("Erro ao carregar permissões/escopos após login:", err);
         setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
@@ -201,12 +346,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const u = profile as User;
             setUserState(u);
             try {
-              const [perms, escopos] = await Promise.all([
-                carregarPermissoes(u.role),
-                carregarEscoposVisiveis(u.id, u.role),
-              ]);
-              setPermissions(perms);
+              const escopos = await carregarEscoposVisiveis(u.id, u.role);
               setEscoposVisiveis(escopos);
+              const perms = await carregarPermissoes(
+                u.role,
+                u.role === "operador" ? escopos.operadorasVisiveis : undefined
+              );
+              setPermissions(perms);
             } catch (err) {
               console.error("Erro ao carregar permissões/escopos:", err);
               setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
@@ -229,12 +375,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const podeVerOperadora = (slug: string) =>
     escoposVisiveis.semRestricaoEscopo === true || escoposVisiveis.operadorasVisiveis.includes(slug);
 
+  const setTheme = (v: boolean) => {
+    if (user?.role === "operador") return; // Operador travado em Dark
+    setIsDark(v);
+  };
+
   return (
     <AppContext.Provider value={{
       user, setUser, checking,
+      activePage, setActivePage,
       permissions, setPermissions,
       escoposVisiveis, podeVerInfluencer, podeVerOperadora,
-      theme, isDark, setIsDark,
+      operadoraBrand,
+      theme, isDark: effectiveIsDark, setIsDark: setTheme,
     }}>
       {children}
     </AppContext.Provider>

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
 import { X, Link2, EyeOff, RotateCcw, AlertCircle } from "lucide-react";
@@ -18,8 +20,6 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 function calcGgr(alias: { total_deposit?: number; total_withdrawal?: number; ggr?: number }): number {
   if (alias.ggr != null) return alias.ggr;
@@ -43,6 +43,7 @@ type TipoMapeamento = "influencer" | "campanha";
 
 export default function GestaoLinks() {
   const { theme, user, podeVerInfluencer } = useApp();
+  const brand = useDashboardBrand();
   const perm = usePermission("gestao_links");
   const { showFiltroOperadora } = useDashboardFiltros();
 
@@ -190,7 +191,7 @@ export default function GestaoLinks() {
     textAlign: "left", padding: "10px 14px", color: theme.textMuted,
     fontWeight: 700, fontSize: 11, textTransform: "uppercase",
     letterSpacing: "0.08em", fontFamily: FONT.body,
-    background: "rgba(74,32,130,0.10)", borderBottom: `1px solid ${theme.cardBorder}`,
+    background: brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 12%, transparent)" : "rgba(74,32,130,0.10)", borderBottom: `1px solid ${theme.cardBorder}`,
   };
   const td: React.CSSProperties = {
     padding: "12px 14px", color: theme.text, fontFamily: FONT.body,
@@ -220,14 +221,14 @@ export default function GestaoLinks() {
   return (
     <div style={{ padding: "24px 32px" }}>
 
-      {/* ─── Header ─────────────────────────────────────────────────────────── */}
+      {/* ─── Header — primária ───────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 6 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-          <GiLinkedRings size={14} color="#fff" />
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: brand.primaryIconBg, border: brand.primaryIconBorder, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2, color: brand.primaryIconColor }}>
+          <GiLinkedRings size={14} />
         </div>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: theme.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>Gestão de Links</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>Gestão de Links</h1>
             {totalPendentes > 0 && (
               <span style={{ background: BRAND.vermelho, color: "#fff", borderRadius: 10, padding: "2px 9px", fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
                 {totalPendentes} pendente{totalPendentes !== 1 ? "s" : ""}
@@ -261,7 +262,7 @@ export default function GestaoLinks() {
           const ativa = aba === a;
           return (
             <button key={a} onClick={() => setAba(a)}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 20, cursor: "pointer", border: `1px solid ${ativa ? BRAND.roxoVivo : theme.cardBorder}`, background: ativa ? `${BRAND.roxoVivo}22` : (theme.inputBg ?? theme.cardBg), color: ativa ? BRAND.roxoVivo : theme.textMuted, fontSize: 13, fontWeight: ativa ? 700 : 400, fontFamily: FONT.body, transition: "all 0.15s" }}>
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 20, cursor: "pointer", border: `1px solid ${ativa ? brand.accent : theme.cardBorder}`, background: ativa ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (theme.inputBg ?? theme.cardBg), color: ativa ? brand.accent : theme.textMuted, fontSize: 13, fontWeight: ativa ? 700 : 400, fontFamily: FONT.body, transition: "all 0.15s" }}>
               {a.charAt(0).toUpperCase() + a.slice(1)}
               {a === "pendentes" && totalPendentes > 0 && (
                 <span style={{ background: BRAND.vermelho, color: "#fff", borderRadius: 10, padding: "0px 6px", fontSize: 10, fontWeight: 700 }}>{totalPendentes}</span>
@@ -278,7 +279,7 @@ export default function GestaoLinks() {
         </div>
       ) : aliases.length === 0 ? (
         <div style={{
-          background: theme.cardBg, border: `1px solid ${theme.cardBorder}`,
+          background: brand.blockBg, border: `1px solid ${theme.cardBorder}`,
           borderRadius: 18, padding: 60,
           textAlign: "center", color: theme.textMuted,
           fontFamily: FONT.body, fontSize: 14,
@@ -288,7 +289,7 @@ export default function GestaoLinks() {
         </div>
       ) : (
         // sem overflow:hidden no wrapper externo para não forçar scroll
-        <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", overflow: "hidden" }}>
+        <div style={{ background: brand.blockBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
             <colgroup>
               {/* UTM Source: largura fixa razoável, vai quebrar internamente */}
@@ -356,7 +357,7 @@ export default function GestaoLinks() {
                         {aba === "pendentes" && podeMapearAlias() && (
                           <>
                             <button onClick={() => abrirModal(alias)}
-                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 10, border: "none", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", whiteSpace: "nowrap" }}>
                               <Link2 size={12} /> Mapear
                             </button>
                             <button onClick={() => ignorar(alias)}

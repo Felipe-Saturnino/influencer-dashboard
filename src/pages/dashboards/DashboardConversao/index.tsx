@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
@@ -48,8 +50,6 @@ const PODIO_CORES = [
   { bg: "rgba(112,202,228,0.13)", border: "rgba(112,202,228,0.35)", text: "#70cae4" }, // 2º ciano
   { bg: "rgba(74,32,130,0.18)",  border: "rgba(74,32,130,0.40)",  text: "#a78bfa" }, // 3º roxo
 ];
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };
@@ -106,19 +106,20 @@ function SectionTitle({ icon, children, sub }: {
   icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: "rgba(74,32,130,0.18)",
-        border: "1px solid rgba(74,32,130,0.30)",
+        background: brand.primaryIconBg,
+        border: brand.primaryIconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: BRAND.ciano, flexShrink: 0,
+        color: brand.primaryIconColor, flexShrink: 0,
       }}>
         {icon}
       </span>
       <span style={{
-        fontSize: 14, fontWeight: 800, color: t.text,
+        fontSize: 14, fontWeight: 800, color: brand.primary,
         fontFamily: FONT_TITLE,
         letterSpacing: "0.05em", textTransform: "uppercase" as const,
       }}>
@@ -370,7 +371,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_conversao");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -423,24 +424,26 @@ export default function DashboardConversao() {
         ? { inicio: "2020-01-01", fim: new Date().toISOString().split("T")[0] }
         : getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
       if (!historico && mesSelecionado) qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
-      if (filtroOperadora !== "todas") qMetricas = qMetricas.eq("operadora_slug", filtroOperadora);
+      if (operadoraSlugsForcado?.length) qMetricas = qMetricas.in("operadora_slug", operadoraSlugsForcado);
+      else if (filtroOperadora !== "todas") qMetricas = qMetricas.eq("operadora_slug", filtroOperadora);
       const { data: metricasData } = await qMetricas;
       let metricas = (metricasData || []) as { influencer_id: string; visit_count: number; registration_count: number; ftd_count: number }[];
       if (historico) {
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
           dataInicio: inicio,
           dataFim: fim,
         });
         metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
       }
 
-      let qLives = supabase.from("lives").select("id, influencer_id, status, plataforma, data").eq("status", "realizada");
+      let qLives = supabase.from("lives").select("id, influencer_id, status, plataforma, data, operadora_slug").eq("status", "realizada");
       if (!historico && mesSelecionado) {
         const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
         qLives = qLives.gte("data", inicio).lte("data", fim);
       }
+      if (operadoraSlugsForcado?.length) qLives = qLives.in("operadora_slug", operadoraSlugsForcado);
       const { data: livesData } = await qLives;
       const lives = livesData || [];
 
@@ -497,18 +500,22 @@ export default function DashboardConversao() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, mesSelecionado, podeVerInfluencer]);
+  }, [historico, idxMes, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
   const rowsFiltradosEscopo = useMemo(() => {
     let r = rows;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (filtroOperadora !== "todas") {
+    if (operadoraSlugsForcado?.length) {
+      const ids = new Set<string>();
+      operadoraSlugsForcado.forEach((slug) => (operadoraInfMap[slug] ?? []).forEach((id) => ids.add(id)));
+      r = r.filter((row) => ids.has(row.influencer_id));
+    } else if (filtroOperadora !== "todas") {
       const ids = operadoraInfMap[filtroOperadora] ?? [];
       r = r.filter((row) => ids.includes(row.influencer_id));
     }
     return r;
-  }, [rows, filtroInfluencer, filtroOperadora, operadoraInfMap]);
+  }, [rows, filtroInfluencer, filtroOperadora, operadoraInfMap, operadoraSlugsForcado]);
 
   const rowA = rowsFiltradosEscopo.find((r) => r.influencer_id === compA) || null;
   const rowB = rowsFiltradosEscopo.find((r) => r.influencer_id === compB) || null;
@@ -522,9 +529,11 @@ export default function DashboardConversao() {
   ];
   const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
 
+  const brand = useDashboardBrand();
+
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
-    background: t.cardBg,
+    background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -590,9 +599,14 @@ export default function DashboardConversao() {
   return (
     <div style={{ padding: "20px 24px 48px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ══ BLOCO 1: FILTROS (padrão Overview) ══════════════════════════════════ */}
+      {/* ══ BLOCO 1: FILTROS — primária transparente ═══════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: t.cardBg, padding: "12px 20px" }}>
+        <div style={{
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
+          padding: "12px 20px",
+        }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             <button style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
@@ -613,9 +627,9 @@ export default function DashboardConversao() {
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
-              border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-              background: historico ? "rgba(124,58,237,0.15)" : "transparent",
-              color: historico ? BRAND.roxoVivo : t.textMuted,
+              border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
               <GiCalendar size={14} /> Histórico

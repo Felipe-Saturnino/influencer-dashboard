@@ -1,14 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora } from "../../../types";
 import { Eye, EyeOff, Pencil, X } from "lucide-react";
 import {
   GiMicrophone, GiPodium, GiWarPick, GiTwoCoins,
-  GiPokerHand, GiCheckMark,
+  GiPokerHand, GiCheckMark, GiShield,
 } from "react-icons/gi";
+import OperadoraTag from "../../../components/OperadoraTag";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -20,8 +24,6 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK, type Plataforma } from "../../../constants/platforms";
@@ -273,6 +275,8 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
   const { theme: t, user, isDark, escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
+  const brand = useDashboardBrand();
+  const { operadoraSlugsForcado, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("influencers");
   const showManagementUI = user?.role !== "influencer";
   // "proprios": ações apenas em registros do escopo do usuário
@@ -285,6 +289,7 @@ export default function Influencers() {
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
 
   const operadorasNoEscopo = operadorasList.filter((o) => podeVerOperadora(o.slug));
+  const opsColorMap = Object.fromEntries(operadorasList.map((o) => [o.slug, o.cor_primaria?.trim() || BRAND.roxoVivo]));
   const [loading,        setLoading]        = useState(true);
   const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar"; inf?: Influencer } | null>(null);
 
@@ -397,7 +402,10 @@ export default function Influencers() {
     )) return false;
     if (filterStatus !== "todos" && (p?.status ?? "ativo") !== filterStatus) return false;
     if (filterPlat !== "todas" && !(p?.canais ?? []).includes(filterPlat as Plataforma)) return false;
-    if (filterOp !== "todas") {
+    if (operadoraSlugsForcado?.length) {
+      const temOp = inf.operadoras?.some((o) => operadoraSlugsForcado.includes(o.operadora_slug));
+      if (!temOp) return false;
+    } else if (filterOp !== "todas") {
       const temOp = inf.operadoras?.some((o) => o.operadora_slug === filterOp);
       if (!temOp) return false;
     }
@@ -408,14 +416,22 @@ export default function Influencers() {
     return true;
   });
 
+  // Base para quadros: mesmo filtro de operadora que a lista (operador vê só sua operadora)
+  const listNoEscopo = list.filter((i) => {
+    if (!podeVerInfluencer(i.id)) return false;
+    if (operadoraSlugsForcado?.length) {
+      const temOp = i.operadoras?.some((o) => operadoraSlugsForcado.includes(o.operadora_slug));
+      if (!temOp) return false;
+    }
+    return true;
+  });
+
   // ── CORREÇÃO 2: apenas influencers ATIVOS no escopo entram no quadro de incompletos ──
-  const incompletos = list.filter((i) =>
-    podeVerInfluencer(i.id) &&
+  const incompletos = listNoEscopo.filter((i) =>
     (i.perfil?.status ?? "ativo") === "ativo" &&
     isPerfilIncompleto(i.perfil, i.perfil?.nome_artistico ?? i.name ?? "")
   );
 
-  const listNoEscopo = list.filter((i) => podeVerInfluencer(i.id));
   const porStatus: Record<StatusInfluencer, number> = { ativo: 0, inativo: 0, cancelado: 0 };
   const porPlat: Record<string, number> = {};
   listNoEscopo.forEach((inf) => {
@@ -426,18 +442,11 @@ export default function Influencers() {
 
   // ── Styles ──
   const cardStyle: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+    background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: "16px", padding: "18px 20px", marginBottom: "10px",
     display: "flex", alignItems: "center", justifyContent: "space-between",
     gap: "12px", flexWrap: "wrap",
   };
-  const selectStyle: React.CSSProperties = {
-    flex: 1, padding: "8px 12px", borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
-    color: t.text, fontSize: 12, fontFamily: FONT.body,
-    cursor: "pointer", outline: "none",
-  };
-
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -447,21 +456,21 @@ export default function Influencers() {
   }
 
   return (
-    <div style={{ padding: "24px", maxWidth: "900px", margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
 
-      {/* ── HEADER ── */}
+      {/* ── HEADER — primária ── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{
             width: 32, height: 32, borderRadius: 9,
-            background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+            background: brand.primaryIconBg, border: brand.primaryIconBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: BRAND.ciano, flexShrink: 0,
+            color: brand.primaryIconColor, flexShrink: 0,
           }}>
             <GiMicrophone size={16} />
           </span>
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
               Influencers
             </h1>
             <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
@@ -474,9 +483,9 @@ export default function Influencers() {
       {/* Quadros resumo (quem gerencia múltiplos) */}
       {showManagementUI && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: t.textMuted, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
-              <GiPodium size={13} style={{ color: BRAND.ciano }} /> Total de Influencers
+          <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: brand.secondary, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
+              <GiPodium size={13} style={{ color: brand.secondary }} /> Total de Influencers
             </div>
             <div style={{ fontSize: 36, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
               {listNoEscopo.length}
@@ -506,7 +515,7 @@ export default function Influencers() {
             )}
           </div>
 
-          <div style={{ background: t.cardBg, border: `1px solid ${BRAND.vermelho}33`, borderRadius: 16, padding: 20 }}>
+          <div style={{ background: brand.blockBg, border: `1px solid ${BRAND.vermelho}33`, borderRadius: 16, padding: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: BRAND.vermelho, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
               <GiWarPick size={13} /> Perfil Incompleto
             </div>
@@ -536,73 +545,155 @@ export default function Influencers() {
         </div>
       )}
 
-      {/* Busca e filtros */}
+      {/* Bloco de filtros consolidado (estilo Agenda, sem carrossel) */}
       {showManagementUI && (
-        <>
-          <input
-            value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome artístico ou e-mail..."
-            style={{
-              width: "100%", boxSizing: "border-box", padding: "10px 16px",
-              borderRadius: 12, border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
-              fontFamily: FONT.body, outline: "none", marginBottom: 10,
-            }}
-          />
-
-          <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
-              <option value="todos">Todos os status</option>
-              {STATUS_OPTS.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-              ))}
-            </select>
-            <select value={filterPlat} onChange={(e) => setFilterPlat(e.target.value)} style={selectStyle}>
-              <option value="todas">Todas as plataformas</option>
-              {PLATAFORMAS.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)} style={selectStyle}>
-              <option value="todas">Todas as operadoras</option>
-              {operadorasNoEscopo.map((o) => (
-                <option key={o.slug} value={o.slug}>{o.nome}</option>
-              ))}
-            </select>
-          </div>
-
-          {cacheMax > 0 && (
-            <div style={{
-              background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-              borderRadius: "12px", padding: "14px 18px", marginBottom: "16px",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
-                  <GiTwoCoins size={13} style={{ color: BRAND.ciano }} /> Cachê por Hora — até
-                </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
-                  {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
-                </span>
-              </div>
-              <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
-                <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
-                <div style={{ position: "absolute", left: 0, width: `${(cacheLimit / cacheMax) * 100}%`, height: 4, borderRadius: 2, background: `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
-                <input type="range" min={0} max={cacheMax} step={50} value={cacheLimit}
-                  onChange={(e) => setCacheLimit(Number(e.target.value))}
-                  style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
-                <div style={{ position: "absolute", left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
-                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
-                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax)}/h</span>
-              </div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{
+            borderRadius: 14, border: `1px solid ${t.cardBorder}`,
+            background: brand.blockBg,
+            padding: "12px 20px",
+          }}>
+            {/* Linha 1: Status / Plataforma / Operadora */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
+              {STATUS_OPTS.map((s) => {
+                const active = filterStatus === s;
+                const color = STATUS_COLOR[s];
+                return (
+                  <button key={s} onClick={() => setFilterStatus(active ? "todos" : s)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : "transparent",
+                      color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    {STATUS_LABEL[s]}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
+              <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
+              {PLATAFORMAS.map((plat) => {
+                const active = filterPlat === plat;
+                const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
+                return (
+                  <button key={plat} onClick={() => setFilterPlat(active ? "todas" : plat)}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : `${color}11`,
+                      color: active ? color : color + "cc",
+                      fontSize: 12, fontWeight: active ? 700 : 500,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
+                    {plat}
+                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  </button>
+                );
+              })}
+              {showFiltroOperadora && operadorasNoEscopo.length > 0 && (
+                <>
+                  <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Operadora</span>
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                      <GiShield size={13} />
+                    </span>
+                    <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)}
+                      style={{
+                        padding: "6px 14px 6px 30px", borderRadius: 999,
+                        border: `1px solid ${filterOp !== "todas" ? brand.accent : t.cardBorder}`,
+                        background: filterOp !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
+                        color: filterOp !== "todas" ? brand.accent : t.textMuted,
+                        fontSize: 13, fontWeight: filterOp !== "todas" ? 700 : 400,
+                        fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                      }}
+                    >
+                      <option value="todas">Todas as operadoras</option>
+                      {operadorasNoEscopo.map((o) => (
+                        <option key={o.slug} value={o.slug}>{o.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
-          )}
-        </>
+
+            {/* Linha 2: Filtro de Cachê */}
+            {cacheMax > 0 && (
+              <div style={{
+                paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`,
+                paddingBottom: 12,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body }}>
+                    <GiTwoCoins size={13} style={{ color: brand.secondary }} /> Cachê por Hora — até
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>
+                    {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
+                  </span>
+                </div>
+                <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
+                  <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
+                  <div style={{ position: "absolute", left: 0, width: `${(cacheLimit / cacheMax) * 100}%`, height: 4, borderRadius: 2, background: brand.useBrand ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+                  <input type="range" min={0} max={cacheMax} step={50} value={cacheLimit}
+                    onChange={(e) => setCacheLimit(Number(e.target.value))}
+                    style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+                  <div style={{ position: "absolute", left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
+                  <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
+                  <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax)}/h</span>
+                </div>
+              </div>
+            )}
+
+            {/* Linha 3: Barra de Pesquisa */}
+            <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+              <input
+                value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="🔍 Buscar por nome artístico ou e-mail..."
+                style={{
+                  width: "100%", boxSizing: "border-box", padding: "10px 16px",
+                  borderRadius: 12, border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13,
+                  fontFamily: FONT.body, outline: "none",
+                }}
+              />
+            </div>
+
+            {(filterStatus !== "todos" || filterPlat !== "todas" || filterOp !== "todas" || search || (cacheMax > 0 && cacheLimit < cacheMax)) && (
+              <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
+                <button
+                  onClick={() => { setFilterStatus("todos"); setFilterPlat("todas"); setFilterOp("todas"); setSearch(""); setCacheLimit(cacheMax); }}
+                  style={{
+                    padding: "5px 14px", borderRadius: 999,
+                    border: `1px solid ${BRAND.vermelho}44`,
+                    background: `${BRAND.vermelho}11`,
+                    color: BRAND.vermelho, fontSize: 12, fontWeight: 600,
+                    fontFamily: FONT.body, cursor: "pointer",
+                  }}
+                >
+                  ✕ Limpar filtros
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Contador */}
       {!loading && showManagementUI && (
         <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "14px" }}>
-          {filtered.length} influencer(s)
+          <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> influencer(s)
         </div>
       )}
 
@@ -612,7 +703,7 @@ export default function Influencers() {
           Carregando...
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
           Nenhum influencer encontrado.
         </div>
       ) : (
@@ -627,7 +718,7 @@ export default function Influencers() {
               <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-                  background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                  background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body,
                 }}>
@@ -651,7 +742,7 @@ export default function Influencers() {
                   </div>
                   {p?.cache_hora && p.cache_hora > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 5 }}>
-                      <GiTwoCoins size={12} style={{ color: BRAND.ciano }} /> {formatBRL(p.cache_hora)}/h
+                      <GiTwoCoins size={12} style={{ color: brand.secondary }} /> {formatBRL(p.cache_hora)}/h
                     </div>
                   )}
                   {canais.length > 0 && (
@@ -672,12 +763,16 @@ export default function Influencers() {
                       })}
                     </div>
                   )}
-                  {opsAtivas.length > 0 && (
+                  {opsAtivas.length > 0 && user?.role !== "operador" && (
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {opsAtivas.map((o) => (
-                        <span key={o.operadora_slug} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, padding: "3px 9px", borderRadius: 20, background: `${BRAND.amarelo}22`, color: BRAND.amarelo, fontWeight: 600, fontFamily: FONT.body }}>
-                          <GiPokerHand size={11} /> {o.operadora_nome ?? o.operadora_slug}
-                        </span>
+                        <OperadoraTag
+                          key={o.operadora_slug}
+                          label={o.operadora_nome ?? o.operadora_slug}
+                          corPrimaria={opsColorMap[o.operadora_slug]}
+                          dark={isDark ?? false}
+                          icon={<GiPokerHand size={11} />}
+                        />
                       ))}
                     </div>
                   )}
@@ -696,7 +791,7 @@ export default function Influencers() {
                   <button onClick={() => setModal({ mode: "editar", inf })} style={{
                     display: "inline-flex", alignItems: "center", gap: 6,
                     padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
-                    background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                    background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                     color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
                   }}>
                     <Pencil size={13} /> Editar
@@ -716,6 +811,7 @@ export default function Influencers() {
           )}
           onClose={() => setModal(null)}
           isDark={isDark}
+          brand={brand}
         />
       )}
       {modal?.mode === "editar" && modal.inf && (
@@ -727,6 +823,7 @@ export default function Influencers() {
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); loadData(); }}
           isDark={isDark}
+          brand={brand}
         />
       )}
     </div>
@@ -734,10 +831,12 @@ export default function Influencers() {
 }
 
 // ─── Modal Visualizar ─────────────────────────────────────────────────────────
-function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
+function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }: {
   influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; isDark?: boolean;
+  brand?: ReturnType<typeof useDashboardBrand>;
 }) {
   const { theme: t } = useApp();
+  const b = brand ?? { blockBg: t.cardBg, accent: "#7c3aed", secondary: "#7c3aed", useBrand: false };
   const p = influencer.perfil;
   const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
@@ -762,7 +861,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
+      <div style={{ background: b.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
@@ -779,15 +878,15 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
           </button>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: `${BRAND.azul}0d`, border: `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
-          <Eye size={13} style={{ color: BRAND.azul, flexShrink: 0 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: b.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.azul}0d`, border: `1px solid ${b.useBrand ? "color-mix(in srgb, var(--brand-accent) 20%, transparent)" : `${BRAND.azul}30`}`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
+          <Eye size={13} style={{ color: b.accent, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura. Dados sensíveis protegidos.</span>
         </div>
 
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {tabs.map((tb) => (
             <button key={tb.key} onClick={() => setTab(tb.key)}
-              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb.key ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb.key ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? b.accent : t.cardBorder}`, background: tab === tb.key ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (t.inputBg ?? t.cardBg), color: tab === tb.key ? b.accent : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
               {tb.label}
             </button>
           ))}
@@ -854,13 +953,14 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
                 const vinculo = influencer.operadoras?.find((o) => o.operadora_slug === op.slug);
                 const ativo = !!vinculo?.ativo;
                 const id = vinculo?.id_operadora;
+                const opColor = op.cor_primaria?.trim() || BRAND.roxoVivo;
                 return (
-                  <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? BRAND.roxoVivo + "55" : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}08` : "transparent" }}>
+                  <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `${opColor}55` : t.cardBorder}`, background: ativo ? `${opColor}12` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
-                        <GiPokerHand size={13} style={{ color: BRAND.amarelo }} /> {op.nome}
+                        <GiPokerHand size={13} style={{ color: opColor }} /> {op.nome}
                       </span>
-                      <span style={{ padding: "4px 12px", borderRadius: 20, border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: ativo ? BRAND.roxoVivo : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
+                      <span style={{ padding: "4px 12px", borderRadius: 20, border: `1px solid ${ativo ? opColor : t.cardBorder}`, background: ativo ? `${opColor}22` : (t.inputBg ?? t.cardBg), color: ativo ? opColor : t.textMuted, fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
                         {ativo ? "Ativo" : "Inativo"}
                       </span>
                     </div>
@@ -879,10 +979,12 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
 // ─── Modal Editar ─────────────────────────────────────────────────────────────
 type OperadorasFormState = Record<string, { ativo: boolean; id_operadora: string }>;
 
-function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
+function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, brand }: {
   influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; onSaved: () => void; isDark?: boolean;
+  brand?: ReturnType<typeof useDashboardBrand>;
 }) {
   const { theme: t, user } = useApp();
+  const b = brand ?? { blockBg: t.cardBg, accent: "#7c3aed", useBrand: false };
   const existing = influencer.perfil;
   // Status e Cachê somente Gestores e Admin podem alterar
   const podeAlterarStatusCache = user?.role === "admin" || user?.role === "gestor";
@@ -988,7 +1090,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
+      <div style={{ background: b.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
           <div>
@@ -1008,7 +1110,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {tabs.map((tb) => (
             <button key={tb.key} onClick={() => setTab(tb.key)}
-              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb.key ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb.key ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb.key ? b.accent : t.cardBorder}`, background: tab === tb.key ? (b.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (t.inputBg ?? t.cardBg), color: tab === tb.key ? b.accent : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
               {tb.label}
             </button>
           ))}
@@ -1115,14 +1217,15 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
               operadorasList.map((op) => {
                 const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
                 const ativo = st.ativo;
+                const opColor = op.cor_primaria?.trim() || BRAND.roxoVivo;
                 return (
-                  <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? BRAND.roxoVivo + "55" : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}08` : "transparent" }}>
+                  <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `${opColor}55` : t.cardBorder}`, background: ativo ? `${opColor}12` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? 12 : 0 }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
-                        <GiPokerHand size={13} style={{ color: BRAND.amarelo }} /> {op.nome}
+                        <GiPokerHand size={13} style={{ color: opColor }} /> {op.nome}
                       </span>
                       <button onClick={() => setOp(op.slug, { ativo: !ativo })}
-                        style={{ padding: "5px 14px", borderRadius: 20, border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`, background: ativo ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: ativo ? BRAND.roxoVivo : t.textMuted, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
+                        style={{ padding: "5px 14px", borderRadius: 20, border: `1px solid ${ativo ? opColor : t.cardBorder}`, background: ativo ? `${opColor}22` : (t.inputBg ?? t.cardBg), color: ativo ? opColor : t.textMuted, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}>
                         {ativo ? "Ativo" : "Inativo"}
                       </button>
                     </div>
@@ -1147,7 +1250,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
         )}
 
         <button onClick={handleSave} disabled={saving}
-          style={{ width: "100%", marginTop: 8, padding: 13, borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          style={{ width: "100%", marginTop: 8, padding: 13, borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: b.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
           {saving ? "Salvando..." : "Salvar Perfil"}
         </button>
       </div>

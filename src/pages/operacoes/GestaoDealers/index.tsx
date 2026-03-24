@@ -1,11 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
-import { X, Eye, Pencil, MessageSquare, Upload, Trash2 } from "lucide-react";
-import { GiCardRandom } from "react-icons/gi";
+import { X, Eye, Pencil, MessageSquare, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
+import { GiCardRandom, GiShield, GiFemale, GiMale, GiCardPick, GiCardAceSpades, GiCrown } from "react-icons/gi";
+import OperadoraTag from "../../../components/OperadoraTag";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -16,9 +20,9 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
   cinza:    "#6b7280",
+  ouroEscuro: "#7c5e10",
+  ouroBorda: "#d4af37",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const GENERO_OPTS: { value: DealerGenero; label: string }[] = [
@@ -49,9 +53,33 @@ interface DealerObservacao {
   usuario_nome?: string;
 }
 
+function passaFiltroOperadora(d: Dealer, filtroOperadora: string): boolean {
+  if (filtroOperadora === "nenhuma") return !d.operadora_slug;
+  if (filtroOperadora !== "todas" && d.operadora_slug !== filtroOperadora) return false;
+  return true;
+}
+
+function normalizarBuscaTexto(s: string): string {
+  return s.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+}
+
+const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
+  feminino: <GiFemale size={15} aria-hidden />,
+  masculino: <GiMale size={15} aria-hidden />,
+};
+
+const ICONE_JOGO: Record<DealerJogo, ReactNode> = {
+  blackjack: <GiCardPick size={15} aria-hidden />,
+  roleta: <CircleDot size={15} aria-hidden strokeWidth={2.2} />,
+  baccarat: <GiCardAceSpades size={15} aria-hidden />,
+  mesa_vip: <GiCrown size={15} aria-hidden />,
+};
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoDealers() {
-  const { theme: t } = useApp();
+  const { theme: t, user, podeVerOperadora, escoposVisiveis } = useApp();
+  const brand = useDashboardBrand();
+  const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -61,51 +89,151 @@ export default function GestaoDealers() {
   const [modalEditar, setModalEditar] = useState<Dealer | null>(null);
   const [modalObs, setModalObs] = useState<Dealer | null>(null);
 
-  // Filtros
   const [filtroGenero, setFiltroGenero] = useState<string>("todos");
   const [filtroTurno, setFiltroTurno] = useState<string>("todos");
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [filtroJogos, setFiltroJogos] = useState<string>("todos");
+  const [buscaDealer, setBuscaDealer] = useState("");
 
   const carregar = useCallback(async () => {
     setLoading(true);
+    let qDealers = supabase.from("dealers").select("*").order("nickname");
+    if (user?.role === "operador" && operadoraSlugsForcado?.length) {
+      qDealers = qDealers.in("operadora_slug", operadoraSlugsForcado);
+    }
     const [dealersRes, operadorasRes] = await Promise.all([
-      supabase.from("dealers").select("*").order("nickname"),
-      supabase.from("operadoras").select("slug, nome").order("nome").eq("ativo", true),
+      qDealers,
+      supabase.from("operadoras").select("slug, nome, cor_primaria").order("nome").eq("ativo", true),
     ]);
     setDealers((dealersRes.data ?? []) as Dealer[]);
     setOperadoras((operadorasRes.data ?? []) as Operadora[]);
     setLoading(false);
-  }, []);
+  }, [user?.role, operadoraSlugsForcado]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // Filtrar dealers
-  const filtered = dealers.filter((d) => {
-    if (filtroGenero !== "todos" && d.genero !== filtroGenero) return false;
-    if (filtroTurno !== "todos" && d.turno !== filtroTurno) return false;
-    if (filtroOperadora === "nenhuma") {
-      if (d.operadora_slug) return false;
-    } else if (filtroOperadora !== "todas" && d.operadora_slug !== filtroOperadora) return false;
-    if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogo)) return false;
-    return true;
-  });
+  useEffect(() => {
+    if (user?.role === "operador" && operadoraSlugsForcado?.length) {
+      setFiltroOperadora(operadoraSlugsForcado[0]);
+    }
+  }, [user?.role, operadoraSlugsForcado]);
 
-  // Consolidados
-  const totalDealers = dealers.length;
+  const opcoesFiltroOperadora = useMemo(
+    () => operadoras.filter((o) => podeVerOperadora(o.slug)),
+    [operadoras, podeVerOperadora]
+  );
+
+  const dealersPorOperadora = useMemo(
+    () => dealers.filter((d) => passaFiltroOperadora(d, filtroOperadora)),
+    [dealers, filtroOperadora]
+  );
+
+  const filtered = useMemo(() => {
+    const q = normalizarBuscaTexto(buscaDealer);
+    return dealersPorOperadora.filter((d) => {
+      if (filtroGenero !== "todos" && d.genero !== filtroGenero) return false;
+      if (filtroTurno !== "todos" && d.turno !== filtroTurno) return false;
+      if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogo)) return false;
+      if (q) {
+        const nick = normalizarBuscaTexto(d.nickname ?? "");
+        const nome = normalizarBuscaTexto(d.nome_real ?? "");
+        if (!nick.includes(q) && !nome.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [dealersPorOperadora, filtroGenero, filtroTurno, filtroJogos, buscaDealer]);
+
+  const dealersContagemPrincipal = useMemo(
+    () => dealersPorOperadora.filter((d) => filtroTurno === "todos" || d.turno === filtroTurno),
+    [dealersPorOperadora, filtroTurno]
+  );
+  const totalDealersDestaque = dealersContagemPrincipal.length;
+
   const porTurno: Record<string, number> = { manha: 0, tarde: 0, noite: 0 };
   const porGenero: Record<string, number> = { feminino: 0, masculino: 0 };
   const porJogo: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0, mesa_vip: 0 };
-  dealers.forEach((d) => {
+  dealersPorOperadora.forEach((d) => {
     porTurno[d.turno] = (porTurno[d.turno] ?? 0) + 1;
     porGenero[d.genero] = (porGenero[d.genero] ?? 0) + 1;
     (d.jogos ?? []).forEach((j) => { porJogo[j] = (porJogo[j] ?? 0) + 1; });
   });
 
-  const selectStyle: React.CSSProperties = {
-    flex: 1, minWidth: 140, padding: "8px 12px", borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
-    color: t.text, fontSize: 12, fontFamily: FONT.body, cursor: "pointer", outline: "none",
+  const irTurnoAnterior = () => {
+    if (filtroTurno === "todos") {
+      setFiltroTurno(TURNO_OPTS[2].value);
+      return;
+    }
+    const i = TURNO_OPTS.findIndex((o) => o.value === filtroTurno);
+    const prev = i <= 0 ? 2 : i - 1;
+    setFiltroTurno(TURNO_OPTS[prev].value);
+  };
+
+  const irTurnoProximo = () => {
+    if (filtroTurno === "todos") {
+      setFiltroTurno(TURNO_OPTS[0].value);
+      return;
+    }
+    const i = TURNO_OPTS.findIndex((o) => o.value === filtroTurno);
+    const next = i < 0 || i >= 2 ? 0 : i + 1;
+    setFiltroTurno(TURNO_OPTS[next].value);
+  };
+
+  const labelTurnoCarrossel =
+    filtroTurno === "todos"
+      ? "Todos os turnos"
+      : (TURNO_OPTS.find((o) => o.value === filtroTurno)?.label ?? filtroTurno);
+
+  const podeCriarDealer =
+    perm.canCriarOk &&
+    (perm.canCriar !== "proprios" ||
+      escoposVisiveis.semRestricaoEscopo === true ||
+      (escoposVisiveis.operadorasVisiveis?.length ?? 0) > 0);
+
+  const podeEditarDealer = (d: Dealer) => {
+    if (!perm.canEditarOk) return false;
+    if (perm.canEditar !== "proprios") return true;
+    const slug = d.operadora_slug;
+    if (!slug) return false;
+    return podeVerOperadora(slug);
+  };
+
+  const operadoraTravadaModal =
+    user?.role === "operador" && operadoraSlugsForcado?.length === 1 ? operadoraSlugsForcado[0] : undefined;
+
+  const operadorasModal = useMemo(() => {
+    if (user?.role === "operador" && operadoraSlugsForcado?.length)
+      return operadoras.filter((o) => operadoraSlugsForcado.includes(o.slug));
+    return operadoras.filter((o) => podeVerOperadora(o.slug));
+  }, [user?.role, operadoraSlugsForcado, operadoras, podeVerOperadora]);
+
+  const selectOperadoraStyle: CSSProperties = {
+    padding: "6px 12px 6px 32px",
+    borderRadius: 10,
+    border: `1px solid ${filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? brand.accent : t.cardBorder}`,
+    background:
+      filtroOperadora !== "todas" && filtroOperadora !== "nenhuma"
+        ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxo}18`)
+        : (t.inputBg ?? t.cardBg),
+    color: filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? brand.accent : t.text,
+    fontSize: 13,
+    fontWeight: filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? 700 : 400,
+    fontFamily: FONT.body,
+    cursor: "pointer",
+    appearance: "none" as const,
+    outline: "none",
+  };
+
+  const btnNavTurnoStyle: CSSProperties = {
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent",
+    color: t.text,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   };
 
   if (perm.canView === "nao") {
@@ -117,16 +245,16 @@ export default function GestaoDealers() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
 
-      {/* ─── Header ─────────────────────────────────────────────────────────── */}
+      {/* ─── Header — primária ───────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <GiCardRandom size={14} color="#fff" />
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: brand.primaryIconBg, border: brand.primaryIconBorder, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: brand.primaryIconColor }}>
+            <GiCardRandom size={14} />
           </div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
               Gestão de Dealers
             </h1>
             <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13 }}>
@@ -134,11 +262,11 @@ export default function GestaoDealers() {
             </p>
           </div>
         </div>
-        {perm.canCriarOk && (
+        {podeCriarDealer && (
           <button
             onClick={() => setModalCriar(true)}
             style={{
-              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff", border: "none", borderRadius: 10,
               padding: "10px 18px", cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
@@ -149,65 +277,216 @@ export default function GestaoDealers() {
         )}
       </div>
 
-      {/* ─── Bloco 1: Filtros ─────────────────────────────────────────────────── */}
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "18px 20px", marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>Filtros</div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <select value={filtroGenero} onChange={(e) => setFiltroGenero(e.target.value)} style={selectStyle}>
-            <option value="todos">Todos os gêneros</option>
-            {[...GENERO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)} style={selectStyle}>
-            <option value="todos">Todos os turnos</option>
-            {[...TURNO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectStyle}>
-            <option value="todas">Todas as operadoras</option>
-            <option value="nenhuma">Nenhuma operadora</option>
-            {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => <option key={op.slug} value={op.slug}>{op.nome}</option>)}
-          </select>
-          <select value={filtroJogos} onChange={(e) => setFiltroJogos(e.target.value)} style={selectStyle}>
-            <option value="todos">Todos os jogos</option>
-            {[...JOGOS_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
+      {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" aria-label="Turno anterior" onClick={irTurnoAnterior} style={btnNavTurnoStyle}>
+              <ChevronLeft size={14} />
+            </button>
+            <span
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: t.text,
+                fontFamily: FONT.body,
+                minWidth: 180,
+                textAlign: "center",
+              }}
+            >
+              {labelTurnoCarrossel}
+            </span>
+            <button type="button" aria-label="Próximo turno" onClick={irTurnoProximo} style={btnNavTurnoStyle}>
+              <ChevronRight size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setFiltroTurno("todos")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 14px",
+                borderRadius: 999,
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                border:
+                  filtroTurno === "todos"
+                    ? `1px solid ${brand.accent}`
+                    : `1px solid ${t.cardBorder}`,
+                background:
+                  filtroTurno === "todos"
+                    ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)")
+                    : "transparent",
+                color: filtroTurno === "todos" ? brand.accent : t.textMuted,
+                fontWeight: filtroTurno === "todos" ? 700 : 400,
+                transition: "all 0.15s",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+              }}
+            >
+              Todos os turnos
+            </button>
+            {showFiltroOperadora && (
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                  <GiShield size={15} />
+                </span>
+                <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectOperadoraStyle}>
+                  <option value="todas">Todas as operadoras</option>
+                  <option value="nenhuma">Nenhuma operadora</option>
+                  {[...opcoesFiltroOperadora].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
+                    <option key={op.slug} value={op.slug}>{op.nome}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ─── Bloco 2: Quadros consolidados ───────────────────────────────────── */}
+      {/* ─── Bloco consolidado: metade Dealers + metade filtros / busca ───────── */}
       {!loading && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 24 }}>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.roxoVivo}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Dealers</div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: BRAND.roxoVivo, fontFamily: FONT_TITLE, lineHeight: 1 }}>{totalDealers}</div>
-          </div>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.azul}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Turnos</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-              {TURNO_OPTS.map((o) => (
-                <span key={o.value} style={{ fontSize: 12, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body }}>
-                  {o.label}: {porTurno[o.value] ?? 0}
-                </span>
-              ))}
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "stretch",
+          gap: "20px 28px",
+          background: brand.blockBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: 16,
+          padding: "18px 20px",
+          marginBottom: 24,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+        }}>
+          <div style={{
+            flex: "1 1 220px",
+            maxWidth: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            minHeight: 140,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 12 }}>
+              Dealers
+            </div>
+            <div style={{ fontSize: 56, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>
+              {totalDealersDestaque}
             </div>
           </div>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.verde}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Gênero</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-              {GENERO_OPTS.map((o) => (
-                <span key={o.value} style={{ fontSize: 12, fontWeight: 700, color: BRAND.verde, fontFamily: FONT.body }}>
-                  {o.label}: {porGenero[o.value] ?? 0}
-                </span>
-              ))}
+          <div style={{ flex: "2 1 320px", minWidth: 0, display: "flex", flexDirection: "column", gap: 14, justifyContent: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <span style={{
+                flexShrink: 0,
+                minWidth: 76,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: t.textMuted,
+                fontFamily: FONT.body,
+              }}>
+                Gêneros
+              </span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", flex: 1, minWidth: 0 }}>
+                {GENERO_OPTS.map((o) => {
+                  const ativo = filtroGenero === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setFiltroGenero(ativo ? "todos" : o.value)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 7,
+                        padding: "7px 12px",
+                        borderRadius: 8,
+                        border: `1.5px solid ${ativo ? `${BRAND.verde}55` : t.cardBorder}`,
+                        background: ativo ? `${BRAND.verde}18` : (t.inputBg ?? "transparent"),
+                        color: ativo ? BRAND.verde : t.text,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {ICONE_GENERO[o.value]}
+                      <span>{o.label} · {porGenero[o.value] ?? 0}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-          <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderLeft: `4px solid ${BRAND.amarelo}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>Jogos</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-              {JOGOS_OPTS.map((o) => (
-                <span key={o.value} style={{ fontSize: 12, fontWeight: 700, color: BRAND.amarelo, fontFamily: FONT.body }}>
-                  {o.label}: {porJogo[o.value] ?? 0}
-                </span>
-              ))}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <span style={{
+                flexShrink: 0,
+                minWidth: 76,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: t.textMuted,
+                fontFamily: FONT.body,
+              }}>
+                Jogos
+              </span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", flex: 1, minWidth: 0 }}>
+                {JOGOS_OPTS.map((o) => {
+                  const ativo = filtroJogos === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setFiltroJogos(ativo ? "todos" : o.value)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 7,
+                        padding: "7px 12px",
+                        borderRadius: 8,
+                        border: `1.5px solid ${ativo ? `${BRAND.amarelo}66` : t.cardBorder}`,
+                        background: ativo ? `${BRAND.amarelo}20` : (t.inputBg ?? "transparent"),
+                        color: ativo ? BRAND.amarelo : t.text,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {ICONE_JOGO[o.value]}
+                      <span>{o.label} · {porJogo[o.value] ?? 0}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{ position: "relative", width: "100%" }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                <Search size={16} strokeWidth={2} />
+              </span>
+              <input
+                type="search"
+                value={buscaDealer}
+                onChange={(e) => setBuscaDealer(e.target.value)}
+                placeholder="Buscar por nome ou nickname..."
+                aria-label="Buscar dealers por nome ou nickname"
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "10px 14px 10px 40px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg ?? t.cardBg,
+                  color: t.text,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  outline: "none",
+                }}
+              />
             </div>
           </div>
         </div>
@@ -215,31 +494,48 @@ export default function GestaoDealers() {
 
       {/* ─── Bloco 3: Elenco completo ────────────────────────────────────────── */}
       <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}>
-        {filtered.length === 1 ? "1 dealer" : `${filtered.length} dealers`}
+        <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> {filtered.length === 1 ? "dealer" : "dealers"}
       </div>
       {loading ? (
         <div style={{ padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum dealer encontrado.</div>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum dealer encontrado.</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 20 }}>
           {filtered.map((d) => (
             <DealerCard
               key={d.id}
               dealer={d}
               operadoras={operadoras}
+              brand={brand}
               onVer={() => setModalVer(d)}
               onEditar={() => setModalEditar(d)}
               onObservacoes={() => setModalObs(d)}
-              canEditar={perm.canEditarOk}
+              podeEditar={podeEditarDealer(d)}
             />
           ))}
         </div>
       )}
 
       {/* Modais */}
-      {modalCriar && <ModalDealer operadoras={operadoras} editando={null} onClose={() => setModalCriar(false)} onSalvo={() => { setModalCriar(false); carregar(); }} />}
-      {modalEditar && <ModalDealer operadoras={operadoras} editando={modalEditar} onClose={() => setModalEditar(null)} onSalvo={() => { setModalEditar(null); carregar(); }} />}
+      {modalCriar && (
+        <ModalDealer
+          operadoras={operadorasModal}
+          operadoraTravada={operadoraTravadaModal}
+          editando={null}
+          onClose={() => setModalCriar(false)}
+          onSalvo={() => { setModalCriar(false); carregar(); }}
+        />
+      )}
+      {modalEditar && (
+        <ModalDealer
+          operadoras={operadorasModal}
+          operadoraTravada={operadoraTravadaModal}
+          editando={modalEditar}
+          onClose={() => setModalEditar(null)}
+          onSalvo={() => { setModalEditar(null); carregar(); }}
+        />
+      )}
       {modalVer && <ModalVer dealer={modalVer} operadoras={operadoras} onClose={() => setModalVer(null)} />}
       {modalObs && <ModalObservacoes dealer={modalObs} onClose={() => setModalObs(null)} />}
     </div>
@@ -250,25 +546,27 @@ export default function GestaoDealers() {
 function DealerCard({
   dealer,
   operadoras,
+  brand,
   onVer,
   onEditar,
   onObservacoes,
-  canEditar,
+  podeEditar,
 }: {
   dealer: Dealer;
   operadoras: Operadora[];
+  brand: ReturnType<typeof useDashboardBrand>;
   onVer: () => void;
   onEditar: () => void;
   onObservacoes: () => void;
-  canEditar: boolean;
+  podeEditar: boolean;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const fotoUrl = (dealer.fotos ?? [])[0];
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
 
   return (
     <div style={{
-      background: t.cardBg,
+      background: brand.blockBg,
       border: `1px solid ${t.cardBorder}`,
       borderRadius: 18,
       overflow: "hidden",
@@ -313,16 +611,48 @@ function DealerCard({
         <p style={{ margin: "4px 0 10px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
           {dealer.nome_real}
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-          {(dealer.jogos ?? []).map((j) => (
-            <span key={j} style={{
-              background: `${BRAND.vermelho}22`, border: `1px solid ${BRAND.vermelho}66`,
-              color: BRAND.vermelho, padding: "3px 10px", borderRadius: 20,
-              fontSize: 11, fontWeight: 700, fontFamily: FONT.body, textTransform: "uppercase",
-            }}>
-              {JOGOS_OPTS.find((o) => o.value === j)?.label ?? j}
-            </span>
-          ))}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12, alignItems: "center" }}>
+          {(dealer.jogos ?? []).map((j) => {
+            const isMesaVip = j === "mesa_vip";
+            return (
+              <span
+                key={j}
+                style={
+                  isMesaVip
+                    ? {
+                        background: isDark
+                          ? "linear-gradient(135deg, rgba(251,191,36,0.22), rgba(180,83,9,0.18))"
+                          : "linear-gradient(135deg, rgba(253,230,138,0.55), rgba(251,191,36,0.28))",
+                        border: `1px solid ${isDark ? "#eab308" : BRAND.ouroBorda}`,
+                        boxShadow: isDark ? "0 0 0 1px rgba(251,191,36,0.12) inset" : "0 1px 2px rgba(180,83,9,0.12)",
+                        color: isDark ? "#fde68a" : BRAND.ouroEscuro,
+                        padding: "3px 10px",
+                        borderRadius: 20,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        fontFamily: FONT.body,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.03em",
+                        flexShrink: 0,
+                      }
+                    : {
+                        background: `${BRAND.vermelho}22`,
+                        border: `1px solid ${BRAND.vermelho}66`,
+                        color: BRAND.vermelho,
+                        padding: "3px 10px",
+                        borderRadius: 20,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        fontFamily: FONT.body,
+                        textTransform: "uppercase",
+                        flexShrink: 0,
+                      }
+                }
+              >
+                {JOGOS_OPTS.find((o) => o.value === j)?.label ?? j}
+              </span>
+            );
+          })}
         </div>
         {dealer.perfil_influencer && (
           <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.4, marginBottom: 12, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
@@ -334,25 +664,21 @@ function DealerCard({
             {GENERO_OPTS.find((o) => o.value === dealer.genero)?.label ?? dealer.genero}
           </span>
           {op && (
-            <span style={{ background: `${BRAND.azul}22`, color: BRAND.azul, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, fontFamily: FONT.body }}>
-              {op.nome}
-            </span>
+            <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} dark={isDark ?? false} />
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={onVer} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
             <Eye size={13} /> Ver
           </button>
-          {canEditar && (
-            <>
-              <button onClick={onEditar} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                <Pencil size={13} /> Editar
-              </button>
-              <button onClick={onObservacoes} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                <MessageSquare size={13} /> Observações
-              </button>
-            </>
+          {podeEditar && (
+            <button onClick={onEditar} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+              <Pencil size={13} /> Editar
+            </button>
           )}
+          <button onClick={onObservacoes} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+            <MessageSquare size={13} /> Observações
+          </button>
         </div>
       </div>
     </div>
@@ -361,7 +687,7 @@ function DealerCard({
 
 // ─── Modal Ver ────────────────────────────────────────────────────────────────
 function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras: Operadora[]; onClose: () => void }) {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
   const fotoUrl = (dealer.fotos ?? [])[0];
 
@@ -385,7 +711,7 @@ function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras:
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Gênero</span><br /><span style={{ fontSize: 14, color: t.text }}>{GENERO_OPTS.find((o) => o.value === dealer.genero)?.label}</span></div>
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Turno</span><br /><span style={{ fontSize: 14, color: t.text }}>{TURNO_OPTS.find((o) => o.value === dealer.turno)?.label}</span></div>
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Jogos</span><br /><span style={{ fontSize: 14, color: t.text }}>{(dealer.jogos ?? []).map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label).join(", ") || "—"}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br /><span style={{ fontSize: 14, color: t.text }}>{op?.nome ?? "Nenhuma"}</span></div>
+          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br />{op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} dark={isDark ?? false} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}</div>
           {dealer.perfil_influencer && (
             <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Perfil do Influencer</span><br /><span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span></div>
           )}
@@ -408,18 +734,29 @@ function ModalObservacoes({ dealer, onClose }: { dealer: Dealer; onClose: () => 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("dealer_observacoes").select("id, dealer_id, usuario_id, texto, created_at").eq("dealer_id", dealer.id).order("created_at", { ascending: false }).then(({ data }) => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const { data } = await supabase
+        .from("dealer_observacoes")
+        .select("id, dealer_id, usuario_id, texto, created_at")
+        .eq("dealer_id", dealer.id)
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
       const lista = (data ?? []) as DealerObservacao[];
       const ids = [...new Set(lista.map((a) => a.usuario_id).filter(Boolean))] as string[];
       if (ids.length > 0) {
-        supabase.from("profiles").select("id, name").in("id", ids).then(({ data: profs }) => {
-          const map: Record<string, string> = {};
-          (profs ?? []).forEach((p: { id: string; name: string }) => { map[p.id] = p.name ?? p.id; });
-          setObs(lista.map((a) => ({ ...a, usuario_nome: a.usuario_id ? map[a.usuario_id] : "—" })));
-        });
-      } else setObs(lista);
-      setLoading(false);
-    });
+        const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+        if (cancelled) return;
+        const map: Record<string, string> = {};
+        (profs ?? []).forEach((p: { id: string; name: string }) => { map[p.id] = p.name ?? p.id; });
+        setObs(lista.map((a) => ({ ...a, usuario_nome: a.usuario_id ? map[a.usuario_id] ?? "—" : "—" })));
+      } else {
+        setObs(lista);
+      }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, [dealer.id]);
 
   const adicionar = async () => {
@@ -463,11 +800,14 @@ function ModalObservacoes({ dealer, onClose }: { dealer: Dealer; onClose: () => 
 // ─── Modal Criar/Editar Dealer ─────────────────────────────────────────────────
 function ModalDealer({
   operadoras,
+  operadoraTravada,
   editando,
   onClose,
   onSalvo,
 }: {
   operadoras: Operadora[];
+  /** Operador com uma única operadora no escopo: select travado neste slug */
+  operadoraTravada?: string;
   editando: Dealer | null;
   onClose: () => void;
   onSalvo: () => void;
@@ -479,7 +819,9 @@ function ModalDealer({
   const [genero, setGenero] = useState<DealerGenero>(editando?.genero ?? "feminino");
   const [turno, setTurno] = useState<DealerTurno>(editando?.turno ?? "noite");
   const [jogos, setJogos] = useState<DealerJogo[]>(editando?.jogos ?? []);
-  const [operadoraSlug, setOperadoraSlug] = useState<string>(editando?.operadora_slug ?? "");
+  const [operadoraSlug, setOperadoraSlug] = useState<string>(
+    editando?.operadora_slug ?? operadoraTravada ?? ""
+  );
   const [perfilInfluencer, setPerfilInfluencer] = useState(editando?.perfil_influencer ?? "");
   const [status, setStatus] = useState<"aprovado" | "pendente">(editando?.status ?? "aprovado");
   const [vip, setVip] = useState(editando?.vip ?? false);
@@ -487,11 +829,15 @@ function ModalDealer({
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
 
+  useEffect(() => {
+    if (operadoraTravada) setOperadoraSlug(operadoraTravada);
+  }, [operadoraTravada]);
+
   const toggleJogo = (j: DealerJogo) => {
     setJogos((prev) => (prev.includes(j) ? prev.filter((x) => x !== j) : [...prev, j]));
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
     setUploading(true);
@@ -535,7 +881,7 @@ function ModalDealer({
         genero,
         turno,
         jogos,
-        operadora_slug: operadoraSlug || null,
+        operadora_slug: (operadoraTravada ?? operadoraSlug) || null,
         perfil_influencer: perfilInfluencer.trim() || null,
         status,
         vip,
@@ -555,12 +901,12 @@ function ModalDealer({
     }
   };
 
-  const inputStyle: React.CSSProperties = {
+  const inputStyle: CSSProperties = {
     width: "100%", background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: 10, padding: "10px 14px", color: t.text, fontFamily: FONT.body, fontSize: 14, boxSizing: "border-box", outline: "none",
   };
-  const labelStyle: React.CSSProperties = { display: "block", fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "1px" };
-  const fieldStyle: React.CSSProperties = { marginBottom: 18 };
+  const labelStyle: CSSProperties = { display: "block", fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "1px" };
+  const fieldStyle: CSSProperties = { marginBottom: 18 };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 24 }}
@@ -642,10 +988,18 @@ function ModalDealer({
 
         <div style={fieldStyle}>
           <label style={labelStyle}>Operadora</label>
-          <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={inputStyle}>
-            <option value="">Nenhuma</option>
-            {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => <option key={op.slug} value={op.slug}>{op.nome}</option>)}
-          </select>
+          {operadoraTravada ? (
+            <div style={{ ...inputStyle, display: "flex", alignItems: "center", opacity: 0.95 }}>
+              {operadoras.find((o) => o.slug === operadoraTravada)?.nome ?? operadoraTravada}
+            </div>
+          ) : (
+            <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={inputStyle}>
+              <option value="">Nenhuma</option>
+              {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
+                <option key={op.slug} value={op.slug}>{op.nome}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div style={fieldStyle}>

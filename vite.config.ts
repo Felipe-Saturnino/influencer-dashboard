@@ -7,6 +7,19 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom"],
+            "vendor-supabase": ["@supabase/supabase-js"],
+            "vendor-charts": ["recharts"],
+            "vendor-icons": ["react-icons", "lucide-react"],
+          },
+        },
+      },
+      chunkSizeWarningLimit: 550,
+    },
     server: {
       proxy: {
         "/api/criar-usuario": {

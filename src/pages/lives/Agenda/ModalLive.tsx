@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, Plataforma } from "../../../types";
 import { X } from "lucide-react";
@@ -18,8 +19,6 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── PLATAFORMAS ──────────────────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK, PLAT_LINK_KEY } from "../../../constants/platforms";

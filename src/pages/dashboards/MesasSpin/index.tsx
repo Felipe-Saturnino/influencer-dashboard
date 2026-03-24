@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { ChevronLeft, ChevronRight, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
@@ -10,6 +12,7 @@ import {
   GiTrophy,
   GiPerson,
   GiCalendar,
+  GiShield,
 } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -23,8 +26,6 @@ const BRAND = {
   amarelo:   "#f59e0b",
   rosa:      "#ec4899",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface DailyRow {
@@ -112,6 +113,51 @@ function fmtPct(v: number | null) {
 
 const KPIS_ZERO = { bets: 0, turnover: 0, ggr: 0, uap: 0, margin_pct: 0, arpu: 0 };
 
+// ─── SELECT COM ÍCONE (padrão Dashboard Influencer) ───────────────────────────
+function SelectComIcone({
+  icon, value, onChange, children, t,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+  t: any;
+}) {
+  return (
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+      <span style={{
+        position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+        pointerEvents: "none", display: "flex", alignItems: "center",
+        color: t.textMuted, zIndex: 1,
+      }}>
+        {icon}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          padding: "6px 28px 6px 30px",
+          borderRadius: 999,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.inputBg ?? t.cardBg,
+          color: t.text,
+          fontSize: 13,
+          fontFamily: FONT.body,
+          cursor: "pointer",
+          outline: "none",
+          appearance: "none" as const,
+        }}
+      >
+        {children}
+      </select>
+      <span style={{
+        position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+        pointerEvents: "none", color: t.textMuted, fontSize: 10, lineHeight: 1,
+      }}>▾</span>
+    </div>
+  );
+}
+
 // ─── BADGE MARGEM ─────────────────────────────────────────────────────────────
 function MarginBadge({ value }: { value: number | null }) {
   const { theme: t } = useApp();
@@ -132,36 +178,43 @@ function MarginBadge({ value }: { value: number | null }) {
 
 // ─── KPI CARD ─────────────────────────────────────────────────────────────────
 function KpiCard({
-  label, value, icon, accentColor,
+  label, value, icon, accentVar, accentColor,
   atual, anterior, isBRL, isPct, isHistorico,
 }: {
-  label: string; value: string; icon: React.ReactNode; accentColor: string;
+  label: string; value: string; icon: React.ReactNode; accentVar?: string; accentColor: string;
   atual: number; anterior: number; isBRL?: boolean; isPct?: boolean; isHistorico?: boolean;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const diff = atual - anterior;
   const pct = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
   const up = diff >= 0;
   const neutral = Math.abs(diff) < 0.001;
 
+  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
+  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
+  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentColor}18`;
+  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentColor}35`;
+  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
+
   return (
     <div style={{
       borderRadius: 14,
       border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg,
+      background: brand.blockBg,
       overflow: "hidden",
       transition: "box-shadow 0.2s",
     }}>
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
+      <div style={{ height: 3, background: barBg }} />
       <div style={{ padding: "14px 16px" }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{
             width: 30, height: 30, borderRadius: 8,
-            background: `${accentColor}18`,
-            border: `1px solid ${accentColor}35`,
+            background: iconBoxBg,
+            border: iconBoxBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: accentColor,
+            color: iconBoxColor,
           }}>
             {icon}
           </span>
@@ -211,19 +264,20 @@ function KpiCard({
 // ─── SECTION HEADER ───────────────────────────────────────────────────────────
 function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: "rgba(74,32,130,0.18)",
-        border: "1px solid rgba(74,32,130,0.30)",
+        background: brand.primaryIconBg,
+        border: brand.primaryIconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: BRAND.ciano,
+        color: brand.primaryIconColor,
       }}>
         {icon}
       </span>
       <span style={{
-        fontSize: 14, fontWeight: 800, color: t.text,
+        fontSize: 14, fontWeight: 800, color: brand.primary,
         fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase",
       }}>
         {title}
@@ -382,9 +436,11 @@ export default function MesasSpin() {
     }));
   }, [historico, dailyData, monthlyData]);
 
+  const brand = useDashboardBrand();
+
   // ── Estilos base ─────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
-    background: t.cardBg,
+    background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -416,14 +472,6 @@ export default function MesasSpin() {
     display: "flex", alignItems: "center", justifyContent: "center",
   };
 
-  const selectStyle: React.CSSProperties = {
-    padding: "5px 12px", borderRadius: 8,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.cardBg, color: t.text,
-    fontFamily: FONT.body, fontSize: 13, cursor: "pointer",
-    outline: "none",
-  };
-
   // ── Permissão ────────────────────────────────────────────────────────────────
   if (perm.canView === "nao") {
     return (
@@ -437,81 +485,73 @@ export default function MesasSpin() {
     <div style={{ padding: "20px 24px 64px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          BLOCO 1 — FILTROS
+          BLOCO 1 — FILTROS (primária transparente)
       ══════════════════════════════════════════════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
-          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg, padding: "12px 20px",
+          borderRadius: 14, border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
+          padding: "12px 20px",
         }}>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            gap: 12, flexWrap: "wrap",
-          }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
-            {/* Carrossel de meses */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button
-                style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.3 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
-                onClick={irMesAnterior}
-                disabled={historico || isPrimeiro}
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span style={{
-                fontSize: 17, fontWeight: 800, color: t.text,
-                fontFamily: FONT.body, minWidth: 190, textAlign: "center",
-              }}>
-                {historico ? "Todo o período" : mesSelecionado?.label}
+            {/* Navegação de mês — centralizada */}
+            <button
+              style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              onClick={irMesAnterior}
+              disabled={historico || isPrimeiro}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span style={{
+              fontSize: 18, fontWeight: 800, color: t.text,
+              fontFamily: FONT.body, minWidth: 180, textAlign: "center",
+            }}>
+              {historico ? "Todo o período" : mesSelecionado?.label}
+            </span>
+            <button
+              style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              onClick={irMesProximo}
+              disabled={historico || isUltimo}
+            >
+              <ChevronRight size={14} />
+            </button>
+
+            {/* Botão Histórico — padrão Overview */}
+            <button
+              onClick={toggleHistorico}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+                fontFamily: FONT.body, fontSize: 13,
+                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+                background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
+                color: historico ? brand.accent : t.textMuted,
+                fontWeight: historico ? 700 : 400,
+                transition: "all 0.15s",
+              }}
+            >
+              <GiCalendar size={15} /> Histórico
+            </button>
+
+            {/* Filtro Operadora — SelectComIcone (padrão Dashboard Influencer) */}
+            <SelectComIcone
+              icon={<GiShield size={15} />}
+              value={operadoraSel}
+              onChange={setOperadoraSel}
+              t={t}
+            >
+              <option value="todas">Todas as operadoras</option>
+              {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
+                <option key={op.slug} value={op.slug}>{op.nome}</option>
+              ))}
+            </SelectComIcone>
+
+            {loading && (
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
+                <Clock size={12} /> Carregando...
               </span>
-              <button
-                style={{ ...btnNav, opacity: historico || isUltimo ? 0.3 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
-                onClick={irMesProximo}
-                disabled={historico || isUltimo}
-              >
-                <ChevronRight size={14} />
-              </button>
-
-              {/* Botão Histórico */}
-              <button
-                onClick={toggleHistorico}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-                  fontFamily: FONT.body, fontSize: 13,
-                  border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-                  background: historico ? `rgba(124,58,237,0.15)` : "transparent",
-                  color: historico ? BRAND.roxoVivo : t.textMuted,
-                  fontWeight: historico ? 700 : 400,
-                  transition: "all 0.15s",
-                }}
-              >
-                <GiCalendar size={15} /> Histórico
-              </button>
-            </div>
-
-            {/* Filtro operadora */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                Operadora:
-              </span>
-              <select
-                value={operadoraSel}
-                onChange={(e) => setOperadoraSel(e.target.value)}
-                style={selectStyle}
-              >
-                <option value="todas">Todas</option>
-                {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
-                  <option key={op.slug} value={op.slug}>{op.nome}</option>
-                ))}
-              </select>
-
-              {loading && (
-                <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                  <Clock size={12} /> Carregando...
-                </span>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -530,7 +570,7 @@ export default function MesasSpin() {
             label="Apostas"
             value={kpisAtual.bets.toLocaleString("pt-BR")}
             icon={<GiTrophy size={16} />}
-            accentColor={BRAND.ciano}
+            accentVar="--brand-extra1" accentColor={BRAND.ciano}
             atual={kpisAtual.bets}
             anterior={kpisAnt.bets}
             isHistorico={historico}
@@ -539,7 +579,7 @@ export default function MesasSpin() {
             label="Turnover"
             value={fmtBRLCompact(kpisAtual.turnover)}
             icon={<GiCoins size={16} />}
-            accentColor={BRAND.azul}
+            accentVar="--brand-extra2" accentColor={BRAND.azul}
             atual={kpisAtual.turnover}
             anterior={kpisAnt.turnover}
             isBRL
@@ -549,7 +589,7 @@ export default function MesasSpin() {
             label="GGR"
             value={fmtBRLCompact(kpisAtual.ggr)}
             icon={<GiPokerHand size={16} />}
-            accentColor={BRAND.roxoVivo}
+            accentVar="--brand-extra1" accentColor={BRAND.roxoVivo}
             atual={kpisAtual.ggr}
             anterior={kpisAnt.ggr}
             isBRL
@@ -559,7 +599,7 @@ export default function MesasSpin() {
             label="Margem"
             value={fmtPct(kpisAtual.margin_pct)}
             icon={<TrendingUp size={16} />}
-            accentColor={BRAND.amarelo}
+            accentVar="--brand-extra1" accentColor={BRAND.amarelo}
             atual={kpisAtual.margin_pct}
             anterior={kpisAnt.margin_pct}
             isPct
@@ -569,7 +609,7 @@ export default function MesasSpin() {
             label="UAP"
             value={kpisAtual.uap.toLocaleString("pt-BR")}
             icon={<GiPerson size={16} />}
-            accentColor={BRAND.verde}
+            accentVar="--brand-extra3" accentColor={BRAND.verde}
             atual={kpisAtual.uap}
             anterior={kpisAnt.uap}
             isHistorico={historico}
@@ -578,7 +618,7 @@ export default function MesasSpin() {
             label="ARPU"
             value={fmtBRL(kpisAtual.arpu)}
             icon={<GiCoins size={14} />}
-            accentColor={BRAND.rosa}
+            accentVar="--brand-extra4" accentColor={BRAND.rosa}
             atual={kpisAtual.arpu}
             anterior={kpisAnt.arpu}
             isBRL

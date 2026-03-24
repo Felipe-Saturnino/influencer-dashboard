@@ -14,33 +14,46 @@ const ICON_COLOR_INACTIVE = "#c4b5d4";
 // Cor do ícone ativo — branco puro, máximo contraste sobre gradiente
 const ICON_COLOR_ACTIVE    = "#ffffff";
 
+const LOGO_DEFAULT = "/Logo Spin Gaming White.png";
+
 export default function Sidebar({ activePage, onNavigate }: Props) {
-  const { theme: t, permissions } = useApp();
+  const { theme: t, permissions, operadoraBrand } = useApp();
+  const logoUrl = operadoraBrand?.logo_url || LOGO_DEFAULT;
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    Dashboards: true, Lives: true, "Operações": true, Plataforma: true,
+    Dashboards: true, Lives: true, Operações: true, Conteúdo: true, Plataforma: true,
   });
 
   const btnBase: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: "10px",
     width: "100%", padding: "11px 14px", borderRadius: "12px", border: "none",
     cursor: "pointer", fontSize: "13px", fontWeight: 500, textAlign: "left",
-    background: "transparent", color: "#e5dce1", fontFamily: FONT.body,
+    background: "transparent", color: "#e5dce1",
+    fontFamily: "var(--brand-fontFamily, 'Inter', sans-serif)",
   };
+
+  const sidebarBg = operadoraBrand?.cor_background ?? t.sidebar;
 
   return (
     <aside style={{
       width: "240px", height: "100vh", flexShrink: 0,
       position: "fixed", top: 0, left: 0,
-      background: t.sidebar, display: "flex", flexDirection: "column",
+      background: sidebarBg, display: "flex", flexDirection: "column",
       padding: "0px 16px 24px", borderRight: `1px solid ${t.sidebarBorder}`,
       boxSizing: "border-box", zIndex: 100,
     }}>
-      {/* LOGO */}
-      <div style={{ marginBottom: "4px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+      {/* LOGO — operador vê logo da operadora; demais veem Spin Gaming. Regra: mantém dentro do esquadro */}
+      <div style={{
+        marginBottom: 16, paddingTop: 12, display: "flex", justifyContent: "center", alignItems: "center",
+        flexShrink: 0, width: "100%", maxHeight: 64, overflow: "hidden",
+      }}>
         <img
-          src="/Logo Spin Gaming White.png"
-          alt="Spin Gaming"
-          style={{ height: "96px", objectFit: "contain", display: "block" }}
+          src={logoUrl}
+          alt={operadoraBrand ? "Operadora" : "Spin Gaming"}
+          style={{
+            maxWidth: "100%", maxHeight: 64, width: "auto", height: "auto",
+            objectFit: "contain", display: "block",
+          }}
+          onError={(e) => { (e.target as HTMLImageElement).src = LOGO_DEFAULT; }}
         />
       </div>
 
@@ -108,10 +121,10 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
                       style={{
                         ...btnBase,
                         background: active
-                          ? `linear-gradient(135deg, ${BASE_COLORS.purple}cc, ${BASE_COLORS.blue}cc)`
+                          ? "linear-gradient(135deg, color-mix(in srgb, var(--brand-primary) 80%, transparent), color-mix(in srgb, var(--brand-secondary) 80%, transparent))"
                           : "transparent",
                         color:     active ? "white" : "#e5dce1",
-                        boxShadow: active ? `0 4px 16px ${BASE_COLORS.purple}44` : "none",
+                        boxShadow: active ? "0 4px 16px color-mix(in srgb, var(--brand-primary) 27%, transparent)" : "none",
                       }}
                     >
                       <Icon size={15} color={iconColor} />

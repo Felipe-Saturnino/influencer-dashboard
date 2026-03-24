@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
@@ -21,8 +23,6 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK } from "../../../constants/platforms";
@@ -56,7 +56,8 @@ function fmtData(iso: string): string {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Resultados() {
   const { theme: t, isDark } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const brand = useDashboardBrand();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("resultados");
 
   const [lives,          setLives]          = useState<Live[]>([]);
@@ -79,13 +80,9 @@ export default function Resultados() {
 
   async function loadData() {
     setLoading(true);
-    const { data: livesData } = await supabase
-      .from("lives")
-      .select("*, profiles!lives_influencer_id_fkey(name)")
-      .lt("data", todayISO)
-      .eq("status", "agendada")
-      .order("data", { ascending: false })
-      .order("horario", { ascending: true });
+    let q = supabase.from("lives").select("*, profiles!lives_influencer_id_fkey(name)").lt("data", todayISO).eq("status", "agendada").order("data", { ascending: false }).order("horario", { ascending: true });
+    if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+    const { data: livesData } = await q;
 
     if (livesData) {
       const mapped = livesData.map((l: { profiles?: { name: string }; [k: string]: unknown }) => ({ ...l, influencer_name: l.profiles?.name })) as Live[];
@@ -116,7 +113,7 @@ export default function Resultados() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [podeVerInfluencer]);
+  useEffect(() => { loadData(); }, [podeVerInfluencer, operadoraSlugsForcado]);
 
   useEffect(() => {
     supabase.from("profiles").select("id, name").eq("role", "influencer")
@@ -132,10 +129,12 @@ export default function Resultados() {
     let out = lives;
     if (filterInfluencers.length > 0)
       out = out.filter((l) => filterInfluencers.includes(l.influencer_id));
-    if (filterOperadora && filterOperadora !== "todas")
+    if (operadoraSlugsForcado?.length)
+      out = out.filter((l) => l.operadora_slug && operadoraSlugsForcado.includes(l.operadora_slug));
+    else if (filterOperadora && filterOperadora !== "todas")
       out = out.filter((l) => l.operadora_slug === filterOperadora);
     return out;
-  }, [lives, filterInfluencers, filterOperadora]);
+  }, [lives, filterInfluencers, filterOperadora, operadoraSlugsForcado]);
 
   // ── LiveCard ─────────────────────────────────────────────────────────────────
   function LiveCard({ live }: { live: Live }) {
@@ -144,7 +143,7 @@ export default function Resultados() {
 
     return (
       <div style={{
-        background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+        background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
         borderRadius: 16, padding: 20, marginBottom: 12,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
@@ -199,7 +198,7 @@ export default function Resultados() {
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "8px 16px", borderRadius: 10, border: "none",
                 cursor: "pointer",
-                background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                 color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
               }}
             >
@@ -281,14 +280,14 @@ export default function Resultados() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{
                 width: 28, height: 28, borderRadius: 8,
-                background: "rgba(74,32,130,0.18)",
-                border: "1px solid rgba(74,32,130,0.30)",
+                background: brand.primaryIconBg,
+                border: brand.primaryIconBorder,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: BRAND.ciano,
+                color: brand.primaryIconColor,
               }}>
                 <GiCheckMark size={13} />
               </span>
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
                 Validar Live
               </h2>
             </div>
@@ -416,7 +415,7 @@ export default function Resultados() {
               width: "100%", padding: 13, borderRadius: 10, border: "none",
               cursor: saving ? "not-allowed" : "pointer",
               opacity: saving ? 0.7 : 1,
-              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             }}
@@ -439,21 +438,21 @@ export default function Resultados() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
 
-      {/* ── HEADER — padrão NHD Bold + ícone container ── */}
+      {/* ── HEADER — cor primária ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
         <span style={{
           width: 32, height: 32, borderRadius: 9,
-          background: "rgba(74,32,130,0.18)",
-          border: "1px solid rgba(74,32,130,0.30)",
+          background: brand.primaryIconBg,
+          border: brand.primaryIconBorder,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: BRAND.ciano, flexShrink: 0,
+          color: brand.primaryIconColor, flexShrink: 0,
         }}>
           <GiNotebook size={16} />
         </span>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Resultado de Lives
           </h1>
           <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
@@ -462,42 +461,51 @@ export default function Resultados() {
         </div>
       </div>
 
-      {/* ── FILTROS ── */}
+      {/* ── FILTROS (padrão Dashboards) ── */}
       {(showFiltroInfluencer || showFiltroOperadora) && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 16 }}>
-          {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
-            <InfluencerMultiSelect
-              selected={filterInfluencers}
-              onChange={setFilterInfluencers}
-              influencers={influencerListVisiveis}
-              t={t}
-            />
-          )}
-          {showFiltroOperadora && operadorasList.length > 0 && (
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                <GiShield size={13} />
-              </span>
-              <select
-                value={filterOperadora}
-                onChange={(e) => setFilterOperadora(e.target.value)}
-                style={{
-                  padding: "6px 14px 6px 30px", borderRadius: 20,
-                  border: `1.5px solid ${filterOperadora !== "todas" ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: filterOperadora !== "todas" ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg),
-                  color: filterOperadora !== "todas" ? BRAND.roxoVivo : t.textMuted,
-                  fontSize: 12, fontWeight: 600, fontFamily: FONT.body,
-                  cursor: "pointer", outline: "none", appearance: "none",
-                }}
-              >
-                <option value="todas">Todas as operadoras</option>
-                {operadorasList
-                  .filter((o) => podeVerOperadora(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-              </select>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{
+            borderRadius: 14,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
+            padding: "12px 20px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+              {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
+                <InfluencerMultiSelect
+                  selected={filterInfluencers}
+                  onChange={setFilterInfluencers}
+                  influencers={influencerListVisiveis}
+                  t={t}
+                />
+              )}
+              {showFiltroOperadora && operadorasList.length > 0 && (
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                    <GiShield size={13} />
+                  </span>
+                  <select
+                    value={filterOperadora}
+                    onChange={(e) => setFilterOperadora(e.target.value)}
+                    style={{
+                      padding: "6px 14px 6px 30px", borderRadius: 999,
+                      border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                      background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
+                      color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
+                      fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                      fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+                    }}
+                  >
+                    <option value="todas">Todas as operadoras</option>
+                    {operadorasList
+                      .filter((o) => podeVerOperadora(o.slug))
+                      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                      .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -508,7 +516,7 @@ export default function Resultados() {
         </div>
       ) : livesFiltered.length === 0 ? (
         <div style={{
-          background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
           borderRadius: 16, padding: 48,
           textAlign: "center", color: t.textMuted, fontFamily: FONT.body,
         }}>

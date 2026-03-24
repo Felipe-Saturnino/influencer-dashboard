@@ -3,6 +3,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -15,8 +16,6 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── SectionTitle (padrão da plataforma) ─────────────────────────────────────
 function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
@@ -762,7 +761,7 @@ export default function StatusTecnico() {
                   return (
                     <tr key={row.slug} style={{ background: rowBg }}>
                       <td style={tdStyle}>
-                        {isEmail ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}>📧 {row.nome}</span> : row.nome}
+                        {row.nome}
                       </td>
                       <td style={tdStyle}>{ultimoSync ? formatarHora(ultimoSync) : "—"}</td>
                       <td style={tdStyle}>{(registrosHojeR as number).toLocaleString("pt-BR")}</td>

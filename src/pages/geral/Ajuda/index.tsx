@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { PageKey } from "../../../types";
 import {
   GiHelp,
@@ -20,8 +21,6 @@ const BRAND = {
   roxoVivo: "#7c3aed",
   azul: "#1e36f8",
 };
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 type Aba = "conheca" | "troubleshooting";
 type PageKey2 = PageKey;

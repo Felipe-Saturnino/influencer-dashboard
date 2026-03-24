@@ -3,8 +3,9 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { Operadora } from "../../../types";
-import { X, Pencil, AlertCircle } from "lucide-react";
+import { X, Pencil, AlertCircle, Upload } from "lucide-react";
 import { GiShield } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -16,8 +17,6 @@ const BRAND = {
   verde:    "#22c55e",
   cinza:    "#6b7280",
 } as const;
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
@@ -60,7 +59,7 @@ export default function GestaoOperadoras() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
+    <div style={{ padding: "20px 24px 48px" }}>
 
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
@@ -217,7 +216,17 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
   const [nome, setNome] = useState(editando?.nome ?? "");
   const [slug, setSlug] = useState(editando?.slug ?? "");
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
+  const [corPrimaria, setCorPrimaria] = useState(editando?.cor_primaria ?? "");
+  const [corSecundaria, setCorSecundaria] = useState(editando?.cor_secundaria ?? "");
+  const [corAccent, setCorAccent] = useState(editando?.cor_accent ?? "");
+  const [corBackground, setCorBackground] = useState(editando?.cor_background ?? "");
+  const [corTextos, setCorTextos] = useState(editando?.cor_textos ?? "");
+  const [corIcones, setCorIcones] = useState(editando?.cor_icones ?? "");
+  const [logoUrl, setLogoUrl] = useState(editando?.logo_url ?? "");
+  const [fontUrl, setFontUrl] = useState(editando?.font_url ?? "");
   const [salvando, setSalvando] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFont, setUploadingFont] = useState(false);
   const [erro, setErro] = useState("");
 
   // Gera slug automaticamente a partir do nome — invisível ao usuário na criação
@@ -234,6 +243,71 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
     }
   }, [nome, editando]);
 
+  // Sincroniza campos de brand quando abre para outra operadora
+  useEffect(() => {
+    if (editando) {
+      setCorPrimaria(editando.cor_primaria ?? "");
+      setCorSecundaria(editando.cor_secundaria ?? "");
+      setCorAccent(editando.cor_accent ?? "");
+      setCorBackground(editando.cor_background ?? "");
+      setCorTextos(editando.cor_textos ?? "");
+      setCorIcones(editando.cor_icones ?? "");
+      setLogoUrl(editando.logo_url ?? "");
+      setFontUrl(editando.font_url ?? "");
+    }
+  }, [editando?.slug]);
+
+  const BUCKET = "operadoras-brand";
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editando?.slug) return;
+    setUploadingLogo(true);
+    setErro("");
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `${editando.slug}/logo.${ext}`;
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      // Cache-busting: evita que o navegador sirva logo antigo após novo upload
+      setLogoUrl(`${publicUrl}?v=${Date.now()}`);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Erro ao enviar logo.");
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
+  };
+
+  const FONT_MIME: Record<string, string> = {
+    woff2: "font/woff2",
+    woff: "font/woff",
+    ttf: "font/ttf",
+    otf: "font/otf",
+  };
+
+  const handleUploadFont = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editando?.slug) return;
+    setUploadingFont(true);
+    setErro("");
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "woff2";
+      const path = `${editando.slug}/font.${ext}`;
+      const contentType = FONT_MIME[ext] ?? "font/woff2";
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      setFontUrl(publicUrl);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Erro ao enviar fonte.");
+    } finally {
+      setUploadingFont(false);
+      e.target.value = "";
+    }
+  };
+
   const salvar = async () => {
     setErro("");
     if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
@@ -242,13 +316,23 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
 
     setSalvando(true);
     try {
+      const brand = {
+        cor_primaria:     corPrimaria.trim() || null,
+        cor_secundaria:   corSecundaria.trim() || null,
+        cor_accent:       corAccent.trim() || null,
+        cor_background:   corBackground.trim() || null,
+        cor_textos:       corTextos.trim() || null,
+        cor_icones:       corIcones.trim() || null,
+        logo_url:         logoUrl.trim() || null,
+        font_url:         fontUrl.trim() || null,
+      };
       if (editando) {
-        const { error } = await supabase.from("operadoras").update({ nome, ativo }).eq("slug", editando.slug);
+        const { error } = await supabase.from("operadoras").update({ nome, ativo, ...brand }).eq("slug", editando.slug);
         if (error) throw error;
       } else {
         const { data: existe } = await supabase.from("operadoras").select("slug").eq("slug", slug).maybeSingle();
         if (existe) { setErro("Este slug já está em uso. Tente um nome diferente."); setSalvando(false); return; }
-        const { error } = await supabase.from("operadoras").insert({ slug, nome, ativo: true });
+        const { error } = await supabase.from("operadoras").insert({ slug, nome, ativo: true, ...brand });
         if (error) throw error;
       }
       onSalvo();
@@ -325,6 +409,97 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
               value={slug}
               readOnly
             />
+          </div>
+        )}
+
+        {/* Brandguide — cores exibidas para operadores desta operadora */}
+        {editando && (
+          <div style={{ ...fieldStyle, padding: 16, background: "rgba(74,32,130,0.08)", borderRadius: 12, border: `1px solid ${t.cardBorder}`, maxHeight: 420, overflowY: "auto" }}>
+            <div style={{ ...labelStyle, marginBottom: 12 }}>Brandguide (operadores)</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Primária</label>
+                <input type="color" value={corPrimaria || "#7c3aed"} onChange={e => setCorPrimaria(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corPrimaria} onChange={e => setCorPrimaria(e.target.value)} placeholder="#7c3aed"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Secundária</label>
+                <input type="color" value={corSecundaria || "#4a2082"} onChange={e => setCorSecundaria(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corSecundaria} onChange={e => setCorSecundaria(e.target.value)} placeholder="#4a2082"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Accent</label>
+                <input type="color" value={corAccent || "#1e36f8"} onChange={e => setCorAccent(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corAccent} onChange={e => setCorAccent(e.target.value)} placeholder="#1e36f8"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Background</label>
+                <input type="color" value={corBackground || "#0f0f1a"} onChange={e => setCorBackground(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corBackground} onChange={e => setCorBackground(e.target.value)} placeholder="#0f0f1a"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Textos</label>
+                <input type="color" value={corTextos || "#ffffff"} onChange={e => setCorTextos(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corTextos} onChange={e => setCorTextos(e.target.value)} placeholder="#ffffff"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Ícones</label>
+                <input type="color" value={corIcones || "#70cae4"} onChange={e => setCorIcones(e.target.value)}
+                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+                <input type="text" value={corIcones} onChange={e => setCorIcones(e.target.value)} placeholder="#70cae4"
+                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Logo (opcional)</label>
+                <input type="url" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="URL ou envie um arquivo"
+                  style={inputStyle} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <label style={{
+                    display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
+                    background: "rgba(74,32,130,0.15)", border: `1px solid ${t.cardBorder}`,
+                    borderRadius: 8, cursor: uploadingLogo ? "not-allowed" : "pointer",
+                    fontSize: 12, fontFamily: FONT.body, color: t.text,
+                  }}>
+                    <Upload size={14} />
+                    {uploadingLogo ? "Enviando..." : "Enviar logo (PNG, JPG, SVG)"}
+                    <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden disabled={uploadingLogo} onChange={handleUploadLogo} />
+                  </label>
+                  {logoUrl && (
+                    <a href={logoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
+                  )}
+                </div>
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={{ ...labelStyle, fontSize: 10 }}>Fonte customizada (opcional)</label>
+                <input type="url" value={fontUrl} onChange={e => setFontUrl(e.target.value)} placeholder="URL ou envie .woff2, .woff, .ttf, .otf"
+                  style={inputStyle} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <label style={{
+                    display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
+                    background: "rgba(74,32,130,0.15)", border: `1px solid ${t.cardBorder}`,
+                    borderRadius: 8, cursor: uploadingFont ? "not-allowed" : "pointer",
+                    fontSize: 12, fontFamily: FONT.body, color: t.text,
+                  }}>
+                    <Upload size={14} />
+                    {uploadingFont ? "Enviando..." : "Enviar fonte (WOFF2, WOFF, TTF, OTF)"}
+                    <input type="file" accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf" hidden disabled={uploadingFont} onChange={handleUploadFont} />
+                  </label>
+                  {fontUrl && (
+                    <a href={fontUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

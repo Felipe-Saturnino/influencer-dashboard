@@ -1,53 +1,48 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
+import { BRAND } from "../../../lib/dashboardConstants";
+import {
+  fmt,
+  fmtBRL,
+  fmtHorasTotal,
+  getMesesDisponiveis,
+  getDatasDoMes,
+  getDatasDoMesMtd,
+  getStatusROI,
+} from "../../../lib/dashboardHelpers";
+import {
+  SectionTitle,
+  KpiCard,
+  KpiCardDepositos,
+  FunilVisual,
+} from "../../../components/dashboard";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
-  GiPokerHand,      // GGR Total — chip de cassino
-  GiCoins,          // Investimento — moedas
-  GiTrophy,         // ROI Geral + FTDs — troféu
-  GiFilmProjector,  // Lives — transmissão
-  GiSandsOfTime,    // Horas Realizadas — ampulheta
-  GiMicrophone,     // Influencers Ativos — microfone
-  GiCardPlay,       // Depósitos — carta/jogo
-  GiPlayerNext,     // Registros — novo jogador
-  GiReceiveMoney,   // Custo por Registro
-  GiPayMoney,       // Custo por FTD
-  GiCalendar,       // Histórico
-  GiStarMedal,      // Filtro Influencer
-  GiShield,         // Filtro Operadora
+  GiPokerHand,
+  GiCoins,
+  GiTrophy,
+  GiFilmProjector,
+  GiSandsOfTime,
+  GiMicrophone,
+  GiPlayerNext,
+  GiReceiveMoney,
+  GiPayMoney,
+  GiCalendar,
+  GiStarMedal,
+  GiShield,
 } from "react-icons/gi";
-// Fonte NHD Bold para títulos
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
+import {
+  STATUS_ORDEM,
+  type StatusLabel,
+} from "../../../lib/dashboardConstants";
 
-// ─── BRAND COLORS (Brand Guide Spin Gaming) ───────────────────────────────────
-const BRAND = {
-  // Cores principais
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",    // variante mais viva para accent/glow
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  preto:    "#000000",
-  // Semântica de status (mantida por ser sinalização financeira)
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-  // Categorias de KPI
-  receita:     "#4a2082",   // Roxo  → GGR
-  operacao:    "#1e36f8",   // Azul  → Lives, Horas, Influencers
-  transacao:   "#70cae4",   // Ciano → Depósitos, FTDs, Registros
-  custo:       "#e84025",   // Vermelho → Investimento, Custo/FTD, Custo/Reg
-} as const;
-
-// ─── CONSTANTES ──────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };
-
-const STATUS_ORDEM = ["Rentável", "Atenção", "Não Rentável", "Bônus", "Sem dados"] as const;
-type StatusLabel = typeof STATUS_ORDEM[number];
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Metrica {
@@ -112,63 +107,7 @@ interface TotaisData {
   depositos_qtd: number; depositos_valor: number;
 }
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-const pad = (n: number) => String(n).padStart(2, "0");
-const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-                  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-
-function getMesesDisponiveis() {
-  const hoje = new Date();
-  const lista: { ano: number; mes: number; label: string }[] = [];
-  let { ano, mes } = MES_INICIO;
-  while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
-    lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
-    mes++; if (mes > 11) { mes = 0; ano++; }
-  }
-  return lista;
-}
-
-function getDatasDoMes(ano: number, mes: number) {
-  return { inicio: fmt(new Date(ano, mes, 1)), fim: fmt(new Date(ano, mes + 1, 0)) };
-}
-
-function getDatasDoMesMtd(ano: number, mes: number) {
-  const hoje = new Date();
-  let anoAnt = ano, mesAnt = mes - 1;
-  if (mesAnt < 0) { mesAnt = 11; anoAnt--; }
-  const ultimoDia = new Date(anoAnt, mesAnt + 1, 0).getDate();
-  const dia = Math.min(hoje.getDate(), ultimoDia);
-  return { inicio: fmt(new Date(anoAnt, mesAnt, 1)), fim: fmt(new Date(anoAnt, mesAnt, dia)) };
-}
-
-function fmtBRL(v: number) {
-  const sign = v < 0 ? "-" : "";
-  return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function fmtHorasTotal(horas: number) {
-  const h = Math.floor(horas);
-  const m = Math.round((horas - h) * 60);
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function getStatusROI(roi: number | null, ggr: number, investimento: number): {
-  label: StatusLabel; cor: string; bg: string; border: string; roiStr: string;
-} {
-  if (investimento === 0) {
-    if (ggr > 0)  return { label: "Bônus",      cor: "#a855f7", bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.28)", roiStr: "—" };
-    if (ggr < 0)  return { label: "Atenção",    cor: BRAND.amarelo, bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr: "—" };
-    return              { label: "Sem dados",   cor: "#6b7280", bg: "rgba(107,114,128,0.10)", border: "rgba(107,114,128,0.22)", roiStr: "—" };
-  }
-  const r = roi ?? 0;
-  const roiStr = `${r >= 0 ? "+" : ""}${r.toFixed(0)}%`;
-  if (r >= 0)   return { label: "Rentável",    cor: BRAND.verde,   bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.28)",  roiStr };
-  if (r >= -30) return { label: "Atenção",     cor: BRAND.amarelo, bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.28)", roiStr };
-  return              { label: "Não Rentável", cor: BRAND.vermelho, bg: "rgba(232,64,37,0.12)", border: "rgba(232,64,37,0.28)", roiStr };
-}
-
+// ─── HELPERS (calculaTotais específico do Overview) ───────────────────────────
 function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisData {
   const ggr           = rows.reduce((s, r) => s + r.ggr, 0);
   const invest        = totalInvestimento ?? rows.reduce((s, r) => s + r.investimento, 0);
@@ -190,275 +129,10 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
   };
 }
 
-// ─── COMPONENTE: SECTION TITLE ────────────────────────────────────────────────
-function SectionTitle({ icon, children, sub }: {
-  icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
-}) {
-  const { theme: t } = useApp();
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-      <span style={{
-        width: 28, height: 28, borderRadius: 8,
-        background: `rgba(74,32,130,0.18)`,
-        border: `1px solid rgba(74,32,130,0.30)`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: BRAND.ciano, flexShrink: 0,
-      }}>
-        {icon}
-      </span>
-      <span style={{
-        fontSize: 14, fontWeight: 800, color: t.text,
-        fontFamily: FONT_TITLE,
-        letterSpacing: "0.05em", textTransform: "uppercase" as const,
-      }}>
-        {children}
-      </span>
-      {sub && (
-        <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
-          {sub}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ─── KPI CARD ─────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, icon, accentColor, atual, anterior, isBRL, isHistorico, subValue }: {
-  label: string; value: string; icon: React.ReactNode; accentColor: string;
-  atual: number; anterior: number; isBRL?: boolean; isHistorico?: boolean;
-  subValue?: { label: string; value: string };
-}) {
-  const { theme: t } = useApp();
-  const diff     = atual - anterior;
-  const pct      = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
-  const up       = diff >= 0;
-  const isCusto  = label.toLowerCase().includes("custo") || label.toLowerCase().includes("invest");
-  const positivo = isCusto ? !up : up;
-  const corSeta  = positivo ? BRAND.verde : BRAND.vermelho;
-
-  return (
-    <div style={{
-      borderRadius: 14,
-      border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg,
-      overflow: "hidden",
-      transition: "box-shadow 0.2s",
-    }}>
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
-      <div style={{ padding: "14px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: `${accentColor}18`,
-            border: `1px solid ${accentColor}35`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: accentColor, flexShrink: 0,
-          }}>
-            {icon}
-          </span>
-          <span style={{
-            color: t.textMuted, fontSize: 10, fontFamily: FONT.body,
-            fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const,
-          }}>
-            {label}
-          </span>
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: subValue ? 4 : 6, lineHeight: 1.1 }}>
-          {value}
-        </div>
-        {subValue && (
-          <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
-            <span style={{ color: t.text, fontWeight: 600 }}>{subValue.value}</span> {subValue.label}
-          </div>
-        )}
-        {!isHistorico && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontFamily: FONT.body }}>
-            <span style={{ color: corSeta, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>
-              {up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
-            </span>
-            <span style={{ color: t.textMuted, fontSize: 10 }}>
-              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── KPI CARD DEPÓSITOS ────────────────────────────────────────────────────────
-function KpiCardDepositos({ atual, anterior, isHistorico }: {
-  atual: { qtd: number; valor: number };
-  anterior: { qtd: number; valor: number };
-  isHistorico?: boolean;
-}) {
-  const { theme: t } = useApp();
-  const accentColor = BRAND.transacao;
-  const diffQtd = atual.qtd - anterior.qtd;
-  const pctQtd  = anterior.qtd !== 0 ? (diffQtd / Math.abs(anterior.qtd)) * 100 : null;
-  const upQtd   = diffQtd >= 0;
-  const diffVal = atual.valor - anterior.valor;
-  const pctVal  = anterior.valor !== 0 ? (diffVal / Math.abs(anterior.valor)) * 100 : null;
-  const upVal   = diffVal >= 0;
-
-  return (
-    <div style={{
-      borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg, overflow: "hidden",
-    }}>
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
-      <div style={{ padding: "14px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: `${accentColor}18`, border: `1px solid ${accentColor}35`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: accentColor,
-          }}>
-            <GiCardPlay size={16} />
-          </span>
-          <span style={{ color: t.textMuted, fontSize: 10, fontFamily: FONT.body, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const }}>
-            Depósitos
-          </span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Qtd</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>{atual.qtd.toLocaleString("pt-BR")}</div>
-            {!isHistorico && (
-              <div style={{ fontSize: 10, fontFamily: FONT.body }}>
-                <span style={{ color: upQtd ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
-                  {upQtd ? "↑" : "↓"} {pctQtd !== null ? `${Math.abs(pctQtd).toFixed(0)}%` : "—"}
-                </span>
-              </div>
-            )}
-          </div>
-          <div style={{ borderLeft: `1px solid ${t.cardBorder}`, paddingLeft: 10 }}>
-            <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Volume</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>{fmtBRL(atual.valor)}</div>
-            {!isHistorico && (
-              <div style={{ fontSize: 10, fontFamily: FONT.body }}>
-                <span style={{ color: upVal ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
-                  {upVal ? "↑" : "↓"} {pctVal !== null ? `${Math.abs(pctVal).toFixed(0)}%` : "—"}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── FUNIL DE CONVERSÃO (visual em SVG) ───────────────────────────────────────
-const FUNIL_COLORS = ["#4a2082", "#1e36f8", "#70cae4", "#22c55e"] as const;
-const FUNIL_STEPS = [
-  { key: "views",      label: "Views (média)" },
-  { key: "acessos",    label: "Acessos"       },
-  { key: "registros",  label: "Registros"     },
-  { key: "ftds",       label: "FTDs"          },
-] as const;
-
-function FunilVisual({ values, taxas }: {
-  values: number[];
-  taxas: string[];
-}) {
-  const { theme: t } = useApp();
-  const W = 420, H = 340;
-  const levels = 4;
-  const stepH = H / levels;
-  // Larguras: nível 0 = W total, nível 3 = W * 0.32 (fixo pois estático)
-  const widths = [1.0, 0.72, 0.52, 0.32].map((f) => f * W);
-
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "stretch", minHeight: 340 }}>
-      {/* SVG Funil — ocupa metade do espaço */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ maxHeight: 340, display: "block" }} preserveAspectRatio="xMidYMid meet">
-        {FUNIL_STEPS.map((step, i) => {
-          const wTop = widths[i];
-          const wBot = widths[i + 1] ?? widths[i] * 0.7;
-          const xTop = (W - wTop) / 2;
-          const xBot = (W - wBot) / 2;
-          const yTop = i * stepH;
-          const yBot = yTop + stepH - 2; // 2px gap
-          const col = FUNIL_COLORS[i];
-          // Trapezoid path
-          const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
-          return (
-            <g key={step.key}>
-              {/* Fill com gradiente */}
-              <defs>
-                <linearGradient id={`fgrad-${i}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={col} stopOpacity="0.85" />
-                  <stop offset="100%" stopColor={col} stopOpacity="0.55" />
-                </linearGradient>
-              </defs>
-              <path d={path} fill={`url(#fgrad-${i})`} />
-              {/* Label dentro */}
-              <text
-                x={W / 2} y={yTop + stepH / 2 - 6}
-                textAnchor="middle" dominantBaseline="middle"
-                fill="#fff" fontSize={10} fontFamily={FONT.body}
-                fontWeight={600} letterSpacing="0.08em"
-                style={{ textTransform: "uppercase" }}
-              >
-                {step.label}
-              </text>
-              <text
-                x={W / 2} y={yTop + stepH / 2 + 9}
-                textAnchor="middle" dominantBaseline="middle"
-                fill="#fff" fontSize={16} fontFamily={FONT.body} fontWeight={800}
-              >
-                {values[i]?.toLocaleString("pt-BR") ?? "—"}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      </div>
-
-      {/* Taxas de conversão — ocupa a outra metade, cards compactos */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, justifyContent: "center" }}>
-        <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 6, fontWeight: 600 }}>
-          Taxas de Conversão
-        </div>
-        {[
-          { label: "View → Acesso",     taxa: taxas[0], color: FUNIL_COLORS[1] },
-          { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2] },
-          { label: "Registro → FTD",    taxa: taxas[2], color: FUNIL_COLORS[3] },
-          { label: "Acesso → FTD",      taxa: taxas[3], color: FUNIL_COLORS[3], highlight: true },
-          { label: "View → FTD",        taxa: taxas[4], color: FUNIL_COLORS[0], highlight: true },
-        ].map((r) => (
-          <div key={r.label} style={{
-            padding: "6px 10px", borderRadius: 8,
-            border: r.highlight
-              ? `1px solid ${r.color}50`
-              : `1px solid ${t.cardBorder}`,
-            background: r.highlight
-              ? `${r.color}12`
-              : "rgba(255,255,255,0.02)",
-          }}>
-            <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 2 }}>
-              {r.label}
-            </div>
-            <div style={{
-              fontSize: 14, fontWeight: 800, fontFamily: FONT.body,
-              color: r.highlight ? r.color : t.text,
-            }}>
-              {r.taxa}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_overview");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -471,6 +145,8 @@ export default function DashboardOverview() {
 
   const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
   const [filtroOperadora, setFiltroOperadora]   = useState<string>("todas");
+
+  const operadoraSlugParaApi = operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined);
   const [operadorasList, setOperadorasList]     = useState<{ slug: string; nome: string }[]>([]);
   const [operadoraInfMap, setOperadoraInfMap]   = useState<Record<string, string[]>>({});
   const [statusFiltro, setStatusFiltro]         = useState<StatusLabel | null>(null);
@@ -514,13 +190,14 @@ export default function DashboardOverview() {
         let q = supabase.from("influencer_metricas")
           .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data")
           .gte("data", ini).lte("data", fim);
-        if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
+        if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+        else if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
         const { data } = await q;
         const metricas = data || [];
         if (!incluirAliases) return metricas;
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          operadora_slug: operadoraSlugParaApi,
           dataInicio: ini,
           dataFim: fim,
         });
@@ -528,9 +205,9 @@ export default function DashboardOverview() {
       }
 
       async function buscaLives(ini: string, fim: string): Promise<LiveData[]> {
-        const { data } = await supabase.from("lives")
-          .select("id, influencer_id, status, plataforma, data")
-          .eq("status", "realizada").gte("data", ini).lte("data", fim);
+        let q = supabase.from("lives").select("id, influencer_id, status, plataforma, data").eq("status", "realizada").gte("data", ini).lte("data", fim);
+        if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+        const { data } = await q;
         return data || [];
       }
 
@@ -592,12 +269,13 @@ export default function DashboardOverview() {
       if (historico) {
         periodo = { inicio: "2020-01-01", fim: fmt(new Date()) };
         let qM = supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
-        if (filtroOperadora !== "todas") qM = qM.eq("operadora_slug", filtroOperadora);
+        if (operadoraSlugsForcado?.length) qM = qM.in("operadora_slug", operadoraSlugsForcado);
+        else if (filtroOperadora !== "todas") qM = qM.eq("operadora_slug", filtroOperadora);
         const { data: mAll } = await qM;
         let mRaw = mAll || [];
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+          operadora_slug: operadoraSlugParaApi,
           dataInicio: periodo.inicio,
           dataFim: periodo.fim,
         });
@@ -613,7 +291,7 @@ export default function DashboardOverview() {
       }
 
       const investimentoPago = await buscarInvestimentoPago(periodo, {
-        operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+        operadora_slug: operadoraSlugParaApi,
       });
       const rows = montaRanking(metricas, lives, resultados, investimentoPago.porInfluencer);
       const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
@@ -624,7 +302,7 @@ export default function DashboardOverview() {
         const periodoAnt = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
         const [investAnt, mA, lA] = await Promise.all([
           buscarInvestimentoPago(periodoAnt, {
-            operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
+            operadora_slug: operadoraSlugParaApi,
           }),
           buscaMetricas(periodoAnt.inicio, periodoAnt.fim, false),
           buscaLives(periodoAnt.inicio, periodoAnt.fim),
@@ -641,31 +319,33 @@ export default function DashboardOverview() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, mesSelecionado, podeVerInfluencer, filtroOperadora]);
+  }, [historico, idxMes, mesSelecionado, podeVerInfluencer, filtroOperadora, operadoraSlugsForcado, operadoraSlugParaApi]);
 
-  // ── RANKING FILTRADO ──────────────────────────────────────────────────────────
+  const idsOperadoraEfetiva = useMemo(() => {
+    if (operadoraSlugsForcado?.length) {
+      const set = new Set<string>();
+      operadoraSlugsForcado.forEach(slug => (operadoraInfMap[slug] ?? []).forEach(id => set.add(id)));
+      return set;
+    }
+    if (filtroOperadora !== "todas") return new Set(operadoraInfMap[filtroOperadora] ?? []);
+    return null;
+  }, [operadoraSlugsForcado, filtroOperadora, operadoraInfMap]);
+
   const rankingFiltrado = useMemo(() => {
     let r = ranking;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (filtroOperadora !== "todas") {
-      const ids = operadoraInfMap[filtroOperadora] ?? [];
-      r = r.filter((row) => ids.includes(row.influencer_id));
-    }
+    if (idsOperadoraEfetiva) r = r.filter((row) => idsOperadoraEfetiva.has(row.influencer_id));
     if (statusFiltro) r = r.filter((row) => row.statusLabel === statusFiltro);
     return r;
-  }, [ranking, filtroInfluencer, filtroOperadora, statusFiltro, operadoraInfMap]);
+  }, [ranking, filtroInfluencer, idsOperadoraEfetiva, statusFiltro]);
 
-  // Mesmo filtro aplicado ao período anterior (para comparativo MTD)
   const rankingAntFiltrado = useMemo(() => {
     let r = rankingAnt;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
-    if (filtroOperadora !== "todas") {
-      const ids = operadoraInfMap[filtroOperadora] ?? [];
-      r = r.filter((row) => ids.includes(row.influencer_id));
-    }
+    if (idsOperadoraEfetiva) r = r.filter((row) => idsOperadoraEfetiva.has(row.influencer_id));
     if (statusFiltro) r = r.filter((row) => row.statusLabel === statusFiltro);
     return r;
-  }, [rankingAnt, filtroInfluencer, filtroOperadora, statusFiltro, operadoraInfMap]);
+  }, [rankingAnt, filtroInfluencer, idsOperadoraEfetiva, statusFiltro]);
 
   // Totais exibidos nos KPIs e Funil (respeitam filtros de influencer/operadora/status)
   // Com filtro por influencer: desconsiderar Agentes (soma só das rows). Sem filtro: usar totais (inclui Agentes)
@@ -685,9 +365,11 @@ export default function DashboardOverview() {
   const pctAcessoFTD   = totaisExibidos.acessos > 0  ? ((totaisExibidos.ftds      / totaisExibidos.acessos)  * 100).toFixed(1) + "%" : "—";
   const pctViewFTD     = totaisExibidos.views > 0    ? ((totaisExibidos.ftds      / totaisExibidos.views)    * 100).toFixed(1) + "%" : "—";
 
+  const brand = useDashboardBrand();
+
   // ── ESTILOS BASE ──────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
-    background: t.cardBg,
+    background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
@@ -707,6 +389,9 @@ export default function DashboardOverview() {
     fontFamily: FONT.body,
     whiteSpace: "nowrap",
   };
+
+  const zebraStripe = (i: number) =>
+    i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)";
 
   const tdStyle: React.CSSProperties = {
     padding: "10px 12px",
@@ -763,12 +448,12 @@ export default function DashboardOverview() {
   return (
     <div style={{ padding: "20px 24px 48px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ══ BLOCO 1: FILTROS ══════════════════════════════════════════════════ */}
+      {/* ══ BLOCO 1: FILTROS — primária transparente ═══════════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.cardBg,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -781,7 +466,9 @@ export default function DashboardOverview() {
             </button>
 
             <span style={{
-              fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body,
+              fontSize: 18, fontWeight: 800,
+              color: t.text,
+              fontFamily: FONT.body,
               minWidth: 180, textAlign: "center",
             }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
@@ -801,9 +488,13 @@ export default function DashboardOverview() {
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
-                border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-                background: historico ? `rgba(124,58,237,0.15)` : "transparent",
-                color: historico ? BRAND.roxoVivo : t.textMuted,
+                border: historico
+                  ? `1px solid ${brand.accent}`
+                  : `1px solid ${t.cardBorder}`,
+                background: historico
+                  ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)")
+                  : "transparent",
+                color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
@@ -860,84 +551,24 @@ export default function DashboardOverview() {
           KPIs Executivos
         </SectionTitle>
 
-        {/* Linha 1: Receita — GGR / Investimento / ROI */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard
-            label="GGR Total" value={fmtBRL(totaisExibidos.ggr)}
-            icon={<GiPokerHand size={16} />}
-            accentColor={BRAND.receita}
-            atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico}
-          />
-          <KpiCard
-            label="Investimento" value={fmtBRL(totaisExibidos.investimento)}
-            icon={<GiCoins size={16} />}
-            accentColor={BRAND.custo}
-            atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico}
-          />
-          <KpiCard
-            label="ROI Geral"
-            value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"}
-            icon={<GiTrophy size={16} />}
-            accentColor={BRAND.verde}
-            atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico}
-          />
+          <KpiCard label="GGR Total" value={fmtBRL(totaisExibidos.ggr)} icon={<GiPokerHand size={16} />} accentVar="--brand-extra1" accentColor={BRAND.receita} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
+          <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<GiCoins size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
+          <KpiCard label="ROI Geral" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<GiTrophy size={16} />} accentVar="--brand-extra2" accentColor={BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
         </div>
 
-        {/* Linha 2: Operação — Lives / Horas / Influencers + Depósitos */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 12 }}>
-          <KpiCard
-            label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")}
-            icon={<GiFilmProjector size={16} />}
-            accentColor={BRAND.operacao}
-            atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico}
-          />
-          <KpiCard
-            label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)}
-            icon={<GiSandsOfTime size={16} />}
-            accentColor={BRAND.operacao}
-            atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico}
-          />
-          <KpiCard
-            label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")}
-            icon={<GiMicrophone size={16} />}
-            accentColor={BRAND.operacao}
-            atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico}
-          />
-          <KpiCardDepositos
-            atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }}
-            anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }}
-            isHistorico={historico}
-          />
+          <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<GiFilmProjector size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
+          <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<GiSandsOfTime size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
+          <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<GiMicrophone size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
+          <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico} />
         </div>
 
-        {/* Linha 3: Transação — Registros / Custo Reg / FTDs / Custo FTD */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          <KpiCard
-            label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")}
-            icon={<GiPlayerNext size={16} />}
-            accentColor={BRAND.transacao}
-            atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico}
-          />
-          <KpiCard
-            label="Custo por Registro"
-            value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"}
-            icon={<GiReceiveMoney size={16} />}
-            accentColor={BRAND.custo}
-            atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico}
-          />
-          <KpiCard
-            label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")}
-            icon={<GiTrophy size={16} />}
-            accentColor={BRAND.transacao}
-            atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico}
-          />
-          <KpiCard
-            label="Custo por FTD"
-            value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"}
-            icon={<GiPayMoney size={16} />}
-            accentColor={BRAND.custo}
-            atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico}
-          />
+          <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<GiPlayerNext size={16} />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
+          <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<GiReceiveMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
+          <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<GiTrophy size={16} />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
+          <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<GiPayMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
         </div>
       </div>
 
@@ -1018,7 +649,7 @@ export default function DashboardOverview() {
                   return (
                     <tr
                       key={r.influencer_id}
-                      style={{ background: i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)" }}
+                      style={{ background: zebraStripe(i) }}
                     >
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
                       <td style={tdStyle}>{r.lives}</td>

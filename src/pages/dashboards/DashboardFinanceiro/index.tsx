@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
@@ -46,8 +48,6 @@ const PERFIL_CORES: Record<PerfilJogador, { cor: string; bg: string; border: str
   "Recreativos":        { cor: BRAND.ciano,   bg: "rgba(112,202,228,0.12)",border: "rgba(112,202,228,0.35)"},
   "Caçadores de Bônus": { cor: BRAND.vermelho,bg: "rgba(232,64,37,0.12)",  border: "rgba(232,64,37,0.35)"  },
 };
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2025, mes: 11 };
@@ -156,19 +156,20 @@ function SectionTitle({ icon, children, sub }: {
   icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: "rgba(74,32,130,0.18)",
-        border: "1px solid rgba(74,32,130,0.30)",
+        background: brand.primaryIconBg,
+        border: brand.primaryIconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: BRAND.ciano, flexShrink: 0,
+        color: brand.primaryIconColor, flexShrink: 0,
       }}>
         {icon}
       </span>
       <span style={{
-        fontSize: 14, fontWeight: 800, color: t.text,
+        fontSize: 14, fontWeight: 800, color: brand.primary,
         fontFamily: FONT_TITLE,
         letterSpacing: "0.05em", textTransform: "uppercase" as const,
       }}>
@@ -184,37 +185,44 @@ function SectionTitle({ icon, children, sub }: {
 }
 
 // ─── KPI CARD (padrão unificado com Overview) ─────────────────────────────────
-function KpiCard({ label, value, subValue, icon, accentColor, atual, anterior, isHistorico, isBRL, isInverso }: {
+function KpiCard({ label, value, subValue, icon, accentVar, accentColor, atual, anterior, isHistorico, isBRL, isInverso }: {
   label: string; value: string;
   subValue?: { label: string; value: string };
-  icon: React.ReactNode; accentColor: string;
+  icon: React.ReactNode; accentVar: string; accentColor: string;
   atual: number; anterior: number;
   isHistorico?: boolean; isBRL?: boolean;
-  isInverso?: boolean; // quando subir é ruim (ex: WD Ratio, Saques)
+  isInverso?: boolean;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const diff    = atual - anterior;
   const pct     = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
   const up      = diff >= 0;
   const positivo = isInverso ? !up : up;
-  const corSeta = positivo ? BRAND.verde : BRAND.vermelho;
+  const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
+
+  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
+  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
+  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentColor}18`;
+  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentColor}35`;
+  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
 
   return (
     <div style={{
       borderRadius: 14,
       border: `1px solid ${t.cardBorder}`,
-      background: t.cardBg,
+      background: brand.blockBg,
       overflow: "hidden",
     }}>
-      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, transparent)` }} />
+      <div style={{ height: 3, background: barBg }} />
       <div style={{ padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{
             width: 30, height: 30, borderRadius: 8,
-            background: `${accentColor}18`,
-            border: `1px solid ${accentColor}35`,
+            background: iconBoxBg,
+            border: iconBoxBorder,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: accentColor, flexShrink: 0,
+            color: iconBoxColor, flexShrink: 0,
           }}>
             {icon}
           </span>
@@ -267,7 +275,7 @@ function PieTooltip({ active, payload, total, cardBg, cardBorder, text }: {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardFinanceiro() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_financeiro");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -279,6 +287,7 @@ export default function DashboardFinanceiro() {
   const [loading, setLoading]       = useState(true);
   const [filtroInfluencer, setFiltroInfluencer] = useState("todos");
   const [operadoraFiltro, setOperadoraFiltro]   = useState("todas");
+  const operadoraForApi = operadoraSlugsForcado?.[0] ?? (operadoraFiltro !== "todas" ? operadoraFiltro : null);
   const [rows, setRows]             = useState<FinanceiroRow[]>([]);
   const [totais, setTotais]         = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
   const [totaisAnt, setTotaisAnt]   = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
@@ -330,14 +339,14 @@ export default function DashboardFinanceiro() {
           p_mes: historico ? null : mesSelecionado?.mes ?? null,
           p_influencer_id: filtroInfluencer === "todos" ? null : filtroInfluencer,
           p_historico: historico,
-          p_operadora_slug: operadoraFiltro === "todas" ? null : operadoraFiltro,
+          p_operadora_slug: operadoraForApi,
         });
         if (!rpcErr && rpcData) {
           metricas = rpcData;
           if (historico) {
             const { buscarMetricasDeAliases } = await import("../../../lib/metricasAliases");
             const aliasesSinteticas = await buscarMetricasDeAliases({
-              operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+              operadora_slug: operadoraForApi ?? undefined,
               influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
               dataInicio: periodoInicio,
               dataFim: periodoFim,
@@ -358,7 +367,8 @@ export default function DashboardFinanceiro() {
           qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
         }
         if (filtroInfluencer !== "todos") qMetricas = qMetricas.eq("influencer_id", filtroInfluencer);
-        if (operadoraFiltro !== "todas")  qMetricas = qMetricas.eq("operadora_slug", operadoraFiltro);
+        if (operadoraSlugsForcado?.length) qMetricas = qMetricas.in("operadora_slug", operadoraSlugsForcado);
+        else if (operadoraFiltro !== "todas") qMetricas = qMetricas.eq("operadora_slug", operadoraFiltro);
         const { data: metricasData } = await qMetricas;
         const raw: { influencer_id: string; ftd_count: number; ftd_total: number; deposit_count: number; deposit_total: number; withdrawal_count: number; withdrawal_total: number; ggr: number }[] = metricasData || [];
         const mapaAgreg = new Map<string, MetricaRow>();
@@ -373,7 +383,7 @@ export default function DashboardFinanceiro() {
         if (historico) {
           const { buscarMetricasDeAliases } = await import("../../../lib/metricasAliases");
           const aliasesSinteticas = await buscarMetricasDeAliases({
-            operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+            operadora_slug: operadoraForApi ?? undefined,
             influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
             dataInicio: periodoInicio,
             dataFim: periodoFim,
@@ -402,7 +412,8 @@ export default function DashboardFinanceiro() {
         qLives = qLives.gte("data", inicio).lte("data", fim);
       }
       if (filtroInfluencer !== "todos") qLives = qLives.eq("influencer_id", filtroInfluencer);
-      if (operadoraFiltro !== "todas")  qLives = qLives.eq("operadora_slug", operadoraFiltro);
+      if (operadoraSlugsForcado?.length) qLives = qLives.in("operadora_slug", operadoraSlugsForcado);
+      else if (operadoraFiltro !== "todas") qLives = qLives.eq("operadora_slug", operadoraFiltro);
       const { data: livesData } = await qLives;
       const lives = livesData || [];
       const liveIds = lives.map((l: { id: string }) => l.id);
@@ -421,7 +432,7 @@ export default function DashboardFinanceiro() {
         { inicio: periodoInicio, fim: periodoFim },
         {
           influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
-          operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+          operadora_slug: operadoraForApi ?? undefined,
           includeAgentes: filtroInfluencer === "todos",
         }
       );
@@ -477,14 +488,15 @@ export default function DashboardFinanceiro() {
             { inicio: periodoAnt.inicio, fim: periodoAnt.fim },
             {
               influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
-              operadora_slug: operadoraFiltro !== "todas" ? operadoraFiltro : undefined,
+              operadora_slug: operadoraForApi ?? undefined,
               includeAgentes: filtroInfluencer === "todos",
             }
           ),
           (async () => {
             let qA = supabase.from("influencer_metricas").select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug").gte("data", periodoAnt.inicio).lte("data", periodoAnt.fim);
             if (filtroInfluencer !== "todos") qA = qA.eq("influencer_id", filtroInfluencer);
-            if (operadoraFiltro !== "todas")  qA = qA.eq("operadora_slug", operadoraFiltro);
+            if (operadoraSlugsForcado?.length) qA = qA.in("operadora_slug", operadoraSlugsForcado);
+            else if (operadoraFiltro !== "todas") qA = qA.eq("operadora_slug", operadoraFiltro);
             const { data } = await qA;
             return data || [];
           })(),
@@ -518,14 +530,19 @@ export default function DashboardFinanceiro() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer]);
+  }, [historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado, operadoraForApi]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
   const rowsParaExibir = useMemo(() => {
+    if (operadoraSlugsForcado?.length) {
+      const ids = new Set<string>();
+      operadoraSlugsForcado.forEach((slug) => (operadoraInfMap[slug] ?? []).forEach((id) => ids.add(id)));
+      return rows.filter((r) => ids.has(r.influencer_id));
+    }
     if (operadoraFiltro === "todas") return rows;
     const ids = operadoraInfMap[operadoraFiltro] ?? [];
     return rows.filter((r) => ids.includes(r.influencer_id));
-  }, [rows, operadoraFiltro, operadoraInfMap]);
+  }, [rows, operadoraFiltro, operadoraInfMap, operadoraSlugsForcado]);
 
   const totaisExibir = useMemo(() => {
     const tFTDs = rowsParaExibir.reduce((s,r) => s+r.ftds, 0);
@@ -562,9 +579,11 @@ export default function DashboardFinanceiro() {
 
   const pieTotal = useMemo(() => pieInvestimento.reduce((s, d) => s + d.value, 0), [pieInvestimento]);
 
+  const brand = useDashboardBrand();
+
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
-    background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+    background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
     borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
@@ -607,9 +626,14 @@ export default function DashboardFinanceiro() {
   return (
     <div style={{ padding: "20px 24px 48px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ══ BLOCO 1: FILTROS ════════════════════════════════════════════════════ */}
+      {/* ══ BLOCO 1: FILTROS — primária transparente ═══════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: t.cardBg, padding: "12px 20px" }}>
+        <div style={{
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
+          padding: "12px 20px",
+        }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button style={{ ...btnNavStyle, opacity: historico||isPrimeiro?0.35:1, cursor: historico||isPrimeiro?"not-allowed":"pointer" }}
               onClick={irMesAnterior} disabled={historico||isPrimeiro}>
@@ -626,9 +650,9 @@ export default function DashboardFinanceiro() {
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
-              border: historico ? `1px solid ${BRAND.roxoVivo}` : `1px solid ${t.cardBorder}`,
-              background: historico ? "rgba(124,58,237,0.15)" : "transparent",
-              color: historico ? BRAND.roxoVivo : t.textMuted,
+              border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
               <GiCalendar size={14} /> Histórico
@@ -683,21 +707,21 @@ export default function DashboardFinanceiro() {
           <KpiCard
             label="FTD" value={fmtBRL(totaisExibir.ftd_total)}
             subValue={{ label: "ticket médio", value: totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ftd_ticket_medio) : "—" }}
-            icon={<GiTrophy size={14} />} accentColor={BRAND.roxo}
+            icon={<GiTrophy size={14} />} accentVar="--brand-extra1" accentColor={BRAND.roxo}
             atual={totaisExibir.ftd_total} anterior={totaisAnt.ftd_total}
             isHistorico={historico} isBRL
           />
           <KpiCard
             label="Depósitos" value={fmtBRL(totaisExibir.depositos)}
             subValue={{ label: "ticket médio", value: totaisExibir.deposit_count > 0 ? fmtBRL(totaisExibir.deposito_ticket_medio) : "—" }}
-            icon={<GiCardPlay size={14} />} accentColor={BRAND.ciano}
+            icon={<GiCardPlay size={14} />} accentVar="--brand-extra3" accentColor={BRAND.ciano}
             atual={totaisExibir.depositos} anterior={totaisAnt.depositos}
             isHistorico={historico} isBRL
           />
           <KpiCard
             label="Saques" value={fmtBRL(totaisExibir.saques)}
             subValue={{ label: "ticket médio", value: totaisExibir.saque_ticket_medio > 0 ? fmtBRL(totaisExibir.saque_ticket_medio) : "—" }}
-            icon={<GiPayMoney size={14} />} accentColor={BRAND.vermelho}
+            icon={<GiPayMoney size={14} />} accentVar="--brand-extra4" accentColor={BRAND.vermelho}
             atual={totaisExibir.saques} anterior={totaisAnt.saques}
             isHistorico={historico} isBRL isInverso
           />
@@ -708,21 +732,21 @@ export default function DashboardFinanceiro() {
           <KpiCard
             label="WD Ratio"
             value={totaisExibir.depositos > 0 ? `${totaisExibir.wd_ratio.toFixed(1)}%` : "—"}
-            icon={<GiScales size={14} />} accentColor={BRAND.vermelho}
+            icon={<GiScales size={14} />} accentVar="--brand-extra4" accentColor={BRAND.vermelho}
             atual={totaisExibir.wd_ratio} anterior={totaisAnt.wd_ratio}
             isHistorico={historico} isInverso
           />
           <KpiCard
             label="GGR por Jogador"
             value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ggr_por_jogador) : "—"}
-            icon={<GiDiceSixFacesFour size={14} />} accentColor={BRAND.roxo}
+            icon={<GiDiceSixFacesFour size={14} />} accentVar="--brand-extra1" accentColor={BRAND.roxo}
             atual={totaisExibir.ggr_por_jogador} anterior={totaisAnt.ggr_por_jogador}
             isHistorico={historico} isBRL
           />
           <KpiCard
             label="PVI"
             value={totaisExibir.pvi > 0 ? `${totaisExibir.pvi}%` : "—"}
-            icon={<GiSpeedometer size={14} />} accentColor={BRAND.verde}
+            icon={<GiSpeedometer size={14} />} accentVar="--brand-extra2" accentColor={BRAND.verde}
             atual={totaisExibir.pvi} anterior={totaisAnt.pvi}
             isHistorico={historico}
           />
@@ -748,7 +772,7 @@ export default function DashboardFinanceiro() {
                       <Cell key={i} fill={entry.color} stroke="none" />
                     ))}
                   </Pie>
-                  <Tooltip content={<PieTooltip total={pieTotal} cardBg={t.cardBg} cardBorder={t.cardBorder} text={t.text} />} />
+                  <Tooltip content={<PieTooltip total={pieTotal} cardBg={brand.blockBg} cardBorder={t.cardBorder} text={t.text} />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

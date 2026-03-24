@@ -4,6 +4,7 @@ import { GiPalette, GiPadlock } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -15,8 +16,6 @@ const BRAND = {
   verde:     "#22c55e",
   gradiente: "linear-gradient(135deg, #4a2082, #1e36f8)",
 };
-
-const FONT_TITLE = "'NHD Bold', 'nhd-bold', sans-serif";
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -32,7 +31,8 @@ function passwordStrength(pwd: string) {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
 export default function Configuracoes() {
-  const { theme: t, isDark, setIsDark } = useApp();
+  const { theme: t, user, isDark, setIsDark } = useApp();
+  const isOperador = user?.role === "operador";
   const perm = usePermission("configuracoes");
 
   const [curPass,  setCurPass]  = useState("");
@@ -143,10 +143,11 @@ export default function Configuracoes() {
           </h2>
         </div>
         <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 20px 40px" }}>
-          Escolha como a interface será exibida.
+          {isOperador ? "Operadores usam sempre o modo escuro com a identidade da operadora." : "Escolha como a interface será exibida."}
         </p>
 
-        {/* Cards de tema */}
+        {/* Cards de tema — oculto para operador (travado em Dark) */}
+        {!isOperador && (
         <div style={{ display: "flex", gap: 12 }}>
           {([false, true] as const).map(dark => {
             const ativo = isDark === dark;
@@ -210,6 +211,7 @@ export default function Configuracoes() {
             );
           })}
         </div>
+        )}
       </div>
 
       {/* ── ALTERAR SENHA ── */}

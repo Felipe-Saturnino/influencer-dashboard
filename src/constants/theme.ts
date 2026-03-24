@@ -1,6 +1,8 @@
 export const FONT = {
-  title: "'Barlow Condensed', 'Impact', 'Arial Black', sans-serif",
-  body:  "'Inter', 'Helvetica Neue', Arial, sans-serif",
+  /** Usa var(--brand-fontFamily) quando operador tem fonte customizada; fallback título Spin */
+  title: "var(--brand-fontFamily, 'Barlow Condensed', 'Impact', 'Arial Black', sans-serif)",
+  /** Usa var(--brand-fontFamily) quando operador tem fonte customizada; fallback Spin (Inter) */
+  body:  "var(--brand-fontFamily, 'Inter', 'Helvetica Neue', Arial, sans-serif)",
 };
 
 export const BASE_COLORS = {
