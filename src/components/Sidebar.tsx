@@ -34,13 +34,16 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
   const sidebarBg = operadoraBrand?.cor_background ?? t.sidebar;
 
   return (
-    <aside style={{
-      width: "240px", height: "100vh", flexShrink: 0,
+    <aside
+      className="app-sidebar-fill"
+      style={{
+      width: "240px", flexShrink: 0,
       position: "fixed", top: 0, left: 0,
       background: sidebarBg, display: "flex", flexDirection: "column",
       padding: "0px 16px 24px", borderRight: `1px solid ${t.sidebarBorder}`,
       boxSizing: "border-box", zIndex: 100,
-    }}>
+    }}
+    >
       {/* LOGO — operador vê logo da operadora; demais veem Spin Gaming. Regra: mantém dentro do esquadro */}
       <div style={{
         marginBottom: 16, paddingTop: 12, display: "flex", justifyContent: "center", alignItems: "center",
