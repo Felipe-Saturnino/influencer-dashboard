@@ -11,6 +11,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "influencers", "scout", "financeiro", "gestao_links", "campanhas", "gestao_dealers",
   "gestao_usuarios", "gestao_operadoras", "status_tecnico",
   "roteiro_mesa",
+  "playbook_influencers",
   "configuracoes", "ajuda",
 ];
 

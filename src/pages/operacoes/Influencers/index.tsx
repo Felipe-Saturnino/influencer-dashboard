@@ -13,6 +13,7 @@ import {
   GiPokerHand, GiCheckMark, GiShield,
 } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
+import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -204,21 +205,6 @@ function CurrencyInput({
       style={style}
     />
   );
-}
-
-// ─── isPerfilIncompleto ───────────────────────────────────────────────────────
-function isPerfilIncompleto(perfil: Perfil | null, name: string): boolean {
-  if (!perfil) return true;
-  if (!name?.trim())                    return true;
-  if (!perfil.nome_completo?.trim())    return true;
-  if (!perfil.telefone?.trim())         return true;
-  if (!perfil.cpf?.trim())              return true;
-  if (!perfil.cache_hora || perfil.cache_hora <= 0) return true;
-  if (!perfil.chave_pix?.trim())        return true;
-  if (!perfil.banco?.trim())            return true;
-  if (!perfil.agencia?.trim())          return true;
-  if (!perfil.conta?.trim())            return true;
-  return false;
 }
 
 // ─── StatusBadge ─────────────────────────────────────────────────────────────

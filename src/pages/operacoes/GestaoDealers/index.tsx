@@ -64,15 +64,15 @@ function normalizarBuscaTexto(s: string): string {
 }
 
 const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
-  feminino: <GiFemale size={15} aria-hidden />,
-  masculino: <GiMale size={15} aria-hidden />,
+  feminino: <GiFemale size={16} aria-hidden />,
+  masculino: <GiMale size={16} aria-hidden />,
 };
 
 const ICONE_JOGO: Record<DealerJogo, ReactNode> = {
-  blackjack: <GiCardPick size={15} aria-hidden />,
-  roleta: <CircleDot size={15} aria-hidden strokeWidth={2.2} />,
-  baccarat: <GiCardAceSpades size={15} aria-hidden />,
-  mesa_vip: <GiCrown size={15} aria-hidden />,
+  blackjack: <GiCardPick size={16} aria-hidden />,
+  roleta: <CircleDot size={16} aria-hidden strokeWidth={2.2} />,
+  baccarat: <GiCardAceSpades size={16} aria-hidden />,
+  mesa_vip: <GiCrown size={16} aria-hidden />,
 };
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
@@ -143,20 +143,41 @@ export default function GestaoDealers() {
     });
   }, [dealersPorOperadora, filtroGenero, filtroTurno, filtroJogos, buscaDealer]);
 
-  const dealersContagemPrincipal = useMemo(
-    () => dealersPorOperadora.filter((d) => filtroTurno === "todos" || d.turno === filtroTurno),
-    [dealersPorOperadora, filtroTurno]
+  /** Total do consolidado: operadora + turno + gênero + jogo (sem busca por texto). */
+  const totalDealersDestaque = useMemo(
+    () =>
+      dealersPorOperadora.filter((d) => {
+        if (filtroTurno !== "todos" && d.turno !== filtroTurno) return false;
+        if (filtroGenero !== "todos" && d.genero !== filtroGenero) return false;
+        if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogo)) return false;
+        return true;
+      }).length,
+    [dealersPorOperadora, filtroTurno, filtroGenero, filtroJogos]
   );
-  const totalDealersDestaque = dealersContagemPrincipal.length;
 
-  const porTurno: Record<string, number> = { manha: 0, tarde: 0, noite: 0 };
-  const porGenero: Record<string, number> = { feminino: 0, masculino: 0 };
-  const porJogo: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0, mesa_vip: 0 };
-  dealersPorOperadora.forEach((d) => {
-    porTurno[d.turno] = (porTurno[d.turno] ?? 0) + 1;
-    porGenero[d.genero] = (porGenero[d.genero] ?? 0) + 1;
-    (d.jogos ?? []).forEach((j) => { porJogo[j] = (porJogo[j] ?? 0) + 1; });
-  });
+  /** Contagens por gênero com turno + jogo + operadora aplicados (sem o filtro de gênero). */
+  const porGenero = useMemo(() => {
+    const acc: Record<string, number> = { feminino: 0, masculino: 0 };
+    dealersPorOperadora.forEach((d) => {
+      if (filtroTurno !== "todos" && d.turno !== filtroTurno) return;
+      if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogo)) return;
+      acc[d.genero] = (acc[d.genero] ?? 0) + 1;
+    });
+    return acc;
+  }, [dealersPorOperadora, filtroTurno, filtroJogos]);
+
+  /** Contagens por jogo com turno + gênero + operadora (sem o filtro de jogo). */
+  const porJogo = useMemo(() => {
+    const acc: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0, mesa_vip: 0 };
+    dealersPorOperadora.forEach((d) => {
+      if (filtroTurno !== "todos" && d.turno !== filtroTurno) return;
+      if (filtroGenero !== "todos" && d.genero !== filtroGenero) return;
+      (d.jogos ?? []).forEach((j) => {
+        if (j in acc) acc[j] = (acc[j] ?? 0) + 1;
+      });
+    });
+    return acc;
+  }, [dealersPorOperadora, filtroTurno, filtroGenero]);
 
   const irTurnoAnterior = () => {
     if (filtroTurno === "todos") {
@@ -400,18 +421,21 @@ export default function GestaoDealers() {
                       type="button"
                       onClick={() => setFiltroGenero(ativo ? "todos" : o.value)}
                       style={{
-                        display: "inline-flex",
+                        display: "flex",
                         alignItems: "center",
-                        gap: 7,
-                        padding: "7px 12px",
-                        borderRadius: 8,
-                        border: `1.5px solid ${ativo ? `${BRAND.verde}55` : t.cardBorder}`,
-                        background: ativo ? `${BRAND.verde}18` : (t.inputBg ?? "transparent"),
-                        color: ativo ? BRAND.verde : t.text,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        fontFamily: FONT.body,
+                        gap: 6,
+                        padding: "6px 14px",
+                        borderRadius: 999,
                         cursor: "pointer",
+                        fontFamily: FONT.body,
+                        fontSize: 13,
+                        border: ativo ? `1px solid ${BRAND.verde}` : `1px solid ${t.cardBorder}`,
+                        background: ativo ? "rgba(34,197,94,0.15)" : "transparent",
+                        color: ativo ? BRAND.verde : t.textMuted,
+                        fontWeight: ativo ? 700 : 400,
+                        transition: "all 0.15s",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
                       }}
                     >
                       {ICONE_GENERO[o.value]}
@@ -443,18 +467,21 @@ export default function GestaoDealers() {
                       type="button"
                       onClick={() => setFiltroJogos(ativo ? "todos" : o.value)}
                       style={{
-                        display: "inline-flex",
+                        display: "flex",
                         alignItems: "center",
-                        gap: 7,
-                        padding: "7px 12px",
-                        borderRadius: 8,
-                        border: `1.5px solid ${ativo ? `${BRAND.amarelo}66` : t.cardBorder}`,
-                        background: ativo ? `${BRAND.amarelo}20` : (t.inputBg ?? "transparent"),
-                        color: ativo ? BRAND.amarelo : t.text,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        fontFamily: FONT.body,
+                        gap: 6,
+                        padding: "6px 14px",
+                        borderRadius: 999,
                         cursor: "pointer",
+                        fontFamily: FONT.body,
+                        fontSize: 13,
+                        border: ativo ? `1px solid ${BRAND.amarelo}` : `1px solid ${t.cardBorder}`,
+                        background: ativo ? "rgba(245,158,11,0.15)" : "transparent",
+                        color: ativo ? BRAND.amarelo : t.textMuted,
+                        fontWeight: ativo ? 700 : 400,
+                        transition: "all 0.15s",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
                       }}
                     >
                       {ICONE_JOGO[o.value]}

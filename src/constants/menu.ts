@@ -19,6 +19,7 @@ import {
   GiShare,
   GiMegaphone,
   GiNotebook,
+  GiOpenBook,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -67,6 +68,7 @@ export const MENU: MenuSection[] = [
     section: "Conteúdo",
     items: [
       { key: "roteiro_mesa", label: "Roteiro de Mesa", icon: GiNotebook },
+      { key: "playbook_influencers", label: "Playbook Influencers", icon: GiOpenBook },
     ],
   },
   {
