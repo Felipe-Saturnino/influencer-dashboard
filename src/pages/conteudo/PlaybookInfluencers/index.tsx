@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback, type CSSProperties, type ReactNode } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -21,6 +21,12 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
 } as const;
+
+/** Texto introdutório fixo abaixo do título (visível em todas as abas). */
+const PLAYBOOK_SUBTITULO_PARAGRAFOS = [
+  "Este material tem como objetivo orientar e apoiar o criador durante suas transmissões ao vivo, garantindo alinhamento com a operação, posicionamento de marca e melhor experiência para o público.",
+  "As diretrizes abaixo devem ser aplicadas de forma natural e autêntica, respeitando o estilo de cada criador.",
+] as const;
 
 /** Papéis que podem ver o painel de auditoria (além de usePermission.canEditarOk). Operador fica de fora. */
 const ROLES_AUDITORIA_PLAYBOOK: Role[] = ["admin", "gestor", "executivo", "agencia"];
@@ -79,28 +85,13 @@ function BlocoInfo({ children, dark }: { children: React.ReactNode; dark: boolea
   );
 }
 
-function ListaOK({ items, dark }: { items: string[]; dark: boolean }) {
+function ListaOK({ items, dark }: { items: React.ReactNode[]; dark: boolean }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
       {items.map((item, i) => (
         <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
           <div style={{ width: 18, height: 18, borderRadius: "50%", background: `${BRAND.verde}20`, border: `1px solid ${BRAND.verde}60`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
             <Check size={10} color={BRAND.verde} />
-          </div>
-          <span style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.55 }}>{item}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ListaX({ items, dark }: { items: string[]; dark: boolean }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-      {items.map((item, i) => (
-        <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-          <div style={{ width: 18, height: 18, borderRadius: "50%", background: `${BRAND.vermelho}15`, border: `1px solid ${BRAND.vermelho}50`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-            <span style={{ fontSize: 10, color: BRAND.vermelho, fontWeight: 700, lineHeight: 1 }}>✕</span>
           </div>
           <span style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.55 }}>{item}</span>
         </div>
@@ -124,34 +115,48 @@ function TituloSecao({ children, accent }: { children: React.ReactNode; accent: 
 const ConteudoPosicionamento: React.FC<{ dark: boolean }> = ({ dark }) => (
   <div>
     <p style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.7, marginTop: 0 }}>
-      A <strong>SPIN Gaming</strong> é um estúdio 100% brasileiro, com operação nacional e dealers brasileiros. Sempre que possível, reforce esses pontos de forma orgânica durante a transmissão.
+      A <strong>Spin Gaming</strong> é um estúdio 100% brasileiro, com operação nacional e dealers brasileiros. Sempre que possível, reforce esses pontos de forma orgânica durante a transmissão.
     </p>
     <TituloSecao accent={BRAND.azul}>Diferenciais para explorar na live</TituloSecao>
     <ListaOK dark={dark} items={[
-      "Estrutura totalmente localizada no Brasil 🇧🇷",
+      "Estrutura totalmente localizada no Brasil",
       "Dealers brasileiros treinados internamente",
       "Operação própria com alto padrão técnico",
     ]} />
     <BlocoInfo dark={dark}>
       As diretrizes devem ser aplicadas de forma <strong>natural e autêntica</strong>, respeitando o estilo de cada criador.
     </BlocoInfo>
+    <TituloSecao accent={BRAND.azul}>Uso de marca</TituloSecao>
+    <ListaOK dark={dark} items={[
+      <>Utilize sempre o nome correto: <strong>Spin Gaming</strong></>,
+      "Configure corretamente bots, overlays e comandos do chat",
+      "Mantenha padrão de comunicação ao mencionar a marca",
+    ]} />
   </div>
 );
 
 const ConteudoDealers: React.FC<{ dark: boolean }> = ({ dark }) => (
   <div>
     <p style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.7, marginTop: 0 }}>
-      A interação com os dealers é um dos principais diferenciais da SPIN Gaming. Use isso para aumentar o engajamento da sua live.
+      A interação com os dealers é um dos principais diferenciais da <strong>Spin Gaming</strong>. Use isso para aumentar o engajamento da sua live.
     </p>
     <TituloSecao accent={BRAND.azul}>Boas práticas</TituloSecao>
     <ListaOK dark={dark} items={[
-      "Utilize o chat da mesa para interagir com a dealer sempre que possível",
+      "Utilize o chat da mesa para interagir com a/o dealer sempre que possível",
+      "O chat da mesa é apenas entre cada jogador e o dealer. Então você não verá as mensagens de outros jogadores, assim como eles não verão as suas se você não mostrar na live",
       "Estimule a interação entre você, a dealer e o público",
       "Utilize essa dinâmica para aumentar o engajamento da live",
       "Utilize sempre os nomes profissionais apresentados na plataforma",
     ]} />
     <BlocoAlerta dark={dark}>
-      <strong>Importante:</strong> Evite incentivar ou solicitar informações pessoais das dealers. Não estimule busca por redes sociais ou nomes reais.
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div>
+          <strong>Importante¹:</strong> Evite incentivar ou solicitar informações pessoais das dealers. Não estimule busca por redes sociais ou nomes reais.
+        </div>
+        <div>
+          <strong>Importante²:</strong> Nunca use o nome real do(a) dealer, sempre utilizar o Nickname da tela
+        </div>
+      </div>
     </BlocoAlerta>
   </div>
 );
@@ -163,12 +168,12 @@ const ConteudoAgendamento: React.FC<{ dark: boolean }> = ({ dark }) => (
     </p>
     <TituloSecao accent={BRAND.vermelho}>Regras obrigatórias</TituloSecao>
     <ListaOK dark={dark} items={[
-      "Registrar previamente todas as lives na plataforma disponibilizada",
+      <>Registrar previamente todas as lives nesta plataforma na página <strong>AGENDA</strong></>,
       "O agendamento deve conter data e horário da transmissão",
       "O registro deve ser realizado com antecedência mínima de 24 horas",
     ]} />
     <BlocoAlerta dark={dark}>
-      <strong>Atenção:</strong> Lives agendadas e realizadas no mesmo dia <strong>não serão contabilizadas</strong> para fins de campanha.
+      <strong>Atenção:</strong> Lives realizadas sem agendamento ou Lives agendadas no mesmo dia não serão contabilizadas para fins de campanha.
     </BlocoAlerta>
     <TituloSecao accent={BRAND.vermelho}>Por que isso é essencial</TituloSecao>
     <ListaOK dark={dark} items={[
@@ -182,29 +187,22 @@ const ConteudoAgendamento: React.FC<{ dark: boolean }> = ({ dark }) => (
 const ConteudoJogos: React.FC<{ dark: boolean }> = ({ dark }) => (
   <div>
     <p style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.7, marginTop: 0 }}>
-      O foco principal é atrair novos jogadores para as mesas da SPIN Gaming. As regras abaixo são <strong>obrigatórias</strong>.
+      O foco principal é atrair novos jogadores para as mesas da <strong>Spin Gaming</strong>. As regras abaixo são <strong>obrigatórias</strong>.
     </p>
     <TituloSecao accent={BRAND.vermelho}>Foco obrigatório — Live Casino SPIN</TituloSecao>
     <ListaOK dark={dark} items={[
-      "Blackjack nas mesas SPIN Gaming",
-      "Roleta nas mesas SPIN Gaming",
-      "Baccarat nas mesas SPIN Gaming",
+      <>Blackjack nas mesas <strong>Spin Gaming</strong></>,
+      <>Roleta nas mesas <strong>Spin Gaming</strong></>,
+      <>Baccarat nas mesas <strong>Spin Gaming</strong></>,
     ]} />
     <BlocoAlerta dark={dark}>
-      <strong>Proibido:</strong> Jogar Blackjack, Roleta ou Baccarat em mesas de provedores concorrentes (Evolution, Pragmatic Play, Playtech ou qualquer outro provedor). Esses jogos devem ocorrer <strong>exclusivamente</strong> nas mesas da SPIN Gaming.
+      <strong>Proibido:</strong> Jogar Blackjack, Roleta ou Baccarat em mesas de provedores concorrentes (Evolution, Pragmatic Play, Playtech ou qualquer outro provedor). Esses jogos devem ocorrer <strong>exclusivamente</strong> nas mesas da <strong>Spin Gaming</strong>.
     </BlocoAlerta>
     <TituloSecao accent={dark ? "#7b95ff" : BRAND.azul}>Uso de Slots (permitido com limite)</TituloSecao>
     <ListaOK dark={dark} items={[
       "Até 15 minutos de slots a cada 1 hora de live",
       "Games Global é recomendado (parceira estratégica), mas não obrigatório",
       "O criador possui liberdade de escolha nos slots",
-    ]} />
-    <TituloSecao accent={BRAND.vermelho}>Proibições explícitas</TituloSecao>
-    <ListaX dark={dark} items={[
-      "Jogar Baccarat, Roleta ou Blackjack em mesas da Evolution",
-      "Jogar Baccarat, Roleta ou Blackjack em mesas da Pragmatic Play",
-      "Jogar Baccarat, Roleta ou Blackjack em mesas da Playtech",
-      "Jogar esses jogos em qualquer outro provedor concorrente",
     ]} />
   </div>
 );
@@ -235,7 +233,7 @@ const ConteudoTecnico: React.FC<{ dark: boolean }> = ({ dark }) => (
       "Evite dar foco ao problema",
     ]} />
     <BlocoInfo dark={dark}>
-      A SPIN Gaming acompanha as transmissões em tempo real pelo usuário <strong>Spingamingbr</strong>. Adicione como MOD da live e aproveite as interações no chat como apoio.
+      A <strong>Spin Gaming</strong> acompanha as transmissões em tempo real pelo usuário <strong>@Spingamingbr</strong>. Adicione como MOD da live e aproveite as interações no chat como apoio.
     </BlocoInfo>
     <TituloSecao accent={BRAND.azul}>Situações que podem ocorrer</TituloSecao>
     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
@@ -248,61 +246,104 @@ const ConteudoTecnico: React.FC<{ dark: boolean }> = ({ dark }) => (
   </div>
 );
 
+const FUN_FACT_CARD: CSSProperties = {
+  padding: "14px 16px",
+  borderRadius: 10,
+  border: "1px solid rgba(112,202,228,0.20)",
+  borderLeft: `3px solid ${BRAND.ciano}`,
+};
+
+function GridFunFacts({ items, dark }: { items: { label: string; value: string }[]; dark: boolean }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10, marginTop: 12 }}>
+      {items.map((f, i) => (
+        <div
+          key={i}
+          style={{
+            ...FUN_FACT_CARD,
+            background: dark ? "rgba(112,202,228,0.06)" : "rgba(112,202,228,0.05)",
+          }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 900, color: dark ? "#70cae4" : "#0f6a8a", fontFamily: FONT_TITLE, lineHeight: 1 }}>{f.value}</div>
+          <div style={{ fontSize: 12, color: dark ? "#9898be" : "#4a4a6a", fontFamily: FONT.body, marginTop: 6, lineHeight: 1.4 }}>{f.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const ConteudoFunFacts: React.FC<{ dark: boolean }> = ({ dark }) => {
-  const facts = [
+  const estrutura = [
     { label: "Investimento em estrutura", value: "R$ 30M+" },
-    { label: "Baralhos em operação", value: "18.000+" },
-    { label: "Dealers treinados internamente", value: "210+" },
-    { label: "Tempo médio de resposta do suporte", value: "3 segundos" },
     { label: "Cabeamento interno", value: "5+ km" },
     { label: "Autonomia do gerador próprio", value: "72 horas" },
+    { label: "Equipamentos de áudio e vídeo de última geração", value: "✓" },
+  ];
+  const operacao = [
+    { label: "Baralhos em operação", value: "18.000+" },
+    { label: "Dealers treinados internamente", value: "210+" },
     { label: "Academia própria de dealers", value: "✓" },
     { label: "Treinadores com certificação internacional", value: "✓" },
-    { label: "Equipamentos de áudio e vídeo de última geração", value: "✓" },
+  ];
+  const suporte = [
+    { label: "Tempo médio de resposta do suporte", value: "3 segundos" },
     { label: "Suporte 24h", value: "✓" },
   ];
   return (
     <div>
       <p style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.7, marginTop: 0 }}>
-        Use esses dados como ganchos durante a live para reforçar o posicionamento da SPIN Gaming. São opcionais, mas altamente recomendados para engajamento.
+        Use esses dados como ganchos durante a live para reforçar o posicionamento da <strong>Spin Gaming</strong>. São opcionais, mas altamente recomendados para engajamento.
       </p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10, marginTop: 16 }}>
-        {facts.map((f, i) => (
-          <div key={i} style={{ padding: "14px 16px", borderRadius: 10, background: dark ? "rgba(112,202,228,0.06)" : "rgba(112,202,228,0.05)", border: "1px solid rgba(112,202,228,0.20)", borderLeft: `3px solid ${BRAND.ciano}` }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: dark ? "#70cae4" : "#0f6a8a", fontFamily: FONT_TITLE, lineHeight: 1 }}>{f.value}</div>
-            <div style={{ fontSize: 12, color: dark ? "#9898be" : "#4a4a6a", fontFamily: FONT.body, marginTop: 6, lineHeight: 1.4 }}>{f.label}</div>
-          </div>
-        ))}
-      </div>
+      <TituloSecao accent={BRAND.ciano}>Fun Facts</TituloSecao>
+      <TituloSecao accent={BRAND.ciano}>Estrutura</TituloSecao>
+      <GridFunFacts dark={dark} items={estrutura} />
+      <TituloSecao accent={BRAND.ciano}>Operação</TituloSecao>
+      <GridFunFacts dark={dark} items={operacao} />
+      <TituloSecao accent={BRAND.ciano}>Suporte</TituloSecao>
+      <GridFunFacts dark={dark} items={suporte} />
     </div>
   );
 };
 
 const ConteudoAcesso: React.FC<{ dark: boolean }> = ({ dark }) => (
   <div>
-    <TituloSecao accent={BRAND.azul}>Mesas SPIN Gaming</TituloSecao>
+    <TituloSecao accent={BRAND.azul}>
+      <>Mesas <strong>Spin Gaming</strong></>
+    </TituloSecao>
     <ListaOK dark={dark} items={[
       "Clique no banner \"MESAS EXCLUSIVAS\"",
       "Ou acesse pelas mesas exibidas logo abaixo do banner",
     ]} />
+    <div style={{ marginTop: 20, borderRadius: 12, overflow: "hidden", border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`, boxShadow: dark ? "0 8px 32px rgba(0,0,0,0.35)" : "0 8px 28px rgba(0,0,0,0.08)" }}>
+      <img
+        src="/playbook/mesas-spin-gaming.png"
+        alt="Interface do site: banner Mesas Exclusivas Liberadas, atalhos e mesas ao vivo (Roleta e Blackjack exclusivos)"
+        loading="lazy"
+        decoding="async"
+        style={{ display: "block", width: "100%", height: "auto" }}
+      />
+    </div>
     <TituloSecao accent={dark ? "#70cae4" : "#0f6a8a"}>Games Global (Slots)</TituloSecao>
     <ListaOK dark={dark} items={[
       "Acesse pela aba CASSINO",
       "Utilize a tag \"Games Global\" para filtrar os jogos",
       "Ou role a barra até encontrar a seção Games Global",
     ]} />
-    <TituloSecao accent={BRAND.azul}>Uso de marca</TituloSecao>
-    <ListaOK dark={dark} items={[
-      "Utilize sempre o nome correto: \"SPIN Gaming\"",
-      "Configure corretamente bots, overlays e comandos do chat",
-      "Mantenha padrão de comunicação ao mencionar a marca",
-    ]} />
+    <div style={{ marginTop: 20, borderRadius: 12, overflow: "hidden", border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`, boxShadow: dark ? "0 8px 32px rgba(0,0,0,0.35)" : "0 8px 28px rgba(0,0,0,0.08)" }}>
+      <img
+        src="/playbook/games-global-slots.png"
+        alt="Interface do cassino: aba CASSINO com a seção Games Global e carrossel de slots"
+        loading="lazy"
+        decoding="async"
+        style={{ display: "block", width: "100%", height: "auto" }}
+      />
+    </div>
   </div>
 );
 
 const ABAS: AbaConfig[] = [
   { key: "posicionamento", label: "Posicionamento", icon: <Star size={14} />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoPosicionamento },
-  { key: "dealers", label: "Dealers", icon: <Users size={14} />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoDealers },
+  { key: "dealers", label: "Dealers", icon: <Users size={14} />, obrigatoria: true, itemKey: "dealers_boas_praticas", accentColor: BRAND.vermelho, content: ConteudoDealers },
   { key: "agendamento", label: "Agendamento", icon: <Calendar size={14} />, obrigatoria: true, itemKey: "agendamento_lives", accentColor: BRAND.vermelho, content: ConteudoAgendamento },
   { key: "jogos", label: "Jogos", icon: <Gamepad2 size={14} />, obrigatoria: true, itemKey: "prioridade_jogos", accentColor: BRAND.vermelho, content: ConteudoJogos },
   { key: "blackjack", label: "Side Bets", icon: <Zap size={14} />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoBlackjack },
@@ -619,24 +660,41 @@ export default function PlaybookInfluencers() {
 
   return (
     <div style={{ padding: "20px 24px 48px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: brand.primaryIconBg,
-            border: brand.primaryIconBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: brand.primaryIconColor, flexShrink: 0,
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ flex: "1 1 280px", minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{
+              width: 32, height: 32, borderRadius: 9,
+              background: brand.primaryIconBg,
+              border: brand.primaryIconBorder,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: brand.primaryIconColor, flexShrink: 0,
+            }}>
+              <BookOpen size={16} />
+            </span>
+            <h1 style={{
+              fontSize: 18, fontWeight: 800, color: brand.primary,
+              fontFamily: FONT_TITLE, margin: 0,
+              letterSpacing: "0.05em", textTransform: "uppercase",
+            }}>
+              Playbook — Influencers
+            </h1>
+          </div>
+          <div style={{
+            marginTop: 12,
+            marginLeft: 40,
+            maxWidth: 720,
+            fontFamily: FONT.body,
+            fontSize: 13,
+            lineHeight: 1.65,
+            color: t.textMuted,
           }}>
-            <BookOpen size={16} />
-          </span>
-          <h1 style={{
-            fontSize: 18, fontWeight: 800, color: brand.primary,
-            fontFamily: FONT_TITLE, margin: 0,
-            letterSpacing: "0.05em", textTransform: "uppercase",
-          }}>
-            Playbook — Influencers
-          </h1>
+            {PLAYBOOK_SUBTITULO_PARAGRAFOS.map((texto, i) => (
+              <p key={i} style={{ margin: i === 0 ? "0 0 10px 0" : 0 }}>
+                {texto}
+              </p>
+            ))}
+          </div>
         </div>
 
         {!loadingStats && (
