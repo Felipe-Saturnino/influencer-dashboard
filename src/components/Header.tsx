@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Settings, HelpCircle, LogOut } from "lucide-react";
+import { Settings, HelpCircle, LogOut, Menu } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { MENU } from "../constants/menu";
 import { BASE_COLORS, FONT } from "../constants/theme";
@@ -8,6 +8,9 @@ interface Props {
   activePage: string;
   onNavigate: (page: string) => void;
   onLogout:   () => void;
+  /** Menu hamburger (layout estreito) */
+  showMenuButton?: boolean;
+  onMenuClick?: () => void;
 }
 
 function getSectionForPage(pageKey: string): string | null {
@@ -20,7 +23,7 @@ function getSectionForPage(pageKey: string): string | null {
 
 const BRAND_VERMELHO = "#e84025";
 
-export default function Header({ activePage, onNavigate, onLogout }: Props) {
+export default function Header({ activePage, onNavigate, onLogout, showMenuButton = false, onMenuClick }: Props) {
   const { theme: t, user, operadoraBrand } = useApp();
   const [open,  setOpen]  = useState(false);
   const [hover, setHover]  = useState(false);
@@ -60,7 +63,9 @@ export default function Header({ activePage, onNavigate, onLogout }: Props) {
     : t.headerBg;
 
   return (
-    <header style={{
+    <header
+      className="app-header-responsive"
+      style={{
       background:    headerBg,
       borderBottom:  `1px solid ${t.headerBorder}`,
       padding:       "0 32px",
@@ -69,18 +74,49 @@ export default function Header({ activePage, onNavigate, onLogout }: Props) {
       alignItems:    "center",
       justifyContent:"space-between",
       flexShrink:    0,
-    }}>
-      {/* Seção da página */}
-      <span style={{
-        color:          t.headerText,
-        fontWeight:     800,
-        fontSize:       "15px",
-        letterSpacing:  "1px",
-        textTransform:  "uppercase",
-        fontFamily:     FONT.title,
-      }}>
-        {section ?? ""}
-      </span>
+      gap:           12,
+    }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+        {showMenuButton && onMenuClick && (
+          <button
+            type="button"
+            aria-label="Abrir menu de navegação"
+            onClick={onMenuClick}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 44,
+              height: 44,
+              marginLeft: -6,
+              border: "none",
+              borderRadius: 12,
+              background: "transparent",
+              color: t.headerText,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <Menu size={22} strokeWidth={2.2} />
+          </button>
+        )}
+        <span
+          style={{
+            color:          t.headerText,
+            fontWeight:     800,
+            fontSize:       "15px",
+            letterSpacing:  "1px",
+            textTransform:  "uppercase",
+            fontFamily:     FONT.title,
+            overflow:       "hidden",
+            textOverflow:   "ellipsis",
+            whiteSpace:     "nowrap",
+          }}
+        >
+          {section ?? ""}
+        </span>
+      </div>
 
       {/* Avatar + Dropdown */}
       <div ref={ref} style={{ position: "relative" }}>
@@ -100,13 +136,20 @@ export default function Header({ activePage, onNavigate, onLogout }: Props) {
             boxShadow:  open || hover ? `0 0 0 1px ${BASE_COLORS.purple}22` : "none",
           }}
         >
-          <p style={{
+          <p
+            className="app-header-user-name"
+            style={{
             margin:     0,
             fontSize:   "13px",
             fontWeight: 600,
             color:      t.headerText,
             fontFamily: FONT.body,
-          }}>
+            maxWidth:   140,
+            overflow:   "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          >
             {user.name}
           </p>
           <div style={{

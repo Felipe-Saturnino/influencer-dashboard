@@ -740,7 +740,7 @@ export default function RoteiroMesa() {
     filtrarSugestoes(sugestoes.filter((s) => s.bloco === bloco));
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
 
       {/* ── HEADER — idêntico ao padrão Agenda de Lives ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>

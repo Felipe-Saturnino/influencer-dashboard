@@ -268,7 +268,7 @@ const FUN_FACT_CARD: CSSProperties = {
 
 function GridFunFacts({ items, dark }: { items: { label: string; value: string }[]; dark: boolean }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10, marginTop: 12 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))", gap: 10, marginTop: 12 }}>
       {items.map((f, i) => (
         <div
           key={i}
@@ -460,7 +460,7 @@ function PainelAuditoria({
         </span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div className="app-grid-2" style={{ gap: 16 }}>
         <div>
           <div style={{ fontSize: 10, fontWeight: 700, color: BRAND.verde, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, marginBottom: 8 }}>
             Confirmaram ({confirmacoes.length})
@@ -712,7 +712,7 @@ export default function PlaybookInfluencers() {
   const tudoConfirmado = user?.role === "influencer" && confirmadosOb === totalOb && totalOb > 0;
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 200px" }}>

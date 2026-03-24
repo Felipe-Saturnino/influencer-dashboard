@@ -466,7 +466,7 @@ export default function Feedback() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
 
       {/* ── HEADER — cor primária ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
@@ -605,7 +605,7 @@ export default function Feedback() {
 
       {/* ── QUADROS DE RESUMO ── */}
       {!loading && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
           {/* Total de lives */}
           <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 14, padding: "16px 18px" }}>
             <div style={{ fontSize: 28, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1 }}>
@@ -847,7 +847,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, brand, onClos
         {/* Campos de resultado */}
         {showResultFields && (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+            <div className="app-grid-2-tight" style={{ marginBottom: 14 }}>
               <div>
                 <label style={labelStyle}>Duração (horas)</label>
                 <input type="number" min={0} value={duracaoHoras} onChange={e => setDuracaoHoras(Math.max(0, parseInt(e.target.value, 10) || 0))} style={inputStyle} />
@@ -857,7 +857,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, brand, onClos
                 <input type="number" min={0} max={59} value={duracaoMin} onChange={e => setDuracaoMin(Math.max(0, Math.min(59, parseInt(e.target.value, 10) || 0)))} style={inputStyle} />
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+            <div className="app-grid-2-tight" style={{ marginBottom: 14 }}>
               <div>
                 <label style={labelStyle}>Média de views</label>
                 <input type="number" min={0} value={mediaViews} onChange={e => setMediaViews(Math.max(0, parseInt(e.target.value, 10) || 0))} style={inputStyle} />

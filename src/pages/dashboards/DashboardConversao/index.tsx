@@ -340,7 +340,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
             {paresPag.map(([rowEsq, rowDir], i) => {
               const posEsq = pagResto * PARES_POR_PAG * 2 + i * 2 + 4;
               return (
-                <div key={rowEsq.influencer_id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div key={rowEsq.influencer_id} className="app-grid-2-tight" style={{ gap: 10 }}>
                   <ItemLista row={rowEsq} pos={posEsq} />
                   {rowDir ? <ItemLista row={rowDir} pos={posEsq + 1} /> : <div />}
                 </div>
@@ -597,7 +597,7 @@ export default function DashboardConversao() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       {/* ══ BLOCO 1: FILTROS — primária transparente ═══════════════════════════════ */}
       <div style={{ marginBottom: 14 }}>
@@ -676,7 +676,7 @@ export default function DashboardConversao() {
         <SectionTitle icon={<GiConvergenceTarget size={14} />}>Comparativo de Funil</SectionTitle>
 
         {/* Selects com badge "vs" estilizado */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", marginBottom: 16 }}>
+        <div className="app-conversao-vs-row">
           <select value={compA} onChange={(e) => setCompA(e.target.value)}
             style={{ ...selectStyleSimple, borderColor: compA ? COR_A.border : undefined, width: "100%" }}>
             <option value="">— Selecione —</option>
@@ -714,7 +714,7 @@ export default function DashboardConversao() {
 
         {/* Cabeçalhos coloridos */}
         {(rowA || rowB) && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 14 }}>
+          <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
             <div style={{ padding: "6px 12px", borderRadius: 10, background: COR_A.bg, border: `1px solid ${COR_A.border}`, textAlign: "center", fontSize: 13, fontWeight: 700, color: COR_A.accent, fontFamily: FONT.body }}>
               {rowA?.nome ?? "—"}
             </div>
@@ -727,9 +727,9 @@ export default function DashboardConversao() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando dados...</div>
         ) : (
-          <div style={{ display: "flex", gap: 16 }}>
+          <div className="app-conversao-funil-duo">
             <PainelFunil row={rowA} isEmpty={!compA} cor={COR_A} />
-            <div style={{ width: 1, background: t.cardBorder, flexShrink: 0 }} />
+            <div className="app-conversao-funil-divider" style={{ width: 1, background: t.cardBorder, flexShrink: 0 }} />
             <PainelFunil row={rowB} isEmpty={!compB} cor={COR_B} />
           </div>
         )}

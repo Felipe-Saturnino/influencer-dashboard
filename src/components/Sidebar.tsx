@@ -7,6 +7,9 @@ import { BASE_COLORS, FONT } from "../constants/theme";
 interface Props {
   activePage: string;
   onNavigate: (page: string) => void;
+  /** ≤900px: menu em gaveta sobre o conteúdo */
+  isDrawer?: boolean;
+  drawerOpen?: boolean;
 }
 
 // Cor do ícone inativo — lilás neutro, subordinado ao texto
@@ -16,7 +19,7 @@ const ICON_COLOR_ACTIVE    = "#ffffff";
 
 const LOGO_DEFAULT = "/Logo Spin Gaming White.png";
 
-export default function Sidebar({ activePage, onNavigate }: Props) {
+export default function Sidebar({ activePage, onNavigate, isDrawer = false, drawerOpen = false }: Props) {
   const { theme: t, permissions, operadoraBrand } = useApp();
   const logoUrl = operadoraBrand?.logo_url || LOGO_DEFAULT;
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -33,9 +36,17 @@ export default function Sidebar({ activePage, onNavigate }: Props) {
 
   const sidebarBg = operadoraBrand?.cor_background ?? t.sidebar;
 
+  const asideClass = [
+    "app-sidebar-fill",
+    isDrawer ? "app-sidebar-drawer" : "",
+    isDrawer && drawerOpen ? "app-sidebar-drawer-open" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <aside
-      className="app-sidebar-fill"
+      className={asideClass}
       style={{
       width: "240px", flexShrink: 0,
       position: "fixed", top: 0, left: 0,

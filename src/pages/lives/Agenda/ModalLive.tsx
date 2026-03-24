@@ -221,7 +221,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         )}
 
         {/* Data e horário */}
-        <div style={{ ...row, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="app-grid-2-tight" style={{ ...row, gap: 10 }}>
           <div>
             <label style={labelStyle}>Data</label>
             <input

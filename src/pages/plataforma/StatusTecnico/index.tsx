@@ -658,7 +658,7 @@ export default function StatusTecnico() {
   }
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+    <div className="app-page-shell" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
       {/* ── Header — padrão da plataforma ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -681,7 +681,7 @@ export default function StatusTecnico() {
       </div>
 
       {/* ── KPI Cards — accent bar ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+      <div className="app-grid-kpi-4" style={{ gap: 16 }}>
         <KpiCard
           label="Integrações Ativas"
           loading={loading}

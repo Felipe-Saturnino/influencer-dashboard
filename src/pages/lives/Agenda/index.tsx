@@ -336,7 +336,8 @@ export default function Agenda() {
     const cells    = getMonthDays(current.getFullYear(), current.getMonth());
     const todayISO = toISO(new Date());
     return (
-      <div>
+      <div className="app-agenda-cal-scroll">
+        <div className="app-agenda-cal-scroll-inner">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
           {DAYS.map(d => (
             <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: t.textMuted, padding: "8px 0", fontFamily: FONT.body }}>
@@ -377,6 +378,7 @@ export default function Agenda() {
             );
           })}
         </div>
+        </div>
       </div>
     );
   }
@@ -386,6 +388,8 @@ export default function Agenda() {
     const week     = getWeekDays(current);
     const todayISO = toISO(new Date());
     return (
+      <div className="app-agenda-cal-scroll">
+        <div className="app-agenda-cal-scroll-inner">
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
         {week.map((date, i) => {
           const dayLives = livesForDay(date);
@@ -409,6 +413,8 @@ export default function Agenda() {
             </div>
           );
         })}
+      </div>
+        </div>
       </div>
     );
   }
@@ -527,7 +533,7 @@ export default function Agenda() {
   }
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
 
       {/* ── HEADER ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>

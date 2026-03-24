@@ -2,9 +2,16 @@
 -- Scout: Tabelas para prospectação de influencers pelo Gestor
 -- Execute no SQL Editor do Supabase
 --
--- NOTA: Ao marcar status "Fechado", o sistema cria usuário na Gestão de Usuários.
--- Isso usa supabase.auth.admin.createUser, que requer Service Role Key.
--- Se o frontend usa apenas Anon Key, crie uma Edge Function para essa operação.
+-- Permissões de PÁGINA (menu Scout, ver/criar/editar/excluir no app):
+--   Configure apenas em Plataforma → Gestão de Usuários. Não use SQL em
+--   role_permissions para isso — este arquivo não altera role_permissions.
+--
+-- RLS abaixo: políticas do Postgres (quem pode ler/gravar LINHAS nas tabelas
+--   scout_* com sessão autenticada). É camada de banco, não substitui a
+--   Gestão de Usuários na interface.
+--
+-- NOTA: Ao marcar status "Fechado", o sistema cria usuário (Edge Function +
+--   Service Role). O frontend chama a função com a Anon Key.
 -- =============================================================================
 
 -- Tabela principal: scout_influencer
@@ -18,6 +25,7 @@ CREATE TABLE IF NOT EXISTS scout_influencer (
   nome_agente       TEXT,
   telefone          TEXT,
   cache_negociado   NUMERIC(12,2) DEFAULT 0,
+  operadora_slug    TEXT REFERENCES operadoras(slug) ON DELETE SET NULL,
   live_cassino      TEXT CHECK (live_cassino IN ('sim', 'nao') OR live_cassino IS NULL),
   email             TEXT,
   -- Canais (plataformas e links - mesmo padrão da página Influencers)
@@ -84,10 +92,3 @@ DROP TRIGGER IF EXISTS scout_influencer_updated ON scout_influencer;
 CREATE TRIGGER scout_influencer_updated
   BEFORE UPDATE ON scout_influencer
   FOR EACH ROW EXECUTE FUNCTION scout_updated_at();
-
--- Permissões: adicionar página Scout para Gestor e Admin
-DELETE FROM role_permissions WHERE page_key = 'scout' AND role IN ('gestor', 'admin');
-INSERT INTO role_permissions (role, page_key, can_view, can_criar, can_editar, can_excluir)
-VALUES
-  ('gestor', 'scout', 'sim', 'sim', 'sim', 'sim'),
-  ('admin', 'scout', 'sim', 'sim', 'sim', 'sim');

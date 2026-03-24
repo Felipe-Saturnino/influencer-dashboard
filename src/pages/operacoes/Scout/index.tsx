@@ -7,7 +7,7 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK, type Plataforma } from "../../../constants/platforms";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { X, Eye, Pencil, Trash2 } from "lucide-react";
-import { GiSpyglass, GiEyeball, GiTwoCoins } from "react-icons/gi";
+import { GiSpyglass, GiEyeball, GiTwoCoins, GiPokerHand } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -19,6 +19,24 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
 } as const;
+
+export type OperadoraScoutOpt = { slug: string; nome: string };
+
+/** Chama a Edge Function (service role): influencer_operadoras + user_scopes — alinha Gestão de Usuários e quadro Influencers. */
+async function vincularOperadoraInfluencerViaApi(userId: string, operadoraSlug: string, scoutId?: string): Promise<void> {
+  const slug = operadoraSlug.trim();
+  if (!slug || !userId.trim()) return;
+  const res = await fetch("/api/criar-usuario-scout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${supabaseAnonKey}`, Apikey: supabaseAnonKey },
+    body: JSON.stringify({
+      vincular_operadora: { user_id: userId.trim(), operadora_slug: slug },
+      ...(scoutId ? { scout_id: scoutId } : {}),
+    }),
+  });
+  const fnData = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((fnData as { error?: string }).error ?? `Erro ${res.status}`);
+}
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 function PlatLogo({ plataforma, size = 14, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
@@ -86,6 +104,8 @@ export interface ScoutInfluencer {
   views_whatsapp?: number | null;
   views_telegram?: number | null;
   categorias?: string[];
+  /** Operadora da parceria (obrigatória ao fechar); replica em influencer_operadoras e user_scopes. */
+  operadora_slug?: string | null;
   user_id?: string | null;
   created_by?: string | null;
   created_at?: string;
@@ -114,10 +134,23 @@ function getLiveCassinoLabel(v: string | null | undefined): string {
   return v === "sim" ? "Sim" : "Não";
 }
 
+/** Numeric do Postgres costuma vir como string no JSON do Supabase — normaliza para ≥ 0. */
+function toCacheNumber(v: unknown): number {
+  if (v == null || v === "") return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? Math.max(0, v) : 0;
+  const s = String(v).trim();
+  if (!s) return 0;
+  let n = Number(s);
+  if (!Number.isFinite(n) && s.includes(",")) {
+    n = Number(s.replace(/\./g, "").replace(",", "."));
+  }
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
 function validarParaFechado(s: {
   nome_artistico?: string | null;
   email?: string | null;
-  cache_negociado?: number | null;
+  cache_negociado?: number | null | string;
   plataformas?: string[];
   link_twitch?: string | null;
   link_youtube?: string | null;
@@ -135,11 +168,13 @@ function validarParaFechado(s: {
   views_discord?: number | null;
   views_whatsapp?: number | null;
   views_telegram?: number | null;
+  operadora_slug?: string | null;
 }): { ok: boolean; msg?: string } {
   if (!(s.nome_artistico ?? "").trim()) return { ok: false, msg: "Nome artístico é obrigatório para marcar como Fechado." };
   if (!(s.email ?? "").trim()) return { ok: false, msg: "E-mail é obrigatório para marcar como Fechado." };
-  const cache = s.cache_negociado ?? 0;
-  if (!cache || cache <= 0) return { ok: false, msg: "Cachê negociado é obrigatório e deve ser maior que zero para marcar como Fechado." };
+  if (!(s.operadora_slug ?? "").toString().trim()) return { ok: false, msg: "Selecione a operadora da parceria para marcar como Fechado (campo no modal Editar)." };
+  const cache = toCacheNumber(s.cache_negociado);
+  if (cache <= 0) return { ok: false, msg: "Cachê negociado é obrigatório e deve ser maior que zero para marcar como Fechado." };
   const plats = s.plataformas ?? [];
   if (plats.length === 0) return { ok: false, msg: "Selecione pelo menos 1 plataforma para marcar como Fechado." };
   const temPlatCompleta = plats.some((p) => {
@@ -197,6 +232,13 @@ export default function Scout() {
   const [cacheLimit, setCacheLimit] = useState(5000);
   const [viewsMax, setViewsMax] = useState(100000);
   const [viewsLimit, setViewsLimit] = useState(100000);
+  const [operadorasOpt, setOperadorasOpt] = useState<OperadoraScoutOpt[]>([]);
+
+  useEffect(() => {
+    supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => {
+      setOperadorasOpt((data ?? []) as OperadoraScoutOpt[]);
+    });
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -204,7 +246,7 @@ export default function Scout() {
     if (error) { console.error("[Scout] Erro ao carregar:", error); setList([]); }
     else {
       setList((data ?? []) as ScoutInfluencer[]);
-      const caches = (data ?? []).map((s: ScoutInfluencer) => s.cache_negociado ?? 0).filter((v: number) => v > 0);
+      const caches = (data ?? []).map((s: ScoutInfluencer) => toCacheNumber(s.cache_negociado)).filter((v: number) => v > 0);
       const viewsAll = (data ?? []).map((s: ScoutInfluencer) => getViewsTotal(s)).filter((v: number) => v > 0);
       if (caches.length > 0) { const cm = Math.max(...caches, 5000); setCacheMax(cm); setCacheLimit(cm); }
       if (viewsAll.length > 0) { const vm = Math.max(...viewsAll, 100000); setViewsMax(vm); setViewsLimit(vm); }
@@ -219,7 +261,7 @@ export default function Scout() {
     if (search && !(s.nome_artistico ?? "").toLowerCase().includes(q) && !(s.email ?? "").toLowerCase().includes(q)) return false;
     if (filterStatus !== "todos" && s.status !== filterStatus) return false;
     if (filterPlat !== "todas" && !(s.plataformas ?? []).includes(filterPlat)) return false;
-    if (cacheMax > 0 && (s.cache_negociado ?? 0) > cacheLimit) return false;
+    if (cacheMax > 0 && toCacheNumber(s.cache_negociado) > cacheLimit) return false;
     if (viewsMax > 0 && getViewsTotal(s) > viewsLimit) return false;
     return true;
   });
@@ -235,20 +277,48 @@ export default function Scout() {
   const podeAlterarStatus = (s: ScoutInfluencer) => podeEditarScout(s);
 
   async function handleStatusChange(scout: ScoutInfluencer, newStatus: StatusScout) {
-    if (newStatus === "fechado") { const val = validarParaFechado(scout); if (!val.ok) { alert(val.msg); return; } }
-    if (newStatus === "fechado" && !scout.user_id) {
+    let effective: ScoutInfluencer = scout;
+    if (newStatus === "fechado") {
+      const { data: freshRow } = await supabase.from("scout_influencer").select("*").eq("id", scout.id).maybeSingle();
+      if (freshRow) effective = { ...scout, ...(freshRow as ScoutInfluencer) };
+      const val = validarParaFechado(effective);
+      if (!val.ok) { alert(val.msg); return; }
+    }
+    if (newStatus === "fechado" && !effective.user_id) {
       try {
+        const cacheNeg = toCacheNumber(effective.cache_negociado);
         const res = await fetch("/api/criar-usuario-scout", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseAnonKey}`, "Apikey": supabaseAnonKey },
-          body: JSON.stringify({ email: (scout.email ?? "").trim(), nome_artistico: (scout.nome_artistico ?? "").trim(), telefone: (scout.telefone ?? "").trim() || undefined, cache_negociado: Math.max(0, Number(scout.cache_negociado) || 0), scout_id: scout.id, plataformas: scout.plataformas ?? [], link_twitch: scout.link_twitch ?? "", link_youtube: scout.link_youtube ?? "", link_kick: scout.link_kick ?? "", link_instagram: scout.link_instagram ?? "", link_tiktok: scout.link_tiktok ?? "", link_discord: scout.link_discord ?? "", link_whatsapp: scout.link_whatsapp ?? "", link_telegram: scout.link_telegram ?? "" }),
+          body: JSON.stringify({
+            email: (effective.email ?? "").trim(),
+            nome_artistico: (effective.nome_artistico ?? "").trim(),
+            telefone: (effective.telefone ?? "").trim() || undefined,
+            cache_negociado: cacheNeg,
+            scout_id: scout.id,
+            plataformas: effective.plataformas ?? [],
+            link_twitch: effective.link_twitch ?? "",
+            link_youtube: effective.link_youtube ?? "",
+            link_kick: effective.link_kick ?? "",
+            link_instagram: effective.link_instagram ?? "",
+            link_tiktok: effective.link_tiktok ?? "",
+            link_discord: effective.link_discord ?? "",
+            link_whatsapp: effective.link_whatsapp ?? "",
+            link_telegram: effective.link_telegram ?? "",
+            operadora_slug: (effective.operadora_slug ?? "").trim() || undefined,
+          }),
         });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
         const uid = (fnData as { userId?: string })?.userId;
         if (!uid) throw new Error("Usuário criado mas ID não retornado");
-        const { error } = await supabase.from("scout_influencer").update({ status: "fechado", user_id: uid }).eq("id", scout.id);
+        const opSlug = (effective.operadora_slug ?? "").trim();
+        const { error } = await supabase.from("scout_influencer").update({ status: "fechado", user_id: uid, operadora_slug: opSlug || null }).eq("id", scout.id);
         if (error) throw new Error(error.message);
+        if (cacheNeg > 0) {
+          const { error: syncErr } = await supabase.from("influencer_perfil").update({ cache_hora: cacheNeg }).eq("id", uid);
+          if (syncErr) console.warn("[Scout] Falha ao sincronizar cachê em influencer_perfil:", syncErr.message);
+        }
         loadData();
       } catch (e) { alert(e instanceof Error ? e.message : "Erro ao criar usuário. Verifique permissões."); }
       return;
@@ -256,11 +326,19 @@ export default function Scout() {
     setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: newStatus } : s)));
     const { error } = await supabase.from("scout_influencer").update({ status: newStatus }).eq("id", scout.id);
     if (error) { setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: scout.status } : s))); return; }
-    // Sincronizar cache para influencer_perfil quando scout já tinha user_id e passou a fechado
-    if (newStatus === "fechado" && scout.user_id) {
-      const cacheHora = Math.max(0, Number(scout.cache_negociado) || 0);
+    // Sincronizar cache e operadora quando scout já tinha user_id e passou a fechado
+    if (newStatus === "fechado" && effective.user_id) {
+      const slugOp = (effective.operadora_slug ?? "").trim();
+      if (slugOp) {
+        try {
+          await vincularOperadoraInfluencerViaApi(effective.user_id, slugOp, scout.id);
+        } catch (e) {
+          alert(e instanceof Error ? e.message : "Erro ao vincular operadora ao influencer.");
+        }
+      }
+      const cacheHora = toCacheNumber(effective.cache_negociado);
       if (cacheHora > 0) {
-        const { error: syncErr } = await supabase.from("influencer_perfil").update({ cache_hora: cacheHora }).eq("id", scout.user_id);
+        const { error: syncErr } = await supabase.from("influencer_perfil").update({ cache_hora: cacheHora }).eq("id", effective.user_id);
         if (syncErr) console.warn("[Scout] Falha ao sincronizar cache para influencer_perfil:", syncErr.message);
       }
     }
@@ -276,7 +354,7 @@ export default function Scout() {
   const PLATS_ORDEM = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok", "Discord", "WhatsApp", "Telegram"];
 
   return (
-    <div style={{ padding: "20px 24px 48px" }}>
+    <div className="app-page-shell">
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: brand.primaryIconBg, border: brand.primaryIconBorder, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: brand.primaryIconColor }}>
@@ -306,7 +384,7 @@ export default function Scout() {
         <div style={{ marginBottom: 24, display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>Funil de Prospecção</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, width: "100%" }}>
+            <div className="app-grid-kpi-4" style={{ width: "100%" }}>
               {STATUS_SCOUT_OPTS.map((s) => (
                 <div key={s} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderLeft: `3px solid ${STATUS_SCOUT_COLOR[s]}`, borderRadius: 18, padding: "16px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)", minWidth: 0 }}>
                   <div style={{ fontSize: 28, fontWeight: 900, color: brand.accent, fontFamily: FONT_TITLE, lineHeight: 1 }}>{porStatus[s] ?? 0}</div>
@@ -319,7 +397,8 @@ export default function Scout() {
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>
               Cobertura de Plataformas
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 12, width: "100%" }}>
+            <div className="app-table-wrap">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(100px, 1fr))", gap: 12, width: "100%", minWidth: 640 }}>
               {PLATS_ORDEM.map((plat) => {
                 const count = porPlat[plat] ?? 0;
                 const cor = PLAT_COLOR[plat as Plataforma];
@@ -346,6 +425,7 @@ export default function Scout() {
                   </div>
                 );
               })}
+            </div>
             </div>
           </div>
         </div>
@@ -407,9 +487,9 @@ export default function Scout() {
           </div>
 
           {/* Linha 2: Cachê / Views */}
-          <div style={{
+          <div className="app-grid-2" style={{
             paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`,
-            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18,
+            gap: 18,
           }}>
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -533,9 +613,14 @@ export default function Scout() {
                     </div>
                   )}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {(s.cache_negociado ?? 0) > 0 && (
+                    {s.operadora_slug && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: `${BRAND.azul}18`, border: `1px solid ${BRAND.azul}44`, fontSize: 11, fontWeight: 600, color: BRAND.azul, fontFamily: FONT.body }}>
+                        <GiPokerHand size={11} /> {operadorasOpt.find((o) => o.slug === s.operadora_slug)?.nome ?? s.operadora_slug}
+                      </span>
+                    )}
+                    {toCacheNumber(s.cache_negociado) > 0 && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: `${BRAND.roxo}18`, border: `1px solid ${BRAND.roxo}44`, fontSize: 11, fontWeight: 600, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
-                        {formatBRL(s.cache_negociado!)}
+                        {formatBRL(toCacheNumber(s.cache_negociado))}
                       </span>
                     )}
                     {s.live_cassino === "sim" && (
@@ -562,20 +647,20 @@ export default function Scout() {
       )}
 
       {modal?.mode === "visualizar" && modal.scout && (
-        <ModalVisualizar scout={modal.scout} onClose={() => setModal(null)} isDark={isDark} />
+        <ModalVisualizar scout={modal.scout} operadorasList={operadorasOpt} onClose={() => setModal(null)} isDark={isDark} />
       )}
       {modal?.mode === "editar" && modal.scout && (
-        <ModalEditar scout={modal.scout} perm={perm} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} isDark={isDark} />
+        <ModalEditar scout={modal.scout} operadorasList={operadorasOpt} perm={perm} onClose={() => setModal(null)} onSaved={() => { setModal(null); loadData(); }} isDark={isDark} />
       )}
       {modalNovo && (
-        <ModalEditar scout={null} perm={perm} onClose={() => setModalNovo(false)} onSaved={() => { setModalNovo(false); loadData(); }} isDark={isDark} />
+        <ModalEditar scout={null} operadorasList={operadorasOpt} perm={perm} onClose={() => setModalNovo(false)} onSaved={() => { setModalNovo(false); loadData(); }} isDark={isDark} />
       )}
     </div>
   );
 }
 
 // ─── Modal Visualizar ─────────────────────────────────────────────────────────
-function ModalVisualizar({ scout, onClose, isDark }: { scout: ScoutInfluencer; onClose: () => void; isDark?: boolean }) {
+function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: ScoutInfluencer; operadorasList: OperadoraScoutOpt[]; onClose: () => void; isDark?: boolean }) {
   const { theme: t } = useApp();
   const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
   const [anotacoes, setAnotacoes] = useState<ScoutAnotacao[]>([]);
@@ -631,8 +716,9 @@ function ModalVisualizar({ scout, onClose, isDark }: { scout: ScoutInfluencer; o
             <div style={row}><label style={labelStyle}>Tipo de Contato</label>{val(scout.tipo_contato ? TIPO_CONTATO_OPTS.find((o) => o.value === scout.tipo_contato)?.label : null)}</div>
             {scout.tipo_contato === "agente" && <div style={row}><label style={labelStyle}>Nome do Agente</label>{val(scout.nome_agente)}</div>}
             <div style={row}><label style={labelStyle}>Telefone</label>{val(scout.telefone)}</div>
-            <div style={row}><label style={labelStyle}>Cachê Negociado</label>{val(scout.cache_negociado ? formatBRL(scout.cache_negociado) : null)}</div>
+            <div style={row}><label style={labelStyle}>Cachê Negociado</label>{val(toCacheNumber(scout.cache_negociado) > 0 ? formatBRL(toCacheNumber(scout.cache_negociado)) : null)}</div>
             <div style={row}><label style={labelStyle}>Live Cassino</label>{val(getLiveCassinoLabel(scout.live_cassino))}</div>
+            <div style={row}><label style={labelStyle}>Operadora (parceria)</label>{val(scout.operadora_slug ? (operadorasList.find((o) => o.slug === scout.operadora_slug)?.nome ?? scout.operadora_slug) : null)}</div>
           </>
         )}
         {tab === "canais" && (
@@ -685,7 +771,7 @@ function ModalVisualizar({ scout, onClose, isDark }: { scout: ScoutInfluencer; o
 }
 
 // ─── Modal Editar ─────────────────────────────────────────────────────────────
-function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutInfluencer | null; perm: Permissoes; onClose: () => void; onSaved: () => void; isDark?: boolean }) {
+function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: { scout: ScoutInfluencer | null; operadorasList: OperadoraScoutOpt[]; perm: Permissoes; onClose: () => void; onSaved: () => void; isDark?: boolean }) {
   const { theme: t, user } = useApp();
   const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
   const [nomeArtistico, setNomeArtistico] = useState(scout?.nome_artistico ?? "");
@@ -693,9 +779,10 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
   const [tipoContato, setTipoContato] = useState<string>(scout?.tipo_contato ?? "");
   const [nomeAgente, setNomeAgente] = useState(scout?.nome_agente ?? "");
   const [telefone, setTelefone] = useState(scout?.telefone ?? "");
-  const [cacheNegociado, setCacheNegociado] = useState<number>(scout?.cache_negociado ?? 0);
+  const [cacheNegociado, setCacheNegociado] = useState<number>(toCacheNumber(scout?.cache_negociado));
   const [liveCassino, setLiveCassino] = useState<string>(scout?.live_cassino ?? "");
   const [email, setEmail] = useState(scout?.email ?? "");
+  const [operadoraSlug, setOperadoraSlug] = useState<string>(scout?.operadora_slug ?? "");
   const [plataformas, setPlataformas] = useState<string[]>(scout?.plataformas ?? []);
   const [categorias, setCategorias] = useState<string[]>(scout?.categorias ?? []);
   const [novoTextoAnotacao, setNovoTextoAnotacao] = useState("");
@@ -720,13 +807,28 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
       setTipoContato(scout.tipo_contato ?? "");
       setNomeAgente(scout.nome_agente ?? "");
       setTelefone(scout.telefone ?? "");
-      setCacheNegociado(scout.cache_negociado ?? 0);
+      setCacheNegociado(toCacheNumber(scout.cache_negociado));
       setLiveCassino(scout.live_cassino ?? "");
       setEmail(scout.email ?? "");
+      setOperadoraSlug(scout.operadora_slug ?? "");
       setPlataformas(scout.plataformas ?? []);
       setCategorias(scout.categorias ?? []);
       setLinks({ twitch: scout.link_twitch ?? "", youtube: scout.link_youtube ?? "", kick: scout.link_kick ?? "", instagram: scout.link_instagram ?? "", tiktok: scout.link_tiktok ?? "", discord: scout.link_discord ?? "", whatsapp: scout.link_whatsapp ?? "", telegram: scout.link_telegram ?? "" });
       setViews({ twitch: scout.views_twitch ?? 0, youtube: scout.views_youtube ?? 0, kick: scout.views_kick ?? 0, instagram: scout.views_instagram ?? 0, tiktok: scout.views_tiktok ?? 0, discord: scout.views_discord ?? 0, whatsapp: scout.views_whatsapp ?? 0, telegram: scout.views_telegram ?? 0 });
+    } else {
+      setNomeArtistico("");
+      setStatus("visualizado");
+      setTipoContato("");
+      setNomeAgente("");
+      setTelefone("");
+      setCacheNegociado(0);
+      setLiveCassino("");
+      setEmail("");
+      setOperadoraSlug("");
+      setPlataformas([]);
+      setCategorias([]);
+      setLinks({ twitch: "", youtube: "", kick: "", instagram: "", tiktok: "", discord: "", whatsapp: "", telegram: "" });
+      setViews({ twitch: 0, youtube: 0, kick: 0, instagram: 0, tiktok: 0, discord: 0, whatsapp: 0, telegram: 0 });
     }
   }, [scout]);
 
@@ -771,6 +873,7 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
       cache_negociado: cacheNegociado || null,
       live_cassino: liveCassino || null,
       email: email.trim() || null,
+      operadora_slug: operadoraSlug.trim() || null,
       plataformas,
       categorias,
       link_twitch: links.twitch?.trim() || null,
@@ -817,6 +920,7 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         views_discord: views.discord,
         views_whatsapp: views.whatsapp,
         views_telegram: views.telegram,
+        operadora_slug: operadoraSlug.trim() || null,
       };
       const val = validarParaFechado(dadosParaValidar);
       if (!val.ok) return setError(val.msg ?? "Dados incompletos para Fechado.");
@@ -842,6 +946,7 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         cache_negociado: cacheNegociado || null,
         live_cassino: liveCassino || null,
         email: email.trim() || null,
+        operadora_slug: operadoraSlug.trim() || null,
         plataformas,
         categorias,
         link_twitch: links.twitch?.trim() || null,
@@ -871,9 +976,19 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         // Sincronizar cache para influencer_perfil quando status fechado (userId = recém-criado, scout.user_id = já existia)
         const userIdParaSync = userId ?? scout.user_id;
         if (status === "fechado" && userIdParaSync) {
-          const cacheHora = Math.max(0, Number(cacheNegociado) || 0);
+          const cacheHora = toCacheNumber(cacheNegociado);
           const { error: syncErr } = await supabase.from("influencer_perfil").update({ cache_hora: cacheHora }).eq("id", userIdParaSync);
           if (syncErr) console.warn("[Scout] Falha ao sincronizar cache para influencer_perfil:", syncErr.message);
+          const op = operadoraSlug.trim();
+          if (op) {
+            try {
+              await vincularOperadoraInfluencerViaApi(userIdParaSync, op, scout.id);
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "Erro ao vincular operadora.");
+              setSaving(false);
+              return;
+            }
+          }
         }
       } else {
         const { error: err } = await supabase.from("scout_influencer").insert(payload);
@@ -905,7 +1020,7 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         email: em,
         nome_artistico: nome,
         telefone: (s.telefone ?? "").trim() || undefined,
-        cache_negociado: Math.max(0, Number(s.cache_negociado) || 0),
+        cache_negociado: toCacheNumber(s.cache_negociado),
         scout_id: s.id ?? undefined,
         plataformas: s.plataformas ?? [],
         link_twitch: s.link_twitch ?? "",
@@ -916,6 +1031,7 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
         link_discord: s.link_discord ?? "",
         link_whatsapp: s.link_whatsapp ?? "",
         link_telegram: s.link_telegram ?? "",
+        operadora_slug: (s.operadora_slug ?? "").toString().trim() || undefined,
       }),
     });
     const fnData = await res.json().catch(() => ({}));
@@ -1036,6 +1152,24 @@ function ModalEditar({ scout, perm, onClose, onSaved, isDark }: { scout: ScoutIn
             <div style={row}>
               <label style={labelStyle}>E-mail {status === "fechado" && <span style={{ color: BRAND.vermelho }}>*</span>}</label>
               <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="email@exemplo.com" />
+            </div>
+            <div style={row}>
+              <label style={labelStyle}>
+                Operadora (parceria) {status === "fechado" && <span style={{ color: BRAND.vermelho }}>*</span>}
+              </label>
+              {operadorasList.length === 0 ? (
+                <p style={{ fontSize: 12, color: t.textMuted, margin: 0, fontFamily: FONT.body }}>Cadastre operadoras em Gestão de Operadoras.</p>
+              ) : (
+                <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="">— {status === "fechado" ? "Obrigatória para Fechado" : "Selecione"}</option>
+                  {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
+                    <option key={o.slug} value={o.slug}>{o.nome}</option>
+                  ))}
+                </select>
+              )}
+              <p style={{ fontSize: 11, color: t.textMuted, margin: "6px 0 0", fontFamily: FONT.body, lineHeight: 1.35 }}>
+                Ao fechar o prospecto, esta operadora é gravada no perfil do influencer (aba Operadoras) e no escopo do usuário na Gestão de Usuários — o mesmo vínculo exigido ao criar um influencer pela Gestão.
+              </p>
             </div>
           </>
         )}

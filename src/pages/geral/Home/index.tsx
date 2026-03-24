@@ -342,7 +342,7 @@ export default function Home() {
   };
 
   return (
-    <div style={{ padding: "32px 24px 48px", background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       {/* Card de boas-vindas */}
       <div
         style={{
@@ -523,7 +523,7 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))",
               gap: 12,
             }}
           >
@@ -581,7 +581,7 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 260px), 1fr))",
               gap: 12,
             }}
           >
@@ -676,7 +676,7 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
               gap: 12,
             }}
           >

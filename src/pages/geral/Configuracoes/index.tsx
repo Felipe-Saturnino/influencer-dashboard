@@ -128,7 +128,7 @@ export default function Configuracoes() {
   };
 
   return (
-    <div style={{ maxWidth: "640px", margin: "0 auto", padding: "32px 4px" }}>
+    <div className="app-page-shell" style={{ maxWidth: "640px", margin: "0 auto" }}>
 
       {/* ── APARÊNCIA ── */}
       <div style={card}>

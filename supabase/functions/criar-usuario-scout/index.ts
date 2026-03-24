@@ -1,24 +1,58 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Edge Function: criar-usuario-scout — cria influencer a partir do Scout (usa Service Role)
-// Chamada quando prospecto é marcado como "Fechado". Não envia e-mail (conforme docs).
+type SupabaseAdmin = ReturnType<typeof createClient>
 
-interface CriarUsuarioScoutRequest {
-  email: string
-  nome_artistico: string
-  telefone?: string
-  cache_negociado?: number
-  scout_id?: string
-  plataformas?: string[]
-  link_twitch?: string
-  link_youtube?: string
-  link_kick?: string
-  link_instagram?: string
-  link_tiktok?: string
-  link_discord?: string
-  link_whatsapp?: string
-  link_telegram?: string
+// Edge Function: criar-usuario-scout — cria influencer a partir do Scout (usa Service Role)
+// Também: vincular_operadora — grava influencer_operadoras + user_scopes (prospecto já com user_id).
+
+function parseCacheNumeric(v: unknown): number {
+  if (v == null || v === '') return 0
+  if (typeof v === 'number') return Number.isFinite(v) ? Math.max(0, v) : 0
+  const s = String(v).trim()
+  if (!s) return 0
+  let n = Number(s)
+  if (!Number.isFinite(n) && s.includes(',')) {
+    n = Number(s.replace(/\./g, '').replace(',', '.'))
+  }
+  return Number.isFinite(n) ? Math.max(0, n) : 0
+}
+
+/** Vincula influencer à operadora: quadro Influencers + escopo na Gestão de Usuários. */
+async function vincularOperadoraInfluencer(
+  supabase: SupabaseAdmin,
+  userId: string,
+  slug: string,
+): Promise<{ error?: string }> {
+  const trim = slug.trim()
+  if (!trim) return { error: 'Operadora obrigatória ao fechar o prospecto no Scout.' }
+
+  const { data: op } = await supabase.from('operadoras').select('slug').eq('slug', trim).maybeSingle()
+  if (!op?.slug) return { error: `Operadora inválida ou não cadastrada: ${trim}` }
+
+  const { error: ioErr } = await supabase.from('influencer_operadoras').upsert(
+    { influencer_id: userId, operadora_slug: trim, ativo: true },
+    { onConflict: 'influencer_id,operadora_slug', ignoreDuplicates: false },
+  )
+  if (ioErr) return { error: ioErr.message }
+
+  const { data: existing } = await supabase
+    .from('user_scopes')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('scope_type', 'operadora')
+    .eq('scope_ref', trim)
+    .maybeSingle()
+
+  if (!existing) {
+    const { error: scErr } = await supabase.from('user_scopes').insert({
+      user_id: userId,
+      scope_type: 'operadora',
+      scope_ref: trim,
+    })
+    if (scErr) return { error: scErr.message }
+  }
+  return {}
 }
 
 function corsHeaders(req: Request) {
@@ -55,6 +89,44 @@ serve(async (req) => {
     })
   }
 
+  const supabase = createClient(supabaseUrl, serviceRoleKey)
+
+  let raw: Record<string, unknown>
+  try {
+    raw = await req.json()
+  } catch {
+    return new Response(JSON.stringify({ error: 'Body inválido' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const vinc = raw.vincular_operadora as { user_id?: string; operadora_slug?: string } | undefined
+  if (vinc && typeof vinc === 'object' && typeof vinc.user_id === 'string' && vinc.user_id.trim()) {
+    const slugIn = String(vinc.operadora_slug ?? '').trim()
+    if (!slugIn) {
+      return new Response(JSON.stringify({ error: 'operadora_slug é obrigatório' }), {
+        status: 400,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+    const verr = await vincularOperadoraInfluencer(supabase, vinc.user_id.trim(), slugIn)
+    if (verr.error) {
+      return new Response(JSON.stringify({ error: verr.error }), {
+        status: 400,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+    const scoutId = typeof raw.scout_id === 'string' ? raw.scout_id.trim() : ''
+    if (scoutId) {
+      await supabase.from('scout_influencer').update({ operadora_slug: slugIn }).eq('id', scoutId)
+    }
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (!senhaPadrao || senhaPadrao.length < 8) {
     return new Response(JSON.stringify({
       error: 'SENHA_PADRAO deve ter no mínimo 8 caracteres. Configure no Supabase → Settings → Edge Functions → Secrets.',
@@ -64,20 +136,8 @@ serve(async (req) => {
     })
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey)
-
-  let body: CriarUsuarioScoutRequest
-  try {
-    body = await req.json()
-  } catch {
-    return new Response(JSON.stringify({ error: 'Body inválido' }), {
-      status: 400,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
-  }
-
-  const email = (body.email ?? '').trim().toLowerCase()
-  const nome = (body.nome_artistico ?? '').trim()
+  const email = String(raw.email ?? '').trim().toLowerCase()
+  const nome = String(raw.nome_artistico ?? '').trim()
 
   if (!email || !nome) {
     return new Response(JSON.stringify({ error: 'E-mail e nome artístico são obrigatórios' }), {
@@ -86,17 +146,44 @@ serve(async (req) => {
     })
   }
 
-  const plat = body.plataformas ?? []
-  let cacheHora = Math.max(0, Number(body.cache_negociado) || 0)
-  // Fallback: se cache vier zerado e tiver scout_id, busca direto do banco (cache_negociado → cache_hora)
-  if (cacheHora <= 0 && body.scout_id) {
+  const plat = (raw.plataformas as string[] | undefined) ?? []
+  const scoutId = typeof raw.scout_id === 'string' ? raw.scout_id.trim() : ''
+
+  let cacheHora = parseCacheNumeric(raw.cache_negociado)
+  let operadoraSlug = String(raw.operadora_slug ?? '').trim()
+
+  if (scoutId) {
     const { data: scoutRow } = await supabase
       .from('scout_influencer')
-      .select('cache_negociado')
-      .eq('id', body.scout_id)
+      .select('cache_negociado, operadora_slug')
+      .eq('id', scoutId)
       .single()
-    const dbCache = scoutRow?.cache_negociado
-    cacheHora = Math.max(0, Number(dbCache) || 0)
+    if (cacheHora <= 0) cacheHora = parseCacheNumeric(scoutRow?.cache_negociado)
+    if (!operadoraSlug && scoutRow?.operadora_slug) operadoraSlug = String(scoutRow.operadora_slug).trim()
+  }
+
+  if (cacheHora <= 0) {
+    return new Response(JSON.stringify({ error: 'Cachê negociado inválido ou ausente' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  if (!operadoraSlug) {
+    return new Response(JSON.stringify({
+      error: 'Operadora é obrigatória para marcar o prospecto como Fechado. Selecione no cadastro do Scout.',
+    }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const { data: opRow } = await supabase.from('operadoras').select('slug').eq('slug', operadoraSlug).maybeSingle()
+  if (!opRow?.slug) {
+    return new Response(JSON.stringify({ error: 'Operadora inválida ou não cadastrada.' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   }
 
   try {
@@ -116,7 +203,6 @@ serve(async (req) => {
 
     const uid = authData.user.id
 
-    // Upsert: o trigger on_auth_user_created já cria o profile; atualizamos com role e must_change_password
     let { error: profileErr } = await supabase.from('profiles').upsert(
       {
         id: uid,
@@ -128,7 +214,6 @@ serve(async (req) => {
       { onConflict: 'id', ignoreDuplicates: false }
     )
 
-    // Fallback: se falhar por duplicate key (perfil já existe do trigger), faz update e continua
     if (profileErr && /duplicate key|unique constraint/i.test(profileErr.message ?? '')) {
       const { error: updateErr } = await supabase.from('profiles').update({
         name: nome,
@@ -147,26 +232,43 @@ serve(async (req) => {
       })
     }
 
-    await supabase.from('influencer_perfil').upsert(
+    const { error: perfilErr } = await supabase.from('influencer_perfil').upsert(
       {
         id: uid,
         nome_artistico: nome,
         nome_completo: nome,
         status: 'ativo',
-        telefone: (body.telefone ?? '').trim() || undefined,
+        telefone: String(raw.telefone ?? '').trim() || undefined,
         cache_hora: cacheHora,
         canais: plat.length > 0 ? plat : undefined,
-        link_twitch: plat.includes('Twitch') ? (body.link_twitch ?? '') : undefined,
-        link_youtube: plat.includes('YouTube') ? (body.link_youtube ?? '') : undefined,
-        link_kick: plat.includes('Kick') ? (body.link_kick ?? '') : undefined,
-        link_instagram: plat.includes('Instagram') ? (body.link_instagram ?? '') : undefined,
-        link_tiktok: plat.includes('TikTok') ? (body.link_tiktok ?? '') : undefined,
-        link_discord: plat.includes('Discord') ? (body.link_discord ?? '') : undefined,
-        link_whatsapp: plat.includes('WhatsApp') ? (body.link_whatsapp ?? '') : undefined,
-        link_telegram: plat.includes('Telegram') ? (body.link_telegram ?? '') : undefined,
+        link_twitch: plat.includes('Twitch') ? String(raw.link_twitch ?? '') : undefined,
+        link_youtube: plat.includes('YouTube') ? String(raw.link_youtube ?? '') : undefined,
+        link_kick: plat.includes('Kick') ? String(raw.link_kick ?? '') : undefined,
+        link_instagram: plat.includes('Instagram') ? String(raw.link_instagram ?? '') : undefined,
+        link_tiktok: plat.includes('TikTok') ? String(raw.link_tiktok ?? '') : undefined,
+        link_discord: plat.includes('Discord') ? String(raw.link_discord ?? '') : undefined,
+        link_whatsapp: plat.includes('WhatsApp') ? String(raw.link_whatsapp ?? '') : undefined,
+        link_telegram: plat.includes('Telegram') ? String(raw.link_telegram ?? '') : undefined,
       },
       { onConflict: 'id', ignoreDuplicates: false }
     )
+
+    if (perfilErr) {
+      await supabase.auth.admin.deleteUser(uid)
+      return new Response(JSON.stringify({ error: perfilErr.message }), {
+        status: 500,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const vErr = await vincularOperadoraInfluencer(supabase, uid, operadoraSlug)
+    if (vErr.error) {
+      await supabase.auth.admin.deleteUser(uid)
+      return new Response(JSON.stringify({ error: vErr.error }), {
+        status: 500,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
 
     return new Response(JSON.stringify({ success: true, userId: uid }), {
       status: 200,

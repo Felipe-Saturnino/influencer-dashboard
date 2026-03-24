@@ -61,7 +61,9 @@ html, body {
 }
 
 :root {
-  /* Escala da UI com zoom do browser em 100% (1 = tamanho cheio). Ajuste aqui ou em Configurações no futuro. */
+  /* Breakpoint único para nav drawer (deve coincidir com useMediaQuery MEDIA_MAX_NAV_DRAWER). */
+  --app-breakpoint-nav: 900px;
+  /* Escala da UI no desktop (browser 100%). Em telas estreitas os @media abaixo reduzem um pouco mais. */
   --app-ui-zoom: 0.9;
   --brand-primary:    #7c3aed;
   --brand-secondary:  #4a2082;
@@ -137,10 +139,68 @@ html, body {
   background: #a0a0b8;
 }
 
-/* Grid da aba Operadora — responsivo em telas estreitas */
+/* ─── Responsivo: tablet / celular (CSS puro + mesma largura que o hook useMediaQuery) ─── */
 @media (max-width: 900px) {
+  :root {
+    /* Um pouco mais compacto no mobile para caber mais conteúdo na largura útil */
+    --app-ui-zoom: 0.84;
+  }
+
   .operadora-secoes-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+  }
+
+  /* Conteúdo principal: sem margem da sidebar fixa; padding lateral seguro (notch). */
+  .app-main-column.app-main-narrow {
+    margin-left: 0 !important;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .main-content {
+    padding-left: max(0px, env(safe-area-inset-left, 0px));
+    padding-right: max(0px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-header-responsive {
+    padding-left: max(12px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(12px, env(safe-area-inset-right, 0px)) !important;
+  }
+
+  /* Sidebar vira gaveta: escondida por padrão, abre com .app-sidebar-drawer-open */
+  aside.app-sidebar-drawer {
+    transform: translateX(-100%);
+    transition: transform 0.28s ease;
+    z-index: 260 !important;
+    box-shadow: none;
+  }
+
+  aside.app-sidebar-drawer.app-sidebar-drawer-open {
+    transform: translateX(0);
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+  }
+
+  .app-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    background: rgba(0, 0, 0, 0.48);
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --app-ui-zoom: 0.8;
+  }
+
+  .app-header-user-name {
+    display: none;
   }
 }
 
