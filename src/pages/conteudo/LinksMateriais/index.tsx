@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
-import { Link2, Copy, Check, AlertCircle } from "lucide-react";
+import { Link2, Copy, Check, AlertCircle, QrCode, Download } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import { GiShare } from "react-icons/gi";
 
 const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source=";
+const QR_MODULO_PX = 192;
 
 type RpcResult = { ok: boolean; error?: string; utm_source?: string };
 
@@ -37,6 +39,8 @@ export default function LinksMateriais() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const [qrVisivel, setQrVisivel] = useState(false);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const carregarMeuPerfil = useCallback(async () => {
     if (!user?.id || user.role !== "influencer") {
@@ -104,6 +108,10 @@ export default function LinksMateriais() {
     if (row) setUtmInput((row.nome_artistico ?? "").trim());
   }, [influencerSelecionado, influenciadores, user?.role]);
 
+  useEffect(() => {
+    setQrVisivel(false);
+  }, [linkCompleto]);
+
   const aguardandoOpcoes =
     user?.role === "influencer" ? loadingPerfil : precisaSelecionarInfluencer && loadingInfluenciadores;
 
@@ -154,6 +162,23 @@ export default function LinksMateriais() {
       window.setTimeout(() => setCopiado(false), 2000);
     } catch {
       setErro("Não foi possível copiar. Selecione o link e copie manualmente.");
+    }
+  }
+
+  function baixarQrPng() {
+    const canvas = qrCanvasRef.current;
+    if (!canvas) return;
+    try {
+      const url = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "spin-qrcode-link-rastreamento.png";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      setErro("Não foi possível baixar o QR Code. Tente novamente.");
     }
   }
 
@@ -481,6 +506,141 @@ export default function LinksMateriais() {
                 {copiado ? <Check size={18} color="#22c55e" /> : <Copy size={18} />}
                 {copiado ? "Copiado" : "Copiar"}
               </button>
+            </div>
+
+            <div
+              style={{
+                marginTop: 24,
+                paddingTop: 20,
+                borderTop: `1px solid ${t.cardBorder}`,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <span style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: brand.primaryIconBg,
+                  border: brand.primaryIconBorder,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: brand.primaryIconColor,
+                  flexShrink: 0,
+                }}>
+                  <QrCode size={14} strokeWidth={2.25} />
+                </span>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: brand.primary,
+                  fontFamily: FONT_TITLE,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                }}>
+                  QR Code do link
+                </h3>
+              </div>
+
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 20 }}>
+                <button
+                  type="button"
+                  onClick={() => setQrVisivel((v) => !v)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "12px 18px",
+                    borderRadius: 12,
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    fontFamily: FONT.body,
+                    background: brand.useBrand ? "var(--brand-primary)" : "linear-gradient(135deg, #7c3aed, #1e36f8)",
+                    color: "#fff",
+                  }}
+                >
+                  <QrCode size={18} strokeWidth={2.25} />
+                  {qrVisivel ? "Ocultar QR Code" : "Gerar QR Code"}
+                </button>
+
+                {qrVisivel && (
+                  <div
+                    style={{
+                      padding: 3,
+                      borderRadius: 16,
+                      background: brand.useBrand
+                        ? "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))"
+                        : "linear-gradient(135deg, #7c3aed, #1e36f8)",
+                      boxShadow: dark
+                        ? "0 10px 36px rgba(0,0,0,0.45)"
+                        : "0 10px 28px rgba(74, 32, 130, 0.18)",
+                    }}
+                  >
+                    <div style={{
+                      borderRadius: 13,
+                      background: "#ffffff",
+                      padding: "18px 20px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 12,
+                      minWidth: QR_MODULO_PX + 40,
+                    }}>
+                      <QRCodeCanvas
+                        ref={qrCanvasRef}
+                        value={linkCompleto}
+                        size={QR_MODULO_PX}
+                        level="M"
+                        marginSize={4}
+                        bgColor="#FFFFFF"
+                        fgColor="#14141a"
+                        title="QR Code do link de rastreamento"
+                      />
+                      <span style={{
+                        fontSize: 9,
+                        fontWeight: 800,
+                        letterSpacing: "0.2em",
+                        color: brand.useBrand ? "var(--brand-primary)" : "#4a2082",
+                        fontFamily: FONT_TITLE,
+                      }}>
+                        SPIN GAMING
+                      </span>
+                      <button
+                        type="button"
+                        onClick={baixarQrPng}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "10px 16px",
+                          borderRadius: 10,
+                          border: brand.useBrand
+                            ? "1px solid color-mix(in srgb, var(--brand-primary) 35%, transparent)"
+                            : "1px solid rgba(124, 58, 237, 0.35)",
+                          background: brand.useBrand
+                            ? "color-mix(in srgb, var(--brand-primary) 8%, #fff)"
+                            : "rgba(124, 58, 237, 0.06)",
+                          color: brand.useBrand ? "var(--brand-primary)" : "#4a2082",
+                          fontWeight: 700,
+                          fontSize: 12,
+                          fontFamily: FONT.body,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Download size={16} strokeWidth={2.25} />
+                        Baixar PNG
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <p style={{ margin: "12px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 520, lineHeight: 1.55 }}>
+                O QR encoda o mesmo link exibido acima. O PNG baixado é o código puro (fundo branco) para uso em stories, posts ou peças; o quadro com gradiente Spin aparece só na tela.
+              </p>
             </div>
           </div>
         )}
