@@ -312,6 +312,9 @@ export default function Home() {
   const cardBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
 
   const nomePerfil = perfilRow?.nome_artistico?.trim() || user.name;
+  const welcomeAvatarLabel = perfilRow?.nome_artistico?.trim() || user.name || user.email || "?";
+  const welcomeInitial = welcomeAvatarLabel[0]?.toUpperCase() ?? "?";
+
   const showPerfilIncompleto =
     role === "influencer" &&
     influencerHomeReady &&
@@ -365,48 +368,28 @@ export default function Home() {
           }}
         />
         <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-          {role === "influencer" ? (
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: "50%",
-                flexShrink: 0,
-                background: useBrand
-                  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-                  : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: 20,
-                fontFamily: FONT.body,
-                border: `2px solid ${useBrand ? "color-mix(in srgb, var(--brand-primary) 50%, transparent)" : "rgba(124, 58, 237, 0.45)"}`,
-              }}
-              aria-hidden
-            >
-              {(nomePerfil || user.email)[0]?.toUpperCase()}
-            </div>
-          ) : (
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 14,
-                background: useBrand
-                  ? "color-mix(in srgb, var(--brand-primary) 20%, transparent)"
-                  : "rgba(124, 58, 237, 0.2)",
-                border: `1px solid ${useBrand ? "color-mix(in srgb, var(--brand-primary) 40%, transparent)" : "rgba(124, 58, 237, 0.4)"}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <GiHistogram size={26} color={accentColor} />
-            </div>
-          )}
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              flexShrink: 0,
+              background: useBrand
+                ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              fontWeight: 800,
+              fontSize: 20,
+              fontFamily: FONT.body,
+              border: `2px solid ${useBrand ? "color-mix(in srgb, var(--brand-primary) 50%, transparent)" : "rgba(124, 58, 237, 0.45)"}`,
+            }}
+            aria-hidden
+          >
+            {welcomeInitial}
+          </div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <h1
               style={{
@@ -448,8 +431,8 @@ export default function Home() {
               AÇÃO NECESSÁRIA
             </div>
             <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.65, marginBottom: 12 }}>
-              Você ainda não concluiu o seu cadastro; isso impede o pagamento das lives realizadas. Acesse a página{" "}
-              <strong>Influencers</strong> e preencha todos os itens pendentes das suas informações.
+              Você ainda não concluiu o seu cadastro, isso impede o pagamento das lives realizadas. Acesse a página
+              Influencers e preencha todos os itens pendentes das suas informações.
             </p>
             <button
               type="button"
@@ -778,8 +761,26 @@ export default function Home() {
           Informações
         </h2>
         <p style={{ margin: 0, fontSize: 13, color: t.textMuted, lineHeight: 1.6 }}>
-          Use o menu lateral para navegar entre as seções. Em caso de dúvidas, acesse{" "}
-          <strong style={{ color: t.text }}>Ajuda</strong> pelo ícone do seu perfil no canto superior direito.
+          Use o menu lateral para navegar entre as seções. Em caso de dúvidas, acesse a página de{" "}
+          <button
+            type="button"
+            onClick={() => setActivePage("ajuda")}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              margin: 0,
+              font: "inherit",
+              fontWeight: 700,
+              color: accentColor,
+              textDecoration: "underline",
+              cursor: "pointer",
+              display: "inline",
+            }}
+          >
+            AJUDA
+          </button>{" "}
+          da plataforma ou pelo ícone do seu perfil no canto superior direito.
         </p>
       </div>
     </div>

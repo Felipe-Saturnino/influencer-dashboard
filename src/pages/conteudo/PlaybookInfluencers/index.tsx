@@ -31,6 +31,19 @@ const PLAYBOOK_SUBTITULO_PARAGRAFOS = [
 /** Papéis que podem ver o painel de auditoria (além de usePermission.canEditarOk). Operador fica de fora. */
 const ROLES_AUDITORIA_PLAYBOOK: Role[] = ["admin", "gestor", "executivo", "agencia"];
 
+/** Mapa id → status em `influencer_perfil` (ausência de linha = tratado como ativo, igual Operações → Influencers). */
+function mapaStatusPerfil(rows: { id: string; status: string | null }[] | null | undefined): Map<string, string | null> {
+  const m = new Map<string, string | null>();
+  (rows ?? []).forEach((r) => m.set(r.id, r.status));
+  return m;
+}
+
+function influencerPerfilEstaAtivo(influencerId: string, statusMap: Map<string, string | null>): boolean {
+  const raw = statusMap.get(influencerId);
+  const s = raw === undefined ? "ativo" : (raw ?? "ativo");
+  return s !== "inativo" && s !== "cancelado";
+}
+
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Confirmacao {
   id: string;
@@ -371,17 +384,28 @@ function PainelAuditoria({
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [confRes, influRes] = await Promise.all([
+      const [confRes, influRes, perfilRes] = await Promise.all([
         supabase.from("guia_confirmacoes").select("id, influencer_id, item_key, confirmed_at").eq("item_key", itemKey),
         supabase.from("profiles").select("id, name").eq("role", "influencer"),
+        supabase.from("influencer_perfil").select("id, status"),
       ]);
+      const statusMap = mapaStatusPerfil((perfilRes.data ?? []) as { id: string; status: string | null }[]);
       const confs = (confRes.data ?? []) as Confirmacao[];
-      const influs = ((influRes.data ?? []) as { id: string; name: string }[]).filter((i) => podeVerInfluencer(i.id));
-      const confIds = new Set(confs.map((c) => c.influencer_id));
-      const influsIds = new Set(influs.map((i) => i.id));
+      const influs = ((influRes.data ?? []) as { id: string; name: string }[]).filter(
+        (i) => podeVerInfluencer(i.id) && influencerPerfilEstaAtivo(i.id, statusMap),
+      );
+      const confIds = new Set(
+        confs
+          .filter((c) => podeVerInfluencer(c.influencer_id) && influencerPerfilEstaAtivo(c.influencer_id, statusMap))
+          .map((c) => c.influencer_id),
+      );
 
       const confComNome = confs
-        .filter((c) => podeVerInfluencer(c.influencer_id))
+        .filter(
+          (c) =>
+            podeVerInfluencer(c.influencer_id) &&
+            influencerPerfilEstaAtivo(c.influencer_id, statusMap),
+        )
         .map((c) => ({
           ...c,
           influencer_nome: influs.find((i) => i.id === c.influencer_id)?.name ?? c.influencer_id,
@@ -613,14 +637,22 @@ export default function PlaybookInfluencers() {
     const itensOb = ITENS_OBRIGATORIOS.map((a) => a.itemKey!);
 
     if (exibirAuditoria) {
-      const { data: influsRaw } = await supabase.from("profiles").select("id").eq("role", "influencer");
-      const influsVis = (influsRaw ?? []).filter((row: { id: string }) => podeVerInfluencer(row.id));
+      const [{ data: influsRaw }, { data: perfilRows }] = await Promise.all([
+        supabase.from("profiles").select("id").eq("role", "influencer"),
+        supabase.from("influencer_perfil").select("id, status"),
+      ]);
+      const statusMap = mapaStatusPerfil((perfilRows ?? []) as { id: string; status: string | null }[]);
+      const influsVis = (influsRaw ?? []).filter(
+        (row: { id: string }) =>
+          podeVerInfluencer(row.id) && influencerPerfilEstaAtivo(row.id, statusMap),
+      );
       setTotalInflu(influsVis.length);
 
       const { data: confRows } = await supabase.from("guia_confirmacoes").select("influencer_id, item_key").in("item_key", itensOb);
       const porInflu: Record<string, Set<string>> = {};
       (confRows ?? []).forEach((c: { influencer_id: string; item_key: string }) => {
         if (!podeVerInfluencer(c.influencer_id)) return;
+        if (!influencerPerfilEstaAtivo(c.influencer_id, statusMap)) return;
         if (!porInflu[c.influencer_id]) porInflu[c.influencer_id] = new Set();
         porInflu[c.influencer_id].add(c.item_key);
       });
