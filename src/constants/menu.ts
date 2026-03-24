@@ -69,6 +69,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "roteiro_mesa", label: "Roteiro de Mesa", icon: GiNotebook },
       { key: "playbook_influencers", label: "Playbook Influencers", icon: GiOpenBook },
+      { key: "links_materiais", label: "Links e Materiais", icon: GiShare },
     ],
   },
   {
