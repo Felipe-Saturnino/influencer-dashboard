@@ -1,8 +1,31 @@
+/* Telas full-viewport quando #root usa zoom (global.css): altura de layout precisa ser maior
+   para que, após o zoom, o preenchimento visual cubra 100% da viewport — evita faixa no rodapé. */
+.app-full-viewport-zoomed {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100dvh;
+}
+
+@supports (zoom: 1) {
+  .app-full-viewport-zoomed {
+    min-height: calc(100vh / var(--app-ui-zoom));
+    min-height: calc(100dvh / var(--app-ui-zoom));
+  }
+}
+
 /* Telas de auth (login / senha) */
 .app-auth-screen {
   box-sizing: border-box;
+  width: 100%;
   min-height: 100dvh;
   padding: clamp(12px, 4vw, 24px);
+}
+
+@supports (zoom: 1) {
+  .app-auth-screen {
+    min-height: calc(100vh / var(--app-ui-zoom));
+    min-height: calc(100dvh / var(--app-ui-zoom));
+  }
 }
 
 /* ─── Shell das páginas logadas (padding fluido + largura segura no mobile) ─── */

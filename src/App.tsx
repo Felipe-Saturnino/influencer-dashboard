@@ -183,7 +183,17 @@ function Root() {
   }
   if (checking) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center", color: "#e5dce1", fontFamily: "Inter, sans-serif" }}>
+      <div
+        className="app-full-viewport-zoomed"
+        style={{
+          background: "#0a0a0f",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#e5dce1",
+          fontFamily: "Inter, sans-serif",
+        }}
+      >
         ⏳ Carregando...
       </div>
     );
@@ -195,10 +205,19 @@ function Root() {
 
 function ConfigError() {
   return (
-    <div style={{
-      minHeight: "100vh", background: "#0a0a0f", display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 24, fontFamily: "Inter, sans-serif", color: "#e5dce1", textAlign: "center",
-    }}>
+    <div
+      className="app-full-viewport-zoomed"
+      style={{
+        background: "#0a0a0f",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        fontFamily: "Inter, sans-serif",
+        color: "#e5dce1",
+        textAlign: "center",
+      }}
+    >
       <div>
         <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
         <h1 style={{ fontSize: 20, marginBottom: 12, color: "#fff" }}>Configuração incompleta</h1>
