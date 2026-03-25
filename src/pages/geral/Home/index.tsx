@@ -6,6 +6,7 @@ import { MENU } from "../../../constants/menu";
 import { Role, Live, LiveResultado } from "../../../types";
 import { supabase } from "../../../lib/supabase";
 import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
+import { PLAYBOOK_ITENS_OBRIGATORIOS } from "../../../constants/playbookGuia";
 import { PLAT_LOGO, PLAT_LOGO_DARK } from "../../../constants/platforms";
 import {
   GiHistogram,
@@ -38,13 +39,6 @@ const BRAND = {
   verde: "#22c55e",
   vermelho: "#e84025",
 } as const;
-
-/** Mesmas chaves obrigatórias do Playbook (abas com ciência pendente). */
-const PLAYBOOK_ITENS_OBRIGATORIOS = [
-  "dealers_boas_praticas",
-  "agendamento_lives",
-  "prioridade_jogos",
-] as const;
 
 function parseLiveLocal(data: string, horario: string): Date {
   const [y, mo, d] = data.split("-").map((x) => parseInt(x, 10));

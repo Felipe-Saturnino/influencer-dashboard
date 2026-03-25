@@ -45,7 +45,26 @@ const STATUS_OPTS: { value: LiveStatus; label: string; color: string }[] = [
 ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-function toISO(d: Date) { return d.toISOString().split("T")[0]; }
+/** Data local YYYY-MM-DD (alinhado a data + horário agendados da live). */
+function todayISOLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseLiveLocal(data: string, horario: string): Date {
+  const [y, mo, d] = data.split("-").map((x) => parseInt(x, 10));
+  const parts = (horario || "00:00").split(":");
+  const hh = parseInt(parts[0] ?? "0", 10) || 0;
+  const mm = parseInt(parts[1] ?? "0", 10) || 0;
+  const ss = parseInt(parts[2] ?? "0", 10) || 0;
+  return new Date(y, mo - 1, d, hh, mm, ss);
+}
+
+/** Só entram lives cujo horário agendado já passou há mais de 5h (fuso local). */
+const RESULTADOS_JANELA_MS = 5 * 60 * 60 * 1000;
 
 function fmtData(iso: string): string {
   if (!iso) return "";
@@ -70,8 +89,6 @@ export default function Resultados() {
   const [influencerList,    setInfluencerList]    = useState<{ id: string; name: string }[]>([]);
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
 
-  const todayISO = toISO(new Date());
-
   const influencerListVisiveis = useMemo(
     () => influencerList.filter((i) => podeVerInfluencer(i.id)),
     [influencerList, podeVerInfluencer]
@@ -80,13 +97,23 @@ export default function Resultados() {
 
   async function loadData() {
     setLoading(true);
-    let q = supabase.from("lives").select("*, profiles!lives_influencer_id_fkey(name)").lt("data", todayISO).eq("status", "agendada").order("data", { ascending: false }).order("horario", { ascending: true });
+    const hojeLocal = todayISOLocal();
+    const agora = Date.now();
+    let q = supabase
+      .from("lives")
+      .select("*, profiles!lives_influencer_id_fkey(name)")
+      .lte("data", hojeLocal)
+      .eq("status", "agendada")
+      .order("data", { ascending: false })
+      .order("horario", { ascending: true });
     if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
     const { data: livesData } = await q;
 
     if (livesData) {
       const mapped = livesData.map((l: { profiles?: { name: string }; [k: string]: unknown }) => ({ ...l, influencer_name: l.profiles?.name })) as Live[];
-      const visiveis = mapped.filter((l) => podeVerInfluencer(l.influencer_id));
+      const visiveis = mapped
+        .filter((l) => podeVerInfluencer(l.influencer_id))
+        .filter((l) => agora - parseLiveLocal(l.data, l.horario).getTime() > RESULTADOS_JANELA_MS);
       setLives(visiveis);
 
       const ids = visiveis.map((l) => l.id);
@@ -456,7 +483,7 @@ export default function Resultados() {
             Resultado de Lives
           </h1>
           <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
-            Lives passadas com status pendente de validação.
+            Lives agendadas cujo horário já passou há mais de 5 horas, pendentes de validação.
           </p>
         </div>
       </div>

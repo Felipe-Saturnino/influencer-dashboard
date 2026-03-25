@@ -64,15 +64,15 @@ function normalizarBuscaTexto(s: string): string {
 }
 
 const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
-  feminino: <GiFemale size={16} aria-hidden />,
-  masculino: <GiMale size={16} aria-hidden />,
+  feminino: <GiFemale size={13} aria-hidden />,
+  masculino: <GiMale size={13} aria-hidden />,
 };
 
 const ICONE_JOGO: Record<DealerJogo, ReactNode> = {
-  blackjack: <GiCardPick size={16} aria-hidden />,
-  roleta: <CircleDot size={16} aria-hidden strokeWidth={2.2} />,
-  baccarat: <GiCardAceSpades size={16} aria-hidden />,
-  mesa_vip: <GiCrown size={16} aria-hidden />,
+  blackjack: <GiCardPick size={13} aria-hidden />,
+  roleta: <CircleDot size={13} aria-hidden strokeWidth={2.2} />,
+  baccarat: <GiCardAceSpades size={13} aria-hidden />,
+  mesa_vip: <GiCrown size={13} aria-hidden />,
 };
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
@@ -228,8 +228,8 @@ export default function GestaoDealers() {
   }, [user?.role, operadoraSlugsForcado, operadoras, podeVerOperadora]);
 
   const selectOperadoraStyle: CSSProperties = {
-    padding: "6px 12px 6px 32px",
-    borderRadius: 10,
+    padding: "6px 14px 6px 30px",
+    borderRadius: 999,
     border: `1px solid ${filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? brand.accent : t.cardBorder}`,
     background:
       filtroOperadora !== "todas" && filtroOperadora !== "nenhuma"
@@ -300,18 +300,18 @@ export default function GestaoDealers() {
 
       {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "12px 20px" }}>
+        <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "10px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button type="button" aria-label="Turno anterior" onClick={irTurnoAnterior} style={btnNavTurnoStyle}>
               <ChevronLeft size={14} />
             </button>
             <span
               style={{
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: 800,
                 color: t.text,
                 fontFamily: FONT.body,
-                minWidth: 180,
+                minWidth: 160,
                 textAlign: "center",
               }}
             >
@@ -327,11 +327,11 @@ export default function GestaoDealers() {
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                padding: "6px 14px",
+                padding: "5px 12px",
                 borderRadius: 999,
                 cursor: "pointer",
                 fontFamily: FONT.body,
-                fontSize: 13,
+                fontSize: 12,
                 border:
                   filtroTurno === "todos"
                     ? `1px solid ${brand.accent}`
@@ -343,8 +343,6 @@ export default function GestaoDealers() {
                 color: filtroTurno === "todos" ? brand.accent : t.textMuted,
                 fontWeight: filtroTurno === "todos" ? 700 : 400,
                 transition: "all 0.15s",
-                textTransform: "uppercase",
-                letterSpacing: "0.04em",
               }}
             >
               Todos os turnos
@@ -352,7 +350,7 @@ export default function GestaoDealers() {
             {showFiltroOperadora && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={15} />
+                  <GiShield size={13} />
                 </span>
                 <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectOperadoraStyle}>
                   <option value="todas">Todas as operadoras</option>
@@ -377,7 +375,7 @@ export default function GestaoDealers() {
           background: brand.blockBg,
           border: `1px solid ${t.cardBorder}`,
           borderRadius: 16,
-          padding: "18px 20px",
+          padding: "14px 18px",
           marginBottom: 24,
           boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
         }}>
@@ -389,7 +387,7 @@ export default function GestaoDealers() {
             alignItems: "center",
             justifyContent: "center",
             textAlign: "center",
-            minHeight: 140,
+            minHeight: 118,
           }}>
             <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 12 }}>
               Dealers
@@ -398,14 +396,14 @@ export default function GestaoDealers() {
               {totalDealersDestaque}
             </div>
           </div>
-          <div style={{ flex: "2 1 320px", minWidth: 0, display: "flex", flexDirection: "column", gap: 14, justifyContent: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: "2 1 320px", minWidth: 0, display: "flex", flexDirection: "column", gap: 10, justifyContent: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <span style={{
                 flexShrink: 0,
-                minWidth: 76,
+                minWidth: 72,
                 fontSize: 10,
                 fontWeight: 700,
-                letterSpacing: "0.12em",
+                letterSpacing: "0.1em",
                 textTransform: "uppercase",
                 color: t.textMuted,
                 fontFamily: FONT.body,
@@ -424,18 +422,16 @@ export default function GestaoDealers() {
                         display: "flex",
                         alignItems: "center",
                         gap: 6,
-                        padding: "6px 14px",
+                        padding: "5px 12px",
                         borderRadius: 999,
                         cursor: "pointer",
                         fontFamily: FONT.body,
-                        fontSize: 13,
-                        border: ativo ? `1px solid ${BRAND.verde}` : `1px solid ${t.cardBorder}`,
+                        fontSize: 12,
+                        border: ativo ? `1px solid ${BRAND.verde}` : `1px solid ${BRAND.verde}55`,
                         background: ativo ? "rgba(34,197,94,0.15)" : "transparent",
                         color: ativo ? BRAND.verde : t.textMuted,
                         fontWeight: ativo ? 700 : 400,
                         transition: "all 0.15s",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
                       }}
                     >
                       {ICONE_GENERO[o.value]}
@@ -445,13 +441,13 @@ export default function GestaoDealers() {
                 })}
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <span style={{
                 flexShrink: 0,
-                minWidth: 76,
+                minWidth: 72,
                 fontSize: 10,
                 fontWeight: 700,
-                letterSpacing: "0.12em",
+                letterSpacing: "0.1em",
                 textTransform: "uppercase",
                 color: t.textMuted,
                 fontFamily: FONT.body,
@@ -470,18 +466,16 @@ export default function GestaoDealers() {
                         display: "flex",
                         alignItems: "center",
                         gap: 6,
-                        padding: "6px 14px",
+                        padding: "5px 12px",
                         borderRadius: 999,
                         cursor: "pointer",
                         fontFamily: FONT.body,
-                        fontSize: 13,
-                        border: ativo ? `1px solid ${BRAND.amarelo}` : `1px solid ${t.cardBorder}`,
-                        background: ativo ? "rgba(245,158,11,0.15)" : "transparent",
+                        fontSize: 12,
+                        border: ativo ? `1px solid ${BRAND.amarelo}` : `1px solid ${BRAND.amarelo}55`,
+                        background: ativo ? "rgba(245,158,11,0.15)" : `${BRAND.amarelo}11`,
                         color: ativo ? BRAND.amarelo : t.textMuted,
-                        fontWeight: ativo ? 700 : 400,
+                        fontWeight: ativo ? 700 : 500,
                         transition: "all 0.15s",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
                       }}
                     >
                       {ICONE_JOGO[o.value]}
@@ -492,8 +486,8 @@ export default function GestaoDealers() {
               </div>
             </div>
             <div style={{ position: "relative", width: "100%" }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                <Search size={16} strokeWidth={2} />
+              <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+                <Search size={14} strokeWidth={2} />
               </span>
               <input
                 type="search"
@@ -504,12 +498,12 @@ export default function GestaoDealers() {
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
-                  padding: "10px 14px 10px 40px",
-                  borderRadius: 10,
+                  padding: "7px 12px 7px 36px",
+                  borderRadius: 999,
                   border: `1px solid ${t.cardBorder}`,
                   background: t.inputBg ?? t.cardBg,
                   color: t.text,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontFamily: FONT.body,
                   outline: "none",
                 }}

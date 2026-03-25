@@ -34,6 +34,7 @@ export type PageKey =
   | "status_tecnico"
   | "roteiro_mesa"
   | "playbook_influencers"
+  | "links_materiais"
   | "configuracoes"
   | "ajuda";
 

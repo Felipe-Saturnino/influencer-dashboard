@@ -525,18 +525,35 @@ function BlocoCiencia({
   const [loadingCheck, setLoadingCheck] = useState(true);
 
   useEffect(() => {
-    supabase.from("guia_confirmacoes")
-      .select("id, confirmed_at")
-      .eq("influencer_id", influencerId)
-      .eq("item_key", itemKey)
-      .maybeSingle()
-      .then(({ data }) => {
+    setLoadingCheck(true);
+    setConfirmado(false);
+    setConfirmedAt(null);
+    setChecked(false);
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("guia_confirmacoes")
+          .select("id, confirmed_at")
+          .eq("influencer_id", influencerId)
+          .eq("item_key", itemKey)
+          .maybeSingle();
+        if (cancelled) return;
         if (data) {
           setConfirmado(true);
           setConfirmedAt(data.confirmed_at);
+        } else {
+          setConfirmado(false);
+          setConfirmedAt(null);
         }
-        setLoadingCheck(false);
-      });
+      } finally {
+        if (!cancelled) setLoadingCheck(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [influencerId, itemKey]);
 
   const handleConfirmar = async () => {
@@ -927,6 +944,7 @@ export default function PlaybookInfluencers() {
 
         {abaConfig.obrigatoria && abaConfig.itemKey && user?.role === "influencer" && influencerId && (
           <BlocoCiencia
+            key={abaConfig.itemKey}
             itemKey={abaConfig.itemKey}
             label={abaConfig.label}
             influencerId={influencerId}

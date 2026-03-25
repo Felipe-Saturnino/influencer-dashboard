@@ -5,7 +5,9 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { Live, Plataforma } from "../../../types";
+import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import { X } from "lucide-react";
 import { GiFilmProjector } from "react-icons/gi";
 
@@ -19,6 +21,23 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
 } as const;
+
+function dateToISOLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function todayISOLocal(): string {
+  return dateToISOLocal(new Date());
+}
+
+function tomorrowISOLocal(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return dateToISOLocal(d);
+}
 
 // ─── PLATAFORMAS ──────────────────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK, PLAT_LINK_KEY } from "../../../constants/platforms";
@@ -39,12 +58,13 @@ interface Props {
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
 export default function ModalLive({ live, onClose, onSave }: Props) {
-  const { theme: t, user, isDark } = useApp();
+  const { theme: t, user, isDark, setActivePage } = useApp();
   const { podeVerInfluencer } = useDashboardFiltros();
   const perm = usePermission("agenda");
   const isInfluencer = user?.role === "influencer";
   const isEdit       = !!live;
   const isAdminOuGestor = user?.role === "admin" || user?.role === "gestor";
+  const exigeAgendarSoDiaSeguinte = user?.role === "influencer" || user?.role === "operador";
   const statusValidado = live?.status === "realizada" || live?.status === "nao_realizada";
   // Apenas Admin e Gestor podem editar/excluir lives com status realizada ou não realizada
   const podeEditar   = isEdit && perm.canEditarOk && (!statusValidado || isAdminOuGestor);
@@ -67,6 +87,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const [confirm, setConfirm] = useState(false);
   const [perfilLinks,        setPerfilLinks]        = useState<Record<string, string>>({});
   const [linkAutoPreenchido, setLinkAutoPreenchido] = useState(false);
+  const [bloqueioAgenda, setBloqueioAgenda] = useState<{
+    perfilIncompleto: boolean;
+    faltaPlaybook: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!isInfluencer) {
@@ -105,7 +129,22 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     if (!form.data)   return setError("Informe a data.");
     if (!form.horario) return setError("Informe o horário.");
     if (!isInfluencer && influencers.length > 0 && !form.influencer_id) return setError("Selecione um influencer.");
+
+    const targetInfluencerId = isInfluencer ? (user?.id ?? "") : (form.influencer_id ?? "");
+    if (!isEdit) {
+      if (!targetInfluencerId) return setError("Selecione um influencer.");
+      const gate = await verificarElegibilidadeAgendaLive(targetInfluencerId);
+      if (gate.perfilIncompleto || gate.faltaPlaybook) {
+        setBloqueioAgenda(gate);
+        return;
+      }
+    }
+
     if (!form.link.trim()) return setError("Informe o link da live na plataforma selecionada.");
+
+    if (exigeAgendarSoDiaSeguinte && form.data < tomorrowISOLocal()) {
+      return setError("Influencers e operadores só podem agendar lives a partir de amanhã (não é permitido agendar para hoje).");
+    }
 
     // Apenas Admin e Gestor podem criar/editar lives em períodos anteriores
     const dataHoraLive = new Date(`${form.data}T${form.horario}`);
@@ -161,6 +200,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const row: React.CSSProperties = { marginBottom: 14 };
 
   return (
+    <>
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
       <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
 
@@ -229,7 +269,13 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               value={form.data}
               onChange={e => !somenteLeitura && set("data", e.target.value)}
               readOnly={somenteLeitura}
-              min={podeAlterarPeriodoAnterior ? undefined : new Date().toISOString().slice(0, 10)}
+              min={
+                podeAlterarPeriodoAnterior
+                  ? undefined
+                  : exigeAgendarSoDiaSeguinte
+                    ? tomorrowISOLocal()
+                    : todayISOLocal()
+              }
               style={inputStyle}
             />
           </div>
@@ -244,7 +290,12 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             />
           </div>
         </div>
-        {!podeAlterarPeriodoAnterior && (podeCriar || podeEditar) && (
+        {exigeAgendarSoDiaSeguinte && (podeCriar || podeEditar) && (
+          <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, marginBottom: 0 }}>
+            Como influencer ou operador, a data da live deve ser a partir de amanhã — não é permitido agendar para o dia de hoje.
+          </p>
+        )}
+        {!exigeAgendarSoDiaSeguinte && !podeAlterarPeriodoAnterior && (podeCriar || podeEditar) && (
           <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, marginBottom: 0 }}>
             Apenas Admin e Gestor podem criar ou editar lives em datas/horários passados.
           </p>
@@ -350,5 +401,24 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         </div>
       </div>
     </div>
+
+    <ModalBloqueioAgendaLive
+      open={bloqueioAgenda !== null}
+      onClose={() => setBloqueioAgenda(null)}
+      perfilIncompleto={bloqueioAgenda?.perfilIncompleto ?? false}
+      faltaPlaybook={bloqueioAgenda?.faltaPlaybook ?? false}
+      segundaPessoa={isInfluencer}
+      onIrInfluencers={() => {
+        setBloqueioAgenda(null);
+        onClose();
+        setActivePage("influencers");
+      }}
+      onIrPlaybook={() => {
+        setBloqueioAgenda(null);
+        onClose();
+        setActivePage("playbook_influencers");
+      }}
+    />
+    </>
   );
 }

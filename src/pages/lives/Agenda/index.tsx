@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
+import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -8,6 +9,7 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
+import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -174,7 +176,7 @@ function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDro
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t, isDark, user, setActivePage } = useApp();
   const brand = useDashboardBrand();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("agenda");
@@ -184,6 +186,11 @@ export default function Agenda() {
   const [lives,   setLives]   = useState<Live[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal,   setModal]   = useState<{ open: boolean; live?: Live }>({ open: false });
+  const [bloqueioNovaLive, setBloqueioNovaLive] = useState<{
+    perfilIncompleto: boolean;
+    faltaPlaybook: boolean;
+  } | null>(null);
+  const [checandoNovaLive, setChecandoNovaLive] = useState(false);
 
   const [filterStatus,      setFilterStatus]      = useState<string | null>(null);
   const [filterPlat,        setFilterPlat]        = useState<string | null>(null);
@@ -524,6 +531,23 @@ export default function Agenda() {
     { value: "dia",    label: "Dia"    },
   ];
 
+  async function tentarAbrirNovaLive() {
+    if (!user) return;
+    if (user.role === "influencer") {
+      setChecandoNovaLive(true);
+      try {
+        const gate = await verificarElegibilidadeAgendaLive(user.id);
+        if (gate.perfilIncompleto || gate.faltaPlaybook) {
+          setBloqueioNovaLive(gate);
+          return;
+        }
+      } finally {
+        setChecandoNovaLive(false);
+      }
+    }
+    setModal({ open: true });
+  }
+
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -560,17 +584,20 @@ export default function Agenda() {
         {/* Botão Nova Live — cor accent */}
         {perm.canCriarOk && (
           <button
-            onClick={() => setModal({ open: true })}
+            type="button"
+            onClick={() => void tentarAbrirNovaLive()}
+            disabled={checandoNovaLive}
             style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "10px 20px", borderRadius: 10, border: "none",
-              cursor: "pointer",
+              cursor: checandoNovaLive ? "not-allowed" : "pointer",
+              opacity: checandoNovaLive ? 0.75 : 1,
               background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
             }}
           >
             <GiFilmProjector size={14} />
-            + Nova Live
+            {checandoNovaLive ? "Verificando..." : "+ Nova Live"}
           </button>
         )}
       </div>
@@ -730,6 +757,22 @@ export default function Agenda() {
           onSave={() => { setModal({ open: false }); loadLives(); }}
         />
       )}
+
+      <ModalBloqueioAgendaLive
+        open={bloqueioNovaLive !== null}
+        onClose={() => setBloqueioNovaLive(null)}
+        perfilIncompleto={bloqueioNovaLive?.perfilIncompleto ?? false}
+        faltaPlaybook={bloqueioNovaLive?.faltaPlaybook ?? false}
+        segundaPessoa
+        onIrInfluencers={() => {
+          setBloqueioNovaLive(null);
+          setActivePage("influencers");
+        }}
+        onIrPlaybook={() => {
+          setBloqueioNovaLive(null);
+          setActivePage("playbook_influencers");
+        }}
+      />
     </div>
   );
 }
