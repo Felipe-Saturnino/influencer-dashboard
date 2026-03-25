@@ -602,6 +602,7 @@ function BlocoSolicitacoes({
   rowsDb,
   perfilMap,
   staffPodeAcao,
+  staffPodeAprovar,
   podeExcluirLinha,
   onRecarregar,
   onPerfisAtualizados,
@@ -612,6 +613,8 @@ function BlocoSolicitacoes({
   rowsDb: BancaRowDb[];
   perfilMap: Record<string, { nome: string; cpf: string }>;
   staffPodeAcao: boolean;
+  /** Operador não aprova solicitações; só libera após aprovação interna. */
+  staffPodeAprovar: boolean;
   /** Gestão de Usuários: can_excluir sim ou proprios + escopo da linha. */
   podeExcluirLinha: (row: BancaRowDb) => boolean;
   onRecarregar: () => void;
@@ -749,7 +752,7 @@ function BlocoSolicitacoes({
                 const perf = perfilMap[r.influencer_id];
                 const st = STATUS_BANCA[r.status];
                 const dataStr = new Date(r.solicitado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-                const showAprovar = staffPodeAcao && r.status === "solicitado";
+                const showAprovar = staffPodeAprovar && r.status === "solicitado";
                 const showLiberar = staffPodeAcao && r.status === "aprovado";
                 const showExcluir = podeExcluirLinha(r);
                 const semAcao = !showAprovar && !showLiberar && !showExcluir;
@@ -1348,6 +1351,8 @@ export default function BancaJogo() {
     !["influencer", "agencia"].includes(user.role) &&
     perm.canEditarOk;
 
+  const staffPodeAprovar = staffPodeAcao && user?.role !== "operador";
+
   /** can_excluir da Gestão de Usuários: sim ou proprios, respeitando escopo influencer + operadora da linha. */
   const podeExcluirLinha = useCallback((r: BancaRowDb) => {
     if (!user || !perm.canExcluirOk) return false;
@@ -1474,6 +1479,7 @@ export default function BancaJogo() {
         rowsDb={ciclosRows}
         perfilMap={perfilMapSolicitacoes}
         staffPodeAcao={staffPodeAcao}
+        staffPodeAprovar={staffPodeAprovar}
         podeExcluirLinha={podeExcluirLinha}
         onRecarregar={carregarDados}
         onPerfisAtualizados={() => void carregarPerfis()}
