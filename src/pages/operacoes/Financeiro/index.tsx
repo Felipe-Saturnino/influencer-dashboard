@@ -194,13 +194,16 @@ function SelectInput({ value, onChange, options, style }: {
   );
 }
 
-function BtnPrimary({ onClick, children, disabled, style }: {
+function BtnPrimary({ onClick, children, disabled, style, title }: {
   onClick: () => void; children: React.ReactNode;
   disabled?: boolean; style?: React.CSSProperties;
+  title?: string;
 }) {
   const brand = useDashboardBrand();
   return (
     <button
+      type="button"
+      title={title}
       onClick={onClick}
       disabled={disabled}
       style={{
