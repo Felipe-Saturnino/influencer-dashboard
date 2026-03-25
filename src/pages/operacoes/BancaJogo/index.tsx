@@ -730,10 +730,26 @@ function ModalAlterarStatusConta({
   const [paraLiberada, setParaLiberada] = useState(statusContaAtual === "liberada");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const [idsOperadoraTxt, setIdsOperadoraTxt] = useState("…");
 
   useEffect(() => {
     setParaLiberada(statusContaAtual === "liberada");
   }, [influencerId, statusContaAtual]);
+
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from("influencer_operadoras")
+        .select("id_operadora")
+        .eq("influencer_id", influencerId)
+        .eq("ativo", true);
+      const ids = [...new Set((data ?? [])
+        .map((r: { id_operadora?: string | null }) => (r.id_operadora ?? "").trim())
+        .filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, "pt-BR"));
+      setIdsOperadoraTxt(ids.length ? ids.join(" · ") : "—");
+    })();
+  }, [influencerId]);
 
   async function salvar() {
     setErr("");
@@ -758,11 +774,21 @@ function ModalAlterarStatusConta({
   }
 
   return (
-    <ModalBase onClose={onClose} maxWidth={420}>
-      <ModalHeader title="Status da conta (banca)" onClose={onClose} />
-      <p style={{ margin: "0 0 8px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{nome}</p>
-      <p style={{ margin: "0 0 16px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.4 }}>
-        Refere-se à conta do influencer na operadora (banca). Não altera o status do cadastro do influencer (ativo / inativo / cancelado).
+    <ModalBase onClose={onClose} maxWidth={440}>
+      <ModalHeader title="Status da Conta" onClose={onClose} />
+      <p style={{
+        margin: "0 0 12px",
+        fontSize: 14,
+        fontWeight: 700,
+        color: t.text,
+        fontFamily: FONT.body,
+        lineHeight: 1.45,
+      }}
+      >
+        {nome} / {idsOperadoraTxt}
+      </p>
+      <p style={{ margin: "0 0 18px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
+        Garanta que a conta esteja Bloqueada enquanto a ação continua ativa para evitar saques por parte do Influencer do dinheiro destinado a ação.
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontFamily: FONT.body, fontSize: 14, color: t.text }}>
