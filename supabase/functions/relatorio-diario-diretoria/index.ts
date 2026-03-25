@@ -162,7 +162,7 @@ function gerarHTML(
   const mesFmt        = mesExtenso(dataOntem)
 
   const linhasAgenda = agenda.length === 0
-    ? `<tr><td colspan="4" style="${TD}color:#9ca3af;font-style:italic;">Nenhuma live agendada para hoje.</td></tr>`
+    ? `<tr><td colspan="4" style="${TD}color:#9ca3af;font-style:italic;">Não há lives agendadas até o momento para hoje.</td></tr>`
     : agenda
         .sort((a, b) => (a.horario || '').localeCompare(b.horario || ''))
         .map((l, i) => `

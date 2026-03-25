@@ -23,11 +23,29 @@ E-mail automático enviado **todo dia às 9h (BRT)** para a diretoria, contendo:
 supabase functions deploy relatorio-diario-diretoria
 ```
 
-### 3. GitHub Actions
+### 3. Automação às 9h (BRT)
 
-O workflow `.github/workflows/relatorio-diario-diretoria.yml` executa às 9h BRT.
+#### Opção A — GitHub Actions (repositório)
+
+O workflow `.github/workflows/relatorio-diario-diretoria.yml` dispara às **12h UTC** (= **9h em Brasília**, fuso `America/Sao_Paulo`).
 
 **Secrets no GitHub:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+
+**Importante:** o agendamento do GitHub **não garante** o minuto exato; pode haver atraso de alguns minutos (documentação oficial). O workflow precisa estar na **branch padrão** do repositório. Nos logs da Action, o passo *Horário da execução* mostra UTC e Brasília no momento do run.
+
+#### Opção B — Supabase (mais pontual)
+
+No **Supabase Dashboard** → **Edge Functions** → `relatorio-diario-diretoria` → **Schedules** (se disponível no seu plano): crie um agendamento **diário às 09:00** com fuso **America/Sao_Paulo**, chamando a função (método e corpo iguais ao workflow: `POST` com `{}` e autorização com **anon key** ou conforme a UI).
+
+Assim o disparo fica alinhado ao horário de Brasília sem depender da fila do GitHub.
+
+#### Opção C — Cron externo
+
+Serviço de cron HTTP (ex.: agendamento diário **09:00** `America/Sao_Paulo`) fazendo `POST` para:
+
+`https://SEU_PROJETO.supabase.co/functions/v1/relatorio-diario-diretoria`
+
+com headers `Authorization: Bearer <ANON_KEY>`, `apikey: <ANON_KEY>`, `Content-Type: application/json` e body `{}`.
 
 ---
 
