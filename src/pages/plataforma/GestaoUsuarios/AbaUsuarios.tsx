@@ -5,7 +5,7 @@ import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
 import type { Theme } from "../../../constants/theme";
-import { BRAND, roleLabel, roleBadgeColor } from "./constants";
+import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS } from "./constants";
 import { ModalUsuario } from "./ModalUsuario";
 
 type FiltroStatus = "todos" | "ativos" | "desativados";
@@ -21,6 +21,9 @@ function formatarEscopo(scopes: UserScope[], ops: Operadora[]): string | null {
     if (s.scope_type === "agencia_par") {
       const [, slug] = s.scope_ref.split(":");
       return ops.find((o) => o.slug === slug)?.nome ?? slug;
+    }
+    if (s.scope_type === "gestor_tipo") {
+      return GESTOR_TIPOS.find((g) => g.slug === s.scope_ref)?.label ?? s.scope_ref;
     }
     return "Influencer";
   });

@@ -4,7 +4,7 @@ import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import type { Theme } from "../../../constants/theme";
-import { BRAND, FONT_TITLE, ROLES, roleBadgeColor, escopoBloqueado } from "./constants";
+import { BRAND, FONT_TITLE, ROLES, roleBadgeColor, GESTOR_TIPOS } from "./constants";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
 
 interface ModalUsuarioProps {
@@ -22,6 +22,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
   const [scopeInfluencers, setScopeInfluencers] = useState<string[]>([]);
   const [scopeOperadoras, setScopeOperadoras] = useState<string[]>([]);
   const [scopePares, setScopePares] = useState<string[]>([]);
+  const [scopeGestorTipos, setScopeGestorTipos] = useState<string[]>([]);
   const [paresAgencia, setParesAgencia] = useState<Array<{ influencerId: string; operadoraSlug: string }>>([]);
   const [influencers, setInfluencers] = useState<{ id: string; nome: string }[]>([]);
   const [salvando, setSalvando] = useState(false);
@@ -55,6 +56,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setScopeInfluencers(scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref));
     setScopeOperadoras(scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref));
     setScopePares(scopes.filter((s) => s.scope_type === "agencia_par").map((s) => s.scope_ref));
+    setScopeGestorTipos(scopes.filter((s) => s.scope_type === "gestor_tipo").map((s) => s.scope_ref));
   }, [editando]);
 
   useEffect(() => {
@@ -62,6 +64,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setScopeInfluencers([]);
     setScopeOperadoras([]);
     setScopePares([]);
+    setScopeGestorTipos([]);
   }, [role, editando]);
 
   useEffect(() => {
@@ -108,6 +111,10 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       setErro("O perfil Operador permite apenas uma operadora.");
       return;
     }
+    if (role === "gestor" && scopeGestorTipos.length === 0) {
+      setErro("Selecione pelo menos um tipo de gestor.");
+      return;
+    }
     const paresValidos = role === "agencia" ? paresAgencia.filter((p) => p.influencerId && p.operadoraSlug) : [];
     if (role === "agencia" && paresValidos.length === 0) {
       setErro("Adicione pelo menos um par influencer + operadora.");
@@ -126,6 +133,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         role === "operador"
           ? (Array.isArray(scopeOperadoras) ? scopeOperadoras : []).slice(0, 1)
           : Array.isArray(scopeOperadoras) ? scopeOperadoras : [];
+      const scopeGestorTiposArr = role === "gestor" ? (Array.isArray(scopeGestorTipos) ? scopeGestorTipos : []) : [];
 
       if (editando) {
         const res = await fetch("/api/atualizar-perfil", {
@@ -138,6 +146,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             scopeInfluencers: scopeInfluencersArr,
             scopeOperadoras: scopeOperadorasArr,
             scopePares: scopeParesParaApi,
+            scopeGestorTipos: scopeGestorTiposArr,
           }),
         });
         const fnData = await res.json().catch(() => ({}));
@@ -155,6 +164,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             scopeInfluencers: scopeInfluencersArr,
             scopeOperadoras: scopeOperadorasArr,
             scopePares: scopeParesParaApi,
+            scopeGestorTipos: role === "gestor" ? scopeGestorTiposArr : [],
             loginUrl,
           }),
         });
@@ -364,8 +374,6 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     </div>
   );
 
-  const bloqueado = escopoBloqueado(role);
-
   return (
     <div style={overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div style={modal}>
@@ -433,7 +441,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             ))}
           </select>
         </div>
-        {bloqueado ? (
+        {role === "admin" ? (
           <div style={field}>
             <label style={labelStyle}>Escopo de acesso</label>
             <div
@@ -451,6 +459,15 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
               Todos os influencers e operadoras
             </div>
           </div>
+        ) : role === "gestor" ? (
+          <MultiSelect
+            label="Tipos de gestor"
+            obrigatorio
+            cor={roleBadgeColor("gestor")}
+            items={GESTOR_TIPOS.map((g) => ({ value: g.slug, label: g.label }))}
+            selected={scopeGestorTipos}
+            onToggle={(v) => toggleItem(scopeGestorTipos, setScopeGestorTipos, v)}
+          />
         ) : role === "agencia" ? (
           <ParesAgenciaUI
             pares={paresAgencia}

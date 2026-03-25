@@ -12,10 +12,13 @@ interface CriarUsuarioRequest {
   scopeInfluencers: string[]
   scopeOperadoras: string[]
   scopePares: string[]
+  scopeGestorTipos?: string[]
   loginUrl?: string  // URL da aplicação para o link no e-mail (ex: window.location.origin)
 }
 
-const ROLES_BLOQUEADOS = ['admin', 'gestor']  // Escopo fixo = todos
+const ROLES_BLOQUEADOS = ['admin', 'gestor']  // Admin sem escopo; gestor usa tipos
+
+const GESTOR_TIPO_SLUGS = ['operacoes', 'marketing', 'afiliados', 'geral'] as const
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get('origin') || '*'
@@ -135,7 +138,7 @@ serve(async (req) => {
     })
   }
 
-  const { email, nome, role, scopeInfluencers, scopeOperadoras, scopePares } = body
+  const { email, nome, role, scopeInfluencers, scopeOperadoras, scopePares, scopeGestorTipos } = body
   const loginUrl = (body.loginUrl ?? '').trim() || 'https://acquisition-hub.vercel.app'  // fallback
 
   // Garantir arrays (evita "forEach is not a function" quando vem string/objeto/undefined)
@@ -143,6 +146,9 @@ serve(async (req) => {
   const scopeInfluencersArr = toStrArr(scopeInfluencers)
   const scopeOperadorasArr = toStrArr(scopeOperadoras)
   const scopeParesArr = toStrArr(scopePares)
+  const scopeGestorTiposArr = toStrArr(scopeGestorTipos).filter((s) =>
+    (GESTOR_TIPO_SLUGS as readonly string[]).includes(s)
+  )
 
   if (!email?.trim() || !nome?.trim() || !role?.trim()) {
     return new Response(JSON.stringify({ error: 'E-mail, nome e perfil são obrigatórios' }), {
@@ -168,6 +174,12 @@ serve(async (req) => {
   }
   if (role === 'agencia' && scopeParesArr.length === 0) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos um par influencer+operadora para a agência' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+  if (role === 'gestor' && scopeGestorTiposArr.length === 0) {
+    return new Response(JSON.stringify({ error: 'Selecione pelo menos um tipo de gestor' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -213,7 +225,14 @@ serve(async (req) => {
     }
 
     // 3. Escopos (user_scopes)
-    if (!bloqueado) {
+    if (role === 'gestor') {
+      const novasTipos = scopeGestorTiposArr.map((scope_ref) => ({
+        user_id: uid,
+        scope_type: 'gestor_tipo',
+        scope_ref,
+      }))
+      await supabase.from('user_scopes').insert(novasTipos)
+    } else if (!bloqueado) {
       const novasLinhas: { user_id: string; scope_type: string; scope_ref: string }[] = []
       if (role === 'agencia') {
         scopeParesArr.forEach((par) =>

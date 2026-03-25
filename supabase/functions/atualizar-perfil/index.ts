@@ -11,9 +11,12 @@ interface AtualizarPerfilRequest {
   scopeInfluencers?: string[]
   scopeOperadoras?: string[]
   scopePares?: string[]
+  scopeGestorTipos?: string[]
 }
 
 const ROLES_BLOQUEADOS = ['admin', 'gestor']
+
+const GESTOR_TIPO_SLUGS = ['operacoes', 'marketing', 'afiliados', 'geral'] as const
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get('origin') || '*'
@@ -95,11 +98,14 @@ serve(async (req) => {
     })
   }
 
-  const { userId, name, role, scopeInfluencers, scopeOperadoras, scopePares } = body
+  const { userId, name, role, scopeInfluencers, scopeOperadoras, scopePares, scopeGestorTipos } = body
   const toStrArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
   const scopeInfluencersArr = toStrArr(scopeInfluencers)
   const scopeOperadorasArr = toStrArr(scopeOperadoras)
   const scopeParesArr = toStrArr(scopePares)
+  const scopeGestorTiposArr = toStrArr(scopeGestorTipos).filter((s) =>
+    (GESTOR_TIPO_SLUGS as readonly string[]).includes(s)
+  )
 
   if (!userId?.trim() || !name?.trim() || !role?.trim()) {
     return new Response(JSON.stringify({ error: 'userId, name e role são obrigatórios' }), {
@@ -128,6 +134,12 @@ serve(async (req) => {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
+  if (role === 'gestor' && scopeGestorTiposArr.length === 0) {
+    return new Response(JSON.stringify({ error: 'Selecione pelo menos um tipo de gestor' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
 
   try {
     const { error: profileErr } = await supabase
@@ -144,7 +156,14 @@ serve(async (req) => {
 
     await supabase.from('user_scopes').delete().eq('user_id', userId)
 
-    if (!bloqueado) {
+    if (role === 'gestor') {
+      const novasTipos = scopeGestorTiposArr.map((scope_ref) => ({
+        user_id: userId,
+        scope_type: 'gestor_tipo',
+        scope_ref,
+      }))
+      await supabase.from('user_scopes').insert(novasTipos)
+    } else if (!bloqueado) {
       const novasLinhas: { user_id: string; scope_type: string; scope_ref: string }[] = []
       if (role === 'agencia') {
         scopeParesArr.forEach((par) => novasLinhas.push({ user_id: userId, scope_type: 'agencia_par', scope_ref: par }))

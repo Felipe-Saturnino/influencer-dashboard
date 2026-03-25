@@ -25,8 +25,10 @@ export type PermissoesMapa = Record<PageKey, PermissaoValor>;
 export interface EscoposVisiveis {
   influencersVisiveis: string[];  // UUIDs
   operadorasVisiveis:  string[];  // slugs
-  semRestricaoEscopo?: boolean;   // true = admin/gestor, vê tudo
+  semRestricaoEscopo?: boolean;   // true = admin/gestor, vê tudo (dados)
   vêTodosInfluencers?: boolean;   // true = executivo, vê todos os influencers
+  /** Tipos de gestor (user_scopes gestor_tipo); usado para filtrar menu vs gestor_tipo_pages */
+  gestorTiposVisiveis?: string[];
 }
 
 /** Brand da operadora (operador): logo, fonte e cores aplicadas via CSS vars */
@@ -95,9 +97,26 @@ async function carregarEscoposVisiveis(
   userId: string,
   role: Role
 ): Promise<EscoposVisiveis> {
-  // Admin e Gestor: sempre vê tudo (sem restrição de escopo)
-  if (role === "admin" || role === "gestor") {
+  if (role === "admin") {
     return { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: true };
+  }
+
+  if (role === "gestor") {
+    const { data: scopes } = await supabase
+      .from("user_scopes")
+      .select("scope_type, scope_ref")
+      .eq("user_id", userId);
+    const lista = scopes ?? [];
+    const gestorTiposVisiveis = lista
+      .filter((s) => s.scope_type === "gestor_tipo")
+      .map((s) => s.scope_ref)
+      .filter(Boolean);
+    return {
+      influencersVisiveis: [],
+      operadorasVisiveis: [],
+      semRestricaoEscopo: true,
+      gestorTiposVisiveis,
+    };
   }
 
   const { data: scopes } = await supabase
@@ -154,8 +173,10 @@ async function carregarEscoposVisiveis(
 // Para operador: intersecta com operadora_pages (páginas liberadas por operadora)
 async function carregarPermissoes(
   role: User["role"],
-  operadorasVisiveis?: string[]
+  options?: { operadorasVisiveis?: string[]; gestorTiposVisiveis?: string[] }
 ): Promise<PermissoesMapa> {
+  const operadorasVisiveis = options?.operadorasVisiveis;
+  const gestorTiposVisiveis = options?.gestorTiposVisiveis;
   const { data } = await supabase
     .from("role_permissions")
     .select("page_key, can_view")
@@ -193,6 +214,25 @@ async function carregarPermissoes(
         .select("page_key")
         .in("operadora_slug", operadorasVisiveis);
       const pagesPermitidas = new Set((opPages ?? []).map((r) => r.page_key));
+      ALL_PAGE_KEYS.forEach((k) => {
+        const cv = mapa[k];
+        if (cv === "sim" || cv === "proprios") {
+          if (!pagesPermitidas.has(k)) mapa[k] = "nao";
+        }
+      });
+    }
+  }
+
+  // Gestor: união das páginas em gestor_tipo_pages para os tipos do usuário. Se não houver linhas na tabela
+  // para esses tipos ainda, mantém só role_permissions (transição até a aba Gestores ser preenchida).
+  if (role === "gestor" && gestorTiposVisiveis && gestorTiposVisiveis.length > 0) {
+    const { data: gtPages } = await supabase
+      .from("gestor_tipo_pages")
+      .select("page_key")
+      .in("gestor_tipo_slug", gestorTiposVisiveis);
+    const rows = gtPages ?? [];
+    if (rows.length > 0) {
+      const pagesPermitidas = new Set(rows.map((r) => r.page_key));
       ALL_PAGE_KEYS.forEach((k) => {
         const cv = mapa[k];
         if (cv === "sim" || cv === "proprios") {
@@ -304,10 +344,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const escopos = await carregarEscoposVisiveis(u.id, u.role);
         setEscoposVisiveis(escopos);
-        const perms = await carregarPermissoes(
-          u.role,
-          u.role === "operador" ? escopos.operadorasVisiveis : undefined
-        );
+        const perms = await carregarPermissoes(u.role, {
+          operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
+          gestorTiposVisiveis: u.role === "gestor" ? escopos.gestorTiposVisiveis : undefined,
+        });
         setPermissions(perms);
       } catch (err) {
         console.error("Erro ao carregar permissões/escopos após login:", err);
@@ -350,10 +390,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             try {
               const escopos = await carregarEscoposVisiveis(u.id, u.role);
               setEscoposVisiveis(escopos);
-              const perms = await carregarPermissoes(
-                u.role,
-                u.role === "operador" ? escopos.operadorasVisiveis : undefined
-              );
+              const perms = await carregarPermissoes(u.role, {
+                operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
+                gestorTiposVisiveis: u.role === "gestor" ? escopos.gestorTiposVisiveis : undefined,
+              });
               setPermissions(perms);
             } catch (err) {
               console.error("Erro ao carregar permissões/escopos:", err);

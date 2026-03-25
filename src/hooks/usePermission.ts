@@ -26,9 +26,12 @@ const CACHE: Record<string, Permissoes> = {};
 export function usePermission(pageKey: PageKey): Permissoes {
   const { user, permissions } = useApp();
   const cvFromContext = permissions[pageKey];
-  const cacheKey = user?.role === "operador"
-    ? `operador:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
-    : `${user?.role ?? "none"}:${pageKey}`;
+  const cacheKey =
+    user?.role === "operador"
+      ? `operador:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
+      : user?.role === "gestor"
+        ? `gestor:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
+        : `${user?.role ?? "none"}:${pageKey}`;
 
   const [perm, setPerm] = useState<Permissoes>(
     CACHE[cacheKey] ?? { canView: null, canCriar: null, canEditar: null, canExcluir: null, loading: true, canCriarOk: false, canEditarOk: false, canExcluirOk: false }
@@ -42,6 +45,7 @@ export function usePermission(pageKey: PageKey): Permissoes {
 
     const cvFromContextVal = permissions[pageKey];
     const operadorCanView = user.role === "operador" && (cvFromContextVal === "sim" || cvFromContextVal === "proprios");
+    const gestorCanView = user.role === "gestor" && (cvFromContextVal === "sim" || cvFromContextVal === "proprios");
 
     if (user.role === "operador") {
       const cv = cvFromContextVal === "sim" || cvFromContextVal === "proprios" ? cvFromContextVal : "nao";
@@ -76,7 +80,42 @@ export function usePermission(pageKey: PageKey): Permissoes {
       return;
     }
 
-    // Busca do DB: apenas o que está em Gestão de Usuários (role_permissions)
+    // Gestor: can_view efetivo vem do AppContext (role_permissions + aba Gestores / gestor_tipo_pages)
+    if (user.role === "gestor") {
+      const cv =
+        cvFromContextVal === "sim" || cvFromContextVal === "proprios" ? cvFromContextVal : "nao";
+      const cached = CACHE[cacheKey];
+      if (cached && cached.canView === cv) {
+        setPerm(cached);
+        return;
+      }
+      supabase
+        .from("role_permissions")
+        .select("can_criar, can_editar, can_excluir")
+        .eq("role", "gestor")
+        .eq("page_key", pageKey)
+        .single()
+        .then(({ data }) => {
+          const cc = (gestorCanView ? (data?.can_criar as PermissaoValor) : null) ?? null;
+          const ce = (gestorCanView ? (data?.can_editar as PermissaoValor) : null) ?? null;
+          const cx = (gestorCanView ? (data?.can_excluir as PermissaoValor) : null) ?? null;
+          const result: Permissoes = {
+            canView: cv,
+            canCriar: cc,
+            canEditar: ce,
+            canExcluir: cx,
+            loading: false,
+            canCriarOk: podeExecutar(cc),
+            canEditarOk: podeExecutar(ce),
+            canExcluirOk: podeExecutar(cx),
+          };
+          CACHE[cacheKey] = result;
+          setPerm(result);
+        });
+      return;
+    }
+
+    // Demais roles: o que está em Gestão de Usuários (role_permissions)
     supabase
       .from("role_permissions")
       .select("can_view, can_criar, can_editar, can_excluir")

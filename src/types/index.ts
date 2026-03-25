@@ -153,10 +153,13 @@ export interface RolePermission {
 }
 
 // ─── ESCOPOS DE USUARIO ───────────────────────────────────────────────────────
-// "influencer"  → scope_ref = UUID do influencer
-// "operadora"   → scope_ref = slug da operadora (ex: "blaze")
-// "agencia_par" → scope_ref = "uuid_influencer:slug_operadora" (ex: "abc-123:blaze")
-export type ScopeType = "influencer" | "operadora" | "agencia_par"; // ✅ agencia_par adicionado
+// "influencer"   → scope_ref = UUID do influencer
+// "operadora"    → scope_ref = slug da operadora (ex: "blaze")
+// "agencia_par"  → scope_ref = "uuid_influencer:slug_operadora" (ex: "abc-123:blaze")
+// "gestor_tipo"  → scope_ref = operacoes | marketing | afiliados | geral
+export type ScopeType = "influencer" | "operadora" | "agencia_par" | "gestor_tipo";
+
+export type GestorTipoSlug = "operacoes" | "marketing" | "afiliados" | "geral";
 
 export interface UserScope {
   id:          string;
@@ -219,6 +222,14 @@ export interface OperadoraPage {
   operadora_slug: string;
   page_key:       PageKey;
   created_at?:    string;
+}
+
+/** Páginas habilitadas por tipo de gestor (aba Gestores) */
+export interface GestorTipoPage {
+  id:                 string;
+  gestor_tipo_slug:   GestorTipoSlug;
+  page_key:           PageKey;
+  created_at?:        string;
 }
 
 // ─── INFLUENCER OPERADORA ────────────────────────────────────────────────────
