@@ -16,18 +16,32 @@ interface AbaUsuariosProps {
 
 function formatarEscopo(scopes: UserScope[], ops: Operadora[]): string | null {
   if (!scopes || scopes.length === 0) return null;
-  const partes = scopes.map((s) => {
-    if (s.scope_type === "operadora") return ops.find((o) => o.slug === s.scope_ref)?.nome ?? s.scope_ref;
+  type Parte = { texto: string; ordem: number };
+  const partes: Parte[] = scopes.map((s) => {
+    if (s.scope_type === "operadora") {
+      return { texto: ops.find((o) => o.slug === s.scope_ref)?.nome ?? s.scope_ref, ordem: 50 };
+    }
     if (s.scope_type === "agencia_par") {
       const [, slug] = s.scope_ref.split(":");
-      return ops.find((o) => o.slug === slug)?.nome ?? slug;
+      return { texto: ops.find((o) => o.slug === slug)?.nome ?? slug, ordem: 50 };
     }
     if (s.scope_type === "gestor_tipo") {
-      return GESTOR_TIPOS.find((g) => g.slug === s.scope_ref)?.label ?? s.scope_ref;
+      const idx = GESTOR_TIPOS.findIndex((g) => g.slug === s.scope_ref);
+      return {
+        texto: GESTOR_TIPOS.find((g) => g.slug === s.scope_ref)?.label ?? s.scope_ref,
+        ordem: idx >= 0 ? idx : 40,
+      };
     }
-    return "Influencer";
+    return { texto: "Influencer", ordem: 60 };
   });
-  return [...new Set(partes)].join(", ");
+  const unicos = new Map<string, Parte>();
+  for (const p of partes) {
+    if (!unicos.has(p.texto) || p.ordem < unicos.get(p.texto)!.ordem) unicos.set(p.texto, p);
+  }
+  return [...unicos.values()]
+    .sort((a, b) => a.ordem - b.ordem || a.texto.localeCompare(b.texto, "pt-BR"))
+    .map((p) => p.texto)
+    .join(", ");
 }
 
 export function AbaUsuarios({ t }: AbaUsuariosProps) {

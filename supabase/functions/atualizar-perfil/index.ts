@@ -162,7 +162,15 @@ serve(async (req) => {
         scope_type: 'gestor_tipo',
         scope_ref,
       }))
-      await supabase.from('user_scopes').insert(novasTipos)
+      const { error: scopeErr } = await supabase.from('user_scopes').insert(novasTipos)
+      if (scopeErr) {
+        return new Response(
+          JSON.stringify({
+            error: `Erro ao salvar tipos de gestor: ${scopeErr.message}. Verifique a migration user_scopes (scope_type gestor_tipo).`,
+          }),
+          { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
+        )
+      }
     } else if (!bloqueado) {
       const novasLinhas: { user_id: string; scope_type: string; scope_ref: string }[] = []
       if (role === 'agencia') {
