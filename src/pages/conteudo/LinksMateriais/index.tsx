@@ -19,10 +19,8 @@ import { GiShare } from "react-icons/gi";
 
 const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source=";
 const PREVIA_QUADRO_MAX_W = 280;
-/** Mesma altura mínima dos quadros gradiente (proporção 600×760). */
-const PREVIA_QUADRO_MIN_H = Math.round((PREVIA_QUADRO_MAX_W * 760) / 600);
-/** QR centralizado no card “somente código” (próximo à largura útil do quadro). */
-const QR_SOLO_NO_CARD_PX = Math.round(PREVIA_QUADRO_MAX_W * 0.82);
+/** Bitmap interno nítido; a escala visual vem do CSS (igual proporção aos PNG 600×760). */
+const QR_SOLO_CANVAS_PX = 520;
 
 /**
  * utm_source: só letras sem acento (A–Z, a–z), números e _.
@@ -760,11 +758,11 @@ export default function LinksMateriais() {
                   </span>
                   <div style={{
                     width: "100%",
+                    aspectRatio: "600 / 760",
                     borderRadius: 14,
                     overflow: "hidden",
                     background: "#ffffff",
                     border: `1px solid ${t.cardBorder}`,
-                    minHeight: PREVIA_QUADRO_MIN_H,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -772,12 +770,18 @@ export default function LinksMateriais() {
                   }}>
                     <QRCodeCanvas
                       value={linkCompleto}
-                      size={QR_SOLO_NO_CARD_PX}
+                      size={QR_SOLO_CANVAS_PX}
                       level="M"
                       marginSize={4}
                       bgColor="#FFFFFF"
                       fgColor="#14141a"
                       title="QR Code do link de rastreamento"
+                      style={{
+                        width: "76%",
+                        height: "auto",
+                        maxWidth: "100%",
+                        display: "block",
+                      }}
                     />
                   </div>
                   <button
@@ -832,14 +836,15 @@ export default function LinksMateriais() {
                   </span>
                   <div style={{
                     width: "100%",
+                    aspectRatio: "600 / 760",
                     borderRadius: 14,
                     overflow: "hidden",
                     background: t.cardBg,
                     border: `1px solid ${t.cardBorder}`,
-                    minHeight: PREVIA_QUADRO_MIN_H,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    boxSizing: "border-box",
                   }}>
                     {carregandoPreviewsQuadro || !previewEscuro ? (
                       <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, padding: 24 }}>
@@ -849,7 +854,12 @@ export default function LinksMateriais() {
                       <img
                         src={previewEscuro}
                         alt="Quadro Spin gradiente escuro com QR Code"
-                        style={{ width: "100%", height: "auto", display: "block", verticalAlign: "top" }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          display: "block",
+                          objectFit: "contain",
+                        }}
                       />
                     )}
                   </div>
@@ -901,14 +911,15 @@ export default function LinksMateriais() {
                   </span>
                   <div style={{
                     width: "100%",
+                    aspectRatio: "600 / 760",
                     borderRadius: 14,
                     overflow: "hidden",
                     background: t.cardBg,
                     border: `1px solid ${t.cardBorder}`,
-                    minHeight: PREVIA_QUADRO_MIN_H,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    boxSizing: "border-box",
                   }}>
                     {carregandoPreviewsQuadro || !previewClaro ? (
                       <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, padding: 24 }}>
@@ -918,7 +929,12 @@ export default function LinksMateriais() {
                       <img
                         src={previewClaro}
                         alt="Quadro Spin gradiente claro com QR Code"
-                        style={{ width: "100%", height: "auto", display: "block", verticalAlign: "top" }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          display: "block",
+                          objectFit: "contain",
+                        }}
                       />
                     )}
                   </div>
