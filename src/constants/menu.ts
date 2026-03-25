@@ -16,6 +16,7 @@ import {
   GiRadarSweep,
   GiCardRandom,
   GiDiceSixFacesFour,
+  GiPokerHand,
   GiShare,
   GiMegaphone,
   GiNotebook,
@@ -60,6 +61,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "gestao_dealers", label: "Gestão de Dealers", icon: GiCardRandom  },
       { key: "financeiro",    label: "Financeiro",        icon: GiCash        },
+      { key: "banca_jogo",    label: "Banca de Jogo",     icon: GiPokerHand   },
       { key: "campanhas",     label: "Campanhas",          icon: GiMegaphone   },
       { key: "gestao_links",  label: "Gestão de Links",    icon: GiLinkedRings },
     ],

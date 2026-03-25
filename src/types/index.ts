@@ -26,6 +26,7 @@ export type PageKey =
   | "influencers"
   | "scout"
   | "financeiro"
+  | "banca_jogo"
   | "gestao_links"
   | "campanhas"
   | "gestao_usuarios"
