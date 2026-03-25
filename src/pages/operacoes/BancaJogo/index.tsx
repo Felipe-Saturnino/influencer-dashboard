@@ -5,6 +5,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { GiShield } from "react-icons/gi";
@@ -121,8 +122,9 @@ function BlocoLabel({ label }: { label: string }) {
   );
 }
 
-function ModalBase({ children, maxWidth = 440, onClose }: {
+function ModalBase({ children, maxWidth = 440, onClose, zIndex = 1000 }: {
   children: React.ReactNode; maxWidth?: number; onClose: () => void;
+  zIndex?: number;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -130,7 +132,7 @@ function ModalBase({ children, maxWidth = 440, onClose }: {
     <div style={{
       position: "fixed", inset: 0, background: "#00000090",
       display: "flex", alignItems: "center", justifyContent: "center",
-      zIndex: 1000, padding: "20px",
+      zIndex, padding: "20px",
     }}
     >
       <div style={{
@@ -160,6 +162,57 @@ function useBancaFiltroOperadoraUI(userRole: string | undefined) {
   return userRole && !["influencer", "agencia", "operador"].includes(userRole);
 }
 
+function ModalBloqueioSolicitacaoCampanha({
+  tipo,
+  onClose,
+}: {
+  tipo: "perfil" | "playbook";
+  onClose: () => void;
+}) {
+  const { theme: t, setActivePage } = useApp();
+  const brand = useDashboardBrand();
+  const texto = tipo === "perfil"
+    ? "Para solicitar valores para a Campanha promocional você precisa concluir o cadastro na página de Influencers. Qualquer solicitação permanece bloqueada até a conclusão do cadastro."
+    : "Para solicitar valores para a Campanha promocional você precisa ler e dar ciência nos termos do Playbook. Qualquer solicitação permanece bloqueada até que essa ciência seja registrada.";
+
+  function irResolver() {
+    onClose();
+    setActivePage(tipo === "perfil" ? "influencers" : "playbook_influencers");
+  }
+
+  return (
+    <ModalBase onClose={onClose} maxWidth={460} zIndex={1100}>
+      <ModalHeader title="Solicitação indisponível" onClose={onClose} />
+      <p style={{ margin: "0 0 22px", fontSize: 14, color: t.text, fontFamily: FONT.body, lineHeight: 1.55 }}>
+        {texto}
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            flex: 1, minWidth: 120, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg, color: t.textMuted, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+          }}
+        >
+          Fechar
+        </button>
+        <button
+          type="button"
+          onClick={irResolver}
+          style={{
+            flex: 2, minWidth: 180, padding: 12, borderRadius: 10, border: "none", fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+            background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+            color: "#fff",
+          }}
+        >
+          {tipo === "perfil" ? "Ir para Influencers" : "Ir para Playbook"}
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
+
 function ModalSolicitar({
   onClose,
   onSalvo,
@@ -167,6 +220,7 @@ function ModalSolicitar({
   userId,
   influencerListAgencia,
   nomeInfluencerLocked,
+  onBloqueioGate,
 }: {
   onClose: () => void;
   onSalvo: () => void;
@@ -174,6 +228,7 @@ function ModalSolicitar({
   userId: string;
   influencerListAgencia: { id: string; name: string }[];
   nomeInfluencerLocked?: string;
+  onBloqueioGate: (tipo: "perfil" | "playbook") => void;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -184,6 +239,8 @@ function ModalSolicitar({
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [opcoesIo, setOpcoesIo] = useState<{ slug: string; id_operadora: string | null; nome: string }[]>([]);
+  /** Agência: null = sem influencer ou verificando; true = pode solicitar; false = bloqueado (gate já disparou). */
+  const [agenciaElegivel, setAgenciaElegivel] = useState<boolean | null>(userRole === "agencia" ? null : true);
 
   const labelStyle: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body };
   const inputStyle: React.CSSProperties = {
@@ -202,6 +259,29 @@ function ModalSolicitar({
       setOpcoesIo([]); setOpSlug(""); setIdOp("");
     }
   }, [userRole, infSel]);
+
+  useEffect(() => {
+    if (userRole !== "agencia") return;
+    if (!infSel) {
+      setAgenciaElegivel(null);
+      return;
+    }
+    let cancel = false;
+    setAgenciaElegivel(null);
+    void verificarElegibilidadeAgendaLive(infSel).then((c) => {
+      if (cancel) return;
+      if (c.perfilIncompleto) {
+        onBloqueioGate("perfil");
+        setAgenciaElegivel(false);
+      } else if (c.faltaPlaybook) {
+        onBloqueioGate("playbook");
+        setAgenciaElegivel(false);
+      } else {
+        setAgenciaElegivel(true);
+      }
+    });
+    return () => { cancel = true; };
+  }, [userRole, infSel, onBloqueioGate]);
 
   async function carregarIo(influencerId: string) {
     const { data: ios } = await supabase
@@ -238,8 +318,11 @@ function ModalSolicitar({
   }, [opSlug, opcoesIo]);
 
   const valorNum = parseFloat(valorStr.replace(",", ".")) || 0;
+  const escopoOk = userRole === "influencer" || !!infSel;
+  const regraCampanhaOk = userRole !== "agencia" || agenciaElegivel === true;
   const podeSubmeter =
-    (userRole === "influencer" || infSel) &&
+    escopoOk &&
+    regraCampanhaOk &&
     opSlug &&
     idOp.length > 0 &&
     valorNum > 0;
@@ -248,6 +331,15 @@ function ModalSolicitar({
     setErr("");
     if (!podeSubmeter) return;
     const influencerAlvo = userRole === "influencer" ? userId : infSel;
+    const check = await verificarElegibilidadeAgendaLive(influencerAlvo);
+    if (check.perfilIncompleto) {
+      onBloqueioGate("perfil");
+      return;
+    }
+    if (check.faltaPlaybook) {
+      onBloqueioGate("playbook");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from("banca_jogo_solicitacoes").insert({
       influencer_id: influencerAlvo,
@@ -284,6 +376,14 @@ function ModalSolicitar({
                 <option key={i.id} value={i.id}>{i.name}</option>
               ))}
             </select>
+            {infSel && agenciaElegivel === null ? (
+              <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Verificando elegibilidade…</p>
+            ) : null}
+            {infSel && agenciaElegivel === false ? (
+              <p style={{ margin: "8px 0 0", fontSize: 12, color: "#f59e0b", fontFamily: FONT.body }}>
+                Este influencer não pode solicitar valores até concluir cadastro ou ciência do Playbook (veja o aviso na tela).
+              </p>
+            ) : null}
           </div>
         )}
 
@@ -528,10 +628,31 @@ function BlocoSolicitacoes({
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [bloqueioSolicitacao, setBloqueioSolicitacao] = useState<"perfil" | "playbook" | null>(null);
   const [modalAprovar, setModalAprovar] = useState<BancaRowDb | null>(null);
   const [modalLiberar, setModalLiberar] = useState<BancaRowDb | null>(null);
   const [liberando, setLiberando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+
+  const onBloqueioGate = useCallback((tipo: "perfil" | "playbook") => {
+    setBloqueioSolicitacao(tipo);
+  }, []);
+
+  async function aoClicarSolicitar() {
+    if (!user?.id) return;
+    if (user.role === "influencer") {
+      const check = await verificarElegibilidadeAgendaLive(user.id);
+      if (check.perfilIncompleto) {
+        setBloqueioSolicitacao("perfil");
+        return;
+      }
+      if (check.faltaPlaybook) {
+        setBloqueioSolicitacao("playbook");
+        return;
+      }
+    }
+    setModalOpen(true);
+  }
 
   const lista = useMemo(() => {
     return rowsDb.filter((r) => {
@@ -595,7 +716,7 @@ function BlocoSolicitacoes({
         {podeSolicitar ? (
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={() => void aoClicarSolicitar()}
             style={{
               padding: "8px 16px", borderRadius: 10, border: "none",
               background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
@@ -681,6 +802,12 @@ function BlocoSolicitacoes({
         </table>
       </div>
 
+      {bloqueioSolicitacao ? (
+        <ModalBloqueioSolicitacaoCampanha
+          tipo={bloqueioSolicitacao}
+          onClose={() => setBloqueioSolicitacao(null)}
+        />
+      ) : null}
       {modalOpen && user && (
         <ModalSolicitar
           onClose={() => setModalOpen(false)}
@@ -689,6 +816,7 @@ function BlocoSolicitacoes({
           userId={user.id}
           influencerListAgencia={influencerListAgencia}
           nomeInfluencerLocked={nomeUsuario}
+          onBloqueioGate={onBloqueioGate}
         />
       )}
       {modalAprovar && user ? (
