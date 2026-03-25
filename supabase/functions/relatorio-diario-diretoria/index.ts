@@ -706,6 +706,19 @@ serve(async (req) => {
 
   } catch (e) {
     console.error('[relatorio-diario-diretoria] Erro:', e)
+    try {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      )
+      await supabase.from('tech_logs').insert({
+        integracao_slug: null,
+        tipo: 'relatorio_diretoria',
+        descricao: `[exceção] ${String(e)}`.slice(0, 2000),
+      })
+    } catch {
+      /* ignora falha ao registrar */
+    }
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
     })
