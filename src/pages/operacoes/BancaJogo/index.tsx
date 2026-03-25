@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { GiShield } from "react-icons/gi";
 
 type BancaStatus = "solicitado" | "aprovado" | "liberado";
+type BancaStatusConta = "liberada" | "bloqueada";
 
 interface BancaRowDb {
   id: string;
@@ -353,12 +354,157 @@ function ModalSolicitar({
   );
 }
 
+function ModalAprovarBanca({
+  row,
+  userId,
+  onClose,
+  onSucesso,
+}: {
+  row: BancaRowDb;
+  userId: string;
+  onClose: () => void;
+  onSucesso: () => void;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const [valorStr, setValorStr] = useState(String(row.valor));
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const labelStyle: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body };
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg, color: t.inputText, fontSize: 13, fontFamily: FONT.body, boxSizing: "border-box",
+  };
+  const valorNum = parseFloat(valorStr.replace(",", ".")) || 0;
+
+  async function handleConfirmar() {
+    setErr("");
+    if (valorNum <= 0) {
+      setErr("Informe um valor maior que zero.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("banca_jogo_solicitacoes").update({
+      valor: valorNum,
+      status: "aprovado",
+      aprovado_em: new Date().toISOString(),
+      aprovado_por: userId,
+      updated_at: new Date().toISOString(),
+    }).eq("id", row.id).eq("status", "solicitado");
+    setSaving(false);
+    if (error) {
+      setErr(error.message ?? "Não foi possível aprovar.");
+      return;
+    }
+    onSucesso();
+    onClose();
+  }
+
+  return (
+    <ModalBase onClose={onClose} maxWidth={440}>
+      <ModalHeader title="Aprovar solicitação" onClose={onClose} />
+      <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+        Ajuste o valor, se necessário, antes de aprovar.
+      </p>
+      <div>
+        <label style={labelStyle}>Valor (R$)</label>
+        <input
+          type="number"
+          min={0.01}
+          step="0.01"
+          value={valorStr}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "") { setValorStr(""); return; }
+            const n = parseFloat(v.replace(",", "."));
+            if (!isNaN(n) && n < 0) return;
+            setValorStr(v);
+          }}
+          style={inputStyle}
+        />
+      </div>
+      {err ? <div style={{ color: "#ef4444", fontSize: 12, marginTop: 12, fontFamily: FONT.body }}>{err}</div> : null}
+      <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={handleConfirmar}
+          disabled={saving || valorNum <= 0}
+          style={{
+            flex: 2, padding: 12, borderRadius: 10, border: "none", fontWeight: 700, fontFamily: FONT.body,
+            cursor: saving || valorNum <= 0 ? "not-allowed" : "pointer", opacity: saving || valorNum <= 0 ? 0.6 : 1,
+            background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+            color: "#fff",
+          }}
+        >
+          {saving ? "Salvando..." : "Confirmar aprovação"}
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
+
+function ModalConfirmLiberar({
+  idOperadora,
+  onCancel,
+  onSeguir,
+  loading,
+}: {
+  idOperadora: string;
+  onCancel: () => void;
+  onSeguir: () => void;
+  loading?: boolean;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const idTxt = (idOperadora ?? "").trim() || "—";
+  return (
+    <ModalBase onClose={onCancel} maxWidth={440}>
+      <ModalHeader title="Liberar banca" onClose={onCancel} />
+      <p style={{ margin: "0 0 24px", fontSize: 14, color: t.text, fontFamily: FONT.body, lineHeight: 1.5 }}>
+        Verifique se a conta <strong style={{ fontFamily: "monospace" }}>{idTxt}</strong> está bloqueada.
+      </p>
+      <div style={{ display: "flex", gap: 10 }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={loading}
+          style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontWeight: 700, fontFamily: FONT.body, cursor: loading ? "not-allowed" : "pointer" }}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={onSeguir}
+          disabled={loading}
+          style={{
+            flex: 1, padding: 12, borderRadius: 10, border: "none", fontWeight: 700, fontFamily: FONT.body,
+            cursor: loading ? "not-allowed" : "pointer",
+            background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+            color: "#fff",
+          }}
+        >
+          {loading ? "Processando..." : "Seguir"}
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
+
 function BlocoSolicitacoes({
   filtros,
   rowsDb,
   perfilMap,
   staffPodeAcao,
+  podeExcluirLinha,
   onRecarregar,
+  onPerfisAtualizados,
   influencerListAgencia,
   nomeUsuario,
 }: {
@@ -366,7 +512,10 @@ function BlocoSolicitacoes({
   rowsDb: BancaRowDb[];
   perfilMap: Record<string, { nome: string; cpf: string }>;
   staffPodeAcao: boolean;
+  /** Gestão de Usuários: can_excluir sim ou proprios + escopo da linha. */
+  podeExcluirLinha: (row: BancaRowDb) => boolean;
   onRecarregar: () => void;
+  onPerfisAtualizados: () => void;
   influencerListAgencia: { id: string; name: string }[];
   nomeUsuario: string;
 }) {
@@ -379,6 +528,10 @@ function BlocoSolicitacoes({
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalAprovar, setModalAprovar] = useState<BancaRowDb | null>(null);
+  const [modalLiberar, setModalLiberar] = useState<BancaRowDb | null>(null);
+  const [liberando, setLiberando] = useState(false);
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
   const lista = useMemo(() => {
     return rowsDb.filter((r) => {
@@ -395,25 +548,31 @@ function BlocoSolicitacoes({
     }).sort((a, b) => (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? ""));
   }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, statusFiltro, periodo, historico]);
 
-  async function aprovar(id: string) {
+  async function executarLiberar(row: BancaRowDb) {
     if (!user?.id) return;
-    const { error } = await supabase.from("banca_jogo_solicitacoes").update({
-      status: "aprovado",
-      aprovado_em: new Date().toISOString(),
-      aprovado_por: user.id,
-      updated_at: new Date().toISOString(),
-    }).eq("id", id).eq("status", "solicitado");
-    if (!error) onRecarregar();
+    setLiberando(true);
+    try {
+      const { error } = await supabase.from("banca_jogo_solicitacoes").update({
+        status: "liberado",
+        liberado_em: new Date().toISOString(),
+        liberado_por: user.id,
+        updated_at: new Date().toISOString(),
+      }).eq("id", row.id).eq("status", "aprovado");
+      if (!error) {
+        onRecarregar();
+        setModalLiberar(null);
+      }
+    } finally {
+      setLiberando(false);
+    }
   }
 
-  async function liberar(id: string) {
-    if (!user?.id) return;
-    const { error } = await supabase.from("banca_jogo_solicitacoes").update({
-      status: "liberado",
-      liberado_em: new Date().toISOString(),
-      liberado_por: user.id,
-      updated_at: new Date().toISOString(),
-    }).eq("id", id).eq("status", "aprovado");
+  async function excluirSolicitacao(r: BancaRowDb) {
+    if (!podeExcluirLinha(r)) return;
+    if (!window.confirm("Excluir esta solicitação permanentemente?")) return;
+    setExcluindoId(r.id);
+    const { error } = await supabase.from("banca_jogo_solicitacoes").delete().eq("id", r.id);
+    setExcluindoId(null);
     if (!error) onRecarregar();
   }
 
@@ -469,6 +628,10 @@ function BlocoSolicitacoes({
                 const perf = perfilMap[r.influencer_id];
                 const st = STATUS_BANCA[r.status];
                 const dataStr = new Date(r.solicitado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+                const showAprovar = staffPodeAcao && r.status === "solicitado";
+                const showLiberar = staffPodeAcao && r.status === "aprovado";
+                const showExcluir = podeExcluirLinha(r);
+                const semAcao = !showAprovar && !showLiberar && !showExcluir;
                 return (
                   <tr key={r.id} style={{ borderBottom: `1px solid ${t.cardBorder}` }}>
                     <td style={td}>{perf?.nome ?? r.influencer_id}</td>
@@ -482,17 +645,33 @@ function BlocoSolicitacoes({
                     </td>
                     <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>{dataStr}</td>
                     <td style={td}>
-                      {staffPodeAcao && r.status === "solicitado" ? (
-                        <button type="button" onClick={() => aprovar(r.id)} style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #6b7fff44", background: "#6b7fff15", color: "#6b7fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                          Aprovar
-                        </button>
-                      ) : null}
-                      {staffPodeAcao && r.status === "aprovado" ? (
-                        <button type="button" onClick={() => liberar(r.id)} style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #10b98144", background: "#10b98115", color: "#10b981", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                          Liberar
-                        </button>
-                      ) : null}
-                      {!staffPodeAcao ? <span style={{ color: t.textMuted, fontSize: 11 }}>—</span> : null}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                        {showAprovar ? (
+                          <button type="button" onClick={() => setModalAprovar(r)} style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #6b7fff44", background: "#6b7fff15", color: "#6b7fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+                            Aprovar
+                          </button>
+                        ) : null}
+                        {showLiberar ? (
+                          <button type="button" onClick={() => setModalLiberar(r)} style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #10b98144", background: "#10b98115", color: "#10b981", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+                            Liberar
+                          </button>
+                        ) : null}
+                        {showExcluir ? (
+                          <button
+                            type="button"
+                            disabled={excluindoId === r.id}
+                            onClick={() => void excluirSolicitacao(r)}
+                            style={{
+                              padding: "5px 12px", borderRadius: 8, border: "1px solid #ef444444", background: "#ef444415",
+                              color: "#ef4444", fontSize: 11, fontWeight: 700, fontFamily: FONT.body,
+                              cursor: excluindoId === r.id ? "not-allowed" : "pointer", opacity: excluindoId === r.id ? 0.65 : 1,
+                            }}
+                          >
+                            {excluindoId === r.id ? "…" : "Excluir"}
+                          </button>
+                        ) : null}
+                        {semAcao ? <span style={{ color: t.textMuted, fontSize: 11 }}>—</span> : null}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -512,7 +691,109 @@ function BlocoSolicitacoes({
           nomeInfluencerLocked={nomeUsuario}
         />
       )}
+      {modalAprovar && user ? (
+        <ModalAprovarBanca
+          row={modalAprovar}
+          userId={user.id}
+          onClose={() => setModalAprovar(null)}
+          onSucesso={() => { onRecarregar(); onPerfisAtualizados(); }}
+        />
+      ) : null}
+      {modalLiberar ? (
+        <ModalConfirmLiberar
+          idOperadora={(modalLiberar.id_operadora_exibicao ?? "").trim()}
+          onCancel={() => { if (!liberando) setModalLiberar(null); }}
+          onSeguir={() => void executarLiberar(modalLiberar)}
+          loading={liberando}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function ModalAlterarStatusConta({
+  influencerId,
+  nome,
+  statusContaAtual,
+  onClose,
+  onSalvo,
+}: {
+  influencerId: string;
+  nome: string;
+  /** Status da conta na banca (operadora), não o status do cadastro do influencer. */
+  statusContaAtual: BancaStatusConta;
+  onClose: () => void;
+  onSalvo: () => void;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const [paraLiberada, setParaLiberada] = useState(statusContaAtual === "liberada");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    setParaLiberada(statusContaAtual === "liberada");
+  }, [influencerId, statusContaAtual]);
+
+  async function salvar() {
+    setErr("");
+    const novoConta: BancaStatusConta = paraLiberada ? "liberada" : "bloqueada";
+    if (novoConta === statusContaAtual) {
+      onClose();
+      return;
+    }
+    setSaving(true);
+    const agora = new Date().toISOString();
+    const patch: Record<string, string> = { banca_status_conta: novoConta };
+    if (paraLiberada) patch.banca_data_desbloqueio = agora;
+    else patch.banca_data_bloqueio = agora;
+    const { error } = await supabase.from("influencer_perfil").update(patch).eq("id", influencerId);
+    setSaving(false);
+    if (error) {
+      setErr(error.message ?? "Não foi possível atualizar.");
+      return;
+    }
+    onSalvo();
+    onClose();
+  }
+
+  return (
+    <ModalBase onClose={onClose} maxWidth={420}>
+      <ModalHeader title="Status da conta (banca)" onClose={onClose} />
+      <p style={{ margin: "0 0 8px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{nome}</p>
+      <p style={{ margin: "0 0 16px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.4 }}>
+        Refere-se à conta do influencer na operadora (banca). Não altera o status do cadastro do influencer (ativo / inativo / cancelado).
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontFamily: FONT.body, fontSize: 14, color: t.text }}>
+          <input type="radio" name="stconta" checked={paraLiberada} onChange={() => setParaLiberada(true)} />
+          Liberada
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontFamily: FONT.body, fontSize: 14, color: t.text }}>
+          <input type="radio" name="stconta" checked={!paraLiberada} onChange={() => setParaLiberada(false)} />
+          Bloqueada
+        </label>
+      </div>
+      {err ? <div style={{ color: "#ef4444", fontSize: 12, marginTop: 12, fontFamily: FONT.body }}>{err}</div> : null}
+      <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+        <button type="button" onClick={onClose} style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={() => void salvar()}
+          disabled={saving}
+          style={{
+            flex: 1, padding: 12, borderRadius: 10, border: "none", fontWeight: 700, fontFamily: FONT.body,
+            cursor: saving ? "not-allowed" : "pointer",
+            background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+            color: "#fff",
+          }}
+        >
+          {saving ? "Salvando..." : "Salvar"}
+        </button>
+      </div>
+    </ModalBase>
   );
 }
 
@@ -520,10 +801,21 @@ function BlocoConsolidadoBanca({
   filtros,
   rowsDb,
   perfilMap,
+  podeEditarStatusConta,
+  onPerfisAtualizados,
 }: {
   filtros: BlocoFiltros;
   rowsDb: BancaRowDb[];
-  perfilMap: Record<string, { nome: string; cpf: string; status: string; email: string }>;
+  perfilMap: Record<string, {
+    nome: string;
+    cpf: string;
+    email: string;
+    banca_status_conta: BancaStatusConta;
+    banca_data_bloqueio: string | null;
+    banca_data_desbloqueio: string | null;
+  }>;
+  podeEditarStatusConta: boolean;
+  onPerfisAtualizados: () => void;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -535,6 +827,10 @@ function BlocoConsolidadoBanca({
 
   const [busca, setBusca] = useState("");
   const [expandido, setExpandido] = useState<string | null>(null);
+  const [modalStatus, setModalStatus] = useState<{ id: string; nome: string; statusConta: BancaStatusConta } | null>(null);
+
+  const fmtData = (iso: string | null | undefined) =>
+    iso ? new Date(iso).toLocaleDateString("pt-BR", { dateStyle: "short" }) : "—";
 
   const rowsFiltradas = useMemo(() => {
     return rowsDb.filter((r) => {
@@ -556,8 +852,9 @@ function BlocoConsolidadoBanca({
     email: string;
     totalLiberado: number;
     totalSolicitado: number;
-    ultimaLiberacao: string | null;
-    statusPerfil: string;
+    dataBloqueio: string | null;
+    dataDesbloqueio: string | null;
+    statusContaBanca: BancaStatusConta;
   }
 
   const agregados = useMemo(() => {
@@ -572,17 +869,17 @@ function BlocoConsolidadoBanca({
       const perf = perfilMap[infId];
       const totalLiberado = list.filter((x) => x.status === "liberado").reduce((a, x) => a + Number(x.valor), 0);
       const totalSolicitado = list.filter((x) => x.status === "solicitado" || x.status === "aprovado").reduce((a, x) => a + Number(x.valor), 0);
-      const liberados = list.filter((x) => x.status === "liberado" && x.liberado_em);
-      const ultima = liberados.sort((a, b) => (b.liberado_em ?? "").localeCompare(a.liberado_em ?? ""))[0]?.liberado_em ?? null;
-      const st = perf?.status ?? "ativo";
+      const stConta: BancaStatusConta =
+        perf?.banca_status_conta === "bloqueada" ? "bloqueada" : "liberada";
       out.push({
         influencer_id: infId,
         nome: perf?.nome ?? infId,
         email: perf?.email ?? "",
         totalLiberado,
         totalSolicitado,
-        ultimaLiberacao: ultima,
-        statusPerfil: st,
+        dataBloqueio: perf?.banca_data_bloqueio ?? null,
+        dataDesbloqueio: perf?.banca_data_desbloqueio ?? null,
+        statusContaBanca: stConta,
       });
     }
     return out.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
@@ -602,8 +899,8 @@ function BlocoConsolidadoBanca({
     padding: "13px 14px", fontSize: "13px", color: t.text, fontFamily: FONT.body,
   };
 
-  const contaLabel = (st: string) => {
-    if (st === "ativo") return { label: "Liberada", color: "#10b981" };
+  const contaLabel = (st: BancaStatusConta) => {
+    if (st === "liberada") return { label: "Liberada", color: "#10b981" };
     return { label: "Bloqueada", color: "#ef4444" };
   };
 
@@ -630,7 +927,7 @@ function BlocoConsolidadoBanca({
           <thead>
             <tr>
               <th style={{ ...th, width: 32 }} />
-              {["Influencer", "Total liberado", "Total solicitado", "Última liberação", "Status da conta"].map((h) => (
+              {["Influencer", "Total liberado", "Total solicitado", "Data de bloqueio", "Data de desbloqueio", "Status da conta"].map((h) => (
                 <th key={h} style={th}>{h}</th>
               ))}
             </tr>
@@ -638,14 +935,14 @@ function BlocoConsolidadoBanca({
           <tbody>
             {filtradaBusca.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40 }}>
+                <td colSpan={7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40 }}>
                   Nenhum dado para os filtros atuais.
                 </td>
               </tr>
             ) : (
               filtradaBusca.map((row) => {
                 const open = expandido === row.influencer_id;
-                const sl = contaLabel(row.statusPerfil);
+                const sl = contaLabel(row.statusContaBanca);
                 const itens = rowsFiltradas.filter((r) => r.influencer_id === row.influencer_id).sort((a, b) => (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? ""));
                 return (
                   <Fragment key={row.influencer_id}>
@@ -667,18 +964,29 @@ function BlocoConsolidadoBanca({
                       </td>
                       <td style={{ ...td, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(row.totalLiberado)}</td>
                       <td style={{ ...td, color: row.totalSolicitado > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.totalSolicitado > 0 ? 600 : 400 }}>{fmtMoeda(row.totalSolicitado)}</td>
-                      <td style={{ ...td, color: t.textMuted }}>
-                        {row.ultimaLiberacao ? new Date(row.ultimaLiberacao).toLocaleDateString("pt-BR") : "—"}
-                      </td>
+                      <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>{fmtData(row.dataBloqueio)}</td>
+                      <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>{fmtData(row.dataDesbloqueio)}</td>
                       <td style={td}>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44` }}>
+                        <span
+                          role={podeEditarStatusConta ? "button" : undefined}
+                          title={podeEditarStatusConta ? "Clique para alterar" : undefined}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (podeEditarStatusConta) setModalStatus({ id: row.influencer_id, nome: row.nome, statusConta: row.statusContaBanca });
+                          }}
+                          style={{
+                            fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20,
+                            background: `${sl.color}22`, color: sl.color, border: `1px solid ${sl.color}44`,
+                            cursor: podeEditarStatusConta ? "pointer" : "default",
+                          }}
+                        >
                           {sl.label}
                         </span>
                       </td>
                     </tr>
                     {open ? (
                       <tr style={{ background: t.isDark ? "rgba(74,48,130,0.06)" : "rgba(74,48,130,0.03)" }}>
-                        <td colSpan={6} style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
+                        <td colSpan={7} style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
                           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: t.textMuted, marginBottom: 10, fontFamily: FONT.body }}>
                             Bancas solicitadas — {row.nome}
                           </div>
@@ -720,6 +1028,15 @@ function BlocoConsolidadoBanca({
           </tbody>
         </table>
       </div>
+      {modalStatus ? (
+        <ModalAlterarStatusConta
+          influencerId={modalStatus.id}
+          nome={modalStatus.nome}
+          statusContaAtual={modalStatus.statusConta}
+          onClose={() => setModalStatus(null)}
+          onSalvo={onPerfisAtualizados}
+        />
+      ) : null}
     </div>
   );
 }
@@ -743,7 +1060,14 @@ export default function BancaJogo() {
   const [filterOperadora, setFilterOperadora] = useState("todas");
   const [influencerList, setInfluencerList] = useState<{ id: string; name: string }[]>([]);
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
-  const [perfilMap, setPerfilMap] = useState<Record<string, { nome: string; cpf: string; status: string; email: string }>>({});
+  const [perfilMap, setPerfilMap] = useState<Record<string, {
+    nome: string;
+    cpf: string;
+    email: string;
+    banca_status_conta: BancaStatusConta;
+    banca_data_bloqueio: string | null;
+    banca_data_desbloqueio: string | null;
+  }>>({});
 
   const MESES_OPCOES = useMemo(() => gerarMeses().slice(1), []);
   const [mesFiltro, setMesFiltro] = useState(MESES_OPCOES[0]?.value ?? "");
@@ -826,30 +1150,57 @@ export default function BancaJogo() {
     });
   }, []);
 
-  useEffect(() => {
-    void (async () => {
-      const { data: perfis } = await supabase.from("influencer_perfil").select("id, nome_artistico, cpf, status");
-      const { data: emails } = await supabase.from("profiles").select("id, email").eq("role", "influencer");
-      const emailM: Record<string, string> = {};
-      for (const e of emails ?? []) emailM[(e as { id: string }).id] = (e as { email: string }).email;
-      const m: Record<string, { nome: string; cpf: string; status: string; email: string }> = {};
-      for (const p of perfis ?? []) {
-        const row = p as { id: string; nome_artistico?: string; cpf?: string; status?: string };
-        m[row.id] = {
-          nome: row.nome_artistico ?? emailM[row.id] ?? row.id,
-          cpf: row.cpf ?? "",
-          status: row.status ?? "ativo",
-          email: emailM[row.id] ?? "",
-        };
-      }
-      setPerfilMap(m);
-    })();
+  const carregarPerfis = useCallback(async () => {
+    const { data: perfis } = await supabase
+      .from("influencer_perfil")
+      .select("id, nome_artistico, cpf, banca_status_conta, banca_data_bloqueio, banca_data_desbloqueio");
+    const { data: emails } = await supabase.from("profiles").select("id, email").eq("role", "influencer");
+    const emailM: Record<string, string> = {};
+    for (const e of emails ?? []) emailM[(e as { id: string }).id] = (e as { email: string }).email;
+    const m: Record<string, {
+      nome: string;
+      cpf: string;
+      email: string;
+      banca_status_conta: BancaStatusConta;
+      banca_data_bloqueio: string | null;
+      banca_data_desbloqueio: string | null;
+    }> = {};
+    for (const p of perfis ?? []) {
+      const row = p as {
+        id: string;
+        nome_artistico?: string;
+        cpf?: string;
+        banca_status_conta?: string | null;
+        banca_data_bloqueio?: string | null;
+        banca_data_desbloqueio?: string | null;
+      };
+      const conta: BancaStatusConta = row.banca_status_conta === "bloqueada" ? "bloqueada" : "liberada";
+      m[row.id] = {
+        nome: row.nome_artistico ?? emailM[row.id] ?? row.id,
+        cpf: row.cpf ?? "",
+        email: emailM[row.id] ?? "",
+        banca_status_conta: conta,
+        banca_data_bloqueio: row.banca_data_bloqueio ?? null,
+        banca_data_desbloqueio: row.banca_data_desbloqueio ?? null,
+      };
+    }
+    setPerfilMap(m);
   }, []);
+
+  useEffect(() => { void carregarPerfis(); }, [carregarPerfis]);
 
   const staffPodeAcao =
     !!user &&
     !["influencer", "agencia"].includes(user.role) &&
     perm.canEditarOk;
+
+  /** can_excluir da Gestão de Usuários: sim ou proprios, respeitando escopo influencer + operadora da linha. */
+  const podeExcluirLinha = useCallback((r: BancaRowDb) => {
+    if (!user || !perm.canExcluirOk) return false;
+    const ce = perm.canExcluir;
+    if (ce !== "sim" && ce !== "proprios") return false;
+    return podeVerInfluencer(r.influencer_id) && podeVerOperadora(r.operadora_slug);
+  }, [user, perm.canExcluirOk, perm.canExcluir, podeVerInfluencer, podeVerOperadora]);
 
   if (perm.loading) {
     return (
@@ -969,12 +1320,20 @@ export default function BancaJogo() {
         rowsDb={ciclosRows}
         perfilMap={perfilMapSolicitacoes}
         staffPodeAcao={staffPodeAcao}
+        podeExcluirLinha={podeExcluirLinha}
         onRecarregar={carregarDados}
+        onPerfisAtualizados={() => void carregarPerfis()}
         influencerListAgencia={influencerListAgenciaModal}
         nomeUsuario={user?.name ?? ""}
       />
 
-      <BlocoConsolidadoBanca filtros={filtros} rowsDb={ciclosRows} perfilMap={perfilMap} />
+      <BlocoConsolidadoBanca
+        filtros={filtros}
+        rowsDb={ciclosRows}
+        perfilMap={perfilMap}
+        podeEditarStatusConta={staffPodeAcao}
+        onPerfisAtualizados={() => void carregarPerfis()}
+      />
     </div>
   );
 }

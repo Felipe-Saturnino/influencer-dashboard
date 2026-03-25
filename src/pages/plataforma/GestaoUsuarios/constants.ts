@@ -44,7 +44,7 @@ export const PAGES: {
   { key: "influencers", label: "Influencers", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "scout", label: "Scout", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "financeiro", label: "Financeiro", secao: "Operações", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "banca_jogo", label: "Banca de Jogo", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "banca_jogo", label: "Banca de Jogo", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_links", label: "Gestão de Links", secao: "Operações", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "campanhas", label: "Campanhas", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: true },
