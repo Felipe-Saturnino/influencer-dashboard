@@ -18,9 +18,11 @@ import { QRCodeCanvas } from "qrcode.react";
 import { GiShare } from "react-icons/gi";
 
 const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source=";
-/** Tamanho do QR na prévia “somente código”. */
-const QR_PREVIA_PX = 176;
 const PREVIA_QUADRO_MAX_W = 280;
+/** Mesma altura mínima dos quadros gradiente (proporção 600×760). */
+const PREVIA_QUADRO_MIN_H = Math.round((PREVIA_QUADRO_MAX_W * 760) / 600);
+/** QR centralizado no card “somente código” (próximo à largura útil do quadro). */
+const QR_SOLO_NO_CARD_PX = Math.round(PREVIA_QUADRO_MAX_W * 0.82);
 
 /**
  * utm_source: só letras sem acento (A–Z, a–z), números e _.
@@ -758,42 +760,25 @@ export default function LinksMateriais() {
                   </span>
                   <div style={{
                     width: "100%",
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    background: "#ffffff",
+                    border: `1px solid ${t.cardBorder}`,
+                    minHeight: PREVIA_QUADRO_MIN_H,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     boxSizing: "border-box",
-                    padding: 3,
-                    borderRadius: 16,
-                    background: brand.useBrand
-                      ? "linear-gradient(135deg, var(--brand-primary), var(--brand-accent))"
-                      : "linear-gradient(135deg, #7c3aed, #1e36f8)",
-                    boxShadow: dark ? "0 8px 28px rgba(0,0,0,0.35)" : "0 8px 24px rgba(74, 32, 130, 0.14)",
                   }}>
-                    <div style={{
-                      borderRadius: 13,
-                      background: "#ffffff",
-                      padding: "16px 18px 14px",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 10,
-                    }}>
-                      <QRCodeCanvas
-                        value={linkCompleto}
-                        size={QR_PREVIA_PX}
-                        level="M"
-                        marginSize={4}
-                        bgColor="#FFFFFF"
-                        fgColor="#14141a"
-                        title="QR Code do link de rastreamento"
-                      />
-                      <span style={{
-                        fontSize: 8,
-                        fontWeight: 800,
-                        letterSpacing: "0.18em",
-                        color: brand.useBrand ? "var(--brand-primary)" : "#4a2082",
-                        fontFamily: FONT_TITLE,
-                      }}>
-                        SPIN GAMING
-                      </span>
-                    </div>
+                    <QRCodeCanvas
+                      value={linkCompleto}
+                      size={QR_SOLO_NO_CARD_PX}
+                      level="M"
+                      marginSize={4}
+                      bgColor="#FFFFFF"
+                      fgColor="#14141a"
+                      title="QR Code do link de rastreamento"
+                    />
                   </div>
                   <button
                     type="button"
@@ -851,7 +836,7 @@ export default function LinksMateriais() {
                     overflow: "hidden",
                     background: t.cardBg,
                     border: `1px solid ${t.cardBorder}`,
-                    minHeight: Math.round((PREVIA_QUADRO_MAX_W * 760) / 600),
+                    minHeight: PREVIA_QUADRO_MIN_H,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -920,7 +905,7 @@ export default function LinksMateriais() {
                     overflow: "hidden",
                     background: t.cardBg,
                     border: `1px solid ${t.cardBorder}`,
-                    minHeight: Math.round((PREVIA_QUADRO_MAX_W * 760) / 600),
+                    minHeight: PREVIA_QUADRO_MIN_H,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -962,10 +947,6 @@ export default function LinksMateriais() {
                   </button>
                 </div>
               </div>
-
-              <p style={{ margin: "16px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
-                Cada opção mostra como ficará o arquivo. Os PNG dos quadros são gerados em alta resolução (600×760 px) para stories e posts; o QR “somente código” é baixado em 512 px.
-              </p>
             </div>
           </div>
         )}

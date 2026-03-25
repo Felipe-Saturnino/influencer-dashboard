@@ -9,9 +9,6 @@ const GAP = 48;
 const QR_BOX = 296;
 const QR_BOX_R = 28;
 const LOGO_MAX_W = 400;
-const CORNER = 40;
-const STROKE = 6;
-
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const rr = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
@@ -85,39 +82,6 @@ async function loadSpinLogo(baseUrl: string): Promise<HTMLImageElement | null> {
   });
 }
 
-/** Cantos em “L” brancos levemente para fora da caixa do QR (equivalente ao template HTML). */
-function drawQrCorners(ctx: CanvasRenderingContext2D, bx: number, by: number) {
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = STROKE;
-  ctx.lineCap = "square";
-  const o = 6;
-  const c = CORNER;
-
-  ctx.beginPath();
-  ctx.moveTo(bx - o + c, by - o);
-  ctx.lineTo(bx - o, by - o);
-  ctx.lineTo(bx - o, by - o + c);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(bx + QR_BOX + o - c, by - o);
-  ctx.lineTo(bx + QR_BOX + o, by - o);
-  ctx.lineTo(bx + QR_BOX + o, by - o + c);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(bx + QR_BOX + o - c, by + QR_BOX + o);
-  ctx.lineTo(bx + QR_BOX + o, by + QR_BOX + o);
-  ctx.lineTo(bx + QR_BOX + o, by + QR_BOX + o - c);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(bx - o + c, by + QR_BOX + o);
-  ctx.lineTo(bx - o, by + QR_BOX + o);
-  ctx.lineTo(bx - o, by + QR_BOX + o - c);
-  ctx.stroke();
-}
-
 /**
  * Canvas 600×760 — quadro Spin (gradiente dark ou light) + logo + QR real do link.
  */
@@ -172,8 +136,6 @@ export async function renderSpinBrandedQrToCanvas(
   ctx.fillStyle = "#ffffff";
   roundRectPath(ctx, qrLeft, qrTop, QR_BOX, QR_BOX, QR_BOX_R);
   ctx.fill();
-
-  drawQrCorners(ctx, qrLeft, qrTop);
 
   const qrCanvas = document.createElement("canvas");
   const qrInner = 232;

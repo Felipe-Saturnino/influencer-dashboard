@@ -835,12 +835,6 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     onRecarregar();
   }
 
-  async function recalcularPagamentos(c: CicloPagamento) {
-    await supabase.from("pagamentos").delete().eq("ciclo_id", c.id);
-    await gerarPagamentosDoCiclo(c);
-    await carregarDados(c);
-  }
-
   const OPERADORA_PADRAO = "casa_apostas";
 
   async function gerarPagamentosDoCiclo(c: CicloPagamento) {
@@ -890,7 +884,6 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       await carregarPreview(c);
     } else {
       // Ciclo fechado: carrega os pagamentos existentes (preserva status aprovado/a pagar/pago).
-      // Para incluir lives validadas após o fechamento, usar o botão "Recalcular".
       await carregarPagamentos(c);
     }
     setLoading(false);
@@ -1254,11 +1247,6 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          {ciclo && !isAberto && perm.canEditarOk && (
-            <BtnAcao onClick={() => recalcularPagamentos(ciclo)} color="#10b981">
-              🔄 Recalcular
-            </BtnAcao>
-          )}
           {ciclo && perm.canEditarOk && (
             <BtnPrimary onClick={() => setModalAgente(true)}>
               ➕ Pagamento de Agente
@@ -1314,7 +1302,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                       <span style={{ fontSize: "12px", maxWidth: 480, display: "block", marginTop: 8 }}>
-                        <strong>Confira:</strong> (1) Selecione no dropdown acima o ciclo que contém as datas das suas lives — ex.: lives em 26–28/01 ficam no ciclo 22/01–28/01 (qui–qua). (2) A live foi validada em <strong>Lives → Resultados</strong> com status realizada, operadora e duração? (3) O influencer tem cachê/hora em Operações → Influencers? (4) O filtro de operadora está em &quot;Todas&quot;? Se alterou dados após fechar, use <strong>Recalcular</strong>.
+                        <strong>Confira:</strong> (1) Selecione no dropdown acima o ciclo que contém as datas das suas lives — ex.: lives em 26–28/01 ficam no ciclo 22/01–28/01 (qui–qua). (2) A live foi validada em <strong>Lives → Resultados</strong> com status realizada, operadora e duração? (3) O influencer tem cachê/hora em Operações → Influencers? (4) O filtro de operadora está em &quot;Todas&quot;?
                       </span>
                     </div>
                   </td>
