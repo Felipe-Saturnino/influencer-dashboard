@@ -57,6 +57,19 @@ def main():
     days = (end_date - start_date).days + 1
     log.info("=== Backfill: %s a %s (%d dias) ===", start_date, end_date, days)
 
+    if os.environ.get("SKIP_META_PREFLIGHT", "").strip().lower() not in ("1", "true", "yes"):
+        ok, err = etl.meta_preflight()
+        if not ok:
+            log.error(
+                "Backfill abortado: token Meta inválido ou expirado. "
+                "Gere novo Page Access Token em Meta for Developers e atualize o secret "
+                "META_ACCESS_TOKEN no GitHub. Detalhe: %s",
+                err,
+            )
+            exit(1)
+
+    sleep_sec = float(os.environ.get("BACKFILL_SLEEP_SECONDS", "2"))
+
     channels = [
         ("instagram", etl.fetch_instagram),
         ("facebook", etl.fetch_facebook),
@@ -76,10 +89,19 @@ def main():
             except Exception as exc:
                 log.error("%s — ERRO: %s", name, exc, exc_info=True)
                 etl.log_run(name, "error", error=str(exc))
+                if name in ("instagram", "facebook") and os.environ.get(
+                    "BACKFILL_FAIL_FAST_META", ""
+                ).strip().lower() in ("1", "true", "yes"):
+                    exc_s = str(exc).lower()
+                    if "expired" in exc_s or "session has expired" in exc_s or "oauth" in exc_s:
+                        log.error(
+                            "Backfill interrompido (BACKFILL_FAIL_FAST_META): corrija o token Meta e rode de novo."
+                        )
+                        exit(1)
 
-        # Pequena pausa entre dias para evitar rate limit
-        if d < end_date:
-            time.sleep(2)
+        # Pausa entre dias para reduzir rate limit (ajuste BACKFILL_SLEEP_SECONDS se necessário)
+        if d < end_date and sleep_sec > 0:
+            time.sleep(sleep_sec)
 
     log.info("=== Backfill concluído ===")
 

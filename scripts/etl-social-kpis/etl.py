@@ -2,6 +2,12 @@
 Social Media KPI Pipeline
 Canais: LinkedIn, Instagram, YouTube, Facebook
 Roda via GitHub Actions todo dia às 06:00 BRT
+
+v2:
+- Instagram: follower_count removido dos insights → followers_count no objeto IG
+- Instagram/Facebook: engagement_rate limitado a 99.9999 (overflow no banco)
+- Facebook: page_impressions + page_engaged_users; post_impressions nos posts
+- YouTube: subscriberCount (Channels API), impressions no Analytics; followers no kpi_daily
 """
 
 import os
@@ -24,7 +30,6 @@ SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", os.environ.get("SUPABASE_S
 
 META_TOKEN = os.environ.get("META_ACCESS_TOKEN", "")
 META_PAGE_ID = os.environ.get("META_PAGE_ID", "")
-# Opcional: ID direto da conta Instagram Business (evita lookup via Page quando não vinculada)
 META_IG_ACCOUNT_ID = os.environ.get("META_IG_ACCOUNT_ID", "")
 
 YOUTUBE_CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID", "")
@@ -36,11 +41,11 @@ LINKEDIN_TOKEN = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
 LINKEDIN_ORG_ID = os.environ.get("LINKEDIN_ORG_ID", "")
 
 TARGET_DATE = date.today() - timedelta(days=1)
-# Meta e Instagram têm delay de 24-48h nos insights; usar D-2 aumenta chance de dados disponíveis
 INSIGHTS_DATE = date.today() - timedelta(days=2)
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
+_MAX_ENGAGEMENT_RATE = 99.9999
 
 # ------------------------------------------------------------
 # Helpers
@@ -59,8 +64,9 @@ def _log_api_error(resp: requests.Response, context: str = ""):
         log.error("%s API erro %s: %s", context, resp.status_code, txt)
         if "expired" in txt.lower():
             log.error("Meta — Token expirado. Gere novo Page Access Token em Meta for Developers.")
+
+
 def _parse_iso_duration_seconds(duration: str) -> int:
-    """Converte duração ISO 8601 (PT1M30S, PT45S, PT2H) para segundos."""
     m = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration)
     if not m:
         return 0
@@ -69,7 +75,6 @@ def _parse_iso_duration_seconds(duration: str) -> int:
 
 
 def _classify_video(duration: str, snippet: dict) -> str:
-    """Classifica vídeo em 'short', 'live' ou 'upload'."""
     live_status = snippet.get("liveBroadcastContent", "none")
     if live_status in ("live", "upcoming"):
         return "live"
@@ -79,7 +84,6 @@ def _classify_video(duration: str, snippet: dict) -> str:
 
 
 def get_youtube_token() -> str:
-    """Troca o refresh token por um access token fresco."""
     resp = requests.post(
         "https://oauth2.googleapis.com/token",
         data={
@@ -114,7 +118,6 @@ def log_run(channel: str, status: str, records: int = 0, error: str = None, ms: 
             "duration_ms": ms,
         }
     ).execute()
-    # Registrar erro em tech_logs para exibir em Status Técnico > Logs Recentes
     if status == "error" and error:
         try:
             supabase.table("tech_logs").insert(
@@ -122,6 +125,50 @@ def log_run(channel: str, status: str, records: int = 0, error: str = None, ms: 
             ).execute()
         except Exception as e:
             log.warning("Falha ao registrar tech_log: %s", e)
+
+
+def meta_preflight() -> tuple[bool, str]:
+    """
+    Valida META_ACCESS_TOKEN com uma chamada mínima à Graph API.
+    Use no início do backfill para evitar centenas de erros quando o token expirou.
+    Se Meta não estiver configurado, retorna (True, '').
+    """
+    if not META_TOKEN:
+        return True, ""
+    if not META_PAGE_ID and not META_IG_ACCOUNT_ID:
+        return True, ""
+    base = "https://graph.facebook.com/v21.0"
+    try:
+        if META_PAGE_ID:
+            r = requests.get(
+                f"{base}/{META_PAGE_ID}",
+                params={"fields": "id,name", "access_token": META_TOKEN},
+                timeout=30,
+            )
+        else:
+            r = requests.get(
+                f"{base}/{META_IG_ACCOUNT_ID}",
+                params={"fields": "id,username", "access_token": META_TOKEN},
+                timeout=30,
+            )
+        if r.status_code == 200:
+            log.info("Meta preflight OK (token válido para Page/IG).")
+            return True, ""
+        _log_api_error(r, "Meta preflight")
+        try:
+            body = r.json()
+            err = body.get("error", {}) if isinstance(body.get("error"), dict) else {}
+            msg = err.get("message", r.text[:400] if r.text else "unknown")
+        except Exception:
+            msg = (r.text or "")[:400]
+        return False, msg
+    except requests.RequestException as e:
+        log.error("Meta preflight — falha de rede: %s", e)
+        return False, str(e)
+
+
+def _cap_engagement_rate(x: float) -> float:
+    return min(round(x, 4), _MAX_ENGAGEMENT_RATE)
 
 
 # ------------------------------------------------------------
@@ -137,9 +184,8 @@ def fetch_instagram():
 
     t0 = time.monotonic()
     log.info("Instagram — iniciando coleta para %s", TARGET_DATE)
-
     base = "https://graph.facebook.com/v21.0"
-    # Insights têm delay de 24-48h; usar INSIGHTS_DATE
+
     ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
     ins_until = ins_since + 86400
     since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
@@ -159,7 +205,10 @@ def fetch_instagram():
         data = page_resp.json()
         ig_biz = data.get("instagram_business_account")
         if not ig_biz:
-            log.error("Instagram — Página %s não tem Instagram Business Account vinculada. Use META_IG_ACCOUNT_ID ou vincule no Meta Business.", META_PAGE_ID)
+            log.error(
+                "Instagram — Página %s não tem Instagram Business Account vinculada. Use META_IG_ACCOUNT_ID ou vincule no Meta Business.",
+                META_PAGE_ID,
+            )
             log_run("instagram", "error", 0, "Page sem IG Business Account")
             return
         ig_id = ig_biz.get("id")
@@ -168,12 +217,21 @@ def fetch_instagram():
             log_run("instagram", "error", 0, "instagram_business_account.id ausente")
             return
 
-    # Métricas: reach e follower_count — limitadas a 30 dias pela API Meta; para backfill, continuamos sem insights
-    metrics = {}
+    followers = 0
+    profile_resp = requests.get(
+        f"{base}/{ig_id}",
+        params={"fields": "followers_count", "access_token": META_TOKEN},
+    )
+    if profile_resp.status_code == 200:
+        followers = profile_resp.json().get("followers_count", 0) or 0
+    else:
+        log.warning("Instagram — falha ao buscar followers_count: %s", profile_resp.text[:200])
+
+    reach = None
     insights_resp = requests.get(
         f"{base}/{ig_id}/insights",
         params={
-            "metric": "reach,follower_count",
+            "metric": "reach",
             "period": "day",
             "since": ins_since,
             "until": ins_until,
@@ -181,16 +239,16 @@ def fetch_instagram():
         },
     )
     if insights_resp.status_code == 200:
-        metrics = {m["name"]: m["values"][0]["value"] for m in insights_resp.json().get("data", [])}
+        for m in insights_resp.json().get("data", []):
+            if m["name"] == "reach" and m.get("values"):
+                reach = m["values"][0]["value"]
     else:
         err_text = (insights_resp.text or "").lower()
-        if "30 days" in err_text or "follower_count" in err_text:
+        if "30 days" in err_text or "outside" in err_text or "range" in err_text or "follower_count" in err_text:
             log.warning("Instagram — Insights fora da janela de 30 dias (ignorando). Prosseguindo com posts.")
         else:
             _log_api_error(insights_resp, "Instagram insights")
-            insights_resp.raise_for_status()
 
-    # Coleta com paginação (API retorna 25 por padrão; limit=100 + loop para pegar todos)
     posts_raw = []
     next_url = None
     params = {
@@ -212,7 +270,7 @@ def fetch_instagram():
         next_url = data.get("paging", {}).get("next")
         if not next_url or not batch:
             break
-        time.sleep(0.3)  # evita rate limit
+        time.sleep(0.3)
 
     post_rows = []
     total_engagements = 0
@@ -233,8 +291,8 @@ def fetch_instagram():
         eng = likes + comments + ins_map.get("saved", 0) + ins_map.get("shares", 0)
         impr = ins_map.get("impressions", 1) or 1
         total_engagements += eng
-
         thumbnail = p.get("thumbnail_url") or p.get("media_url")
+
         post_rows.append(
             {
                 "post_id": p["id"],
@@ -250,21 +308,19 @@ def fetch_instagram():
                 "saves": ins_map.get("saved"),
                 "shares": ins_map.get("shares"),
                 "video_views": ins_map.get("video_views"),
-                "engagement_rate": round(eng / impr, 4),
+                "engagement_rate": _cap_engagement_rate(eng / impr),
             }
         )
 
-    followers = metrics.get("follower_count", 0)
-    impressions = metrics.get("reach", 1) or 1  # reach como proxy quando impressions não disponível
-
+    impressions_proxy = max(reach or 0, 1)
     kpi_row = {
         "channel": "instagram",
         "date": TARGET_DATE.isoformat(),
         "followers": followers,
-        "impressions": metrics.get("reach"),  # reach como proxy
-        "reach": metrics.get("reach"),
+        "impressions": reach,
+        "reach": reach,
         "engagements": total_engagements,
-        "engagement_rate": round(total_engagements / impressions, 4),
+        "engagement_rate": _cap_engagement_rate(total_engagements / impressions_proxy),
         "posts_published": len(post_rows),
     }
 
@@ -286,14 +342,13 @@ def fetch_facebook():
 
     t0 = time.monotonic()
     log.info("Facebook — iniciando coleta para %s", TARGET_DATE)
-
     base = "https://graph.facebook.com/v21.0"
+
     ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
     ins_until = ins_since + 86400
     since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
     until = since + 86400
 
-    # Total de seguidores via Page object (page_fans depreciado)
     page_resp = requests.get(
         f"{base}/{META_PAGE_ID}",
         params={"fields": "followers_count", "access_token": META_TOKEN},
@@ -301,23 +356,25 @@ def fetch_facebook():
     page_data = page_resp.json() if page_resp.status_code == 200 else {}
     followers_count = page_data.get("followers_count")
 
-    # Métricas atualizadas (nov 2025): page_media_view, page_post_engagements
+    metrics = {}
     ins_resp = requests.get(
         f"{base}/{META_PAGE_ID}/insights",
         params={
-            "metric": "page_media_view,page_post_engagements",
+            "metric": "page_impressions,page_engaged_users",
             "period": "day",
             "since": ins_since,
             "until": ins_until,
             "access_token": META_TOKEN,
         },
     )
-    if ins_resp.status_code != 200:
+    if ins_resp.status_code == 200:
+        for m in ins_resp.json().get("data", []):
+            if m.get("values"):
+                metrics[m["name"]] = m["values"][0]["value"]
+    else:
         _log_api_error(ins_resp, "Facebook insights")
-        ins_resp.raise_for_status()
-    metrics = {m["name"]: m["values"][0]["value"] for m in ins_resp.json().get("data", [])}
+        log.warning("Facebook — insights indisponíveis, continuando sem métricas de página.")
 
-    # Coleta com paginação (API retorna 25 por padrão; limit=100 + loop para pegar todos)
     posts_raw = []
     next_url = None
     params = {
@@ -339,7 +396,7 @@ def fetch_facebook():
         next_url = data.get("paging", {}).get("next")
         if not next_url or not batch:
             break
-        time.sleep(0.3)  # evita rate limit
+        time.sleep(0.3)
 
     _STATUS_MAP = {
         "added_photos": "photo",
@@ -355,7 +412,7 @@ def fetch_facebook():
         ins = requests.get(
             f"{base}/{p['id']}/insights",
             params={
-                "metric": "post_media_view,post_reach,post_reactions_by_type_total,post_clicks,post_shares",
+                "metric": "post_impressions,post_reach,post_reactions_by_type_total,post_clicks,post_shares",
                 "access_token": META_TOKEN,
             },
         ).json().get("data", [])
@@ -370,12 +427,12 @@ def fetch_facebook():
             reactions = 0
 
         eng = reactions + ins_map.get("post_clicks", 0) + ins_map.get("post_shares", 0)
-        impr = ins_map.get("post_media_view", ins_map.get("post_impressions", 1)) or 1
+        impr = ins_map.get("post_impressions", 1) or 1
         total_eng += eng
 
         fb_type = _STATUS_MAP.get(p.get("status_type", ""), "status")
-
         thumb = p.get("full_picture") or p.get("thumbnail_url")
+
         post_rows.append(
             {
                 "post_id": p["id"],
@@ -384,28 +441,29 @@ def fetch_facebook():
                 "message": (p.get("message") or "")[:500],
                 "permalink": p.get("permalink_url"),
                 "thumbnail_url": (thumb[:2048] if thumb else None),
-                "impressions": ins_map.get("post_media_view") or ins_map.get("post_impressions"),
+                "impressions": ins_map.get("post_impressions"),
                 "reach": ins_map.get("post_reach"),
                 "reactions": reactions,
                 "comments": 0,
                 "shares": ins_map.get("post_shares"),
                 "link_clicks": ins_map.get("post_clicks"),
-                "engagement_rate": round(eng / impr, 4),
+                "engagement_rate": _cap_engagement_rate(eng / impr),
             }
         )
 
-    page_views = metrics.get("page_media_view", 1) or 1
-    engagements = metrics.get("page_post_engagements", total_eng)
+    page_impressions = metrics.get("page_impressions", 1) or 1
+    engagements = metrics.get("page_engaged_users", total_eng)
     if engagements is None:
         engagements = total_eng
+
     kpi_row = {
         "channel": "facebook",
         "date": TARGET_DATE.isoformat(),
-        "followers": followers_count or metrics.get("page_follows"),
-        "impressions": metrics.get("page_media_view"),
-        "reach": metrics.get("page_media_view"),
+        "followers": followers_count,
+        "impressions": metrics.get("page_impressions"),
+        "reach": metrics.get("page_impressions"),
         "engagements": engagements,
-        "engagement_rate": round(int(engagements or 0) / max(1, int(page_views or 1)), 4),
+        "engagement_rate": _cap_engagement_rate(int(engagements or 0) / max(1, int(page_impressions or 1))),
         "posts_published": len(post_rows),
         "link_clicks": sum(r.get("link_clicks") or 0 for r in post_rows),
     }
@@ -428,13 +486,27 @@ def fetch_youtube():
 
     t0 = time.monotonic()
     log.info("YouTube — iniciando coleta para %s", TARGET_DATE)
-
     base = "https://www.googleapis.com/youtube/v3"
     ana_base = "https://youtubeanalytics.googleapis.com/v2"
     headers = {"Authorization": f"Bearer {get_youtube_token()}"}
     date_str = TARGET_DATE.isoformat()
 
-    # YouTube Analytics API exige dimensions para reports; day + métricas básicas
+    subscribers = None
+    channel_resp = requests.get(
+        f"{base}/channels",
+        headers=headers,
+        params={"part": "statistics", "id": YOUTUBE_CHANNEL_ID},
+    )
+    if channel_resp.status_code == 200:
+        items = channel_resp.json().get("items", [])
+        if items:
+            stats = items[0].get("statistics", {})
+            subscribers = int(stats.get("subscriberCount", 0))
+            log.info("YouTube — inscritos: %s", subscribers)
+    else:
+        log.warning("YouTube — falha ao buscar inscritos: %s", channel_resp.text[:200])
+
+    # impressions + demais métricas (annotationClickThroughRate omitido: anotações legadas / compatibilidade day)
     ana_resp = requests.get(
         f"{ana_base}/reports",
         headers=headers,
@@ -443,20 +515,24 @@ def fetch_youtube():
             "startDate": date_str,
             "endDate": date_str,
             "dimensions": "day",
-            "metrics": "views,estimatedMinutesWatched,likes,comments,subscribersGained",
+            "metrics": "views,estimatedMinutesWatched,likes,comments,subscribersGained,impressions",
         },
     )
     if ana_resp.status_code != 200:
         _log_api_error(ana_resp, "YouTube Analytics")
         ana_resp.raise_for_status()
+
     rows = ana_resp.json().get("rows", [[]])
-    # Com dimensions=day: cada row = [date, views, watch_min, likes, comments, subs_gained]
-    row = rows[0] if rows else ["", 0, 0, 0, 0, 0]
-    if len(row) >= 6:
-        views, watch_min, likes, comments, subs_gained = row[1], row[2], row[3], row[4], row[5]
-    else:
-        views = watch_min = likes = comments = subs_gained = 0
-    avg_view_pct = impressions = ctr = None
+    row = rows[0] if rows else ["", 0, 0, 0, 0, 0, 0]
+
+    views = int(row[1]) if len(row) > 1 else 0
+    watch_min = row[2] if len(row) > 2 else 0
+    likes = int(row[3]) if len(row) > 3 else 0
+    comments = int(row[4]) if len(row) > 4 else 0
+    subs_gained = int(row[5]) if len(row) > 5 else 0
+    channel_impressions = int(row[6]) if len(row) > 6 else 0
+    channel_ctr = None
+
     shares = 0
 
     search_resp = requests.get(
@@ -495,22 +571,26 @@ def fetch_youtube():
                     "type": vtype,
                     "views": int(s.get("viewCount", 0)),
                     "watch_time_min": int(watch_min) if len(video_ids) == 1 else None,
-                    "avg_view_pct": float(avg_view_pct) if len(video_ids) == 1 and avg_view_pct is not None else None,
+                    "avg_view_pct": None,
                     "likes": int(s.get("likeCount", 0)),
                     "comments": int(s.get("commentCount", 0)),
-                    "impressions": int(impressions) if impressions is not None and len(video_ids) == 1 else None,
-                    "ctr": float(ctr) if len(video_ids) == 1 and ctr is not None else None,
+                    "impressions": channel_impressions if len(video_ids) == 1 else None,
+                    "ctr": channel_ctr if len(video_ids) == 1 else None,
                     "subscribers_gained": int(subs_gained) if len(video_ids) == 1 else None,
                 }
             )
 
+    eng_total = likes + comments + shares
+    eng_base = max(channel_impressions, views, 1)
+
     kpi_row = {
         "channel": "youtube",
         "date": date_str,
-        "impressions": int(impressions or 0),
-        "video_views": int(views),
-        "engagements": int(likes) + int(comments) + int(shares),
-        "engagement_rate": round((int(likes) + int(comments)) / max(int(views), 1), 4),
+        "followers": subscribers,
+        "impressions": channel_impressions,
+        "video_views": views,
+        "engagements": eng_total,
+        "engagement_rate": _cap_engagement_rate(eng_total / eng_base),
         "posts_published": len(video_rows),
     }
 
@@ -532,7 +612,6 @@ def fetch_linkedin():
 
     t0 = time.monotonic()
     log.info("LinkedIn — iniciando coleta para %s", TARGET_DATE)
-
     base = "https://api.linkedin.com/v2"
     headers = {
         "Authorization": f"Bearer {LINKEDIN_TOKEN}",
@@ -620,7 +699,7 @@ def fetch_linkedin():
         "followers": followers,
         "impressions": total_impressions,
         "engagements": total_engagements,
-        "engagement_rate": round(total_engagements / max(total_impressions, 1), 4),
+        "engagement_rate": _cap_engagement_rate(total_engagements / max(total_impressions, 1)),
         "posts_published": len(post_rows),
         "link_clicks": sum(r.get("clicks") or 0 for r in post_rows),
     }
