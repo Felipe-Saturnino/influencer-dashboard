@@ -413,13 +413,19 @@ export default function StatusTecnico() {
         setEmailEnviando(false);
         return;
       }
-      // fetch explícito (mesmos headers do GitHub Actions) — evita falha genérica do invoke no browser
-      const { data: sess } = await supabase.auth.getSession();
-      const bearer = sess.session?.access_token ?? supabaseAnonKey;
-      const base = supabaseUrl.replace(/\/$/, "");
-      let res: Response;
+      // fetch explícito (mesmos headers do GitHub Actions) — CORS na função deve incluir apikey + x-client-info
+      let bearer = supabaseAnonKey;
       try {
-        res = await fetch(`${base}/functions/v1/relatorio-diario-diretoria`, {
+        const { data: sess } = await supabase.auth.getSession();
+        if (sess.session?.access_token) bearer = sess.session.access_token;
+      } catch {
+        /* mantém anon */
+      }
+      const base = supabaseUrl.replace(/\/$/, "");
+      const urlFn = `${base}/functions/v1/relatorio-diario-diretoria`;
+      let res: Response;
+      const tentarFetch = () =>
+        fetch(urlFn, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${bearer}`,
@@ -428,6 +434,12 @@ export default function StatusTecnico() {
           },
           body: "{}",
         });
+      try {
+        res = await tentarFetch();
+        if (!res.ok && (res.status === 502 || res.status === 503 || res.status === 504)) {
+          await new Promise((r) => setTimeout(r, 800));
+          res = await tentarFetch();
+        }
       } catch (fetchErr) {
         const raw = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
         const rede =
@@ -473,7 +485,11 @@ export default function StatusTecnico() {
         texto: `Relatório enviado com sucesso${dest}. A diretoria pode acompanhar possíveis erros e o status das integrações.`,
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      let msg = e instanceof Error ? e.message : String(e);
+      if (/edge function/i.test(msg) || /FunctionsFetchError/i.test(msg)) {
+        msg =
+          "Não foi possível chamar a função relatorio-diario-diretoria. Atualize o app publicado (deploy do front), confira se a função existe no projeto do VITE_SUPABASE_URL, desative JWT na função se usar só anon, e rode: supabase functions deploy relatorio-diario-diretoria.";
+      }
       setEmailMensagem({ tipo: "erro", texto: msg });
     } finally {
       setEmailEnviando(false);
