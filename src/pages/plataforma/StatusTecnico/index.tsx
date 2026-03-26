@@ -365,7 +365,11 @@ export default function StatusTecnico() {
       const resData = (resDataRaw ?? {}) as { ok?: boolean; erro?: string; message?: string };
 
       if (invokeError) {
-        let texto = invokeError.message ?? "Erro ao chamar trigger-social-kpis";
+        let texto =
+          (typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : null) ??
+          invokeError.message ??
+          "Erro ao chamar trigger-social-kpis";
+        if (texto.includes("non-2xx") && resData.erro) texto = resData.erro;
         if (texto.includes("404") || texto.includes("not found")) {
           texto =
             "Edge Function trigger-social-kpis não encontrada. Execute: supabase functions deploy trigger-social-kpis. Configure GITHUB_TOKEN e GITHUB_REPO nos Secrets.";

@@ -32,22 +32,21 @@ serve(async (req) => {
   const token = Deno.env.get("GITHUB_TOKEN");
   const repo = Deno.env.get("GITHUB_REPO");
 
+  // HTTP 200 + ok:false para o cliente Supabase não mascarar o motivo como "non-2xx"
   if (!token || !repo) {
-    return response(
-      {
-        ok: false,
-        erro: "GITHUB_TOKEN e GITHUB_REPO devem estar configurados em Supabase → Edge Functions → Secrets.",
-      },
-      500
-    );
+    return response({
+      ok: false,
+      erro:
+        "GITHUB_TOKEN e GITHUB_REPO devem estar configurados em Supabase → Edge Functions → Secrets do projeto.",
+    });
   }
 
   const [owner, repoName] = repo.split("/");
   if (!owner || !repoName) {
-    return response(
-      { ok: false, erro: "GITHUB_REPO deve estar no formato owner/repo (ex: Felipe-Saturnino/influencer-dashboard)" },
-      500
-    );
+    return response({
+      ok: false,
+      erro: "GITHUB_REPO deve estar no formato owner/repo (ex: Felipe-Saturnino/influencer-dashboard)",
+    });
   }
 
   try {
@@ -69,13 +68,18 @@ serve(async (req) => {
 
     if (!res.ok) {
       const text = await res.text();
-      return response(
-        {
-          ok: false,
-          erro: `GitHub API: ${res.status} ${res.statusText}. ${text.slice(0, 300)}`,
-        },
-        502
-      );
+      let hint = "";
+      if (res.status === 404) {
+        hint =
+          " Verifique se o ficheiro .github/workflows/sync-social-kpis-daily.yml existe no branch indicado e se o token tem scope workflow (repo + workflow).";
+      } else if (res.status === 403 || res.status === 401) {
+        hint =
+          " Token sem permissão: crie um Fine-grained ou classic PAT com leitura de Actions e permissão para disparar workflows neste repositório.";
+      }
+      return response({
+        ok: false,
+        erro: `GitHub API: ${res.status} ${res.statusText}. ${text.slice(0, 400)}${hint}`,
+      });
     }
 
     return response({
@@ -84,7 +88,7 @@ serve(async (req) => {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return response({ ok: false, erro: msg }, 500);
+    return response({ ok: false, erro: msg });
   }
 });
 
