@@ -7,7 +7,7 @@ v2:
 - Instagram: follower_count removido dos insights → followers_count no objeto IG
 - Instagram/Facebook: engagement_rate limitado a 99.9999 (overflow no banco)
 - Facebook: page_impressions + page_engaged_users; post_impressions nos posts
-- YouTube: subscriberCount (Channels API), impressions no Analytics; followers no kpi_daily
+- YouTube: subscriberCount (Channels API); Analytics day report sem métrica impressions; followers no kpi_daily
 """
 
 import os
@@ -46,6 +46,19 @@ INSIGHTS_DATE = date.today() - timedelta(days=2)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 _MAX_ENGAGEMENT_RATE = 99.9999
+
+
+def _redact_secrets_for_log(msg: str | None) -> str | None:
+    """Nunca gravar access_token ou segredos em tech_logs / pipeline_runs."""
+    if not msg:
+        return msg
+    s = str(msg)
+    s = re.sub(r"([?&])access_token=[^&\s\"']+", r"\1access_token=REDACTED", s, flags=re.I)
+    s = re.sub(r"(?i)access_token=[^&\s\"']+", "access_token=REDACTED", s)
+    if META_TOKEN and len(META_TOKEN) > 12:
+        s = s.replace(META_TOKEN, "REDACTED_META_TOKEN")
+    return s[:2000]
+
 
 # ------------------------------------------------------------
 # Helpers
@@ -108,20 +121,21 @@ def upsert(table: str, rows: list[dict], conflict_col: str = None):
 def log_run(channel: str, status: str, records: int = 0, error: str = None, ms: int = 0):
     if not supabase:
         return
+    safe_err = _redact_secrets_for_log(error) if error else None
     supabase.table("pipeline_runs").insert(
         {
             "run_date": TARGET_DATE.isoformat(),
             "channel": channel,
             "status": status,
             "records_in": records,
-            "error_msg": error,
+            "error_msg": safe_err,
             "duration_ms": ms,
         }
     ).execute()
-    if status == "error" and error:
+    if status == "error" and safe_err:
         try:
             supabase.table("tech_logs").insert(
-                {"integracao_slug": None, "tipo": channel, "descricao": error[:500]}
+                {"integracao_slug": None, "tipo": channel, "descricao": safe_err[:500]}
             ).execute()
         except Exception as e:
             log.warning("Falha ao registrar tech_log: %s", e)
@@ -506,7 +520,8 @@ def fetch_youtube():
     else:
         log.warning("YouTube — falha ao buscar inscritos: %s", channel_resp.text[:200])
 
-    # impressions + demais métricas (annotationClickThroughRate omitido: anotações legadas / compatibilidade day)
+    # YouTube Analytics v2: a métrica "impressions" não é válida com dimensions=day neste relatório
+    # (400 Unknown identifier). Métricas suportadas: views, estimatedMinutesWatched, likes, etc.
     ana_resp = requests.get(
         f"{ana_base}/reports",
         headers=headers,
@@ -515,7 +530,7 @@ def fetch_youtube():
             "startDate": date_str,
             "endDate": date_str,
             "dimensions": "day",
-            "metrics": "views,estimatedMinutesWatched,likes,comments,subscribersGained,impressions",
+            "metrics": "views,estimatedMinutesWatched,likes,comments,subscribersGained",
         },
     )
     if ana_resp.status_code != 200:
@@ -523,14 +538,14 @@ def fetch_youtube():
         ana_resp.raise_for_status()
 
     rows = ana_resp.json().get("rows", [[]])
-    row = rows[0] if rows else ["", 0, 0, 0, 0, 0, 0]
+    row = rows[0] if rows else ["", 0, 0, 0, 0, 0]
 
     views = int(row[1]) if len(row) > 1 else 0
     watch_min = row[2] if len(row) > 2 else 0
     likes = int(row[3]) if len(row) > 3 else 0
     comments = int(row[4]) if len(row) > 4 else 0
     subs_gained = int(row[5]) if len(row) > 5 else 0
-    channel_impressions = int(row[6]) if len(row) > 6 else 0
+    channel_impressions = None  # não disponível neste report; dashboard usa video_views no fallback
     channel_ctr = None
 
     shares = 0
@@ -581,7 +596,7 @@ def fetch_youtube():
             )
 
     eng_total = likes + comments + shares
-    eng_base = max(channel_impressions, views, 1)
+    eng_base = max(views, 1)
 
     kpi_row = {
         "channel": "youtube",
