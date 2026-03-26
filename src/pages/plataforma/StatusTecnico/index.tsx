@@ -365,7 +365,11 @@ export default function StatusTecnico() {
       const resData = (resDataRaw ?? {}) as { ok?: boolean; erro?: string; message?: string };
 
       if (invokeError) {
-        let texto = invokeError.message ?? "Erro ao chamar trigger-social-kpis";
+        let texto =
+          (typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : null) ??
+          invokeError.message ??
+          "Erro ao chamar trigger-social-kpis";
+        if (texto.includes("non-2xx") && resData.erro) texto = resData.erro;
         if (texto.includes("404") || texto.includes("not found")) {
           texto =
             "Edge Function trigger-social-kpis não encontrada. Execute: supabase functions deploy trigger-social-kpis. Configure GITHUB_TOKEN e GITHUB_REPO nos Secrets.";
@@ -409,16 +413,46 @@ export default function StatusTecnico() {
         setEmailEnviando(false);
         return;
       }
-      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("relatorio-diario-diretoria", {
-        body: {},
-      });
-
-      const resData = (resDataRaw ?? {}) as { ok?: boolean; error?: string; destinatarios?: string[] };
-
-      if (invokeError) {
+      // fetch explícito (mesmos headers do GitHub Actions) — evita falha genérica do invoke no browser
+      const { data: sess } = await supabase.auth.getSession();
+      const bearer = sess.session?.access_token ?? supabaseAnonKey;
+      const base = supabaseUrl.replace(/\/$/, "");
+      let res: Response;
+      try {
+        res = await fetch(`${base}/functions/v1/relatorio-diario-diretoria`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${bearer}`,
+            apikey: supabaseAnonKey,
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+        });
+      } catch (fetchErr) {
+        const raw = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+        const rede =
+          raw.includes("Failed to fetch") ||
+          raw.includes("NetworkError") ||
+          raw.toLowerCase().includes("network");
         setEmailMensagem({
           tipo: "erro",
-          texto: invokeError.message ?? "Erro ao enviar relatório. Verifique se a Edge Function relatorio-diario-diretoria está implantada.",
+          texto: rede
+            ? "Não foi possível chegar à Edge Function (rede, firewall, bloqueador ou CORS). Abra F12 → Rede, tente de novo e confira se relatorio-diario-diretoria está publicada no Supabase."
+            : raw,
+        });
+        setEmailEnviando(false);
+        return;
+      }
+
+      const resData = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; destinatarios?: string[] };
+
+      if (!res.ok) {
+        setEmailMensagem({
+          tipo: "erro",
+          texto:
+            typeof resData.error === "string"
+              ? resData.error
+              : `Erro HTTP ${res.status}. Verifique logs da função no Supabase e secrets (Resend / destinatários).`,
         });
         setEmailEnviando(false);
         return;
