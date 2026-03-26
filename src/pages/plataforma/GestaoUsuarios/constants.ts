@@ -1,4 +1,4 @@
-import type { Role, PageKey, PermissaoValor } from "../../../types";
+import type { Role, PageKey, PermissaoValor, GestorTipoSlug } from "../../../types";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 
 export { FONT_TITLE };
@@ -14,6 +14,14 @@ export const BRAND = {
   cinza: "#6b7280",
   gradiente: "linear-gradient(135deg, #4a2082, #1e36f8)",
 } as const;
+
+/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores) */
+export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
+  { slug: "operacoes", label: "Operações" },
+  { slug: "marketing", label: "Marketing" },
+  { slug: "afiliados", label: "Afiliados" },
+  { slug: "geral", label: "Geral" },
+];
 
 export const ROLES: { value: Role; label: string }[] = [
   { value: "admin", label: "Administrador" },
@@ -44,6 +52,7 @@ export const PAGES: {
   { key: "influencers", label: "Influencers", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "scout", label: "Scout", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "financeiro", label: "Financeiro", secao: "Operações", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "banca_jogo", label: "Banca de Jogo", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_links", label: "Gestão de Links", secao: "Operações", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "campanhas", label: "Campanhas", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: true },
@@ -82,6 +91,7 @@ export function roleBadgeColor(role: Role): string {
   return map[role] ?? BRAND.cinza;
 }
 
+/** Admin não usa escopo de influencers/operadoras; gestor usa tipos (multi) na aba Usuários. */
 export function escopoBloqueado(role: Role): boolean {
-  return role === "admin" || role === "gestor";
+  return role === "admin";
 }

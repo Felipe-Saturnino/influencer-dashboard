@@ -5,6 +5,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { CicloPagamento, Pagamento, PagamentoStatus } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
@@ -193,13 +194,16 @@ function SelectInput({ value, onChange, options, style }: {
   );
 }
 
-function BtnPrimary({ onClick, children, disabled, style }: {
+function BtnPrimary({ onClick, children, disabled, style, title }: {
   onClick: () => void; children: React.ReactNode;
   disabled?: boolean; style?: React.CSSProperties;
+  title?: string;
 }) {
   const brand = useDashboardBrand();
   return (
     <button
+      type="button"
+      title={title}
       onClick={onClick}
       disabled={disabled}
       style={{
@@ -805,9 +809,14 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const [modalPagar, setModalPagar] = useState<PagamentoRow | null>(null);
   const [modalAgente, setModalAgente] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [enviarPagamentoLoading, setEnviarPagamentoLoading] = useState(false);
 
   const ciclo = ciclos.find(c => c.id === cicloId) ?? ciclos[0] ?? null;
   const isAberto = ciclo ? cicloAberto(ciclo) : false;
+  const temAguardandoPagamento = useMemo(
+    () => rows.some(r => r.status === "a_pagar"),
+    [rows],
+  );
 
   // Padrão: ciclo atual (aberto). Só altera se a seleção for inválida (ciclo removido da lista)
   useEffect(() => {
@@ -1205,6 +1214,22 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     total: rows.reduce((a, r) => a + r.total, 0),
   }), [rows]);
 
+  async function handleEnviarPagamentoEmail() {
+    if (!ciclo || isAberto || !temAguardandoPagamento) return;
+    setEnviarPagamentoLoading(true);
+    try {
+      const res = await enviarPagamentoEmailCiclo(supabase, ciclo.id);
+      if (!res.ok) {
+        alert(res.error);
+        return;
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Erro ao enviar notificação de pagamento.");
+    } finally {
+      setEnviarPagamentoLoading(false);
+    }
+  }
+
   const th: React.CSSProperties = {
     padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
     letterSpacing: "1.2px", textTransform: "uppercase", color: t.textMuted,
@@ -1247,6 +1272,15 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          {ciclo && !isAberto && temAguardandoPagamento && perm.canEditarOk && (
+            <BtnPrimary
+              onClick={() => void handleEnviarPagamentoEmail()}
+              disabled={enviarPagamentoLoading}
+              title="Notificar por e-mail (automação em configuração)"
+            >
+              {enviarPagamentoLoading ? "⏳ Enviando..." : "Enviar Pagamento"}
+            </BtnPrimary>
+          )}
           {ciclo && perm.canEditarOk && (
             <BtnPrimary onClick={() => setModalAgente(true)}>
               ➕ Pagamento de Agente
@@ -1998,9 +2032,15 @@ export default function Financeiro() {
         <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos de influencers.</p>
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
           <div style={{ fontSize: "40px", marginBottom: "16px" }}>📅</div>
-          <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>Nenhum ciclo cadastrado</p>
+          <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
+            {user?.role === "influencer" ? "Nenhum pagamento cadastrado" : "Nenhum ciclo cadastrado"}
+          </p>
           <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
-            Os ciclos são criados automaticamente (qui–qua). Verifique as permissões da tabela <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>ciclos_pagamento</code> no Supabase (INSERT permitido para autenticados).
+            {user?.role === "influencer" ? (
+              <>Os ciclos são criados automaticamente (qui–qua). Verifique se você realizou lives no período; caso tenha problemas, entre em contato.</>
+            ) : (
+              <>Os ciclos são criados automaticamente (qui–qua). Verifique as permissões da tabela <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>ciclos_pagamento</code> no Supabase (INSERT permitido para autenticados).</>
+            )}
           </p>
           <button
             onClick={() => { carregarCiclos(); }}

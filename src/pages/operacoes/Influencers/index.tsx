@@ -792,9 +792,7 @@ export default function Influencers() {
       {modal?.mode === "visualizar" && modal.inf && (
         <ModalVisualizar
           influencer={modal.inf}
-          operadorasList={operadorasNoEscopo.filter((o) =>
-            (modal.inf!.operadoras ?? []).some((op) => op.operadora_slug === o.slug)
-          )}
+          operadorasList={operadorasNoEscopo}
           onClose={() => setModal(null)}
           isDark={isDark}
           brand={brand}
@@ -803,9 +801,7 @@ export default function Influencers() {
       {modal?.mode === "editar" && modal.inf && (
         <ModalPerfil
           influencer={modal.inf}
-          operadorasList={operadorasNoEscopo.filter((o) =>
-            (modal.inf!.operadoras ?? []).some((op) => op.operadora_slug === o.slug)
-          )}
+          operadorasList={operadorasNoEscopo}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); loadData(); }}
           isDark={isDark}
@@ -976,11 +972,11 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
   const podeAlterarStatusCache = user?.role === "admin" || user?.role === "gestor";
 
   const inicialOperadoras: OperadorasFormState = {};
-  (influencer.operadoras ?? []).forEach((o) => {
-    inicialOperadoras[o.operadora_slug] = {
-      ativo: o.ativo,
-      id_operadora: o.id_operadora ?? "",
-    };
+  operadorasList.forEach((o) => {
+    const v = influencer.operadoras?.find((vinc) => vinc.operadora_slug === o.slug);
+    inicialOperadoras[o.slug] = v
+      ? { ativo: !!v.ativo, id_operadora: v.id_operadora ?? "" }
+      : { ativo: false, id_operadora: "" };
   });
 
   const [editNomeCompleto, setEditNomeCompleto] = useState(influencer.perfil?.nome_completo ?? "");
@@ -1023,7 +1019,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
       await supabase.from("profiles").update({ name: form.nome_artistico.trim() }).eq("id", influencer.id);
     }
 
-    const payload = {
+    const payload: Perfil & { nome_completo: string; updated_at: string } = {
       ...form,
       nome_completo: editNomeCompleto.trim(),
       updated_at: new Date().toISOString(),
@@ -1032,16 +1028,19 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
     if (!podeAlterarStatusCache && existing) {
       payload.status = existing.status ?? "ativo";
       payload.cache_hora = existing.cache_hora ?? 0;
+    } else if (existing && (payload.cache_hora == null || Number.isNaN(Number(payload.cache_hora)))) {
+      payload.cache_hora = existing.cache_hora ?? 0;
     }
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
       : await supabase.from("influencer_perfil").insert(payload);
     if (err) { setError(err.message); setSaving(false); return; }
 
-    const slugsValidos = new Set(operadorasList.map((o) => o.slug));
-    await supabase.from("influencer_operadoras").delete().eq("influencer_id", influencer.id);
-    for (const [slug, st] of opsAtivas) {
-      if (slugsValidos.has(slug) && st.id_operadora?.trim()) {
+    const slugsGeridos = new Set(operadorasList.map((o) => o.slug));
+    for (const slug of slugsGeridos) {
+      const st = operadorasForm[slug] ?? { ativo: false, id_operadora: "" };
+      await supabase.from("influencer_operadoras").delete().eq("influencer_id", influencer.id).eq("operadora_slug", slug);
+      if (st.ativo && st.id_operadora?.trim()) {
         await supabase.from("influencer_operadoras").insert({
           influencer_id: influencer.id,
           operadora_slug: slug,
