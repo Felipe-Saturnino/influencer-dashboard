@@ -49,7 +49,9 @@ function corsHeaders(req: Request) {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'authorization, content-type',
+    // Browser + supabase-js enviam apikey e x-client-info; sem isso o preflight bloqueia o POST.
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type',
     'Access-Control-Max-Age': '86400',
   }
 }
