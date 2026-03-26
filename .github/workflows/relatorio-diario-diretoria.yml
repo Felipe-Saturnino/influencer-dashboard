@@ -1,6 +1,8 @@
-# Relatório Diário Diretoria — Execução diária às 9h (horário de Brasília)
+# Relatório Diário Diretoria — Execução diária às 6h (horário de Brasília)
 #
-# Horário: 9h America/Sao_Paulo = 12h UTC (Brasil sem horário de verão desde 2019)
+# Horário: 6h America/Sao_Paulo = 9h UTC (Brasil sem horário de verão desde 2019).
+# Disparo mais cedo compensa atrasos frequentes da fila do GitHub Actions: mesmo com
+# atraso de algumas horas, o e-mail tende a sair ainda pela manhã.
 #
 # Limitação do GitHub Actions: execuções agendadas podem atrasar alguns minutos
 # (ou mais em picos de carga). Para disparo mais pontual, use o agendador nativo
@@ -8,14 +10,14 @@
 #
 # O workflow precisa existir na branch padrão do repositório para o schedule rodar.
 
-name: Relatório Diário Diretoria (9h BRT)
+name: Relatório Diário Diretoria (6h BRT)
 
 permissions:
   contents: read
 
 on:
   schedule:
-    - cron: "0 12 * * *"
+    - cron: "0 9 * * *"
   workflow_dispatch:
 
 concurrency:
