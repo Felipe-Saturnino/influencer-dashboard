@@ -404,35 +404,54 @@ export default function SocialMediaDashboard() {
   const sumVal = (arr: KpiDaily[], f: keyof KpiDaily): number =>
     arr.reduce((a, r) => a + (Number(r[f]) || 0), 0);
 
+  /** Taxa de engajamento agregada no período (evita depender de engagement_rate null no banco). */
+  const calcEngRate = (byCh: KpiDaily[]): string => {
+    const eng = sumVal(byCh, "engagements");
+    const impr = sumVal(byCh, "impressions");
+    if (impr > 0) return fmtPct(eng / impr);
+    const views = sumVal(byCh, "video_views");
+    if (views > 0) return fmtPct(eng / views);
+    return "—";
+  };
+
+  const calcEngBadge = (byCh: KpiDaily[]): number => {
+    const eng = sumVal(byCh, "engagements");
+    const impr = sumVal(byCh, "impressions");
+    if (impr > 0) return (eng / impr) * 100;
+    const views = sumVal(byCh, "video_views");
+    if (views > 0) return (eng / views) * 100;
+    return 0;
+  };
+
   const channelConfig = [
     {
       channel: "instagram", nome: "Instagram", cor: "#E1306C",
       stats: (byCh: KpiDaily[]) => [
-        { label: "Seguidores",  val: fmtNum(lastVal(byCh, "followers"))    },
-        { label: "Alcance",     val: fmtNum(sumVal(byCh, "reach"))         },
-        { label: "Impressões",  val: fmtNum(sumVal(byCh, "impressions"))   },
-        { label: "Engajamento", val: fmtNum(sumVal(byCh, "engagements"))   },
-        { label: "Taxa eng.",   val: fmtPct(lastVal(byCh, "engagement_rate")) },
+        { label: "Seguidores",  val: fmtNum(lastVal(byCh, "followers"))  },
+        { label: "Alcance",     val: fmtNum(sumVal(byCh, "reach"))       },
+        { label: "Impressões",  val: fmtNum(sumVal(byCh, "impressions")) },
+        { label: "Engajamento", val: fmtNum(sumVal(byCh, "engagements")) },
+        { label: "Taxa eng.",   val: calcEngRate(byCh) },
       ],
     },
     {
       channel: "facebook", nome: "Facebook", cor: "#1877F2",
       stats: (byCh: KpiDaily[]) => [
-        { label: "Seguidores",  val: fmtNum(lastVal(byCh, "followers"))    },
-        { label: "Alcance",     val: fmtNum(sumVal(byCh, "impressions"))   },
-        { label: "Impressões",  val: fmtNum(sumVal(byCh, "impressions"))   },
-        { label: "Reações",     val: fmtNum(sumVal(byCh, "engagements"))   },
-        { label: "Cliques",     val: fmtNum(sumVal(byCh, "link_clicks"))   },
+        { label: "Seguidores",  val: fmtNum(lastVal(byCh, "followers"))  },
+        { label: "Alcance",     val: fmtNum(sumVal(byCh, "reach"))       },
+        { label: "Impressões",  val: fmtNum(sumVal(byCh, "impressions")) },
+        { label: "Reações",     val: fmtNum(sumVal(byCh, "engagements")) },
+        { label: "Cliques",     val: fmtNum(sumVal(byCh, "link_clicks")) },
       ],
     },
     {
       channel: "youtube", nome: "YouTube", cor: "#FF0000",
       stats: (byCh: KpiDaily[]) => [
-        { label: "Inscritos",       val: fmtNum(lastVal(byCh, "followers"))    },
-        { label: "Visualizações",   val: fmtNum(sumVal(byCh, "video_views"))   },
-        { label: "Impressões",      val: fmtNum(sumVal(byCh, "impressions"))   },
-        { label: "Engajamento",     val: fmtNum(sumVal(byCh, "engagements"))   },
-        { label: "Taxa eng.",       val: fmtPct(lastVal(byCh, "engagement_rate")) },
+        { label: "Inscritos",     val: fmtNum(lastVal(byCh, "followers"))    },
+        { label: "Visualizações", val: fmtNum(sumVal(byCh, "video_views"))   },
+        { label: "Impressões",    val: fmtNum(sumVal(byCh, "impressions"))   },
+        { label: "Engajamento",   val: fmtNum(sumVal(byCh, "engagements"))   },
+        { label: "Taxa eng.",     val: calcEngRate(byCh) },
       ],
     },
   ];
@@ -553,7 +572,7 @@ export default function SocialMediaDashboard() {
             {channelConfig.map((cfg) => {
               const byCh   = totais.byChannel[cfg.channel] ?? [];
               const stats  = cfg.stats(byCh);
-              const engVal = byCh.length ? (byCh[byCh.length - 1]?.engagement_rate ?? 0) * 100 : 0;
+              const engVal = calcEngBadge(byCh);
               return (
                 <div key={cfg.channel} style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, overflow: "hidden" }}>
                   <div style={{ height: 3, background: cfg.cor }} />
