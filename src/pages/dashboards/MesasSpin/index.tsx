@@ -9,7 +9,21 @@ import { fetchAllPages } from "../../../lib/supabasePaginate";
 import type { OperadoraRef } from "../../../lib/mesasSpinRelatorioOcr";
 import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
 import KpiCard from "../../../components/dashboard/KpiCard";
-import { ChevronLeft, ChevronRight, Clock, LayoutGrid, Table2, FileImage, Wallet, TrendingUp, ListOrdered, Percent } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  LayoutGrid,
+  Table2,
+  FileImage,
+  Wallet,
+  TrendingUp,
+  ListOrdered,
+  Percent,
+  ChartColumnBig,
+  Users,
+  Coins,
+} from "lucide-react";
 import { GiCalendar } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -126,20 +140,47 @@ function fmtPct(v: number | null) {
   return `${Number(v).toFixed(1)}%`;
 }
 
-type KpiAgg = { turnover: number; ggr: number; bets: number; marginMedia: number | null };
+/** Métricas do bloco Monthly Summaries BRL (1 linha = 1 mês consolidado). */
+type MonthlyKpiSnapshot = {
+  turnover: number | null;
+  ggr: number | null;
+  margin_pct: number | null;
+  bets: number | null;
+  uap: number | null;
+  bet_size: number | null;
+  arpu: number | null;
+};
 
-function computeKpiFromDaily(daily: DailyRow[]): KpiAgg | null {
-  if (daily.length === 0) return null;
-  const withMargin = daily.filter((r) => r.margin_pct != null);
+function snapshotFromMonthlyRow(row: Partial<MonthlyRow> | null): MonthlyKpiSnapshot | null {
+  if (!row) return null;
   return {
-    turnover: daily.reduce((s, r) => s + (r.turnover ?? 0), 0),
-    ggr: daily.reduce((s, r) => s + (r.ggr ?? 0), 0),
-    bets: daily.reduce((s, r) => s + (r.bets ?? 0), 0),
-    marginMedia:
-      withMargin.length > 0
-        ? withMargin.reduce((s, r) => s + (Number(r.margin_pct) || 0), 0) / withMargin.length
-        : null,
+    turnover: row.turnover != null ? Number(row.turnover) : null,
+    ggr: row.ggr != null ? Number(row.ggr) : null,
+    margin_pct: row.margin_pct != null ? Number(row.margin_pct) : null,
+    bets: row.bets != null ? Number(row.bets) : null,
+    uap: row.uap != null ? Number(row.uap) : null,
+    bet_size: row.bet_size != null ? Number(row.bet_size) : null,
+    arpu: row.arpu != null ? Number(row.arpu) : null,
   };
+}
+
+function aggMonthlyKpiFromRows(rows: MonthlyRow[]): MonthlyKpiSnapshot | null {
+  if (rows.length === 0) return null;
+  const turnover = rows.reduce((s, r) => s + Number(r.turnover ?? 0), 0);
+  const ggr = rows.reduce((s, r) => s + Number(r.ggr ?? 0), 0);
+  const bets = rows.reduce((s, r) => s + Number(r.bets ?? 0), 0);
+  const uap = rows.reduce((s, r) => s + Number(r.uap ?? 0), 0);
+  const margins = rows.map((r) => r.margin_pct).filter((v): v is number => v != null);
+  const margin_pct = margins.length > 0 ? margins.reduce((a, b) => a + b, 0) / margins.length : null;
+  const bs = rows.map((r) => r.bet_size).filter((v): v is number => v != null);
+  const bet_size = bs.length > 0 ? bs.reduce((a, b) => a + Number(b), 0) / bs.length : null;
+  const ar = rows.map((r) => r.arpu).filter((v): v is number => v != null);
+  const arpu = ar.length > 0 ? ar.reduce((a, b) => a + Number(b), 0) / ar.length : null;
+  return { turnover, ggr, margin_pct, bets, uap, bet_size, arpu };
+}
+
+function nKpi(v: number | null | undefined): number {
+  return Number(v) || 0;
 }
 
 type RotulosMesa = { d1: string; d2: string; mtd: string; usouFallbackDaily: boolean };
@@ -334,7 +375,9 @@ export default function MesasSpin() {
   const [porTabelaSnapshot, setPorTabelaSnapshot] = useState<string | null>(null);
   /** Todas as linhas por mesa (modo Histórico), para agrupar mês a mês. */
   const [porTabelaHistAll, setPorTabelaHistAll] = useState<PorTabelaRow[]>([]);
-  const [kpiMesAnterior, setKpiMesAnterior] = useState<KpiAgg | null>(null);
+  /** Monthly Summaries BRL — mês do carrossel e mês anterior (comparativo). */
+  const [monthlyKpiAtual, setMonthlyKpiAtual] = useState<MonthlyKpiSnapshot | null>(null);
+  const [monthlyKpiAnt, setMonthlyKpiAnt] = useState<MonthlyKpiSnapshot | null>(null);
   const [operadorasOcr, setOperadorasOcr] = useState<OperadoraRef[]>([]);
   const [uploadMsg, setUploadMsg]       = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
 
@@ -362,7 +405,8 @@ export default function MesasSpin() {
     setPorTabelaRows([]);
     setPorTabelaSnapshot(null);
     setPorTabelaHistAll([]);
-    setKpiMesAnterior(null);
+    setMonthlyKpiAtual(null);
+    setMonthlyKpiAnt(null);
 
     try {
       if (historico) {
@@ -409,20 +453,27 @@ export default function MesasSpin() {
         setDailyData(daily);
         setMonthlyData([]);
 
+        const mesIsoCarousel = fmt(new Date(mesSelecionado.ano, mesSelecionado.mes, 1));
+        const { data: mCur } = await supabase
+          .from("relatorio_monthly_summary")
+          .select("turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+          .eq("mes", mesIsoCarousel)
+          .is("operadora", null)
+          .maybeSingle();
+        setMonthlyKpiAtual(snapshotFromMonthlyRow(mCur));
+
         if (idxMes > 0) {
           const prev = mesesDisponiveis[idxMes - 1];
-          const pi = getDatasDoMes(prev.ano, prev.mes);
-          const dailyAnt = await fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
-              .is("operadora", null)
-              .gte("data", pi.inicio)
-              .lte("data", pi.fim)
-              .order("data", { ascending: true })
-              .range(from, to)
-          );
-          setKpiMesAnterior(computeKpiFromDaily(dailyAnt));
+          const mesIsoAnt = fmt(new Date(prev.ano, prev.mes, 1));
+          const { data: mAnt } = await supabase
+            .from("relatorio_monthly_summary")
+            .select("turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+            .eq("mes", mesIsoAnt)
+            .is("operadora", null)
+            .maybeSingle();
+          setMonthlyKpiAnt(snapshotFromMonthlyRow(mAnt));
+        } else {
+          setMonthlyKpiAnt(null);
         }
 
         const { data: snap } = await supabase
@@ -472,19 +523,13 @@ export default function MesasSpin() {
     }));
   }, [historico, dailyData, monthlyData]);
 
-  const kpiResumo = useMemo(() => {
-    if (tabelaRows.length === 0) return null;
-    const withMargin = tabelaRows.filter((r) => r.margin_pct != null);
-    return {
-      turnover: tabelaRows.reduce((s, r) => s + (r.turnover ?? 0), 0),
-      ggr: tabelaRows.reduce((s, r) => s + (r.ggr ?? 0), 0),
-      bets: tabelaRows.reduce((s, r) => s + (r.bets ?? 0), 0),
-      marginMedia:
-        withMargin.length > 0
-          ? withMargin.reduce((s, r) => s + (Number(r.margin_pct) || 0), 0) / withMargin.length
-          : null,
-    };
-  }, [tabelaRows]);
+  const kpiMonthlyHistoricoAgg = useMemo(
+    () => (historico ? aggMonthlyKpiFromRows(monthlyData) : null),
+    [historico, monthlyData],
+  );
+
+  const kpiExibir: MonthlyKpiSnapshot | null = historico ? kpiMonthlyHistoricoAgg : monthlyKpiAtual;
+  const kpiAntExibir: MonthlyKpiSnapshot | null = historico ? null : monthlyKpiAnt;
 
   const porTabelaCda = useMemo(
     () =>
@@ -541,7 +586,11 @@ export default function MesasSpin() {
     return items;
   }, [historico, porTabelaHistAll]);
 
-  const mostrarComparativoKpi = !historico && kpiMesAnterior != null;
+  /** Rodapé “vs mês ant.” só com mês atual e mês anterior vindos do Monthly Summary BRL. */
+  const isHistoricoKpi =
+    historico ||
+    monthlyKpiAnt == null ||
+    (!historico && monthlyKpiAtual == null);
 
   const brand = useDashboardBrand();
 
@@ -688,55 +737,89 @@ export default function MesasSpin() {
         </div>
       )}
 
-      {kpiResumo && (
+      {!loading && (!historico || kpiMonthlyHistoricoAgg != null) && (
         <div style={{ ...card, marginBottom: 14 }}>
           <SectionHeader
             icon={<LayoutGrid size={15} />}
             title="KPIs Consolidados"
-            sub={historico ? undefined : "· comparativo vs mês anterior"}
+            sub={historico ? "· Monthly Summaries BRL (agregado)" : "· Monthly Summaries BRL · comparativo vs mês anterior"}
           />
-          <div className="app-grid-kpi-4" style={{ gap: 12 }}>
+          <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
             <KpiCard
               label="Turnover"
-              value={fmtBRL(kpiResumo.turnover)}
+              value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
               icon={<Wallet size={16} />}
               accentVar="--brand-extra3"
               accentColor={BRAND.roxoVivo}
-              atual={kpiResumo.turnover}
-              anterior={kpiMesAnterior?.turnover ?? 0}
+              atual={nKpi(kpiExibir?.turnover)}
+              anterior={nKpi(kpiAntExibir?.turnover)}
               isBRL
-              isHistorico={historico || !mostrarComparativoKpi}
-            />
-            <KpiCard
-              label="GGR"
-              value={fmtBRL(kpiResumo.ggr)}
-              icon={<TrendingUp size={16} />}
-              accentVar="--brand-extra1"
-              accentColor={kpiResumo.ggr >= 0 ? BRAND.verde : BRAND.vermelho}
-              atual={kpiResumo.ggr}
-              anterior={kpiMesAnterior?.ggr ?? 0}
-              isBRL
-              isHistorico={historico || !mostrarComparativoKpi}
+              isHistorico={isHistoricoKpi}
             />
             <KpiCard
               label="Apostas"
-              value={kpiResumo.bets.toLocaleString("pt-BR")}
+              value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
               icon={<ListOrdered size={16} />}
               accentVar="--brand-extra2"
               accentColor={BRAND.azul}
-              atual={kpiResumo.bets}
-              anterior={kpiMesAnterior?.bets ?? 0}
-              isHistorico={historico || !mostrarComparativoKpi}
+              atual={nKpi(kpiExibir?.bets)}
+              anterior={nKpi(kpiAntExibir?.bets)}
+              isHistorico={isHistoricoKpi}
             />
             <KpiCard
-              label="Margem média"
-              value={kpiResumo.marginMedia != null ? fmtPct(kpiResumo.marginMedia) : "—"}
+              label="Margem"
+              value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
               icon={<Percent size={16} />}
               accentVar="--brand-extra4"
               accentColor={BRAND.amarelo}
-              atual={kpiResumo.marginMedia ?? 0}
-              anterior={kpiMesAnterior?.marginMedia ?? 0}
-              isHistorico={historico || !mostrarComparativoKpi}
+              atual={nKpi(kpiExibir?.margin_pct)}
+              anterior={nKpi(kpiAntExibir?.margin_pct)}
+              isHistorico={isHistoricoKpi}
+            />
+            <KpiCard
+              label="Aposta média"
+              value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
+              icon={<ChartColumnBig size={16} />}
+              accentVar="--brand-extra4"
+              accentColor={BRAND.ciano}
+              atual={nKpi(kpiExibir?.bet_size)}
+              anterior={nKpi(kpiAntExibir?.bet_size)}
+              isBRL
+              isHistorico={isHistoricoKpi}
+            />
+          </div>
+          <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+            <KpiCard
+              label="GGR"
+              value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
+              icon={<TrendingUp size={16} />}
+              accentVar="--brand-extra1"
+              accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
+              atual={nKpi(kpiExibir?.ggr)}
+              anterior={nKpi(kpiAntExibir?.ggr)}
+              isBRL
+              isHistorico={isHistoricoKpi}
+            />
+            <KpiCard
+              label="UAP"
+              value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
+              icon={<Users size={16} />}
+              accentVar="--brand-extra2"
+              accentColor={BRAND.roxo}
+              atual={nKpi(kpiExibir?.uap)}
+              anterior={nKpi(kpiAntExibir?.uap)}
+              isHistorico={isHistoricoKpi}
+            />
+            <KpiCard
+              label="ARPU"
+              value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
+              icon={<Coins size={16} />}
+              accentVar="--brand-extra3"
+              accentColor={BRAND.roxoVivo}
+              atual={nKpi(kpiExibir?.arpu)}
+              anterior={nKpi(kpiAntExibir?.arpu)}
+              isBRL
+              isHistorico={isHistoricoKpi}
             />
           </div>
         </div>
