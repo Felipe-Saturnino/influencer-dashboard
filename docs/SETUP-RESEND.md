@@ -43,9 +43,13 @@ Sem domínio verificado, use `onboarding@resend.dev` (limitado a testes).
 |--------|-------------|-----------|
 | `RESEND_API_KEY` | Sim | Chave da API Resend |
 | `RESEND_FROM` | Produção | Ex: `Acquisition Hub <noreply@spingaming.com.br>` |
-| `RELATORIO_DIRETORIA_DESTINATARIOS` | Sim* | E-mails da diretoria, separados por vírgula |
+| `RELATORIO_DIRETORIA_DESTINATARIOS` | Sim* | E-mails da diretoria (função `relatorio-diario-diretoria`), separados por vírgula |
+| `EMAIL_AGENDA_DESTINATARIOS` | Sim† | E-mails do time operacional (função `email-agenda-diaria`), separados por vírgula |
+| `EMAIL_AGENDA_FROM` | Não | Remetente só para a agenda; se vazio, usa `RESEND_FROM` |
 
 \* Para o relatório diário. Ver `docs/SETUP-RELATORIO-DIARIO-DIRETORIA.md`.
+
+† Para o e-mail apenas com **Agenda do dia**. Deploy: `supabase functions deploy email-agenda-diaria`.
 
 ---
 
@@ -53,6 +57,7 @@ Sem domínio verificado, use `onboarding@resend.dev` (limitado a testes).
 
 ```bash
 supabase functions deploy relatorio-diario-diretoria
+supabase functions deploy email-agenda-diaria
 supabase functions deploy criar-usuario   # se usar boas-vindas
 supabase functions deploy sync-metricas   # se usar alerta 403
 ```

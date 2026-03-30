@@ -25,3 +25,7 @@ verify_jwt = false
 [functions.relatorio-diario-diretoria]
 verify_jwt = false
 # Chamada pelo app (Status Técnico), GitHub Actions e cron; mesma superfície que sync (anon + service na função)
+
+[functions.email-agenda-diaria]
+verify_jwt = false
+# Agenda do dia (operacional); destinatários em EMAIL_AGENDA_DESTINATARIOS
