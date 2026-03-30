@@ -65,6 +65,12 @@ function isIsoDate(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
+function podeEditar(
+  v: string | null | undefined,
+): boolean {
+  return v === "sim" || v === "proprios";
+}
+
 async function canIngest(
   supabaseSr: ReturnType<typeof createClient>,
   userId: string,
@@ -75,21 +81,20 @@ async function canIngest(
     .eq("id", userId)
     .maybeSingle();
   if (pe || !prof?.role) return false;
-  if (prof.role === "admin" || prof.role === "executivo") return true;
-  const { data: rpMesas } = await supabaseSr
-    .from("role_permissions")
-    .select("can_view")
-    .eq("role", prof.role)
-    .eq("page_key", "mesas_spin")
-    .maybeSingle();
-  if (rpMesas?.can_view === "sim" || rpMesas?.can_view === "proprios") return true;
   const { data: rpStatus } = await supabaseSr
     .from("role_permissions")
-    .select("can_view")
+    .select("can_editar")
     .eq("role", prof.role)
     .eq("page_key", "status_tecnico")
     .maybeSingle();
-  return rpStatus?.can_view === "sim" || rpStatus?.can_view === "proprios";
+  if (podeEditar(rpStatus?.can_editar)) return true;
+  const { data: rpMesas } = await supabaseSr
+    .from("role_permissions")
+    .select("can_editar")
+    .eq("role", prof.role)
+    .eq("page_key", "mesas_spin")
+    .maybeSingle();
+  return podeEditar(rpMesas?.can_editar);
 }
 
 serve(async (req) => {

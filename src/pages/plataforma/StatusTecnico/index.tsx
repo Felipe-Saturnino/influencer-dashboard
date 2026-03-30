@@ -276,7 +276,7 @@ export default function StatusTecnico() {
   }, [carregar]);
 
   const executarSync = async () => {
-    if (syncExecutando || !perm.canView || perm.canView === "nao") return;
+    if (syncExecutando || !perm.canEditarOk) return;
     setSyncExecutando(true);
     setSyncMensagem(null);
     try {
@@ -352,7 +352,7 @@ export default function StatusTecnico() {
   };
 
   const executarSyncSocial = async () => {
-    if (syncSocialExecutando || !perm.canView || perm.canView === "nao") return;
+    if (syncSocialExecutando || !perm.canEditarOk) return;
     setSyncSocialExecutando(true);
     setSyncSocialMensagem(null);
     try {
@@ -407,7 +407,7 @@ export default function StatusTecnico() {
   };
 
   const enviarEmailDiretoria = async () => {
-    if (emailEnviando || !perm.canView || perm.canView === "nao") return;
+    if (emailEnviando || !perm.canEditarOk) return;
     setEmailEnviando(true);
     setEmailMensagem(null);
     try {
@@ -839,12 +839,12 @@ export default function StatusTecnico() {
                       </td>
                       <td style={tdStyle}>
                         {(isCda || isSocial) && (
-                          <button onClick={onSync} disabled={syncExecutandoRow || !perm.canView} style={btnAcao(syncExecutandoRow)}>
+                          <button onClick={onSync} disabled={syncExecutandoRow || !perm.canEditarOk} style={btnAcao(syncExecutandoRow)}>
                             {syncExecutandoRow ? "..." : "🔄 Sync"}
                           </button>
                         )}
                         {isEmail && (
-                          <button onClick={enviarEmailDiretoria} disabled={emailEnviando || !perm.canView} style={btnAcao(emailEnviando)}>
+                          <button onClick={enviarEmailDiretoria} disabled={emailEnviando || !perm.canEditarOk} style={btnAcao(emailEnviando)}>
                             {emailEnviando ? "Enviando..." : "Enviar"}
                           </button>
                         )}
@@ -1056,23 +1056,33 @@ export default function StatusTecnico() {
         })()}
       </div>
 
-      {/* Upload de arquivos — relatório Mesas Spin (OCR) */}
+      {/* Upload de arquivos — relatório Mesas Spin (OCR); só quem tem Editar em Status Técnico */}
       <div style={card}>
         <SectionTitle icon={<FileImage size={14} />}>Upload de arquivos</SectionTitle>
-        <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
-          Envie as imagens do relatório <strong>Mesas Spin</strong> (print do BI). O OCR corre no seu navegador; após
-          confirmar, os dados são gravados nas tabelas <code style={{ fontSize: 12 }}>relatorio_*</code> do Supabase
-          (diário, mensal e por mesa).
-        </p>
-        <MesasSpinRelatorioUpload
-          t={t}
-          operadoras={operadorasOcr}
-          disabled={perm.loading}
-          embedded
-          title=""
-          description=""
-          onImported={() => void carregar()}
-        />
+        {!perm.loading && !perm.canEditarOk ? (
+          <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: 0, lineHeight: 1.5 }}>
+            Apenas utilizadores com permissão de <strong>edição</strong> em Status Técnico podem importar relatórios
+            (OCR). Peça a um administrador para ativar &quot;Editar&quot; no seu perfil em{" "}
+            <strong>Gestão de Usuários</strong> se precisar desta função.
+          </p>
+        ) : (
+          <>
+            <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
+              Envie as imagens do relatório <strong>Mesas Spin</strong> (print do BI). O OCR corre no seu navegador; após
+              confirmar, os dados são gravados nas tabelas <code style={{ fontSize: 12 }}>relatorio_*</code> do Supabase
+              (diário, mensal e por mesa).
+            </p>
+            <MesasSpinRelatorioUpload
+              t={t}
+              operadoras={operadorasOcr}
+              disabled={perm.loading || !perm.canEditarOk}
+              embedded
+              title=""
+              description=""
+              onImported={() => void carregar()}
+            />
+          </>
+        )}
       </div>
 
       {/* Configuração de Alertas */}

@@ -107,13 +107,29 @@ export function MesasSpinRelatorioUpload({
         },
       });
       const res = data as { ok?: boolean; error?: string; inserted?: Record<string, number> } | null;
+
       if (fnErr) {
-        const hint = res?.error ? ` ${res.error}` : "";
-        throw new Error(
-          (typeof fnErr.message === "string" ? fnErr.message : "Falha na Edge Function.") +
-            hint +
-            " Confirme: supabase functions deploy ingest-relatorio-mesas-ocr",
-        );
+        if (res?.error) {
+          throw new Error(res.error);
+        }
+        const msg = typeof fnErr.message === "string" ? fnErr.message : "Falha ao contactar a Edge Function.";
+        if (/non-2xx/i.test(msg)) {
+          throw new Error(
+            "A função ingest-relatorio-mesas-ocr não está disponível ou devolveu erro. " +
+              "No Supabase → Edge Functions, confirme que existe uma função com este nome exato e que está publicada. " +
+              "Se acabou de criar, volte a fazer Deploy. Corpo do erro: " +
+              msg,
+          );
+        }
+        if (/404|not found/i.test(msg)) {
+          throw new Error(
+            "Edge Function ingest-relatorio-mesas-ocr não encontrada (404). Crie/publique a função no projeto Supabase.",
+          );
+        }
+        if (/401|unauthorized/i.test(msg)) {
+          throw new Error("Sessão expirada ou não autorizado. Atualize a página e faça login novamente.");
+        }
+        throw new Error(msg);
       }
       if (!res?.ok) {
         throw new Error(res?.error ?? "Resposta inválida do servidor.");
