@@ -96,7 +96,9 @@ export function monthYearToIso(mon: string, year: string): string | null {
 /** Normaliza token com possível %, R$, espaços. */
 export function parsePtBrNumber(raw: string): number | null {
   let t = raw.replace(/R\$/gi, "").replace(/%/g, "").replace(/\s/g, "").trim();
-  if (!t || t === "—" || t === "-") return null;
+  if (!t) return null;
+  /** Célula vazia no print / OCR — conta como 0 para não invalidar a linha das 9 métricas. */
+  if (t === "—" || t === "-" || t === "–" || /^[–‑]$/.test(t) || /^n\/?a$/i.test(t)) return 0;
   t = t.replace(/O/g, "0");
 
   const sign = t.startsWith("-") ? -1 : 1;
@@ -151,6 +153,11 @@ function numbersFromRight(parts: string[], count: number): { nums: number[]; res
   }
   if (nums.length !== count) return null;
   return { nums, rest: parts.slice(0, i + 1) };
+}
+
+function isPerTableOcrHeaderLine(line: string): boolean {
+  const low = line.toLowerCase();
+  return (low.includes("ggr") && low.includes("d-1") && low.includes("turnover")) || /^table\b/i.test(line);
 }
 
 export function resolveOperadoraSlug(nomeMesa: string, operadoras: OperadoraRef[]): string | null {
@@ -282,37 +289,72 @@ function parsePorTabelaLines(
   operadoras: OperadoraRef[],
 ): PorTabelaParsed[] {
   const out: PorTabelaParsed[] = [];
+  /** Nome da mesa veio em linha(s) anteriores; a seguinte pode trazer só os 9 números. */
+  let pendingName: string | null = null;
+  /** Máx. linhas a fundir: quebra de linha do OCR costuma separar nome longo dos valores. */
+  const MAX_LINE_MERGE = 6;
+
   for (let i = start; i < end; i++) {
     const line = lines[i];
-    const low = line.toLowerCase();
-    if (low.includes("ggr") && low.includes("d-1") && low.includes("turnover")) continue;
-    if (/^table\b/i.test(line)) continue;
+    if (isPerTableOcrHeaderLine(line)) {
+      pendingName = null;
+      continue;
+    }
 
-    const parts = splitLineParts(line);
-    if (parts.length < 10) continue;
-    const nr = numbersFromRight(parts, 9);
-    if (!nr) continue;
-    const name = nr.rest.join(" ").trim();
-    if (!name || name.length < 3) continue;
-    if (/^month\b|^day\b|^main\b/i.test(name)) continue;
+    let merged = line;
+    let mergeEnd = i;
+    let parsed: PorTabelaParsed | null = null;
 
-    const [ggr_d1, turnover_d1, bets_d1, ggr_d2, turnover_d2, bets_d2, ggr_mtd, turnover_mtd, bets_mtd] = nr.nums;
+    for (let k = 0; k < MAX_LINE_MERGE; k++) {
+      const parts = splitLineParts(merged);
+      if (parts.length >= 9) {
+        const nr = numbersFromRight(parts, 9);
+        if (nr) {
+          let name = nr.rest.join(" ").trim();
+          if (name.length < 3 && pendingName) {
+            name = pendingName.trim();
+          }
+          if (name.length >= 3 && !/^month\b|^day\b|^main\b/i.test(name)) {
+            const [ggr_d1, turnover_d1, bets_d1, ggr_d2, turnover_d2, bets_d2, ggr_mtd, turnover_mtd, bets_mtd] =
+              nr.nums;
+            parsed = {
+              data_relatorio: dataRelatorio,
+              nome_tabela: name,
+              operadora: resolveOperadoraSlug(name, operadoras),
+              ggr_d1,
+              turnover_d1,
+              bets_d1: Math.round(bets_d1),
+              ggr_d2,
+              turnover_d2,
+              bets_d2: Math.round(bets_d2),
+              ggr_mtd,
+              turnover_mtd,
+              bets_mtd: Math.round(bets_mtd),
+            };
+            break;
+          }
+        }
+      }
+      if (mergeEnd + 1 >= end) break;
+      mergeEnd++;
+      merged = `${merged} ${lines[mergeEnd]}`;
+    }
 
-    out.push({
-      data_relatorio: dataRelatorio,
-      nome_tabela: name,
-      operadora: resolveOperadoraSlug(name, operadoras),
-      ggr_d1,
-      turnover_d1,
-      bets_d1: Math.round(bets_d1),
-      ggr_d2,
-      turnover_d2,
-      bets_d2: Math.round(bets_d2),
-      ggr_mtd,
-      turnover_mtd,
-      bets_mtd: Math.round(bets_mtd),
-    });
+    if (parsed) {
+      out.push(parsed);
+      pendingName = null;
+      i = mergeEnd;
+      continue;
+    }
+
+    const partsOne = splitLineParts(line);
+    if (partsOne.length > 0 && partsOne.length < 9) {
+      pendingName = pendingName ? `${pendingName} ${line.trim()}` : line.trim();
+    } else if (partsOne.length >= 9) {
+      pendingName = null;
+    }
   }
+
   return out;
 }
 
