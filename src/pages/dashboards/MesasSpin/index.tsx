@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
@@ -24,7 +25,7 @@ import {
   Users,
   Coins,
 } from "lucide-react";
-import { GiCalendar } from "react-icons/gi";
+import { GiCalendar, GiShield } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -103,6 +104,8 @@ function getDatasDoMes(ano: number, mes: number) {
 }
 
 const OPERADORA_CASA_APOSTAS = "casa_apostas";
+/** Linhas sem prefixo reconhecido e sem slug no OCR. */
+const OPERADORA_OUTRAS = "outras_mesas";
 
 /** Nome da mesa sem o prefixo operadora (apenas exibição CDA). */
 function nomeMesaCdaCurto(nomeTabela: string): string {
@@ -114,6 +117,78 @@ function isMesaCasaApostas(row: PorTabelaRow): boolean {
   if (row.operadora === OPERADORA_CASA_APOSTAS) return true;
   if (row.operadora != null) return false;
   return /^casa de apostas\b/i.test(row.nome_tabela);
+}
+
+/** Slug consolidado por linha (alinha ao OCR / coluna operadora). */
+function slugOperadoraPorLinha(row: PorTabelaRow): string {
+  if (row.operadora != null && String(row.operadora).length > 0) return row.operadora;
+  if (isMesaCasaApostas(row)) return OPERADORA_CASA_APOSTAS;
+  return OPERADORA_OUTRAS;
+}
+
+function nomeMesaParaExibicao(
+  row: PorTabelaRow,
+  slug: string,
+  operadorasList: { slug: string; nome: string }[],
+): string {
+  const op = operadorasList.find((o) => o.slug === slug);
+  if (op) {
+    const nt = row.nome_tabela.trim();
+    if (nt.toLowerCase().startsWith(op.nome.toLowerCase())) {
+      const rest = nt.slice(op.nome.length).replace(/^\s+/, "").trim();
+      if (rest.length > 0) return rest;
+    }
+  }
+  if (slug === OPERADORA_CASA_APOSTAS || isMesaCasaApostas(row)) return nomeMesaCdaCurto(row.nome_tabela);
+  return row.nome_tabela.trim();
+}
+
+function nomeTituloOperadora(
+  slug: string,
+  operadorasList: { slug: string; nome: string }[],
+): string {
+  if (slug === OPERADORA_OUTRAS) return "Outras mesas";
+  const o = operadorasList.find((x) => x.slug === slug);
+  return o?.nome ?? slug.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function filtrarPorEscopoOperadora(
+  rows: PorTabelaRow[],
+  filtroOperadora: string,
+  operadoraSlugsForcado: string[] | null,
+  podeVerOperadoraFn: (s: string) => boolean,
+): PorTabelaRow[] {
+  const slugsFixos = operadoraSlugsForcado?.length ? operadoraSlugsForcado : null;
+  const slugsEscolha = !slugsFixos && filtroOperadora !== "todas" ? [filtroOperadora] : null;
+  const permitir = slugsFixos ?? slugsEscolha;
+  return rows.filter((r) => {
+    const slug = slugOperadoraPorLinha(r);
+    if (!podeVerOperadoraFn(slug)) return false;
+    if (permitir && !permitir.includes(slug)) return false;
+    return true;
+  });
+}
+
+function agruparPorSlug(rows: PorTabelaRow[]): Map<string, PorTabelaRow[]> {
+  const m = new Map<string, PorTabelaRow[]>();
+  for (const r of rows) {
+    const slug = slugOperadoraPorLinha(r);
+    if (!m.has(slug)) m.set(slug, []);
+    m.get(slug)!.push(r);
+  }
+  return m;
+}
+
+function ordenarSlugs(
+  slugs: string[],
+  operadorasList: { slug: string; nome: string }[],
+): string[] {
+  return [...slugs].sort((a, b) =>
+    nomeTituloOperadora(a, operadorasList).localeCompare(
+      nomeTituloOperadora(b, operadorasList),
+      "pt-BR",
+    ),
+  );
 }
 
 function addDaysIso(isoYmd: string, delta: number): string {
@@ -226,53 +301,67 @@ function MarginBadge({ value }: { value: number | null }) {
   );
 }
 
-// ─── Grelha de mini-tabelas por mesa (Casa de Apostas) ───────────────────────
-function MesasPorMesaGridInner({
+// ─── Lista vertical: uma mesa por bloco (evita sobreposição da grelha) ───────
+function MesasPorMesaListaVertical({
   rows,
   rotulos,
+  slugOperadora,
+  operadorasList,
   thMini,
   tdMini,
   tdMiniNum,
 }: {
   rows: PorTabelaRow[];
   rotulos: RotulosMesa;
+  slugOperadora: string;
+  operadorasList: { slug: string; nome: string }[];
   thMini: React.CSSProperties;
   tdMini: React.CSSProperties;
   tdMiniNum: React.CSSProperties;
 }) {
   const { theme: t } = useApp();
+  const sorted = [...rows].sort((a, b) =>
+    nomeMesaParaExibicao(a, slugOperadora, operadorasList).localeCompare(
+      nomeMesaParaExibicao(b, slugOperadora, operadorasList),
+      "pt-BR",
+    ),
+  );
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-        gap: 16,
-      }}
-    >
-      {rows.map((row) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
+      {sorted.map((row) => (
         <div
-          key={row.nome_tabela}
+          key={`${row.data_relatorio}|${slugOperadora}|${row.nome_tabela}`}
           style={{
             border: `1px solid ${t.cardBorder}`,
             borderRadius: 14,
             padding: 14,
             background: "rgba(74,32,130,0.04)",
+            width: "100%",
+            boxSizing: "border-box",
+            minWidth: 0,
           }}
         >
-          <div style={{
-            fontWeight: 800,
-            fontSize: 14,
-            color: t.text,
-            marginBottom: 12,
-            fontFamily: FONT.body,
-            lineHeight: 1.3,
-          }}>
-            {nomeMesaCdaCurto(row.nome_tabela)}
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: 13,
+              color: t.text,
+              marginBottom: 10,
+              fontFamily: FONT.body,
+              lineHeight: 1.35,
+              wordBreak: "break-word",
+            }}
+          >
+            <span style={{ fontSize: 10, color: t.textMuted, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
+              Mesa
+            </span>
+            {nomeMesaParaExibicao(row, slugOperadora, operadorasList)}
           </div>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 280 }}>
             <thead>
               <tr>
-                <th style={thMini}>Período</th>
+                <th style={thMini}>Data</th>
                 <th style={{ ...thMini, textAlign: "right" }}>Apostas</th>
                 <th style={{ ...thMini, textAlign: "right" }}>Turnover</th>
                 <th style={{ ...thMini, textAlign: "right" }}>GGR</th>
@@ -317,6 +406,7 @@ function MesasPorMesaGridInner({
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       ))}
     </div>
@@ -356,6 +446,7 @@ function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: str
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function MesasSpin() {
   const { theme: t } = useApp();
+  const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("mesas_spin");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -380,6 +471,7 @@ export default function MesasSpin() {
   const [monthlyKpiAnt, setMonthlyKpiAnt] = useState<MonthlyKpiSnapshot | null>(null);
   const [operadorasOcr, setOperadorasOcr] = useState<OperadoraRef[]>([]);
   const [uploadMsg, setUploadMsg]       = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -531,15 +623,27 @@ export default function MesasSpin() {
   const kpiExibir: MonthlyKpiSnapshot | null = historico ? kpiMonthlyHistoricoAgg : monthlyKpiAtual;
   const kpiAntExibir: MonthlyKpiSnapshot | null = historico ? null : monthlyKpiAnt;
 
-  const porTabelaCda = useMemo(
+  const operadorasListFmt = operadorasOcr as { slug: string; nome: string }[];
+
+  const porTabelaFiltradas = useMemo(
     () =>
-      porTabelaRows
-        .filter(isMesaCasaApostas)
-        .sort((a, b) =>
-          nomeMesaCdaCurto(a.nome_tabela).localeCompare(nomeMesaCdaCurto(b.nome_tabela), "pt-BR"),
-        ),
-    [porTabelaRows],
+      filtrarPorEscopoOperadora(
+        porTabelaRows,
+        filtroOperadora,
+        operadoraSlugsForcado,
+        podeVerOperadora,
+      ),
+    [porTabelaRows, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
   );
+
+  /** Snapshot do mês: blocos por operadora (ordem alfabética por nome). */
+  const porOperadoraSnapshot = useMemo(() => {
+    const m = agruparPorSlug(porTabelaFiltradas);
+    return ordenarSlugs([...m.keys()], operadorasListFmt).map((slug) => ({
+      slug,
+      rows: m.get(slug)!,
+    }));
+  }, [porTabelaFiltradas, operadorasListFmt]);
 
   const rotulosPorMesaBrl = useMemo(() => {
     if (!mesSelecionado) {
@@ -553,25 +657,33 @@ export default function MesasSpin() {
     );
   }, [dailyData, porTabelaSnapshot, mesSelecionado]);
 
-  /** Histórico: último snapshot por mês (YYYY-MM), só Casa de Apostas. */
+  /** Histórico: último snapshot por mês, por operadora (respeita filtro / escopo). */
   const porMesaPorMesHistorico = useMemo(() => {
     if (!historico || porTabelaHistAll.length === 0) return [];
+    const filtroLinhas = (rows: PorTabelaRow[]) =>
+      filtrarPorEscopoOperadora(rows, filtroOperadora, operadoraSlugsForcado, podeVerOperadora);
+
     const map = new Map<string, PorTabelaRow[]>();
     for (const r of porTabelaHistAll) {
-      if (!isMesaCasaApostas(r)) continue;
       const ym = r.data_relatorio.slice(0, 7);
       if (!map.has(ym)) map.set(ym, []);
       map.get(ym)!.push(r);
     }
-    const items: Array<{ ym: string; mesLabel: string; snapshot: string; rows: PorTabelaRow[] }> = [];
+    const items: Array<{
+      ym: string;
+      mesLabel: string;
+      snapshot: string;
+      porOperadora: { slug: string; rows: PorTabelaRow[] }[];
+    }> = [];
     for (const [ym, list] of map) {
       if (list.length === 0) continue;
       const snapshot = list.reduce((a, r) => (r.data_relatorio > a ? r.data_relatorio : a), list[0].data_relatorio);
-      const rowsSnap = list
-        .filter((r) => r.data_relatorio === snapshot)
-        .sort((a, b) =>
-          nomeMesaCdaCurto(a.nome_tabela).localeCompare(nomeMesaCdaCurto(b.nome_tabela), "pt-BR"),
-        );
+      let rowsSnap = list.filter((r) => r.data_relatorio === snapshot);
+      rowsSnap = filtroLinhas(rowsSnap);
+      const bySlug = agruparPorSlug(rowsSnap);
+      const porOperadora = ordenarSlugs([...bySlug.keys()], operadorasListFmt)
+        .map((slug) => ({ slug, rows: bySlug.get(slug)! }))
+        .filter((b) => b.rows.length > 0);
       const [yStr, mStr] = ym.split("-");
       const Y = Number(yStr);
       const M = Number(mStr) - 1;
@@ -579,12 +691,19 @@ export default function MesasSpin() {
         ym,
         mesLabel: `${MESES_PT[M]} ${Y}`,
         snapshot,
-        rows: rowsSnap,
+        porOperadora,
       });
     }
     items.sort((a, b) => a.ym.localeCompare(b.ym));
-    return items;
-  }, [historico, porTabelaHistAll]);
+    return items.filter((it) => it.porOperadora.length > 0);
+  }, [
+    historico,
+    porTabelaHistAll,
+    filtroOperadora,
+    operadoraSlugsForcado,
+    podeVerOperadora,
+    operadorasListFmt,
+  ]);
 
   /** Rodapé “vs mês ant.” só com mês atual e mês anterior vindos do Monthly Summary BRL. */
   const isHistoricoKpi =
@@ -632,6 +751,19 @@ export default function MesasSpin() {
     border: `1px solid ${t.cardBorder}`,
     background: "transparent", color: t.text, cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center",
+  };
+
+  const selectStyle: React.CSSProperties = {
+    padding: "6px 12px 6px 32px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg,
+    color: t.text,
+    fontSize: 13,
+    fontFamily: FONT.body,
+    cursor: "pointer",
+    appearance: "none" as const,
+    outline: "none",
   };
 
   // ── Permissão ────────────────────────────────────────────────────────────────
@@ -696,6 +828,38 @@ export default function MesasSpin() {
               <GiCalendar size={15} /> Histórico
             </button>
 
+            {showFiltroOperadora && (
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    pointerEvents: "none",
+                    color: t.textMuted,
+                  }}
+                >
+                  <GiShield size={15} />
+                </span>
+                <select
+                  value={filtroOperadora}
+                  onChange={(e) => setFiltroOperadora(e.target.value)}
+                  style={selectStyle}
+                >
+                  <option value="todas">Todas as operadoras</option>
+                  {operadorasOcr
+                    .filter((o) => podeVerOperadora(o.slug))
+                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                    .map((o) => (
+                      <option key={o.slug} value={o.slug}>
+                        {o.nome}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
                 <Clock size={12} /> Carregando...
@@ -742,7 +906,7 @@ export default function MesasSpin() {
           <SectionHeader
             icon={<LayoutGrid size={15} />}
             title="KPIs Consolidados"
-            sub={historico ? "· Monthly Summaries BRL (agregado)" : "· Monthly Summaries BRL · comparativo vs mês anterior"}
+            sub={historico ? "· agregado do período" : "· comparativo vs mês anterior"}
           />
           <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
             <KpiCard
@@ -926,40 +1090,60 @@ export default function MesasSpin() {
       </div>
 
       {!historico && (
-        <div style={{ ...card, marginBottom: 14 }}>
-          <SectionHeader
-            icon={<Table2 size={15} />}
-            title="Dados por mesa"
-            sub="· Casa de Apostas — primeira linha alinhada ao último dia do resumo diário (BRL)"
-          />
-          {rotulosPorMesaBrl.usouFallbackDaily && porTabelaCda.length > 0 && (
-            <p style={{ margin: "0 0 14px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-              Sem linhas no resumo diário neste mês: rótulos de data usam o dia anterior à data do print.
-            </p>
-          )}
+        <>
           {loading ? (
-            <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-              <Clock size={16} style={{ marginBottom: 8 }} />
-              Carregando mesas…
+            <div style={{ ...card, marginBottom: 14 }}>
+              <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
+              <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                <Clock size={16} style={{ marginBottom: 8 }} />
+                Carregando mesas…
+              </div>
             </div>
           ) : porTabelaRows.length === 0 ? (
-            <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-              Nenhum registo em <code style={{ fontSize: 12 }}>relatorio_por_tabela</code> para este mês. Use o bloco de importação acima (ou o Status Técnico).
-            </p>
-          ) : porTabelaCda.length === 0 ? (
-            <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-              Nenhuma mesa da Casa de Apostas neste snapshot (outras operadoras foram omitidas).
-            </p>
+            <div style={{ ...card, marginBottom: 14 }}>
+              <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
+              <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                Nenhum registo em <code style={{ fontSize: 12 }}>relatorio_por_tabela</code> para este mês. Use o bloco de importação acima (ou o Status Técnico).
+              </p>
+            </div>
+          ) : porOperadoraSnapshot.length === 0 ? (
+            <div style={{ ...card, marginBottom: 14 }}>
+              <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
+              <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                Nenhuma mesa neste filtro de operadora. Ajuste o seletor no topo ou verifique o escopo de acesso.
+              </p>
+            </div>
           ) : (
-            <MesasPorMesaGridInner
-              rows={porTabelaCda}
-              rotulos={rotulosPorMesaBrl}
-              thMini={thMini}
-              tdMini={tdMini}
-              tdMiniNum={tdMiniNum}
-            />
+            <>
+              <p style={{ margin: "0 0 14px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                Valores alinhados ao último dia do resumo diário (BRL) deste mês.
+              </p>
+              {rotulosPorMesaBrl.usouFallbackDaily && porTabelaFiltradas.length > 0 && (
+                <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                  Sem linhas no resumo diário neste mês: rótulos de data usam o dia anterior à data do print.
+                </p>
+              )}
+              {porOperadoraSnapshot.map(({ slug, rows }) => (
+                <div key={slug} style={{ ...card, marginBottom: 14 }}>
+                  <SectionHeader
+                    icon={<Table2 size={15} />}
+                    title="Dados por mesa"
+                    sub={`· ${nomeTituloOperadora(slug, operadorasListFmt)}`}
+                  />
+                  <MesasPorMesaListaVertical
+                    rows={rows}
+                    rotulos={rotulosPorMesaBrl}
+                    slugOperadora={slug}
+                    operadorasList={operadorasListFmt}
+                    thMini={thMini}
+                    tdMini={tdMini}
+                    tdMiniNum={tdMiniNum}
+                  />
+                </div>
+              ))}
+            </>
           )}
-        </div>
+        </>
       )}
 
       {historico && (
@@ -967,7 +1151,7 @@ export default function MesasSpin() {
           <SectionHeader
             icon={<Table2 size={15} />}
             title="Dados por mesa"
-            sub="· Casa de Apostas — última importação de cada mês (mês a mês)"
+            sub="· última importação de cada mês (valores em BRL)"
           />
           {loading ? (
             <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
@@ -976,10 +1160,10 @@ export default function MesasSpin() {
             </div>
           ) : porMesaPorMesHistorico.length === 0 ? (
             <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-              Nenhum registo em <code style={{ fontSize: 12 }}>relatorio_por_tabela</code> para Casa de Apostas no período.
+              Nenhum registo em <code style={{ fontSize: 12 }}>relatorio_por_tabela</code> no período para o filtro atual.
             </p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
               {porMesaPorMesHistorico.map((blo) => {
                 const [yStr, mStr] = blo.ym.split("-");
                 const rot = rotulosPorMesaParaMes(
@@ -990,40 +1174,57 @@ export default function MesasSpin() {
                 );
                 return (
                   <div key={blo.ym}>
-                    <h3 style={{
-                      fontFamily: FONT_TITLE,
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: brand.primary,
-                      margin: "0 0 12px",
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
-                    }}>
+                    <h3
+                      style={{
+                        fontFamily: FONT_TITLE,
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: brand.primary,
+                        margin: "0 0 14px",
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                      }}
+                    >
                       {blo.mesLabel}
-                      <span style={{
-                        fontFamily: FONT.body,
-                        fontWeight: 500,
-                        fontSize: 11,
-                        color: t.textMuted,
-                        marginLeft: 8,
-                        textTransform: "none",
-                        letterSpacing: "normal",
-                      }}>
+                      <span
+                        style={{
+                          fontFamily: FONT.body,
+                          fontWeight: 500,
+                          fontSize: 11,
+                          color: t.textMuted,
+                          marginLeft: 8,
+                          textTransform: "none",
+                          letterSpacing: "normal",
+                        }}
+                      >
                         · print {fmtDataPtBr(blo.snapshot)}
                       </span>
                     </h3>
-                    {rot.usouFallbackDaily && blo.rows.length > 0 && (
-                      <p style={{ margin: "0 0 10px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-                        Sem resumo diário neste mês: rótulos por data do print.
-                      </p>
-                    )}
-                    <MesasPorMesaGridInner
-                      rows={blo.rows}
-                      rotulos={rot}
-                      thMini={thMini}
-                      tdMini={tdMini}
-                      tdMiniNum={tdMiniNum}
-                    />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                      {blo.porOperadora.map(({ slug: opSlug, rows }) => (
+                        <div key={`${blo.ym}-${opSlug}`}>
+                          <SectionHeader
+                            icon={<Table2 size={14} />}
+                            title="Dados por mesa"
+                            sub={`· ${nomeTituloOperadora(opSlug, operadorasListFmt)}`}
+                          />
+                          {rot.usouFallbackDaily && rows.length > 0 && (
+                            <p style={{ margin: "0 0 10px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                              Sem resumo diário neste mês: rótulos por data do print.
+                            </p>
+                          )}
+                          <MesasPorMesaListaVertical
+                            rows={rows}
+                            rotulos={rot}
+                            slugOperadora={opSlug}
+                            operadorasList={operadorasListFmt}
+                            thMini={thMini}
+                            tdMini={tdMini}
+                            tdMiniNum={tdMiniNum}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 );
               })}
