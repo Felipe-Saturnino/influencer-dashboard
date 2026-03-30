@@ -215,7 +215,11 @@ function fmtPct(v: number | null) {
   return `${Number(v).toFixed(1)}%`;
 }
 
-/** Métricas do bloco Monthly Summaries BRL (1 linha = 1 mês consolidado). */
+/**
+ * KPIs Consolidados — sempre da tabela `relatorio_monthly_summary` (print: Monthly Summaries BRL),
+ * linha consolidada (`operadora` null), colunas: Turnover, Bets, Margin, Bet size, GGR, UAP, ARPU.
+ * Carrossel: mês selecionado. Histórico: período inteiro (somas + indicadores derivados do total).
+ */
 type MonthlyKpiSnapshot = {
   turnover: number | null;
   ggr: number | null;
@@ -245,12 +249,32 @@ function aggMonthlyKpiFromRows(rows: MonthlyRow[]): MonthlyKpiSnapshot | null {
   const ggr = rows.reduce((s, r) => s + Number(r.ggr ?? 0), 0);
   const bets = rows.reduce((s, r) => s + Number(r.bets ?? 0), 0);
   const uap = rows.reduce((s, r) => s + Number(r.uap ?? 0), 0);
-  const margins = rows.map((r) => r.margin_pct).filter((v): v is number => v != null);
-  const margin_pct = margins.length > 0 ? margins.reduce((a, b) => a + b, 0) / margins.length : null;
-  const bs = rows.map((r) => r.bet_size).filter((v): v is number => v != null);
-  const bet_size = bs.length > 0 ? bs.reduce((a, b) => a + Number(b), 0) / bs.length : null;
-  const ar = rows.map((r) => r.arpu).filter((v): v is number => v != null);
-  const arpu = ar.length > 0 ? ar.reduce((a, b) => a + Number(b), 0) / ar.length : null;
+
+  /** Margem sobre o período: GGR/turnover (%), alinhado ao “Monthly summaries” agregado. */
+  let margin_pct: number | null = null;
+  if (turnover !== 0) margin_pct = (ggr / turnover) * 100;
+  else {
+    const margins = rows.map((r) => r.margin_pct).filter((v): v is number => v != null);
+    margin_pct =
+      margins.length > 0 ? margins.reduce((a, b) => a + Number(b), 0) / margins.length : null;
+  }
+
+  /** Aposta média no período: turnover total / apostas totais (= média ponderada por volume). */
+  let bet_size: number | null = null;
+  if (bets !== 0) bet_size = turnover / bets;
+  else {
+    const bs = rows.map((r) => r.bet_size).filter((v): v is number => v != null);
+    bet_size = bs.length > 0 ? bs.reduce((a, b) => a + Number(b), 0) / bs.length : null;
+  }
+
+  /** ARPU no período: GGR total / UAP total (soma mensal de UAP como no pedido; mesma lógica que ΣGGR/ΣUAP por linha). */
+  let arpu: number | null = null;
+  if (uap !== 0) arpu = ggr / uap;
+  else {
+    const ar = rows.map((r) => r.arpu).filter((v): v is number => v != null);
+    arpu = ar.length > 0 ? ar.reduce((a, b) => a + Number(b), 0) / ar.length : null;
+  }
+
   return { turnover, ggr, margin_pct, bets, uap, bet_size, arpu };
 }
 
@@ -258,7 +282,11 @@ function nKpi(v: number | null | undefined): number {
   return Number(v) || 0;
 }
 
-type RotulosMesa = { d1: string; d2: string; mtd: string; usouFallbackDaily: boolean };
+/**
+ * Rótulo da linha “Dados por mesa”: só colunas d-1 do print (Turnover/Bets/GGR d-1).
+ * A data exibida é a da última linha da tabela Daily Summaries BRL (referência D-1 do BI).
+ */
+type RotulosMesa = { d1: string; usouFallbackDaily: boolean };
 
 function rotulosPorMesaParaMes(
   dailyData: DailyRow[],
@@ -270,15 +298,13 @@ function rotulosPorMesaParaMes(
   const inMonth = dailyData.filter((r) => r.data >= inicio && r.data <= fim);
   const ultimoDiaDailyIso =
     inMonth.length === 0 ? null : inMonth.reduce((a, r) => (r.data > a ? r.data : a), inMonth[0].data);
-  const ultimo = ultimoDiaDailyIso ?? (snapshotIso ? addDaysIso(snapshotIso, -1) : null);
-  const mtd = `MTD · ${MESES_CURTOS[mes0a11]}/${ano}`;
-  if (!ultimo) {
-    return { d1: "D-1 (BI)", d2: "D-2 (BI)", mtd, usouFallbackDaily: false };
+  /** Mesmo dia que a última entrada do Daily Summaries BRL no período; fallback: véspera da data do print. */
+  const d1Referencia = ultimoDiaDailyIso ?? (snapshotIso ? addDaysIso(snapshotIso, -1) : null);
+  if (!d1Referencia) {
+    return { d1: "—", usouFallbackDaily: false };
   }
   return {
-    d1: fmtDataPtBr(ultimo),
-    d2: fmtDataPtBr(addDaysIso(ultimo, -1)),
-    mtd,
+    d1: fmtDataPtBr(d1Referencia),
     usouFallbackDaily: ultimoDiaDailyIso === null,
   };
 }
@@ -378,30 +404,6 @@ function MesasPorMesaListaVertical({
                   fontWeight: 600,
                 }}>
                   {row.ggr_d1 != null ? fmtBRL(Number(row.ggr_d1)) : "—"}
-                </td>
-              </tr>
-              <tr>
-                <td style={tdMini}>{rotulos.d2}</td>
-                <td style={tdMiniNum}>{row.bets_d2 != null ? row.bets_d2.toLocaleString("pt-BR") : "—"}</td>
-                <td style={tdMiniNum}>{row.turnover_d2 != null ? fmtBRL(Number(row.turnover_d2)) : "—"}</td>
-                <td style={{
-                  ...tdMiniNum,
-                  color: (row.ggr_d2 ?? 0) >= 0 ? BRAND.verde : BRAND.vermelho,
-                  fontWeight: 600,
-                }}>
-                  {row.ggr_d2 != null ? fmtBRL(Number(row.ggr_d2)) : "—"}
-                </td>
-              </tr>
-              <tr style={{ background: "rgba(74,32,130,0.06)" }}>
-                <td style={{ ...tdMini, fontWeight: 600 }}>{rotulos.mtd}</td>
-                <td style={tdMiniNum}>{row.bets_mtd != null ? row.bets_mtd.toLocaleString("pt-BR") : "—"}</td>
-                <td style={tdMiniNum}>{row.turnover_mtd != null ? fmtBRL(Number(row.turnover_mtd)) : "—"}</td>
-                <td style={{
-                  ...tdMiniNum,
-                  color: (row.ggr_mtd ?? 0) >= 0 ? BRAND.verde : BRAND.vermelho,
-                  fontWeight: 600,
-                }}>
-                  {row.ggr_mtd != null ? fmtBRL(Number(row.ggr_mtd)) : "—"}
                 </td>
               </tr>
             </tbody>
@@ -546,24 +548,24 @@ export default function MesasSpin() {
         setMonthlyData([]);
 
         const mesIsoCarousel = fmt(new Date(mesSelecionado.ano, mesSelecionado.mes, 1));
-        const { data: mCur } = await supabase
+        const { data: curRows } = await supabase
           .from("relatorio_monthly_summary")
           .select("turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
           .eq("mes", mesIsoCarousel)
           .is("operadora", null)
-          .maybeSingle();
-        setMonthlyKpiAtual(snapshotFromMonthlyRow(mCur));
+          .limit(1);
+        setMonthlyKpiAtual(snapshotFromMonthlyRow(curRows?.[0] ?? null));
 
         if (idxMes > 0) {
           const prev = mesesDisponiveis[idxMes - 1];
           const mesIsoAnt = fmt(new Date(prev.ano, prev.mes, 1));
-          const { data: mAnt } = await supabase
+          const { data: antRows } = await supabase
             .from("relatorio_monthly_summary")
             .select("turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
             .eq("mes", mesIsoAnt)
             .is("operadora", null)
-            .maybeSingle();
-          setMonthlyKpiAnt(snapshotFromMonthlyRow(mAnt));
+            .limit(1);
+          setMonthlyKpiAnt(snapshotFromMonthlyRow(antRows?.[0] ?? null));
         } else {
           setMonthlyKpiAnt(null);
         }
@@ -647,7 +649,7 @@ export default function MesasSpin() {
 
   const rotulosPorMesaBrl = useMemo(() => {
     if (!mesSelecionado) {
-      return { d1: "D-1 (BI)", d2: "D-2 (BI)", mtd: "MTD", usouFallbackDaily: false };
+      return { d1: "—", usouFallbackDaily: false };
     }
     return rotulosPorMesaParaMes(
       dailyData,
@@ -906,7 +908,11 @@ export default function MesasSpin() {
           <SectionHeader
             icon={<LayoutGrid size={15} />}
             title="KPIs Consolidados"
-            sub={historico ? "· agregado do período" : "· comparativo vs mês anterior"}
+            sub={
+              historico
+                ? "· soma de todos os meses (resumo mensal BRL consolidado)"
+                : "· mês selecionado (resumo mensal BRL) · comparativo vs mês anterior"
+            }
           />
           <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
             <KpiCard
@@ -1082,9 +1088,13 @@ export default function MesasSpin() {
             </div>
           ) : (
             <>
+              <p style={{ margin: "0 0 12px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                Cada mesa: Turnover, Apostas e GGR vêm só das colunas D-1 do relatório; a data mostrada é a da
+                última linha do Daily Summaries BRL (sem D-2 nem MTD).
+              </p>
               {rotulosPorMesaBrl.usouFallbackDaily && porTabelaFiltradas.length > 0 && (
                 <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  Sem linhas no resumo diário neste mês: rótulos de data usam o dia anterior à data do print.
+                  Sem resumo diário neste mês: a data da linha usa a véspera da data do print.
                 </p>
               )}
               {porOperadoraSnapshot.map(({ slug, rows }) => (
@@ -1115,7 +1125,7 @@ export default function MesasSpin() {
           <SectionHeader
             icon={<Table2 size={15} />}
             title="Dados por mesa"
-            sub="· última importação de cada mês (valores em BRL)"
+            sub="· última importação por mês — só D-1 (Turnover, Apostas, GGR) · BRL"
           />
           {loading ? (
             <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
