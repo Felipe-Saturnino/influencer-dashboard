@@ -1050,39 +1050,6 @@ export default function MesasSpin() {
                     </tr>
                   );
                 })}
-
-                {/* Linha de totais */}
-                {tabelaRows.length > 1 && (
-                  <tr style={{
-                    borderTop: `2px solid ${t.cardBorder}`,
-                    background: "rgba(74,32,130,0.10)",
-                  }}>
-                    <td style={{ ...tdStyle, fontWeight: 700, color: t.text }}>Total</td>
-                    <td style={{ ...tdNum, fontWeight: 700 }}>
-                      {fmtBRL(tabelaRows.reduce((s, r) => s + (r.turnover ?? 0), 0))}
-                    </td>
-                    <td style={{ ...tdNum, fontWeight: 700, color: BRAND.roxoVivo }}>
-                      {fmtBRL(tabelaRows.reduce((s, r) => s + (r.ggr ?? 0), 0))}
-                    </td>
-                    <td style={tdNum}>
-                      <MarginBadge
-                        value={
-                          tabelaRows.length > 0
-                            ? tabelaRows.reduce((s, r) => s + (Number(r.margin_pct) || 0), 0) / tabelaRows.length
-                            : null
-                        }
-                      />
-                    </td>
-                    <td style={{ ...tdNum, fontWeight: 700 }}>
-                      {tabelaRows.reduce((s, r) => s + (r.bets ?? 0), 0).toLocaleString("pt-BR")}
-                    </td>
-                    <td style={{ ...tdNum, fontWeight: 700 }}>
-                      {tabelaRows.reduce((s, r) => s + (r.uap ?? 0), 0).toLocaleString("pt-BR")}
-                    </td>
-                    <td style={tdNum}>—</td>
-                    <td style={tdNum}>—</td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -1115,9 +1082,6 @@ export default function MesasSpin() {
             </div>
           ) : (
             <>
-              <p style={{ margin: "0 0 14px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-                Valores alinhados ao último dia do resumo diário (BRL) deste mês.
-              </p>
               {rotulosPorMesaBrl.usouFallbackDaily && porTabelaFiltradas.length > 0 && (
                 <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
                   Sem linhas no resumo diário neste mês: rótulos de data usam o dia anterior à data do print.

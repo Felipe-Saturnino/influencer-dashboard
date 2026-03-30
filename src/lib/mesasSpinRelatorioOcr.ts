@@ -160,6 +160,113 @@ function isPerTableOcrHeaderLine(line: string): boolean {
   return (low.includes("ggr") && low.includes("d-1") && low.includes("turnover")) || /^table\b/i.test(line);
 }
 
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Corta linhas OCR onde começa o nome de uma operadora (evita fundir várias mesas num só nome). */
+function buildPorTabelaLabelSplitRegex(operadoras: OperadoraRef[]): RegExp | null {
+  const labels = Array.from(
+    new Set<string>(["Casa de Apostas", ...operadoras.map((o) => o.nome).filter(Boolean)]),
+  ).sort((a, b) => b.length - a.length);
+  if (labels.length === 0) return null;
+  const inner = labels.map((l) => escapeRegExp(l)).join("|");
+  return new RegExp(`(?=(?:${inner})\\b)`, "gi");
+}
+
+function chunkStartsWithOperadoraLabel(chunk: string, operadoras: OperadoraRef[]): boolean {
+  const low = chunk.trim().toLowerCase();
+  if (low.startsWith("casa de apostas")) return true;
+  return operadoras.some((o) => o.nome && low.startsWith(o.nome.toLowerCase()));
+}
+
+/**
+ * Parte o texto fundido do OCR em segmentos (um por bloco que recomeça com operadora).
+ * Trechos sem rótulo no início são colados ao segmento seguinte (ex.: "Blackjack 1" antes de "Bet Nacional …").
+ */
+function splitPorTabelaMergedIntoChunks(merged: string, operadoras: OperadoraRef[]): string[] {
+  const re = buildPorTabelaLabelSplitRegex(operadoras);
+  if (!re) return [merged.trim()].filter(Boolean);
+  const raw = merged.split(re).map((s) => s.trim()).filter((s) => s.length > 0);
+  const out: string[] = [];
+  let orphan = "";
+  for (const s of raw) {
+    if (chunkStartsWithOperadoraLabel(s, operadoras)) {
+      out.push(orphan ? `${orphan} ${s}` : s);
+      orphan = "";
+    } else {
+      orphan = orphan ? `${orphan} ${s}` : s;
+    }
+  }
+  if (orphan) out.push(orphan);
+  return out;
+}
+
+function sanitizePorTabelaMesaName(name: string): string {
+  let s = name.replace(/\s+(?:o|O)\s+(?:o|O)(?:\s+(?:o|O))*/g, " ");
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
+}
+
+function makePorTabelaParsed(
+  nomeTabela: string,
+  nums: number[],
+  dataRelatorio: string,
+  operadoras: OperadoraRef[],
+): PorTabelaParsed {
+  const [ggr_d1, turnover_d1, bets_d1, ggr_d2, turnover_d2, bets_d2, ggr_mtd, turnover_mtd, bets_mtd] = nums;
+  const name = sanitizePorTabelaMesaName(nomeTabela.trim());
+  return {
+    data_relatorio: dataRelatorio,
+    nome_tabela: name,
+    operadora: resolveOperadoraSlug(name, operadoras),
+    ggr_d1,
+    turnover_d1,
+    bets_d1: Math.round(bets_d1),
+    ggr_d2,
+    turnover_d2,
+    bets_d2: Math.round(bets_d2),
+    ggr_mtd,
+    turnover_mtd,
+    bets_mtd: Math.round(bets_mtd),
+  };
+}
+
+/** Últimos 9 tokens são todos numéricos (uma linha de métricas no fim do segmento). */
+function tryStripTrailingNineNumeric(parts: string[]): { nums: number[]; rest: string[] } | null {
+  if (parts.length < 9) return null;
+  const slice9 = parts.slice(-9);
+  const nums: number[] = [];
+  for (const p of slice9) {
+    const n = parsePtBrNumber(p);
+    if (n === null) return null;
+    nums.push(n);
+  }
+  return { nums, rest: parts.slice(0, -9) };
+}
+
+/**
+ * Dentro de um segmento já cortado por operadora: pode haver 2+ mesas (ex.: duas linhas coladas);
+ * remove sufixos de 9 números da direita até esgotar.
+ */
+function parsePorTabelaSegmentToRows(
+  chunk: string,
+  dataRelatorio: string,
+  operadoras: OperadoraRef[],
+): PorTabelaParsed[] {
+  const rows: PorTabelaParsed[] = [];
+  let parts = splitLineParts(chunk);
+  while (parts.length >= 10) {
+    const stripped = tryStripTrailingNineNumeric(parts);
+    if (!stripped || stripped.rest.length === 0) break;
+    const name = stripped.rest.join(" ").trim();
+    if (name.length < 2 || /^month\b|^day\b|^main\b|^summary\b/i.test(name)) break;
+    rows.unshift(makePorTabelaParsed(name, stripped.nums, dataRelatorio, operadoras));
+    parts = stripped.rest;
+  }
+  return rows;
+}
+
 export function resolveOperadoraSlug(nomeMesa: string, operadoras: OperadoraRef[]): string | null {
   const lower = nomeMesa.toLowerCase().trim();
   const sorted = [...operadoras].filter((o) => o.nome).sort((a, b) => b.nome.length - a.nome.length);
@@ -303,49 +410,41 @@ function parsePorTabelaLines(
 
     let merged = line;
     let mergeEnd = i;
-    let parsed: PorTabelaParsed | null = null;
+    let gotBatch = false;
 
     for (let k = 0; k < MAX_LINE_MERGE; k++) {
-      const parts = splitLineParts(merged);
-      if (parts.length >= 9) {
-        const nr = numbersFromRight(parts, 9);
-        if (nr) {
-          let name = nr.rest.join(" ").trim();
-          if (name.length < 3 && pendingName) {
-            name = pendingName.trim();
-          }
-          if (name.length >= 3 && !/^month\b|^day\b|^main\b/i.test(name)) {
-            const [ggr_d1, turnover_d1, bets_d1, ggr_d2, turnover_d2, bets_d2, ggr_mtd, turnover_mtd, bets_mtd] =
-              nr.nums;
-            parsed = {
-              data_relatorio: dataRelatorio,
-              nome_tabela: name,
-              operadora: resolveOperadoraSlug(name, operadoras),
-              ggr_d1,
-              turnover_d1,
-              bets_d1: Math.round(bets_d1),
-              ggr_d2,
-              turnover_d2,
-              bets_d2: Math.round(bets_d2),
-              ggr_mtd,
-              turnover_mtd,
-              bets_mtd: Math.round(bets_mtd),
-            };
-            break;
+      const toParse = pendingName ? `${pendingName} ${merged}`.trim() : merged;
+      let batch: PorTabelaParsed[] = [];
+      const chunks = splitPorTabelaMergedIntoChunks(toParse, operadoras);
+      for (const ch of chunks) {
+        batch.push(...parsePorTabelaSegmentToRows(ch, dataRelatorio, operadoras));
+      }
+      if (batch.length === 0) {
+        const parts = splitLineParts(toParse);
+        if (parts.length >= 9) {
+          const nr = numbersFromRight(parts, 9);
+          if (nr) {
+            let name = sanitizePorTabelaMesaName(nr.rest.join(" ").trim());
+            if (name.length < 3 && pendingName) name = sanitizePorTabelaMesaName(pendingName.trim());
+            if (name.length >= 3 && !/^month\b|^day\b|^main\b|^summary\b/i.test(name)) {
+              batch = [makePorTabelaParsed(name, nr.nums, dataRelatorio, operadoras)];
+            }
           }
         }
+      }
+      if (batch.length > 0) {
+        out.push(...batch);
+        pendingName = null;
+        i = mergeEnd;
+        gotBatch = true;
+        break;
       }
       if (mergeEnd + 1 >= end) break;
       mergeEnd++;
       merged = `${merged} ${lines[mergeEnd]}`;
     }
 
-    if (parsed) {
-      out.push(parsed);
-      pendingName = null;
-      i = mergeEnd;
-      continue;
-    }
+    if (gotBatch) continue;
 
     const partsOne = splitLineParts(line);
     if (partsOne.length > 0 && partsOne.length < 9) {
