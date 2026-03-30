@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Upload, FileImage, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import {
@@ -8,8 +8,13 @@ import {
   type OperadoraRef,
 } from "../lib/mesasSpinRelatorioOcr";
 import type { Theme } from "../constants/theme";
+import { UPLOAD_PLS_DISPLAY_NAME } from "../lib/uploadPlsCommercial";
 
 const FONT = "'Inter', 'Helvetica Neue', Arial, sans-serif";
+
+const BRAND_ROXO = "#4a2082";
+const BRAND_AZUL = "#1e36f8";
+const DEFAULT_BTN_RADIUS = 10;
 
 function fmtResumo(p: IngestRelatorioPayload): string {
   return `${p.daily_summary.length} dia(s) · ${p.monthly_summary.length} mês(es) · ${p.por_tabela.length} mesa(s)`;
@@ -25,16 +30,23 @@ export function MesasSpinRelatorioUpload({
   disabled,
   onImported,
   embedded = false,
+  variant = "default",
   title = DEFAULT_TITLE,
   description = DEFAULT_DESC,
+  onBusyChange,
+  onUserMessage,
 }: {
   t: Theme;
   operadoras: OperadoraRef[];
   disabled?: boolean;
   onImported: () => void;
   embedded?: boolean;
+  /** default = cartão; statusTable = célula da tabela Status das Integrações */
+  variant?: "default" | "statusTable";
   title?: string;
   description?: string;
+  onBusyChange?: (busy: boolean) => void;
+  onUserMessage?: (msg: { tipo: "ok" | "erro"; texto: string } | null) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
@@ -43,9 +55,14 @@ export function MesasSpinRelatorioUpload({
   const [error, setError] = useState<string | null>(null);
   const [doneMsg, setDoneMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+
   const onFile = useCallback(
     async (file: File | null) => {
       if (!file || disabled) return;
+      onUserMessage?.(null);
       setError(null);
       setDoneMsg(null);
       setPreview(null);
@@ -75,13 +92,15 @@ export function MesasSpinRelatorioUpload({
           );
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        const te = e instanceof Error ? e.message : String(e);
+        setError(te);
+        onUserMessage?.({ tipo: "erro", texto: `${UPLOAD_PLS_DISPLAY_NAME}: ${te}` });
       } finally {
         setBusy(false);
         setStage("");
       }
     },
-    [disabled, operadoras],
+    [disabled, operadoras, onUserMessage],
   );
 
   async function enviarSupabase() {
@@ -107,39 +126,91 @@ export function MesasSpinRelatorioUpload({
         },
       });
       const res = data as { ok?: boolean; error?: string; inserted?: Record<string, number> } | null;
+
       if (fnErr) {
-        const hint = res?.error ? ` ${res.error}` : "";
-        throw new Error(
-          (typeof fnErr.message === "string" ? fnErr.message : "Falha na Edge Function.") +
-            hint +
-            " Confirme: supabase functions deploy ingest-relatorio-mesas-ocr",
-        );
+        if (res?.error) {
+          throw new Error(res.error);
+        }
+        const msg = typeof fnErr.message === "string" ? fnErr.message : "Falha ao contactar a Edge Function.";
+        if (/non-2xx/i.test(msg)) {
+          throw new Error(
+            "A função ingest-relatorio-mesas-ocr não está disponível ou devolveu erro. " +
+              "No Supabase → Edge Functions, confirme que existe uma função com este nome exato e que está publicada. " +
+              "Se acabou de criar, volte a fazer Deploy. Corpo do erro: " +
+              msg,
+          );
+        }
+        if (/404|not found/i.test(msg)) {
+          throw new Error(
+            "Edge Function ingest-relatorio-mesas-ocr não encontrada (404). Crie/publique a função no projeto Supabase.",
+          );
+        }
+        if (/401|unauthorized/i.test(msg)) {
+          throw new Error("Sessão expirada ou não autorizado. Atualize a página e faça login novamente.");
+        }
+        throw new Error(msg);
       }
       if (!res?.ok) {
         throw new Error(res?.error ?? "Resposta inválida do servidor.");
       }
-      setDoneMsg(`Importado: ${JSON.stringify(res.inserted ?? {})}`);
+      const okText = `Importado: ${JSON.stringify(res.inserted ?? {})}`;
+      setDoneMsg(okText);
       setPreview(null);
+      onUserMessage?.({ tipo: "ok", texto: `${UPLOAD_PLS_DISPLAY_NAME}: ${okText}` });
       onImported();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const te = e instanceof Error ? e.message : String(e);
+      setError(te);
+      onUserMessage?.({ tipo: "erro", texto: `${UPLOAD_PLS_DISPLAY_NAME}: ${te}` });
     } finally {
       setBusy(false);
     }
   }
 
-  const wrapStyle: React.CSSProperties = embedded
-    ? { fontFamily: FONT, padding: 0, margin: 0 }
-    : {
-        borderRadius: 18,
-        border: `1px solid ${t.cardBorder}`,
-        background: t.cardBg,
-        padding: 20,
-        marginBottom: 14,
-        fontFamily: FONT,
-      };
+  const wrapStyle: React.CSSProperties =
+    variant === "statusTable"
+      ? { fontFamily: FONT, padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start", maxWidth: 360 }
+      : embedded
+        ? { fontFamily: FONT, padding: 0, margin: 0 }
+        : {
+            borderRadius: 18,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.cardBg,
+            padding: 20,
+            marginBottom: 14,
+            fontFamily: FONT,
+          };
 
-  const showTitleBlock = !embedded && (title !== "" || description !== "");
+  const showTitleBlock = variant !== "statusTable" && !embedded && (title !== "" || description !== "");
+
+  const btnTableStyle: React.CSSProperties =
+    variant === "statusTable"
+      ? {
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "6px 14px",
+          borderRadius: 8,
+          border: "none",
+          background: disabled || busy ? "#6b7280" : `linear-gradient(135deg, ${BRAND_ROXO}, ${BRAND_AZUL})`,
+          color: "#fff",
+          fontSize: 12,
+          fontWeight: 700,
+          fontFamily: FONT,
+          cursor: disabled || busy ? "not-allowed" : "pointer",
+        }
+      : {
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 14px",
+          borderRadius: DEFAULT_BTN_RADIUS,
+          border: `1px solid ${t.cardBorder}`,
+          cursor: disabled || busy ? "not-allowed" : "pointer",
+          opacity: disabled || busy ? 0.6 : 1,
+          fontSize: 13,
+          color: t.text,
+        };
 
   return (
     <>
@@ -157,22 +228,9 @@ export function MesasSpinRelatorioUpload({
           </>
         )}
 
-        <label
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 14px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            cursor: disabled || busy ? "not-allowed" : "pointer",
-            opacity: disabled || busy ? 0.6 : 1,
-            fontSize: 13,
-            color: t.text,
-          }}
-        >
-          <Upload size={16} />
-          <span>Escolher imagem…</span>
+        <label style={btnTableStyle}>
+          <Upload size={variant === "statusTable" ? 14 : 16} />
+          <span>{variant === "statusTable" ? "Escolher imagem…" : "Escolher imagem…"}</span>
           <input
             type="file"
             accept="image/*"

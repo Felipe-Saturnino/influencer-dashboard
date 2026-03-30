@@ -5,8 +5,8 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
-import { FileImage } from "lucide-react";
 import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
+import { UPLOAD_PLS_COMMERCIAL_SLUG, UPLOAD_PLS_DISPLAY_NAME } from "../../../lib/uploadPlsCommercial";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -118,6 +118,8 @@ interface FluxoDia {
   cda: number;
   social: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
+  /** Uploads PLS / Daily Commercial (OCR) bem-sucedidos (sync_logs ok), por dia */
+  pls: number;
   total: number;
 }
 
@@ -131,17 +133,22 @@ export default function StatusTecnico() {
   const [syncSocialMensagem, setSyncSocialMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [emailEnviando, setEmailEnviando] = useState(false);
   const [emailMensagem, setEmailMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [emailAgendaEnviando, setEmailAgendaEnviando] = useState(false);
+  const [emailAgendaMensagem, setEmailAgendaMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [techLogs, setTechLogs] = useState<TechLog[]>([]);
   const [pipelineRuns, setPipelineRuns] = useState<PipelineRun[]>([]);
   const [fluxoDados, setFluxoDados] = useState<FluxoDia[]>([]);
   const [registrosHoje, setRegistrosHoje] = useState(0);
-  const [ultimoEmailEnvioAt, setUltimoEmailEnvioAt] = useState<string | null>(null);
+  const [emailUltimoDiretoria, setEmailUltimoDiretoria] = useState<string | null>(null);
+  const [emailUltimoAgenda, setEmailUltimoAgenda] = useState<string | null>(null);
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
   const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
+  const [, setPlsUploadBusy] = useState(false);
+  const [plsMensagem, setPlsMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
 
   const card: React.CSSProperties = {
     background: t.cardBg,
@@ -173,12 +180,13 @@ export default function StatusTecnico() {
     setOperadorasOcr(opOcr ?? []);
 
     // Sync logs (últimos 7 dias)
-    const { data: syncData } = await supabase
+    const { data: syncDataRaw } = await supabase
       .from("sync_logs")
       .select("*")
       .order("executado_em", { ascending: false })
       .limit(100);
-    setSyncLogs(syncData ?? []);
+    const syncData = syncDataRaw ?? [];
+    setSyncLogs(syncData);
 
     // Tech logs — sempre buscar 48h para alertas; exibir conforme logFiltro
     const desde = new Date();
@@ -235,18 +243,29 @@ export default function StatusTecnico() {
       acc[r.data][r.tipo] = (acc[r.data][r.tipo] ?? 0) + r.destinatarios_count;
       return acc;
     }, {});
-    const ultimoEmail = (resEmails.data ?? []).reduce<string | null>((max, row) => {
-      const r = row as { created_at?: string };
-      if (!r.created_at) return max;
-      return !max || r.created_at > max ? r.created_at : max;
-    }, null);
-    setUltimoEmailEnvioAt(ultimoEmail);
+    const emailRowsBrutos = (resEmails.data ?? []) as { data: string; tipo: string; destinatarios_count: number; created_at?: string }[];
+    const ultimoPorTipo = (tipo: string) =>
+      emailRowsBrutos.filter((r) => r.tipo === tipo).reduce<string | null>((max, row) => {
+        if (!row.created_at) return max;
+        return !max || row.created_at > max ? row.created_at : max;
+      }, null);
+    setEmailUltimoDiretoria(ultimoPorTipo("relatorio_diretoria"));
+    setEmailUltimoAgenda(ultimoPorTipo("email_agenda_diaria"));
     setEmailEnviosCount((resEmails.data ?? []).length);
+
+    const plsPorData = syncData.reduce<Record<string, number>>((acc, l) => {
+      if (l.integracao_slug !== UPLOAD_PLS_COMMERCIAL_SLUG || l.status !== "ok") return acc;
+      const d = String(l.executado_em).slice(0, 10);
+      const n = (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0);
+      acc[d] = (acc[d] ?? 0) + Math.max(n, 1);
+      return acc;
+    }, {});
 
     const datasSet = new Set<string>([
       ...Object.keys(cdaPorData),
       ...Object.keys(socialPorData),
       ...Object.keys(emailsPorData),
+      ...Object.keys(plsPorData),
       hoje,
     ]);
     const fluxoArray: FluxoDia[] = Array.from(datasSet)
@@ -256,12 +275,14 @@ export default function StatusTecnico() {
         const social = socialPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
+        const pls = plsPorData[data] ?? 0;
         return {
           data,
           cda,
           social,
           emails,
-          total: cda + social + emailTotal,
+          pls,
+          total: cda + social + emailTotal + pls,
         };
       });
     setFluxoDados(fluxoArray);
@@ -276,7 +297,7 @@ export default function StatusTecnico() {
   }, [carregar]);
 
   const executarSync = async () => {
-    if (syncExecutando || !perm.canView || perm.canView === "nao") return;
+    if (syncExecutando || !perm.canEditarOk) return;
     setSyncExecutando(true);
     setSyncMensagem(null);
     try {
@@ -352,7 +373,7 @@ export default function StatusTecnico() {
   };
 
   const executarSyncSocial = async () => {
-    if (syncSocialExecutando || !perm.canView || perm.canView === "nao") return;
+    if (syncSocialExecutando || !perm.canEditarOk) return;
     setSyncSocialExecutando(true);
     setSyncSocialMensagem(null);
     try {
@@ -407,7 +428,7 @@ export default function StatusTecnico() {
   };
 
   const enviarEmailDiretoria = async () => {
-    if (emailEnviando || !perm.canView || perm.canView === "nao") return;
+    if (emailEnviando || !perm.canEditarOk) return;
     setEmailEnviando(true);
     setEmailMensagem(null);
     try {
@@ -490,6 +511,7 @@ export default function StatusTecnico() {
         tipo: "ok",
         texto: `Relatório enviado com sucesso${dest}. A diretoria pode acompanhar possíveis erros e o status das integrações.`,
       });
+      void carregar();
     } catch (e) {
       let msg = e instanceof Error ? e.message : String(e);
       if (/edge function/i.test(msg) || /FunctionsFetchError/i.test(msg)) {
@@ -499,6 +521,102 @@ export default function StatusTecnico() {
       setEmailMensagem({ tipo: "erro", texto: msg });
     } finally {
       setEmailEnviando(false);
+    }
+  };
+
+  const enviarEmailAgenda = async () => {
+    if (emailAgendaEnviando || !perm.canEditarOk) return;
+    setEmailAgendaEnviando(true);
+    setEmailAgendaMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setEmailAgendaMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setEmailAgendaEnviando(false);
+        return;
+      }
+      let bearer = supabaseAnonKey;
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        if (sess.session?.access_token) bearer = sess.session.access_token;
+      } catch {
+        /* mantém anon */
+      }
+      const base = supabaseUrl.replace(/\/$/, "");
+      const urlFn = `${base}/functions/v1/email-agenda-diaria`;
+      let res: Response;
+      const tentarFetch = () =>
+        fetch(urlFn, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${bearer}`,
+            apikey: supabaseAnonKey,
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+        });
+      try {
+        res = await tentarFetch();
+        if (!res.ok && (res.status === 502 || res.status === 503 || res.status === 504)) {
+          await new Promise((r) => setTimeout(r, 800));
+          res = await tentarFetch();
+        }
+      } catch (fetchErr) {
+        const raw = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+        const rede =
+          raw.includes("Failed to fetch") ||
+          raw.includes("NetworkError") ||
+          raw.toLowerCase().includes("network");
+        setEmailAgendaMensagem({
+          tipo: "erro",
+          texto: rede
+            ? "Não foi possível chegar à Edge Function (rede, CORS). Confira se email-agenda-diaria está publicada no Supabase."
+            : raw,
+        });
+        setEmailAgendaEnviando(false);
+        return;
+      }
+
+      const resData = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; destinatarios?: string[] };
+
+      if (!res.ok) {
+        setEmailAgendaMensagem({
+          tipo: "erro",
+          texto:
+            typeof resData.error === "string"
+              ? resData.error
+              : `Erro HTTP ${res.status}. Verifique logs da função e secrets EMAIL_AGENDA_DESTINATARIOS / Resend.`,
+        });
+        setEmailAgendaEnviando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        setEmailAgendaMensagem({
+          tipo: "erro",
+          texto: resData?.error ?? "Erro ao enviar e-mail de agenda.",
+        });
+        setEmailAgendaEnviando(false);
+        return;
+      }
+
+      const dest = resData?.destinatarios?.length ? ` para ${resData.destinatarios.join(", ")}` : "";
+      setEmailAgendaMensagem({
+        tipo: "ok",
+        texto: `Agenda enviada com sucesso${dest}.`,
+      });
+      void carregar();
+    } catch (e) {
+      let msg = e instanceof Error ? e.message : String(e);
+      if (/edge function/i.test(msg) || /FunctionsFetchError/i.test(msg)) {
+        msg =
+          "Não foi possível chamar email-agenda-diaria. Faça deploy: supabase functions deploy email-agenda-diaria e defina EMAIL_AGENDA_DESTINATARIOS.";
+      }
+      setEmailAgendaMensagem({ tipo: "erro", texto: msg });
+    } finally {
+      setEmailAgendaEnviando(false);
     }
   };
 
@@ -515,24 +633,40 @@ export default function StatusTecnico() {
   }, null);
   const socialStatusOk = ultimoPipelineRun?.status === "success";
 
-  const ultimoTechLogEmail = techLogs
+  const ultimoTechLogDiretoria = techLogs
     .filter((l) => l.tipo === "relatorio_diretoria")
     .reduce<string | null>((max, l) => {
       if (!max) return l.created_at;
       return l.created_at > max ? l.created_at : max;
     }, null);
-  const emailStatusOk =
-    !!ultimoEmailEnvioAt &&
-    (!ultimoTechLogEmail || ultimoEmailEnvioAt >= ultimoTechLogEmail);
+  const ultimoTechLogAgenda = techLogs
+    .filter((l) => l.tipo === "email_agenda_diaria")
+    .reduce<string | null>((max, l) => {
+      if (!max) return l.created_at;
+      return l.created_at > max ? l.created_at : max;
+    }, null);
+  const emailStatusDiretoriaOk =
+    !!emailUltimoDiretoria &&
+    (!ultimoTechLogDiretoria || emailUltimoDiretoria >= ultimoTechLogDiretoria);
+  const emailStatusAgendaOk =
+    !!emailUltimoAgenda &&
+    (!ultimoTechLogAgenda || emailUltimoAgenda >= ultimoTechLogAgenda);
 
-  const integracoesAtivasCount = [cdaStatusOk, socialStatusOk, emailStatusOk].filter(Boolean).length;
-  const totalIntegracoes = 3;
+  const plsLogsAll = syncLogs.filter((l) => l.integracao_slug === UPLOAD_PLS_COMMERCIAL_SLUG);
+  const ultimoPlsSync = plsLogsAll[0] ?? null;
+  const plsStatusOk = ultimoPlsSync?.status === "ok";
+
+  const integracoesAtivasCount = [cdaStatusOk, socialStatusOk, emailStatusDiretoriaOk, emailStatusAgendaOk, plsStatusOk].filter(Boolean)
+    .length;
+  const totalIntegracoes = 5;
 
   // Último Sync: mais recente de qualquer uma das 3 (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
   if (ultimoSyncCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncCdaLog.executado_em, label: "CDA" });
   if (ultimoPipelineRun?.created_at) timestamps.push({ ts: ultimoPipelineRun.created_at, label: "Social" });
-  if (ultimoEmailEnvioAt) timestamps.push({ ts: ultimoEmailEnvioAt, label: "E-mail" });
+  if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
+  if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
+  if (ultimoPlsSync?.executado_em) timestamps.push({ ts: ultimoPlsSync.executado_em, label: "Upload PLS" });
   const ultimoSyncQualquer = timestamps.length > 0 ? timestamps.reduce((a, b) => (a.ts > b.ts ? a : b)) : null;
 
   // Registros Hoje: soma do fluxo total (CDA + Social Media + E-mails)
@@ -544,10 +678,14 @@ export default function StatusTecnico() {
   const cdaFalhas = syncLogs.filter((l) => l.integracao_slug === "casa_apostas" && l.status === "falha").length;
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
-  const emailFalhas = techLogs.filter((l) => l.tipo === "relatorio_diretoria").length;
+  const emailFalhas = techLogs.filter((l) =>
+    l.tipo === "relatorio_diretoria" || l.tipo === "email_agenda_diaria",
+  ).length;
   const emailTotal = emailEnviosCount + emailFalhas;
-  const totalTentativas = cdaTotal + socialTotal + Math.max(emailTotal, 1);
-  const totalFalhas = cdaFalhas + socialFalhas + emailFalhas;
+  const plsFalhasSync = plsLogsAll.filter((l) => l.status === "falha").length;
+  const emailFalhasSemPls = emailFalhas;
+  const totalTentativas = cdaTotal + socialTotal + Math.max(emailTotal, 1) + plsLogsAll.length;
+  const totalFalhas = cdaFalhas + socialFalhas + emailFalhasSemPls + plsFalhasSync;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
 
   // Alertas derivados — ordem: CDA, Social Media, E-mail
@@ -621,21 +759,55 @@ export default function StatusTecnico() {
   }
 
   // ── E-mail para diretoria ──
-  const techLogsEmail24h = techLogs.filter((l) => {
+  const techLogsEmailDir24h = techLogs.filter((l) => {
     const created = new Date(l.created_at);
     return l.tipo === "relatorio_diretoria" && created >= vinteQuatroHoras;
   });
-  const emailEnviadoHoje = (fluxoDados.find((f) => f.data === hojeIso)?.emails?.relatorio_diretoria ?? 0) > 0;
+  const emailEnviadoHojeDir =
+    (fluxoDados.find((f) => f.data === hojeIso)?.emails?.relatorio_diretoria ?? 0) > 0;
 
-  if (techLogsEmail24h.length > 0) {
+  if (techLogsEmailDir24h.length > 0) {
     alertas.push({ nivel: "erro", msg: "Erro ao enviar E-mail - Relatório de Influencers (Resend)" });
   }
-  if (!emailEnviadoHoje) {
+  if (!emailEnviadoHojeDir) {
     alertas.push({ nivel: "aviso", msg: "E-mail - Relatório de Influencers (Resend) não enviado hoje" });
   }
 
-  // Status por integração (última execução)
-  const statusPorIntegracao = integrations.map((int) => {
+  // ── E-mail agenda (operacional) ──
+  const techLogsEmailAgenda24h = techLogs.filter((l) => {
+    const created = new Date(l.created_at);
+    return l.tipo === "email_agenda_diaria" && created >= vinteQuatroHoras;
+  });
+  const emailEnviadoHojeAgenda =
+    (fluxoDados.find((f) => f.data === hojeIso)?.emails?.email_agenda_diaria ?? 0) > 0;
+
+  if (techLogsEmailAgenda24h.length > 0) {
+    alertas.push({ nivel: "erro", msg: "Erro ao enviar E-mail - Agenda do dia (Resend)" });
+  }
+  if (!emailEnviadoHojeAgenda) {
+    alertas.push({ nivel: "aviso", msg: "E-mail - Agenda do dia (Resend) não enviado hoje" });
+  }
+
+  // ── Upload PLS / Daily Commercial (OCR) ──
+  const techLogsPls24h = techLogs.filter((l) => {
+    const created = new Date(l.created_at);
+    return l.tipo === UPLOAD_PLS_COMMERCIAL_SLUG && created >= vinteQuatroHoras;
+  });
+  const plsSyncFalha24h = plsLogsAll.filter((l) => {
+    const created = new Date(l.executado_em);
+    return l.status === "falha" && created >= vinteQuatroHoras;
+  });
+  if (techLogsPls24h.length > 0 || plsSyncFalha24h.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: "Erro no Upload de Arquivo — a importação não atualizou a base de dados (PLS / Daily Commercial Report).",
+    });
+  }
+
+  // Status por integração (última execução) — PLS tem linha própria com upload na célula Ação
+  const statusPorIntegracao = integrations
+    .filter((int) => int.slug !== UPLOAD_PLS_COMMERCIAL_SLUG)
+    .map((int) => {
     const logsInt = syncLogs.filter((l) => l.integracao_slug === int.slug);
     const ultimo = logsInt[0];
     const syncsHoje = logsInt.filter((l) => l.executado_em?.startsWith(hojeIso));
@@ -673,19 +845,56 @@ export default function StatusTecnico() {
   const emailDiretoriaRow = {
     slug: "email_diretoria",
     nome: "Enviar e-mail para diretoria",
-    ultimoSync: ultimoEmailEnvioAt,
+    ultimoSync: emailUltimoDiretoria,
     registrosHoje: fluxoHojeSocial?.emails?.relatorio_diretoria ?? 0,
     erros: techLogs.filter((l) => l.tipo === "relatorio_diretoria").length,
-    status: (emailStatusOk ? "ok" : "falha") as "ok" | "warning" | "falha",
+    status: (emailStatusDiretoriaOk ? "ok" : "falha") as "ok" | "warning" | "falha",
     syncTipo: "email" as const,
   };
-  const linhasCompletas = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow];
+  const emailAgendaRow = {
+    slug: "email_agenda",
+    nome: "Enviar e-mail de Agenda",
+    ultimoSync: emailUltimoAgenda,
+    registrosHoje: fluxoHojeSocial?.emails?.email_agenda_diaria ?? 0,
+    erros: techLogs.filter((l) => l.tipo === "email_agenda_diaria").length,
+    status: (emailStatusAgendaOk ? "ok" : "falha") as "ok" | "warning" | "falha",
+    syncTipo: "email_agenda" as const,
+  };
+  const plsUltimo = ultimoPlsSync;
+  let plsRowStatus: "ok" | "warning" | "falha" = "ok";
+  if (!plsUltimo) plsRowStatus = "falha";
+  else if (plsUltimo.status === "falha") plsRowStatus = "falha";
+  else if (plsUltimo.erros_count && plsUltimo.erros_count > 0) plsRowStatus = "warning";
+  const plsRow = {
+    slug: UPLOAD_PLS_COMMERCIAL_SLUG,
+    nome: UPLOAD_PLS_DISPLAY_NAME,
+    descricao: "OCR no navegador → ingest-relatorio-mesas-ocr",
+    ativo: true,
+    ultimoSync: plsUltimo?.executado_em ?? null,
+    registrosHoje: fluxoHojeSocial?.pls ?? 0,
+    erros: techLogs.filter((l) => l.tipo === UPLOAD_PLS_COMMERCIAL_SLUG).length,
+    status: plsRowStatus,
+    syncTipo: "pls_upload" as const,
+  };
+  const linhasCompletas = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow, plsRow];
 
   const maxFluxo = Math.max(...fluxoDados.map((f) => f.total), 1);
   const fluxoLabel = (k: string) =>
-    ({ cda: "CDA (Casa de Apostas)", social: "Social Media", relatorio_diretoria: "E-mail: Relatório Diretoria" }[k] ?? `E-mail: ${k}`);
+    ({
+      cda: "CDA (Casa de Apostas)",
+      social: "Social Media",
+      pls: UPLOAD_PLS_DISPLAY_NAME,
+      relatorio_diretoria: "E-mail: Relatório Diretoria",
+      email_agenda_diaria: "E-mail: Agenda do dia",
+    }[k] ?? `E-mail: ${k}`);
   const fluxoCor = (k: string) =>
-    ({ cda: BRAND.roxoVivo, social: BRAND.azul, relatorio_diretoria: BRAND.verde }[k] ?? "#10b981");
+    ({
+      cda: BRAND.roxoVivo,
+      social: BRAND.azul,
+      pls: "#a855f7",
+      relatorio_diretoria: BRAND.verde,
+      email_agenda_diaria: "#14b8a6",
+    }[k] ?? "#10b981");
 
   const corIntegracoes = integracoesAtivasCount === totalIntegracoes ? BRAND.verde : integracoesAtivasCount > 0 ? BRAND.amarelo : BRAND.vermelho;
   const corTaxaErro = parseFloat(taxaErro) > 5 ? BRAND.vermelho : parseFloat(taxaErro) > 0 ? BRAND.amarelo : BRAND.verde;
@@ -767,9 +976,15 @@ export default function StatusTecnico() {
       {/* ── Status das Integrações ── */}
       <div style={card}>
         <SectionTitle icon={<GiCircuitry size={14} />}>Status das Integrações</SectionTitle>
-        {(syncMensagem || syncSocialMensagem || emailMensagem) && (
+        {(syncMensagem || syncSocialMensagem || emailMensagem || emailAgendaMensagem || plsMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-            {[syncMensagem && { prefix: "Sync CDA", msg: syncMensagem }, syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem }, emailMensagem && { prefix: "E-mail", msg: emailMensagem }]
+            {[
+              syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
+              syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
+              emailMensagem && { prefix: "E-mail Diretoria", msg: emailMensagem },
+              emailAgendaMensagem && { prefix: "E-mail Agenda", msg: emailAgendaMensagem },
+              plsMensagem && { prefix: "", msg: plsMensagem },
+            ]
               .filter(Boolean)
               .map((item, i) => {
                 const { prefix, msg } = item as { prefix: string; msg: { tipo: "ok" | "erro"; texto: string } };
@@ -781,7 +996,9 @@ export default function StatusTecnico() {
                     color: msg.tipo === "ok" ? BRAND.verde : BRAND.vermelho,
                     fontFamily: FONT.body, fontSize: 12,
                   }}>
-                    {msg.tipo === "ok" ? "✅ " : "⚠️ "}{prefix}: {msg.texto}
+                    {msg.tipo === "ok" ? "✅ " : "⚠️ "}
+                    {prefix ? `${prefix}: ` : ""}
+                    {msg.texto}
                   </div>
                 );
               })}
@@ -806,8 +1023,14 @@ export default function StatusTecnico() {
                 {linhasCompletas.map((row, idx) => {
                   const isCda = row.syncTipo === "cda";
                   const isSocial = row.syncTipo === "social";
-                  const isEmail = row.syncTipo === "email";
-                  const syncExecutandoRow = isCda ? syncExecutando : isSocial ? syncSocialExecutando : false;
+                  const isEmailDir = row.syncTipo === "email";
+                  const isEmailAgenda = row.syncTipo === "email_agenda";
+                  const isPlsUpload = row.syncTipo === "pls_upload";
+                  const syncExecutandoRow = isCda
+                    ? syncExecutando
+                    : isSocial
+                      ? syncSocialExecutando
+                      : false;
                   const onSync = isCda ? executarSync : isSocial ? executarSyncSocial : () => {};
                   const ultimoSync = "ultimoSync" in row ? row.ultimoSync : null;
                   const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
@@ -839,14 +1062,32 @@ export default function StatusTecnico() {
                       </td>
                       <td style={tdStyle}>
                         {(isCda || isSocial) && (
-                          <button onClick={onSync} disabled={syncExecutandoRow || !perm.canView} style={btnAcao(syncExecutandoRow)}>
+                          <button onClick={onSync} disabled={syncExecutandoRow || !perm.canEditarOk} style={btnAcao(syncExecutandoRow)}>
                             {syncExecutandoRow ? "..." : "🔄 Sync"}
                           </button>
                         )}
-                        {isEmail && (
-                          <button onClick={enviarEmailDiretoria} disabled={emailEnviando || !perm.canView} style={btnAcao(emailEnviando)}>
+                        {isEmailDir && (
+                          <button onClick={enviarEmailDiretoria} disabled={emailEnviando || !perm.canEditarOk} style={btnAcao(emailEnviando)}>
                             {emailEnviando ? "Enviando..." : "Enviar"}
                           </button>
+                        )}
+                        {isEmailAgenda && (
+                          <button onClick={enviarEmailAgenda} disabled={emailAgendaEnviando || !perm.canEditarOk} style={btnAcao(emailAgendaEnviando)}>
+                            {emailAgendaEnviando ? "Enviando..." : "Enviar"}
+                          </button>
+                        )}
+                        {isPlsUpload && (
+                          <MesasSpinRelatorioUpload
+                            variant="statusTable"
+                            t={t}
+                            operadoras={operadorasOcr}
+                            disabled={perm.loading || !perm.canEditarOk}
+                            title=""
+                            description=""
+                            onImported={() => void carregar()}
+                            onBusyChange={setPlsUploadBusy}
+                            onUserMessage={setPlsMensagem}
+                          />
                         )}
                       </td>
                     </tr>
@@ -867,7 +1108,9 @@ export default function StatusTecnico() {
           {[
             { key: "cda", label: "CDA" },
             { key: "social", label: "Social Media" },
+            { key: "pls", label: "PLS / Commercial" },
             { key: "relatorio_diretoria", label: "E-mail Diretoria" },
+            { key: "email_agenda_diaria", label: "E-mail Agenda" },
           ].map((item) => (
             <span key={item.key} style={{ fontFamily: FONT.body, fontSize: 11, color: t.textMuted, display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: fluxoCor(item.key), flexShrink: 0, display: "inline-block" }} />
@@ -908,6 +1151,12 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.social)}%`, minWidth: f.social > 0 ? 8 : 0, height: "100%", background: fluxoCor("social"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.pls > 0 && (
+                      <div
+                        title={`${fluxoLabel("pls")}: ${f.pls.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.pls)}%`, minWidth: f.pls > 0 ? 8 : 0, height: "100%", background: fluxoCor("pls"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                       <div
                         key={tipo}
@@ -931,6 +1180,7 @@ export default function StatusTecnico() {
                     }}>
                       {f.cda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}</div>}
                       {f.social > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}</div>}
+                      {f.pls > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("pls"), fontWeight: 600 }}>●</span> {fluxoLabel("pls")}: {f.pls.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }}>●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
                       ))}
@@ -1036,8 +1286,10 @@ export default function StatusTecnico() {
                             instagram: "Social Media (Instagram)", facebook: "Social Media (Facebook)",
                             youtube: "Social Media (YouTube)", linkedin: "Social Media (LinkedIn)",
                             relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
+                            email_agenda_diaria: "E-mail - Agenda do dia (Resend)",
                             resend: "E-mail (Resend)",
-                          }[log.tipo] ?? log.tipo;
+                            [UPLOAD_PLS_COMMERCIAL_SLUG]: UPLOAD_PLS_DISPLAY_NAME,
+                          }[log.tipo] ?? (log.tipo === UPLOAD_PLS_COMMERCIAL_SLUG ? UPLOAD_PLS_DISPLAY_NAME : log.tipo);
                     return (
                       <tr key={log.id} style={{ background: idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
                         <td style={tdStyle}>{formatarHora(log.created_at)}</td>
@@ -1054,25 +1306,6 @@ export default function StatusTecnico() {
             </div>
           );
         })()}
-      </div>
-
-      {/* Upload de arquivos — relatório Mesas Spin (OCR) */}
-      <div style={card}>
-        <SectionTitle icon={<FileImage size={14} />}>Upload de arquivos</SectionTitle>
-        <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
-          Envie as imagens do relatório <strong>Mesas Spin</strong> (print do BI). O OCR corre no seu navegador; após
-          confirmar, os dados são gravados nas tabelas <code style={{ fontSize: 12 }}>relatorio_*</code> do Supabase
-          (diário, mensal e por mesa).
-        </p>
-        <MesasSpinRelatorioUpload
-          t={t}
-          operadoras={operadorasOcr}
-          disabled={perm.loading}
-          embedded
-          title=""
-          description=""
-          onImported={() => void carregar()}
-        />
       </div>
 
       {/* Configuração de Alertas */}
@@ -1133,7 +1366,19 @@ export default function StatusTecnico() {
                 </tr>
                 <tr>
                   <td style={tdStyle}>E-mail - Relatório de Influencers (Resend) não enviado hoje</td>
-                  <td style={tdStyle}>Sem email_envios hoje</td>
+                  <td style={tdStyle}>Sem email_envios hoje (tipo relatorio_diretoria)</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Erro ao enviar E-mail - Agenda do dia (Resend)</td>
+                  <td style={tdStyle}>tech_logs email_agenda_diaria (24h)</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>E-mail - Agenda do dia (Resend) não enviado hoje</td>
+                  <td style={tdStyle}>Sem email_envios hoje (tipo email_agenda_diaria)</td>
+                </tr>
+                <tr>
+                  <td style={tdStyle}>Erro no Upload de Arquivo</td>
+                  <td style={tdStyle}>tech_logs ou sync_logs (status falha) para upload PLS / Daily Commercial nas últimas 24h</td>
                 </tr>
               </tbody>
             </table>

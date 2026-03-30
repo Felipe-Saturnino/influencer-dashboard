@@ -65,6 +65,12 @@ function isIsoDate(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
+function podeEditar(
+  v: string | null | undefined,
+): boolean {
+  return v === "sim" || v === "proprios";
+}
+
 async function canIngest(
   supabaseSr: ReturnType<typeof createClient>,
   userId: string,
@@ -75,21 +81,20 @@ async function canIngest(
     .eq("id", userId)
     .maybeSingle();
   if (pe || !prof?.role) return false;
-  if (prof.role === "admin" || prof.role === "executivo") return true;
-  const { data: rpMesas } = await supabaseSr
-    .from("role_permissions")
-    .select("can_view")
-    .eq("role", prof.role)
-    .eq("page_key", "mesas_spin")
-    .maybeSingle();
-  if (rpMesas?.can_view === "sim" || rpMesas?.can_view === "proprios") return true;
   const { data: rpStatus } = await supabaseSr
     .from("role_permissions")
-    .select("can_view")
+    .select("can_editar")
     .eq("role", prof.role)
     .eq("page_key", "status_tecnico")
     .maybeSingle();
-  return rpStatus?.can_view === "sim" || rpStatus?.can_view === "proprios";
+  if (podeEditar(rpStatus?.can_editar)) return true;
+  const { data: rpMesas } = await supabaseSr
+    .from("role_permissions")
+    .select("can_editar")
+    .eq("role", prof.role)
+    .eq("page_key", "mesas_spin")
+    .maybeSingle();
+  return podeEditar(rpMesas?.can_editar);
 }
 
 serve(async (req) => {
@@ -195,6 +200,9 @@ serve(async (req) => {
     }
   }
 
+  const INTEGRACAO_SLUG = "upload_pls_daily_commercial";
+  const t0 = Date.now();
+
   try {
     if (daily.length > 0) {
       const datas = [...new Set(daily.map((r) => r.data))];
@@ -267,6 +275,24 @@ serve(async (req) => {
       if (pErr) throw pErr;
     }
 
+    const regsIn = daily.length + monthly.length + porTabela.length;
+    const dur = Date.now() - t0;
+    try {
+      await supabase.from("sync_logs").insert({
+        integracao_slug: INTEGRACAO_SLUG,
+        status: "ok",
+        registros_inseridos: regsIn,
+        registros_atualizados: porTabela.length,
+        erros_count: 0,
+        mensagem_erro: null,
+        duracao_ms: dur,
+        periodo_inicio: null,
+        periodo_fim: null,
+      });
+    } catch (logErr) {
+      console.error("[ingest-relatorio-mesas-ocr] sync_logs ok:", logErr);
+    }
+
     return new Response(
       JSON.stringify({
         ok: true,
@@ -280,6 +306,27 @@ serve(async (req) => {
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    const dur = Date.now() - t0;
+    try {
+      await supabase.from("tech_logs").insert({
+        integracao_slug: INTEGRACAO_SLUG,
+        tipo: INTEGRACAO_SLUG,
+        descricao: `Erro no upload (OCR → relatorio_*): ${msg}`.slice(0, 2000),
+      });
+      await supabase.from("sync_logs").insert({
+        integracao_slug: INTEGRACAO_SLUG,
+        status: "falha",
+        registros_inseridos: 0,
+        registros_atualizados: 0,
+        erros_count: 1,
+        mensagem_erro: msg.slice(0, 500),
+        duracao_ms: dur,
+        periodo_inicio: null,
+        periodo_fim: null,
+      });
+    } catch (logErr) {
+      console.error("[ingest-relatorio-mesas-ocr] log falha:", logErr);
+    }
     return new Response(JSON.stringify({ ok: false, error: msg }), {
       status: 500,
       headers: { ...cors, "Content-Type": "application/json" },
