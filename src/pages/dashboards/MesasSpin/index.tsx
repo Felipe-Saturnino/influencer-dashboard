@@ -5,15 +5,9 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
-import { ChevronLeft, ChevronRight, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import {
-  GiPokerHand,
-  GiCoins,
-  GiTrophy,
-  GiPerson,
-  GiCalendar,
-  GiShield,
-} from "react-icons/gi";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { GiCalendar } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -50,11 +44,6 @@ interface MonthlyRow {
   arpu: number | null;
 }
 
-interface Operadora {
-  slug: string;
-  nome: string;
-}
-
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 const MESES_PT = [
   "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
@@ -81,81 +70,14 @@ function getDatasDoMes(ano: number, mes: number) {
   return { inicio: fmt(new Date(ano, mes, 1)), fim: fmt(new Date(ano, mes + 1, 0)) };
 }
 
-function getDatasDoMesMtd(ano: number, mes: number) {
-  let anoAnt = ano, mesAnt = mes - 1;
-  if (mesAnt < 0) { mesAnt = 11; anoAnt--; }
-  const ultimoDia = new Date(anoAnt, mesAnt + 1, 0).getDate();
-  const hoje = new Date();
-  const dia =
-    anoAnt === hoje.getFullYear() && mesAnt === hoje.getMonth()
-      ? Math.min(hoje.getDate(), ultimoDia)
-      : ultimoDia;
-  return { inicio: fmt(new Date(anoAnt, mesAnt, 1)), fim: fmt(new Date(anoAnt, mesAnt, dia)) };
-}
-
 function fmtBRL(v: number) {
   const sign = v < 0 ? "-" : "";
   return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function fmtBRLCompact(v: number) {
-  const abs = Math.abs(v);
-  const sign = v < 0 ? "-" : "";
-  if (abs >= 1_000_000) return `${sign}R$ ${(abs / 1_000_000).toFixed(2)}M`;
-  if (abs >= 1_000) return `${sign}R$ ${(abs / 1_000).toFixed(1)}k`;
-  return fmtBRL(v);
-}
-
 function fmtPct(v: number | null) {
   if (v == null) return "—";
   return `${Number(v).toFixed(1)}%`;
-}
-
-const KPIS_ZERO = { bets: 0, turnover: 0, ggr: 0, uap: 0, margin_pct: 0, arpu: 0 };
-
-// ─── SELECT COM ÍCONE (padrão Dashboard Influencer) ───────────────────────────
-function SelectComIcone({
-  icon, value, onChange, children, t,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  onChange: (v: string) => void;
-  children: React.ReactNode;
-  t: any;
-}) {
-  return (
-    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-      <span style={{
-        position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-        pointerEvents: "none", display: "flex", alignItems: "center",
-        color: t.textMuted, zIndex: 1,
-      }}>
-        {icon}
-      </span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          padding: "6px 28px 6px 30px",
-          borderRadius: 999,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.inputBg ?? t.cardBg,
-          color: t.text,
-          fontSize: 13,
-          fontFamily: FONT.body,
-          cursor: "pointer",
-          outline: "none",
-          appearance: "none" as const,
-        }}
-      >
-        {children}
-      </select>
-      <span style={{
-        position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-        pointerEvents: "none", color: t.textMuted, fontSize: 10, lineHeight: 1,
-      }}>▾</span>
-    </div>
-  );
 }
 
 // ─── BADGE MARGEM ─────────────────────────────────────────────────────────────
@@ -173,91 +95,6 @@ function MarginBadge({ value }: { value: number | null }) {
     }}>
       {fmtPct(v)}
     </span>
-  );
-}
-
-// ─── KPI CARD ─────────────────────────────────────────────────────────────────
-function KpiCard({
-  label, value, icon, accentVar, accentColor,
-  atual, anterior, isBRL, isPct, isHistorico,
-}: {
-  label: string; value: string; icon: React.ReactNode; accentVar?: string; accentColor: string;
-  atual: number; anterior: number; isBRL?: boolean; isPct?: boolean; isHistorico?: boolean;
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  const diff = atual - anterior;
-  const pct = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
-  const up = diff >= 0;
-  const neutral = Math.abs(diff) < 0.001;
-
-  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
-  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
-  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentColor}18`;
-  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentColor}35`;
-  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
-
-  return (
-    <div style={{
-      borderRadius: 14,
-      border: `1px solid ${t.cardBorder}`,
-      background: brand.blockBg,
-      overflow: "hidden",
-      transition: "box-shadow 0.2s",
-    }}>
-      <div style={{ height: 3, background: barBg }} />
-      <div style={{ padding: "14px 16px" }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: iconBoxBg,
-            border: iconBoxBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: iconBoxColor,
-          }}>
-            {icon}
-          </span>
-          <span style={{
-            color: t.textMuted, fontSize: 10, fontFamily: FONT.body,
-            fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase",
-          }}>
-            {label}
-          </span>
-        </div>
-
-        {/* Valor principal */}
-        <div style={{
-          fontSize: 22, fontWeight: 800, color: t.text,
-          fontFamily: FONT.body, marginBottom: 6, lineHeight: 1.1,
-        }}>
-          {value}
-        </div>
-
-        {/* Delta */}
-        {!isHistorico && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontFamily: FONT.body }}>
-            {neutral ? (
-              <Minus size={12} color={t.textMuted} />
-            ) : up ? (
-              <TrendingUp size={12} color={BRAND.verde} />
-            ) : (
-              <TrendingDown size={12} color={BRAND.vermelho} />
-            )}
-            <span style={{ color: neutral ? t.textMuted : up ? BRAND.verde : BRAND.vermelho, fontWeight: 700, fontSize: 12 }}>
-              {pct !== null ? `${up && !neutral ? "+" : ""}${pct.toFixed(1)}%` : "—"}
-            </span>
-            <span style={{ color: t.textMuted, fontSize: 10 }}>
-              vs {isPct
-                ? fmtPct(anterior)
-                : isBRL
-                  ? fmtBRLCompact(anterior)
-                  : anterior.toLocaleString("pt-BR")} mês ant.
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -291,23 +128,6 @@ function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: str
   );
 }
 
-// ─── PLACEHOLDER BLOCO ────────────────────────────────────────────────────────
-function PlaceholderBloco({ label }: { label: string }) {
-  const { theme: t } = useApp();
-  return (
-    <div style={{
-      borderRadius: 18, border: `1.5px dashed ${t.cardBorder}`,
-      background: `${t.cardBg}80`,
-      padding: "32px 20px",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      color: t.textMuted, fontFamily: FONT.body, fontSize: 13, gap: 8,
-    }}>
-      <Clock size={14} />
-      {label} — em breve
-    </div>
-  );
-}
-
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function MesasSpin() {
   const { theme: t } = useApp();
@@ -323,12 +143,9 @@ export default function MesasSpin() {
   const [idxMes, setIdxMes]           = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
   const [historico, setHistorico]     = useState(false);
   const [loading, setLoading]         = useState(true);
-  const [operadoras, setOperadoras]   = useState<Operadora[]>([]);
-  const [operadoraSel, setOperadoraSel] = useState<string>("todas");
 
   const [dailyData, setDailyData]     = useState<DailyRow[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
-  const [kpisAnterior, setKpisAnterior] = useState(KPIS_ZERO);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -340,87 +157,44 @@ export default function MesasSpin() {
     else setHistorico(true);
   }
 
-  // ── Carregar operadoras ──────────────────────────────────────────────────────
-  useEffect(() => {
-    supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => {
-      setOperadoras(data ?? []);
-    });
-  }, []);
-
   // ── Carregar dados principais ─────────────────────────────────────────────────
   useEffect(() => {
     async function carregar() {
       setLoading(true);
 
       if (historico) {
-        const { data: monthly } = await supabase
-          .from("relatorio_monthly_summary")
-          .select("mes, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
-          .order("mes");
-        const { data: daily } = await supabase
-          .from("relatorio_daily_summary")
-          .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
-          .order("data");
-        setMonthlyData(monthly ?? []);
-        setDailyData(daily ?? []);
+        const monthly = await fetchAllPages(async (from, to) =>
+          supabase
+            .from("relatorio_monthly_summary")
+            .select("mes, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+            .order("mes", { ascending: true })
+            .range(from, to)
+        );
+        const daily = await fetchAllPages(async (from, to) =>
+          supabase
+            .from("relatorio_daily_summary")
+            .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+            .order("data", { ascending: true })
+            .range(from, to)
+        );
+        setMonthlyData(monthly);
+        setDailyData(daily);
       } else if (mesSelecionado) {
         const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-        const { data: daily } = await supabase
-          .from("relatorio_daily_summary")
-          .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
-          .gte("data", inicio).lte("data", fim).order("data");
-        setDailyData(daily ?? []);
+        const daily = await fetchAllPages(async (from, to) =>
+          supabase
+            .from("relatorio_daily_summary")
+            .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+            .gte("data", inicio).lte("data", fim).order("data", { ascending: true }).range(from, to)
+        );
+        setDailyData(daily);
         setMonthlyData([]);
-
-        // KPIs mês anterior (MTD comparável)
-        const { inicio: iAnt, fim: fAnt } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
-        const { data: ant } = await supabase
-          .from("relatorio_daily_summary")
-          .select("turnover, ggr, margin_pct, bets, uap, arpu")
-          .gte("data", iAnt).lte("data", fAnt);
-        const rows = ant ?? [];
-        const totalAnt = rows.reduce((s, r) => ({
-          bets:       s.bets + (r.bets ?? 0),
-          turnover:   s.turnover + (r.turnover ?? 0),
-          ggr:        s.ggr + (r.ggr ?? 0),
-          uap:        s.uap + (r.uap ?? 0),
-          margin_pct: 0,
-          arpu:       0,
-        }), KPIS_ZERO);
-        // Margem e ARPU: médias ponderadas simples
-        const margemMedia = rows.length > 0
-          ? rows.reduce((s, r) => s + (Number(r.margin_pct) || 0), 0) / rows.length : 0;
-        const arpuMedio = rows.length > 0
-          ? rows.reduce((s, r) => s + (Number(r.arpu) || 0), 0) / rows.length : 0;
-        setKpisAnterior({ ...totalAnt, margin_pct: margemMedia, arpu: arpuMedio });
       }
 
       setLoading(false);
     }
     carregar();
   }, [historico, idxMes, mesSelecionado]);
-
-  // ── KPIs período atual ───────────────────────────────────────────────────────
-  const kpisAtual = useMemo(() => {
-    const source = historico
-      ? monthlyData.map((r) => ({ ...r, data: r.mes }))
-      : dailyData;
-    const totais = source.reduce((s, r) => ({
-      bets:       s.bets + (r.bets ?? 0),
-      turnover:   s.turnover + (r.turnover ?? 0),
-      ggr:        s.ggr + (r.ggr ?? 0),
-      uap:        s.uap + (r.uap ?? 0),
-      margin_pct: 0,
-      arpu:       0,
-    }), KPIS_ZERO);
-    const margemMedia = source.length > 0
-      ? source.reduce((s, r) => s + (Number(r.margin_pct) || 0), 0) / source.length : 0;
-    const arpuMedio = source.length > 0
-      ? source.reduce((s, r) => s + (Number(r.arpu) || 0), 0) / source.length : 0;
-    return { ...totais, margin_pct: margemMedia, arpu: arpuMedio };
-  }, [historico, dailyData, monthlyData]);
-
-  const kpisAnt = historico ? KPIS_ZERO : kpisAnterior;
 
   // ── Dados tabela (diário ou mensal) ──────────────────────────────────────────
   const tabelaRows = useMemo(() => {
@@ -534,19 +308,6 @@ export default function MesasSpin() {
               <GiCalendar size={15} /> Histórico
             </button>
 
-            {/* Filtro Operadora — SelectComIcone (padrão Dashboard Influencer) */}
-            <SelectComIcone
-              icon={<GiShield size={15} />}
-              value={operadoraSel}
-              onChange={setOperadoraSel}
-              t={t}
-            >
-              <option value="todas">Todas as operadoras</option>
-              {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
-                <option key={op.slug} value={op.slug}>{op.nome}</option>
-              ))}
-            </SelectComIcone>
-
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
                 <Clock size={12} /> Carregando...
@@ -557,85 +318,7 @@ export default function MesasSpin() {
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          BLOCO 2 — KPIs PRINCIPAIS
-      ══════════════════════════════════════════════════════════════════════ */}
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionHeader
-          icon={<GiPokerHand size={15} />}
-          title="KPIs Principais"
-          sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
-        />
-        <div className="app-grid-kpi-6">
-          <KpiCard
-            label="Apostas"
-            value={kpisAtual.bets.toLocaleString("pt-BR")}
-            icon={<GiTrophy size={16} />}
-            accentVar="--brand-extra1" accentColor={BRAND.ciano}
-            atual={kpisAtual.bets}
-            anterior={kpisAnt.bets}
-            isHistorico={historico}
-          />
-          <KpiCard
-            label="Turnover"
-            value={fmtBRLCompact(kpisAtual.turnover)}
-            icon={<GiCoins size={16} />}
-            accentVar="--brand-extra2" accentColor={BRAND.azul}
-            atual={kpisAtual.turnover}
-            anterior={kpisAnt.turnover}
-            isBRL
-            isHistorico={historico}
-          />
-          <KpiCard
-            label="GGR"
-            value={fmtBRLCompact(kpisAtual.ggr)}
-            icon={<GiPokerHand size={16} />}
-            accentVar="--brand-extra1" accentColor={BRAND.roxoVivo}
-            atual={kpisAtual.ggr}
-            anterior={kpisAnt.ggr}
-            isBRL
-            isHistorico={historico}
-          />
-          <KpiCard
-            label="Margem"
-            value={fmtPct(kpisAtual.margin_pct)}
-            icon={<TrendingUp size={16} />}
-            accentVar="--brand-extra1" accentColor={BRAND.amarelo}
-            atual={kpisAtual.margin_pct}
-            anterior={kpisAnt.margin_pct}
-            isPct
-            isHistorico={historico}
-          />
-          <KpiCard
-            label="UAP"
-            value={kpisAtual.uap.toLocaleString("pt-BR")}
-            icon={<GiPerson size={16} />}
-            accentVar="--brand-extra3" accentColor={BRAND.verde}
-            atual={kpisAtual.uap}
-            anterior={kpisAnt.uap}
-            isHistorico={historico}
-          />
-          <KpiCard
-            label="ARPU"
-            value={fmtBRL(kpisAtual.arpu)}
-            icon={<GiCoins size={14} />}
-            accentVar="--brand-extra4" accentColor={BRAND.rosa}
-            atual={kpisAtual.arpu}
-            anterior={kpisAnt.arpu}
-            isBRL
-            isHistorico={historico}
-          />
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          BLOCO 3 — EVOLUÇÃO DO MÊS (PLACEHOLDER)
-      ══════════════════════════════════════════════════════════════════════ */}
-      <div style={{ marginBottom: 14 }}>
-        <PlaceholderBloco label="Bloco 3 · Gráfico de evolução — últimos 12 meses (Turnover, GGR, UAP)" />
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          BLOCO 5 — DETALHAMENTO DIÁRIO / MENSAL
+          Tabela — detalhamento diário / mensal
       ══════════════════════════════════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionHeader
@@ -733,11 +416,6 @@ export default function MesasSpin() {
           </div>
         )}
       </div>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          BLOCO 6 — MESAS (PLACEHOLDER)
-      ══════════════════════════════════════════════════════════════════════ */}
-      <PlaceholderBloco label="Bloco 6 · Mesas por operadora com dropdown diário (aguarda nova tabela)" />
 
     </div>
   );

@@ -5,6 +5,8 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
+import { FileImage } from "lucide-react";
+import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -139,6 +141,7 @@ export default function StatusTecnico() {
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
+  const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
 
   const card: React.CSSProperties = {
     background: t.cardBg,
@@ -165,6 +168,9 @@ export default function StatusTecnico() {
     // Integrações
     const { data: intData } = await supabase.from("integrations").select("*").eq("ativo", true);
     setIntegrations(intData ?? []);
+
+    const { data: opOcr } = await supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome");
+    setOperadorasOcr(opOcr ?? []);
 
     // Sync logs (últimos 7 dias)
     const { data: syncData } = await supabase
@@ -1048,6 +1054,25 @@ export default function StatusTecnico() {
             </div>
           );
         })()}
+      </div>
+
+      {/* Upload de arquivos — relatório Mesas Spin (OCR) */}
+      <div style={card}>
+        <SectionTitle icon={<FileImage size={14} />}>Upload de arquivos</SectionTitle>
+        <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: "0 0 16px", lineHeight: 1.5 }}>
+          Envie as imagens do relatório <strong>Mesas Spin</strong> (print do BI). O OCR corre no seu navegador; após
+          confirmar, os dados são gravados nas tabelas <code style={{ fontSize: 12 }}>relatorio_*</code> do Supabase
+          (diário, mensal e por mesa).
+        </p>
+        <MesasSpinRelatorioUpload
+          t={t}
+          operadoras={operadorasOcr}
+          disabled={perm.loading}
+          embedded
+          title=""
+          description=""
+          onImported={() => void carregar()}
+        />
       </div>
 
       {/* Configuração de Alertas */}

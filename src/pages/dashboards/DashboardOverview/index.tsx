@@ -5,6 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { BRAND } from "../../../lib/dashboardConstants";
 import {
@@ -70,6 +71,40 @@ interface LiveData {
   status: string;
   plataforma: string;
   data: string;
+}
+
+async function fetchMetricasHistoricoPaginado(
+  filtroOperadora: string,
+  operadoraSlugsForcado: string[] | null | undefined
+): Promise<Metrica[]> {
+  const slugs = operadoraSlugsForcado ?? undefined;
+  return fetchAllPages(async (from, to) => {
+    let qM = supabase
+      .from("influencer_metricas")
+      .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data")
+      .order("data", { ascending: true })
+      .order("influencer_id", { ascending: true })
+      .order("operadora_slug", { ascending: true })
+      .range(from, to);
+    if (slugs?.length) qM = qM.in("operadora_slug", slugs);
+    else if (filtroOperadora !== "todas") qM = qM.eq("operadora_slug", filtroOperadora);
+    return qM;
+  });
+}
+
+async function fetchLivesHistoricoPaginado(operadoraSlugsForcado: string[] | null | undefined): Promise<LiveData[]> {
+  const slugs = operadoraSlugsForcado ?? undefined;
+  return fetchAllPages(async (from, to) => {
+    let qL = supabase
+      .from("lives")
+      .select("id, influencer_id, status, plataforma, data")
+      .eq("status", "realizada")
+      .order("data", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (slugs?.length) qL = qL.in("operadora_slug", slugs);
+    return qL;
+  });
 }
 
 interface LiveResultado {
@@ -213,10 +248,12 @@ export default function DashboardOverview() {
 
       async function buscaResultados(lives: LiveData[]): Promise<LiveResultado[]> {
         const ids = lives.map((l) => l.id);
-        if (!ids.length) return [];
-        const { data } = await supabase.from("live_resultados")
-          .select("live_id, duracao_horas, duracao_min, media_views").in("live_id", ids);
-        return data || [];
+        return fetchLiveResultadosBatched<LiveResultado>(ids, async (slice) =>
+          await supabase
+            .from("live_resultados")
+            .select("live_id, duracao_horas, duracao_min, media_views")
+            .in("live_id", slice)
+        );
       }
 
       function montaRanking(m: Metrica[], l: LiveData[], r: LiveResultado[], investimentoPorInf: Record<string, number>): RankingRow[] {
@@ -268,11 +305,7 @@ export default function DashboardOverview() {
       let periodo: { inicio: string; fim: string };
       if (historico) {
         periodo = { inicio: "2020-01-01", fim: fmt(new Date()) };
-        let qM = supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data");
-        if (operadoraSlugsForcado?.length) qM = qM.in("operadora_slug", operadoraSlugsForcado);
-        else if (filtroOperadora !== "todas") qM = qM.eq("operadora_slug", filtroOperadora);
-        const { data: mAll } = await qM;
-        let mRaw = mAll || [];
+        const mRaw = await fetchMetricasHistoricoPaginado(filtroOperadora, operadoraSlugsForcado);
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
           operadora_slug: operadoraSlugParaApi,
@@ -280,8 +313,7 @@ export default function DashboardOverview() {
           dataFim: periodo.fim,
         });
         metricas = mesclarMetricasComAliases(mRaw, aliasesSinteticas, periodo.fim, podeVerInfluencer);
-        const { data: lAll } = await supabase.from("lives").select("id, influencer_id, status, plataforma, data").eq("status", "realizada");
-        lives = lAll || [];
+        lives = await fetchLivesHistoricoPaginado(operadoraSlugsForcado);
         resultados = await buscaResultados(lives);
       } else {
         periodo = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);

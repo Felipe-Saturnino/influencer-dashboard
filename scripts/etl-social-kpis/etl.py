@@ -6,7 +6,7 @@ Roda via GitHub Actions todo dia às 06:00 BRT
 v2:
 - Instagram: follower_count removido dos insights → followers_count no objeto IG
 - Instagram/Facebook: engagement_rate limitado a 99.9999 (overflow no banco)
-- Facebook: page_impressions + page_engaged_users; post_impressions nos posts
+- Facebook: page_impressions + page_post_engagements (page_engaged_users inválido na API); post_impressions nos posts
 - YouTube: subscriberCount (Channels API); Analytics day report sem métrica impressions; followers no kpi_daily
 """
 
@@ -77,6 +77,22 @@ def _log_api_error(resp: requests.Response, context: str = ""):
         log.error("%s API erro %s: %s", context, resp.status_code, txt)
         if "expired" in txt.lower():
             log.error("Meta — Token expirado. Gere novo Page Access Token em Meta for Developers.")
+
+
+def _parse_api_datetime(val: object) -> str | None:
+    """Normaliza timestamp ISO da Meta/YouTube para string compatível com timestamptz no Postgres."""
+    if not val or not isinstance(val, str):
+        return None
+    s = val.strip()
+    if s.endswith("+0000"):
+        s = s[:-5] + "+00:00"
+    s = s.replace("Z", "+00:00")
+    try:
+        from datetime import datetime
+
+        return datetime.fromisoformat(s).isoformat()
+    except ValueError:
+        return None
 
 
 def _parse_iso_duration_seconds(duration: str) -> int:
@@ -311,6 +327,7 @@ def fetch_instagram():
             {
                 "post_id": p["id"],
                 "date": TARGET_DATE.isoformat(),
+                "published_at": _parse_api_datetime(p.get("timestamp")),
                 "type": p.get("media_type"),
                 "caption": (p.get("caption") or "")[:500],
                 "permalink": p.get("permalink"),
@@ -371,10 +388,11 @@ def fetch_facebook():
     followers_count = page_data.get("followers_count")
 
     metrics = {}
+    # page_engaged_users não é métrica válida no endpoint atual → (#100) valid insights metric
     ins_resp = requests.get(
         f"{base}/{META_PAGE_ID}/insights",
         params={
-            "metric": "page_impressions,page_engaged_users",
+            "metric": "page_impressions,page_post_engagements",
             "period": "day",
             "since": ins_since,
             "until": ins_until,
@@ -451,6 +469,7 @@ def fetch_facebook():
             {
                 "post_id": p["id"],
                 "date": TARGET_DATE.isoformat(),
+                "published_at": _parse_api_datetime(p.get("created_time")),
                 "type": fb_type,
                 "message": (p.get("message") or "")[:500],
                 "permalink": p.get("permalink_url"),
@@ -466,7 +485,7 @@ def fetch_facebook():
         )
 
     page_impressions = metrics.get("page_impressions", 1) or 1
-    engagements = metrics.get("page_engaged_users", total_eng)
+    engagements = metrics.get("page_post_engagements", total_eng)
     if engagements is None:
         engagements = total_eng
 
@@ -582,6 +601,7 @@ def fetch_youtube():
                 {
                     "video_id": v["id"],
                     "date": date_str,
+                    "published_at": _parse_api_datetime(v["snippet"].get("publishedAt")),
                     "title": v["snippet"]["title"],
                     "type": vtype,
                     "views": int(s.get("viewCount", 0)),

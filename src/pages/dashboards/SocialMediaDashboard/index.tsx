@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { ChevronLeft, ChevronRight, Clock, Play, Heart, MessageCircle, Bookmark } from "lucide-react";
 import {
   GiPokerHand,
   GiMicrophone,
@@ -77,8 +78,10 @@ interface PostUnificado {
   cor: string;
   tag: string;
   resumo: string;
-  stats: string[];
+  stats: ReactNode[];
   date: string;
+  /** ISO da API (Meta/YouTube); null em linhas antigas até o próximo ETL. */
+  publishedAt: string | null;
   url: string | null;
   thumbnailUrl: string | null;
 }
@@ -93,6 +96,84 @@ const fmtNum = (n: number | null | undefined) => {
 
 const fmtPct = (n: number | null | undefined) =>
   n != null ? `${(n * 100).toFixed(1)}%` : "—";
+
+/** Data/hora da publicação no carrossel (America/Sao_Paulo). */
+function fmtPostPublicacao(publishedAt: string | null | undefined, dataFallback: string): string {
+  if (publishedAt) {
+    const d = new Date(publishedAt);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "America/Sao_Paulo",
+      });
+    }
+  }
+  if (dataFallback) {
+    const d = new Date(`${dataFallback}T12:00:00`);
+    if (!Number.isNaN(d.getTime())) {
+      return `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })} · só dia (sem hora no registo)`;
+    }
+  }
+  return "—";
+}
+
+function postStatPill(icon: ReactNode, value: string): ReactNode {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0, color: "currentColor" }}>{icon}</span>
+      <span style={{ fontVariantNumeric: "tabular-nums" }}>{value}</span>
+    </span>
+  );
+}
+
+function PostCarouselThumb({ p, height }: { p: PostUnificado; height: number }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const hasUrl = Boolean(p.thumbnailUrl?.trim());
+  const showBadge = !hasUrl || imgFailed;
+
+  return (
+    <div style={{
+      width: "100%", height,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: `${p.cor}18`, overflow: "hidden", position: "relative",
+    }}>
+      {hasUrl && !imgFailed && (
+        <img
+          src={p.thumbnailUrl!}
+          alt=""
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          loading="lazy"
+          onError={() => setImgFailed(true)}
+        />
+      )}
+      {showBadge && (
+        <div style={{
+          position: "absolute", inset: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          pointerEvents: "none",
+        }}>
+          <svg width="96" height="96" viewBox="0 0 96 96">
+            <rect width="96" height="96" rx="20" fill={p.cor} opacity=".2" />
+            <text x="48" y="62" textAnchor="middle" fontSize="36" fill={p.cor} fontFamily={FONT.body}>{p.tag}</text>
+          </svg>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ordenarPostsRecentes(a: PostUnificado, b: PostUnificado): number {
+  const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : NaN;
+  const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : NaN;
+  if (!Number.isNaN(ta) && !Number.isNaN(tb) && ta !== tb) return tb - ta;
+  if (!Number.isNaN(ta) && Number.isNaN(tb)) return -1;
+  if (Number.isNaN(ta) && !Number.isNaN(tb)) return 1;
+  return b.date.localeCompare(a.date);
+}
 
 // ─── COMPONENTE: SECTION TITLE (padrão do Overview) ──────────────────────────
 function SectionTitle({
@@ -273,27 +354,31 @@ export default function SocialMediaDashboard() {
       setLoading(true);
       setCarIdx(0);
 
-      const { data: kpi } = await supabase
-        .from("kpi_daily")
-        .select("*")
-        .gte("date", start)
-        .lte("date", end)
-        .order("date", { ascending: true });
+      const kpi = await fetchAllPages<KpiDaily>(async (from, to) =>
+        supabase
+          .from("kpi_daily")
+          .select("*")
+          .gte("date", start)
+          .lte("date", end)
+          .order("date", { ascending: true })
+          .order("channel", { ascending: true })
+          .range(from, to)
+      );
 
       if (cancelled) return;
-      setKpiData((kpi as KpiDaily[]) ?? []);
+      setKpiData(kpi);
 
       const [igRes, fbRes, ytRes] = await Promise.all([
         supabase.from("instagram_posts")
-          .select("date,type,caption,likes,comments,saves,impressions,permalink,thumbnail_url")
+          .select("date,published_at,type,caption,likes,comments,saves,impressions,permalink,thumbnail_url")
           .gte("date", start).lte("date", end)
           .order("date", { ascending: false }).limit(500),
         supabase.from("facebook_posts")
-          .select("date,type,message,reactions,comments,impressions,permalink,thumbnail_url")
+          .select("date,published_at,type,message,reactions,comments,impressions,permalink,thumbnail_url")
           .gte("date", start).lte("date", end)
           .order("date", { ascending: false }).limit(500),
         supabase.from("youtube_videos")
-          .select("date,type,title,views,likes,comments,video_id")
+          .select("date,published_at,type,title,views,likes,comments,video_id")
           .gte("date", start).lte("date", end)
           .order("date", { ascending: false }).limit(500),
       ]);
@@ -301,17 +386,17 @@ export default function SocialMediaDashboard() {
       if (cancelled) return;
 
       const ig = (igRes.data ?? []) as Array<{
-        date: string; type: string; caption: string | null;
+        date: string; published_at: string | null; type: string; caption: string | null;
         likes: number | null; comments: number | null; saves: number | null;
         impressions: number | null; permalink: string | null; thumbnail_url: string | null;
       }>;
       const fb = (fbRes.data ?? []) as Array<{
-        date: string; type: string; message: string | null;
+        date: string; published_at: string | null; type: string; message: string | null;
         reactions: number | null; comments: number | null;
         impressions: number | null; permalink: string | null; thumbnail_url: string | null;
       }>;
       const yt = (ytRes.data ?? []) as Array<{
-        date: string; type: string; title: string | null;
+        date: string; published_at: string | null; type: string; title: string | null;
         views: number | null; likes: number | null; comments: number | null; video_id: string;
       }>;
 
@@ -323,34 +408,48 @@ export default function SocialMediaDashboard() {
 
       const formatoCount: Record<string, number> = {};
 
-      const unificar = <T extends { date: string; type: string }>(
+      const unificar = <T extends { date: string; type: string; published_at?: string | null }>(
         arr: T[], canal: string, cor: string, tag: string,
         getResumo: (r: T) => string,
-        getStats: (r: T) => string[],
+        getStats: (r: T) => ReactNode[],
         getUrl: (r: T) => string | null,
         getThumbnail: (r: T) => string | null
       ): PostUnificado[] =>
         arr.map((r) => {
           const tipo = tipoMap[r.type] ?? r.type ?? "Post";
           formatoCount[tipo] = (formatoCount[tipo] ?? 0) + 1;
-          return { canal, tipo, cor, tag, resumo: getResumo(r), stats: getStats(r), date: r.date, url: getUrl(r), thumbnailUrl: getThumbnail(r) };
+          return {
+            canal, tipo, cor, tag, resumo: getResumo(r), stats: getStats(r),
+            date: r.date, publishedAt: r.published_at ?? null, url: getUrl(r), thumbnailUrl: getThumbnail(r),
+          };
         });
 
       const postsUnif: PostUnificado[] = [
         ...unificar(ig, "Instagram", "#E1306C", "IG",
           (r) => (r.caption ?? "").slice(0, 140),
-          (r) => [`♥ ${fmtNum(r.likes)}`, `💬 ${fmtNum(r.comments)}`, r.saves != null ? `🔖 ${fmtNum(r.saves)}` : ""].filter(Boolean),
+          (r) => [
+            postStatPill(<Heart size={15} strokeWidth={2} aria-hidden />, fmtNum(r.likes)),
+            postStatPill(<MessageCircle size={15} strokeWidth={2} aria-hidden />, fmtNum(r.comments)),
+            ...(r.saves != null ? [postStatPill(<Bookmark size={15} strokeWidth={2} aria-hidden />, fmtNum(r.saves))] : []),
+          ],
           (r) => r.permalink, (r) => r.thumbnail_url),
         ...unificar(fb, "Facebook", "#1877F2", "FB",
           (r) => (r.message ?? "").slice(0, 140),
-          (r) => [`♥ ${fmtNum(r.reactions)}`, `💬 ${fmtNum(r.comments)}`],
+          (r) => [
+            postStatPill(<Heart size={15} strokeWidth={2} aria-hidden />, fmtNum(r.reactions)),
+            postStatPill(<MessageCircle size={15} strokeWidth={2} aria-hidden />, fmtNum(r.comments)),
+          ],
           (r) => r.permalink, (r) => r.thumbnail_url),
         ...unificar(yt, "YouTube", "#FF0000", "YT",
           (r) => (r.title ?? "").slice(0, 140),
-          (r) => [`▶ ${fmtNum(r.views)}`, `♥ ${fmtNum(r.likes)}`, `💬 ${fmtNum(r.comments)}`],
+          (r) => [
+            postStatPill(<Play size={15} strokeWidth={2} aria-hidden />, fmtNum(r.views)),
+            postStatPill(<Heart size={15} strokeWidth={2} aria-hidden />, fmtNum(r.likes)),
+            postStatPill(<MessageCircle size={15} strokeWidth={2} aria-hidden />, fmtNum(r.comments)),
+          ],
           (r) => (r.video_id ? `https://www.youtube.com/watch?v=${r.video_id}` : null),
           (r) => (r.video_id ? `https://img.youtube.com/vi/${r.video_id}/mqdefault.jpg` : null)),
-      ].sort((a, b) => b.date.localeCompare(a.date));
+      ].sort(ordenarPostsRecentes);
 
       setPosts(postsUnif);
       setFormatos(
@@ -780,28 +879,9 @@ export default function SocialMediaDashboard() {
                         background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
                         overflow: "hidden",
                       }}>
-                        <div style={{
-                          width: "100%", height: POST_H_THUMB,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          background: `${p.cor}18`, overflow: "hidden", position: "relative",
-                        }}>
-                          {p.thumbnailUrl && (
-                            <img
-                              src={p.thumbnailUrl} alt=""
-                              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                              loading="lazy"
-                              onError={(e) => { e.currentTarget.style.display = "none"; }}
-                            />
-                          )}
-                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <svg width="96" height="96" viewBox="0 0 96 96">
-                              <rect width="96" height="96" rx="20" fill={p.cor} opacity=".2" />
-                              <text x="48" y="62" textAnchor="middle" fontSize="36" fill={p.cor} fontFamily={FONT.body}>{p.tag}</text>
-                            </svg>
-                          </div>
-                        </div>
+                        <PostCarouselThumb p={p} height={POST_H_THUMB} />
                         <div style={{ padding: 24 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 10, color: p.cor }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 6, color: p.cor }}>
                             {p.url ? (
                               <a href={p.url} target="_blank" rel="noopener noreferrer"
                                 style={{ color: "inherit", textDecoration: "none", borderBottom: "1px dotted currentColor" }}>
@@ -810,13 +890,22 @@ export default function SocialMediaDashboard() {
                             ) : <>{p.canal} · {p.tipo}</>}
                           </div>
                           <div style={{
+                            fontSize: 12, fontWeight: 500, color: t.textMuted, fontFamily: FONT.body,
+                            marginBottom: 10, letterSpacing: "0.02em",
+                          }}>
+                            {fmtPostPublicacao(p.publishedAt, p.date)}
+                          </div>
+                          <div style={{
                             fontSize: 16, color: t.textMuted, lineHeight: 1.55, marginBottom: 14,
                             display: "-webkit-box", WebkitLineClamp: 4,
                             WebkitBoxOrient: "vertical" as const, overflow: "hidden", fontFamily: FONT.body,
                           }}>
                             {p.resumo || `Post de ${p.date}`}
                           </div>
-                          <div style={{ display: "flex", gap: 14, fontSize: 14, color: t.textMuted, fontFamily: FONT.body, flexWrap: "wrap" as const }}>
+                          <div style={{
+                            display: "flex", alignItems: "center", flexWrap: "wrap" as const,
+                            gap: "10px 18px", fontSize: 14, color: t.textMuted, fontFamily: FONT.body,
+                          }}>
                             {p.stats.map((s, j) => <span key={j}>{s}</span>)}
                           </div>
                         </div>

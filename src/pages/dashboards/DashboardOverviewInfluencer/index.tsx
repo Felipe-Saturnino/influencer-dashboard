@@ -5,6 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
 import { BRAND } from "../../../lib/dashboardConstants";
@@ -238,29 +239,38 @@ export default function DashboardOverviewInfluencer() {
       const infIdsQuery = infIds.length > 0 ? infIds : (perfisData || []).map((p: InfluencerPerfil) => p.id);
 
       async function buscaMetricas(ini: string, fim: string): Promise<Metrica[]> {
-        let q = supabase.from("influencer_metricas")
-          .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data")
-          .gte("data", ini).lte("data", fim);
-        if (infIdsQuery.length > 0) q = q.in("influencer_id", infIdsQuery);
-        if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
-        const { data } = await q;
-        return data || [];
+        return fetchAllPages(async (from, to) => {
+          let q = supabase.from("influencer_metricas")
+            .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data")
+            .gte("data", ini).lte("data", fim)
+            .order("data", { ascending: true })
+            .order("influencer_id", { ascending: true })
+            .order("operadora_slug", { ascending: true })
+            .range(from, to);
+          if (infIdsQuery.length > 0) q = q.in("influencer_id", infIdsQuery);
+          if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
+          return q;
+        });
       }
 
       async function buscaLives(ini: string, fim: string): Promise<LiveData[]> {
-        let q = supabase.from("lives")
-          .select("id, influencer_id, data, plataforma")
-          .eq("status", "realizada").gte("data", ini).lte("data", fim);
-        if (infIdsQuery.length > 0) q = q.in("influencer_id", infIdsQuery);
-        const { data } = await q;
-        return data || [];
+        return fetchAllPages(async (from, to) => {
+          let q = supabase.from("lives")
+            .select("id, influencer_id, data, plataforma")
+            .eq("status", "realizada").gte("data", ini).lte("data", fim)
+            .order("data", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to);
+          if (infIdsQuery.length > 0) q = q.in("influencer_id", infIdsQuery);
+          return q;
+        });
       }
 
       async function buscaResultados(lives: LiveData[]) {
         const ids = lives.map((l) => l.id);
-        if (!ids.length) return [] as LiveResultado[];
-        const { data } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min, media_views, max_views").in("live_id", ids);
-        return data || [];
+        return fetchLiveResultadosBatched<LiveResultado>(ids, async (slice) =>
+          await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min, media_views, max_views").in("live_id", slice)
+        );
       }
 
       let metricas = await buscaMetricas(inicio, fim);
@@ -292,12 +302,16 @@ export default function DashboardOverviewInfluencer() {
 
       // Incluir influencers com métricas, lives OU aliases mapeados (caso só tenham tráfego via Gestão de Links)
       let idsComDados = [...new Set([...rows.map((m) => m.influencer_id), ...liveRows.map((l) => l.influencer_id)])];
-      const { data: aliasesMapeados } = await supabase
-        .from("utm_aliases")
-        .select("influencer_id")
-        .eq("status", "mapeado")
-        .not("influencer_id", "is", null);
-      const idsAliases = [...new Set((aliasesMapeados ?? []).map((a: { influencer_id: string }) => a.influencer_id).filter((id) => podeVerInfluencer(id)))];
+      const aliasesMapeados = await fetchAllPages<{ influencer_id: string }>(async (from, to) =>
+        supabase
+          .from("utm_aliases")
+          .select("influencer_id")
+          .eq("status", "mapeado")
+          .not("influencer_id", "is", null)
+          .order("influencer_id", { ascending: true })
+          .range(from, to)
+      );
+      const idsAliases = [...new Set(aliasesMapeados.map((a) => a.influencer_id).filter((id) => podeVerInfluencer(id)))];
       idsComDados = [...new Set([...idsComDados, ...idsAliases])];
       setInfluencersComDadosIds(idsComDados);
 
