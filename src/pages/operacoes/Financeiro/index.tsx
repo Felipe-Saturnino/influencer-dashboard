@@ -137,6 +137,57 @@ function cicloAberto(ciclo: CicloPagamento): boolean {
   return hoje <= fim;
 }
 
+function mesCalendarioDeHoje(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function yyyymmFromDateStr(yyyyMmDd: string): string {
+  if (!yyyyMmDd || yyyyMmDd.length < 7) return "";
+  return yyyyMmDd.slice(0, 7);
+}
+
+/** Meses (yyyy-mm) posteriores ao mês de referência até fimYm (inclusive), em ordem decrescente — ex.: ciclo que termina em abril enquanto estamos em março → ["2026-04"]. */
+function mesesPosterioresAoMesAtualAte(fimYm: string, mesReferenciaYm: string): string[] {
+  if (!fimYm || !mesReferenciaYm || fimYm <= mesReferenciaYm) return [];
+  const r: string[] = [];
+  let y = Number(fimYm.slice(0, 4));
+  let m = Number(fimYm.slice(5, 7));
+  while (true) {
+    const curYm = `${y}-${String(m).padStart(2, "0")}`;
+    if (curYm <= mesReferenciaYm) break;
+    r.push(curYm);
+    m -= 1;
+    if (m < 1) {
+      m = 12;
+      y -= 1;
+    }
+  }
+  return r;
+}
+
+/** Lista do carrossel: meses passados + atual (gerarMeses) e, se o ciclo aberto terminar em mês futuro, esses meses aparecem à frente (índice 0 = mais “à frente” no calendário). */
+function opcoesMesesDoCarrossel(ciclos: CicloPagamento[]): { value: string; label: string }[] {
+  const base = gerarMeses().slice(1);
+  const refYm = mesCalendarioDeHoje();
+  const aberto = ciclos.find((c) => cicloAberto(c));
+  const fimYm = aberto?.data_fim ? yyyymmFromDateStr(aberto.data_fim) : "";
+  const extrasYm = fimYm ? mesesPosterioresAoMesAtualAte(fimYm, refYm) : [];
+  const extraOpcoes = extrasYm.map((value) => ({
+    value,
+    label: `${MESES_NOMES[Number(value.slice(5, 7)) - 1]} ${value.slice(0, 4)}`,
+  }));
+  const seen = new Set(extraOpcoes.map((o) => o.value));
+  const merged: { value: string; label: string }[] = [...extraOpcoes];
+  for (const o of base) {
+    if (!seen.has(o.value)) {
+      seen.add(o.value);
+      merged.push(o);
+    }
+  }
+  return merged;
+}
+
 // ── Componentes base ───────────────────────────────────────────────────────────
 
 function Avatar({ name, size = 28 }: { name: string; size?: number }) {
@@ -1785,9 +1836,17 @@ export default function Financeiro() {
     [influencerList, podeVerInfluencer]
   );
 
-  const MESES_OPCOES = useMemo(() => gerarMeses().slice(1), []);
-  const [mesFiltro, setMesFiltro] = useState(MESES_OPCOES[0]?.value ?? "");
+  const MESES_OPCOES = useMemo(() => opcoesMesesDoCarrossel(ciclos), [ciclos]);
+  const [mesFiltro, setMesFiltro] = useState(() => mesCalendarioDeHoje());
   const [historico, setHistorico] = useState(false);
+
+  useEffect(() => {
+    if (historico || MESES_OPCOES.length === 0) return;
+    if (!MESES_OPCOES.some((m) => m.value === mesFiltro)) {
+      const fallback = MESES_OPCOES.find((m) => m.value === mesCalendarioDeHoje()) ?? MESES_OPCOES[0];
+      if (fallback) setMesFiltro(fallback.value);
+    }
+  }, [MESES_OPCOES, historico, mesFiltro]);
 
   const filterOperadoraEfetivo = operadoraSlugsForcado?.length ? operadoraSlugsForcado[0] : filterOperadora;
   const filtroOp = operadoraSlugsForcado?.length ? operadoraSlugsForcado : (filterOperadora !== "todas" ? [filterOperadora] : null);
