@@ -6,6 +6,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
   GiCalendar, GiStarMedal, GiShield,
@@ -419,15 +420,23 @@ export default function DashboardConversao() {
       });
       setOperadoraInfMap(map);
 
-      let qMetricas = supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, visit_count, data");
       const { inicio, fim } = historico || !mesSelecionado
         ? { inicio: "2020-01-01", fim: new Date().toISOString().split("T")[0] }
         : getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-      if (!historico && mesSelecionado) qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
-      if (operadoraSlugsForcado?.length) qMetricas = qMetricas.in("operadora_slug", operadoraSlugsForcado);
-      else if (filtroOperadora !== "todas") qMetricas = qMetricas.eq("operadora_slug", filtroOperadora);
-      const { data: metricasData } = await qMetricas;
-      let metricas = (metricasData || []) as { influencer_id: string; visit_count: number; registration_count: number; ftd_count: number }[];
+      const metricasData = await fetchAllPages<{ influencer_id: string; visit_count: number; registration_count: number; ftd_count: number; data: string }>(
+        async (from, to) => {
+          let qMetricas = supabase.from("influencer_metricas").select("influencer_id, registration_count, ftd_count, visit_count, data")
+            .order("data", { ascending: true })
+            .order("influencer_id", { ascending: true })
+            .order("operadora_slug", { ascending: true })
+            .range(from, to);
+          if (!historico && mesSelecionado) qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
+          if (operadoraSlugsForcado?.length) qMetricas = qMetricas.in("operadora_slug", operadoraSlugsForcado);
+          else if (filtroOperadora !== "todas") qMetricas = qMetricas.eq("operadora_slug", filtroOperadora);
+          return qMetricas;
+        }
+      );
+      let metricas = metricasData;
       if (historico) {
         const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
@@ -438,21 +447,26 @@ export default function DashboardConversao() {
         metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
       }
 
-      let qLives = supabase.from("lives").select("id, influencer_id, status, plataforma, data, operadora_slug").eq("status", "realizada");
-      if (!historico && mesSelecionado) {
-        const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-        qLives = qLives.gte("data", inicio).lte("data", fim);
-      }
-      if (operadoraSlugsForcado?.length) qLives = qLives.in("operadora_slug", operadoraSlugsForcado);
-      const { data: livesData } = await qLives;
-      const lives = livesData || [];
+      const lives = await fetchAllPages<{ id: string; influencer_id: string; status: string; plataforma: string; data: string; operadora_slug: string }>(
+        async (from, to) => {
+          let qLives = supabase.from("lives").select("id, influencer_id, status, plataforma, data, operadora_slug").eq("status", "realizada")
+            .order("data", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to);
+          if (!historico && mesSelecionado) {
+            const { inicio: i0, fim: f0 } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
+            qLives = qLives.gte("data", i0).lte("data", f0);
+          }
+          if (operadoraSlugsForcado?.length) qLives = qLives.in("operadora_slug", operadoraSlugsForcado);
+          return qLives;
+        }
+      );
 
-      const liveIds = lives.map((l: { id: string }) => l.id);
-      let resultados: { live_id: string; duracao_horas: number; duracao_min: number; media_views: number }[] = [];
-      if (liveIds.length > 0) {
-        const { data: resData } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min, media_views").in("live_id", liveIds);
-        resultados = resData || [];
-      }
+      const liveIds = lives.map((l) => l.id);
+      const resultados = await fetchLiveResultadosBatched<{ live_id: string; duracao_horas: number; duracao_min: number; media_views: number }>(
+        liveIds,
+        async (slice) => await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min, media_views").in("live_id", slice)
+      );
 
       const mapa = new Map<string, { acessos: number; registros: number; ftds: number; viewsTotal: number; liveComViews: number; horas: number }>();
       metricas.forEach((m: { influencer_id: string; visit_count: number; registration_count: number; ftd_count: number }) => {

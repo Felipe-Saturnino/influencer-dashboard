@@ -4,6 +4,7 @@
  * dashboards imediatamente, mesmo antes do sync-metricas-cda rodar.
  */
 import { supabase } from "./supabase";
+import { fetchAllPages } from "./supabasePaginate";
 
 export interface MetricaAliasSynthetic {
   influencer_id: string;
@@ -48,24 +49,28 @@ export async function buscarMetricasDeAliases(opts?: {
   dataInicio?: string;
   dataFim?: string;
 }): Promise<MetricaAliasSynthetic[]> {
-  let q = supabase
-    .from("utm_aliases")
-    .select("influencer_id, total_visits, total_registrations, total_ftds, total_deposit, total_withdrawal, primeiro_visto, ultimo_visto")
-    .eq("status", "mapeado")
-    .not("influencer_id", "is", null);
+  const rows = await fetchAllPages<AliasRow>(async (from, to) => {
+    let q = supabase
+      .from("utm_aliases")
+      .select("influencer_id, total_visits, total_registrations, total_ftds, total_deposit, total_withdrawal, primeiro_visto, ultimo_visto")
+      .eq("status", "mapeado")
+      .not("influencer_id", "is", null)
+      .order("influencer_id", { ascending: true })
+      .order("primeiro_visto", { ascending: true, nullsFirst: true })
+      .range(from, to);
 
-  if (opts?.operadora_slug) {
-    q = q.or(`operadora_slug.eq.${opts.operadora_slug},operadora_slug.is.null`);
-  }
-  if (opts?.influencerIds?.length) {
-    q = q.in("influencer_id", opts.influencerIds);
-  }
-  if (opts?.dataInicio && opts?.dataFim) {
-    q = q.lte("primeiro_visto", opts.dataFim).or(`ultimo_visto.gte.${opts.dataInicio},ultimo_visto.is.null`);
-  }
+    if (opts?.operadora_slug) {
+      q = q.or(`operadora_slug.eq.${opts.operadora_slug},operadora_slug.is.null`);
+    }
+    if (opts?.influencerIds?.length) {
+      q = q.in("influencer_id", opts.influencerIds);
+    }
+    if (opts?.dataInicio && opts?.dataFim) {
+      q = q.lte("primeiro_visto", opts.dataFim).or(`ultimo_visto.gte.${opts.dataInicio},ultimo_visto.is.null`);
+    }
 
-  const { data } = await q;
-  const rows = (data ?? []) as AliasRow[];
+    return q;
+  });
 
   const byInf = new Map<string, { visits: number; regs: number; ftds: number; ftdTotal: number; deposit: number; withdrawal: number; ultimo: string }>();
   for (const r of rows) {

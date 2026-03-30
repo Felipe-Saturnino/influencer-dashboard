@@ -5,6 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { BRAND } from "../../../lib/dashboardConstants";
 import {
@@ -72,51 +73,38 @@ interface LiveData {
   data: string;
 }
 
-/** PostgREST/Supabase retorna no máx. 1000 linhas por request; no Histórico isso truncava o consolidado. */
-const SUPABASE_PAGE = 1000;
-
 async function fetchMetricasHistoricoPaginado(
   filtroOperadora: string,
   operadoraSlugsForcado: string[] | null | undefined
 ): Promise<Metrica[]> {
-  const acc: Metrica[] = [];
   const slugs = operadoraSlugsForcado ?? undefined;
-  for (let from = 0; ; from += SUPABASE_PAGE) {
+  return fetchAllPages(async (from, to) => {
     let qM = supabase
       .from("influencer_metricas")
       .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_total, ggr, data")
       .order("data", { ascending: true })
       .order("influencer_id", { ascending: true })
       .order("operadora_slug", { ascending: true })
-      .range(from, from + SUPABASE_PAGE - 1);
+      .range(from, to);
     if (slugs?.length) qM = qM.in("operadora_slug", slugs);
     else if (filtroOperadora !== "todas") qM = qM.eq("operadora_slug", filtroOperadora);
-    const { data: chunk } = await qM;
-    const rows = chunk || [];
-    acc.push(...rows);
-    if (rows.length < SUPABASE_PAGE) break;
-  }
-  return acc;
+    return qM;
+  });
 }
 
 async function fetchLivesHistoricoPaginado(operadoraSlugsForcado: string[] | null | undefined): Promise<LiveData[]> {
-  const acc: LiveData[] = [];
   const slugs = operadoraSlugsForcado ?? undefined;
-  for (let from = 0; ; from += SUPABASE_PAGE) {
+  return fetchAllPages(async (from, to) => {
     let qL = supabase
       .from("lives")
       .select("id, influencer_id, status, plataforma, data")
       .eq("status", "realizada")
       .order("data", { ascending: true })
       .order("id", { ascending: true })
-      .range(from, from + SUPABASE_PAGE - 1);
+      .range(from, to);
     if (slugs?.length) qL = qL.in("operadora_slug", slugs);
-    const { data: chunk } = await qL;
-    const rows = chunk || [];
-    acc.push(...rows);
-    if (rows.length < SUPABASE_PAGE) break;
-  }
-  return acc;
+    return qL;
+  });
 }
 
 interface LiveResultado {
@@ -260,18 +248,12 @@ export default function DashboardOverview() {
 
       async function buscaResultados(lives: LiveData[]): Promise<LiveResultado[]> {
         const ids = lives.map((l) => l.id);
-        if (!ids.length) return [];
-        const chunk = 150;
-        const out: LiveResultado[] = [];
-        for (let i = 0; i < ids.length; i += chunk) {
-          const slice = ids.slice(i, i + chunk);
-          const { data } = await supabase
+        return fetchLiveResultadosBatched<LiveResultado>(ids, async (slice) =>
+          await supabase
             .from("live_resultados")
             .select("live_id, duracao_horas, duracao_min, media_views")
-            .in("live_id", slice);
-          if (data?.length) out.push(...data);
-        }
-        return out;
+            .in("live_id", slice)
+        );
       }
 
       function montaRanking(m: Metrica[], l: LiveData[], r: LiveResultado[], investimentoPorInf: Record<string, number>): RankingRow[] {

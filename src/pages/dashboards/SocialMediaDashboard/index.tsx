@@ -5,6 +5,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { ChevronLeft, ChevronRight, Clock, Play, Heart, MessageCircle, Bookmark } from "lucide-react";
 import {
   GiPokerHand,
@@ -353,15 +354,19 @@ export default function SocialMediaDashboard() {
       setLoading(true);
       setCarIdx(0);
 
-      const { data: kpi } = await supabase
-        .from("kpi_daily")
-        .select("*")
-        .gte("date", start)
-        .lte("date", end)
-        .order("date", { ascending: true });
+      const kpi = await fetchAllPages<KpiDaily>(async (from, to) =>
+        supabase
+          .from("kpi_daily")
+          .select("*")
+          .gte("date", start)
+          .lte("date", end)
+          .order("date", { ascending: true })
+          .order("channel", { ascending: true })
+          .range(from, to)
+      );
 
       if (cancelled) return;
-      setKpiData((kpi as KpiDaily[]) ?? []);
+      setKpiData(kpi);
 
       const [igRes, fbRes, ytRes] = await Promise.all([
         supabase.from("instagram_posts")

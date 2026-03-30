@@ -5,6 +5,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { GiCalendar } from "react-icons/gi";
 
@@ -162,23 +163,31 @@ export default function MesasSpin() {
       setLoading(true);
 
       if (historico) {
-        const { data: monthly } = await supabase
-          .from("relatorio_monthly_summary")
-          .select("mes, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
-          .order("mes");
-        const { data: daily } = await supabase
-          .from("relatorio_daily_summary")
-          .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
-          .order("data");
-        setMonthlyData(monthly ?? []);
-        setDailyData(daily ?? []);
+        const monthly = await fetchAllPages(async (from, to) =>
+          supabase
+            .from("relatorio_monthly_summary")
+            .select("mes, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+            .order("mes", { ascending: true })
+            .range(from, to)
+        );
+        const daily = await fetchAllPages(async (from, to) =>
+          supabase
+            .from("relatorio_daily_summary")
+            .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+            .order("data", { ascending: true })
+            .range(from, to)
+        );
+        setMonthlyData(monthly);
+        setDailyData(daily);
       } else if (mesSelecionado) {
         const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-        const { data: daily } = await supabase
-          .from("relatorio_daily_summary")
-          .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
-          .gte("data", inicio).lte("data", fim).order("data");
-        setDailyData(daily ?? []);
+        const daily = await fetchAllPages(async (from, to) =>
+          supabase
+            .from("relatorio_daily_summary")
+            .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+            .gte("data", inicio).lte("data", fim).order("data", { ascending: true }).range(from, to)
+        );
+        setDailyData(daily);
         setMonthlyData([]);
       }
 
