@@ -98,16 +98,40 @@ export function parsePtBrNumber(raw: string): number | null {
   let t = raw.replace(/R\$/gi, "").replace(/%/g, "").replace(/\s/g, "").trim();
   if (!t || t === "—" || t === "-") return null;
   t = t.replace(/O/g, "0");
-  if (/^-?[\d.]+,\d{1,4}$/.test(t)) {
+
+  const sign = t.startsWith("-") ? -1 : 1;
+  if (t.startsWith("-") || t.startsWith("+")) t = t.slice(1);
+
+  // Vírgula só como milhar (OCR perdeu os centavos ou trocou "." por ","): 207,595 → R$ 207.595,00
+  if (/^\d{1,3}(,\d{3})+$/.test(t)) {
+    const n = Number(t.replace(/,/g, ""));
+    return Number.isFinite(n) ? sign * n : null;
+  }
+
+  // Apenas pontos como milhar pt-BR, sem parte decimal na string: 207.595 → 207595
+  if (/^\d{1,3}(\.\d{3})+$/.test(t)) {
+    const n = Number(t.replace(/\./g, ""));
+    return Number.isFinite(n) ? sign * n : null;
+  }
+
+  // pt-BR: milhar com ponto, decimal com vírgula (ex.: 207.595,00 ou 207595,50)
+  if (/^[\d.]+,\d{1,4}$/.test(t)) {
     const norm = t.replace(/\./g, "").replace(",", ".");
     const n = Number(norm);
-    return Number.isFinite(n) ? n : null;
+    return Number.isFinite(n) ? sign * n : null;
   }
-  if (/^-?[\d,]+\.\d{1,4}$/.test(t)) {
+
+  // EN / misto: milhar com vírgula, decimal com ponto
+  if (/^[\d,]+\.\d{1,4}$/.test(t)) {
     const n = Number(t.replace(/,/g, ""));
-    return Number.isFinite(n) ? n : null;
+    return Number.isFinite(n) ? sign * n : null;
   }
-  if (/^-?\d+$/.test(t)) return Number(t);
+
+  if (/^\d+$/.test(t)) {
+    const n = Number(t);
+    return Number.isFinite(n) ? sign * n : null;
+  }
+
   return null;
 }
 

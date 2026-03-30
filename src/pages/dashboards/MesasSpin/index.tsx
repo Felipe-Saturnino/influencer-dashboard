@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -6,7 +6,9 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import type { OperadoraRef } from "../../../lib/mesasSpinRelatorioOcr";
+import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
+import { ChevronLeft, ChevronRight, Clock, LayoutGrid, Table2, FileImage } from "lucide-react";
 import { GiCalendar } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -42,6 +44,21 @@ interface MonthlyRow {
   uap: number | null;
   bet_size: number | null;
   arpu: number | null;
+}
+
+interface PorTabelaRow {
+  data_relatorio: string;
+  nome_tabela: string;
+  operadora: string | null;
+  ggr_d1: number | null;
+  turnover_d1: number | null;
+  bets_d1: number | null;
+  ggr_d2: number | null;
+  turnover_d2: number | null;
+  bets_d2: number | null;
+  ggr_mtd: number | null;
+  turnover_mtd: number | null;
+  bets_mtd: number | null;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -128,6 +145,30 @@ function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: str
   );
 }
 
+// ─── KPI compacto (resumo do período da tabela) ────────────────────────────────
+function KpiMesasCard({ label, value, accent }: { label: string; value: string; accent: string }) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  return (
+    <div style={{
+      background: brand.blockBg,
+      border: `1px solid ${t.cardBorder}`,
+      borderRadius: 14,
+      padding: "14px 16px",
+      overflow: "hidden",
+    }}>
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, transparent)`, margin: "-14px -16px 12px" }} />
+      <p style={{
+        fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase",
+        margin: "0 0 8px", letterSpacing: "0.06em", fontFamily: FONT.body,
+      }}>
+        {label}
+      </p>
+      <p style={{ fontSize: 20, fontWeight: 800, color: t.text, margin: 0, fontFamily: FONT.body }}>{value}</p>
+    </div>
+  );
+}
+
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function MesasSpin() {
   const { theme: t } = useApp();
@@ -144,8 +185,12 @@ export default function MesasSpin() {
   const [historico, setHistorico]     = useState(false);
   const [loading, setLoading]         = useState(true);
 
-  const [dailyData, setDailyData]     = useState<DailyRow[]>([]);
-  const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
+  const [dailyData, setDailyData]       = useState<DailyRow[]>([]);
+  const [monthlyData, setMonthlyData]   = useState<MonthlyRow[]>([]);
+  const [porTabelaRows, setPorTabelaRows] = useState<PorTabelaRow[]>([]);
+  const [porTabelaSnapshot, setPorTabelaSnapshot] = useState<string | null>(null);
+  const [operadorasOcr, setOperadorasOcr] = useState<OperadoraRef[]>([]);
+  const [uploadMsg, setUploadMsg]       = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -157,16 +202,27 @@ export default function MesasSpin() {
     else setHistorico(true);
   }
 
-  // ── Carregar dados principais ─────────────────────────────────────────────────
   useEffect(() => {
-    async function carregar() {
-      setLoading(true);
+    let alive = true;
+    supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => {
+      if (alive) setOperadorasOcr(data ?? []);
+    });
+    return () => { alive = false; };
+  }, []);
 
+  // ── Carregar dados principais + snapshot por mesa ─────────────────────────────
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    setPorTabelaRows([]);
+    setPorTabelaSnapshot(null);
+
+    try {
       if (historico) {
         const monthly = await fetchAllPages(async (from, to) =>
           supabase
             .from("relatorio_monthly_summary")
             .select("mes, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+            .is("operadora", null)
             .order("mes", { ascending: true })
             .range(from, to)
         );
@@ -174,6 +230,7 @@ export default function MesasSpin() {
           supabase
             .from("relatorio_daily_summary")
             .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
+            .is("operadora", null)
             .order("data", { ascending: true })
             .range(from, to)
         );
@@ -185,16 +242,47 @@ export default function MesasSpin() {
           supabase
             .from("relatorio_daily_summary")
             .select("data, turnover, ggr, margin_pct, bets, uap, bet_size, arpu")
-            .gte("data", inicio).lte("data", fim).order("data", { ascending: true }).range(from, to)
+            .is("operadora", null)
+            .gte("data", inicio)
+            .lte("data", fim)
+            .order("data", { ascending: true })
+            .range(from, to)
         );
         setDailyData(daily);
         setMonthlyData([]);
-      }
 
+        const { data: snap } = await supabase
+          .from("relatorio_por_tabela")
+          .select("data_relatorio")
+          .gte("data_relatorio", inicio)
+          .lte("data_relatorio", fim)
+          .order("data_relatorio", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (snap?.data_relatorio) {
+          setPorTabelaSnapshot(snap.data_relatorio);
+          const mesas = await fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_por_tabela")
+              .select(
+                "data_relatorio, nome_tabela, operadora, ggr_d1, turnover_d1, bets_d1, ggr_d2, turnover_d2, bets_d2, ggr_mtd, turnover_mtd, bets_mtd",
+              )
+              .eq("data_relatorio", snap.data_relatorio)
+              .order("nome_tabela")
+              .range(from, to)
+          );
+          setPorTabelaRows(mesas as PorTabelaRow[]);
+        }
+      }
+    } finally {
       setLoading(false);
     }
-    carregar();
-  }, [historico, idxMes, mesSelecionado]);
+  }, [historico, mesSelecionado]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   // ── Dados tabela (diário ou mensal) ──────────────────────────────────────────
   const tabelaRows = useMemo(() => {
@@ -209,6 +297,20 @@ export default function MesasSpin() {
       ...r,
     }));
   }, [historico, dailyData, monthlyData]);
+
+  const kpiResumo = useMemo(() => {
+    if (tabelaRows.length === 0) return null;
+    const withMargin = tabelaRows.filter((r) => r.margin_pct != null);
+    return {
+      turnover: tabelaRows.reduce((s, r) => s + (r.turnover ?? 0), 0),
+      ggr: tabelaRows.reduce((s, r) => s + (r.ggr ?? 0), 0),
+      bets: tabelaRows.reduce((s, r) => s + (r.bets ?? 0), 0),
+      marginMedia:
+        withMargin.length > 0
+          ? withMargin.reduce((s, r) => s + (Number(r.margin_pct) || 0), 0) / withMargin.length
+          : null,
+    };
+  }, [tabelaRows]);
 
   const brand = useDashboardBrand();
 
@@ -235,6 +337,15 @@ export default function MesasSpin() {
   };
 
   const tdNum: React.CSSProperties = { ...tdStyle, textAlign: "right", fontVariantNumeric: "tabular-nums" };
+
+  const thMesa: React.CSSProperties = {
+    ...thStyle, fontSize: 9, padding: "8px 6px", letterSpacing: "0.04em", whiteSpace: "normal", maxWidth: 88,
+    lineHeight: 1.2,
+  };
+  const tdMesa: React.CSSProperties = {
+    ...tdStyle, fontSize: 12, padding: "8px 6px", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis",
+  };
+  const tdMesaNum: React.CSSProperties = { ...tdNum, fontSize: 12, padding: "8px 6px" };
 
   const isPrimeiro = idxMes === 0;
   const isUltimo   = idxMes === mesesDisponiveis.length - 1;
@@ -316,6 +427,58 @@ export default function MesasSpin() {
           </div>
         </div>
       </div>
+
+      {uploadMsg && (
+        <div style={{
+          marginBottom: 14,
+          padding: 12,
+          borderRadius: 12,
+          border: `1px solid ${uploadMsg.tipo === "ok" ? BRAND.verde : BRAND.vermelho}`,
+          background: uploadMsg.tipo === "ok" ? `${BRAND.verde}14` : `${BRAND.vermelho}14`,
+          color: uploadMsg.tipo === "ok" ? BRAND.verde : BRAND.vermelho,
+          fontFamily: FONT.body, fontSize: 13,
+        }}>
+          {uploadMsg.tipo === "ok" ? "✅ " : "⚠️ "}{uploadMsg.texto}
+        </div>
+      )}
+
+      {!perm.loading && perm.canEditarOk && (
+        <div style={{ ...card, marginBottom: 14 }}>
+          <SectionHeader
+            icon={<FileImage size={15} />}
+            title="Importar relatório (print)"
+            sub="· mesmo fluxo OCR do Status Técnico — atualiza resumo diário, mensal e por mesa"
+          />
+          <MesasSpinRelatorioUpload
+            t={t}
+            operadoras={operadorasOcr}
+            disabled={perm.loading}
+            embedded
+            onImported={() => { void carregar(); }}
+            onUserMessage={setUploadMsg}
+          />
+        </div>
+      )}
+
+      {kpiResumo && (
+        <div style={{ ...card, marginBottom: 14 }}>
+          <SectionHeader
+            icon={<LayoutGrid size={15} />}
+            title={historico ? "Resumo do período (soma)" : "Resumo do mês (soma das linhas)"}
+            sub={historico ? "· todos os meses carregados" : undefined}
+          />
+          <div className="app-grid-kpi-4" style={{ gap: 12 }}>
+            <KpiMesasCard label="Turnover" value={fmtBRL(kpiResumo.turnover)} accent={BRAND.roxoVivo} />
+            <KpiMesasCard label="GGR" value={fmtBRL(kpiResumo.ggr)} accent={kpiResumo.ggr >= 0 ? BRAND.verde : BRAND.vermelho} />
+            <KpiMesasCard label="Apostas" value={kpiResumo.bets.toLocaleString("pt-BR")} accent={BRAND.azul} />
+            <KpiMesasCard
+              label="Margem média"
+              value={kpiResumo.marginMedia != null ? fmtPct(kpiResumo.marginMedia) : "—"}
+              accent={BRAND.amarelo}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════════════
           Tabela — detalhamento diário / mensal
@@ -416,6 +579,71 @@ export default function MesasSpin() {
           </div>
         )}
       </div>
+
+      {!historico && (
+        <div style={{ ...card, marginBottom: 14 }}>
+          <SectionHeader
+            icon={<Table2 size={15} />}
+            title="Por mesa (print BI)"
+            sub={
+              porTabelaSnapshot
+                ? `· snapshot ${new Date(porTabelaSnapshot + "T12:00:00").toLocaleDateString("pt-BR")} — GGR / Turnover / Apostas`
+                : "· importe um relatório com secção “Per table” ou aguarde dados no mês"
+            }
+          />
+          {loading ? (
+            <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+              <Clock size={16} style={{ marginBottom: 8 }} />
+              Carregando mesas…
+            </div>
+          ) : porTabelaRows.length === 0 ? (
+            <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+              Nenhum registro em <code style={{ fontSize: 12 }}>relatorio_por_tabela</code> para este mês. Use o bloco de importação acima (ou o Status Técnico).
+            </p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 960 }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...thStyle, minWidth: 160 }}>Mesa</th>
+                    <th style={thMesa}>GGR D-1</th>
+                    <th style={thMesa}>TO D-1</th>
+                    <th style={thMesa}>Ap. D-1</th>
+                    <th style={thMesa}>GGR D-2</th>
+                    <th style={thMesa}>TO D-2</th>
+                    <th style={thMesa}>Ap. D-2</th>
+                    <th style={thMesa}>GGR MTD</th>
+                    <th style={thMesa}>TO MTD</th>
+                    <th style={thMesa}>Ap. MTD</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {porTabelaRows.map((row, i) => (
+                    <tr key={`${row.nome_tabela}-${i}`} style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent" }}>
+                      <td style={{ ...tdMesa, fontWeight: 600 }} title={row.nome_tabela}>{row.nome_tabela}</td>
+                      <td style={{ ...tdMesaNum, color: (row.ggr_d1 ?? 0) >= 0 ? BRAND.verde : BRAND.vermelho }}>
+                        {row.ggr_d1 != null ? fmtBRL(Number(row.ggr_d1)) : "—"}
+                      </td>
+                      <td style={tdMesaNum}>{row.turnover_d1 != null ? fmtBRL(Number(row.turnover_d1)) : "—"}</td>
+                      <td style={tdMesaNum}>{row.bets_d1 != null ? row.bets_d1.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={{ ...tdMesaNum, color: (row.ggr_d2 ?? 0) >= 0 ? BRAND.verde : BRAND.vermelho }}>
+                        {row.ggr_d2 != null ? fmtBRL(Number(row.ggr_d2)) : "—"}
+                      </td>
+                      <td style={tdMesaNum}>{row.turnover_d2 != null ? fmtBRL(Number(row.turnover_d2)) : "—"}</td>
+                      <td style={tdMesaNum}>{row.bets_d2 != null ? row.bets_d2.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={{ ...tdMesaNum, color: (row.ggr_mtd ?? 0) >= 0 ? BRAND.verde : BRAND.vermelho }}>
+                        {row.ggr_mtd != null ? fmtBRL(Number(row.ggr_mtd)) : "—"}
+                      </td>
+                      <td style={tdMesaNum}>{row.turnover_mtd != null ? fmtBRL(Number(row.turnover_mtd)) : "—"}</td>
+                      <td style={tdMesaNum}>{row.bets_mtd != null ? row.bets_mtd.toLocaleString("pt-BR") : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
     </div>
   );
