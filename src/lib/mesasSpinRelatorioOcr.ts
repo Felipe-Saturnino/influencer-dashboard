@@ -261,19 +261,29 @@ function thirdLooksLikeD2ForBlackjackVariant(third: number): boolean {
 }
 
 /**
- * OCR às vezes “come” a célula GGR d-1 na Roleta: os 3 primeiros tokens passam a ser
- * Turnover d-1, Bets d-1 e GGR d-2 — nunca usar o 3.º como apostas.
+ * OCR às vezes “come” a célula GGR d-1 na Roleta: os 2 primeiros tokens passam a ser
+ * Turnover d-1 e Bets d-1. O 3.º token pode ser outra coluna — nunca usar para apostas.
  */
-function roletaLooksLikeShiftedFirstCellIsTurnover(
-  first: number,
-  second: number,
-  third: number,
-): boolean {
+function roletaLooksLikeShiftedFirstCellIsTurnover(first: number, second: number): boolean {
   const absF = Math.abs(first);
   if (absF < 55_000 || absF > 240_000) return false;
-  if (second < 7_000 || second > 70_000) return false;
-  if (Math.abs(third) > absF * 0.12) return false;
-  return absF > Math.abs(second) * 1.15;
+  if (second < 7_000 || second > 75_000) return false;
+  if (Math.abs(second) >= absF * 0.52) return false;
+  return absF > Math.abs(second) * 1.12;
+}
+
+/**
+ * Speed Baccarat: leitura sem GGR d-1 (1.º token já ~9k turnover, 2.º ~3.7k apostas).
+ * Não confundir com (594, 9457, 3728), onde o 1.º número é o GGR.
+ */
+function speedBaccaratLooksLikeSkippedLeadingGgr(first: number, second: number): boolean {
+  const a = Math.abs(first);
+  const b = Math.abs(second);
+  if (a < 5_000 || a > 18_000) return false;
+  if (b < 2_200 || b > 12_000) return false;
+  if (a <= b * 1.25) return false;
+  if (a >= b * 6) return false;
+  return true;
 }
 
 function looseDigitGroupsPattern(n: number): string {
@@ -314,13 +324,14 @@ function strictPerTableD1Triple(
   let turnover = nums[1];
   let apostas = nums[2];
 
-  if (
-    mesa === "Roleta" &&
-    roletaLooksLikeShiftedFirstCellIsTurnover(nums[0], nums[1], nums[2])
-  ) {
+  if (mesa === "Roleta" && roletaLooksLikeShiftedFirstCellIsTurnover(nums[0], nums[1])) {
     turnover = nums[0];
     apostas = nums[1];
     ggr = extractRoletaGgrBeforeTurnover(afterNameForRoleta, turnover);
+  } else if (mesa === "Speed Baccarat" && speedBaccaratLooksLikeSkippedLeadingGgr(nums[0], nums[1])) {
+    turnover = nums[0];
+    apostas = nums[1];
+    ggr = null;
   }
 
   const isBjFamily =
