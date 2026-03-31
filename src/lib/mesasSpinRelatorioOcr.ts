@@ -253,48 +253,51 @@ export function resolveMesaOperadora(tableCell: string): { operadora: string; me
 }
 
 /**
- * GGR d-1 é muito menor que Turnover d-1; Apostas normalmente bem abaixo do Turnover.
- * Quando o 1.º token parece Turnover (OCR perdeu o GGR), desliza a janela até achar o trio.
+ * Per table BRL: só as 3 primeiras colunas numéricas após o nome da mesa
+ * (GGR d-1, Turnover d-1, Bets d-1). Não deslocar a janela — valores seguintes são d-2/MTD.
  */
-function maxStartIndexForD1Window(nums: number[], mesa: string): number {
-  const cap = mesa === "Roleta" ? 20 : 12;
-  return Math.min(nums.length - 3, cap);
+function thirdLooksLikeD2ForBlackjackVariant(third: number): boolean {
+  return Math.abs(third) >= 35_000;
 }
 
-function pickD1GgrTurnoverApostas(nums: number[], mesa: string): [number, number, number] | null {
+function strictPerTableD1Triple(
+  nums: number[],
+  mesa: string,
+): { ggr: number | null; turnover: number; apostas: number } | null {
   if (nums.length < 3) return null;
-  const maxI = maxStartIndexForD1Window(nums, mesa);
-  const candidates: Array<{ i: number; ggr: number; turnover: number; apostas: number }> = [];
-  for (let i = 0; i <= maxI; i++) {
-    const ggr = nums[i];
-    const turnover = nums[i + 1];
-    const apostas = nums[i + 2];
-    const absG = Math.abs(ggr);
-    const absT = Math.abs(turnover);
-    if (absT < 500) continue;
-    if (absG >= absT) continue;
-    const ratioG = absG / absT;
-    if (ratioG >= 0.42) continue;
-    if (ratioG < 0.022 && absT > 35_000) continue;
-    const ratioA = apostas / absT;
-    if (ratioA < 0.0015 || ratioA > 0.42) continue;
-    if (apostas > absT) continue;
-    if (absT > 400_000) continue;
-    if (mesa === "Roleta" && absT < 55_000) continue;
-    if (mesa === "Blackjack 1" && apostas > 18_000) continue;
-    if (mesa === "Blackjack VIP" && apostas > 18_000) continue;
-    if (mesa === "Blackjack 2" && apostas > 15_000) continue;
-    candidates.push({ i, ggr, turnover, apostas });
+  let ggr: number | null = nums[0];
+  let turnover = nums[1];
+  let apostas = nums[2];
+
+  const isBjFamily =
+    mesa === "Blackjack 1" || mesa === "Blackjack VIP" || mesa === "Blackjack 2";
+
+  if (
+    isBjFamily &&
+    thirdLooksLikeD2ForBlackjackVariant(apostas) &&
+    Math.abs(turnover) >= 200 &&
+    Math.abs(turnover) <= 30_000 &&
+    Math.abs(ggr ?? 0) >= 8000 &&
+    Math.abs(ggr ?? 0) <= 120_000
+  ) {
+    apostas = turnover;
+    turnover = ggr as number;
+    ggr = null;
+  } else if (
+    ggr != null &&
+    Math.abs(ggr) >= 8000 &&
+    Math.abs(ggr) <= 120_000 &&
+    Math.abs(turnover) < Math.abs(ggr) * 0.25 &&
+    Math.abs(turnover) >= 50 &&
+    Math.abs(turnover) <= 12_000 &&
+    Math.abs(apostas) <= 50_000
+  ) {
+    const tTmp = ggr;
+    ggr = turnover;
+    turnover = tTmp;
   }
-  if (candidates.length === 0) {
-    if (mesa === "Roleta") {
-      const tTurn = Math.abs(nums[1] ?? 0);
-      if (tTurn > 0 && tTurn < 55_000) return null;
-    }
-    return [nums[0], nums[1], nums[2]];
-  }
-  candidates.sort((a, b) => a.i - b.i);
-  return [candidates[0].ggr, candidates[0].turnover, candidates[0].apostas];
+
+  return { ggr, turnover, apostas };
 }
 
 /** Há carácter «-» antes do 1.º dígito da célula numérica (GGR d-1). */
@@ -316,19 +319,21 @@ function adjustRoletaGgrSign(mesa: string, ggr: number, turnover: number): numbe
   return ggr;
 }
 
-/** Métricas d-1: GGR, Turnover, Apostas (ordem do quadro). */
+/** Métricas d-1: GGR, Turnover, Apostas — só as 3 primeiras células numéricas da linha. */
 function parseFirstThreeMetrics(
   afterName: string,
   mesa: string,
-): [number, number, number] | null {
+): [number | null, number, number] | null {
   const norm = normalizeSignedNumberText(afterName);
   const parts = splitLineParts(norm);
   const nums = collectNumbersLeftToRight(parts);
-  const triple = pickD1GgrTurnoverApostas(nums, mesa);
-  if (!triple) return null;
-  let [ggr, turnover, apostas] = triple;
-  if (ggr > 0 && minusBeforeFirstDigitInCell(norm)) ggr = -Math.abs(ggr);
-  ggr = adjustRoletaGgrSign(mesa, ggr, turnover);
+  const raw = strictPerTableD1Triple(nums, mesa);
+  if (!raw) return null;
+  let { ggr, turnover, apostas } = raw;
+  if (ggr != null) {
+    if (ggr > 0 && minusBeforeFirstDigitInCell(norm)) ggr = -Math.abs(ggr);
+    ggr = adjustRoletaGgrSign(mesa, ggr, turnover);
+  }
   return [ggr, turnover, apostas];
 }
 
@@ -368,18 +373,34 @@ function looksLikeMarginPercent(n: number): boolean {
  * Considera todas as ocorrências plausíveis como margem (|x| ≤ 20 %), não só a primeira.
  */
 function impliedGgrFromMarginInDailyRest(raw: string, turnover: number): number | null {
+  type Cand = { g: number; ap: number };
+  const cands: Cand[] = [];
   const re = /(-?\d+(?:[.,]\d+)?)\s*%/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(raw)) !== null) {
     const pct = parseNumericToken(`${m[1]}%`);
     if (pct == null) continue;
     const ap = Math.abs(pct);
-    if (ap > 6 || ap < 0.05) continue;
+    if (ap > 12 || ap < 0.05) continue;
     const g = Math.round((turnover * pct) / 100);
-    if (Math.abs(g) > Math.abs(turnover) * 0.28) continue;
-    return g;
+    if (Math.abs(g) > Math.abs(turnover) * 0.35) continue;
+    cands.push({ g, ap });
   }
-  return null;
+  const reLoose = /(-?\d+)\s*[.,]\s*(\d+)\s*%/g;
+  while ((m = reLoose.exec(raw)) !== null) {
+    const pct = parseNumericToken(`${m[1]}.${m[2]}%`) ?? parseNumericToken(`${m[1]},${m[2]}%`);
+    if (pct == null) continue;
+    const ap = Math.abs(pct);
+    if (ap > 12 || ap < 0.05) continue;
+    const g = Math.round((turnover * pct) / 100);
+    if (Math.abs(g) > Math.abs(turnover) * 0.35) continue;
+    cands.push({ g, ap });
+  }
+  if (cands.length === 0) return null;
+  const neg = cands.filter((c) => c.g < 0);
+  const pool = neg.length > 0 ? neg : cands;
+  pool.sort((a, b) => a.ap - b.ap);
+  return pool[0]!.g;
 }
 
 function assignDailyMetrics(nr: number[]): {
@@ -472,7 +493,23 @@ function parseDailyBlock(
   return out;
 }
 
-/** Linha «Summary» do Per table: primeiros 3 valores = GGR/Turnover/Bets d-1 (validação do daily). */
+/** Ordem típica GGR, Turnover; se o OCR colocar Turnover (>50k) à frente do GGR, corrige. */
+function normalizeSummaryGgrTurnoverPair(nums: number[]): { ggr: number; turnover: number } | null {
+  if (nums.length < 2) return null;
+  let g = nums[0];
+  let t = nums[1];
+  const ag = Math.abs(g);
+  const at = Math.abs(t);
+  if (ag > 50_000 && at < ag * 0.25 && at < 100_000) {
+    return { ggr: t, turnover: g };
+  }
+  if (at > 50_000 && ag < at * 0.25) {
+    return { ggr: g, turnover: t };
+  }
+  return { ggr: g, turnover: t };
+}
+
+/** Linha «Summary» do Per table: primeiros 2 valores = GGR e Turnover d-1 (para validar o daily). */
 function parsePerTableSummaryD1TripleFromLines(lines: string[]): { ggr: number; turnover: number } | null {
   let last: { ggr: number; turnover: number } | null = null;
   for (let i = 0; i < lines.length; i++) {
@@ -483,7 +520,8 @@ function parsePerTableSummaryD1TripleFromLines(lines: string[]): { ggr: number; 
     const tail = normalizeSignedNumberText(line.slice(k + 7));
     const nums = collectNumbersLeftToRight(splitLineParts(tail));
     if (nums.length < 3) continue;
-    last = { ggr: nums[0], turnover: nums[1] };
+    const pair = normalizeSummaryGgrTurnoverPair(nums);
+    if (pair) last = pair;
   }
   return last;
 }
