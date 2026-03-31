@@ -316,6 +316,107 @@ function stripSummaryLeadForMerge(tail: string): string {
   return tail.replace(/^.*?\bsummary\b/i, "").trim();
 }
 
+function isLayoutNoiseWord(raw: string): boolean {
+  const t = raw.trim().toLowerCase().replace(/\s+/g, "");
+  if (t.length === 0) return true;
+  if (/^d[-]?1$/i.test(t) || /^d[-]?2$/i.test(t)) return true;
+  if (t === "ggr" || t === "mtd") return true;
+  if (t === "turnover" || t === "bets" || t === "bet") return true;
+  if (t === "summary") return true;
+  if (t === "per" || t === "table" || t === "brl") return true;
+  return false;
+}
+
+function wordsToMetricWords(ws: OcrWordLayout[]): OcrWordLayout[] {
+  return [...ws].filter((w) => !isLayoutNoiseWord(w.text)).sort((a, b) => a.bbox.x0 - b.bbox.x0);
+}
+
+function medianGap(ns: number[]): number {
+  if (ns.length === 0) return 0;
+  const s = [...ns].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+}
+
+function clusterWordsToNumber(cluster: OcrWordLayout[]): number | null {
+  if (cluster.length === 0) return null;
+  const joined = normalizeSignedNumberText(
+    cluster.map((w) => w.text.trim()).filter(Boolean).join(" "),
+  );
+  const nums = collectNumbersLeftToRight(splitLineParts(joined));
+  if (nums.length >= 1) return nums[0]!;
+  const t = joined.replace(/\s+/g, "").trim();
+  return t ? parseNumericToken(t) : null;
+}
+
+function clusterMetricWordsByMedianGap(ws: OcrWordLayout[]): OcrWordLayout[][] {
+  if (ws.length === 0) return [];
+  const sorted = [...ws].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+  const gaps: number[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    gaps.push(sorted[i]!.bbox.x0 - sorted[i - 1]!.bbox.x1);
+  }
+  const med = medianGap(gaps);
+  const thresh = Math.max(22, med * 1.6);
+  const clusters: OcrWordLayout[][] = [[sorted[0]!]];
+  for (let i = 1; i < sorted.length; i++) {
+    const g = sorted[i]!.bbox.x0 - sorted[i - 1]!.bbox.x1;
+    if (g > thresh) clusters.push([]);
+    clusters[clusters.length - 1]!.push(sorted[i]!);
+  }
+  return clusters;
+}
+
+/**
+ * GGR / Turnover / Apostas d-1 via salto X (corta bloco d-2) + 2 colunas intermédias na zona d-1.
+ */
+function buildPerTableD1TripleStringFromMetricWords(metricWords: OcrWordLayout[]): string | null {
+  const filtered = metricWords.filter((w) => !isLayoutNoiseWord(w.text));
+  if (filtered.length < 1) return null;
+  const sorted = [...filtered].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+
+  const outerGaps: Array<{ i: number; g: number }> = [];
+  for (let i = 1; i < sorted.length; i++) {
+    outerGaps.push({ i, g: sorted[i]!.bbox.x0 - sorted[i - 1]!.bbox.x1 });
+  }
+  const gvals = outerGaps.map((x) => x.g);
+  const medOut = medianGap(gvals);
+  const maxOut = outerGaps.length ? Math.max(...gvals) : 0;
+  const strongBlockAfterD1 = maxOut >= Math.max(34, medOut * 1.85);
+
+  let d1words = sorted;
+  if (strongBlockAfterD1 && outerGaps.length > 0) {
+    const cut = outerGaps.reduce((a, b) => (b.g > a.g ? b : a)).i;
+    if (cut >= 2 && cut < sorted.length) d1words = sorted.slice(0, cut);
+  }
+
+  if (d1words.length < 1) return null;
+
+  const innerGaps: Array<{ i: number; g: number }> = [];
+  for (let i = 1; i < d1words.length; i++) {
+    innerGaps.push({ i, g: d1words[i]!.bbox.x0 - d1words[i - 1]!.bbox.x1 });
+  }
+  if (innerGaps.length >= 2) {
+    const byG = [...innerGaps].sort((a, b) => b.g - a.g);
+    const top = byG[0]!;
+    const second = byG[1]!;
+    const s1 = Math.min(top.i, second.i);
+    const s2 = Math.max(top.i, second.i);
+    const g = clusterWordsToNumber(d1words.slice(0, s1));
+    const t = clusterWordsToNumber(d1words.slice(s1, s2));
+    const a = clusterWordsToNumber(d1words.slice(s2));
+    if (g != null && t != null && a != null) return `${g} ${t} ${a}`;
+  }
+
+  const clusters = clusterMetricWordsByMedianGap(d1words);
+  if (clusters.length < 3) return null;
+  const g = clusterWordsToNumber(clusters[0]!);
+  const t = clusterWordsToNumber(clusters[1]!);
+  const a = clusterWordsToNumber(clusters[2]!);
+  if (g == null || t == null || a == null) return null;
+  return `${g} ${t} ${a}`;
+}
+
 /**
  * Per table BRL: só as 3 primeiras colunas numéricas após o nome da mesa
  * (GGR d-1, Turnover d-1, Bets d-1). Não deslocar a janela — valores seguintes são d-2/MTD.
@@ -920,6 +1021,7 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
             .filter(Boolean)
             .join(" ")
         : lineStr.slice(canon.raw.length).trim();
+    let metricWords = wordsToMetricWords(subWords.slice(k));
     let nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(afterRest)));
 
     if (nums.length < 3 && i > 0) {
@@ -935,6 +1037,7 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
         const prep = prevWords.map((w) => w.text?.trim() ?? "").filter(Boolean).join(" ");
         afterRest = `${prep} ${afterRest}`.trim();
         nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(afterRest)));
+        metricWords = [...wordsToMetricWords(prevWords), ...metricWords];
       }
     }
 
@@ -947,13 +1050,17 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
         const tail2 = stripSummaryLeadForMerge(nextStrFixed);
         afterRest = `${afterRest} ${tail2}`.trim();
         nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(afterRest)));
+        metricWords = [...metricWords, ...wordsToMetricWords(nextWords)];
         if (nums.length >= 3) i++;
       }
     }
 
-    if (nums.length < 3) continue;
-    const norm = normalizeSignedNumberText(afterRest);
-    const triple = parseFirstThreeMetrics(norm, resolved.mesa);
+    const geomStr = buildPerTableD1TripleStringFromMetricWords(metricWords);
+    let triple = geomStr ? parseFirstThreeMetrics(geomStr, resolved.mesa) : null;
+    if (!triple) {
+      if (nums.length < 3) continue;
+      triple = parseFirstThreeMetrics(normalizeSignedNumberText(afterRest), resolved.mesa);
+    }
     if (!triple) continue;
     const [ggr, turnover, apostas] = triple;
     out.push({
