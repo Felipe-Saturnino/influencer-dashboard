@@ -38,8 +38,6 @@ export interface IngestRelatorioMesasPayload {
 
 export type IngestRelatorioPayload = IngestRelatorioMesasPayload;
 
-const BR_DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-
 const MESES_EN: Record<string, number> = {
   jan: 0,
   feb: 1,
@@ -139,10 +137,68 @@ function splitLineParts(line: string): string[] {
   return line.trim().split(/\s+/).filter(Boolean);
 }
 
-function brDateToIso(token: string): string | null {
-  const m = token.match(BR_DATE_RE);
-  if (!m) return null;
-  return `${m[3]}-${m[2]}-${m[1]}`;
+/** Primeira data DD/MM/AAAA na linha; corrige 2O→20 e, se o OCR leu 20 mas existe 29 no mesmo mês/ano na linha, usa 29. */
+function firstBrDateInLineToIso(line: string): { iso: string; restStart: number } | null {
+  const dm = line.match(/(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})/);
+  if (!dm || dm.index === undefined) return null;
+  let dd = dm[1].replace(/[oO]/g, "0");
+  const mm = dm[2].replace(/[oO]/g, "0");
+  const yy = dm[3].replace(/[oO]/g, "0");
+  if (dd === "20" && new RegExp(`\\b29\\s*\\/\\s*${mm}\\s*\\/\\s*${yy}\\b`).test(line)) {
+    dd = "29";
+  }
+  const iso = `${yy}-${mm}-${dd}`;
+  return { iso, restStart: dm.index + dm[0].length };
+}
+
+/** Maior data DD/MM/AAAA encontrada em todo o OCR (para dia referência por mesa). */
+function maxBrDateIsoInText(text: string): string | null {
+  const re = /\b(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})\b/g;
+  let max: string | null = null;
+  let rm: RegExpExecArray | null;
+  while ((rm = re.exec(text)) !== null) {
+    let dd = rm[1].replace(/[oO]/g, "0");
+    const mm = rm[2].replace(/[oO]/g, "0");
+    const yy = rm[3].replace(/[oO]/g, "0");
+    const iso = `${yy}-${mm}-${dd}`;
+    if (!max || iso > max) {
+      max = iso;
+    }
+  }
+  return max;
+}
+
+/** Corrige 20→29 quando o OCR troca o 9 do dia (ex.: 29/03 lido como 20/03). */
+function fixPhantomDay20InDailyRows(rows: DailyRowParsed[], fullText: string): void {
+  const maxT = maxBrDateIsoInText(fullText);
+  if (maxT) {
+    const maxDay = parseInt(maxT.slice(8), 10);
+    const ymMax = maxT.slice(0, 7);
+    const has29 = rows.some((r) => r.data === maxT);
+    if (maxDay === 29 && !has29) {
+      for (const r of rows) {
+        if (r.data === `${ymMax}-20`) {
+          r.data = maxT;
+          return;
+        }
+      }
+    }
+  }
+  const byYm = new Map<string, DailyRowParsed[]>();
+  for (const r of rows) {
+    const ym = r.data.slice(0, 7);
+    if (!byYm.has(ym)) byYm.set(ym, []);
+    byYm.get(ym)!.push(r);
+  }
+  for (const [ym, group] of byYm) {
+    if (group.length < 3) continue;
+    const days = new Set(group.map((x) => parseInt(x.data.slice(8), 10)));
+    if (days.has(29) || !days.has(20)) continue;
+    if (days.has(27) && days.has(28)) {
+      const victim = group.find((x) => x.data.endsWith("-20"));
+      if (victim) victim.data = `${ym}-29`;
+    }
+  }
 }
 
 /** Coleta todos os tokens numéricos na linha, da esquerda para a direita. */
@@ -215,61 +271,85 @@ function isMonthlyTitleLine(line: string): boolean {
  * Turnover, GGR, Margin %, Bets (apostas), UAP, Bet Size, ARPU.
  * Índices: 0,1,3,4 — ignoramos margin (2), bet size (5) e ARPU (6).
  */
-function parseDailyBlock(lines: string[], start: number, endExclusive: number): DailyRowParsed[] {
+function looksLikeMarginPercent(n: number): boolean {
+  return Number.isFinite(n) && Math.abs(n) <= 50;
+}
+
+function assignDailyMetrics(nr: number[]): {
+  turnover: number;
+  ggr: number;
+  apostas: number;
+  uap: number;
+} | null {
+  let turnover: number;
+  let ggr: number;
+  let apostas: number;
+  let uap: number;
+  if (nr.length >= 7) {
+    turnover = nr[0];
+    ggr = nr[1];
+    apostas = nr[3];
+    uap = nr[4];
+  } else if (nr.length === 6) {
+    if (looksLikeMarginPercent(nr[2])) {
+      turnover = nr[0];
+      ggr = nr[1];
+      apostas = nr[3];
+      uap = nr[4];
+    } else {
+      turnover = nr[0];
+      ggr = nr[1];
+      apostas = nr[2];
+      uap = nr[3];
+    }
+  } else if (nr.length === 5) {
+    turnover = nr[0];
+    ggr = nr[1];
+    apostas = nr[3];
+    uap = nr[4];
+  } else if (nr.length === 4) {
+    turnover = nr[0];
+    ggr = nr[1];
+    apostas = nr[2];
+    uap = nr[3];
+  } else {
+    return null;
+  }
+  return { turnover, ggr, apostas, uap };
+}
+
+function parseDailyBlock(
+  lines: string[],
+  start: number,
+  endExclusive: number,
+  fullText: string,
+): DailyRowParsed[] {
   const out: DailyRowParsed[] = [];
   let i = start;
   while (i < endExclusive) {
     const line = lines[i];
     if (isMonthlyTitleLine(line) || /\bper\s+table/i.test(line)) break;
-    const parts = splitLineParts(line);
-    if (parts.length < 5) {
+    const dateHit = firstBrDateInLineToIso(line);
+    if (!dateHit) {
       i++;
       continue;
     }
-    const dIso = brDateToIso(parts[0]);
-    if (!dIso) {
-      i++;
-      continue;
-    }
-    const tail = parts.slice(1);
-    const nr = collectNumbersLeftToRight(tail);
-    let turnover: number;
-    let ggr: number;
-    let apostas: number;
-    let uap: number;
-    if (nr.length >= 7) {
-      turnover = nr[0];
-      ggr = nr[1];
-      apostas = nr[3];
-      uap = nr[4];
-    } else if (nr.length === 6) {
-      turnover = nr[0];
-      ggr = nr[1];
-      apostas = nr[2];
-      uap = nr[3];
-    } else if (nr.length === 5) {
-      turnover = nr[0];
-      ggr = nr[1];
-      apostas = nr[3];
-      uap = nr[4];
-    } else if (nr.length === 4) {
-      turnover = nr[0];
-      ggr = nr[1];
-      apostas = nr[2];
-      uap = nr[3];
-    } else {
+    const rest = line.slice(dateHit.restStart);
+    const nr = collectNumbersLeftToRight(splitLineParts(rest));
+    const metrics = assignDailyMetrics(nr);
+    if (!metrics) {
       i++;
       continue;
     }
     out.push({
-      data: dIso,
-      turnover,
-      ggr,
-      apostas: Math.round(apostas),
-      uap: Math.round(uap),
+      data: dateHit.iso,
+      ...metrics,
+      apostas: Math.round(metrics.apostas),
+      uap: Math.round(metrics.uap),
     });
     i++;
   }
+  fixPhantomDay20InDailyRows(out, fullText);
   return out;
 }
 
@@ -280,8 +360,10 @@ function parseDailyBlock(lines: string[], start: number, endExclusive: number): 
  */
 function parseMonthlyUapArpuAllLines(lines: string[]): MonthlyRowParsed[] {
   const byMes = new Map<string, MonthlyRowParsed>();
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (isMonthlyTitleLine(line)) continue;
+    if (/^\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}/.test(line.trim())) continue;
     const m = line.match(MONTH_YEAR_RE);
     if (!m || m.index === undefined) continue;
     const mon = m[1];
@@ -289,16 +371,69 @@ function parseMonthlyUapArpuAllLines(lines: string[]): MonthlyRowParsed[] {
     const mesIso = monthYearToIso(mon, year);
     if (!mesIso) continue;
     const tail = line.slice(m.index + m[0].length);
-    const parts = splitLineParts(tail);
-    const allNums = collectNumbersLeftToRight(parts);
+    let parts = splitLineParts(tail);
+    let allNums = collectNumbersLeftToRight(parts);
+    if (
+      allNums.length === 0 &&
+      i + 1 < lines.length &&
+      !isMonthlyTitleLine(lines[i + 1]) &&
+      !/^\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}/.test(lines[i + 1].trim())
+    ) {
+      const nextNums = collectNumbersLeftToRight(splitLineParts(lines[i + 1]));
+      if (nextNums.length >= 2) {
+        allNums = nextNums.length === 2 ? nextNums : [nextNums[0], nextNums[1]];
+        i++;
+      }
+    }
+    if (allNums.length === 1 && i + 1 < lines.length) {
+      const nextNums = collectNumbersLeftToRight(splitLineParts(lines[i + 1]));
+      if (nextNums.length === 1) {
+        allNums = [allNums[0], nextNums[0]];
+        i++;
+      }
+    }
+    if (allNums.length === 3) {
+      const [a, b, c] = allNums;
+      if (a >= 500 && a <= 100_000 && b >= 50 && b < 1000 && c >= 0 && c < 100) {
+        const arpu = c < 10 ? b + c / 10 : b + c / 100;
+        allNums = [a, arpu];
+      }
+    }
     if (allNums.length !== 2) continue;
     const [uapVal, arpuVal] = allNums;
+    if (uapVal < 100 || uapVal > 1_000_000) continue;
+    if (Math.abs(arpuVal) > 1_000_000) continue;
     byMes.set(mesIso, {
       mes: mesIso,
       uap: Math.round(uapVal),
       arpu: arpuVal,
     });
   }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isMonthlyTitleLine(line)) continue;
+    if (/^\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}/.test(line.trim())) continue;
+    if (/blackjack|roulette|baccarat|bet nacional|summary|per\s+table|casa de apostas/i.test(line)) continue;
+    const nums = collectNumbersLeftToRight(splitLineParts(line));
+    if (nums.length !== 2) continue;
+    const [uapVal, arpuVal] = nums;
+    if (uapVal < 800 || uapVal > 5000) continue;
+    if (arpuVal < 80 || arpuVal > 350) continue;
+    for (let j = i - 1; j >= Math.max(0, i - 6); j--) {
+      const m2 = lines[j].match(MONTH_YEAR_RE);
+      if (!m2) continue;
+      const mesIso2 = monthYearToIso(m2[1], m2[2]);
+      if (!mesIso2 || byMes.has(mesIso2)) break;
+      byMes.set(mesIso2, {
+        mes: mesIso2,
+        uap: Math.round(uapVal),
+        arpu: arpuVal,
+      });
+      break;
+    }
+  }
+
   return Array.from(byMes.values()).sort((a, b) => a.mes.localeCompare(b.mes));
 }
 
@@ -352,7 +487,7 @@ export function parseRelatorioFromOcrText(text: string): IngestRelatorioMesasPay
   const dailyEnd = iDaily >= 0 ? inferDailyEnd(lines, iDaily, iPer) : 0;
 
   const daily =
-    iDaily >= 0 ? parseDailyBlock(lines, iDaily + 1, dailyEnd) : [];
+    iDaily >= 0 ? parseDailyBlock(lines, iDaily + 1, dailyEnd, text) : [];
 
   const monthly = parseMonthlyUapArpuAllLines(lines);
 
@@ -360,12 +495,8 @@ export function parseRelatorioFromOcrText(text: string): IngestRelatorioMesasPay
     ? daily.reduce((a, r) => (r.data > a ? r.data : a), daily[0].data)
     : new Date().toISOString().slice(0, 10);
 
-  const re = /\b(\d{2})\/(\d{2})\/(\d{4})\b/g;
-  let rm: RegExpExecArray | null;
-  while ((rm = re.exec(text)) !== null) {
-    const iso = `${rm[3]}-${rm[2]}-${rm[1]}`;
-    if (iso > dataRef) dataRef = iso;
-  }
+  const maxScan = maxBrDateIsoInText(text);
+  if (maxScan && maxScan > dataRef) dataRef = maxScan;
 
   const porStart = iPer >= 0 ? iPer + 1 : -1;
   const por_tabela =
@@ -402,7 +533,7 @@ export async function terminateMesasSpinOcrWorker(): Promise<void> {
   }
 }
 
-export async function prepareImageForOcr(file: File, maxWidth = 3200): Promise<string> {
+export async function prepareImageForOcr(file: File, maxWidth = 4200): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
     const bmp = await createImageBitmap(await fetch(url).then((r) => r.blob()));
