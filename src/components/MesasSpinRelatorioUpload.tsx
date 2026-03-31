@@ -67,14 +67,14 @@ export function MesasSpinRelatorioUpload({
       setDoneMsg(null);
       setPreview(null);
       setBusy(true);
-      setStage("OCR…");
+      setStage("Preparando imagem…");
       setPct(0);
       try {
         if (!file.type.startsWith("image/")) {
           throw new Error("Envie uma imagem (PNG ou JPEG).");
         }
         const text = await runMesasSpinOcr(file, (s, p) => {
-          setStage(s === "ocr" ? `OCR… ${p}%` : "Preparando imagem…");
+          setStage(s === "ocr" ? "OCR…" : "Preparando imagem…");
           if (s === "ocr") setPct(p);
         });
         if (!text || text.length < 80) {
@@ -247,7 +247,7 @@ export function MesasSpinRelatorioUpload({
         {busy && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 12, color: t.textMuted }}>
             <Loader2 size={14} style={{ animation: "ocrSpin 0.9s linear infinite" }} />
-            {stage || "Processando…"} {pct > 0 && stage.includes("OCR") ? `${pct}%` : ""}
+            {stage === "OCR…" ? `OCR… ${pct}%` : stage || "Processando…"}
           </div>
         )}
 
