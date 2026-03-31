@@ -74,16 +74,21 @@ const MESES_EN_LONG: Record<string, number> = {
 const MONTHS_FOR_RE =
   "january|february|march|april|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|abr";
 
-const MONTH_YEAR_RE = new RegExp(`\\b(${MONTHS_FOR_RE})[\\s.:]*(\\d{4})\\b`, "i");
+const MONTH_YEAR_RE = new RegExp(
+  `\\b(${MONTHS_FOR_RE})(?:\\s|[.:_-]|\\b)*(\\d{4}|\\d{2}[oO]\\d{2})\\b`,
+  "i",
+);
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-function monthYearToIso(mon: string, year: string): string | null {
+function monthYearToIso(mon: string, yearRaw: string): string | null {
   const key = mon.toLowerCase();
   const mi = MESES_EN_LONG[key] ?? MESES_EN[key];
   if (mi === undefined) return null;
+  const year = yearRaw.replace(/o/gi, "0");
+  if (!/^\d{4}$/.test(year)) return null;
   return `${year}-${pad2(mi + 1)}-01`;
 }
 
@@ -140,16 +145,13 @@ function brDateToIso(token: string): string | null {
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
-function numbersFromRight(parts: string[], count: number): number[] | null {
+/** Coleta todos os tokens numéricos na linha, da esquerda para a direita. */
+function collectNumbersLeftToRight(parts: string[]): number[] {
   const nums: number[] = [];
-  let i = parts.length - 1;
-  while (i >= 0 && nums.length < count) {
-    const n = parseNumericToken(parts[i]);
-    if (n === null) break;
-    nums.unshift(n);
-    i--;
+  for (const p of parts) {
+    const n = parseNumericToken(p);
+    if (n != null) nums.push(n);
   }
-  if (nums.length !== count) return null;
   return nums;
 }
 
@@ -173,17 +175,16 @@ export function resolveMesaOperadora(tableCell: string): { operadora: string; me
   return null;
 }
 
-/** Primeiros três números após o nome da mesa (GGR d-1, Turnover d-1, Bets d-1). */
+/**
+ * Métricas d-1 da linha Per table: GGR d-1, Turnover d-1, Bets d-1.
+ * Com OCR, a linha traz 9+ números (d-1, d-2, MTD); usamos sempre o 1.º trio.
+ */
 function parseFirstThreeMetrics(afterName: string): [number, number, number] | null {
   const parts = splitLineParts(afterName);
-  const nums: number[] = [];
-  for (const p of parts) {
-    const n = parseNumericToken(p);
-    if (n != null) {
-      nums.push(n);
-      if (nums.length === 3) return [nums[0], nums[1], nums[2]];
-    }
-  }
+  const nums = collectNumbersLeftToRight(parts);
+  if (nums.length >= 9) return [nums[0], nums[1], nums[2]];
+  if (nums.length >= 6) return [nums[0], nums[1], nums[2]];
+  if (nums.length >= 3) return [nums[0], nums[1], nums[2]];
   return null;
 }
 
@@ -209,6 +210,11 @@ function isMonthlyTitleLine(line: string): boolean {
   );
 }
 
+/**
+ * Daily summaries BRL: após a data, ordem fixa
+ * Turnover, GGR, Margin %, Bets (apostas), UAP, Bet Size, ARPU.
+ * Índices: 0,1,3,4 — ignoramos margin (2), bet size (5) e ARPU (6).
+ */
 function parseDailyBlock(lines: string[], start: number, endExclusive: number): DailyRowParsed[] {
   const out: DailyRowParsed[] = [];
   let i = start;
@@ -225,21 +231,35 @@ function parseDailyBlock(lines: string[], start: number, endExclusive: number): 
       i++;
       continue;
     }
-    let tail = parts.slice(1);
-    let nr = numbersFromRight(tail, 5);
-    if (!nr) nr = numbersFromRight(tail, 4);
-    if (!nr) {
-      i++;
-      continue;
-    }
+    const tail = parts.slice(1);
+    const nr = collectNumbersLeftToRight(tail);
     let turnover: number;
     let ggr: number;
     let apostas: number;
     let uap: number;
-    if (nr.length === 5) {
-      [turnover, ggr, , apostas, uap] = nr;
+    if (nr.length >= 7) {
+      turnover = nr[0];
+      ggr = nr[1];
+      apostas = nr[3];
+      uap = nr[4];
+    } else if (nr.length === 6) {
+      turnover = nr[0];
+      ggr = nr[1];
+      apostas = nr[2];
+      uap = nr[3];
+    } else if (nr.length === 5) {
+      turnover = nr[0];
+      ggr = nr[1];
+      apostas = nr[3];
+      uap = nr[4];
+    } else if (nr.length === 4) {
+      turnover = nr[0];
+      ggr = nr[1];
+      apostas = nr[2];
+      uap = nr[3];
     } else {
-      [turnover, ggr, apostas, uap] = nr;
+      i++;
+      continue;
     }
     out.push({
       data: dIso,
@@ -254,14 +274,13 @@ function parseDailyBlock(lines: string[], start: number, endExclusive: number): 
 }
 
 /**
- * Tabela monthly à direita: cada linha tem MMM YYYY e exatamente 2 números (UAP inteiro, ARPU decimal).
- * Ignora linhas do quadro esquerdo (muitas colunas numéricas).
+ * Tabela monthly UAP/ARPU (geralmente à direita): linha "Jan 2026" + exatamente 2 números.
+ * O quadro esquerdo tem 6+ números após o mês → ignorado.
+ * Varre o texto inteiro: ordem do OCR pode colocar esse bloco depois de "Per table".
  */
-function parseSecondMonthlyBlock(lines: string[], start: number, endExclusive: number): MonthlyRowParsed[] {
-  const out: MonthlyRowParsed[] = [];
-  for (let i = start; i < endExclusive; i++) {
-    const line = lines[i];
-    if (/\bper\s+table/i.test(line)) break;
+function parseMonthlyUapArpuAllLines(lines: string[]): MonthlyRowParsed[] {
+  const byMes = new Map<string, MonthlyRowParsed>();
+  for (const line of lines) {
     if (isMonthlyTitleLine(line)) continue;
     const m = line.match(MONTH_YEAR_RE);
     if (!m || m.index === undefined) continue;
@@ -271,21 +290,16 @@ function parseSecondMonthlyBlock(lines: string[], start: number, endExclusive: n
     if (!mesIso) continue;
     const tail = line.slice(m.index + m[0].length);
     const parts = splitLineParts(tail);
-    const fromRight: number[] = [];
-    for (let j = parts.length - 1; j >= 0; j--) {
-      const n = parseNumericToken(parts[j]);
-      if (n === null) break;
-      fromRight.unshift(n);
-    }
-    if (fromRight.length !== 2) continue;
-    const [uapVal, arpuVal] = fromRight;
-    out.push({
+    const allNums = collectNumbersLeftToRight(parts);
+    if (allNums.length !== 2) continue;
+    const [uapVal, arpuVal] = allNums;
+    byMes.set(mesIso, {
       mes: mesIso,
       uap: Math.round(uapVal),
       arpu: arpuVal,
     });
   }
-  return out;
+  return Array.from(byMes.values()).sort((a, b) => a.mes.localeCompare(b.mes));
 }
 
 function parsePorTabelaBlock(
@@ -340,17 +354,7 @@ export function parseRelatorioFromOcrText(text: string): IngestRelatorioMesasPay
   const daily =
     iDaily >= 0 ? parseDailyBlock(lines, iDaily + 1, dailyEnd) : [];
 
-  const bound = iPer >= 0 ? iPer : lines.length;
-  const monthlyTitles: number[] = [];
-  for (let i = iDaily >= 0 ? iDaily : 0; i < bound; i++) {
-    if (isMonthlyTitleLine(lines[i])) monthlyTitles.push(i);
-  }
-  let monthlyScanStart = bound;
-  if (monthlyTitles.length >= 2) monthlyScanStart = monthlyTitles[1] + 1;
-  else if (monthlyTitles.length === 1) monthlyScanStart = monthlyTitles[0] + 1;
-  /** Só linhas «Mês ano» + exactamente UAP e ARPU (filtra o quadro mensal esquerdo com mais métricas). */
-  const monthly =
-    monthlyScanStart < bound ? parseSecondMonthlyBlock(lines, monthlyScanStart, bound) : [];
+  const monthly = parseMonthlyUapArpuAllLines(lines);
 
   let dataRef = daily.length
     ? daily.reduce((a, r) => (r.data > a ? r.data : a), daily[0].data)
