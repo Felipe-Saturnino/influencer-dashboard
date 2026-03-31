@@ -373,18 +373,25 @@ function collapseMetricWordsSameCell(ws: OcrWordLayout[]): OcrWordLayout[] {
 }
 
 /**
- * Pontua cortes (menor = melhor). Rejeita quando «Apostas» parece coluna d-2 (ex. apostas d-1 muito baixas na mesa).
+ * «Per table BRL» d-1: neste BI o turnover d-1 das mesas não passa ~100k e GGR d-1 << turnover MTD.
+ * Evita escolher (GGR) + (Turnover MTD) + (Bets MTD) só porque a/turnover MTD é baixo.
  */
-function perTableTripleSplitScore(g: number, t: number, a: number, mesa: string): number | null {
+function perTableTripleLooksLikeD1(g: number, t: number, a: number, mesa: string): boolean {
   const absT = Math.abs(t);
   const absA = Math.abs(a);
   const absG = Math.abs(g);
-  if (!(absT > 0) || !Number.isFinite(absA)) return null;
+  if (!(absT > 0) || !Number.isFinite(absA)) return false;
+  // Colunas MTD / erros de primeira célula (ex. turnover lido como GGR)
+  if (absG > 28_000) return false;
+  if (absT > 130_000) return false;
+  if (absA > 48_000) return false;
 
   if (mesa === "Roleta") {
     const r = absA / absT;
-    if (r > 1.25 || r < 0.06) return null;
-    return r * 8 + Math.min(absG / absT, 2.5) * 0.5;
+    if (r > 1.12 || r < 0.07) return false;
+    if (absT > 105_000) return false;
+    if (absA > 42_000) return false;
+    return true;
   }
 
   const bjLike =
@@ -393,17 +400,32 @@ function perTableTripleSplitScore(g: number, t: number, a: number, mesa: string)
     mesa === "Blackjack VIP" ||
     mesa === "Blackjack 2";
   if (bjLike) {
-    if (absT < 300 && absA > 25_000) return null;
-    if (absT >= 400 && absA > absT * 1.38) return null;
-    if (absA > 100_000) return null;
-    if (absG > absT * 2.2 && absT > 2_000) return null;
-    const r = absA / absT;
-    const penalty = r > 0.85 ? r * 4 : r;
-    return penalty + Math.min(absG / (absT + 1), 1.2) * 0.3;
+    if (absT < 320 && absA > 22_000) return false;
+    if (absT >= 400 && absA > absT * 1.38) return false;
+    // Margem típica |GGR|/turnover no d-1 (rejeita GGR certo + turnover MTD)
+    if (absT > 600 && absG >= 15) {
+      const m = absG / absT;
+      if (m < 0.0022 || m > 0.52) return false;
+    }
+    return true;
   }
 
-  if (absT >= 400 && absA > absT * 1.38) return null;
-  return absA / absT;
+  return true;
+}
+
+/**
+ * Pontua cortes (menor = melhor). Entre triplos plausíveis, prefere menor volume (d-1 vs MTD).
+ */
+function perTableTripleSplitScore(g: number, t: number, a: number, mesa: string): number | null {
+  if (!perTableTripleLooksLikeD1(g, t, a, mesa)) return null;
+  const absT = Math.abs(t);
+  const absA = Math.abs(a);
+  const absG = Math.abs(g);
+  const r = absA / Math.max(absT, 1);
+  const ratioPen = mesa === "Roleta" ? r * 6 : Math.min(r, 1.2) * 2.8;
+  const volumePen = Math.log10(absT + absA + 12) * 4.2;
+  const gPen = Math.min(absG / (absT + 1), 0.28) * 0.45;
+  return ratioPen + volumePen + gPen;
 }
 
 function enumerateBestD1TripleString(atoms: OcrWordLayout[], mesa: string): string | null {
@@ -423,6 +445,17 @@ function enumerateBestD1TripleString(atoms: OcrWordLayout[], mesa: string): stri
     }
   }
   return best?.s ?? null;
+}
+
+/** Quando a enumeração não acha nenhum triplo plausível, tenta 1 átomo = 1 coluna d-1 (OCR já fundiu milhares). */
+function tripleFromFirstThreeAtoms(collapsed: OcrWordLayout[], mesa: string): string | null {
+  if (collapsed.length < 3) return null;
+  const gv = clusterWordsToNumber(collapsed.slice(0, 1));
+  const tv = clusterWordsToNumber(collapsed.slice(1, 2));
+  const av = clusterWordsToNumber(collapsed.slice(2, 3));
+  if (gv == null || tv == null || av == null) return null;
+  if (!perTableTripleLooksLikeD1(gv, tv, av, mesa)) return null;
+  return `${gv} ${tv} ${av}`;
 }
 
 function clusterWordsToNumber(cluster: OcrWordLayout[]): number | null {
@@ -482,6 +515,8 @@ function buildPerTableD1TripleStringFromMetricWords(metricWords: OcrWordLayout[]
   const collapsed = collapseMetricWordsSameCell(d1words);
   const bestEnum = enumerateBestD1TripleString(collapsed, mesa);
   if (bestEnum) return bestEnum;
+  const fromThree = tripleFromFirstThreeAtoms(collapsed, mesa);
+  if (fromThree) return fromThree;
 
   const innerGaps: Array<{ i: number; g: number }> = [];
   for (let i = 1; i < d1words.length; i++) {
