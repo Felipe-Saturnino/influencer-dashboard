@@ -118,7 +118,6 @@ interface FluxoDia {
   cda: number;
   social: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
-  /** Uploads PLS / Daily Commercial (OCR) bem-sucedidos (sync_logs ok), por dia */
   pls: number;
   total: number;
 }
@@ -146,10 +145,8 @@ export default function StatusTecnico() {
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
   const [, setPlsUploadBusy] = useState(false);
   const [plsMensagem, setPlsMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
-
   const card: React.CSSProperties = {
     background: t.cardBg,
     borderRadius: 16,
@@ -175,9 +172,6 @@ export default function StatusTecnico() {
     // Integrações
     const { data: intData } = await supabase.from("integrations").select("*").eq("ativo", true);
     setIntegrations(intData ?? []);
-
-    const { data: opOcr } = await supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome");
-    setOperadorasOcr(opOcr ?? []);
 
     // Sync logs (últimos 7 dias)
     const { data: syncDataRaw } = await supabase
@@ -623,7 +617,7 @@ export default function StatusTecnico() {
   // KPIs derivados
   const hojeIsoKpi = new Date().toISOString().split("T")[0];
 
-  // Integrações Ativas: 3 (CDA, Social Media, E-mail) — OK = último Sync (automático ou manual) foi sucesso
+  // Integrações Ativas: CDA, Social, e-mails — OK = último sync/execução com sucesso
   const ultimoSyncCdaLog = syncLogs.find((l) => l.integracao_slug === "casa_apostas");
   const cdaStatusOk = ultimoSyncCdaLog?.status === "ok";
 
@@ -660,7 +654,7 @@ export default function StatusTecnico() {
     .length;
   const totalIntegracoes = 5;
 
-  // Último Sync: mais recente de qualquer uma das 3 (por data de execução)
+  // Último Sync: mais recente entre CDA, Social, e-mails e PLS (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
   if (ultimoSyncCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncCdaLog.executado_em, label: "CDA" });
   if (ultimoPipelineRun?.created_at) timestamps.push({ ts: ultimoPipelineRun.created_at, label: "Social" });
@@ -673,7 +667,7 @@ export default function StatusTecnico() {
   const fluxoHoje = fluxoDados.find((f) => f.data === hojeIsoKpi);
   const registrosHojeTotal = fluxoHoje?.total ?? registrosHoje;
 
-  // Taxa de Erro: agregada das 3 (falhas / total tentativas)
+  // Taxa de Erro: falhas / total de tentativas (CDA, Social, e-mails)
   const cdaTotal = syncLogs.filter((l) => l.integracao_slug === "casa_apostas").length;
   const cdaFalhas = syncLogs.filter((l) => l.integracao_slug === "casa_apostas" && l.status === "falha").length;
   const socialTotal = pipelineRuns.length;
@@ -683,9 +677,8 @@ export default function StatusTecnico() {
   ).length;
   const emailTotal = emailEnviosCount + emailFalhas;
   const plsFalhasSync = plsLogsAll.filter((l) => l.status === "falha").length;
-  const emailFalhasSemPls = emailFalhas;
   const totalTentativas = cdaTotal + socialTotal + Math.max(emailTotal, 1) + plsLogsAll.length;
-  const totalFalhas = cdaFalhas + socialFalhas + emailFalhasSemPls + plsFalhasSync;
+  const totalFalhas = cdaFalhas + socialFalhas + emailFalhas + plsFalhasSync;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
 
   // Alertas derivados — ordem: CDA, Social Media, E-mail
@@ -788,23 +781,19 @@ export default function StatusTecnico() {
     alertas.push({ nivel: "aviso", msg: "E-mail - Agenda do dia (Resend) não enviado hoje" });
   }
 
-  // ── Upload PLS / Daily Commercial (OCR) ──
-  const techLogsPls24h = techLogs.filter((l) => {
-    const created = new Date(l.created_at);
-    return l.tipo === UPLOAD_PLS_COMMERCIAL_SLUG && created >= vinteQuatroHoras;
+  // ── Upload PLS / Daily Commercial Report (sync_logs) ──
+  const plsFalhaRecente24h = plsLogsAll.filter((l) => {
+    if (l.status !== "falha") return false;
+    return new Date(l.executado_em) >= vinteQuatroHoras;
   });
-  const plsSyncFalha24h = plsLogsAll.filter((l) => {
-    const created = new Date(l.executado_em);
-    return l.status === "falha" && created >= vinteQuatroHoras;
-  });
-  if (techLogsPls24h.length > 0 || plsSyncFalha24h.length > 0) {
+  if (plsFalhaRecente24h.length > 0) {
     alertas.push({
       nivel: "erro",
-      msg: "Erro no Upload de Arquivo — a importação não atualizou a base de dados (PLS / Daily Commercial Report).",
+      msg: "Upload PLS / Daily Commercial Report falhou nas últimas 24h — confira Logs Recentes e tente novamente com imagem mais nítida.",
     });
   }
 
-  // Status por integração (última execução) — PLS tem linha própria com upload na célula Ação
+  // Status por integração (última execução)
   const statusPorIntegracao = integrations
     .filter((int) => int.slug !== UPLOAD_PLS_COMMERCIAL_SLUG)
     .map((int) => {
@@ -860,23 +849,36 @@ export default function StatusTecnico() {
     status: (emailStatusAgendaOk ? "ok" : "falha") as "ok" | "warning" | "falha",
     syncTipo: "email_agenda" as const,
   };
-  const plsUltimo = ultimoPlsSync;
-  let plsRowStatus: "ok" | "warning" | "falha" = "ok";
-  if (!plsUltimo) plsRowStatus = "falha";
-  else if (plsUltimo.status === "falha") plsRowStatus = "falha";
-  else if (plsUltimo.erros_count && plsUltimo.erros_count > 0) plsRowStatus = "warning";
+
+  const syncsHojePls = plsLogsAll.filter((l) => l.executado_em?.startsWith(hojeIso));
+  const regsHojePls = syncsHojePls.reduce(
+    (s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0),
+    0,
+  );
+  const regsExibirPls =
+    regsHojePls ||
+    (ultimoPlsSync?.status === "ok"
+      ? (ultimoPlsSync.registros_inseridos ?? 0) + (ultimoPlsSync.registros_atualizados ?? 0)
+      : 0);
+  let plsRowStatus: "ok" | "warning" | "falha" = "falha";
+  if (ultimoPlsSync?.status === "ok") {
+    plsRowStatus = ultimoPlsSync.erros_count && ultimoPlsSync.erros_count > 0 ? "warning" : "ok";
+  } else if (ultimoPlsSync?.status === "falha") {
+    plsRowStatus = "falha";
+  }
   const plsRow = {
     slug: UPLOAD_PLS_COMMERCIAL_SLUG,
     nome: UPLOAD_PLS_DISPLAY_NAME,
-    descricao: "OCR no navegador → ingest-relatorio-mesas-ocr",
+    descricao: "OCR no navegador → relatórios Mesas Spin (daily, monthly, por mesa)",
     ativo: true,
-    ultimoSync: plsUltimo?.executado_em ?? null,
-    registrosHoje: fluxoHojeSocial?.pls ?? 0,
-    erros: techLogs.filter((l) => l.tipo === UPLOAD_PLS_COMMERCIAL_SLUG).length,
+    ultimoSync: ultimoPlsSync?.executado_em ?? null,
+    registrosHoje: regsExibirPls,
+    erros: ultimoPlsSync?.erros_count ?? 0,
     status: plsRowStatus,
     syncTipo: "pls_upload" as const,
   };
-  const linhasCompletas = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow, plsRow];
+
+  const linhasCompletas = [...statusPorIntegracao, plsRow, socialKpisRow, emailDiretoriaRow, emailAgendaRow];
 
   const maxFluxo = Math.max(...fluxoDados.map((f) => f.total), 1);
   const fluxoLabel = (k: string) =>
@@ -891,7 +893,7 @@ export default function StatusTecnico() {
     ({
       cda: BRAND.roxoVivo,
       social: BRAND.azul,
-      pls: "#a855f7",
+      pls: "#c026d3",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
     }[k] ?? "#10b981");
@@ -1023,9 +1025,9 @@ export default function StatusTecnico() {
                 {linhasCompletas.map((row, idx) => {
                   const isCda = row.syncTipo === "cda";
                   const isSocial = row.syncTipo === "social";
+                  const isPlsUpload = row.syncTipo === "pls_upload";
                   const isEmailDir = row.syncTipo === "email";
                   const isEmailAgenda = row.syncTipo === "email_agenda";
-                  const isPlsUpload = row.syncTipo === "pls_upload";
                   const syncExecutandoRow = isCda
                     ? syncExecutando
                     : isSocial
@@ -1078,13 +1080,10 @@ export default function StatusTecnico() {
                         )}
                         {isPlsUpload && (
                           <MesasSpinRelatorioUpload
-                            variant="statusTable"
                             t={t}
-                            operadoras={operadorasOcr}
-                            disabled={perm.loading || !perm.canEditarOk}
-                            title=""
-                            description=""
-                            onImported={() => void carregar()}
+                            variant="statusTable"
+                            disabled={!perm.canEditarOk}
+                            onImported={carregar}
                             onBusyChange={setPlsUploadBusy}
                             onUserMessage={setPlsMensagem}
                           />
@@ -1281,15 +1280,16 @@ export default function StatusTecnico() {
                   {techLogsFiltrados.map((log, idx) => {
                     const integracaoLabel =
                       log.integracao_slug
-                        ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ?? log.integracao_slug
+                        ? log.integracao_slug === UPLOAD_PLS_COMMERCIAL_SLUG
+                          ? UPLOAD_PLS_DISPLAY_NAME
+                          : (integrations.find((i) => i.slug === log.integracao_slug)?.nome ?? log.integracao_slug)
                         : {
                             instagram: "Social Media (Instagram)", facebook: "Social Media (Facebook)",
                             youtube: "Social Media (YouTube)", linkedin: "Social Media (LinkedIn)",
                             relatorio_diretoria: "E-mail - Relatório de Influencers (Resend)",
                             email_agenda_diaria: "E-mail - Agenda do dia (Resend)",
                             resend: "E-mail (Resend)",
-                            [UPLOAD_PLS_COMMERCIAL_SLUG]: UPLOAD_PLS_DISPLAY_NAME,
-                          }[log.tipo] ?? (log.tipo === UPLOAD_PLS_COMMERCIAL_SLUG ? UPLOAD_PLS_DISPLAY_NAME : log.tipo);
+                          }[log.tipo] ?? log.tipo;
                     return (
                       <tr key={log.id} style={{ background: idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
                         <td style={tdStyle}>{formatarHora(log.created_at)}</td>
@@ -1377,8 +1377,8 @@ export default function StatusTecnico() {
                   <td style={tdStyle}>Sem email_envios hoje (tipo email_agenda_diaria)</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>Erro no Upload de Arquivo</td>
-                  <td style={tdStyle}>tech_logs ou sync_logs (status falha) para upload PLS / Daily Commercial nas últimas 24h</td>
+                  <td style={tdStyle}>Upload PLS / Daily Commercial Report — falha recente</td>
+                  <td style={tdStyle}>sync_logs status=falha para upload_pls_daily_commercial (últimas 24h)</td>
                 </tr>
               </tbody>
             </table>
