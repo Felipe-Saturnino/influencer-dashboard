@@ -137,6 +137,40 @@ export function parsePtBrNumber(raw: string): number | null {
   return null;
 }
 
+/** Margem = GGR/Turnover (%). Usar na plataforma em vez do valor OCR quando há ruído (ex.: 1,8% → 18). */
+export function marginPctFromGgrTurnover(
+  turnover: number | null | undefined,
+  ggr: number | null | undefined,
+): number | null {
+  const t = Number(turnover);
+  const g = Number(ggr);
+  if (!Number.isFinite(t) || t === 0) return null;
+  if (!Number.isFinite(g)) return null;
+  return (g / t) * 100;
+}
+
+/** Bet size = Turnover ÷ Apostas (linha). Ignorar colunas da imagem. */
+export function betSizeFromTurnoverBets(
+  turnover: number | null | undefined,
+  bets: number | null | undefined,
+): number | null {
+  const t = Number(turnover);
+  const b = Number(bets);
+  if (!Number.isFinite(t) || !Number.isFinite(b) || b === 0) return null;
+  return t / b;
+}
+
+/** ARPU = GGR ÷ UAP (linha). Pode ser negativo; ignorar coluna da imagem. */
+export function arpuFromGgrUap(
+  ggr: number | null | undefined,
+  uap: number | null | undefined,
+): number | null {
+  const g = Number(ggr);
+  const u = Number(uap);
+  if (!Number.isFinite(g) || !Number.isFinite(u) || u === 0) return null;
+  return g / u;
+}
+
 function splitLineParts(line: string): string[] {
   return line.trim().split(/\s+/).filter(Boolean);
 }
@@ -167,7 +201,7 @@ function escapeRegExp(s: string) {
 /** Corta linhas OCR onde começa o nome de uma operadora (evita fundir várias mesas num só nome). */
 function buildPorTabelaLabelSplitRegex(operadoras: OperadoraRef[]): RegExp | null {
   const labels = Array.from(
-    new Set<string>(["Casa de Apostas", ...operadoras.map((o) => o.nome).filter(Boolean)]),
+    new Set<string>(["Casa de Apostas", "Casa de Aposta", ...operadoras.map((o) => o.nome).filter(Boolean)]),
   ).sort((a, b) => b.length - a.length);
   if (labels.length === 0) return null;
   const inner = labels.map((l) => escapeRegExp(l)).join("|");
@@ -176,7 +210,7 @@ function buildPorTabelaLabelSplitRegex(operadoras: OperadoraRef[]): RegExp | nul
 
 function chunkStartsWithOperadoraLabel(chunk: string, operadoras: OperadoraRef[]): boolean {
   const low = chunk.trim().toLowerCase();
-  if (low.startsWith("casa de apostas")) return true;
+  if (low.startsWith("casa de apostas") || low.startsWith("casa de aposta")) return true;
   return operadoras.some((o) => o.nome && low.startsWith(o.nome.toLowerCase()));
 }
 
@@ -206,6 +240,18 @@ function sanitizePorTabelaMesaName(name: string): string {
   let s = name.replace(/\s+(?:o|O)\s+(?:o|O)(?:\s+(?:o|O))*/g, " ");
   s = s.replace(/\s+/g, " ").trim();
   return s;
+}
+
+/** Linha Summary ou lixo OCR (números colados no nome). */
+function isPorTabelaNomeIgnorar(name: string): boolean {
+  const t = sanitizePorTabelaMesaName(name);
+  if (t.length < 2) return true;
+  if (/^summary\b/i.test(t)) return true;
+  if (/\bsummary\b/i.test(t)) return true;
+  if (t.length > 90) return true;
+  const digitChunks = t.match(/\d[\d\s.,]*/g) ?? [];
+  if (digitChunks.length >= 5) return true;
+  return false;
 }
 
 function makePorTabelaParsed(
@@ -260,7 +306,10 @@ function parsePorTabelaSegmentToRows(
     const stripped = tryStripTrailingNineNumeric(parts);
     if (!stripped || stripped.rest.length === 0) break;
     const name = stripped.rest.join(" ").trim();
-    if (name.length < 2 || /^month\b|^day\b|^main\b|^summary\b/i.test(name)) break;
+    if (name.length < 2 || /^month\b|^day\b|^main\b/i.test(name) || isPorTabelaNomeIgnorar(name)) {
+      parts = stripped.rest;
+      continue;
+    }
     rows.unshift(makePorTabelaParsed(name, stripped.nums, dataRelatorio, operadoras));
     parts = stripped.rest;
   }
@@ -299,29 +348,64 @@ function findPerTableIndex(lines: string[]): number {
 function parseDailyRows(lines: string[], start: number, end: number, _operadoras: OperadoraRef[]): DailySummaryParsed[] {
   void _operadoras;
   const out: DailySummaryParsed[] = [];
-  for (let i = start; i < end; i++) {
-    const parts = splitLineParts(lines[i]);
-    if (parts.length < 8) continue;
-    const dIso = brDateToIso(parts[0]);
-    if (!dIso) continue;
-    const nr = numbersFromRight(parts.slice(1), 7);
-    if (!nr) continue;
-    const [turnover, ggr, margin_pct, bets, uap, bet_size, arpu] = nr.nums;
-    out.push({
-      data: dIso,
-      operadora: null,
-      turnover,
-      ggr,
-      margin_pct,
-      bets: Math.round(bets),
-      uap: Math.round(uap),
-      bet_size,
-      arpu,
-    });
+  let i = start;
+  while (i < end) {
+    const line0 = lines[i];
+    if (/monthly\s+summar/i.test(line0) || /\bper\s+table\b/i.test(line0)) break;
+
+    let merged = line0;
+    let j = i;
+    let parsed: DailySummaryParsed | null = null;
+    for (let k = 0; k < 7; k++) {
+      const parts = splitLineParts(merged);
+      if (parts.length >= 8) {
+        const dIso = brDateToIso(parts[0]);
+        if (dIso) {
+          const nr = numbersFromRight(parts.slice(1), 7);
+          if (nr) {
+            /** Daily summaries BRL: Turnover, GGR, Margin, Bets, UAP, Bet size, ARPU no print — usamos só data+Turnover+GGR+Bets+UAP; demais colunas ignoradas no valor final. */
+            const [turnover, ggr, , betsRaw, uapRaw, , _ocrArpuIgnorado] = nr.nums;
+            void _ocrArpuIgnorado;
+            const bets = Math.round(betsRaw);
+            const uap = Math.round(uapRaw);
+            const margin_pct = marginPctFromGgrTurnover(turnover, ggr);
+            const bet_size = betSizeFromTurnoverBets(turnover, bets);
+            const arpu = arpuFromGgrUap(ggr, uap);
+            parsed = {
+              data: dIso,
+              operadora: null,
+              turnover,
+              ggr,
+              margin_pct,
+              bets,
+              uap,
+              bet_size,
+              arpu,
+            };
+            break;
+          }
+        }
+      }
+      if (j + 1 >= end) break;
+      const next = lines[j + 1];
+      if (/monthly\s+summar/i.test(next) || /\bper\s+table\b/i.test(next)) break;
+      j++;
+      merged = `${merged} ${next}`;
+    }
+    if (parsed) {
+      out.push(parsed);
+      i = j + 1;
+    } else {
+      i++;
+    }
   }
   return out;
 }
 
+/**
+ * Monthly summaries no BI costuma vir em duas tabelas: (Turnover, GGR, Margin, Bets, Bet size) e (UAP, ARPU).
+ * Linhas com 5 números + linhas com 2 números para o mesmo mês são fundidas (ordem no OCR irrelevante).
+ */
 function parseMonthlyBlock(textBlock: string[], _operadoras: OperadoraRef[]): MonthlySummaryParsed[] {
   void _operadoras;
   const merged = new Map<
@@ -330,6 +414,8 @@ function parseMonthlyBlock(textBlock: string[], _operadoras: OperadoraRef[]): Mo
   >();
 
   for (const line of textBlock) {
+    if (/\bper\s+table\b/i.test(line)) break;
+
     const m = line.match(MONTH_YEAR_RE);
     if (!m) continue;
     const mesIso = monthYearToIso(m[1], m[2]);
@@ -346,39 +432,49 @@ function parseMonthlyBlock(textBlock: string[], _operadoras: OperadoraRef[]): Mo
       j--;
     }
     if (nums.length === 0) continue;
+
     const cur = merged.get(mesIso) ?? {};
+
     if (nums.length >= 7) {
       cur.turnover = nums[0];
       cur.ggr = nums[1];
       cur.margin_pct = nums[2];
       cur.bets = nums[3];
       cur.bet_size = nums[4];
-      cur.uap = nums[5];
+      cur.uap = Math.round(nums[5]);
       cur.arpu = nums[6];
-    } else if (nums.length >= 5 && cur.uap === undefined) {
+    } else if (nums.length >= 5) {
       cur.turnover = nums[0];
       cur.ggr = nums[1];
       cur.margin_pct = nums[2];
       cur.bets = nums[3];
       cur.bet_size = nums[4];
-    } else if (nums.length <= 3 && cur.turnover !== undefined) {
-      if (nums.length >= 2) {
-        cur.uap = nums[0];
-        cur.arpu = nums[1];
-      }
+    } else if (nums.length === 2) {
+      cur.uap = Math.round(nums[0]);
+      cur.arpu = nums[1];
     }
+
     merged.set(mesIso, cur);
   }
 
   const out: MonthlySummaryParsed[] = [];
   for (const [mes, v] of merged) {
-    if (v.turnover == null && v.ggr == null) continue;
+    if (
+      v.turnover == null &&
+      v.ggr == null &&
+      v.bets == null &&
+      v.uap == null &&
+      v.arpu == null
+    ) {
+      continue;
+    }
+    const marginCalc = marginPctFromGgrTurnover(v.turnover ?? null, v.ggr ?? null);
     out.push({
       mes,
       operadora: null,
       turnover: v.turnover ?? null,
       ggr: v.ggr ?? null,
-      margin_pct: v.margin_pct ?? null,
+      margin_pct: marginCalc ?? v.margin_pct ?? null,
       bets: v.bets != null ? Math.round(v.bets) : null,
       uap: v.uap != null ? Math.round(v.uap) : null,
       bet_size: v.bet_size ?? null,
@@ -426,7 +522,7 @@ function parsePorTabelaLines(
           if (nr) {
             let name = sanitizePorTabelaMesaName(nr.rest.join(" ").trim());
             if (name.length < 3 && pendingName) name = sanitizePorTabelaMesaName(pendingName.trim());
-            if (name.length >= 3 && !/^month\b|^day\b|^main\b|^summary\b/i.test(name)) {
+            if (name.length >= 3 && !/^month\b|^day\b|^main\b/i.test(name) && !isPorTabelaNomeIgnorar(name)) {
               batch = [makePorTabelaParsed(name, nr.nums, dataRelatorio, operadoras)];
             }
           }
@@ -457,9 +553,16 @@ function parsePorTabelaLines(
   return out;
 }
 
-function inferDataRelatorio(daily: DailySummaryParsed[], fallback: string): string {
-  if (daily.length === 0) return fallback;
-  return daily.reduce((a, r) => (r.data > a ? r.data : a), daily[0].data);
+function inferDataRelatorio(daily: DailySummaryParsed[], ocrText: string, fallback: string): string {
+  let best: string | null =
+    daily.length === 0 ? null : daily.reduce((a, r) => (r.data > a ? r.data : a), daily[0].data);
+  const re = /\b(\d{2})\/(\d{2})\/(\d{4})\b/g;
+  let rm: RegExpExecArray | null;
+  while ((rm = re.exec(ocrText)) !== null) {
+    const iso = `${rm[3]}-${rm[2]}-${rm[1]}`;
+    if (!best || iso > best) best = iso;
+  }
+  return best ?? fallback;
 }
 
 export function parseRelatorioFromOcrText(text: string, operadoras: OperadoraRef[]): IngestRelatorioPayload {
@@ -482,11 +585,13 @@ export function parseRelatorioFromOcrText(text: string, operadoras: OperadoraRef
     monthly = parseMonthlyBlock(lines.slice(iMonthly + 1, end), operadoras);
   }
 
-  const dataRelatorio = inferDataRelatorio(daily, todayIso);
+  const dataRelatorio = inferDataRelatorio(daily, text, todayIso);
 
   let porTabela: PorTabelaParsed[] = [];
   if (iPer >= 0) {
-    porTabela = parsePorTabelaLines(lines, iPer + 1, lines.length, dataRelatorio, operadoras);
+    porTabela = parsePorTabelaLines(lines, iPer + 1, lines.length, dataRelatorio, operadoras).filter(
+      (p) => !isPorTabelaNomeIgnorar(p.nome_tabela),
+    );
   }
 
   return {
