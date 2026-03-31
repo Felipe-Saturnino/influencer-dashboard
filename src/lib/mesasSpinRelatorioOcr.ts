@@ -38,6 +38,11 @@ export interface IngestRelatorioMesasPayload {
 
 export type IngestRelatorioPayload = IngestRelatorioMesasPayload;
 
+/** Palavras com bbox (resultado do Tesseract) para colunas 2–4 na ordem visual. */
+export type OcrWordLayout = { text: string; bbox: { x0: number; y0: number; x1: number; y1: number } };
+export type OcrLineLayout = { words?: OcrWordLayout[]; bbox?: { x0: number; y0: number; x1: number; y1: number } };
+export type MesasSpinOcrResult = { text: string; layoutLines: OcrLineLayout[] | null };
+
 const MESES_EN: Record<string, number> = {
   jan: 0,
   feb: 1,
@@ -250,6 +255,65 @@ export function resolveMesaOperadora(tableCell: string): { operadora: string; me
     if (low.startsWith(m.raw.toLowerCase())) return { operadora: m.operadora, mesa: m.mesa };
   }
   return null;
+}
+
+function canonEntryForLine(lineStr: string): (typeof MESA_RAW_TO_CANON)[number] | null {
+  const norm = lineStr.replace(/\s+/g, " ").trim();
+  const low = norm.toLowerCase();
+  for (const m of MESA_RAW_TO_CANON) {
+    if (low.startsWith(m.raw.toLowerCase())) return m;
+  }
+  return null;
+}
+
+/** Quantas palavras (ordem X) cobrem o prefixo canónico do nome da mesa. */
+function countPrefixWords(sortedWords: OcrWordLayout[], rawCanon: string): number {
+  const target = rawCanon.toLowerCase().replace(/\s+/g, " ").trim();
+  let acc = "";
+  for (let k = 0; k < sortedWords.length; k++) {
+    const t = sortedWords[k]!.text.trim();
+    acc = k === 0 ? t : `${acc} ${t}`;
+    const low = acc.toLowerCase().replace(/\s+/g, " ");
+    if (low.startsWith(target) && acc.length >= target.length - 4) return k + 1;
+    if (low.length > target.length + 20) break;
+  }
+  return 0;
+}
+
+function lineCenterY(line: OcrLineLayout): number {
+  const y0 = line.bbox?.y0 ?? 0;
+  const y1 = line.bbox?.y1 ?? 0;
+  return (y0 + y1) / 2;
+}
+
+/** 1.ª ocorrência de uma linha de mesa «Casa de Apostas …» (ignora «Per table BRL» à esquerda). */
+function mesaStartOnLine(sortedWords: OcrWordLayout[]): { startWi: number; canon: (typeof MESA_RAW_TO_CANON)[number] } | null {
+  for (let start = 0; start < sortedWords.length; start++) {
+    for (const m of MESA_RAW_TO_CANON) {
+      const target = m.raw.toLowerCase().replace(/\s+/g, " ").trim();
+      let acc = "";
+      for (let k = start; k < sortedWords.length; k++) {
+        const t = sortedWords[k]!.text.trim();
+        acc = k === start ? t : `${acc} ${t}`;
+        const low = acc.toLowerCase().replace(/\s+/g, " ");
+        if (low.startsWith(target) && acc.length >= target.length - 4) {
+          return { startWi: start, canon: m };
+        }
+        if (low.length > target.length + 28) break;
+      }
+    }
+  }
+  return null;
+}
+
+function isPerTableHeaderFragment(lineStr: string): boolean {
+  return /\bper\s+table\b/i.test(lineStr) && /brl/i.test(lineStr);
+}
+
+/** Retira «Summary» e o que estiver colado antes dos números da linha de totais. */
+function stripSummaryLeadForMerge(tail: string): string {
+  if (!/\bsummary\b/i.test(tail)) return tail;
+  return tail.replace(/^.*?\bsummary\b/i, "").trim();
 }
 
 /**
@@ -825,6 +889,85 @@ function parseMonthlyUapArpuAllLines(lines: string[], rawText: string): MonthlyR
   return Array.from(byMes.values()).sort((a, b) => a.mes.localeCompare(b.mes));
 }
 
+/**
+ * Per table: lê colunas 2–4 pela ordem X das palavras (após o nome canónico), não pela ordem do string plano.
+ * Opcionalmente funde a linha seguinte se o OCR partir o nome dos números (e a linha seguinte não for outra mesa).
+ */
+function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string): PorTabelaRowParsed[] {
+  const sorted = [...ocrLines].sort((a, b) => lineCenterY(a) - lineCenterY(b));
+  const out: PorTabelaRowParsed[] = [];
+  const yMergeMax = 62;
+
+  for (let i = 0; i < sorted.length; i++) {
+    const words = [...(sorted[i]!.words ?? [])].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+    if (words.length === 0) continue;
+
+    const mesaHit = mesaStartOnLine(words);
+    if (!mesaHit) continue;
+
+    const { startWi, canon } = mesaHit;
+    const subWords = words.slice(startWi);
+    const lineStr = subWords.map((w) => w.text?.trim() ?? "").filter(Boolean).join(" ");
+    if (/^main\b|^day\b/i.test(lineStr)) continue;
+
+    const resolved = { operadora: canon.operadora, mesa: canon.mesa };
+    const k = countPrefixWords(subWords, canon.raw);
+    let afterRest =
+      k > 0
+        ? subWords
+            .slice(k)
+            .map((w) => w.text?.trim() ?? "")
+            .filter(Boolean)
+            .join(" ")
+        : lineStr.slice(canon.raw.length).trim();
+    let nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(afterRest)));
+
+    if (nums.length < 3 && i > 0) {
+      const prev = sorted[i - 1]!;
+      const ydP = Math.abs(lineCenterY(sorted[i]!) - lineCenterY(prev));
+      const prevWords = [...(prev.words ?? [])].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+      const prevStr = prevWords.map((w) => w.text?.trim() ?? "").filter(Boolean).join(" ");
+      const prevHasMesa = mesaStartOnLine(prevWords) != null;
+      const prevHeaderSemNumeros =
+        isPerTableHeaderFragment(prevStr) &&
+        collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(prevStr))).length === 0;
+      if (ydP < yMergeMax && !prevHasMesa && !prevHeaderSemNumeros && !/^main\b/i.test(prevStr)) {
+        const prep = prevWords.map((w) => w.text?.trim() ?? "").filter(Boolean).join(" ");
+        afterRest = `${prep} ${afterRest}`.trim();
+        nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(afterRest)));
+      }
+    }
+
+    if (nums.length < 3 && i + 1 < sorted.length) {
+      const yd = Math.abs(lineCenterY(sorted[i + 1]!) - lineCenterY(sorted[i]!));
+      const nextWords = [...(sorted[i + 1]!.words ?? [])].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+      const nextStrFixed = nextWords.map((w) => w.text?.trim() ?? "").filter(Boolean).join(" ");
+      const nextOwn = nextStrFixed.length > 0 ? mesaStartOnLine(nextWords) : null;
+      if (yd < yMergeMax && !nextOwn) {
+        const tail2 = stripSummaryLeadForMerge(nextStrFixed);
+        afterRest = `${afterRest} ${tail2}`.trim();
+        nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(afterRest)));
+        if (nums.length >= 3) i++;
+      }
+    }
+
+    if (nums.length < 3) continue;
+    const norm = normalizeSignedNumberText(afterRest);
+    const triple = parseFirstThreeMetrics(norm, resolved.mesa);
+    if (!triple) continue;
+    const [ggr, turnover, apostas] = triple;
+    out.push({
+      dia: diaRef,
+      operadora: resolved.operadora,
+      mesa: resolved.mesa,
+      ggr,
+      turnover,
+      apostas: Math.round(apostas),
+    });
+  }
+  return out;
+}
+
 function parsePorTabelaBlock(
   lines: string[],
   start: number,
@@ -868,7 +1011,10 @@ function inferDailyEnd(lines: string[], iDaily: number, iPer: number): number {
   return bound;
 }
 
-export function parseRelatorioFromOcrText(text: string): IngestRelatorioMesasPayload {
+export function parseRelatorioFromOcrText(
+  text: string,
+  layoutLines?: OcrLineLayout[] | null,
+): IngestRelatorioMesasPayload {
   const lines = normalizeLines(text);
   const iDaily = findDailySummariesIndex(lines);
   const iPer = findPerTableIndex(lines);
@@ -889,8 +1035,13 @@ export function parseRelatorioFromOcrText(text: string): IngestRelatorioMesasPay
   if (maxScan && maxScan > dataRef) dataRef = maxScan;
 
   const porStart = iPer >= 0 ? iPer + 1 : -1;
+  const useLayout = layoutLines != null && layoutLines.length > 0;
   const por_tabela =
-    porStart >= 0 ? parsePorTabelaBlock(lines, porStart, dataRef) : [];
+    porStart >= 0
+      ? useLayout
+        ? parsePorTabelaFromLayoutLines(layoutLines!, dataRef)
+        : parsePorTabelaBlock(lines, porStart, dataRef)
+      : [];
 
   return {
     data_referencia_por_mesa: dataRef,
@@ -943,11 +1094,8 @@ export async function prepareImageForOcr(file: File, maxWidth = 4800): Promise<s
   }
 }
 
-/** Bbox + palavras: reconstrói o texto na ordem visual (útil em tabelas com o mesmo layout em dias diferentes). */
-type OcrWordLite = { text: string; bbox: { x0: number; y0: number; x1: number; y1: number } };
-type OcrLineLite = { words?: OcrWordLite[]; bbox?: { x0: number; y0: number; x1: number; y1: number } };
-
-function buildSpatialOcrText(data: { text?: string | null; lines?: OcrLineLite[] | null }): string {
+/** Reconstrói o texto na ordem visual (Daily/Monthly continuam a usar isto). */
+function buildSpatialOcrText(data: { text?: string | null; lines?: OcrLineLayout[] | null }): string {
   const lines = data.lines;
   if (!lines || lines.length === 0) return data.text ?? "";
 
@@ -972,14 +1120,27 @@ function buildSpatialOcrText(data: { text?: string | null; lines?: OcrLineLite[]
   return spatial.length > 0 ? spatial : (data.text ?? "");
 }
 
-export async function runMesasSpinOcr(
+export async function runMesasSpinOcrDetailed(
   file: File,
   onProgress?: (stage: string, pct: number) => void,
-): Promise<string> {
+): Promise<MesasSpinOcrResult> {
   onProgress?.("preparação", 0);
   const dataUrl = await prepareImageForOcr(file);
   onProgress?.("ocr", 0);
   const worker = await getWorker((p) => onProgress?.("ocr", p));
   const { data } = await worker.recognize(dataUrl);
-  return buildSpatialOcrText(data as { text?: string | null; lines?: OcrLineLite[] | null });
+  const layoutLines = Array.isArray(data.lines) ? (data.lines as OcrLineLayout[]) : null;
+  const text = buildSpatialOcrText({
+    text: data.text,
+    lines: layoutLines,
+  });
+  return { text, layoutLines: layoutLines && layoutLines.length > 0 ? layoutLines : null };
+}
+
+export async function runMesasSpinOcr(
+  file: File,
+  onProgress?: (stage: string, pct: number) => void,
+): Promise<string> {
+  const { text } = await runMesasSpinOcrDetailed(file, onProgress);
+  return text;
 }

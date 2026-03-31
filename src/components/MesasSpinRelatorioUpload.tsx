@@ -3,7 +3,7 @@ import { Upload, FileImage, Loader2, CheckCircle2, AlertCircle } from "lucide-re
 import { supabase } from "../lib/supabase";
 import {
   parseRelatorioFromOcrText,
-  runMesasSpinOcr,
+  runMesasSpinOcrDetailed,
   type IngestRelatorioPayload,
 } from "../lib/mesasSpinRelatorioOcr";
 import type { Theme } from "../constants/theme";
@@ -69,14 +69,14 @@ export function MesasSpinRelatorioUpload({
         if (!file.type.startsWith("image/")) {
           throw new Error("Envie uma imagem (PNG ou JPEG).");
         }
-        const text = await runMesasSpinOcr(file, (s, p) => {
+        const { text, layoutLines } = await runMesasSpinOcrDetailed(file, (s, p) => {
           setStage(s === "ocr" ? "OCR…" : "Preparando imagem…");
           if (s === "ocr") setPct(p);
         });
         if (!text || text.length < 80) {
           throw new Error("OCR retornou pouco texto — use imagem mais nítida ou maior resolução.");
         }
-        const parsed = parseRelatorioFromOcrText(text);
+        const parsed = parseRelatorioFromOcrText(text, layoutLines);
         setPreview(parsed);
         if (
           parsed.daily_summary.length === 0 &&
