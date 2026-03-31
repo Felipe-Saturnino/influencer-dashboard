@@ -256,9 +256,14 @@ export function resolveMesaOperadora(tableCell: string): { operadora: string; me
  * GGR d-1 é muito menor que Turnover d-1; Apostas normalmente bem abaixo do Turnover.
  * Quando o 1.º token parece Turnover (OCR perdeu o GGR), desliza a janela até achar o trio.
  */
-function pickD1GgrTurnoverApostas(nums: number[]): [number, number, number] | null {
+function maxStartIndexForD1Window(nums: number[], mesa: string): number {
+  const cap = mesa === "Roleta" ? 20 : 12;
+  return Math.min(nums.length - 3, cap);
+}
+
+function pickD1GgrTurnoverApostas(nums: number[], mesa: string): [number, number, number] | null {
   if (nums.length < 3) return null;
-  const maxI = Math.min(nums.length - 3, 10);
+  const maxI = maxStartIndexForD1Window(nums, mesa);
   const candidates: Array<{ i: number; ggr: number; turnover: number; apostas: number }> = [];
   for (let i = 0; i <= maxI; i++) {
     const ggr = nums[i];
@@ -272,12 +277,22 @@ function pickD1GgrTurnoverApostas(nums: number[]): [number, number, number] | nu
     if (ratioG >= 0.42) continue;
     if (ratioG < 0.022 && absT > 35_000) continue;
     const ratioA = apostas / absT;
-    if (ratioA < 0.0015 || ratioA > 0.55) continue;
+    if (ratioA < 0.0015 || ratioA > 0.42) continue;
     if (apostas > absT) continue;
     if (absT > 400_000) continue;
+    if (mesa === "Roleta" && absT < 55_000) continue;
+    if (mesa === "Blackjack 1" && apostas > 18_000) continue;
+    if (mesa === "Blackjack VIP" && apostas > 18_000) continue;
+    if (mesa === "Blackjack 2" && apostas > 15_000) continue;
     candidates.push({ i, ggr, turnover, apostas });
   }
-  if (candidates.length === 0) return [nums[0], nums[1], nums[2]];
+  if (candidates.length === 0) {
+    if (mesa === "Roleta") {
+      const tTurn = Math.abs(nums[1] ?? 0);
+      if (tTurn > 0 && tTurn < 55_000) return null;
+    }
+    return [nums[0], nums[1], nums[2]];
+  }
   candidates.sort((a, b) => a.i - b.i);
   return [candidates[0].ggr, candidates[0].turnover, candidates[0].apostas];
 }
@@ -295,6 +310,9 @@ function minusBeforeFirstDigitInCell(cellTail: string): boolean {
 function adjustRoletaGgrSign(mesa: string, ggr: number, turnover: number): number {
   if (mesa !== "Roleta") return ggr;
   if (ggr > 0 && turnover > 65_000 && ggr >= 4000 && ggr <= 12_000) return -Math.abs(ggr);
+  if (ggr > 0 && turnover >= 35_000 && turnover < 55_000 && ggr > 500 && ggr < 2500) {
+    return -Math.abs(ggr);
+  }
   return ggr;
 }
 
@@ -306,7 +324,7 @@ function parseFirstThreeMetrics(
   const norm = normalizeSignedNumberText(afterName);
   const parts = splitLineParts(norm);
   const nums = collectNumbersLeftToRight(parts);
-  const triple = pickD1GgrTurnoverApostas(nums);
+  const triple = pickD1GgrTurnoverApostas(nums, mesa);
   if (!triple) return null;
   let [ggr, turnover, apostas] = triple;
   if (ggr > 0 && minusBeforeFirstDigitInCell(norm)) ggr = -Math.abs(ggr);
@@ -345,13 +363,23 @@ function looksLikeMarginPercent(n: number): boolean {
   return Number.isFinite(n) && Math.abs(n) <= 50;
 }
 
-/** 1.ª percentagem na linha (coluna Margin % do daily); GGR ≈ Turnover × margin/100 quando o OCR perde o GGR. */
+/**
+ * Percentagens na linha do daily (Margin %). Para 29/03 o OCR pode falhar o GGR negativo mas manter «-2,7%».
+ * Considera todas as ocorrências plausíveis como margem (|x| ≤ 20 %), não só a primeira.
+ */
 function impliedGgrFromMarginInDailyRest(raw: string, turnover: number): number | null {
-  const m = raw.match(/(-?\d+(?:[.,]\d+)?)\s*%/);
-  if (!m) return null;
-  const pct = parseNumericToken(`${m[1]}%`);
-  if (pct == null || Math.abs(pct) > 50) return null;
-  return Math.round((turnover * pct) / 100);
+  const re = /(-?\d+(?:[.,]\d+)?)\s*%/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) {
+    const pct = parseNumericToken(`${m[1]}%`);
+    if (pct == null) continue;
+    const ap = Math.abs(pct);
+    if (ap > 6 || ap < 0.05) continue;
+    const g = Math.round((turnover * pct) / 100);
+    if (Math.abs(g) > Math.abs(turnover) * 0.28) continue;
+    return g;
+  }
+  return null;
 }
 
 function assignDailyMetrics(nr: number[]): {
@@ -444,6 +472,36 @@ function parseDailyBlock(
   return out;
 }
 
+/** Linha «Summary» do Per table: primeiros 3 valores = GGR/Turnover/Bets d-1 (validação do daily). */
+function parsePerTableSummaryD1TripleFromLines(lines: string[]): { ggr: number; turnover: number } | null {
+  let last: { ggr: number; turnover: number } | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!/\bsummary\b/i.test(line.toLowerCase())) continue;
+    const low = line.toLowerCase();
+    const k = low.indexOf("summary");
+    const tail = normalizeSignedNumberText(line.slice(k + 7));
+    const nums = collectNumbersLeftToRight(splitLineParts(tail));
+    if (nums.length < 3) continue;
+    last = { ggr: nums[0], turnover: nums[1] };
+  }
+  return last;
+}
+
+function fillNullDailyGgrFromSummaryRow(rows: DailyRowParsed[], summary: { ggr: number; turnover: number } | null): void {
+  if (!summary) return;
+  const tol = Math.max(3, Math.abs(summary.turnover) * 0.001);
+  for (const r of rows) {
+    if (r.ggr != null || r.turnover == null) continue;
+    if (Math.abs(r.turnover - summary.turnover) <= tol) r.ggr = summary.ggr;
+  }
+  const stillNull = rows.filter((r) => r.ggr == null && r.turnover != null);
+  if (stillNull.length === 1) {
+    const r = stillNull[0]!;
+    if (Math.abs(r.turnover! - summary.turnover) <= tol * 3) r.ggr = summary.ggr;
+  }
+}
+
 /**
  * Tabela monthly UAP/ARPU (geralmente à direita): linha "Jan 2026" + exatamente 2 números.
  * O quadro esquerdo tem 6+ números após o mês → ignorado.
@@ -462,7 +520,7 @@ function monthlyUapArpuCandidateScore(uap: number, arpu: number): number {
 /** Vários «Jan 2026» no OCR (quadro esquerdo vs direito); escolhe o par UAP/ARPU plausível (Janeiro costuma falhar no 1.º match). */
 function scrapeMonthlyUapArpuGaps(text: string, byMes: Map<string, MonthlyRowParsed>): void {
   const re = new RegExp(
-    `\\b(${MONTHS_FOR_RE})\\s+(\\d{4}|\\d{2}[oO]\\d{2})\\b\\s*[^0-9\\-]{0,40}([\\-0-9][0-9O.,]{0,16})\\s+([\\-0-9][0-9O.,]{0,16})`,
+    `\\b(${MONTHS_FOR_RE})\\s+(\\d{4}|\\d{2}[oO]\\d{2})\\b[\\s\\S]{0,240}?([\\-0-9][0-9O.,]{0,16})\\s+([\\-0-9][0-9O.,]{0,16})`,
     "gi",
   );
   const scraped = new Map<string, MonthlyRowParsed[]>();
@@ -492,10 +550,7 @@ function scrapeMonthlyUapArpuGaps(text: string, byMes: Map<string, MonthlyRowPar
       byMes.set(mesIso, best);
       continue;
     }
-    if (
-      monthlyUapArpuCandidateScore(best.uap!, best.arpu!) >
-      monthlyUapArpuCandidateScore(cur.uap!, cur.arpu!)
-    ) {
+    if (monthlyUapArpuCandidateScore(best.uap!, best.arpu!) > monthlyUapArpuCandidateScore(cur.uap!, cur.arpu!)) {
       byMes.set(mesIso, best);
     }
   }
@@ -567,12 +622,16 @@ function parseMonthlyUapArpuAllLines(lines: string[], rawText: string): MonthlyR
       const m2 = lines[j].match(MONTH_YEAR_RE);
       if (!m2) continue;
       const mesIso2 = monthYearToIso(m2[1], m2[2]);
-      if (!mesIso2 || byMes.has(mesIso2)) break;
-      byMes.set(mesIso2, {
+      if (!mesIso2) break;
+      const cand: MonthlyRowParsed = {
         mes: mesIso2,
         uap: Math.round(uapVal),
         arpu: arpuVal,
-      });
+      };
+      const cur = byMes.get(mesIso2);
+      if (!cur || monthlyUapArpuCandidateScore(cand.uap!, cand.arpu!) > monthlyUapArpuCandidateScore(cur.uap!, cur.arpu!)) {
+        byMes.set(mesIso2, cand);
+      }
       break;
     }
   }
@@ -633,6 +692,8 @@ export function parseRelatorioFromOcrText(text: string): IngestRelatorioMesasPay
 
   const daily =
     iDaily >= 0 ? parseDailyBlock(lines, iDaily + 1, dailyEnd, text) : [];
+
+  fillNullDailyGgrFromSummaryRow(daily, parsePerTableSummaryD1TripleFromLines(lines));
 
   const monthly = parseMonthlyUapArpuAllLines(lines, text);
 
