@@ -331,6 +331,63 @@ function wordsToMetricWords(ws: OcrWordLayout[]): OcrWordLayout[] {
   return [...ws].filter((w) => !isLayoutNoiseWord(w.text)).sort((a, b) => a.bbox.x0 - b.bbox.x0);
 }
 
+/**
+ * O OCR separa «-» do número (GGR neg. na Roleta); o centro X do «-» pode cair na coluna errada.
+ * Funde com o token seguinte se estiver perto e tiver dígitos.
+ */
+function mergeOrphanMinusWords(ws: OcrWordLayout[]): OcrWordLayout[] {
+  const sorted = [...ws].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+  const out: OcrWordLayout[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const w = sorted[i]!;
+    const t = w.text
+      .trim()
+      .replace(/\u2212/g, "-")
+      .replace(/\u2013/g, "-");
+    if ((t === "-" || t === "–" || t === "—") && i + 1 < sorted.length) {
+      const n = sorted[i + 1]!;
+      const gap = n.bbox.x0 - w.bbox.x1;
+      if (gap <= 72 && /\d/.test(n.text)) {
+        out.push({
+          text: `-${n.text.trim()}`,
+          bbox: {
+            x0: w.bbox.x0,
+            y0: Math.min(w.bbox.y0, n.bbox.y0),
+            x1: n.bbox.x1,
+            y1: Math.max(w.bbox.y1, n.bbox.y1),
+          },
+        });
+        i++;
+        continue;
+      }
+    }
+    out.push(w);
+  }
+  return out;
+}
+
+/** 1.ª e última linha de mesa costumam desviar ligeiramente em X relativamente ao cabeçalho. */
+function slackenD1AnchorsForEdgeRow(
+  a: PerTableD1ColumnAnchors,
+  isFirstDataRow: boolean,
+  isLastDataRow: boolean,
+): PerTableD1ColumnAnchors {
+  const spanGT = Math.max(a.boundTurnBets - a.boundGgrTurn, 24);
+  const spanTB = Math.max(a.betsRightMaxX - a.boundTurnBets, 24);
+  const dxG = Math.max(32, spanGT * 0.14);
+  const dxB = Math.max(32, spanTB * 0.12);
+  let boundGgrTurn = a.boundGgrTurn;
+  let boundTurnBets = a.boundTurnBets;
+  let betsRightMaxX = a.betsRightMaxX;
+  if (isFirstDataRow) boundGgrTurn = a.boundGgrTurn + Math.max(dxG, 40);
+  if (isLastDataRow) {
+    betsRightMaxX = a.betsRightMaxX + Math.max(dxB, 40);
+    boundTurnBets = a.boundTurnBets - Math.min(dxB * 0.35, spanGT * 0.2);
+  }
+  if (boundTurnBets <= boundGgrTurn + 8) boundTurnBets = boundGgrTurn + spanGT * 0.45;
+  return { boundGgrTurn, boundTurnBets, betsRightMaxX };
+}
+
 function medianGap(ns: number[]): number {
   if (ns.length === 0) return 0;
   const s = [...ns].sort((a, b) => a - b);
@@ -807,11 +864,19 @@ function strictPerTableD1Triple(
   mesa: string,
   afterNameForRoleta: string,
   roletaNumPool?: number[],
+  trustColumnLayout?: boolean,
 ): { ggr: number | null; turnover: number; apostas: number } | null {
   if (nums.length < 3) return null;
   let ggr: number | null = nums[0];
   let turnover = nums[1];
   let apostas = nums[2];
+
+  if (trustColumnLayout) {
+    const out = { ggr, turnover, apostas };
+    out.turnover = Math.abs(out.turnover);
+    out.apostas = Math.abs(out.apostas);
+    return out;
+  }
 
   if (mesa === "Roleta" && roletaLooksLikeShiftedFirstCellIsTurnover(nums[0], nums[1])) {
     turnover = nums[0];
@@ -893,7 +958,7 @@ function adjustRoletaGgrSign(mesa: string, ggr: number, turnover: number): numbe
 function parseFirstThreeMetrics(
   afterName: string,
   mesa: string,
-  layoutContext?: { allNums: number[]; fullTail: string },
+  layoutContext?: { allNums: number[]; fullTail: string; fromColumnLayout?: boolean },
 ): [number | null, number, number] | null {
   const norm = normalizeSignedNumberText(afterName);
   const parts = splitLineParts(norm);
@@ -901,15 +966,33 @@ function parseFirstThreeMetrics(
   const tailForRoleta = layoutContext?.fullTail ?? norm;
   const roletaPool =
     layoutContext?.allNums && layoutContext.allNums.length >= 3 ? layoutContext.allNums : undefined;
-  const raw = strictPerTableD1Triple(nums, mesa, tailForRoleta, roletaPool);
+  const trustCols = layoutContext?.fromColumnLayout === true;
+  const raw = strictPerTableD1Triple(nums, mesa, tailForRoleta, roletaPool, trustCols);
   if (!raw) return null;
   let { ggr, turnover, apostas } = raw;
   const tailForSign = layoutContext?.fullTail ?? norm;
   if (ggr != null) {
     if (ggr > 0 && minusBeforeFirstDigitInCell(tailForSign)) ggr = -Math.abs(ggr);
-    ggr = adjustRoletaGgrSign(mesa, ggr, turnover);
+    if (!trustCols) ggr = adjustRoletaGgrSign(mesa, ggr, turnover);
   }
   return [ggr, Math.abs(turnover), Math.abs(apostas)];
+}
+
+/** Quando as colunas falham no GGR mas turnover/apostas batem: último número antes do turnover na cauda OCR. */
+function extractRoletaGgrLoose(tail: string, turnover: number, apostas: number): number | null {
+  const tAbs = Math.abs(turnover);
+  const bAbs = Math.abs(apostas);
+  const nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(tail)));
+  const tolT = Math.max(25, tAbs * 0.006);
+  const tolB = Math.max(20, bAbs * 0.025);
+  const idx = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
+  if (idx <= 0) return null;
+  for (let k = idx - 1; k >= 0; k--) {
+    const v = nums[k]!;
+    if (Math.abs(Math.abs(v) - bAbs) <= tolB) continue;
+    return v;
+  }
+  return null;
 }
 
 function findDailySummariesIndex(lines: string[]): number {
@@ -1279,6 +1362,18 @@ function parseMonthlyUapArpuAllLines(lines: string[], rawText: string): MonthlyR
   return Array.from(byMes.values()).sort((a, b) => a.mes.localeCompare(b.mes));
 }
 
+function findFirstLastMesaLineIndices(sorted: OcrLineLayout[]): { first: number | null; last: number | null } {
+  let first: number | null = null;
+  let last: number | null = null;
+  for (let idx = 0; idx < sorted.length; idx++) {
+    const ww = [...(sorted[idx]!.words ?? [])].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+    if (ww.length === 0 || !mesaStartOnLine(ww)) continue;
+    if (first == null) first = idx;
+    last = idx;
+  }
+  return { first, last };
+}
+
 /**
  * Per table: lê colunas 2–4 pela ordem X das palavras (após o nome canónico), não pela ordem do string plano.
  * Opcionalmente funde a linha seguinte se o OCR partir o nome dos números (e a linha seguinte não for outra mesa).
@@ -1287,6 +1382,7 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
   const sorted = [...ocrLines].sort((a, b) => lineCenterY(a) - lineCenterY(b));
   const headerWs = findPerTableHeaderWords(sorted);
   const d1Anchors = headerWs ? buildPerTableD1ColumnAnchors(headerWs) : null;
+  const { first: firstMesaIdx, last: lastMesaIdx } = findFirstLastMesaLineIndices(sorted);
   const out: PorTabelaRowParsed[] = [];
   const yMergeMax = 62;
 
@@ -1348,9 +1444,25 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
 
     const tailNorm = normalizeSignedNumberText(afterRest);
     const allNums = collectNumbersLeftToRight(splitLineParts(tailNorm));
-    const layoutCtx = { allNums, fullTail: tailNorm };
-    const geomCol = d1Anchors ? buildTripleStringFromColumnBuckets(metricWords, d1Anchors) : null;
-    const geomStr = geomCol ?? buildPerTableD1TripleStringFromMetricWords(metricWords);
+    const layoutCtxBase = { allNums, fullTail: tailNorm };
+    const isFirstMesaRow = firstMesaIdx != null && i === firstMesaIdx;
+    const isLastMesaRow = lastMesaIdx != null && i === lastMesaIdx;
+    const mergedMetrics = mergeOrphanMinusWords(metricWords);
+    let geomCol: string | null = null;
+    if (d1Anchors) {
+      const rowAnchors = slackenD1AnchorsForEdgeRow(d1Anchors, isFirstMesaRow, isLastMesaRow);
+      geomCol = buildTripleStringFromColumnBuckets(mergedMetrics, rowAnchors);
+      if (!geomCol && isFirstMesaRow && resolved.mesa === "Roleta") {
+        const looser = slackenD1AnchorsForEdgeRow(d1Anchors, true, false);
+        geomCol = buildTripleStringFromColumnBuckets(mergedMetrics, {
+          ...looser,
+          boundGgrTurn: looser.boundGgrTurn + Math.max(50, (looser.boundTurnBets - looser.boundGgrTurn) * 0.1),
+        });
+      }
+    }
+    const geomStr = geomCol ?? buildPerTableD1TripleStringFromMetricWords(mergedMetrics);
+    const fromColumnLayout = geomCol != null;
+    const layoutCtx = { ...layoutCtxBase, fromColumnLayout };
     let triple = geomStr ? parseFirstThreeMetrics(geomStr, resolved.mesa, layoutCtx) : null;
     if (!triple) {
       if (nums.length < 3) continue;
@@ -1361,8 +1473,15 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
       resolved.mesa !== "Speed Baccarat" &&
       resolved.mesa !== "Roleta"
     ) {
-      const alt = parseFirstThreeMetrics(tailNorm, resolved.mesa, layoutCtx);
+      const alt = parseFirstThreeMetrics(tailNorm, resolved.mesa, {
+        ...layoutCtxBase,
+        fromColumnLayout: false,
+      });
       if (alt && alt[0] != null) triple = alt;
+    }
+    if (triple && resolved.mesa === "Roleta" && triple[0] == null && triple[1] != null && triple[2] != null) {
+      const gFill = extractRoletaGgrLoose(tailNorm, triple[1], triple[2]);
+      if (gFill != null) triple = [gFill, triple[1], triple[2]];
     }
     if (!triple) continue;
     const [ggr, turnover, apostas] = triple;
