@@ -201,6 +201,13 @@ function fixPhantomDay20InDailyRows(rows: DailyRowParsed[], fullText: string): v
   }
 }
 
+/** União de menos “soltos” antes de dígitos (ex.: «- 3,746» ou «–5280») e normalização de travessões. */
+function normalizeSignedNumberText(s: string): string {
+  return s
+    .replace(/[\u2212\u2013\u2014]/g, "-")
+    .replace(/-\s+(?=[\d,])/g, "-");
+}
+
 /**
  * Coleta números na linha. O OCR costuma separar o sinal: "- 3,746" → merge com o token seguinte.
  */
@@ -252,6 +259,7 @@ export function resolveMesaOperadora(tableCell: string): { operadora: string; me
 function pickD1GgrTurnoverApostas(nums: number[]): [number, number, number] | null {
   if (nums.length < 3) return null;
   const maxI = Math.min(nums.length - 3, 10);
+  const candidates: Array<{ i: number; ggr: number; turnover: number; apostas: number }> = [];
   for (let i = 0; i <= maxI; i++) {
     const ggr = nums[i];
     const turnover = nums[i + 1];
@@ -262,19 +270,48 @@ function pickD1GgrTurnoverApostas(nums: number[]): [number, number, number] | nu
     if (absG >= absT) continue;
     const ratioG = absG / absT;
     if (ratioG >= 0.42) continue;
+    if (ratioG < 0.022 && absT > 35_000) continue;
     const ratioA = apostas / absT;
     if (ratioA < 0.0015 || ratioA > 0.55) continue;
     if (apostas > absT) continue;
-    return [ggr, turnover, apostas];
+    if (absT > 400_000) continue;
+    candidates.push({ i, ggr, turnover, apostas });
   }
-  return [nums[0], nums[1], nums[2]];
+  if (candidates.length === 0) return [nums[0], nums[1], nums[2]];
+  candidates.sort((a, b) => a.i - b.i);
+  return [candidates[0].ggr, candidates[0].turnover, candidates[0].apostas];
+}
+
+/** Há carácter «-» antes do 1.º dígito da célula numérica (GGR d-1). */
+function minusBeforeFirstDigitInCell(cellTail: string): boolean {
+  const idx = cellTail.search(/\d/);
+  if (idx < 0) return false;
+  return /-/.test(cellTail.slice(0, idx));
+}
+
+/**
+ * Roleta costuma ter GGR negativo com grande turnover; se o OCR perde o menos e o trio bate escala típica, corrige o sinal.
+ */
+function adjustRoletaGgrSign(mesa: string, ggr: number, turnover: number): number {
+  if (mesa !== "Roleta") return ggr;
+  if (ggr > 0 && turnover > 65_000 && ggr >= 4000 && ggr <= 12_000) return -Math.abs(ggr);
+  return ggr;
 }
 
 /** Métricas d-1: GGR, Turnover, Apostas (ordem do quadro). */
-function parseFirstThreeMetrics(afterName: string): [number, number, number] | null {
-  const parts = splitLineParts(afterName);
+function parseFirstThreeMetrics(
+  afterName: string,
+  mesa: string,
+): [number, number, number] | null {
+  const norm = normalizeSignedNumberText(afterName);
+  const parts = splitLineParts(norm);
   const nums = collectNumbersLeftToRight(parts);
-  return pickD1GgrTurnoverApostas(nums);
+  const triple = pickD1GgrTurnoverApostas(nums);
+  if (!triple) return null;
+  let [ggr, turnover, apostas] = triple;
+  if (ggr > 0 && minusBeforeFirstDigitInCell(norm)) ggr = -Math.abs(ggr);
+  ggr = adjustRoletaGgrSign(mesa, ggr, turnover);
+  return [ggr, turnover, apostas];
 }
 
 function findDailySummariesIndex(lines: string[]): number {
@@ -306,6 +343,15 @@ function isMonthlyTitleLine(line: string): boolean {
  */
 function looksLikeMarginPercent(n: number): boolean {
   return Number.isFinite(n) && Math.abs(n) <= 50;
+}
+
+/** 1.ª percentagem na linha (coluna Margin % do daily); GGR ≈ Turnover × margin/100 quando o OCR perde o GGR. */
+function impliedGgrFromMarginInDailyRest(raw: string, turnover: number): number | null {
+  const m = raw.match(/(-?\d+(?:[.,]\d+)?)\s*%/);
+  if (!m) return null;
+  const pct = parseNumericToken(`${m[1]}%`);
+  if (pct == null || Math.abs(pct) > 50) return null;
+  return Math.round((turnover * pct) / 100);
 }
 
 function assignDailyMetrics(nr: number[]): {
@@ -374,12 +420,16 @@ function parseDailyBlock(
       i++;
       continue;
     }
-    const rest = line.slice(dateHit.restStart);
+    const rest = normalizeSignedNumberText(line.slice(dateHit.restStart));
     const nr = collectNumbersLeftToRight(splitLineParts(rest));
-    const metrics = assignDailyMetrics(nr);
+    let metrics = assignDailyMetrics(nr);
     if (!metrics) {
       i++;
       continue;
+    }
+    if (metrics.ggr == null) {
+      const inferred = impliedGgrFromMarginInDailyRest(rest, metrics.turnover);
+      if (inferred != null) metrics = { ...metrics, ggr: inferred };
     }
     out.push({
       data: dateHit.iso,
@@ -400,25 +450,54 @@ function parseDailyBlock(
  * Varre o texto inteiro: ordem do OCR pode colocar esse bloco depois de "Per table".
  */
 /** Captura "Jan 2026 1.322 146,76" no texto bruto (OCR parte linhas; quadro da esquerda tem milhões e é filtrado). */
+function monthlyUapArpuCandidateScore(uap: number, arpu: number): number {
+  let s = 0;
+  if (uap >= 700 && uap <= 2200) s += 25;
+  if (uap >= 1100 && uap <= 1450) s += 10;
+  if (Math.abs(arpu) >= 90 && Math.abs(arpu) <= 230) s += 25;
+  if (Math.abs(arpu) >= 130 && Math.abs(arpu) <= 200) s += 8;
+  return s;
+}
+
+/** Vários «Jan 2026» no OCR (quadro esquerdo vs direito); escolhe o par UAP/ARPU plausível (Janeiro costuma falhar no 1.º match). */
 function scrapeMonthlyUapArpuGaps(text: string, byMes: Map<string, MonthlyRowParsed>): void {
   const re = new RegExp(
-    `\\b(${MONTHS_FOR_RE})\\s+(\\d{4}|\\d{2}[oO]\\d{2})\\b\\s*[^0-9\\-]{0,8}([\\-0-9][0-9O.,]{0,16})\\s+([\\-0-9][0-9O.,]{0,16})`,
+    `\\b(${MONTHS_FOR_RE})\\s+(\\d{4}|\\d{2}[oO]\\d{2})\\b\\s*[^0-9\\-]{0,40}([\\-0-9][0-9O.,]{0,16})\\s+([\\-0-9][0-9O.,]{0,16})`,
     "gi",
   );
+  const scraped = new Map<string, MonthlyRowParsed[]>();
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     const mesIso = monthYearToIso(m[1], m[2].replace(/o/gi, "0"));
-    if (!mesIso || byMes.has(mesIso)) continue;
+    if (!mesIso) continue;
     const uapVal = parseNumericToken(m[3].replace(/O/g, "0"));
     const arpuVal = parseNumericToken(m[4].replace(/O/g, "0"));
     if (uapVal == null || arpuVal == null) continue;
-    if (uapVal < 600 || uapVal > 6000) continue;
-    if (Math.abs(arpuVal) > 450 || Math.abs(arpuVal) < 38) continue;
-    byMes.set(mesIso, {
+    if (uapVal < 500 || uapVal > 8000) continue;
+    if (Math.abs(arpuVal) > 500 || Math.abs(arpuVal) < 28) continue;
+    const row: MonthlyRowParsed = {
       mes: mesIso,
       uap: Math.round(uapVal),
       arpu: arpuVal,
-    });
+    };
+    if (!scraped.has(mesIso)) scraped.set(mesIso, []);
+    scraped.get(mesIso)!.push(row);
+  }
+  for (const [mesIso, rows] of scraped) {
+    const best = rows.reduce((a, b) =>
+      monthlyUapArpuCandidateScore(b.uap!, b.arpu!) > monthlyUapArpuCandidateScore(a.uap!, a.arpu!) ? b : a,
+    );
+    const cur = byMes.get(mesIso);
+    if (!cur) {
+      byMes.set(mesIso, best);
+      continue;
+    }
+    if (
+      monthlyUapArpuCandidateScore(best.uap!, best.arpu!) >
+      monthlyUapArpuCandidateScore(cur.uap!, cur.arpu!)
+    ) {
+      byMes.set(mesIso, best);
+    }
   }
 }
 
@@ -523,7 +602,7 @@ function parsePorTabelaBlock(
       }
     }
     const afterName = line.slice(prefixLen).trim();
-    const triple = parseFirstThreeMetrics(afterName);
+    const triple = parseFirstThreeMetrics(afterName, resolved.mesa);
     if (!triple) continue;
     const [ggr, turnover, apostas] = triple;
     out.push({
@@ -599,7 +678,7 @@ export async function terminateMesasSpinOcrWorker(): Promise<void> {
   }
 }
 
-export async function prepareImageForOcr(file: File, maxWidth = 4200): Promise<string> {
+export async function prepareImageForOcr(file: File, maxWidth = 4800): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
     const bmp = await createImageBitmap(await fetch(url).then((r) => r.blob()));
