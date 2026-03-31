@@ -64,6 +64,7 @@ const MESES_EN: Record<string, number> = {
   feb: 1,
   mar: 2,
   apr: 3,
+  abr: 3,
   may: 4,
   jun: 5,
   jul: 6,
@@ -74,12 +75,74 @@ const MESES_EN: Record<string, number> = {
   dec: 11,
 };
 
-/** Inglês abreviado do BI; OCR costuma perder o espaço entre mês e ano (ex.: «Mar2026»). */
-const MONTH_YEAR_RE = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[\s.:]*(\d{4})\b/i;
+/** Nomes completos que o OCR costuma devolver em vez de «mar», «apr», etc. */
+const MESES_EN_LONG: Record<string, number> = {
+  january: 0,
+  february: 1,
+  march: 2,
+  april: 3,
+  may: 4,
+  june: 5,
+  july: 6,
+  august: 7,
+  september: 8,
+  october: 9,
+  november: 10,
+  december: 11,
+};
+
+/**
+ * Blocos do print (ordem típica no BI):
+ * 1 — Daily summaries BRL: coluna Day (DD/MM/AAAA) + Turnover, GGR, Bets, UAP (+ margem/bet size/ARPU calculados).
+ * 2 — Monthly summaries BRL (1.ª e 2.ª tabela no mesmo recorte até «Per table»): linhas «Mar 2026» / «March 2026» + números.
+ * 3 — Per table: uma linha por mesa «Casa de Apostas …» + 9 métricas.
+ */
+const MONTHS_FOR_RE =
+  "january|february|march|april|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|abr";
+
+/** Inglês/typo; espaço entre mês e ano opcional (Mar2026). «abr» ≈ abril em prints PT. */
+const MONTH_YEAR_RE = new RegExp(`\\b(${MONTHS_FOR_RE})[\\s.:]*(\\d{4})\\b`, "i");
+
 const BR_DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 
 function lineLooksLikeMonthlyRow(line: string): boolean {
   return MONTH_YEAR_RE.test(line);
+}
+
+function isDailySummariesTitleLine(line: string): boolean {
+  const x = line.toLowerCase();
+  return (
+    /daily\s*summar/i.test(line) ||
+    (/daily/i.test(x) && /summar/i.test(x) && /brl/i.test(line)) ||
+    (/resumo.*di[ií]/i.test(line) && /brl/i.test(x))
+  );
+}
+
+function isMonthlySummariesTitleLine(line: string): boolean {
+  const x = line.toLowerCase();
+  return (
+    /monthly\s*summar/i.test(line) ||
+    /month\s+summar/i.test(line) ||
+    (/monthly/.test(x) && /summar/.test(x)) ||
+    (/month/.test(x) && /summar/.test(x) && /brl/i.test(line))
+  );
+}
+
+function isPerTableTitleLine(line: string): boolean {
+  const x = line.toLowerCase();
+  return (
+    /\bper\s+table\b/i.test(line) ||
+    /\bper\s+tabl/i.test(line) ||
+    (/\bper\b/.test(x) && /\btable\b/.test(x) && !/\bper\s*tableau\b/i.test(x))
+  );
+}
+
+/** Não fundir linha seguinte no mesmo dia: novo dia, cabeçalho de secção ou linha mensal. */
+function shouldBreakDailyLineMerge(nextLine: string): boolean {
+  if (isMonthlySummariesTitleLine(nextLine) || isPerTableTitleLine(nextLine)) return true;
+  if (lineLooksLikeMonthlyRow(nextLine)) return true;
+  const p = splitLineParts(nextLine);
+  return p.length > 0 && brDateToIso(p[0]) != null;
 }
 
 function pad2(n: number) {
@@ -93,7 +156,8 @@ export function brDateToIso(token: string): string | null {
 }
 
 export function monthYearToIso(mon: string, year: string): string | null {
-  const mi = MESES_EN[mon.toLowerCase()];
+  const key = mon.toLowerCase();
+  const mi = MESES_EN_LONG[key] ?? MESES_EN[key];
   if (mi === undefined) return null;
   return `${year}-${pad2(mi + 1)}-01`;
 }
@@ -192,6 +256,20 @@ function numbersFromRight(parts: string[], count: number): { nums: number[]; res
   }
   if (nums.length !== count) return null;
   return { nums, rest: parts.slice(0, i + 1) };
+}
+
+/** Primeira linha que parece dados do Daily summaries (data BR + 5 ou 7 métricas). */
+function findFirstDailyDataLineIndex(lines: string[], from: number, until: number): number {
+  const u = Math.min(until, lines.length);
+  for (let i = Math.max(0, from); i < u; i++) {
+    const line = lines[i];
+    if (isMonthlySummariesTitleLine(line) || isPerTableTitleLine(line)) break;
+    const p = splitLineParts(line);
+    if (p.length < 2 || !brDateToIso(p[0])) continue;
+    const tail = p.slice(1);
+    if (numbersFromRight(tail, 7) || numbersFromRight(tail, 5)) return i;
+  }
+  return -1;
 }
 
 function isPerTableOcrHeaderLine(line: string): boolean {
@@ -338,26 +416,15 @@ function normalizeLines(text: string): string[] {
 }
 
 function findDailySummariesIndex(lines: string[]): number {
-  return lines.findIndex((l) =>
-    /daily\s*summar/i.test(l) || (/daily/i.test(l) && /summar/i.test(l) && /brl/i.test(l)),
-  );
+  return lines.findIndex((l) => isDailySummariesTitleLine(l));
 }
 
 function findMonthlySummariesIndex(lines: string[]): number {
-  return lines.findIndex((l) => {
-    const x = l.toLowerCase();
-    return (
-      /monthly\s*summar/i.test(l) ||
-      /month\s+summar/i.test(l) ||
-      (/monthly/.test(x) && /summar/.test(x)) ||
-      (/month/.test(x) && /summar/.test(x) && /brl/i.test(l))
-    );
-  });
+  return lines.findIndex((l) => isMonthlySummariesTitleLine(l));
 }
 
-/** Evita confundir com "period", "prev", etc. */
 function findPerTableIndex(lines: string[]): number {
-  return lines.findIndex((l) => /\bper\s+table\b/i.test(l) || /\bper\s+tabl/i.test(l));
+  return lines.findIndex((l) => isPerTableTitleLine(l));
 }
 
 function parseDailyRows(lines: string[], start: number, end: number, _operadoras: OperadoraRef[]): DailySummaryParsed[] {
@@ -366,7 +433,7 @@ function parseDailyRows(lines: string[], start: number, end: number, _operadoras
   let i = start;
   while (i < end) {
     const line0 = lines[i];
-    if (/monthly\s+summar/i.test(line0) || /\bper\s+table\b/i.test(line0)) break;
+    if (isMonthlySummariesTitleLine(line0) || isPerTableTitleLine(line0)) break;
 
     let merged = line0;
     let j = i;
@@ -420,7 +487,7 @@ function parseDailyRows(lines: string[], start: number, end: number, _operadoras
       }
       if (j + 1 >= end) break;
       const next = lines[j + 1];
-      if (/monthly\s+summar/i.test(next) || /\bper\s+table\b/i.test(next)) break;
+      if (shouldBreakDailyLineMerge(next)) break;
       j++;
       merged = `${merged} ${next}`;
     }
@@ -446,7 +513,7 @@ function parseMonthlyBlock(textBlock: string[], _operadoras: OperadoraRef[]): Mo
   >();
 
   for (const line of textBlock) {
-    if (/\bper\s+table\b/i.test(line)) break;
+    if (isPerTableTitleLine(line)) break;
 
     const m = line.match(MONTH_YEAR_RE);
     if (!m || m.index === undefined) continue;
@@ -613,9 +680,10 @@ export function parseRelatorioFromOcrText(text: string, operadoras: OperadoraRef
   let monthlyStartInclusive = -1;
   if (iMonthlyHeader >= 0 && iMonthlyHeader < regionEnd) {
     monthlyStartInclusive = iMonthlyHeader + 1;
-  } else if (iDaily >= 0) {
-    /** Cabeçalho «Monthly» ilegível no OCR: primeira linha «Mar 2026 …» delimita fim do daily. */
-    for (let idx = iDaily + 1; idx < regionEnd; idx++) {
+  } else {
+    /** Cabeçalho «Monthly» ilegível no OCR: primeira linha «Mar 2026» / «March 2026» fecha o daily. */
+    const scanFrom = iDaily >= 0 ? iDaily + 1 : 0;
+    for (let idx = scanFrom; idx < regionEnd; idx++) {
       if (lineLooksLikeMonthlyRow(lines[idx])) {
         dailyEndExclusive = idx;
         monthlyStartInclusive = idx;
@@ -625,8 +693,14 @@ export function parseRelatorioFromOcrText(text: string, operadoras: OperadoraRef
   }
 
   let daily: DailySummaryParsed[] = [];
-  if (iDaily >= 0) {
-    daily = parseDailyRows(lines, iDaily + 1, dailyEndExclusive, operadoras);
+  let dailyStart = iDaily >= 0 ? iDaily + 1 : 0;
+  const monthlyCap = monthlyStartInclusive >= 0 ? monthlyStartInclusive : regionEnd;
+  if (iDaily < 0) {
+    const hit = findFirstDailyDataLineIndex(lines, 0, Math.min(monthlyCap, regionEnd));
+    if (hit >= 0) dailyStart = hit;
+  }
+  if (dailyStart < dailyEndExclusive) {
+    daily = parseDailyRows(lines, dailyStart, dailyEndExclusive, operadoras);
   }
 
   let monthly: MonthlySummaryParsed[] = [];
