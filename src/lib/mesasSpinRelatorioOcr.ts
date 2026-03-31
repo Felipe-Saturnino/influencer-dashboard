@@ -295,23 +295,64 @@ function looseDigitGroupsPattern(n: number): string {
   return chunks.join(String.raw`[\s,.\u00A0\u2019]*`);
 }
 
-/** Tenta ler GGR d-1 ainda presente no texto antes do turnover (ex.: «-5 280» antes de 96 593). */
+/** GGR da Roleta tipicamente |GGR|/turnover ∈ [1,5%, 12%]; nunca ~0. */
+function scoreRoletaGgrCandidate(v: number, turnoverAbs: number): number | null {
+  const av = Math.abs(v);
+  if (av < 120 || av > Math.min(35_000, turnoverAbs * 0.28)) return null;
+  const ratio = av / turnoverAbs;
+  if (ratio < 0.012 || ratio > 0.14) return null;
+  return Math.abs(ratio - 0.055);
+}
+
+/** Texto antes da 1.ª ocorrência do turnover; escolhe candidato com escala plausível. */
 function extractRoletaGgrBeforeTurnover(tail: string, turnover: number): number | null {
-  const t = Math.round(Math.abs(turnover));
-  if (t < 10_000) return null;
-  const re = new RegExp(looseDigitGroupsPattern(t));
+  const tAbs = Math.abs(turnover);
+  if (tAbs < 10_000) return null;
+  const re = new RegExp(looseDigitGroupsPattern(Math.round(tAbs)));
   const hit = tail.match(re);
-  if (!hit || hit.index === undefined || hit.index < 1) return null;
-  const prefix = normalizeSignedNumberText(tail.slice(0, hit.index));
-  const headNums = collectNumbersLeftToRight(splitLineParts(prefix.trim()));
+  if (!hit || hit.index === undefined) return null;
+  const prefix = hit.index > 0 ? normalizeSignedNumberText(tail.slice(0, hit.index)) : "";
+  const headNums = prefix
+    ? collectNumbersLeftToRight(splitLineParts(prefix.trim()))
+    : [];
+  let best: number | null = null;
+  let bestScore = Infinity;
+  for (const v of headNums) {
+    const sc = scoreRoletaGgrCandidate(v, tAbs);
+    if (sc == null) continue;
+    const bias = v < 0 ? -0.01 : 0;
+    if (sc + bias < bestScore) {
+      bestScore = sc + bias;
+      best = v;
+    }
+  }
+  if (best != null) return best;
   for (let i = headNums.length - 1; i >= 0; i--) {
     const v = headNums[i]!;
-    if (Math.abs(v) >= Math.abs(turnover) * 0.35) continue;
-    if (Math.abs(v) > 25_000) continue;
-    if (Math.abs(v) < 30) continue;
+    if (Math.abs(v) >= tAbs * 0.35) continue;
+    if (Math.abs(v) > 28_000) continue;
+    if (Math.abs(v) < 120) continue;
     return v;
   }
   return null;
+}
+
+/** Na lista de números da linha, o turnover pode ser o 2.º; o GGR imediatamente antes (só se escala bate). */
+function extractRoletaGgrFromNumsBeforeTurnover(
+  nums: number[],
+  turnover: number,
+  apostas: number,
+): number | null {
+  const tAbs = Math.abs(turnover);
+  const bAbs = Math.abs(apostas);
+  const tolT = Math.max(10, tAbs * 0.004);
+  const tolB = Math.max(10, bAbs * 0.004);
+  const idx = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
+  if (idx <= 0) return null;
+  const prev = nums[idx - 1]!;
+  if (Math.abs(Math.abs(prev) - bAbs) <= tolB) return null;
+  if (scoreRoletaGgrCandidate(prev, tAbs) == null) return null;
+  return prev;
 }
 
 function strictPerTableD1Triple(
@@ -327,11 +368,23 @@ function strictPerTableD1Triple(
   if (mesa === "Roleta" && roletaLooksLikeShiftedFirstCellIsTurnover(nums[0], nums[1])) {
     turnover = nums[0];
     apostas = nums[1];
-    ggr = extractRoletaGgrBeforeTurnover(afterNameForRoleta, turnover);
+    ggr =
+      extractRoletaGgrFromNumsBeforeTurnover(nums, turnover, apostas) ??
+      extractRoletaGgrBeforeTurnover(afterNameForRoleta, turnover);
   } else if (mesa === "Speed Baccarat" && speedBaccaratLooksLikeSkippedLeadingGgr(nums[0], nums[1])) {
     turnover = nums[0];
     apostas = nums[1];
+    const c = nums[2];
     ggr = null;
+    const tAbsB = Math.abs(turnover);
+    if (
+      c !== undefined &&
+      Math.abs(c) >= 150 &&
+      Math.abs(c) < tAbsB * 0.13 &&
+      Math.abs(c) < 8_000
+    ) {
+      ggr = c;
+    }
   }
 
   const isBjFamily =
@@ -362,7 +415,10 @@ function strictPerTableD1Triple(
     turnover = tTmp;
   }
 
-  return { ggr, turnover, apostas };
+  let out = { ggr, turnover, apostas };
+  out.turnover = Math.abs(out.turnover);
+  out.apostas = Math.abs(out.apostas);
+  return out;
 }
 
 /** Há carácter «-» antes do 1.º dígito da célula numérica (GGR d-1). */
@@ -399,7 +455,7 @@ function parseFirstThreeMetrics(
     if (ggr > 0 && minusBeforeFirstDigitInCell(norm)) ggr = -Math.abs(ggr);
     ggr = adjustRoletaGgrSign(mesa, ggr, turnover);
   }
-  return [ggr, turnover, apostas];
+  return [ggr, Math.abs(turnover), Math.abs(apostas)];
 }
 
 function findDailySummariesIndex(lines: string[]): number {
