@@ -338,6 +338,93 @@ function medianGap(ns: number[]): number {
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
 }
 
+/** Funde caixas OCR adjacentes com pequeno espaço (ex. «1» + «,053») para não confundir gap interno com coluna nova. */
+function collapseMetricWordsSameCell(ws: OcrWordLayout[]): OcrWordLayout[] {
+  const sorted = [...ws].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+  if (sorted.length <= 1) return sorted;
+  const gaps: number[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    gaps.push(sorted[i]!.bbox.x0 - sorted[i - 1]!.bbox.x1);
+  }
+  const med = medianGap(gaps);
+  const maxJoin = Math.min(50, Math.max(8, med * 0.72));
+  const out: OcrWordLayout[] = [];
+  let acc = sorted[0]!;
+  for (let i = 1; i < sorted.length; i++) {
+    const w = sorted[i]!;
+    const gap = w.bbox.x0 - acc.bbox.x1;
+    if (gap <= maxJoin) {
+      acc = {
+        text: `${acc.text.trim()} ${w.text.trim()}`.trim(),
+        bbox: {
+          x0: acc.bbox.x0,
+          y0: Math.min(acc.bbox.y0, w.bbox.y0),
+          x1: Math.max(acc.bbox.x1, w.bbox.x1),
+          y1: Math.max(acc.bbox.y1, w.bbox.y1),
+        },
+      };
+    } else {
+      out.push(acc);
+      acc = w;
+    }
+  }
+  out.push(acc);
+  return out;
+}
+
+/**
+ * Pontua cortes (menor = melhor). Rejeita quando «Apostas» parece coluna d-2 (ex. apostas d-1 muito baixas na mesa).
+ */
+function perTableTripleSplitScore(g: number, t: number, a: number, mesa: string): number | null {
+  const absT = Math.abs(t);
+  const absA = Math.abs(a);
+  const absG = Math.abs(g);
+  if (!(absT > 0) || !Number.isFinite(absA)) return null;
+
+  if (mesa === "Roleta") {
+    const r = absA / absT;
+    if (r > 1.25 || r < 0.06) return null;
+    return r * 8 + Math.min(absG / absT, 2.5) * 0.5;
+  }
+
+  const bjLike =
+    mesa === "Speed Baccarat" ||
+    mesa === "Blackjack 1" ||
+    mesa === "Blackjack VIP" ||
+    mesa === "Blackjack 2";
+  if (bjLike) {
+    if (absT < 300 && absA > 25_000) return null;
+    if (absT >= 400 && absA > absT * 1.38) return null;
+    if (absA > 100_000) return null;
+    if (absG > absT * 2.2 && absT > 2_000) return null;
+    const r = absA / absT;
+    const penalty = r > 0.85 ? r * 4 : r;
+    return penalty + Math.min(absG / (absT + 1), 1.2) * 0.3;
+  }
+
+  if (absT >= 400 && absA > absT * 1.38) return null;
+  return absA / absT;
+}
+
+function enumerateBestD1TripleString(atoms: OcrWordLayout[], mesa: string): string | null {
+  const n = atoms.length;
+  if (n < 3) return null;
+  let best: { s: string; score: number } | null = null;
+  for (let i = 1; i <= n - 2; i++) {
+    for (let j = i + 1; j <= n - 1; j++) {
+      const gv = clusterWordsToNumber(atoms.slice(0, i));
+      const tv = clusterWordsToNumber(atoms.slice(i, j));
+      const av = clusterWordsToNumber(atoms.slice(j));
+      if (gv == null || tv == null || av == null) continue;
+      const sc = perTableTripleSplitScore(gv, tv, av, mesa);
+      if (sc == null) continue;
+      const s = `${gv} ${tv} ${av}`;
+      if (!best || sc < best.score) best = { s, score: sc };
+    }
+  }
+  return best?.s ?? null;
+}
+
 function clusterWordsToNumber(cluster: OcrWordLayout[]): number | null {
   if (cluster.length === 0) return null;
   const joined = normalizeSignedNumberText(
@@ -370,7 +457,7 @@ function clusterMetricWordsByMedianGap(ws: OcrWordLayout[]): OcrWordLayout[][] {
 /**
  * GGR / Turnover / Apostas d-1 via salto X (corta bloco d-2) + 2 colunas intermédias na zona d-1.
  */
-function buildPerTableD1TripleStringFromMetricWords(metricWords: OcrWordLayout[]): string | null {
+function buildPerTableD1TripleStringFromMetricWords(metricWords: OcrWordLayout[], mesa: string): string | null {
   const filtered = metricWords.filter((w) => !isLayoutNoiseWord(w.text));
   if (filtered.length < 1) return null;
   const sorted = [...filtered].sort((a, b) => a.bbox.x0 - b.bbox.x0);
@@ -391,6 +478,10 @@ function buildPerTableD1TripleStringFromMetricWords(metricWords: OcrWordLayout[]
   }
 
   if (d1words.length < 1) return null;
+
+  const collapsed = collapseMetricWordsSameCell(d1words);
+  const bestEnum = enumerateBestD1TripleString(collapsed, mesa);
+  if (bestEnum) return bestEnum;
 
   const innerGaps: Array<{ i: number; g: number }> = [];
   for (let i = 1; i < d1words.length; i++) {
@@ -514,16 +605,19 @@ function extractRoletaGgrFromNumsBeforeTurnover(
   const tolB = Math.max(10, bAbs * 0.004);
   const idx = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
   if (idx <= 0) return null;
-  const prev = nums[idx - 1]!;
-  if (Math.abs(Math.abs(prev) - bAbs) <= tolB) return null;
-  if (scoreRoletaGgrCandidate(prev, tAbs) == null) return null;
-  return prev;
+  for (let k = idx - 1; k >= 0; k--) {
+    const prev = nums[k]!;
+    if (Math.abs(Math.abs(prev) - bAbs) <= tolB) continue;
+    if (scoreRoletaGgrCandidate(prev, tAbs) != null) return prev;
+  }
+  return null;
 }
 
 function strictPerTableD1Triple(
   nums: number[],
   mesa: string,
   afterNameForRoleta: string,
+  roletaNumPool?: number[],
 ): { ggr: number | null; turnover: number; apostas: number } | null {
   if (nums.length < 3) return null;
   let ggr: number | null = nums[0];
@@ -533,8 +627,9 @@ function strictPerTableD1Triple(
   if (mesa === "Roleta" && roletaLooksLikeShiftedFirstCellIsTurnover(nums[0], nums[1])) {
     turnover = nums[0];
     apostas = nums[1];
+    const pool = roletaNumPool && roletaNumPool.length >= 3 ? roletaNumPool : nums;
     ggr =
-      extractRoletaGgrFromNumsBeforeTurnover(nums, turnover, apostas) ??
+      extractRoletaGgrFromNumsBeforeTurnover(pool, turnover, apostas) ??
       extractRoletaGgrBeforeTurnover(afterNameForRoleta, turnover);
   } else if (mesa === "Speed Baccarat" && speedBaccaratLooksLikeSkippedLeadingGgr(nums[0], nums[1])) {
     turnover = nums[0];
@@ -609,15 +704,20 @@ function adjustRoletaGgrSign(mesa: string, ggr: number, turnover: number): numbe
 function parseFirstThreeMetrics(
   afterName: string,
   mesa: string,
+  layoutContext?: { allNums: number[]; fullTail: string },
 ): [number | null, number, number] | null {
   const norm = normalizeSignedNumberText(afterName);
   const parts = splitLineParts(norm);
   const nums = collectNumbersLeftToRight(parts);
-  const raw = strictPerTableD1Triple(nums, mesa, norm);
+  const tailForRoleta = layoutContext?.fullTail ?? norm;
+  const roletaPool =
+    layoutContext?.allNums && layoutContext.allNums.length >= 3 ? layoutContext.allNums : undefined;
+  const raw = strictPerTableD1Triple(nums, mesa, tailForRoleta, roletaPool);
   if (!raw) return null;
   let { ggr, turnover, apostas } = raw;
+  const tailForSign = layoutContext?.fullTail ?? norm;
   if (ggr != null) {
-    if (ggr > 0 && minusBeforeFirstDigitInCell(norm)) ggr = -Math.abs(ggr);
+    if (ggr > 0 && minusBeforeFirstDigitInCell(tailForSign)) ggr = -Math.abs(ggr);
     ggr = adjustRoletaGgrSign(mesa, ggr, turnover);
   }
   return [ggr, Math.abs(turnover), Math.abs(apostas)];
@@ -1055,11 +1155,22 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
       }
     }
 
-    const geomStr = buildPerTableD1TripleStringFromMetricWords(metricWords);
-    let triple = geomStr ? parseFirstThreeMetrics(geomStr, resolved.mesa) : null;
+    const tailNorm = normalizeSignedNumberText(afterRest);
+    const allNums = collectNumbersLeftToRight(splitLineParts(tailNorm));
+    const layoutCtx = { allNums, fullTail: tailNorm };
+    const geomStr = buildPerTableD1TripleStringFromMetricWords(metricWords, resolved.mesa);
+    let triple = geomStr ? parseFirstThreeMetrics(geomStr, resolved.mesa, layoutCtx) : null;
     if (!triple) {
       if (nums.length < 3) continue;
-      triple = parseFirstThreeMetrics(normalizeSignedNumberText(afterRest), resolved.mesa);
+      triple = parseFirstThreeMetrics(tailNorm, resolved.mesa, layoutCtx);
+    } else if (
+      triple[0] == null &&
+      geomStr &&
+      resolved.mesa !== "Speed Baccarat" &&
+      resolved.mesa !== "Roleta"
+    ) {
+      const alt = parseFirstThreeMetrics(tailNorm, resolved.mesa, layoutCtx);
+      if (alt && alt[0] != null) triple = alt;
     }
     if (!triple) continue;
     const [ggr, turnover, apostas] = triple;
