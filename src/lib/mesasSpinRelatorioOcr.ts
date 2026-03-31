@@ -260,14 +260,68 @@ function thirdLooksLikeD2ForBlackjackVariant(third: number): boolean {
   return Math.abs(third) >= 35_000;
 }
 
+/**
+ * OCR às vezes “come” a célula GGR d-1 na Roleta: os 3 primeiros tokens passam a ser
+ * Turnover d-1, Bets d-1 e GGR d-2 — nunca usar o 3.º como apostas.
+ */
+function roletaLooksLikeShiftedFirstCellIsTurnover(
+  first: number,
+  second: number,
+  third: number,
+): boolean {
+  const absF = Math.abs(first);
+  if (absF < 55_000 || absF > 240_000) return false;
+  if (second < 7_000 || second > 70_000) return false;
+  if (Math.abs(third) > absF * 0.12) return false;
+  return absF > Math.abs(second) * 1.15;
+}
+
+function looseDigitGroupsPattern(n: number): string {
+  const s = String(Math.round(Math.abs(n)));
+  const chunks: string[] = [];
+  for (let i = s.length; i > 0; i -= 3) {
+    chunks.unshift(s.slice(Math.max(0, i - 3), i));
+  }
+  return chunks.join(String.raw`[\s,.\u00A0\u2019]*`);
+}
+
+/** Tenta ler GGR d-1 ainda presente no texto antes do turnover (ex.: «-5 280» antes de 96 593). */
+function extractRoletaGgrBeforeTurnover(tail: string, turnover: number): number | null {
+  const t = Math.round(Math.abs(turnover));
+  if (t < 10_000) return null;
+  const re = new RegExp(looseDigitGroupsPattern(t));
+  const hit = tail.match(re);
+  if (!hit || hit.index === undefined || hit.index < 1) return null;
+  const prefix = normalizeSignedNumberText(tail.slice(0, hit.index));
+  const headNums = collectNumbersLeftToRight(splitLineParts(prefix.trim()));
+  for (let i = headNums.length - 1; i >= 0; i--) {
+    const v = headNums[i]!;
+    if (Math.abs(v) >= Math.abs(turnover) * 0.35) continue;
+    if (Math.abs(v) > 25_000) continue;
+    if (Math.abs(v) < 30) continue;
+    return v;
+  }
+  return null;
+}
+
 function strictPerTableD1Triple(
   nums: number[],
   mesa: string,
+  afterNameForRoleta: string,
 ): { ggr: number | null; turnover: number; apostas: number } | null {
   if (nums.length < 3) return null;
   let ggr: number | null = nums[0];
   let turnover = nums[1];
   let apostas = nums[2];
+
+  if (
+    mesa === "Roleta" &&
+    roletaLooksLikeShiftedFirstCellIsTurnover(nums[0], nums[1], nums[2])
+  ) {
+    turnover = nums[0];
+    apostas = nums[1];
+    ggr = extractRoletaGgrBeforeTurnover(afterNameForRoleta, turnover);
+  }
 
   const isBjFamily =
     mesa === "Blackjack 1" || mesa === "Blackjack VIP" || mesa === "Blackjack 2";
@@ -327,7 +381,7 @@ function parseFirstThreeMetrics(
   const norm = normalizeSignedNumberText(afterName);
   const parts = splitLineParts(norm);
   const nums = collectNumbersLeftToRight(parts);
-  const raw = strictPerTableD1Triple(nums, mesa);
+  const raw = strictPerTableD1Triple(nums, mesa, norm);
   if (!raw) return null;
   let { ggr, turnover, apostas } = raw;
   if (ggr != null) {
@@ -401,6 +455,27 @@ function impliedGgrFromMarginInDailyRest(raw: string, turnover: number): number 
   const pool = neg.length > 0 ? neg : cands;
   pool.sort((a, b) => a.ap - b.ap);
   return pool[0]!.g;
+}
+
+/**
+ * No print, ARPU ≈ GGR / UAP (ex.: -27,15 × 138 ≈ -3747). Útil quando o OCR perde o GGR mas lê ARPU.
+ */
+function inferGgrFromArpuTimesUap(turnover: number, uap: number, nr: number[]): number | null {
+  if (uap < 80 || Math.abs(turnover) < 10_000) return null;
+  let best: number | null = null;
+  let bestScore = Infinity;
+  for (const x of nr) {
+    if (!Number.isFinite(x) || Math.abs(x) > 400 || Math.abs(x) < 2.2) continue;
+    const g = Math.round(x * uap);
+    const ratio = Math.abs(g) / Math.abs(turnover);
+    if (ratio > 0.14 || ratio < 0.0045 || Math.abs(g) < 40) continue;
+    const score = Math.abs(ratio - 0.035);
+    if (score < bestScore) {
+      bestScore = score;
+      best = g;
+    }
+  }
+  return best;
 }
 
 function assignDailyMetrics(nr: number[]): {
@@ -479,6 +554,10 @@ function parseDailyBlock(
     if (metrics.ggr == null) {
       const inferred = impliedGgrFromMarginInDailyRest(rest, metrics.turnover);
       if (inferred != null) metrics = { ...metrics, ggr: inferred };
+    }
+    if (metrics.ggr == null) {
+      const fromArpu = inferGgrFromArpuTimesUap(metrics.turnover, metrics.uap, nr);
+      if (fromArpu != null) metrics = { ...metrics, ggr: fromArpu };
     }
     out.push({
       data: dateHit.iso,
