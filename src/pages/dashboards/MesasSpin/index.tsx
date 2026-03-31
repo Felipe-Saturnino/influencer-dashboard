@@ -104,19 +104,40 @@ function getDatasDoMes(ano: number, mes: number) {
 }
 
 const OPERADORA_CASA_APOSTAS = "casa_apostas";
+/** Rótulo do bloco na UI (print pode vir “Casa de Apostas”; alinhado ao pedido do produto). */
+const EXIBICAO_OPERADORA_CASA_APOSTAS = "Casa de Aposta";
 /** Linhas sem prefixo reconhecido e sem slug no OCR. */
 const OPERADORA_OUTRAS = "outras_mesas";
 
-/** Nome da mesa sem o prefixo operadora (apenas exibição CDA). */
+/**
+ * Nome completo no print → Mesa exibida · Operadora do bloco = Casa de Aposta.
+ * Ordem: padrões mais específicos primeiro (ex.: VIP antes de Blackjack 1).
+ */
+function canonicalMesaCasaAposta(nomeTabela: string): string | null {
+  const t = nomeTabela.trim();
+  const pares: readonly (readonly [RegExp, string])[] = [
+    [/^casa de apostas?\s+vip\s+blackjack\s+1\s*$/i, "Blackjack VIP"],
+    [/^casa de apostas?\s+blackjack\s+1\s*$/i, "Blackjack 1"],
+    [/^casa de apostas?\s+blackjack\s+2\s*$/i, "Blackjack 2"],
+    [/^casa de apostas?\s+speed\s+baccarat\s*$/i, "Speed Baccarat"],
+    [/^casa de apostas?\s+roulette\s*$/i, "Roleta"],
+  ];
+  for (const [re, mesa] of pares) {
+    if (re.test(t)) return mesa;
+  }
+  return null;
+}
+
+/** Nome da mesa sem o prefixo operadora (apenas exibição CDA, fallback). */
 function nomeMesaCdaCurto(nomeTabela: string): string {
-  const s = nomeTabela.replace(/^casa de apostas\s+/i, "").trim();
+  const s = nomeTabela.replace(/^casa de apostas?\s+/i, "").trim();
   return s.length > 0 ? s : nomeTabela.trim();
 }
 
 function isMesaCasaApostas(row: PorTabelaRow): boolean {
   if (row.operadora === OPERADORA_CASA_APOSTAS) return true;
   if (row.operadora != null) return false;
-  return /^casa de apostas\b/i.test(row.nome_tabela);
+  return /^casa de apostas?\b/i.test(row.nome_tabela);
 }
 
 /** Slug consolidado por linha (alinha ao OCR / coluna operadora). */
@@ -131,6 +152,9 @@ function nomeMesaParaExibicao(
   slug: string,
   operadorasList: { slug: string; nome: string }[],
 ): string {
+  const canon = canonicalMesaCasaAposta(row.nome_tabela);
+  if (canon != null) return canon;
+
   const op = operadorasList.find((o) => o.slug === slug);
   if (op) {
     const nt = row.nome_tabela.trim();
@@ -148,6 +172,7 @@ function nomeTituloOperadora(
   operadorasList: { slug: string; nome: string }[],
 ): string {
   if (slug === OPERADORA_OUTRAS) return "Outras mesas";
+  if (slug === OPERADORA_CASA_APOSTAS) return EXIBICAO_OPERADORA_CASA_APOSTAS;
   const o = operadorasList.find((x) => x.slug === slug);
   return o?.nome ?? slug.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
