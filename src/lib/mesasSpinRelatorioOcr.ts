@@ -316,6 +316,10 @@ function stripSummaryLeadForMerge(tail: string): string {
   return tail.replace(/^.*?\bsummary\b/i, "").trim();
 }
 
+function lineTextLooksLikeSummary(ws: OcrWordLayout[]): boolean {
+  return /\bsummary\b/i.test(ws.map((w) => w.text.trim()).join(" "));
+}
+
 function isLayoutNoiseWord(raw: string): boolean {
   const t = raw.trim().toLowerCase().replace(/\s+/g, "");
   if (t.length === 0) return true;
@@ -1400,6 +1404,15 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
 
     const resolved = { operadora: canon.operadora, mesa: canon.mesa };
     const k = countPrefixWords(subWords, canon.raw);
+    const nameWordsForBounds = subWords.slice(0, Math.max(k, 1));
+    const mesaNameLeftX = Math.min(...nameWordsForBounds.map((w) => w.bbox.x0));
+    /** GGR «órfão» à esquerda de «Casa… Roulette» na mesma linha OCR (1.ª linha de dados). */
+    const orphansBeforeMesaName = words.filter(
+      (w) =>
+        !isLayoutNoiseWord(w.text) &&
+        w.bbox.x1 < mesaNameLeftX - 1 &&
+        /^[-–—\d.,\s]+$/.test(w.text.replace(/O/g, "0")),
+    );
     let afterRest =
       k > 0
         ? subWords
@@ -1408,7 +1421,10 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
             .filter(Boolean)
             .join(" ")
         : lineStr.slice(canon.raw.length).trim();
-    let metricWords = wordsToMetricWords(subWords.slice(k));
+    let metricWords = [
+      ...orphansBeforeMesaName.sort((a, b) => a.bbox.x0 - b.bbox.x0),
+      ...wordsToMetricWords(subWords.slice(k)),
+    ];
     let nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(afterRest)));
 
     if (nums.length < 3 && i > 0) {
@@ -1433,7 +1449,9 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
       const nextWords = [...(sorted[i + 1]!.words ?? [])].sort((a, b) => a.bbox.x0 - b.bbox.x0);
       const nextStrFixed = nextWords.map((w) => w.text?.trim() ?? "").filter(Boolean).join(" ");
       const nextOwn = nextStrFixed.length > 0 ? mesaStartOnLine(nextWords) : null;
-      if (yd < yMergeMax && !nextOwn) {
+      /** Linha «Summary» não é continuação da mesa: anexar palavras contamina colunas d-1 com MTD/d-2. */
+      const nextIsSummary = lineTextLooksLikeSummary(nextWords);
+      if (yd < yMergeMax && !nextOwn && !nextIsSummary) {
         const tail2 = stripSummaryLeadForMerge(nextStrFixed);
         afterRest = `${afterRest} ${tail2}`.trim();
         nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(afterRest)));
