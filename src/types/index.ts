@@ -32,6 +32,7 @@ export type PageKey =
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
   | "gestao_dealers"
+  | "central_notificacoes"
   | "status_tecnico"
   | "roteiro_mesa"
   | "playbook_influencers"

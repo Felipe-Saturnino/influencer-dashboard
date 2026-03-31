@@ -50,6 +50,7 @@ const BancaJogo   = lazyWithRetry(() => import("./pages/operacoes/BancaJogo"));
 const GestaoLinks = lazyWithRetry(() => import("./pages/operacoes/GestaoLinks"));
 const Campanhas = lazyWithRetry(() => import("./pages/operacoes/Campanhas"));
 const GestaoDealers = lazyWithRetry(() => import("./pages/operacoes/GestaoDealers"));
+const CentralNotificacoes = lazyWithRetry(() => import("./pages/operacoes/CentralNotificacoes"));
 const RoteiroMesa = lazyWithRetry(() => import("./pages/conteudo/RoteiroMesa"));
 const PlaybookInfluencers = lazyWithRetry(() => import("./pages/conteudo/PlaybookInfluencers"));
 const LinksMateriais = lazyWithRetry(() => import("./pages/conteudo/LinksMateriais"));
@@ -76,6 +77,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   gestao_links:     GestaoLinks,
   campanhas:        Campanhas,
   gestao_dealers:   GestaoDealers,
+  central_notificacoes: CentralNotificacoes,
   roteiro_mesa:     RoteiroMesa,
   playbook_influencers: PlaybookInfluencers,
   links_materiais:  LinksMateriais,
