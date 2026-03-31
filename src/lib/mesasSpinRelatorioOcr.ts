@@ -286,6 +286,25 @@ function lineCenterY(line: OcrLineLayout): number {
   return (y0 + y1) / 2;
 }
 
+function wordCenterYWord(w: OcrWordLayout): number {
+  return (w.bbox.y0 + w.bbox.y1) / 2;
+}
+
+/** Token que parece número/coluna (OCR); evita «Casa», «Roulette», etc. */
+function looksLikeNumericOcrToken(raw: string): boolean {
+  const t = raw.trim().replace(/\u2212/g, "-").replace(/\u2013/g, "-").replace(/\u2014/g, "-");
+  if (t.length === 0 || t.length > 28) return false;
+  if (/[a-zA-Z]{2,}/.test(t)) return false;
+  return /[\d]/.test(t.replace(/O/gi, "0"));
+}
+
+/** GGR, Turnover, Bets d-1 = 3 primeiros números na ordem do texto (Bi lê colunas da esquerda para a direita). */
+function tryPorTabelaTripleFromTextOrder(tailAfterMesa: string): string | null {
+  const nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(tailAfterMesa)));
+  if (nums.length < 3) return null;
+  return `${nums[0]} ${nums[1]} ${nums[2]}`;
+}
+
 /** 1.ª ocorrência de uma linha de mesa «Casa de Apostas …» (ignora «Per table BRL» à esquerda). */
 function mesaStartOnLine(sortedWords: OcrWordLayout[]): { startWi: number; canon: (typeof MESA_RAW_TO_CANON)[number] } | null {
   for (let start = 0; start < sortedWords.length; start++) {
@@ -317,7 +336,8 @@ function stripSummaryLeadForMerge(tail: string): string {
 }
 
 function lineTextLooksLikeSummary(ws: OcrWordLayout[]): boolean {
-  return /\bsummary\b/i.test(ws.map((w) => w.text.trim()).join(" "));
+  const s = ws.map((w) => w.text.trim().toLowerCase()).join(" ");
+  return /\bsummary\b/i.test(s) || /\bsummar[yv]\b/.test(s) || /\b4ummary\b/.test(s);
 }
 
 function isLayoutNoiseWord(raw: string): boolean {
@@ -1406,12 +1426,23 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
     const k = countPrefixWords(subWords, canon.raw);
     const nameWordsForBounds = subWords.slice(0, Math.max(k, 1));
     const mesaNameLeftX = Math.min(...nameWordsForBounds.map((w) => w.bbox.x0));
-    /** GGR «órfão» à esquerda de «Casa… Roulette» na mesma linha OCR (1.ª linha de dados). */
+    const ys = nameWordsForBounds.map((w) => wordCenterYWord(w)).sort((a, b) => a - b);
+    const yMed =
+      ys.length > 0 ? ys[Math.floor(ys.length / 2)]! : lineCenterY(sorted[i]!);
+    const lineH = Math.max(
+      14,
+      (sorted[i]!.bbox?.y1 ?? 0) - (sorted[i]!.bbox?.y0 ?? 0),
+    );
+    const yTol = Math.max(44, lineH * 0.42);
+    const inSameTextRow = (w: OcrWordLayout) => Math.abs(wordCenterYWord(w) - yMed) <= yTol;
+
+    /** GGR «órfão» à esquerda do nome da mesa, **na mesma faixa Y** (evita lixo de outras linhas no mesmo `line` do Tesseract). */
     const orphansBeforeMesaName = words.filter(
       (w) =>
+        inSameTextRow(w) &&
         !isLayoutNoiseWord(w.text) &&
         w.bbox.x1 < mesaNameLeftX - 1 &&
-        /^[-–—\d.,\s]+$/.test(w.text.replace(/O/g, "0")),
+        looksLikeNumericOcrToken(w.text),
     );
     let afterRest =
       k > 0
@@ -1423,7 +1454,7 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
         : lineStr.slice(canon.raw.length).trim();
     let metricWords = [
       ...orphansBeforeMesaName.sort((a, b) => a.bbox.x0 - b.bbox.x0),
-      ...wordsToMetricWords(subWords.slice(k)),
+      ...wordsToMetricWords(subWords.slice(k).filter(inSameTextRow)),
     ];
     let nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(afterRest)));
 
@@ -1461,6 +1492,15 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
     }
 
     const tailNorm = normalizeSignedNumberText(afterRest);
+    /** Inclui palavras numéricas à esquerda do nome da mesa (ex. GGR na Roleta) na ordem de leitura. */
+    const orderTail = normalizeSignedNumberText(
+      [
+        ...orphansBeforeMesaName.sort((a, b) => a.bbox.x0 - b.bbox.x0).map((w) => w.text.trim()),
+        afterRest.trim(),
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
     const allNums = collectNumbersLeftToRight(splitLineParts(tailNorm));
     const layoutCtxBase = { allNums, fullTail: tailNorm };
     const isFirstMesaRow = firstMesaIdx != null && i === firstMesaIdx;
@@ -1501,6 +1541,36 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
       const gFill = extractRoletaGgrLoose(tailNorm, triple[1], triple[2]);
       if (gFill != null) triple = [gFill, triple[1], triple[2]];
     }
+
+    /**
+     * 1.ª e última **linha de mesa**: o layout por X falha mais (cabeçalho, Summary, `line` do Tesseract alto).
+     * Ordem do print: após o nome vêm sempre GGR d-1, Turnover d-1, Bets d-1 — os 3 primeiros números na cauda são fiéis se a cauda não incluir linha Summary (já bloqueada).
+     */
+    if (isFirstMesaRow && resolved.mesa === "Roleta") {
+      const os = tryPorTabelaTripleFromTextOrder(orderTail);
+      if (os) {
+        const orderNums = collectNumbersLeftToRight(splitLineParts(orderTail));
+        const tTxt = parseFirstThreeMetrics(os, resolved.mesa, {
+          allNums: orderNums.length >= 3 ? orderNums : layoutCtxBase.allNums,
+          fullTail: orderTail,
+          fromColumnLayout: true,
+        });
+        if (tTxt) triple = tTxt;
+      }
+    }
+    if (isLastMesaRow && resolved.mesa === "Speed Baccarat") {
+      const os = tryPorTabelaTripleFromTextOrder(orderTail);
+      if (os) {
+        const orderNums = collectNumbersLeftToRight(splitLineParts(orderTail));
+        const tTxt = parseFirstThreeMetrics(os, resolved.mesa, {
+          allNums: orderNums.length >= 3 ? orderNums : layoutCtxBase.allNums,
+          fullTail: orderTail,
+          fromColumnLayout: true,
+        });
+        if (tTxt) triple = tTxt;
+      }
+    }
+
     if (!triple) continue;
     const [ggr, turnover, apostas] = triple;
     out.push({
