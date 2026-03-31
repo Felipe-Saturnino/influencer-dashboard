@@ -876,6 +876,35 @@ export async function prepareImageForOcr(file: File, maxWidth = 4800): Promise<s
   }
 }
 
+/** Bbox + palavras: reconstrói o texto na ordem visual (útil em tabelas com o mesmo layout em dias diferentes). */
+type OcrWordLite = { text: string; bbox: { x0: number; y0: number; x1: number; y1: number } };
+type OcrLineLite = { words?: OcrWordLite[]; bbox?: { x0: number; y0: number; x1: number; y1: number } };
+
+function buildSpatialOcrText(data: { text?: string | null; lines?: OcrLineLite[] | null }): string {
+  const lines = data.lines;
+  if (!lines || lines.length === 0) return data.text ?? "";
+
+  const sortedLines = [...lines].sort((a, b) => {
+    const ya = (a.bbox?.y0 ?? 0) + (a.bbox?.y1 ?? 0);
+    const yb = (b.bbox?.y0 ?? 0) + (b.bbox?.y1 ?? 0);
+    return ya - yb;
+  });
+
+  const out: string[] = [];
+  for (const line of sortedLines) {
+    const words = [...(line.words ?? [])].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+    const s = words
+      .map((w) => w.text?.trim() ?? "")
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    if (s.length > 0) out.push(s);
+  }
+
+  const spatial = out.join("\n");
+  return spatial.length > 0 ? spatial : (data.text ?? "");
+}
+
 export async function runMesasSpinOcr(
   file: File,
   onProgress?: (stage: string, pct: number) => void,
@@ -885,5 +914,5 @@ export async function runMesasSpinOcr(
   onProgress?.("ocr", 0);
   const worker = await getWorker((p) => onProgress?.("ocr", p));
   const { data } = await worker.recognize(dataUrl);
-  return data.text ?? "";
+  return buildSpatialOcrText(data as { text?: string | null; lines?: OcrLineLite[] | null });
 }
