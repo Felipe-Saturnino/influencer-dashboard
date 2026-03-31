@@ -298,13 +298,6 @@ function looksLikeNumericOcrToken(raw: string): boolean {
   return /[\d]/.test(t.replace(/O/gi, "0"));
 }
 
-/** GGR, Turnover, Bets d-1 = 3 primeiros números na ordem do texto (Bi lê colunas da esquerda para a direita). */
-function tryPorTabelaTripleFromTextOrder(tailAfterMesa: string): string | null {
-  const nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(tailAfterMesa)));
-  if (nums.length < 3) return null;
-  return `${nums[0]} ${nums[1]} ${nums[2]}`;
-}
-
 /** 1.ª ocorrência de uma linha de mesa «Casa de Apostas …» (ignora «Per table BRL» à esquerda). */
 function mesaStartOnLine(sortedWords: OcrWordLayout[]): { startWi: number; canon: (typeof MESA_RAW_TO_CANON)[number] } | null {
   for (let start = 0; start < sortedWords.length; start++) {
@@ -658,6 +651,48 @@ function buildTripleStringFromColumnBuckets(
     else if (col === 2) b2.push(w);
   }
   const sortX = (p: OcrWordLayout, q: OcrWordLayout) => p.bbox.x0 - q.bbox.x0;
+  b0.sort(sortX);
+  b1.sort(sortX);
+  b2.sort(sortX);
+  const g = clusterWordsToNumber(b0);
+  const t = clusterWordsToNumber(b1);
+  const bet = clusterWordsToNumber(b2);
+  if (g == null || t == null || bet == null) return null;
+  return `${g} ${t} ${bet}`;
+}
+
+/**
+ * 1.ª / última linha de dados: limites do cabeçalho desalinham → reparte o intervalo d-1
+ * [min X, betsRightMaxX) em **três faixas iguais** (GGR | Turnover | Bets), só com palavras nessa janela.
+ * Evita usar «3 primeiros números no texto» quando o GGR não aparece na string (deslocava T/B para GGR/T e T_d-2 em Apostas).
+ */
+function buildTripleStringFromD1EqualThirds(
+  metricWords: OcrWordLayout[],
+  betsRightMaxX: number,
+): string | null {
+  const raw = [...metricWords]
+    .filter((w) => !isLayoutNoiseWord(w.text) && wordCenterX(w) < betsRightMaxX)
+    .sort((a, b) => a.bbox.x0 - b.bbox.x0);
+  if (raw.length === 0) return null;
+  const collapsed = collapseMetricWordsSameCell(raw);
+  if (collapsed.length < 3) return null;
+  const xs = collapsed.map((w) => wordCenterX(w));
+  const xMin = Math.min(...xs);
+  const xMax = Math.max(...xs);
+  const span = xMax - xMin;
+  if (span < 28) return null;
+  const t1 = xMin + span / 3;
+  const t2 = xMin + (2 * span) / 3;
+  const b0: OcrWordLayout[] = [];
+  const b1: OcrWordLayout[] = [];
+  const b2: OcrWordLayout[] = [];
+  const sortX = (p: OcrWordLayout, q: OcrWordLayout) => p.bbox.x0 - q.bbox.x0;
+  for (const w of collapsed) {
+    const cx = wordCenterX(w);
+    if (cx < t1) b0.push(w);
+    else if (cx < t2) b1.push(w);
+    else b2.push(w);
+  }
   b0.sort(sortX);
   b1.sort(sortX);
   b2.sort(sortX);
@@ -1492,15 +1527,6 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
     }
 
     const tailNorm = normalizeSignedNumberText(afterRest);
-    /** Inclui palavras numéricas à esquerda do nome da mesa (ex. GGR na Roleta) na ordem de leitura. */
-    const orderTail = normalizeSignedNumberText(
-      [
-        ...orphansBeforeMesaName.sort((a, b) => a.bbox.x0 - b.bbox.x0).map((w) => w.text.trim()),
-        afterRest.trim(),
-      ]
-        .filter(Boolean)
-        .join(" "),
-    );
     const allNums = collectNumbersLeftToRight(splitLineParts(tailNorm));
     const layoutCtxBase = { allNums, fullTail: tailNorm };
     const isFirstMesaRow = firstMesaIdx != null && i === firstMesaIdx;
@@ -1509,13 +1535,35 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
     let geomCol: string | null = null;
     if (d1Anchors) {
       const rowAnchors = slackenD1AnchorsForEdgeRow(d1Anchors, isFirstMesaRow, isLastMesaRow);
-      geomCol = buildTripleStringFromColumnBuckets(mergedMetrics, rowAnchors);
+      const useEqualThirds =
+        (isFirstMesaRow && resolved.mesa === "Roleta") ||
+        (isLastMesaRow && resolved.mesa === "Speed Baccarat");
+      if (useEqualThirds) {
+        geomCol =
+          buildTripleStringFromD1EqualThirds(mergedMetrics, rowAnchors.betsRightMaxX) ??
+          buildTripleStringFromColumnBuckets(mergedMetrics, rowAnchors);
+      } else {
+        geomCol = buildTripleStringFromColumnBuckets(mergedMetrics, rowAnchors);
+      }
       if (!geomCol && isFirstMesaRow && resolved.mesa === "Roleta") {
         const looser = slackenD1AnchorsForEdgeRow(d1Anchors, true, false);
-        geomCol = buildTripleStringFromColumnBuckets(mergedMetrics, {
-          ...looser,
-          boundGgrTurn: looser.boundGgrTurn + Math.max(50, (looser.boundTurnBets - looser.boundGgrTurn) * 0.1),
-        });
+        const wide = looser.betsRightMaxX + 36;
+        geomCol =
+          buildTripleStringFromD1EqualThirds(mergedMetrics, wide) ??
+          buildTripleStringFromColumnBuckets(mergedMetrics, {
+            ...looser,
+            boundGgrTurn: looser.boundGgrTurn + Math.max(50, (looser.boundTurnBets - looser.boundGgrTurn) * 0.1),
+          });
+      }
+      if (!geomCol && isLastMesaRow && resolved.mesa === "Speed Baccarat") {
+        const looser = slackenD1AnchorsForEdgeRow(d1Anchors, false, true);
+        const wide = looser.betsRightMaxX + 36;
+        geomCol =
+          buildTripleStringFromD1EqualThirds(mergedMetrics, wide) ??
+          buildTripleStringFromColumnBuckets(mergedMetrics, {
+            ...looser,
+            boundGgrTurn: looser.boundGgrTurn + Math.max(50, (looser.boundTurnBets - looser.boundGgrTurn) * 0.1),
+          });
       }
     }
     const geomStr = geomCol ?? buildPerTableD1TripleStringFromMetricWords(mergedMetrics);
@@ -1540,35 +1588,6 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
     if (triple && resolved.mesa === "Roleta" && triple[0] == null && triple[1] != null && triple[2] != null) {
       const gFill = extractRoletaGgrLoose(tailNorm, triple[1], triple[2]);
       if (gFill != null) triple = [gFill, triple[1], triple[2]];
-    }
-
-    /**
-     * 1.ª e última **linha de mesa**: o layout por X falha mais (cabeçalho, Summary, `line` do Tesseract alto).
-     * Ordem do print: após o nome vêm sempre GGR d-1, Turnover d-1, Bets d-1 — os 3 primeiros números na cauda são fiéis se a cauda não incluir linha Summary (já bloqueada).
-     */
-    if (isFirstMesaRow && resolved.mesa === "Roleta") {
-      const os = tryPorTabelaTripleFromTextOrder(orderTail);
-      if (os) {
-        const orderNums = collectNumbersLeftToRight(splitLineParts(orderTail));
-        const tTxt = parseFirstThreeMetrics(os, resolved.mesa, {
-          allNums: orderNums.length >= 3 ? orderNums : layoutCtxBase.allNums,
-          fullTail: orderTail,
-          fromColumnLayout: true,
-        });
-        if (tTxt) triple = tTxt;
-      }
-    }
-    if (isLastMesaRow && resolved.mesa === "Speed Baccarat") {
-      const os = tryPorTabelaTripleFromTextOrder(orderTail);
-      if (os) {
-        const orderNums = collectNumbersLeftToRight(splitLineParts(orderTail));
-        const tTxt = parseFirstThreeMetrics(os, resolved.mesa, {
-          allNums: orderNums.length >= 3 ? orderNums : layoutCtxBase.allNums,
-          fullTail: orderTail,
-          fromColumnLayout: true,
-        });
-        if (tTxt) triple = tTxt;
-      }
     }
 
     if (!triple) continue;
