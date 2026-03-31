@@ -372,89 +372,242 @@ function collapseMetricWordsSameCell(ws: OcrWordLayout[]): OcrWordLayout[] {
   return out;
 }
 
-/**
- * «Per table BRL» d-1: neste BI o turnover d-1 das mesas não passa ~100k e GGR d-1 << turnover MTD.
- * Evita escolher (GGR) + (Turnover MTD) + (Bets MTD) só porque a/turnover MTD é baixo.
- */
-function perTableTripleLooksLikeD1(g: number, t: number, a: number, mesa: string): boolean {
-  const absT = Math.abs(t);
-  const absA = Math.abs(a);
-  const absG = Math.abs(g);
-  if (!(absT > 0) || !Number.isFinite(absA)) return false;
-  // Colunas MTD / erros de primeira célula (ex. turnover lido como GGR)
-  if (absG > 28_000) return false;
-  if (absT > 130_000) return false;
-  if (absA > 48_000) return false;
+/** Limites horizontais das 3 colunas d-1 (GGR / Turnover / Bets) inferidos do cabeçalho «Per table BRL» na imagem. */
+type PerTableD1ColumnAnchors = {
+  boundGgrTurn: number;
+  boundTurnBets: number;
+  /** Palavras com centro X abaixo disto pertencem a Bets d-1; à direita são d-2/MTD. */
+  betsRightMaxX: number;
+};
 
-  if (mesa === "Roleta") {
-    const r = absA / absT;
-    if (r > 1.12 || r < 0.07) return false;
-    if (absT > 105_000) return false;
-    if (absA > 42_000) return false;
-    return true;
+function wordCenterX(w: OcrWordLayout): number {
+  return (w.bbox.x0 + w.bbox.x1) / 2;
+}
+
+function avgSpanCenterX(ws: OcrWordLayout[], from: number, to: number): number {
+  let s = 0;
+  let n = 0;
+  for (let i = from; i <= to; i++) {
+    s += wordCenterX(ws[i]!);
+    n++;
   }
+  return n ? s / n : 0;
+}
 
-  const bjLike =
-    mesa === "Speed Baccarat" ||
-    mesa === "Blackjack 1" ||
-    mesa === "Blackjack VIP" ||
-    mesa === "Blackjack 2";
-  if (bjLike) {
-    if (absT < 320 && absA > 22_000) return false;
-    if (absT >= 400 && absA > absT * 1.38) return false;
-    // Margem típica |GGR|/turnover no d-1 (rejeita GGR certo + turnover MTD)
-    if (absT > 600 && absG >= 15) {
-      const m = absG / absT;
-      if (m < 0.0022 || m > 0.52) return false;
+function spanMaxX1(ws: OcrWordLayout[], from: number, to: number): number {
+  let m = -Infinity;
+  for (let i = from; i <= to; i++) m = Math.max(m, ws[i]!.bbox.x1);
+  return m;
+}
+
+function spanMinX0(ws: OcrWordLayout[], from: number, to: number): number {
+  let m = Infinity;
+  for (let i = from; i <= to; i++) m = Math.min(m, ws[i]!.bbox.x0);
+  return m;
+}
+
+function normTok(t: string): string {
+  return t.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+/** «d-1», «d - 1», token «d1» colado ou partido. */
+function headerWordIsDminus1(ws: OcrWordLayout[], i: number): boolean {
+  const a = normTok(ws[i]?.text ?? "");
+  const b = i + 1 < ws.length ? normTok(ws[i + 1]!.text) : "";
+  const c = i + 2 < ws.length ? normTok(ws[i + 2]!.text) : "";
+  if (/^d[-–]?\s*1$/i.test(a) || a === "d1" || a.replace(/[^a-z0-9]/gi, "") === "d1") return true;
+  if (a === "d" && /^[-–]?\s*1$/.test(b)) return true;
+  if (a === "d" && b === "-" && /^1$/.test(c)) return true;
+  return false;
+}
+
+function headerWordIsDminus2(ws: OcrWordLayout[], i: number): boolean {
+  const a = normTok(ws[i]?.text ?? "");
+  const b = i + 1 < ws.length ? normTok(ws[i + 1]!.text) : "";
+  const c = i + 2 < ws.length ? normTok(ws[i + 2]!.text) : "";
+  if (/^d[-–]?\s*2$/i.test(a) || a === "d2" || a.replace(/[^a-z0-9]/gi, "") === "d2") return true;
+  if (a === "d" && /^[-–]?\s*2$/.test(b)) return true;
+  if (a === "d" && b === "-" && /^2$/.test(c)) return true;
+  return false;
+}
+
+function lineLooksLikePerTableHeader(ws: OcrWordLayout[]): boolean {
+  const spaceJoin = ws.map((w) => normTok(w.text)).join(" ");
+  const compact = spaceJoin.replace(/\s+/g, "");
+  if (!/\bper\b/i.test(spaceJoin) || !/\btable\b/i.test(spaceJoin)) return false;
+  if (!/ggr/i.test(spaceJoin)) return false;
+  if (!/turnover|tunrover/i.test(spaceJoin)) return false;
+  if (!/\bbets?\b/i.test(spaceJoin)) return false;
+  return /\bd\s*[-]?\s*1\b/i.test(spaceJoin) || /\bd1\b/i.test(compact);
+}
+
+function findPerTableHeaderWords(sortedLayoutLines: OcrLineLayout[]): OcrWordLayout[] | null {
+  for (let li = 0; li < sortedLayoutLines.length; li++) {
+    const line = sortedLayoutLines[li]!;
+    const raw = line.words ?? [];
+    if (raw.length < 4) continue;
+    const ws = [...raw].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+    if (lineLooksLikePerTableHeader(ws)) return ws;
+    if (li + 1 < sortedLayoutLines.length) {
+      const yd = Math.abs(lineCenterY(line) - lineCenterY(sortedLayoutLines[li + 1]!));
+      if (yd < 40) {
+        const raw2 = sortedLayoutLines[li + 1]!.words ?? [];
+        if (raw2.length === 0) continue;
+        const merged = [...raw, ...raw2].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+        if (lineLooksLikePerTableHeader(merged)) return merged;
+      }
     }
-    return true;
   }
+  return null;
+}
 
-  return true;
+/** Índice final (inclusivo) do sufixo «d-1» ou «d-2» começando em `i` (primeiro token após GGR/Turnover/Bets). */
+function endIndexOfDminusSuffix(w: OcrWordLayout[], i: number, digit: "1" | "2"): number {
+  const t = normTok(w[i]?.text ?? "");
+  const oneOrTwo = digit === "1" ? "1" : "2";
+  if (new RegExp(`^d[-–]?\\s*${oneOrTwo}$`, "i").test(t) || t === `d${oneOrTwo}`) return i;
+  const flattened = t.replace(/[^a-z0-9]/gi, "");
+  if (flattened === `d${oneOrTwo}`) return i;
+  if (t === "d" && i + 2 < w.length && normTok(w[i + 1]!.text) === "-" && normTok(w[i + 2]!.text) === oneOrTwo) {
+    return i + 2;
+  }
+  if (t === "d" && i + 1 < w.length && new RegExp(`^[-]?${oneOrTwo}$`).test(normTok(w[i + 1]!.text))) {
+    return i + 1;
+  }
+  return i;
 }
 
 /**
- * Pontua cortes (menor = melhor). Entre triplos plausíveis, prefere menor volume (d-1 vs MTD).
+ * Obtém limites X entre GGR d-1 | Turnover d-1 | Bets d-1 a partir dos títulos do cabeçalho na imagem.
+ * Direito da coluna Bets: meio‑termo até «GGR d-2» quando existir.
  */
-function perTableTripleSplitScore(g: number, t: number, a: number, mesa: string): number | null {
-  if (!perTableTripleLooksLikeD1(g, t, a, mesa)) return null;
-  const absT = Math.abs(t);
-  const absA = Math.abs(a);
-  const absG = Math.abs(g);
-  const r = absA / Math.max(absT, 1);
-  const ratioPen = mesa === "Roleta" ? r * 6 : Math.min(r, 1.2) * 2.8;
-  const volumePen = Math.log10(absT + absA + 12) * 4.2;
-  const gPen = Math.min(absG / (absT + 1), 0.28) * 0.45;
-  return ratioPen + volumePen + gPen;
+function buildPerTableD1ColumnAnchors(headerWordsSorted: OcrWordLayout[]): PerTableD1ColumnAnchors | null {
+  const w = headerWordsSorted;
+  const n = w.length;
+
+  let iGgrD1 = -1;
+  let jGgrD1 = -1;
+  let iTurnD1 = -1;
+  let jTurnD1 = -1;
+  let iBetD1 = -1;
+  let jBetD1 = -1;
+  let iGgrD2 = -1;
+  let jGgrD2 = -1;
+
+  for (let i = 0; i < n; i++) {
+    if (!/^ggr$/i.test(normTok(w[i]!.text))) continue;
+    if (i + 1 >= n || !headerWordIsDminus1(w, i + 1)) continue;
+    iGgrD1 = i;
+    jGgrD1 = endIndexOfDminusSuffix(w, i + 1, "1");
+    break;
+  }
+
+  for (let i = 0; i < n; i++) {
+    if (!/turnover|tunrover/i.test(normTok(w[i]!.text))) continue;
+    if (i + 1 >= n || !headerWordIsDminus1(w, i + 1)) continue;
+    iTurnD1 = i;
+    jTurnD1 = endIndexOfDminusSuffix(w, i + 1, "1");
+    break;
+  }
+
+  for (let i = 0; i < n; i++) {
+    if (!/^bets?$/i.test(normTok(w[i]!.text))) continue;
+    if (i + 1 >= n || !headerWordIsDminus1(w, i + 1)) continue;
+    iBetD1 = i;
+    jBetD1 = endIndexOfDminusSuffix(w, i + 1, "1");
+    break;
+  }
+
+  for (let i = 0; i < n; i++) {
+    if (!/^ggr$/i.test(normTok(w[i]!.text))) continue;
+    if (i + 1 >= n || !headerWordIsDminus2(w, i + 1)) continue;
+    if (iGgrD1 >= 0 && i >= iGgrD1 && i <= jGgrD1) continue;
+    iGgrD2 = i;
+    jGgrD2 = endIndexOfDminusSuffix(w, i + 1, "2");
+    break;
+  }
+
+  if (iGgrD1 < 0 || iTurnD1 < 0 || iBetD1 < 0) return null;
+
+  const xG = avgSpanCenterX(w, iGgrD1, jGgrD1);
+  const xT = avgSpanCenterX(w, iTurnD1, jTurnD1);
+  const xB = avgSpanCenterX(w, iBetD1, jBetD1);
+  const xsSorted = [xG, xT, xB].sort((a, b) => a - b);
+  const xLeft = xsSorted[0]!;
+  const xMid = xsSorted[1]!;
+  const xRight = xsSorted[2]!;
+
+  let betsRightMaxX: number;
+  if (iGgrD2 >= 0) {
+    const rightBets = spanMaxX1(w, iBetD1, jBetD1);
+    const leftG2 = spanMinX0(w, iGgrD2, jGgrD2);
+    betsRightMaxX = (rightBets + leftG2) / 2;
+  } else {
+    betsRightMaxX = xRight + Math.max(48, (xRight - xMid) * 1.15);
+  }
+
+  return {
+    boundGgrTurn: (xLeft + xMid) / 2,
+    boundTurnBets: (xMid + xRight) / 2,
+    betsRightMaxX,
+  };
 }
 
-function enumerateBestD1TripleString(atoms: OcrWordLayout[], mesa: string): string | null {
+function assignMetricWordToD1Column(cx: number, a: PerTableD1ColumnAnchors): 0 | 1 | 2 | -1 {
+  if (cx < a.boundGgrTurn) return 0;
+  if (cx < a.boundTurnBets) return 1;
+  if (cx < a.betsRightMaxX) return 2;
+  return -1;
+}
+
+/** Lê GGR / Turnover / Apostas d-1 alinhando às colunas do cabeçalho (sem regras entre magnitudes). */
+function buildTripleStringFromColumnBuckets(
+  metricWords: OcrWordLayout[],
+  anchors: PerTableD1ColumnAnchors,
+): string | null {
+  const b0: OcrWordLayout[] = [];
+  const b1: OcrWordLayout[] = [];
+  const b2: OcrWordLayout[] = [];
+  for (const w of metricWords) {
+    if (isLayoutNoiseWord(w.text)) continue;
+    const cx = wordCenterX(w);
+    const col = assignMetricWordToD1Column(cx, anchors);
+    if (col === 0) b0.push(w);
+    else if (col === 1) b1.push(w);
+    else if (col === 2) b2.push(w);
+  }
+  const sortX = (p: OcrWordLayout, q: OcrWordLayout) => p.bbox.x0 - q.bbox.x0;
+  b0.sort(sortX);
+  b1.sort(sortX);
+  b2.sort(sortX);
+  const g = clusterWordsToNumber(b0);
+  const t = clusterWordsToNumber(b1);
+  const bet = clusterWordsToNumber(b2);
+  if (g == null || t == null || bet == null) return null;
+  return `${g} ${t} ${bet}`;
+}
+
+/** Fallback sem cabeçalho: 1.º trio contíguo em X que parseia (sem comparar GGR vs turnover). */
+function enumerateFirstValidD1TripleString(atoms: OcrWordLayout[]): string | null {
   const n = atoms.length;
   if (n < 3) return null;
-  let best: { s: string; score: number } | null = null;
   for (let i = 1; i <= n - 2; i++) {
     for (let j = i + 1; j <= n - 1; j++) {
       const gv = clusterWordsToNumber(atoms.slice(0, i));
       const tv = clusterWordsToNumber(atoms.slice(i, j));
       const av = clusterWordsToNumber(atoms.slice(j));
-      if (gv == null || tv == null || av == null) continue;
-      const sc = perTableTripleSplitScore(gv, tv, av, mesa);
-      if (sc == null) continue;
-      const s = `${gv} ${tv} ${av}`;
-      if (!best || sc < best.score) best = { s, score: sc };
+      if (gv != null && tv != null && av != null) return `${gv} ${tv} ${av}`;
     }
   }
-  return best?.s ?? null;
+  return null;
 }
 
-/** Quando a enumeração não acha nenhum triplo plausível, tenta 1 átomo = 1 coluna d-1 (OCR já fundiu milhares). */
-function tripleFromFirstThreeAtoms(collapsed: OcrWordLayout[], mesa: string): string | null {
+function tripleFromFirstThreeAtoms(collapsed: OcrWordLayout[]): string | null {
   if (collapsed.length < 3) return null;
   const gv = clusterWordsToNumber(collapsed.slice(0, 1));
   const tv = clusterWordsToNumber(collapsed.slice(1, 2));
   const av = clusterWordsToNumber(collapsed.slice(2, 3));
   if (gv == null || tv == null || av == null) return null;
-  if (!perTableTripleLooksLikeD1(gv, tv, av, mesa)) return null;
   return `${gv} ${tv} ${av}`;
 }
 
@@ -490,7 +643,8 @@ function clusterMetricWordsByMedianGap(ws: OcrWordLayout[]): OcrWordLayout[][] {
 /**
  * GGR / Turnover / Apostas d-1 via salto X (corta bloco d-2) + 2 colunas intermédias na zona d-1.
  */
-function buildPerTableD1TripleStringFromMetricWords(metricWords: OcrWordLayout[], mesa: string): string | null {
+/** Fallback quando não há cabeçalho «Per table» reconhecido: só geometria (gaps), sem regras GGR×turnover. */
+function buildPerTableD1TripleStringFromMetricWords(metricWords: OcrWordLayout[]): string | null {
   const filtered = metricWords.filter((w) => !isLayoutNoiseWord(w.text));
   if (filtered.length < 1) return null;
   const sorted = [...filtered].sort((a, b) => a.bbox.x0 - b.bbox.x0);
@@ -513,9 +667,9 @@ function buildPerTableD1TripleStringFromMetricWords(metricWords: OcrWordLayout[]
   if (d1words.length < 1) return null;
 
   const collapsed = collapseMetricWordsSameCell(d1words);
-  const bestEnum = enumerateBestD1TripleString(collapsed, mesa);
+  const bestEnum = enumerateFirstValidD1TripleString(collapsed);
   if (bestEnum) return bestEnum;
-  const fromThree = tripleFromFirstThreeAtoms(collapsed, mesa);
+  const fromThree = tripleFromFirstThreeAtoms(collapsed);
   if (fromThree) return fromThree;
 
   const innerGaps: Array<{ i: number; g: number }> = [];
@@ -1131,6 +1285,8 @@ function parseMonthlyUapArpuAllLines(lines: string[], rawText: string): MonthlyR
  */
 function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string): PorTabelaRowParsed[] {
   const sorted = [...ocrLines].sort((a, b) => lineCenterY(a) - lineCenterY(b));
+  const headerWs = findPerTableHeaderWords(sorted);
+  const d1Anchors = headerWs ? buildPerTableD1ColumnAnchors(headerWs) : null;
   const out: PorTabelaRowParsed[] = [];
   const yMergeMax = 62;
 
@@ -1193,7 +1349,8 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
     const tailNorm = normalizeSignedNumberText(afterRest);
     const allNums = collectNumbersLeftToRight(splitLineParts(tailNorm));
     const layoutCtx = { allNums, fullTail: tailNorm };
-    const geomStr = buildPerTableD1TripleStringFromMetricWords(metricWords, resolved.mesa);
+    const geomCol = d1Anchors ? buildTripleStringFromColumnBuckets(metricWords, d1Anchors) : null;
+    const geomStr = geomCol ?? buildPerTableD1TripleStringFromMetricWords(metricWords);
     let triple = geomStr ? parseFirstThreeMetrics(geomStr, resolved.mesa, layoutCtx) : null;
     if (!triple) {
       if (nums.length < 3) continue;
