@@ -825,10 +825,16 @@ function thirdLooksLikeD2ForBlackjackVariant(third: number): boolean {
  * OCR às vezes “come” a célula GGR d-1 na Roleta: os 2 primeiros tokens passam a ser
  * Turnover d-1 e Bets d-1. O 3.º token pode ser outra coluna — nunca usar para apostas.
  */
-function roletaLooksLikeShiftedFirstCellIsTurnover(first: number, second: number): boolean {
+function roletaLooksLikeShiftedFirstCellIsTurnover(
+  first: number,
+  second: number,
+  firstDataRow?: boolean,
+): boolean {
   const absF = Math.abs(first);
-  if (absF < 55_000 || absF > 240_000) return false;
-  if (second < 7_000 || second > 75_000) return false;
+  const minTurn = firstDataRow ? 38_000 : 55_000;
+  if (absF < minTurn || absF > 240_000) return false;
+  const minSecond = firstDataRow ? 5_000 : 7_000;
+  if (second < minSecond || second > 75_000) return false;
   if (Math.abs(second) >= absF * 0.52) return false;
   return absF > Math.abs(second) * 1.12;
 }
@@ -848,21 +854,27 @@ function speedBaccaratLooksLikeSkippedLeadingGgr(first: number, second: number):
 }
 
 /**
- * Com âncoras/OCR na última linha, o 1.º bucket pode ser **Bets d-1**, o 2.º Turnover d-1 (certo) e o 3.º **Turnover d-2**
- * — «GGR» fica com apostas e «Apostas» com d-2.
+ * Com âncoras/OCR (especialmente última linha), o 1.º bucket pode ser **Bets d-1**, o 2.º Turnover d-1 e o 3.º **Turnover d-2**.
+ * Padrão seguro: **a < b < c** (|--|) — turn d-2 pode ser só ligeiramente maior que d-1, por isso na **última linha** aceitamos só isso.
  */
 function speedBaccaratTrustColsLookLikeBetsTurnD2(
   first: number,
   second: number,
   third: number,
+  lastDataRow?: boolean,
 ): boolean {
   const a = Math.abs(first);
   const b = Math.abs(second);
   const c = Math.abs(third);
-  if (a >= b * 0.995) return false;
-  if (b < 3_500 || b > 120_000) return false;
-  if (a < 400 || a > b * 0.92) return false;
-  /** 3.º slot = Turnover d-2: costuma ser nitidamente maior que d-1 ou já na faixa «grande». */
+  if (b < 1_500 || b > 250_000 || a < 50) return false;
+  if (a >= b) return false;
+  if (c <= b) return false;
+
+  if (lastDataRow === true) {
+    return true;
+  }
+
+  if (a > b * 0.92) return false;
   const thirdLooksLikeD2Turn = c >= 22_000 || c >= b * 1.11 || (c > 14_000 && c > a * 2.2);
   if (!thirdLooksLikeD2Turn) return false;
   if (c < 12_000 && c <= a * 1.35) return false;
@@ -963,7 +975,10 @@ function extractSpeedBaccaratGgrFromNumsBeforeTurnover(
   if (tAbs < 2_000) return null;
   const tolT = Math.max(50, tAbs * 0.008);
   const tolB = Math.max(35, bAbs * 0.035);
-  const ti = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
+  let ti = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
+  if (ti < 0) {
+    ti = indexOfClosestAbsMatch(nums, tAbs, Math.max(160, tAbs * 0.028));
+  }
   if (ti <= 0) return null;
   for (let k = ti - 1; k >= 0; k--) {
     const v = nums[k]!;
@@ -977,12 +992,15 @@ function extractSpeedBaccaratGgrFromNumsBeforeTurnover(
   return null;
 }
 
+type PerTableEdgeRows = { isFirst?: boolean; isLast?: boolean };
+
 function strictPerTableD1Triple(
   nums: number[],
   mesa: string,
   afterNameForRoleta: string,
   roletaNumPool?: number[],
   trustColumnLayout?: boolean,
+  edgeRows?: PerTableEdgeRows,
 ): { ggr: number | null; turnover: number; apostas: number } | null {
   if (nums.length < 3) return null;
   let ggr: number | null = nums[0];
@@ -992,7 +1010,12 @@ function strictPerTableD1Triple(
   if (
     trustColumnLayout &&
     mesa === "Speed Baccarat" &&
-    speedBaccaratTrustColsLookLikeBetsTurnD2(nums[0]!, nums[1]!, nums[2]!)
+    speedBaccaratTrustColsLookLikeBetsTurnD2(
+      nums[0]!,
+      nums[1]!,
+      nums[2]!,
+      edgeRows?.isLast === true,
+    )
   ) {
     const pool = roletaNumPool && roletaNumPool.length >= 3 ? roletaNumPool : nums;
     turnover = nums[1]!;
@@ -1010,7 +1033,10 @@ function strictPerTableD1Triple(
     return out;
   }
 
-  if (mesa === "Roleta" && roletaLooksLikeShiftedFirstCellIsTurnover(nums[0], nums[1])) {
+  if (
+    mesa === "Roleta" &&
+    roletaLooksLikeShiftedFirstCellIsTurnover(nums[0], nums[1], edgeRows?.isFirst === true)
+  ) {
     turnover = nums[0];
     apostas = nums[1];
     const pool = roletaNumPool && roletaNumPool.length >= 3 ? roletaNumPool : nums;
@@ -1090,7 +1116,13 @@ function adjustRoletaGgrSign(mesa: string, ggr: number, turnover: number): numbe
 function parseFirstThreeMetrics(
   afterName: string,
   mesa: string,
-  layoutContext?: { allNums: number[]; fullTail: string; fromColumnLayout?: boolean },
+  layoutContext?: {
+    allNums: number[];
+    fullTail: string;
+    fromColumnLayout?: boolean;
+    isFirstPerTableMesaRow?: boolean;
+    isLastPerTableMesaRow?: boolean;
+  },
 ): [number | null, number, number] | null {
   const norm = normalizeSignedNumberText(afterName);
   const parts = splitLineParts(norm);
@@ -1099,7 +1131,14 @@ function parseFirstThreeMetrics(
   const roletaPool =
     layoutContext?.allNums && layoutContext.allNums.length >= 3 ? layoutContext.allNums : undefined;
   const trustCols = layoutContext?.fromColumnLayout === true;
-  const raw = strictPerTableD1Triple(nums, mesa, tailForRoleta, roletaPool, trustCols);
+  const edgeRows: PerTableEdgeRows | undefined =
+    layoutContext?.isFirstPerTableMesaRow != null || layoutContext?.isLastPerTableMesaRow != null
+      ? {
+          isFirst: layoutContext.isFirstPerTableMesaRow,
+          isLast: layoutContext.isLastPerTableMesaRow,
+        }
+      : undefined;
+  const raw = strictPerTableD1Triple(nums, mesa, tailForRoleta, roletaPool, trustCols, edgeRows);
   if (!raw) return null;
   let { ggr, turnover, apostas } = raw;
   const tailForSign = layoutContext?.fullTail ?? norm;
@@ -1110,6 +1149,21 @@ function parseFirstThreeMetrics(
   return [ggr, Math.abs(turnover), Math.abs(apostas)];
 }
 
+/** Índice do valor mais próximo de `target` em |x|; útil quando o OCR altera ligeiramente o turnover. */
+function indexOfClosestAbsMatch(nums: number[], target: number, maxDelta: number): number {
+  let bestI = -1;
+  let bestD = Infinity;
+  for (let i = 0; i < nums.length; i++) {
+    const d = Math.abs(Math.abs(nums[i]!) - target);
+    if (d < bestD) {
+      bestD = d;
+      bestI = i;
+    }
+  }
+  if (bestI < 0 || bestD > maxDelta) return -1;
+  return bestI;
+}
+
 /** Quando as colunas falham no GGR mas turnover/apostas batem: número antes do turnover na cauda OCR. */
 function extractRoletaGgrLoose(tail: string, turnover: number, apostas: number): number | null {
   const tAbs = Math.abs(turnover);
@@ -1117,7 +1171,10 @@ function extractRoletaGgrLoose(tail: string, turnover: number, apostas: number):
   const nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(tail)));
   const tolT = Math.max(90, tAbs * 0.016);
   const tolB = Math.max(25, bAbs * 0.028);
-  const idx = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
+  let idx = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
+  if (idx < 0) {
+    idx = indexOfClosestAbsMatch(nums, tAbs, Math.max(220, tAbs * 0.045));
+  }
   if (idx <= 0) return null;
   let bestScored: number | null = null;
   let bestRank = Infinity;
@@ -1612,8 +1669,17 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
     }
 
     const tailNorm = normalizeSignedNumberText(afterRest);
-    const allNums = collectNumbersLeftToRight(splitLineParts(tailNorm));
-    const layoutCtxBase = { allNums, fullTail: tailNorm };
+    const orphanPrefix = orphansBeforeMesaName
+      .map((w) => w.text?.trim() ?? "")
+      .filter(Boolean)
+      .join(" ");
+    const orphanNorm = orphanPrefix ? normalizeSignedNumberText(orphanPrefix) : "";
+    const fullTailForLayout = orphanNorm ? `${orphanNorm} ${tailNorm}`.trim() : tailNorm;
+    const numsAfterName = collectNumbersLeftToRight(splitLineParts(tailNorm));
+    const orphanNums = orphanNorm ? collectNumbersLeftToRight(splitLineParts(orphanNorm)) : [];
+    const allNums =
+      orphanNums.length > 0 ? [...orphanNums, ...numsAfterName] : numsAfterName;
+    const layoutCtxBase = { allNums, fullTail: fullTailForLayout };
     const isFirstMesaRow = firstMesaIdx != null && i === firstMesaIdx;
     const isLastMesaRow = lastMesaIdx != null && i === lastMesaIdx;
     const mergedMetrics = mergeOrphanMinusWords(metricWords);
@@ -1653,27 +1719,33 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
     }
     const geomStr = geomCol ?? buildPerTableD1TripleStringFromMetricWords(mergedMetrics);
     const fromColumnLayout = geomCol != null;
-    const layoutCtx = { ...layoutCtxBase, fromColumnLayout };
+    const layoutCtx = {
+      ...layoutCtxBase,
+      fromColumnLayout,
+      isFirstPerTableMesaRow: isFirstMesaRow,
+      isLastPerTableMesaRow: isLastMesaRow,
+    };
     let triple = geomStr ? parseFirstThreeMetrics(geomStr, resolved.mesa, layoutCtx) : null;
     if (!triple) {
       if (nums.length < 3) continue;
-      triple = parseFirstThreeMetrics(tailNorm, resolved.mesa, layoutCtx);
+      triple = parseFirstThreeMetrics(layoutCtxBase.fullTail, resolved.mesa, layoutCtx);
     } else if (
       triple[0] == null &&
       geomStr &&
       resolved.mesa !== "Speed Baccarat" &&
       resolved.mesa !== "Roleta"
     ) {
-      const alt = parseFirstThreeMetrics(tailNorm, resolved.mesa, {
+      const alt = parseFirstThreeMetrics(layoutCtxBase.fullTail, resolved.mesa, {
         ...layoutCtxBase,
         fromColumnLayout: false,
       });
       if (alt && alt[0] != null) triple = alt;
     }
     if (triple && resolved.mesa === "Roleta" && triple[0] == null && triple[1] != null && triple[2] != null) {
-      let gFill = extractRoletaGgrLoose(tailNorm, triple[1], triple[2]);
+      const ft = layoutCtxBase.fullTail;
+      let gFill = extractRoletaGgrLoose(ft, triple[1], triple[2]);
       if (gFill != null) {
-        if (gFill > 0 && minusBeforeFirstDigitInCell(tailNorm)) gFill = -Math.abs(gFill);
+        if (gFill > 0 && minusBeforeFirstDigitInCell(ft)) gFill = -Math.abs(gFill);
         gFill = adjustRoletaGgrSign("Roleta", gFill, triple[1]!);
         triple = [gFill, triple[1], triple[2]];
       }
