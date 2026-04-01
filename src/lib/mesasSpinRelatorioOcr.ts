@@ -1144,6 +1144,138 @@ function adjustRoletaGgrSign(mesa: string, ggr: number, turnover: number): numbe
   return ggr;
 }
 
+/**
+ * Reparações finais para OCR ruidoso: troca turnover/apostas (ex.: VIP 745 vs 26k),
+ * GGR com dígito/milhar «comido» (Roleta 17→9017; VIP 745→4745; BJ 83→483).
+ */
+function finalRepairPerTableMetrics(
+  mesa: string,
+  ggr: number | null,
+  turnover: number,
+  apostas: number,
+  numPool: number[],
+): { ggr: number | null; turnover: number; apostas: number } {
+  let g = ggr;
+  let t = Math.abs(turnover);
+  let b = Math.abs(apostas);
+  const poolAbs = () => [...new Set(numPool.map((n) => Math.abs(n)))];
+
+  if (t >= 200 && t < 12_000 && b > 15_000 && b > t * 2.5) {
+    const tmp = t;
+    t = b;
+    b = tmp;
+  }
+  const avgBet = t / Math.max(1, b);
+  if (avgBet > 0 && avgBet < 1.2 && Math.max(t, b) > 12_000) {
+    const tmp = t;
+    t = b;
+    b = tmp;
+  }
+
+  if (mesa === "Roleta" && g != null && g > 0 && t > 45_000) {
+    const candidates: number[] = [];
+    if (g < 260) candidates.push(g + 9_000);
+    if (g >= 880 && g <= 1_250) candidates.push((g % 1000) + 9_000);
+    let best: number | null = null;
+    let bestDist = Infinity;
+    for (const cand of candidates) {
+      const r = cand / t;
+      if (r >= 0.028 && r <= 0.17) {
+        const dist = Math.abs(r - 0.075);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = cand;
+        }
+      }
+    }
+    if (best != null) g = best;
+  }
+
+  if (mesa === "Blackjack VIP" && t >= 11_000 && t <= 50_000) {
+    if (g != null && g <= 150 && b >= 350 && b <= 10_000) {
+      const plus = b + 4_000;
+      const rPlus = plus / t;
+      if (rPlus >= 0.07 && rPlus <= 0.28) {
+        const stolenBet = b;
+        g = plus;
+        const altB = poolAbs().find(
+          (n) =>
+            n >= 150 &&
+            n <= 4_500 &&
+            Math.round(n) !== Math.round(t) &&
+            Math.round(n) !== Math.round(stolenBet) &&
+            Math.abs(n - stolenBet) > 8,
+        );
+        if (altB != null) b = altB;
+      } else {
+        const rB = b / t;
+        if (rB >= 0.07 && rB <= 0.22) g = b;
+      }
+    }
+  }
+
+  if (
+    mesa === "Blackjack VIP" &&
+    g != null &&
+    g > 0 &&
+    g <= 1_800 &&
+    t >= 11_000 &&
+    t <= 45_000 &&
+    b <= 2_000
+  ) {
+    const cand = g + 4_000;
+    const r = cand / t;
+    if (r >= 0.07 && r <= 0.28) g = cand;
+  }
+
+  if (
+    (mesa === "Blackjack 1" || mesa === "Blackjack 2") &&
+    g != null &&
+    g > 30 &&
+    g > 0 &&
+    g < 150 &&
+    t > 14_000
+  ) {
+    const cand = g + 400;
+    const r = cand / t;
+    if (r >= 0.003 && r <= 0.04) g = cand;
+  }
+
+  if ((mesa === "Blackjack 1" || mesa === "Blackjack 2") && g != null && g <= 30 && t > 14_000) {
+    const uniq = poolAbs().filter((n) => Math.round(n) !== Math.round(t));
+    for (const n of uniq.sort((a, b) => b - a)) {
+      if (n < 35 || n > 6_000) continue;
+      let fixed = false;
+      for (const cand of [n + 400, n]) {
+        const r = cand / t;
+        if (r >= 0.002 && r <= 0.045 && cand >= 40 && cand <= 3_500) {
+          g = cand;
+          fixed = true;
+          break;
+        }
+      }
+      if (fixed) break;
+    }
+  }
+
+  if (g != null && g <= 25 && t > 18_000 && numPool.length >= 3) {
+    const alt = numPool.filter(
+      (n) =>
+        Math.abs(n) >= 350 &&
+        Math.abs(n) <= 6_500 &&
+        Math.round(Math.abs(n)) !== Math.round(t) &&
+        Math.round(Math.abs(n)) !== Math.round(b),
+    );
+    if (alt.length === 1) {
+      const v = alt[0]!;
+      const r = Math.abs(v) / t;
+      if (r >= 0.004 && r <= 0.25) g = v;
+    }
+  }
+
+  return { ggr: g, turnover: t, apostas: Math.round(b) };
+}
+
 /** Métricas d-1: GGR, Turnover, Apostas — só as 3 primeiras células numéricas da linha. */
 function parseFirstThreeMetrics(
   afterName: string,
@@ -1159,6 +1291,10 @@ function parseFirstThreeMetrics(
   const norm = normalizeSignedNumberText(afterName);
   const parts = splitLineParts(norm);
   const nums = collectNumbersLeftToRight(parts);
+  const numPoolForRepair =
+    layoutContext?.allNums && layoutContext.allNums.length > 0
+      ? [...nums, ...layoutContext.allNums]
+      : nums;
   const tailForRoleta = layoutContext?.fullTail ?? norm;
   const roletaPool =
     layoutContext?.allNums && layoutContext.allNums.length >= 3 ? layoutContext.allNums : undefined;
@@ -1172,7 +1308,8 @@ function parseFirstThreeMetrics(
       : undefined;
   const raw = strictPerTableD1Triple(nums, mesa, tailForRoleta, roletaPool, trustCols, edgeRows);
   if (!raw) return null;
-  let { ggr, turnover, apostas } = raw;
+  const rep = finalRepairPerTableMetrics(mesa, raw.ggr, raw.turnover, raw.apostas, numPoolForRepair);
+  let { ggr, turnover, apostas } = rep;
   const tailForSign = layoutContext?.fullTail ?? norm;
   if (ggr != null) {
     if (ggr > 0 && minusBeforeFirstDigitInCell(tailForSign)) ggr = -Math.abs(ggr);
@@ -1446,7 +1583,7 @@ function assignDailyMetrics(nr: number[]): {
   return { turnover: t0, ggr: t1, apostas: t2, uap: nr[3]! };
 }
 
-/** Corrige turnover truncado (milhar) ou confundido com apostas: bet size típico ~2,5–20 vs contagem. */
+/** Só recupera milhar truncado (×10/×100). Não inferir turnover a partir de GGR — gerava valores ~185k incorretos. */
 function fixDailyOcrTurnoverGgr(
   turnover: number,
   ggr: number | null,
@@ -1461,7 +1598,7 @@ function fixDailyOcrTurnoverGgr(
     if (r < 2.2 || r > 21) return false;
     if (g != null && Math.abs(g) > 80) {
       const rg = Math.abs(g) / tt;
-      if (rg < 0.008 || rg > 0.2) return false;
+      if (rg < 0.008 || rg > 0.22) return false;
     }
     return true;
   };
@@ -1472,7 +1609,11 @@ function fixDailyOcrTurnoverGgr(
   let bestScore = Number.POSITIVE_INFINITY;
   const consider = (tt: number) => {
     if (!okRatio(tt)) return;
-    const score = Math.abs(tt / bets - 6.5);
+    let score = Math.abs(tt / bets - 6.5);
+    if (g != null && Math.abs(g) > 80) {
+      const rg = Math.abs(g) / tt;
+      score += Math.abs(rg - 0.055) * 200;
+    }
     if (score < bestScore) {
       bestScore = score;
       bestT = tt;
@@ -1482,10 +1623,9 @@ function fixDailyOcrTurnoverGgr(
   for (const mul of [10, 100] as const) {
     consider(Math.round(turnover * mul));
   }
-  if (g != null && Math.abs(g) > 150) {
-    for (const m of [0.052, 0.056, 0.058, 0.062, 0.066, 0.07]) {
-      consider(Math.round(Math.abs(g) / m));
-    }
+  if (g != null && Math.abs(g) > 400 && bets > 6_000) {
+    consider(Math.round(Math.abs(g) / 0.056));
+    consider(Math.round(Math.abs(g) / 0.062));
   }
 
   return { turnover: bestScore < Number.POSITIVE_INFINITY ? bestT : t, ggr: g };
@@ -1530,13 +1670,6 @@ function parseDailyBlock(
     const scaled = fixDailyOcrTurnoverGgr(turnover, ggr, metrics.apostas);
     turnover = scaled.turnover;
     ggr = scaled.ggr;
-    if (ggr != null && turnover > 0) {
-      const rg = Math.abs(ggr) / turnover;
-      if (rg > 0.17) {
-        const alt = impliedGgrFromMarginInDailyRest(rest, turnover);
-        if (alt != null && Math.abs(alt) > 80) ggr = alt;
-      }
-    }
     out.push({
       data: dateHit.iso,
       turnover,
