@@ -103,6 +103,9 @@ export function parseNumericToken(raw: string): number | null {
   let t = raw.replace(/R\$/gi, "").replace(/%/g, "").replace(/\s/g, "").trim();
   if (!t) return null;
   if (t === "—" || t === "-" || t === "–" || /^n\/?a$/i.test(t)) return null;
+  t = t.replace(/^["'`´«»]+|["'`´«»]+$/g, "");
+  t = t.replace(/(\d)[a-zA-Z]{1,3}$/i, "$1");
+  if (!t) return null;
   t = t.replace(/O/g, "0");
 
   const sign = t.startsWith("-") ? -1 : 1;
@@ -242,6 +245,19 @@ function collectNumbersLeftToRight(parts: string[]): number[] {
   return nums;
 }
 
+/** Corrige lixo típico do OCR no início do nome da mesa (ex.: «(asa de Apostas Routerte»). */
+function normalizeOcrTableNameLine(s: string): string {
+  let t = s.replace(/\s+/g, " ").trim();
+  t = t.replace(/^[\s([{`'""«»]+/, "");
+  t = t.replace(/\basa\s+de\s+apostas\b/gi, "Casa de Apostas");
+  t = t.replace(/\bcasa\s+de\s+apostas\b/gi, "Casa de Apostas");
+  t = t.replace(/\brouterte\b/gi, "Roulette");
+  t = t.replace(/\broulete\b/gi, "Roulette");
+  t = t.replace(/\broulett\b/gi, "Roulette");
+  t = t.replace(/\b(blackjack\s+\d)\s*\.\s+(?=[\d-])/gi, "$1 ");
+  return t.trim();
+}
+
 /** Texto bruto da coluna Table → operadora + mesa canónica; null se ignorar (Bet Nacional, Summary, etc.). */
 const MESA_RAW_TO_CANON: Array<{ raw: string; operadora: string; mesa: string }> = [
   { raw: "Casa de Apostas VIP Blackjack 1", operadora: "Casa de Apostas", mesa: "Blackjack VIP" },
@@ -252,7 +268,8 @@ const MESA_RAW_TO_CANON: Array<{ raw: string; operadora: string; mesa: string }>
 ].sort((a, b) => b.raw.length - a.raw.length);
 
 export function resolveMesaOperadora(tableCell: string): { operadora: string; mesa: string } | null {
-  const norm = tableCell.replace(/\s+/g, " ").trim();
+  let norm = normalizeOcrTableNameLine(tableCell).replace(/\s+/g, " ").trim();
+  norm = norm.replace(/\.\s*$/g, "").trim();
   const low = norm.toLowerCase();
   if (/^summary\b/i.test(low) || /\bsummary\b/i.test(low)) return null;
   if (low.startsWith("bet nacional")) return null;
@@ -263,7 +280,7 @@ export function resolveMesaOperadora(tableCell: string): { operadora: string; me
 }
 
 function canonEntryForLine(lineStr: string): (typeof MESA_RAW_TO_CANON)[number] | null {
-  const norm = lineStr.replace(/\s+/g, " ").trim();
+  const norm = normalizeOcrTableNameLine(lineStr).replace(/\s+/g, " ").replace(/\.\s*$/g, "").trim();
   const low = norm.toLowerCase();
   for (const m of MESA_RAW_TO_CANON) {
     if (low.startsWith(m.raw.toLowerCase())) return m;
@@ -1407,7 +1424,8 @@ function parseDailyBlock(
   let i = start;
   while (i < endExclusive) {
     const line = lines[i];
-    if (isMonthlyTitleAt(lines, i)) break;
+    // Só a linha atual: janelas «para a frente» faziam coincidir 30/03+31/03 com «Monthly» na linha seguinte e paravam cedo.
+    if (isMonthlyTitleLine(line) || /^\s*monthly\s+/i.test(line.trim())) break;
     const perAhead = lineChunkJoin(lines, i, 4);
     if (/\bper\b/i.test(perAhead) && /\btable\b/i.test(perAhead)) break;
     const dateHit = firstBrDateInLineToIso(line);
@@ -1544,56 +1562,80 @@ function scrapeMonthlyUapArpuGaps(text: string, byMes: Map<string, MonthlyRowPar
   }
 }
 
+/**
+ * Último par plausível (UAP, ARPU) quando o OCR junta as duas tabelas mensais na mesma linha
+ * (ex.: «Mar 2026 … Mar 2026 1,370 17»).
+ */
+function pickBestUapArpuPairFromNumbers(allNums: number[]): { uap: number; arpu: number } | null {
+  for (let k = allNums.length - 1; k >= 1; k--) {
+    let uapVal = allNums[k - 1]!;
+    let arpuVal = allNums[k]!;
+    if (uapVal < 100 || !Number.isFinite(uapVal)) continue;
+    if (!Number.isFinite(arpuVal)) continue;
+    if (arpuVal >= 5 && arpuVal < 55 && uapVal >= 350) arpuVal *= 10;
+    if (
+      uapVal <= 50_000 &&
+      Math.abs(arpuVal) >= 7 &&
+      Math.abs(arpuVal) <= 450
+    ) {
+      return { uap: uapVal, arpu: arpuVal };
+    }
+  }
+  return null;
+}
+
 function parseMonthlyUapArpuAllLines(lines: string[], rawText: string): MonthlyRowParsed[] {
   const byMes = new Map<string, MonthlyRowParsed>();
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (isMonthlyTitleLine(line)) continue;
     if (/^\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}/.test(line.trim())) continue;
-    const m = line.match(MONTH_YEAR_RE);
-    if (!m || m.index === undefined) continue;
-    const mon = m[1];
-    const year = m[2];
-    const mesIso = monthYearToIso(mon, year);
-    if (!mesIso) continue;
-    const tail = line.slice(m.index + m[0].length);
-    let parts = splitLineParts(tail);
-    let allNums = collectNumbersLeftToRight(parts);
-    if (
-      allNums.length === 0 &&
-      i + 1 < lines.length &&
-      !isMonthlyTitleLine(lines[i + 1]) &&
-      !/^\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}/.test(lines[i + 1].trim())
-    ) {
-      const nextNums = collectNumbersLeftToRight(splitLineParts(lines[i + 1]));
-      if (nextNums.length >= 2) {
-        allNums = nextNums.length === 2 ? nextNums : [nextNums[0], nextNums[1]];
-        i++;
+    const reMy = new RegExp(MONTH_YEAR_RE.source, "gi");
+    const matches = [...line.matchAll(reMy)];
+    if (matches.length === 0) continue;
+
+    const ingestMonthSegment = (mon: string, yearRaw: string, segment: string) => {
+      const y = yearRaw.replace(/o/gi, "0");
+      const mesIso = monthYearToIso(mon, y);
+      if (!mesIso) return;
+      const parts = splitLineParts(segment);
+      let allNums = collectNumbersLeftToRight(parts);
+      if (allNums.length === 3) {
+        const [a, b, c] = allNums;
+        if (a >= 500 && a <= 100_000 && b >= 50 && b < 1000 && c >= 0 && c < 100) {
+          const arpuMerged = c < 10 ? b + c / 10 : b + c / 100;
+          allNums = [a, arpuMerged];
+        }
       }
+      let uapVal: number;
+      let arpuVal: number;
+      if (allNums.length === 2) {
+        uapVal = allNums[0]!;
+        arpuVal = allNums[1]!;
+        if (arpuVal >= 5 && arpuVal < 55 && uapVal >= 350) arpuVal *= 10;
+      } else if (allNums.length > 2) {
+        const picked = pickBestUapArpuPairFromNumbers(allNums);
+        if (!picked) return;
+        uapVal = picked.uap;
+        arpuVal = picked.arpu;
+      } else return;
+
+      if (uapVal < 100 || uapVal > 1_000_000) return;
+      if (Math.abs(arpuVal) > 1_000_000) return;
+      byMes.set(mesIso, {
+        mes: mesIso,
+        uap: Math.round(uapVal),
+        arpu: arpuVal,
+      });
+    };
+
+    for (let mi = 0; mi < matches.length; mi++) {
+      const mat = matches[mi]!;
+      const start = mat.index! + mat[0].length;
+      const end = mi + 1 < matches.length ? matches[mi + 1]!.index! : line.length;
+      const segment = line.slice(start, end);
+      ingestMonthSegment(mat[1], mat[2], segment);
     }
-    if (allNums.length === 1 && i + 1 < lines.length) {
-      const nextNums = collectNumbersLeftToRight(splitLineParts(lines[i + 1]));
-      if (nextNums.length === 1) {
-        allNums = [allNums[0], nextNums[0]];
-        i++;
-      }
-    }
-    if (allNums.length === 3) {
-      const [a, b, c] = allNums;
-      if (a >= 500 && a <= 100_000 && b >= 50 && b < 1000 && c >= 0 && c < 100) {
-        const arpu = c < 10 ? b + c / 10 : b + c / 100;
-        allNums = [a, arpu];
-      }
-    }
-    if (allNums.length !== 2) continue;
-    const [uapVal, arpuVal] = allNums;
-    if (uapVal < 100 || uapVal > 1_000_000) continue;
-    if (Math.abs(arpuVal) > 1_000_000) continue;
-    byMes.set(mesIso, {
-      mes: mesIso,
-      uap: Math.round(uapVal),
-      arpu: arpuVal,
-    });
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -1905,9 +1947,11 @@ export function parseRelatorioFromOcrText(
         ? parsePorTabelaFromLayoutLines(layoutLines!, dataRef)
         : parsePorTabelaBlock(lines, porStart, dataRef)
       : [];
-  if (porStart >= 0 && por_tabela.length === 0) {
+  if (porStart >= 0) {
     const fromText = parsePorTabelaBlock(lines, porStart, dataRef);
-    if (fromText.length > 0) por_tabela = fromText;
+    if (por_tabela.length === 0 || fromText.length > por_tabela.length) {
+      if (fromText.length > 0) por_tabela = fromText;
+    }
   }
 
   return {
