@@ -339,8 +339,12 @@ function rotulosPorMesaParaMes(
   };
 }
 
-const BLACKJACK_MESA_ORDER = ["Blackjack 1", "Blackjack VIP", "Blackjack 2"] as const;
-const BOTTOM_MESA_ORDER = ["Speed Baccarat", "Roleta"] as const;
+/** Layout fixo Casa de Apostas: 2 quadros por linha (Roleta sozinha na 3.ª linha, coluna esquerda). */
+const CASA_APOSTAS_MESA_GRID: readonly (readonly [string, string | null])[] = [
+  ["Blackjack 1", "Blackjack 2"],
+  ["Blackjack VIP", "Speed Baccarat"],
+  ["Roleta", null],
+] as const;
 
 function apostaMediaMesa(t: number | null, b: number | null): number | null {
   if (t == null || b == null) return null;
@@ -445,22 +449,27 @@ function partitionCasaApostasMesas(
   rows: PorTabelaRow[],
   slug: string,
   operadorasList: { slug: string; nome: string }[],
-): { blackjack: PorTabelaRow[]; bottom: PorTabelaRow[]; rest: PorTabelaRow[] } | null {
+): { gridLinhas: (PorTabelaRow | null)[][]; rest: PorTabelaRow[] } | null {
   if (slug !== OPERADORA_CASA_APOSTAS) return null;
   const byName = new Map<string, PorTabelaRow>();
   for (const r of rows) {
     const name = nomeMesaParaExibicao(r, slug, operadorasList);
     byName.set(name, r);
   }
-  const blackjack = BLACKJACK_MESA_ORDER.map((n) => byName.get(n)).filter((x): x is PorTabelaRow => x != null);
-  const bottom = BOTTOM_MESA_ORDER.map((n) => byName.get(n)).filter((x): x is PorTabelaRow => x != null);
-  const placed = new Set<string>([...BLACKJACK_MESA_ORDER, ...BOTTOM_MESA_ORDER]);
+  const placed = new Set<string>();
+  for (const [a, b] of CASA_APOSTAS_MESA_GRID) {
+    placed.add(a);
+    if (b) placed.add(b);
+  }
+  const gridLinhas = CASA_APOSTAS_MESA_GRID.map(([a, b]) =>
+    b == null ? [byName.get(a) ?? null] : [byName.get(a) ?? null, byName.get(b) ?? null],
+  );
   const rest: PorTabelaRow[] = [];
   for (const r of rows) {
     const name = nomeMesaParaExibicao(r, slug, operadorasList);
     if (!placed.has(name)) rest.push(r);
   }
-  return { blackjack, bottom, rest };
+  return { gridLinhas, rest };
 }
 
 function MarginBadge({ value }: { value: number | null }) {
@@ -534,7 +543,7 @@ function MesasPorMesaListaVertical({
   );
 }
 
-/** Casa de Apostas: 3 Blackjacks na mesma linha; Speed Baccarat e Roleta na linha seguinte; restantes abaixo. */
+/** Casa de Apostas: 2 quadros por linha — BJ1+BJ2; VIP+Speed Baccarat; Roleta (1.ª coluna). */
 function MesasCasaApostasGrid({
   rows,
   rotulos,
@@ -566,13 +575,7 @@ function MesasCasaApostasGrid({
       />
     );
   }
-  const { blackjack, bottom, rest } = part;
-  const grid3: React.CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: 12,
-    width: "100%",
-  };
+  const { gridLinhas, rest } = part;
   const grid2: React.CSSProperties = {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -581,38 +584,30 @@ function MesasCasaApostasGrid({
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
-      {blackjack.length > 0 && (
-        <div style={grid3}>
-          {blackjack.map((row) => (
-            <MesaD1MiniTable
-              key={`${row.data_relatorio}|bj|${row.nome_tabela}`}
-              row={row}
-              rotulos={rotulos}
-              slugOperadora={slugOperadora}
-              operadorasList={operadorasList}
-              thMini={thMini}
-              tdMini={tdMini}
-              tdMiniNum={tdMiniNum}
-            />
-          ))}
-        </div>
-      )}
-      {bottom.length > 0 && (
-        <div style={grid2}>
-          {bottom.map((row) => (
-            <MesaD1MiniTable
-              key={`${row.data_relatorio}|bt|${row.nome_tabela}`}
-              row={row}
-              rotulos={rotulos}
-              slugOperadora={slugOperadora}
-              operadorasList={operadorasList}
-              thMini={thMini}
-              tdMini={tdMini}
-              tdMiniNum={tdMiniNum}
-            />
-          ))}
-        </div>
-      )}
+      {gridLinhas.map((cells, li) => {
+        if (!cells.some(Boolean)) return null;
+        return (
+          <div key={`cda-row-${li}`} style={grid2}>
+            {cells.map((row, ci) =>
+              row ? (
+                <MesaD1MiniTable
+                  key={`${row.data_relatorio}|cda-${li}-${ci}|${row.nome_tabela}`}
+                  row={row}
+                  rotulos={rotulos}
+                  slugOperadora={slugOperadora}
+                  operadorasList={operadorasList}
+                  thMini={thMini}
+                  tdMini={tdMini}
+                  tdMiniNum={tdMiniNum}
+                />
+              ) : (
+                <div key={`cda-empty-${li}-${ci}`} style={{ minWidth: 0 }} />
+              ),
+            )}
+            {cells.length === 1 ? <div key={`cda-empty-${li}-pad`} style={{ minWidth: 0 }} /> : null}
+          </div>
+        );
+      })}
       {rest.length > 0 && (
         <MesasPorMesaListaVertical
           rows={rest}
