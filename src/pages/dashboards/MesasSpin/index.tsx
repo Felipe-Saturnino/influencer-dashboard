@@ -415,6 +415,7 @@ function linhaMesaPorDiaFromRow(r: PorTabelaRow): LinhaMesaPorDia {
 type CelulaJogoMetricas = Pick<LinhaMesaPorDia, "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size">;
 
 type JogoMetricKey = keyof CelulaJogoMetricas;
+type JogoComparativoMetricKey = Exclude<JogoMetricKey, "margin_pct">;
 
 function emptyCelulaJogo(): CelulaJogoMetricas {
   return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null };
@@ -577,10 +578,10 @@ function MarginBadge({ value }: { value: number | null }) {
   if (value == null) return <span style={{ color: tt.textMuted }}>—</span>;
   const v = Number(value);
   let bg: string = "rgba(124,58,237,0.12)", color: string = BRAND.roxoVivo;
-  if (v >= 5) {
+  if (v > 10) {
     bg = "rgba(34,197,94,0.12)";
     color = BRAND.verde;
-  } else if (v < 3) {
+  } else if (v < 0) {
     bg = "rgba(232,64,37,0.12)";
     color = BRAND.vermelho;
   }
@@ -1108,14 +1109,6 @@ export default function MesasSpin() {
     });
   }, [historico, dailyData, porTabelaFiltradas, operadorasListFmt]);
 
-  const temDadosMesaSpinBlocos = useMemo(
-    () =>
-      mesasOpcoesBlackjack.length > 0 ||
-      linhasSpeedBaccarat.length > 0 ||
-      linhasRoleta.length > 0,
-    [mesasOpcoesBlackjack.length, linhasSpeedBaccarat.length, linhasRoleta.length],
-  );
-
   const linhasMesaA = useMemo(() => {
     if (!compMesaA) return [];
     return porTabelaFiltradas
@@ -1299,7 +1292,7 @@ export default function MesasSpin() {
           {linhas.length === 0 ? (
             <tr>
               <td colSpan={6} style={{ ...tdStyle, color: t.textMuted, textAlign: "center" }}>
-                Sem dados no período.
+                Nenhum dado para o período selecionado.
               </td>
             </tr>
           ) : (
@@ -1332,7 +1325,7 @@ export default function MesasSpin() {
     </div>
   );
 
-  const renderJogoMetricCell = (cell: CelulaJogoMetricas, metric: JogoMetricKey) => {
+  const renderJogoMetricCell = (cell: CelulaJogoMetricas, metric: JogoComparativoMetricKey) => {
     switch (metric) {
       case "ggr": {
         const ggr = cell.ggr ?? 0;
@@ -1352,12 +1345,6 @@ export default function MesasSpin() {
         return <td style={tdNum}>{cell.turnover != null ? fmtBRL(cell.turnover) : "—"}</td>;
       case "bets":
         return <td style={tdNum}>{cell.bets != null ? cell.bets.toLocaleString("pt-BR") : "—"}</td>;
-      case "margin_pct":
-        return (
-          <td style={tdNum}>
-            <MarginBadge value={cell.margin_pct} />
-          </td>
-        );
       case "bet_size":
         return <td style={tdNum}>{cell.bet_size != null ? fmtBRL(cell.bet_size) : "—"}</td>;
     }
@@ -1716,27 +1703,70 @@ export default function MesasSpin() {
       {!historico && (
         <>
           {loading ? (
-            <div style={{ ...card, marginBottom: 14 }}>
-              <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
-              <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                <Clock size={16} style={{ marginBottom: 8 }} />
-                Carregando mesas…
+            <>
+              <div style={{ ...card, marginBottom: 14 }}>
+                <SectionHeader
+                  icon={<GiDiceSixFacesFour size={15} />}
+                  title="Comparativo de Jogo"
+                  sub={mesSelecionado?.label}
+                />
+                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                  <Clock size={16} style={{ marginBottom: 8 }} />
+                  Carregando…
+                </div>
               </div>
-            </div>
+              <div style={{ ...card, marginBottom: 14 }}>
+                <SectionHeader
+                  icon={<GiConvergenceTarget size={15} />}
+                  title="Comparativo de mesa"
+                  sub="Blackjack"
+                />
+                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                  <Clock size={16} style={{ marginBottom: 8 }} />
+                  Carregando…
+                </div>
+              </div>
+              <div style={{ ...card, marginBottom: 14 }}>
+                <SectionHeader
+                  icon={<Table2 size={15} />}
+                  title="Dados por mesa"
+                  sub="Baccarat e Roleta"
+                />
+                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                  <Clock size={16} style={{ marginBottom: 8 }} />
+                  Carregando…
+                </div>
+              </div>
+            </>
           ) : porTabelaRows.length === 0 ? (
-            <div style={{ ...card, marginBottom: 14 }}>
-              <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
-              <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-                Nenhum dado para o período selecionado.
+            <>
+              <div style={{ ...card, marginBottom: 14 }}>
+                <SectionHeader
+                  icon={<GiDiceSixFacesFour size={15} />}
+                  title="Comparativo de Jogo"
+                  sub={mesSelecionado?.label}
+                />
+                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+                  Nenhum dado para o período selecionado.
+                </div>
               </div>
-            </div>
-          ) : !temDadosMesaSpinBlocos ? (
-            <div style={{ ...card, marginBottom: 14 }}>
-              <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
-              <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                Nenhuma mesa Blackjack, Baccarat ou Roleta neste filtro de operadora.
-              </p>
-            </div>
+              <div style={{ ...card, marginBottom: 14 }}>
+                <SectionHeader
+                  icon={<GiConvergenceTarget size={15} />}
+                  title="Comparativo de mesa"
+                  sub="Blackjack"
+                />
+                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+                  Nenhum dado para o período selecionado.
+                </div>
+              </div>
+              <div style={{ ...card, marginBottom: 14 }}>
+                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+                  Nenhum dado para o período selecionado.
+                </div>
+              </div>
+            </>
           ) : (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
@@ -1746,8 +1776,8 @@ export default function MesasSpin() {
                   sub={mesSelecionado?.label}
                 />
                 {linhasComparativoJogo.length === 0 ? (
-                  <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    Nenhum dia com detalhamento diário neste mês.
+                  <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+                    Nenhum dado para o período selecionado.
                   </div>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
@@ -1767,14 +1797,11 @@ export default function MesasSpin() {
                             Apostas
                           </th>
                           <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Margem
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
                             Aposta média
                           </th>
                         </tr>
                         <tr>
-                          {([0, 1, 2, 3, 4] as const).flatMap((mi) =>
+                          {([0, 1, 2, 3] as const).flatMap((mi) =>
                             (["Blackjack", "Roleta", "Baccarat"] as const).map((nome, gi) => (
                               <th
                                 key={`sub-${mi}-${nome}`}
@@ -1800,9 +1827,7 @@ export default function MesasSpin() {
                             }}
                           >
                             <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
-                            {(
-                              ["ggr", "turnover", "bets", "margin_pct", "bet_size"] as const
-                            ).flatMap((metric) =>
+                            {(["ggr", "turnover", "bets", "bet_size"] as const).flatMap((metric) =>
                               (["blackjack", "roleta", "baccarat"] as const).map((game) => (
                                 <Fragment key={`${row.dataIso}-${metric}-${game}`}>
                                   {renderJogoMetricCell(row[game], metric)}
@@ -1815,24 +1840,13 @@ export default function MesasSpin() {
                     </table>
                   </div>
                 )}
-                <p
-                  style={{
-                    margin: "12px 0 0",
-                    fontSize: 11,
-                    color: t.textMuted,
-                    fontFamily: FONT.body,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  Blackjack = soma das mesas Blackjack 1, 2 e VIP. Baccarat = Speed Baccarat.
-                </p>
               </div>
 
               <div style={{ ...card, marginBottom: 14 }}>
                 <SectionHeader
                   icon={<GiConvergenceTarget size={15} />}
                   title="Comparativo de mesa"
-                  sub="blackjack"
+                  sub="Blackjack"
                 />
                 <p
                   style={{
@@ -1847,9 +1861,9 @@ export default function MesasSpin() {
                 </p>
 
                 {mesasOpcoesBlackjack.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                    Sem dados de Blackjack neste período.
-                  </p>
+                  <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+                    Nenhum dado para o período selecionado.
+                  </div>
                 ) : (
                   <>
                     <div className="app-conversao-vs-row">
@@ -1971,7 +1985,7 @@ export default function MesasSpin() {
               </div>
 
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="baccarat e roleta" />
+                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
 
                 <div className="app-conversao-funil-duo">
                   <div style={{ flex: 1, minWidth: 0 }}>
