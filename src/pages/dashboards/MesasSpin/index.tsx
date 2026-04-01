@@ -62,6 +62,14 @@ interface MonthlyRow {
   arpu: number | null;
 }
 
+/** Linha enriquecida da tabela de detalhe (diário ou mensal/histórico). */
+type LinhaDetalheTab = Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & {
+  label: string;
+  margin_pct: number | null;
+  bet_size: number | null;
+  arpu: number | null;
+};
+
 interface PorTabelaRow {
   data_relatorio: string;
   nome_tabela: string;
@@ -278,33 +286,29 @@ type MonthlyKpiSnapshot = {
   arpu: number | null;
 };
 
-function snapshotFromMonthlyRowV2(row: { uap?: number | null; arpu?: number | null } | null): MonthlyKpiSnapshot | null {
-  if (!row) return null;
-  return {
-    turnover: null,
-    ggr: null,
-    margin_pct: null,
-    bets: null,
-    uap: row.uap != null ? Number(row.uap) : null,
-    bet_size: null,
-    arpu: row.arpu != null ? Number(row.arpu) : null,
-  };
-}
-
-/** Histórico mensal v2: só UAP (soma) e ARPU (média)" simples; restantes KPIs ficam para cruzamentos futuros. */
-function aggMonthlyKpiFromRowsV2(rows: MonthlyRow[]): MonthlyKpiSnapshot | null {
+/** Agrega linhas do detalhamento diário (somas + margem, aposta média e ARPU derivados). */
+function aggDailyMesKpi(rows: DailyRow[]): MonthlyKpiSnapshot | null {
   if (rows.length === 0) return null;
-  const uap = rows.reduce((s, r) => s + Number(r.uap ?? 0), 0);
-  const arpus = rows.map((r) => r.arpu).filter((v): v is number => v != null && Number.isFinite(Number(v)));
-  const arpu =
-    arpus.length > 0 ? arpus.reduce((a, b) => a + Number(b), 0) / arpus.length : null;
+  let turnover = 0;
+  let ggr = 0;
+  let bets = 0;
+  let uap = 0;
+  for (const r of rows) {
+    turnover += Number(r.turnover ?? 0);
+    ggr += Number(r.ggr ?? 0);
+    bets += Number(r.bets ?? 0);
+    uap += Number(r.uap ?? 0);
+  }
+  const margin_pct = turnover !== 0 ? (ggr / turnover) * 100 : null;
+  const bet_size = bets !== 0 ? turnover / bets : null;
+  const arpu = uap !== 0 ? ggr / uap : null;
   return {
-    turnover: null,
-    ggr: null,
-    margin_pct: null,
-    bets: null,
+    turnover,
+    ggr,
+    margin_pct,
+    bets,
     uap: uap || null,
-    bet_size: null,
+    bet_size,
     arpu,
   };
 }
@@ -333,6 +337,130 @@ function rotulosPorMesaParaMes(
     d1: fmtDataPtBr(d1Referencia),
     usouFallbackDaily: ultimoDiaDailyIso === null,
   };
+}
+
+const BLACKJACK_MESA_ORDER = ["Blackjack 1", "Blackjack VIP", "Blackjack 2"] as const;
+const BOTTOM_MESA_ORDER = ["Speed Baccarat", "Roleta"] as const;
+
+function apostaMediaMesa(t: number | null, b: number | null): number | null {
+  if (t == null || b == null) return null;
+  const bn = Number(b);
+  if (!Number.isFinite(bn) || bn === 0) return null;
+  return Number(t) / bn;
+}
+
+/** Uma linha na mini-tabela por mesa (d-1). */
+function MesaD1MiniTable({
+  row,
+  rotulos,
+  slugOperadora,
+  operadorasList,
+  thMini,
+  tdMini,
+  tdMiniNum,
+}: {
+  row: PorTabelaRow;
+  rotulos: RotulosMesa;
+  slugOperadora: string;
+  operadorasList: { slug: string; nome: string }[];
+  thMini: React.CSSProperties;
+  tdMini: React.CSSProperties;
+  tdMiniNum: React.CSSProperties;
+}) {
+  const { theme: tt } = useApp();
+  const am = apostaMediaMesa(row.turnover_d1, row.bets_d1);
+  return (
+    <div
+      style={{
+        border: `1px solid ${tt.cardBorder}`,
+        borderRadius: 14,
+        padding: 14,
+        background: "rgba(74,32,130,0.04)",
+        width: "100%",
+        boxSizing: "border-box",
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          fontWeight: 800,
+          fontSize: 13,
+          color: tt.text,
+          marginBottom: 10,
+          fontFamily: FONT.body,
+          lineHeight: 1.35,
+          wordBreak: "break-word",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            color: tt.textMuted,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            display: "block",
+            marginBottom: 4,
+          }}
+        >
+          Mesa
+        </span>
+        {nomeMesaParaExibicao(row, slugOperadora, operadorasList)}
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 280 }}>
+          <thead>
+            <tr>
+              <th style={thMini}>Data</th>
+              <th style={{ ...thMini, textAlign: "right" }}>GGR</th>
+              <th style={{ ...thMini, textAlign: "right" }}>Turnover</th>
+              <th style={{ ...thMini, textAlign: "right" }}>Apostas</th>
+              <th style={{ ...thMini, textAlign: "right" }}>Aposta média</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ background: "rgba(74,32,130,0.06)" }}>
+              <td style={tdMini}>{rotulos.d1}</td>
+              <td
+                style={{
+                  ...tdMiniNum,
+                  color: (row.ggr_d1 ?? 0) >= 0 ? BRAND.verde : BRAND.vermelho,
+                  fontWeight: 600,
+                }}
+              >
+                {row.ggr_d1 != null ? fmtBRL(Number(row.ggr_d1)) : "—"}
+              </td>
+              <td style={tdMiniNum}>{row.turnover_d1 != null ? fmtBRL(Number(row.turnover_d1)) : "—"}</td>
+              <td style={tdMiniNum}>{row.bets_d1 != null ? row.bets_d1.toLocaleString("pt-BR") : "—"}</td>
+              <td style={tdMiniNum}>{am != null ? fmtBRL(am) : "—"}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function partitionCasaApostasMesas(
+  rows: PorTabelaRow[],
+  slug: string,
+  operadorasList: { slug: string; nome: string }[],
+): { blackjack: PorTabelaRow[]; bottom: PorTabelaRow[]; rest: PorTabelaRow[] } | null {
+  if (slug !== OPERADORA_CASA_APOSTAS) return null;
+  const byName = new Map<string, PorTabelaRow>();
+  for (const r of rows) {
+    const name = nomeMesaParaExibicao(r, slug, operadorasList);
+    byName.set(name, r);
+  }
+  const blackjack = BLACKJACK_MESA_ORDER.map((n) => byName.get(n)).filter((x): x is PorTabelaRow => x != null);
+  const bottom = BOTTOM_MESA_ORDER.map((n) => byName.get(n)).filter((x): x is PorTabelaRow => x != null);
+  const placed = new Set<string>([...BLACKJACK_MESA_ORDER, ...BOTTOM_MESA_ORDER]);
+  const rest: PorTabelaRow[] = [];
+  for (const r of rows) {
+    const name = nomeMesaParaExibicao(r, slug, operadorasList);
+    if (!placed.has(name)) rest.push(r);
+  }
+  return { blackjack, bottom, rest };
 }
 
 function MarginBadge({ value }: { value: number | null }) {
@@ -382,7 +510,6 @@ function MesasPorMesaListaVertical({
   tdMini: React.CSSProperties;
   tdMiniNum: React.CSSProperties;
 }) {
-  const { theme: tt } = useApp();
   const sorted = [...rows].sort((a, b) =>
     nomeMesaParaExibicao(a, slugOperadora, operadorasList).localeCompare(
       nomeMesaParaExibicao(b, slugOperadora, operadorasList),
@@ -392,77 +519,111 @@ function MesasPorMesaListaVertical({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
       {sorted.map((row) => (
-        <div
+        <MesaD1MiniTable
           key={`${row.data_relatorio}|${slugOperadora}|${row.nome_tabela}`}
-          style={{
-            border: `1px solid ${tt.cardBorder}`,
-            borderRadius: 14,
-            padding: 14,
-            background: "rgba(74,32,130,0.04)",
-            width: "100%",
-            boxSizing: "border-box",
-            minWidth: 0,
-          }}
-        >
-          <div
-            style={{
-              fontWeight: 800,
-              fontSize: 13,
-              color: tt.text,
-              marginBottom: 10,
-              fontFamily: FONT.body,
-              lineHeight: 1.35,
-              wordBreak: "break-word",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 10,
-                color: tt.textMuted,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                display: "block",
-                marginBottom: 4,
-              }}
-            >
-              Mesa
-            </span>
-            {nomeMesaParaExibicao(row, slugOperadora, operadorasList)}
-          </div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 280 }}>
-              <thead>
-                <tr>
-                  <th style={thMini}>Data</th>
-                  <th style={{ ...thMini, textAlign: "right" }}>Apostas</th>
-                  <th style={{ ...thMini, textAlign: "right" }}>Turnover</th>
-                  <th style={{ ...thMini, textAlign: "right" }}>GGR</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ background: "rgba(74,32,130,0.06)" }}>
-                  <td style={tdMini}>{rotulos.d1}</td>
-                  <td style={tdMiniNum}>{row.bets_d1 != null ? row.bets_d1.toLocaleString("pt-BR") : "—"}</td>
-                  <td style={tdMiniNum}>{row.turnover_d1 != null ? fmtBRL(Number(row.turnover_d1)) : "—"}</td>
-                  <td
-                    style={{
-                      ...tdMiniNum,
-                      color: (row.ggr_d1 ?? 0) >= 0 ? BRAND.verde : BRAND.vermelho,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {row.ggr_d1 != null ? fmtBRL(Number(row.ggr_d1)) : "—"}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p style={{ margin: "10px 0 0", fontSize: 10, color: tt.textMuted }}>
-            Colunas D-2 e MTD do print ainda não estão na base; podem ser adicionadas depois.
-          </p>
-        </div>
+          row={row}
+          rotulos={rotulos}
+          slugOperadora={slugOperadora}
+          operadorasList={operadorasList}
+          thMini={thMini}
+          tdMini={tdMini}
+          tdMiniNum={tdMiniNum}
+        />
       ))}
+    </div>
+  );
+}
+
+/** Casa de Apostas: 3 Blackjacks na mesma linha; Speed Baccarat e Roleta na linha seguinte; restantes abaixo. */
+function MesasCasaApostasGrid({
+  rows,
+  rotulos,
+  slugOperadora,
+  operadorasList,
+  thMini,
+  tdMini,
+  tdMiniNum,
+}: {
+  rows: PorTabelaRow[];
+  rotulos: RotulosMesa;
+  slugOperadora: string;
+  operadorasList: { slug: string; nome: string }[];
+  thMini: React.CSSProperties;
+  tdMini: React.CSSProperties;
+  tdMiniNum: React.CSSProperties;
+}) {
+  const part = partitionCasaApostasMesas(rows, slugOperadora, operadorasList);
+  if (!part) {
+    return (
+      <MesasPorMesaListaVertical
+        rows={rows}
+        rotulos={rotulos}
+        slugOperadora={slugOperadora}
+        operadorasList={operadorasList}
+        thMini={thMini}
+        tdMini={tdMini}
+        tdMiniNum={tdMiniNum}
+      />
+    );
+  }
+  const { blackjack, bottom, rest } = part;
+  const grid3: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: 12,
+    width: "100%",
+  };
+  const grid2: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 12,
+    width: "100%",
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
+      {blackjack.length > 0 && (
+        <div style={grid3}>
+          {blackjack.map((row) => (
+            <MesaD1MiniTable
+              key={`${row.data_relatorio}|bj|${row.nome_tabela}`}
+              row={row}
+              rotulos={rotulos}
+              slugOperadora={slugOperadora}
+              operadorasList={operadorasList}
+              thMini={thMini}
+              tdMini={tdMini}
+              tdMiniNum={tdMiniNum}
+            />
+          ))}
+        </div>
+      )}
+      {bottom.length > 0 && (
+        <div style={grid2}>
+          {bottom.map((row) => (
+            <MesaD1MiniTable
+              key={`${row.data_relatorio}|bt|${row.nome_tabela}`}
+              row={row}
+              rotulos={rotulos}
+              slugOperadora={slugOperadora}
+              operadorasList={operadorasList}
+              thMini={thMini}
+              tdMini={tdMini}
+              tdMiniNum={tdMiniNum}
+            />
+          ))}
+        </div>
+      )}
+      {rest.length > 0 && (
+        <MesasPorMesaListaVertical
+          rows={rest}
+          rotulos={rotulos}
+          slugOperadora={slugOperadora}
+          operadorasList={operadorasList}
+          thMini={thMini}
+          tdMini={tdMini}
+          tdMiniNum={tdMiniNum}
+        />
+      )}
     </div>
   );
 }
@@ -555,8 +716,8 @@ export default function MesasSpin() {
   const [porTabelaRows, setPorTabelaRows] = useState<PorTabelaRow[]>([]);
   const [porTabelaSnapshot, setPorTabelaSnapshot] = useState<string | null>(null);
   const [porTabelaHistAll, setPorTabelaHistAll] = useState<PorTabelaRow[]>([]);
-  const [monthlyKpiAtual, setMonthlyKpiAtual] = useState<MonthlyKpiSnapshot | null>(null);
-  const [monthlyKpiAnt, setMonthlyKpiAnt] = useState<MonthlyKpiSnapshot | null>(null);
+  /** Só para comparação MoM no carrossel: totais do mês anterior a partir do daily. */
+  const [dailyDataPrevMonth, setDailyDataPrevMonth] = useState<DailyRow[]>([]);
   const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
   const [uploadMsg, setUploadMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
@@ -598,8 +759,7 @@ export default function MesasSpin() {
     setPorTabelaRows([]);
     setPorTabelaSnapshot(null);
     setPorTabelaHistAll([]);
-    setMonthlyKpiAtual(null);
-    setMonthlyKpiAnt(null);
+    setDailyDataPrevMonth([]);
 
     try {
       if (historico) {
@@ -641,25 +801,19 @@ export default function MesasSpin() {
         setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         setMonthlyData([]);
 
-        const mesIsoCarousel = fmt(new Date(mesSelecionado.ano, mesSelecionado.mes, 1));
-        const { data: curRows } = await supabase
-          .from("relatorio_monthly_summary")
-          .select("uap, arpu")
-          .eq("mes", mesIsoCarousel)
-          .limit(1);
-        setMonthlyKpiAtual(snapshotFromMonthlyRowV2(curRows?.[0] ?? null));
-
         if (idxMes > 0) {
-          const prev = mesesDisponiveis[idxMes - 1];
-          const mesIsoAnt = fmt(new Date(prev.ano, prev.mes, 1));
-          const { data: antRows } = await supabase
-            .from("relatorio_monthly_summary")
-            .select("uap, arpu")
-            .eq("mes", mesIsoAnt)
-            .limit(1);
-          setMonthlyKpiAnt(snapshotFromMonthlyRowV2(antRows?.[0] ?? null));
-        } else {
-          setMonthlyKpiAnt(null);
+          const prev = mesesDisponiveis[idxMes - 1]!;
+          const { inicio: pi, fim: pf } = getDatasDoMes(prev.ano, prev.mes);
+          const dailyPrevRaw = await fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_daily_summary")
+              .select("data, turnover, ggr, apostas, uap")
+              .gte("data", pi)
+              .lte("data", pf)
+              .order("data", { ascending: true })
+              .range(from, to),
+          );
+          setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         }
 
         const { data: snap } = await supabase
@@ -694,25 +848,49 @@ export default function MesasSpin() {
   }, [carregar]);
 
   const tabelaRows = useMemo(() => {
+    const enrich = (base: Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & { label: string }): LinhaDetalheTab => {
+      const t = base.turnover;
+      const g = base.ggr;
+      const b = base.bets;
+      const u = base.uap;
+      const margin_pct = t != null && Number(t) !== 0 && g != null ? (Number(g) / Number(t)) * 100 : null;
+      const bet_size =
+        b != null && Number(b) !== 0 && t != null ? Number(t) / Number(b) : null;
+      const arpu = u != null && Number(u) !== 0 && g != null ? Number(g) / Number(u) : null;
+      return { ...base, margin_pct, bet_size, arpu };
+    };
     if (historico) {
       return monthlyData.map((r) => {
         const d = new Date(r.mes + "T12:00:00");
-        return { label: `${MESES_CURTOS[d.getMonth()]} ${d.getFullYear()}`, ...r };
+        return enrich({
+          label: `${MESES_CURTOS[d.getMonth()]} ${d.getFullYear()}`,
+          turnover: r.turnover,
+          ggr: r.ggr,
+          bets: r.bets,
+          uap: r.uap,
+        });
       });
     }
-    return dailyData.map((r) => ({
-      label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-      ...r,
-    }));
+    return dailyData.map((r) =>
+      enrich({
+        label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+        }),
+        turnover: r.turnover,
+        ggr: r.ggr,
+        bets: r.bets,
+        uap: r.uap,
+      }),
+    );
   }, [historico, dailyData, monthlyData]);
 
-  const kpiMonthlyHistoricoAgg = useMemo(
-    () => (historico ? aggMonthlyKpiFromRowsV2(monthlyData) : null),
-    [historico, monthlyData],
-  );
+  const kpiExibir = useMemo(() => (dailyData.length === 0 ? null : aggDailyMesKpi(dailyData)), [dailyData]);
 
-  const kpiExibir: MonthlyKpiSnapshot | null = historico ? kpiMonthlyHistoricoAgg : monthlyKpiAtual;
-  const kpiAntExibir: MonthlyKpiSnapshot | null = historico ? null : monthlyKpiAnt;
+  const kpiAntExibir = useMemo(() => {
+    if (historico || dailyDataPrevMonth.length === 0) return null;
+    return aggDailyMesKpi(dailyDataPrevMonth);
+  }, [historico, dailyDataPrevMonth]);
 
   const operadorasListFmt = operadorasOcr;
 
@@ -789,7 +967,7 @@ export default function MesasSpin() {
     operadorasListFmt,
   ]);
 
-  const isHistoricoKpi = historico || monthlyKpiAnt == null || (!historico && monthlyKpiAtual == null);
+  const isHistoricoKpi = historico || idxMes === 0 || dailyDataPrevMonth.length === 0;
 
   const brand = useDashboardBrand();
 
@@ -1047,16 +1225,20 @@ export default function MesasSpin() {
           <SectionHeader
             icon={<LayoutGrid size={15} />}
             title="KPIs Consolidados"
-            sub={
-              historico
-                ? "· resumo mensal: nesta versão da base só UAP e ARPU estão preenchidos; restantes virão com cruzamentos"
-                : "· mês selecionado (monthly BRL) · apenas UAP e ARPU na tabela v2"
-            }
+            sub={historico ? "todo o período · soma do detalhamento diário" : "mês selecionado"}
           />
-          <p style={{ margin: "0 0 12px", fontSize: 11, color: t.textMuted }}>
-            Turnover, apostas, GGR, margem e aposta média consolidados ao nível do monthly summary estarão em branco até existirem colunas ou vistas calculadas.
-          </p>
           <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
+            <KpiCard
+              label="GGR"
+              value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
+              icon={<TrendingUp size={16} />}
+              accentVar="--brand-extra1"
+              accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
+              atual={nKpi(kpiExibir?.ggr)}
+              anterior={nKpi(kpiAntExibir?.ggr)}
+              isBRL
+              isHistorico={isHistoricoKpi}
+            />
             <KpiCard
               label="Turnover"
               value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
@@ -1088,6 +1270,8 @@ export default function MesasSpin() {
               anterior={nKpi(kpiAntExibir?.margin_pct)}
               isHistorico={isHistoricoKpi}
             />
+          </div>
+          <div className="app-grid-kpi-3" style={{ gap: 12 }}>
             <KpiCard
               label="Aposta média"
               value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
@@ -1096,19 +1280,6 @@ export default function MesasSpin() {
               accentColor={BRAND.ciano}
               atual={nKpi(kpiExibir?.bet_size)}
               anterior={nKpi(kpiAntExibir?.bet_size)}
-              isBRL
-              isHistorico={isHistoricoKpi}
-            />
-          </div>
-          <div className="app-grid-kpi-3" style={{ gap: 12 }}>
-            <KpiCard
-              label="GGR"
-              value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
-              icon={<TrendingUp size={16} />}
-              accentVar="--brand-extra1"
-              accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
-              atual={nKpi(kpiExibir?.ggr)}
-              anterior={nKpi(kpiAntExibir?.ggr)}
               isBRL
               isHistorico={isHistoricoKpi}
             />
@@ -1141,7 +1312,7 @@ export default function MesasSpin() {
         <SectionHeader
           icon={<GiCalendar size={15} />}
           title={historico ? "Comparativo Mensal" : "Detalhamento Diário"}
-          sub={historico ? "· consolidado mês a mês (monthly)" : "· dia a dia (daily summaries BRL)"}
+          sub={historico ? "consolidado mês a mês" : "dia a dia"}
         />
 
         {loading ? (
@@ -1159,12 +1330,12 @@ export default function MesasSpin() {
               <thead>
                 <tr>
                   <th style={thStyle}>{historico ? "Mês" : "Data"}</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
                   <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
                   <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
                   <th style={{ ...thStyle, textAlign: "right" }}>UAP</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Bet Size</th>
                   <th style={{ ...thStyle, textAlign: "right" }}>ARPU</th>
                 </tr>
               </thead>
@@ -1177,7 +1348,6 @@ export default function MesasSpin() {
                       style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent" }}
                     >
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.label}</td>
-                      <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
                       <td
                         style={{
                           ...tdNum,
@@ -1187,12 +1357,13 @@ export default function MesasSpin() {
                       >
                         {r.ggr != null ? fmtBRL(r.ggr) : "—"}
                       </td>
+                      <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
+                      <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
                       <td style={{ ...tdNum }}>
                         <MarginBadge value={r.margin_pct} />
                       </td>
-                      <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
                       <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
+                      <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
                       <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
                     </tr>
                   );
@@ -1200,11 +1371,6 @@ export default function MesasSpin() {
               </tbody>
             </table>
           </div>
-        )}
-        {!historico && (
-          <p style={{ margin: "12px 0 0", fontSize: 11, color: t.textMuted }}>
-            No modo mensal (histórico), as linhas mensais só mostram UAP e ARPU; demais colunas aguardam o modelo de dados.
-          </p>
         )}
       </div>
 
@@ -1235,9 +1401,6 @@ export default function MesasSpin() {
             </div>
           ) : (
             <>
-              <p style={{ margin: "0 0 12px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-                Métricas d-1 (GGR, Turnover, Apostas) por mesa; alinhado ao bloco Per table BRL do relatório.
-              </p>
               {rotulosPorMesaBrl.usouFallbackDaily && porTabelaFiltradas.length > 0 && (
                 <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
                   Sem resumo diário neste mês: a data da linha usa a véspera da data do print.
@@ -1250,15 +1413,27 @@ export default function MesasSpin() {
                     title="Dados por mesa"
                     sub={`· ${nomeTituloOperadora(slug, operadorasListFmt)}`}
                   />
-                  <MesasPorMesaListaVertical
-                    rows={rows}
-                    rotulos={rotulosPorMesaBrl}
-                    slugOperadora={slug}
-                    operadorasList={operadorasListFmt}
-                    thMini={thMini}
-                    tdMini={tdMini}
-                    tdMiniNum={tdMiniNum}
-                  />
+                  {slug === OPERADORA_CASA_APOSTAS ? (
+                    <MesasCasaApostasGrid
+                      rows={rows}
+                      rotulos={rotulosPorMesaBrl}
+                      slugOperadora={slug}
+                      operadorasList={operadorasListFmt}
+                      thMini={thMini}
+                      tdMini={tdMini}
+                      tdMiniNum={tdMiniNum}
+                    />
+                  ) : (
+                    <MesasPorMesaListaVertical
+                      rows={rows}
+                      rotulos={rotulosPorMesaBrl}
+                      slugOperadora={slug}
+                      operadorasList={operadorasListFmt}
+                      thMini={thMini}
+                      tdMini={tdMini}
+                      tdMiniNum={tdMiniNum}
+                    />
+                  )}
                 </div>
               ))}
             </>
@@ -1340,15 +1515,27 @@ export default function MesasSpin() {
                               Sem resumo diário neste mês: rótulos por data do print.
                             </p>
                           )}
-                          <MesasPorMesaListaVertical
-                            rows={rows}
-                            rotulos={rot}
-                            slugOperadora={opSlug}
-                            operadorasList={operadorasListFmt}
-                            thMini={thMini}
-                            tdMini={tdMini}
-                            tdMiniNum={tdMiniNum}
-                          />
+                          {opSlug === OPERADORA_CASA_APOSTAS ? (
+                            <MesasCasaApostasGrid
+                              rows={rows}
+                              rotulos={rot}
+                              slugOperadora={opSlug}
+                              operadorasList={operadorasListFmt}
+                              thMini={thMini}
+                              tdMini={tdMini}
+                              tdMiniNum={tdMiniNum}
+                            />
+                          ) : (
+                            <MesasPorMesaListaVertical
+                              rows={rows}
+                              rotulos={rot}
+                              slugOperadora={opSlug}
+                              operadorasList={operadorasListFmt}
+                              thMini={thMini}
+                              tdMini={tdMini}
+                              tdMiniNum={tdMiniNum}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
