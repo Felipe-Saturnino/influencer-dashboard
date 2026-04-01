@@ -13,17 +13,6 @@ interface LiveAgenda {
   link?: string
 }
 
-interface ResultadoLive {
-  nome: string
-  horas: number
-  mediaViews: number
-  acessos: number
-  registros: number
-  ftds: number
-  depositos_valor: number
-  ggr: number
-}
-
 interface ResultadoInfluencer {
   nome: string
   depositos_qtd: number
@@ -103,12 +92,6 @@ function fmtMoeda(n: number): string {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-function fmtHoras(h: number): string {
-  const hh = Math.floor(h)
-  const mm = Math.round((h - hh) * 60)
-  return `${hh}h${mm > 0 ? String(mm).padStart(2,'0') + 'm' : ''}`
-}
-
 // ── Estilos de e-mail reutilizáveis ───────────────────────────────────────────
 
 const TH = `padding:10px 14px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;background:#f9fafb;border-bottom:2px solid #e5e7eb;`
@@ -152,7 +135,6 @@ function gerarHTML(
   dataHoje: string,
   dataOntem: string,
   agenda: LiveAgenda[],
-  livesRows: ResultadoLive[],
   influencersRows: ResultadoInfluencer[],
   mensal: TotaisMensal,
   logoUrl: string,
@@ -194,40 +176,6 @@ function gerarHTML(
     <p style="margin:12px 0 0;font-size:12px;color:#9ca3af;font-style:italic;">
       ⚠️ Os horários informados são previstos e podem sofrer alterações ou atrasos ao longo do dia.
     </p>`
-
-  const linhasLives = livesRows.length === 0
-    ? `<tr><td colspan="8" style="${TD}color:#9ca3af;font-style:italic;">Nenhuma live realizada no dia anterior.</td></tr>`
-    : livesRows
-        .sort((a, b) => b.ggr - a.ggr)
-        .map((r, i) => `
-          <tr style="${trStyle(i)}">
-            <td style="${TD}font-weight:600;">${r.nome}</td>
-            <td style="${TD_R}">${fmtHoras(r.horas)}</td>
-            <td style="${TD_R}">${r.mediaViews > 0 ? fmtNum(r.mediaViews) : '—'}</td>
-            <td style="${TD_R}">${fmtNum(r.acessos)}</td>
-            <td style="${TD_R}">${fmtNum(r.registros)}</td>
-            <td style="${TD_R}">${fmtNum(r.ftds)}</td>
-            <td style="${TD_R}">${fmtMoeda(r.depositos_valor)}</td>
-            <td style="${TD_R}font-weight:700;color:${corGGR(r.ggr)};">${fmtMoeda(r.ggr)}</td>
-          </tr>`)
-        .join('')
-
-  const tabelaLives = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
-      <thead>
-        <tr>
-          <th style="${TH}text-align:left;">Influencer</th>
-          <th style="${TH}text-align:right;">Horas</th>
-          <th style="${TH}text-align:right;">Média de Views</th>
-          <th style="${TH}text-align:right;">Acessos</th>
-          <th style="${TH}text-align:right;">Reg.</th>
-          <th style="${TH}text-align:right;">FTDs</th>
-          <th style="${TH}text-align:right;">Depósitos</th>
-          <th style="${TH}text-align:right;">GGR</th>
-        </tr>
-      </thead>
-      <tbody>${linhasLives}</tbody>
-    </table>`
 
   const linhasInfluencers = influencersRows.length === 0
     ? `<tr><td colspan="6" style="${TD}color:#9ca3af;font-style:italic;">Nenhum resultado adicional no dia anterior.</td></tr>`
@@ -340,8 +288,6 @@ function gerarHTML(
 
       ${secao(
         tituloSecao(`📊 Consolidado de Resultados — ${dataOntemFmt}`),
-        tituloSubSecao('Resultado das Lives do dia anterior') +
-        tabelaLives +
         tituloSubSecao('Resultado de Influencers do dia anterior') +
         tabelaInfluencers +
         tituloSubSecao(`Resultados de Influencers — ${mesFmt}`) +
@@ -382,7 +328,6 @@ async function enviarRelatorio(
   dataHoje: string,
   dataOntem: string,
   agenda: LiveAgenda[],
-  livesRows: ResultadoLive[],
   influencersRows: ResultadoInfluencer[],
   mensal: TotaisMensal,
 ): Promise<{ ok: boolean; error?: string }> {
@@ -403,7 +348,7 @@ async function enviarRelatorio(
     ? `${supabaseUrl}/storage/v1/object/public/logos/Logo%20Spin%20Gaming.png`
     : ''
 
-  const html = gerarHTML(dataHoje, dataOntem, agenda, livesRows, influencersRows, mensal, logoUrl, logoUrlDark)
+  const html = gerarHTML(dataHoje, dataOntem, agenda, influencersRows, mensal, logoUrl, logoUrlDark)
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -523,45 +468,15 @@ serve(async (req) => {
       .eq('data', dataOntem)
       .eq('status', 'realizada')
 
-    const liveIds = (livesOntem ?? []).map((l: { id: string }) => l.id)
-
-    const resultadosMap: Record<string, {
-      duracao_horas: number; duracao_min: number; viewsSum: number; liveComViews: number
-    }> = {}
-
-    if (liveIds.length > 0) {
-      const { data: resData } = await supabase
-        .from('live_resultados')
-        .select('live_id, duracao_horas, duracao_min, media_views')
-        .in('live_id', liveIds)
-
-      const liveToInf = new Map(
-        (livesOntem ?? []).map((l: { id: string; influencer_id: string }) => [l.id, l.influencer_id])
-      )
-
-      for (const res of (resData ?? []) as {
-        live_id: string; duracao_horas: number; duracao_min: number; media_views: number
-      }[]) {
-        const infId = liveToInf.get(res.live_id)
-        if (!infId) continue
-        const cur = resultadosMap[infId] ?? { duracao_horas: 0, duracao_min: 0, viewsSum: 0, liveComViews: 0 }
-        cur.duracao_horas += res.duracao_horas ?? 0
-        cur.duracao_min   += res.duracao_min   ?? 0
-        if (res.media_views) { cur.viewsSum += res.media_views; cur.liveComViews += 1 }
-        resultadosMap[infId] = cur
-      }
-    }
-
     const infIdsAll = [...new Set([
       ...metricasPorInf.keys(),
-      ...Object.keys(resultadosMap),
       ...(livesOntem ?? []).map((l: { influencer_id: string }) => l.influencer_id),
     ])]
 
     if (infIdsAll.length > 0) {
       const [profRes, perfRes] = await Promise.all([
         supabase.from('profiles').select('id, name').in('id', infIdsAll),
-        supabase.from('influencer_perfil').select('id, nome_artistico, cache_hora').in('id', infIdsAll),
+        supabase.from('influencer_perfil').select('id, nome_artistico').in('id', infIdsAll),
       ])
       for (const p of (profRes.data ?? []) as { id: string; name?: string }[]) {
         if (!nameMap[p.id]) nameMap[p.id] = p.name ?? ''
@@ -571,50 +486,25 @@ serve(async (req) => {
       }
     }
 
-    const cacheHoraMap: Record<string, number> = {}
-    if (infIdsAll.length > 0) {
-      const { data: perfData } = await supabase
-        .from('influencer_perfil').select('id, cache_hora').in('id', infIdsAll)
-      for (const p of (perfData ?? []) as { id: string; cache_hora: number }[]) {
-        cacheHoraMap[p.id] = p.cache_hora ?? 0
-      }
-    }
-
     const infComLive = new Set(
       (livesOntem ?? []).map((l: { influencer_id: string }) => l.influencer_id)
     )
 
-    const livesRows: ResultadoLive[] = []
     const influencersRows: ResultadoInfluencer[] = []
 
     for (const id of infIdsAll) {
       const m = metricasPorInf.get(id) ?? { visits: 0, regs: 0, ftds: 0, depQtd: 0, depVal: 0, wdQtd: 0, wdVal: 0, ggr: 0 }
-      const r = resultadosMap[id] ?? { duracao_horas: 0, duracao_min: 0, viewsSum: 0, liveComViews: 0 }
       const nome = nameMap[id] ?? '—'
-
-      if (infComLive.has(id)) {
-        livesRows.push({
+      const temKpi = m.depQtd > 0 || m.depVal > 0 || m.wdQtd > 0 || m.wdVal > 0 || m.ggr !== 0
+      if (infComLive.has(id) || temKpi) {
+        influencersRows.push({
           nome,
-          horas: r.duracao_horas + r.duracao_min / 60,
-          mediaViews: r.liveComViews > 0 ? Math.round(r.viewsSum / r.liveComViews) : 0,
-          acessos: m.visits,
-          registros: m.regs,
-          ftds: m.ftds,
+          depositos_qtd: m.depQtd,
           depositos_valor: m.depVal,
+          saques_qtd: m.wdQtd,
+          saques_valor: m.wdVal,
           ggr: m.ggr,
         })
-      } else {
-        const temKpi = m.depQtd > 0 || m.depVal > 0 || m.wdQtd > 0 || m.wdVal > 0 || m.ggr !== 0
-        if (temKpi) {
-          influencersRows.push({
-            nome,
-            depositos_qtd: m.depQtd,
-            depositos_valor: m.depVal,
-            saques_qtd: m.wdQtd,
-            saques_valor: m.wdVal,
-            ggr: m.ggr,
-          })
-        }
       }
     }
 
@@ -662,7 +552,7 @@ serve(async (req) => {
 
     const result = await enviarRelatorio(
       destinatarios, dataHoje, dataOntem,
-      agenda, livesRows, influencersRows, mensal
+      agenda, influencersRows, mensal
     )
 
     if (!result.ok) {
@@ -698,7 +588,6 @@ serve(async (req) => {
         data_consolidado: dataOntem,
         mes_consolidado: mesExtenso(dataOntem),
         total_agenda: agenda.length,
-        total_lives_rows: livesRows.length,
         total_influencer_rows: influencersRows.length,
         mensal,
         destinatarios,
