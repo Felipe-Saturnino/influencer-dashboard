@@ -847,6 +847,28 @@ function speedBaccaratLooksLikeSkippedLeadingGgr(first: number, second: number):
   return true;
 }
 
+/**
+ * Com âncoras/OCR na última linha, o 1.º bucket pode ser **Bets d-1**, o 2.º Turnover d-1 (certo) e o 3.º **Turnover d-2**
+ * — «GGR» fica com apostas e «Apostas» com d-2.
+ */
+function speedBaccaratTrustColsLookLikeBetsTurnD2(
+  first: number,
+  second: number,
+  third: number,
+): boolean {
+  const a = Math.abs(first);
+  const b = Math.abs(second);
+  const c = Math.abs(third);
+  if (a >= b * 0.995) return false;
+  if (b < 3_500 || b > 120_000) return false;
+  if (a < 400 || a > b * 0.92) return false;
+  /** 3.º slot = Turnover d-2: costuma ser nitidamente maior que d-1 ou já na faixa «grande». */
+  const thirdLooksLikeD2Turn = c >= 22_000 || c >= b * 1.11 || (c > 14_000 && c > a * 2.2);
+  if (!thirdLooksLikeD2Turn) return false;
+  if (c < 12_000 && c <= a * 1.35) return false;
+  return true;
+}
+
 function looseDigitGroupsPattern(n: number): string {
   const s = String(Math.round(Math.abs(n)));
   const chunks: string[] = [];
@@ -856,12 +878,12 @@ function looseDigitGroupsPattern(n: number): string {
   return chunks.join(String.raw`[\s,.\u00A0\u2019]*`);
 }
 
-/** GGR da Roleta tipicamente |GGR|/turnover ∈ [1,5%, 12%]; nunca ~0. */
+/** GGR da Roleta tipicamente |GGR|/turnover ∈ [~0,8%, ~14%]; nunca ~0. */
 function scoreRoletaGgrCandidate(v: number, turnoverAbs: number): number | null {
   const av = Math.abs(v);
-  if (av < 120 || av > Math.min(35_000, turnoverAbs * 0.28)) return null;
+  if (av < 100 || av > Math.min(38_000, turnoverAbs * 0.32)) return null;
   const ratio = av / turnoverAbs;
-  if (ratio < 0.012 || ratio > 0.14) return null;
+  if (ratio < 0.008 || ratio > 0.16) return null;
   return Math.abs(ratio - 0.055);
 }
 
@@ -906,14 +928,51 @@ function extractRoletaGgrFromNumsBeforeTurnover(
 ): number | null {
   const tAbs = Math.abs(turnover);
   const bAbs = Math.abs(apostas);
-  const tolT = Math.max(10, tAbs * 0.004);
+  const tolT = Math.max(55, tAbs * 0.01);
   const tolB = Math.max(10, bAbs * 0.004);
   const idx = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
   if (idx <= 0) return null;
+  let best: number | null = null;
+  let bestSc = Infinity;
+  for (let k = idx - 1; k >= 0; k--) {
+    const prev = nums[k]!;
+    if (Math.abs(Math.abs(prev) - bAbs) <= tolB) continue;
+    const sc = scoreRoletaGgrCandidate(prev, tAbs);
+    if (sc != null && sc < bestSc) {
+      bestSc = sc;
+      best = prev;
+    }
+  }
+  if (best != null) return best;
   for (let k = idx - 1; k >= 0; k--) {
     const prev = nums[k]!;
     if (Math.abs(Math.abs(prev) - bAbs) <= tolB) continue;
     if (scoreRoletaGgrCandidate(prev, tAbs) != null) return prev;
+  }
+  return null;
+}
+
+/** GGR d-1 à esquerda do turnover na linha OCR (após corrigir slots Bets/Turn d-1 na Speed). */
+function extractSpeedBaccaratGgrFromNumsBeforeTurnover(
+  nums: number[],
+  turnover: number,
+  betsD1: number,
+): number | null {
+  const tAbs = Math.abs(turnover);
+  const bAbs = Math.abs(betsD1);
+  if (tAbs < 2_000) return null;
+  const tolT = Math.max(50, tAbs * 0.008);
+  const tolB = Math.max(35, bAbs * 0.035);
+  const ti = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
+  if (ti <= 0) return null;
+  for (let k = ti - 1; k >= 0; k--) {
+    const v = nums[k]!;
+    if (Math.abs(Math.abs(v) - bAbs) <= tolB) continue;
+    const av = Math.abs(v);
+    if (av >= tAbs * 0.42) continue;
+    if (av > 16_000) continue;
+    if (av > 0 && av < 40) continue;
+    return v;
   }
   return null;
 }
@@ -930,6 +989,20 @@ function strictPerTableD1Triple(
   let turnover = nums[1];
   let apostas = nums[2];
 
+  if (
+    trustColumnLayout &&
+    mesa === "Speed Baccarat" &&
+    speedBaccaratTrustColsLookLikeBetsTurnD2(nums[0]!, nums[1]!, nums[2]!)
+  ) {
+    const pool = roletaNumPool && roletaNumPool.length >= 3 ? roletaNumPool : nums;
+    turnover = nums[1]!;
+    apostas = nums[0]!;
+    ggr = extractSpeedBaccaratGgrFromNumsBeforeTurnover(pool, turnover, apostas);
+    const fixed = { ggr, turnover, apostas };
+    fixed.turnover = Math.abs(fixed.turnover);
+    fixed.apostas = Math.abs(fixed.apostas);
+    return fixed;
+  }
   if (trustColumnLayout) {
     const out = { ggr, turnover, apostas };
     out.turnover = Math.abs(out.turnover);
@@ -1037,15 +1110,27 @@ function parseFirstThreeMetrics(
   return [ggr, Math.abs(turnover), Math.abs(apostas)];
 }
 
-/** Quando as colunas falham no GGR mas turnover/apostas batem: último número antes do turnover na cauda OCR. */
+/** Quando as colunas falham no GGR mas turnover/apostas batem: número antes do turnover na cauda OCR. */
 function extractRoletaGgrLoose(tail: string, turnover: number, apostas: number): number | null {
   const tAbs = Math.abs(turnover);
   const bAbs = Math.abs(apostas);
   const nums = collectNumbersLeftToRight(splitLineParts(normalizeSignedNumberText(tail)));
-  const tolT = Math.max(25, tAbs * 0.006);
-  const tolB = Math.max(20, bAbs * 0.025);
+  const tolT = Math.max(90, tAbs * 0.016);
+  const tolB = Math.max(25, bAbs * 0.028);
   const idx = nums.findIndex((n) => Math.abs(Math.abs(n) - tAbs) <= tolT);
   if (idx <= 0) return null;
+  let bestScored: number | null = null;
+  let bestRank = Infinity;
+  for (let k = idx - 1; k >= 0; k--) {
+    const v = nums[k]!;
+    if (Math.abs(Math.abs(v) - bAbs) <= tolB) continue;
+    const sc = scoreRoletaGgrCandidate(v, tAbs);
+    if (sc != null && sc < bestRank) {
+      bestRank = sc;
+      bestScored = v;
+    }
+  }
+  if (bestScored != null) return bestScored;
   for (let k = idx - 1; k >= 0; k--) {
     const v = nums[k]!;
     if (Math.abs(Math.abs(v) - bAbs) <= tolB) continue;
@@ -1586,8 +1671,12 @@ function parsePorTabelaFromLayoutLines(ocrLines: OcrLineLayout[], diaRef: string
       if (alt && alt[0] != null) triple = alt;
     }
     if (triple && resolved.mesa === "Roleta" && triple[0] == null && triple[1] != null && triple[2] != null) {
-      const gFill = extractRoletaGgrLoose(tailNorm, triple[1], triple[2]);
-      if (gFill != null) triple = [gFill, triple[1], triple[2]];
+      let gFill = extractRoletaGgrLoose(tailNorm, triple[1], triple[2]);
+      if (gFill != null) {
+        if (gFill > 0 && minusBeforeFirstDigitInCell(tailNorm)) gFill = -Math.abs(gFill);
+        gFill = adjustRoletaGgrSign("Roleta", gFill, triple[1]!);
+        triple = [gFill, triple[1], triple[2]];
+      }
     }
 
     if (!triple) continue;
