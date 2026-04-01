@@ -138,16 +138,21 @@ function normalizeLines(text: string): string[] {
     .filter((l) => l.length > 0);
 }
 
+/** Junta N linhas consecutivas (OCR às vezes parte o título da secção). */
+function lineChunkJoin(lines: string[], start: number, len: number): string {
+  return lines.slice(start, Math.min(lines.length, start + len)).join(" ");
+}
+
 function splitLineParts(line: string): string[] {
   return line.trim().split(/\s+/).filter(Boolean);
 }
 
-/** Primeira data DD/MM/AAAA na linha; corrige 2O→20 e, se o OCR leu 20 mas existe 29 no mesmo mês/ano na linha, usa 29. */
+/** Primeira data D/M/AAAA na linha; corrige 2O→20 e, se o OCR leu 20 mas existe 29 no mesmo mês/ano na linha, usa 29. */
 function firstBrDateInLineToIso(line: string): { iso: string; restStart: number } | null {
-  const dm = line.match(/(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})/);
+  const dm = line.match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/);
   if (!dm || dm.index === undefined) return null;
-  let dd = dm[1].replace(/[oO]/g, "0");
-  const mm = dm[2].replace(/[oO]/g, "0");
+  let dd = dm[1].replace(/[oO]/g, "0").padStart(2, "0");
+  const mm = dm[2].replace(/[oO]/g, "0").padStart(2, "0");
   const yy = dm[3].replace(/[oO]/g, "0");
   if (dd === "20" && new RegExp(`\\b29\\s*\\/\\s*${mm}\\s*\\/\\s*${yy}\\b`).test(line)) {
     dd = "29";
@@ -156,14 +161,14 @@ function firstBrDateInLineToIso(line: string): { iso: string; restStart: number 
   return { iso, restStart: dm.index + dm[0].length };
 }
 
-/** Maior data DD/MM/AAAA encontrada em todo o OCR (para dia referência por mesa). */
+/** Maior data D/M/AAAA encontrada em todo o OCR (para dia referência por mesa). */
 function maxBrDateIsoInText(text: string): string | null {
-  const re = /\b(\d{2})\s*\/\s*(\d{2})\s*\/\s*(\d{4})\b/g;
+  const re = /\b(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})\b/g;
   let max: string | null = null;
   let rm: RegExpExecArray | null;
   while ((rm = re.exec(text)) !== null) {
-    let dd = rm[1].replace(/[oO]/g, "0");
-    const mm = rm[2].replace(/[oO]/g, "0");
+    let dd = rm[1].replace(/[oO]/g, "0").padStart(2, "0");
+    const mm = rm[2].replace(/[oO]/g, "0").padStart(2, "0");
     const yy = rm[3].replace(/[oO]/g, "0");
     const iso = `${yy}-${mm}-${dd}`;
     if (!max || iso > max) {
@@ -1206,17 +1211,53 @@ function extractRoletaGgrLoose(tail: string, turnover: number, apostas: number):
 }
 
 function findDailySummariesIndex(lines: string[]): number {
-  return lines.findIndex(
-    (l) =>
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i]!;
+    if (
       /daily\s*summar/i.test(l) ||
-      (/daily/i.test(l) && /summar/i.test(l) && /brl/i.test(l)),
-  );
+      (/\bdaily\b/i.test(l) && /summar/i.test(l) && /brl/i.test(l))
+    ) {
+      return i;
+    }
+  }
+  for (const win of [2, 3, 4] as const) {
+    for (let i = 0; i <= lines.length - win; i++) {
+      const c = lineChunkJoin(lines, i, win);
+      if (
+        /daily\s*summar/i.test(c) ||
+        (/\bdaily\b/i.test(c) && /summar/i.test(c) && /brl/i.test(c))
+      ) {
+        return i;
+      }
+    }
+  }
+  return -1;
 }
 
 function findPerTableIndex(lines: string[]): number {
-  return lines.findIndex(
-    (l) => /\bper\s+table/i.test(l) || (/\bper\b/i.test(l) && /\btable\b/i.test(l) && /brl/i.test(l)),
-  );
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i]!;
+    if (
+      /\bper\s+table/i.test(l) ||
+      (/\bper\b/i.test(l) && /\btable\b/i.test(l) && /brl/i.test(l))
+    ) {
+      return i;
+    }
+  }
+  for (const win of [2, 3, 4] as const) {
+    for (let i = 0; i <= lines.length - win; i++) {
+      const c = lineChunkJoin(lines, i, win);
+      if (/\bper\b/i.test(c) && /\btable\b/i.test(c) && (/brl/i.test(c) || /d[\s-]*1/i.test(c))) {
+        return i;
+      }
+    }
+  }
+  for (let i = 0; i < lines.length; i++) {
+    if (!/\bper\b/i.test(lines[i]!)) continue;
+    const c = lineChunkJoin(lines, i, 4);
+    if (/\btable\b/i.test(c)) return i;
+  }
+  return -1;
 }
 
 function isMonthlyTitleLine(line: string): boolean {
@@ -1225,6 +1266,20 @@ function isMonthlyTitleLine(line: string): boolean {
     /monthly\s*summar/i.test(line) ||
     (/monthly/.test(x) && /summar/.test(x) && /brl/i.test(line))
   );
+}
+
+/** Título «Monthly summaries BRL» partido em 2–3 linhas pelo OCR. */
+function isMonthlyTitleAt(lines: string[], i: number): boolean {
+  if (i >= lines.length) return false;
+  if (isMonthlyTitleLine(lines[i]!)) return true;
+  for (const win of [2, 3] as const) {
+    if (i + win <= lines.length) {
+      const c = lineChunkJoin(lines, i, win);
+      const x = c.toLowerCase();
+      if (/monthly\s*summar/i.test(c) || (/monthly/.test(x) && /summar/.test(x) && /brl/i.test(c))) return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -1352,7 +1407,9 @@ function parseDailyBlock(
   let i = start;
   while (i < endExclusive) {
     const line = lines[i];
-    if (isMonthlyTitleLine(line) || /\bper\s+table/i.test(line)) break;
+    if (isMonthlyTitleAt(lines, i)) break;
+    const perAhead = lineChunkJoin(lines, i, 4);
+    if (/\bper\b/i.test(perAhead) && /\btable\b/i.test(perAhead)) break;
     const dateHit = firstBrDateInLineToIso(line);
     if (!dateHit) {
       i++;
@@ -1812,7 +1869,7 @@ function parsePorTabelaBlock(
 function inferDailyEnd(lines: string[], iDaily: number, iPer: number): number {
   const bound = iPer >= 0 ? iPer : lines.length;
   for (let i = iDaily + 1; i < bound; i++) {
-    if (isMonthlyTitleLine(lines[i])) return i;
+    if (isMonthlyTitleAt(lines, i)) return i;
   }
   return bound;
 }
@@ -1842,12 +1899,16 @@ export function parseRelatorioFromOcrText(
 
   const porStart = iPer >= 0 ? iPer + 1 : -1;
   const useLayout = layoutLines != null && layoutLines.length > 0;
-  const por_tabela =
+  let por_tabela =
     porStart >= 0
       ? useLayout
         ? parsePorTabelaFromLayoutLines(layoutLines!, dataRef)
         : parsePorTabelaBlock(lines, porStart, dataRef)
       : [];
+  if (porStart >= 0 && por_tabela.length === 0) {
+    const fromText = parsePorTabelaBlock(lines, porStart, dataRef);
+    if (fromText.length > 0) por_tabela = fromText;
+  }
 
   return {
     data_referencia_por_mesa: dataRef,

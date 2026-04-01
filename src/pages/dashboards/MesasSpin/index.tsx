@@ -1382,10 +1382,9 @@ export default function MesasSpin() {
           ) : porTabelaRows.length === 0 ? (
             <div style={{ ...card, marginBottom: 14 }}>
               <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
-              <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                Nenhum registo em <code style={{ fontSize: 12 }}>relatorio_por_tabela</code> para este mês. Importe
-                pelo bloco acima ou pelo Status Técnico.
-              </p>
+              <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
+                Nenhum dado para o período selecionado.
+              </div>
             </div>
           ) : porOperadoraSnapshot.length === 0 ? (
             <div style={{ ...card, marginBottom: 14 }}>
@@ -1449,9 +1448,9 @@ export default function MesasSpin() {
               Carregando mesas…
             </div>
           ) : porMesaPorMesHistorico.length === 0 ? (
-            <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-              Nenhum registo em <code style={{ fontSize: 12 }}>relatorio_por_tabela</code> no período.
-            </p>
+            <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
+              Nenhum dado para o período selecionado.
+            </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
               {porMesaPorMesHistorico.map((blo) => {
