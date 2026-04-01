@@ -1285,16 +1285,18 @@ function isMonthlyTitleLine(line: string): boolean {
   );
 }
 
-/** Título «Monthly summaries BRL» partido em 2–3 linhas pelo OCR. */
-function isMonthlyTitleAt(lines: string[], i: number): boolean {
+/**
+ * Limite do bloco Daily: início real da secção mensal (linha atual).
+ * Linhas com data DD/MM/AAAA nunca contam como início mensal, mesmo numa janela de várias linhas.
+ */
+function isMonthlySectionBoundaryLine(lines: string[], i: number): boolean {
   if (i >= lines.length) return false;
+  const li = lines[i]!.trim();
+  if (/^\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{4}/.test(li)) return false;
   if (isMonthlyTitleLine(lines[i]!)) return true;
-  for (const win of [2, 3] as const) {
-    if (i + win <= lines.length) {
-      const c = lineChunkJoin(lines, i, win);
-      const x = c.toLowerCase();
-      if (/monthly\s*summar/i.test(c) || (/monthly/.test(x) && /summar/.test(x) && /brl/i.test(c))) return true;
-    }
+  if (/^\s*monthly\b/i.test(li)) {
+    const c2 = lineChunkJoin(lines, i, 2);
+    if (/summar/i.test(c2) && /brl/i.test(c2)) return true;
   }
   return false;
 }
@@ -1911,7 +1913,7 @@ function parsePorTabelaBlock(
 function inferDailyEnd(lines: string[], iDaily: number, iPer: number): number {
   const bound = iPer >= 0 ? iPer : lines.length;
   for (let i = iDaily + 1; i < bound; i++) {
-    if (isMonthlyTitleAt(lines, i)) return i;
+    if (isMonthlySectionBoundaryLine(lines, i)) return i;
   }
   return bound;
 }
