@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { Fragment, useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -24,7 +24,7 @@ import {
   Users,
   Coins,
 } from "lucide-react";
-import { GiCalendar, GiConvergenceTarget, GiShield } from "react-icons/gi";
+import { GiCalendar, GiConvergenceTarget, GiDiceSixFacesFour, GiShield } from "react-icons/gi";
 
 /** ─── Schema v2 (relatorio_* após migração 20260420100000): daily sem operadora; monthly só UAP+ARPU; por_tabela com dia + operadora/mesa texto. */
 
@@ -409,6 +409,48 @@ function linhaMesaPorDiaFromRow(r: PorTabelaRow): LinhaMesaPorDia {
     margin_pct,
     bet_size,
   };
+}
+
+/** Métricas por jogo no comparativo (mesma linha que `LinhaMesaPorDia`, sem data). */
+type CelulaJogoMetricas = Pick<LinhaMesaPorDia, "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size">;
+
+type JogoMetricKey = keyof CelulaJogoMetricas;
+
+function emptyCelulaJogo(): CelulaJogoMetricas {
+  return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null };
+}
+
+/** Soma GGR, turnover e apostas d-1; margem e aposta média a partir dos totais (ex.: Blackjack = BJ1+BJ2+VIP). */
+function aggregateCellFromPorTabelaRows(rows: PorTabelaRow[]): CelulaJogoMetricas {
+  if (rows.length === 0) return emptyCelulaJogo();
+  let ggr = 0;
+  let turnover = 0;
+  let bets = 0;
+  let gN = 0;
+  let tN = 0;
+  let bN = 0;
+  for (const r of rows) {
+    if (r.ggr_d1 != null) {
+      ggr += Number(r.ggr_d1);
+      gN++;
+    }
+    if (r.turnover_d1 != null) {
+      turnover += Number(r.turnover_d1);
+      tN++;
+    }
+    if (r.bets_d1 != null) {
+      bets += Number(r.bets_d1);
+      bN++;
+    }
+  }
+  const ggrOut = gN > 0 ? ggr : null;
+  const turnoverOut = tN > 0 ? turnover : null;
+  const betsOut = bN > 0 ? bets : null;
+  const margin_pct =
+    turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
+  const bet_size =
+    betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
+  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size };
 }
 
 /** Uma linha na mini-tabela por mesa (d-1). */
@@ -1037,6 +1079,35 @@ export default function MesasSpin() {
       .map(linhaMesaPorDiaFromRow);
   }, [porTabelaFiltradas, operadorasListFmt]);
 
+  /** Uma linha por dia do detalhamento; Blackjack = soma BJ1 + BJ2 + VIP; Roleta e Baccarat = Speed Baccarat. */
+  const linhasComparativoJogo = useMemo(() => {
+    if (historico) return [];
+    const byDate = new Map<
+      string,
+      { bj: PorTabelaRow[]; roleta: PorTabelaRow[]; baccarat: PorTabelaRow[] }
+    >();
+    for (const r of porTabelaFiltradas) {
+      const d = r.data_relatorio;
+      const label = labelMesaCda(r, operadorasListFmt);
+      if (!byDate.has(d)) byDate.set(d, { bj: [], roleta: [], baccarat: [] });
+      const bucket = byDate.get(d)!;
+      if (isMesaBlackjackComparativo(r, operadorasListFmt)) bucket.bj.push(r);
+      else if (label === "Roleta") bucket.roleta.push(r);
+      else if (label === "Speed Baccarat") bucket.baccarat.push(r);
+    }
+    return dailyData.map((dr) => {
+      const dataIso = dr.data;
+      const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [] };
+      return {
+        dataIso,
+        labelData: fmtDataPtBr(dataIso),
+        blackjack: aggregateCellFromPorTabelaRows(b.bj),
+        roleta: aggregateCellFromPorTabelaRows(b.roleta),
+        baccarat: aggregateCellFromPorTabelaRows(b.baccarat),
+      };
+    });
+  }, [historico, dailyData, porTabelaFiltradas, operadorasListFmt]);
+
   const temDadosMesaSpinBlocos = useMemo(
     () =>
       mesasOpcoesBlackjack.length > 0 ||
@@ -1260,6 +1331,55 @@ export default function MesasSpin() {
       </table>
     </div>
   );
+
+  const renderJogoMetricCell = (cell: CelulaJogoMetricas, metric: JogoMetricKey) => {
+    switch (metric) {
+      case "ggr": {
+        const ggr = cell.ggr ?? 0;
+        return (
+          <td
+            style={{
+              ...tdNum,
+              color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+              fontWeight: 600,
+            }}
+          >
+            {cell.ggr != null ? fmtBRL(cell.ggr) : "—"}
+          </td>
+        );
+      }
+      case "turnover":
+        return <td style={tdNum}>{cell.turnover != null ? fmtBRL(cell.turnover) : "—"}</td>;
+      case "bets":
+        return <td style={tdNum}>{cell.bets != null ? cell.bets.toLocaleString("pt-BR") : "—"}</td>;
+      case "margin_pct":
+        return (
+          <td style={tdNum}>
+            <MarginBadge value={cell.margin_pct} />
+          </td>
+        );
+      case "bet_size":
+        return <td style={tdNum}>{cell.bet_size != null ? fmtBRL(cell.bet_size) : "—"}</td>;
+    }
+  };
+
+  const thJogoMetricHead: React.CSSProperties = {
+    ...thStyle,
+    textAlign: "center",
+  };
+  const thJogoMetricHeadSep: React.CSSProperties = {
+    ...thStyle,
+    textAlign: "center",
+    borderLeft: `1px solid ${t.cardBorder}`,
+  };
+  const thJogoSub: React.CSSProperties = {
+    ...thStyle,
+    textAlign: "center",
+    fontSize: 9,
+    letterSpacing: "0.04em",
+    textTransform: "none",
+    fontWeight: 600,
+  };
 
   if (perm.canView === "nao") {
     return (
@@ -1620,36 +1740,100 @@ export default function MesasSpin() {
           ) : (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-                  <span
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 8,
-                      background: brand.primaryIconBg,
-                      border: brand.primaryIconBorder,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: brand.primaryIconColor,
-                      flexShrink: 0,
-                    }}
-                  >
-                    <GiConvergenceTarget size={15} />
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 800,
-                      color: t.text,
-                      fontFamily: FONT_TITLE,
-                      letterSpacing: "0.05em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Comparativo de mesa - Blackjack
-                  </span>
-                </div>
+                <SectionHeader
+                  icon={<GiDiceSixFacesFour size={15} />}
+                  title="Comparativo de Jogo"
+                  sub={mesSelecionado?.label}
+                />
+                {linhasComparativoJogo.length === 0 ? (
+                  <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+                    Nenhum dia com detalhamento diário neste mês.
+                  </div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+                      <thead>
+                        <tr>
+                          <th rowSpan={2} style={thStyle}>
+                            Data
+                          </th>
+                          <th colSpan={3} style={thJogoMetricHead}>
+                            GGR
+                          </th>
+                          <th colSpan={3} style={thJogoMetricHeadSep}>
+                            Turnover
+                          </th>
+                          <th colSpan={3} style={thJogoMetricHeadSep}>
+                            Apostas
+                          </th>
+                          <th colSpan={3} style={thJogoMetricHeadSep}>
+                            Margem
+                          </th>
+                          <th colSpan={3} style={thJogoMetricHeadSep}>
+                            Aposta média
+                          </th>
+                        </tr>
+                        <tr>
+                          {([0, 1, 2, 3, 4] as const).flatMap((mi) =>
+                            (["Blackjack", "Roleta", "Baccarat"] as const).map((nome, gi) => (
+                              <th
+                                key={`sub-${mi}-${nome}`}
+                                style={{
+                                  ...thJogoSub,
+                                  ...(mi > 0 && gi === 0
+                                    ? { borderLeft: `1px solid ${t.cardBorder}` }
+                                    : {}),
+                                }}
+                              >
+                                {nome}
+                              </th>
+                            )),
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {linhasComparativoJogo.map((row, i) => (
+                          <tr
+                            key={row.dataIso}
+                            style={{
+                              background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
+                            }}
+                          >
+                            <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
+                            {(
+                              ["ggr", "turnover", "bets", "margin_pct", "bet_size"] as const
+                            ).flatMap((metric) =>
+                              (["blackjack", "roleta", "baccarat"] as const).map((game) => (
+                                <Fragment key={`${row.dataIso}-${metric}-${game}`}>
+                                  {renderJogoMetricCell(row[game], metric)}
+                                </Fragment>
+                              )),
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <p
+                  style={{
+                    margin: "12px 0 0",
+                    fontSize: 11,
+                    color: t.textMuted,
+                    fontFamily: FONT.body,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  Blackjack = soma das mesas Blackjack 1, 2 e VIP. Baccarat = Speed Baccarat.
+                </p>
+              </div>
+
+              <div style={{ ...card, marginBottom: 14 }}>
+                <SectionHeader
+                  icon={<GiConvergenceTarget size={15} />}
+                  title="Comparativo de mesa"
+                  sub="blackjack"
+                />
                 <p
                   style={{
                     margin: "0 0 16px",
@@ -1787,36 +1971,7 @@ export default function MesasSpin() {
               </div>
 
               <div style={{ ...card, marginBottom: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-                  <span
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 8,
-                      background: brand.primaryIconBg,
-                      border: brand.primaryIconBorder,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: brand.primaryIconColor,
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Table2 size={15} />
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 800,
-                      color: t.text,
-                      fontFamily: FONT_TITLE,
-                      letterSpacing: "0.05em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Dados por mesa - Baccarat e Roleta
-                  </span>
-                </div>
+                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="baccarat e roleta" />
 
                 <div className="app-conversao-funil-duo">
                   <div style={{ flex: 1, minWidth: 0 }}>
