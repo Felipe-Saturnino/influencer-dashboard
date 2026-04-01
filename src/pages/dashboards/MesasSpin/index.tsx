@@ -231,6 +231,22 @@ function nomeTituloOperadora(slug: string, operadorasList: { slug: string; nome:
   return o?.nome ?? slug.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const LABELS_BLACKJACK_COMPARATIVO = new Set(["Blackjack 1", "Blackjack 2", "Blackjack VIP"]);
+
+function labelMesaCda(
+  row: PorTabelaRow,
+  operadorasList: { slug: string; nome: string }[],
+): string {
+  return nomeMesaParaExibicao(row, slugOperadoraPorLinha(row), operadorasList);
+}
+
+function isMesaBlackjackComparativo(
+  row: PorTabelaRow,
+  operadorasList: { slug: string; nome: string }[],
+): boolean {
+  return LABELS_BLACKJACK_COMPARATIVO.has(labelMesaCda(row, operadorasList));
+}
+
 function filtrarPorEscopoOperadora(
   rows: PorTabelaRow[],
   filtroOperadora: string,
@@ -990,25 +1006,44 @@ export default function MesasSpin() {
     [porTabelaRows, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
   );
 
-  /** Por dia (mais recente primeiro): todas as importações / dias com dados no mês. */
-  /** Mesas distintas no período (chave = nome completo no DB), para drilldown A vs B. */
-  const mesasOpcoesComparativo = useMemo(() => {
+  /** Só Blackjack 1 / 2 / VIP — comparativo lateral. */
+  const mesasOpcoesBlackjack = useMemo(() => {
     const seen = new Map<string, PorTabelaRow>();
     for (const r of porTabelaFiltradas) {
+      if (!isMesaBlackjackComparativo(r, operadorasListFmt)) continue;
       const k = r.nome_tabela.trim();
       if (!k) continue;
       if (!seen.has(k)) seen.set(k, r);
     }
-    const list = [...seen.entries()].map(([key, sample]) => {
-      const slug = slugOperadoraPorLinha(sample);
-      return {
-        key,
-        label: nomeMesaParaExibicao(sample, slug, operadorasListFmt),
-      };
-    });
+    const list = [...seen.entries()].map(([key, sample]) => ({
+      key,
+      label: labelMesaCda(sample, operadorasListFmt),
+    }));
     list.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
     return list;
   }, [porTabelaFiltradas, operadorasListFmt]);
+
+  const linhasSpeedBaccarat = useMemo(() => {
+    return porTabelaFiltradas
+      .filter((r) => labelMesaCda(r, operadorasListFmt) === "Speed Baccarat")
+      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .map(linhaMesaPorDiaFromRow);
+  }, [porTabelaFiltradas, operadorasListFmt]);
+
+  const linhasRoleta = useMemo(() => {
+    return porTabelaFiltradas
+      .filter((r) => labelMesaCda(r, operadorasListFmt) === "Roleta")
+      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .map(linhaMesaPorDiaFromRow);
+  }, [porTabelaFiltradas, operadorasListFmt]);
+
+  const temDadosMesaSpinBlocos = useMemo(
+    () =>
+      mesasOpcoesBlackjack.length > 0 ||
+      linhasSpeedBaccarat.length > 0 ||
+      linhasRoleta.length > 0,
+    [mesasOpcoesBlackjack.length, linhasSpeedBaccarat.length, linhasRoleta.length],
+  );
 
   const linhasMesaA = useMemo(() => {
     if (!compMesaA) return [];
@@ -1027,24 +1062,24 @@ export default function MesasSpin() {
   }, [porTabelaFiltradas, compMesaB]);
 
   useEffect(() => {
-    if (mesasOpcoesComparativo.length === 0) {
+    if (mesasOpcoesBlackjack.length === 0) {
       setCompMesaA("");
       setCompMesaB("");
       return;
     }
     setCompMesaA((prev) =>
-      prev && mesasOpcoesComparativo.some((x) => x.key === prev) ? prev : mesasOpcoesComparativo[0]!.key,
+      prev && mesasOpcoesBlackjack.some((x) => x.key === prev) ? prev : mesasOpcoesBlackjack[0]!.key,
     );
-  }, [mesasOpcoesComparativo]);
+  }, [mesasOpcoesBlackjack]);
 
   useEffect(() => {
-    if (mesasOpcoesComparativo.length === 0) return;
+    if (mesasOpcoesBlackjack.length === 0) return;
     setCompMesaB((prev) => {
-      if (prev && mesasOpcoesComparativo.some((x) => x.key === prev) && prev !== compMesaA) return prev;
-      const alt = mesasOpcoesComparativo.find((x) => x.key !== compMesaA);
-      return alt?.key ?? mesasOpcoesComparativo[0]!.key;
+      if (prev && mesasOpcoesBlackjack.some((x) => x.key === prev) && prev !== compMesaA) return prev;
+      const alt = mesasOpcoesBlackjack.find((x) => x.key !== compMesaA);
+      return alt?.key ?? mesasOpcoesBlackjack[0]!.key;
     });
-  }, [mesasOpcoesComparativo, compMesaA]);
+  }, [mesasOpcoesBlackjack, compMesaA]);
 
   const porMesaPorMesHistorico = useMemo(() => {
     if (!historico || porTabelaHistAll.length === 0) return [];
@@ -1173,8 +1208,58 @@ export default function MesasSpin() {
     padding: "7px 12px",
   };
 
-  const labelMesaComparativoA = mesasOpcoesComparativo.find((m) => m.key === compMesaA)?.label ?? "—";
-  const labelMesaComparativoB = mesasOpcoesComparativo.find((m) => m.key === compMesaB)?.label ?? "—";
+  const labelMesaComparativoA = mesasOpcoesBlackjack.find((m) => m.key === compMesaA)?.label ?? "—";
+  const labelMesaComparativoB = mesasOpcoesBlackjack.find((m) => m.key === compMesaB)?.label ?? "—";
+
+  const renderMesaDiaTabela = (linhas: LinhaMesaPorDia[], rowStripe: string) => (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Data</th>
+            <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
+            <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
+            <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
+            <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
+            <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
+          </tr>
+        </thead>
+        <tbody>
+          {linhas.length === 0 ? (
+            <tr>
+              <td colSpan={6} style={{ ...tdStyle, color: t.textMuted, textAlign: "center" }}>
+                Sem dados no período.
+              </td>
+            </tr>
+          ) : (
+            linhas.map((row, i) => {
+              const ggr = row.ggr ?? 0;
+              return (
+                <tr key={row.dataIso} style={{ background: i % 2 === 1 ? rowStripe : "transparent" }}>
+                  <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
+                  <td
+                    style={{
+                      ...tdNum,
+                      color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {row.ggr != null ? fmtBRL(row.ggr) : "—"}
+                  </td>
+                  <td style={tdNum}>{row.turnover != null ? fmtBRL(row.turnover) : "—"}</td>
+                  <td style={tdNum}>{row.bets != null ? row.bets.toLocaleString("pt-BR") : "—"}</td>
+                  <td style={{ ...tdNum }}>
+                    <MarginBadge value={row.margin_pct} />
+                  </td>
+                  <td style={tdNum}>{row.bet_size != null ? fmtBRL(Number(row.bet_size)) : "—"}</td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 
   if (perm.canView === "nao") {
     return (
@@ -1525,282 +1610,260 @@ export default function MesasSpin() {
                 Nenhum dado para o período selecionado.
               </div>
             </div>
-          ) : mesasOpcoesComparativo.length === 0 ? (
+          ) : !temDadosMesaSpinBlocos ? (
             <div style={{ ...card, marginBottom: 14 }}>
               <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
               <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-                Nenhuma mesa neste filtro de operadora.
+                Nenhuma mesa Blackjack, Baccarat ou Roleta neste filtro de operadora.
               </p>
             </div>
           ) : (
-            <div style={{ ...card, marginBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-                <span
+            <>
+              <div style={{ ...card, marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                  <span
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      background: brand.primaryIconBg,
+                      border: brand.primaryIconBorder,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: brand.primaryIconColor,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <GiConvergenceTarget size={15} />
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 800,
+                      color: t.text,
+                      fontFamily: FONT_TITLE,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Comparativo de mesa - Blackjack
+                  </span>
+                </div>
+                <p
                   style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 8,
-                    background: brand.primaryIconBg,
-                    border: brand.primaryIconBorder,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: brand.primaryIconColor,
-                    flexShrink: 0,
-                  }}
-                >
-                  <GiConvergenceTarget size={15} />
-                </span>
-                <span
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    color: t.text,
-                    fontFamily: FONT_TITLE,
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Dados por mesa
-                </span>
-                <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-                  comparativo · uma linha por dia de importação (d-1)
-                </span>
-              </div>
-              <p
-                style={{
-                  margin: "0 0 16px",
-                  fontSize: 12,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                  lineHeight: 1.45,
-                }}
-              >
-                Escolha duas mesas para comparar. As linhas seguem o mesmo critério do bloco «Detalhamento Diário» (GGR,
-                Turnover, Apostas, margem e aposta média).
-              </p>
-
-              <div className="app-conversao-vs-row">
-                <select
-                  value={compMesaA}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setCompMesaA(v);
-                    if (v && v === compMesaB) {
-                      const o = mesasOpcoesComparativo.find((m) => m.key !== v);
-                      if (o) setCompMesaB(o.key);
-                    }
-                  }}
-                  style={{
-                    ...selectStyleSimple,
-                    borderColor: compMesaA ? COR_MESA_A.border : undefined,
-                    width: "100%",
-                  }}
-                >
-                  {mesasOpcoesComparativo
-                    .filter((m) => mesasOpcoesComparativo.length < 2 || m.key !== compMesaB)
-                    .map((m) => (
-                      <option key={m.key} value={m.key}>
-                        {m.label}
-                      </option>
-                    ))}
-                </select>
-                <div
-                  style={{
-                    padding: "5px 12px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(74,32,130,0.35)",
-                    background: "rgba(74,32,130,0.10)",
+                    margin: "0 0 16px",
                     fontSize: 12,
-                    fontWeight: 800,
                     color: t.textMuted,
                     fontFamily: FONT.body,
-                    letterSpacing: "0.05em",
-                    textAlign: "center",
+                    lineHeight: 1.45,
                   }}
                 >
-                  VS
-                </div>
-                <select
-                  value={compMesaB}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setCompMesaB(v);
-                    if (v && v === compMesaA) {
-                      const o = mesasOpcoesComparativo.find((m) => m.key !== v);
-                      if (o) setCompMesaA(o.key);
-                    }
-                  }}
-                  style={{
-                    ...selectStyleSimple,
-                    borderColor: compMesaB ? COR_MESA_B.border : undefined,
-                    width: "100%",
-                  }}
-                >
-                  {mesasOpcoesComparativo
-                    .filter((m) => mesasOpcoesComparativo.length < 2 || m.key !== compMesaA)
-                    .map((m) => (
-                      <option key={m.key} value={m.key}>
-                        {m.label}
-                      </option>
-                    ))}
-                </select>
+                  Escolha duas mesas para ver os resultados.
+                </p>
+
+                {mesasOpcoesBlackjack.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                    Sem dados de Blackjack neste período.
+                  </p>
+                ) : (
+                  <>
+                    <div className="app-conversao-vs-row">
+                      <select
+                        value={compMesaA}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCompMesaA(v);
+                          if (v && v === compMesaB) {
+                            const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
+                            if (o) setCompMesaB(o.key);
+                          }
+                        }}
+                        style={{
+                          ...selectStyleSimple,
+                          borderColor: compMesaA ? COR_MESA_A.border : undefined,
+                          width: "100%",
+                        }}
+                      >
+                        {mesasOpcoesBlackjack
+                          .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaB)
+                          .map((m) => (
+                            <option key={m.key} value={m.key}>
+                              {m.label}
+                            </option>
+                          ))}
+                      </select>
+                      <div
+                        style={{
+                          padding: "5px 12px",
+                          borderRadius: 999,
+                          border: "1px solid rgba(74,32,130,0.35)",
+                          background: "rgba(74,32,130,0.10)",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color: t.textMuted,
+                          fontFamily: FONT.body,
+                          letterSpacing: "0.05em",
+                          textAlign: "center",
+                        }}
+                      >
+                        VS
+                      </div>
+                      <select
+                        value={compMesaB}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCompMesaB(v);
+                          if (v && v === compMesaA) {
+                            const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
+                            if (o) setCompMesaA(o.key);
+                          }
+                        }}
+                        style={{
+                          ...selectStyleSimple,
+                          borderColor: compMesaB ? COR_MESA_B.border : undefined,
+                          width: "100%",
+                        }}
+                      >
+                        {mesasOpcoesBlackjack
+                          .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaA)
+                          .map((m) => (
+                            <option key={m.key} value={m.key}>
+                              {m.label}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    {(compMesaA || compMesaB) && (
+                      <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
+                        <div
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 10,
+                            background: COR_MESA_A.bg,
+                            border: `1px solid ${COR_MESA_A.border}`,
+                            textAlign: "center",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: COR_MESA_A.accent,
+                            fontFamily: FONT.body,
+                          }}
+                        >
+                          {labelMesaComparativoA}
+                        </div>
+                        <div
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 10,
+                            background: COR_MESA_B.bg,
+                            border: `1px solid ${COR_MESA_B.border}`,
+                            textAlign: "center",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: COR_MESA_B.accent,
+                            fontFamily: FONT.body,
+                          }}
+                        >
+                          {labelMesaComparativoB}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="app-conversao-funil-duo">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {renderMesaDiaTabela(linhasMesaA, "rgba(124,58,237,0.06)")}
+                      </div>
+                      <div
+                        className="app-conversao-funil-divider"
+                        style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {renderMesaDiaTabela(linhasMesaB, "rgba(30,54,248,0.06)")}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {(compMesaA || compMesaB) && (
-                <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
-                  <div
+              <div style={{ ...card, marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                  <span
                     style={{
-                      padding: "6px 12px",
-                      borderRadius: 10,
-                      background: COR_MESA_A.bg,
-                      border: `1px solid ${COR_MESA_A.border}`,
-                      textAlign: "center",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: COR_MESA_A.accent,
-                      fontFamily: FONT.body,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      background: brand.primaryIconBg,
+                      border: brand.primaryIconBorder,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: brand.primaryIconColor,
+                      flexShrink: 0,
                     }}
                   >
-                    {labelMesaComparativoA}
-                  </div>
-                  <div
+                    <Table2 size={15} />
+                  </span>
+                  <span
                     style={{
-                      padding: "6px 12px",
-                      borderRadius: 10,
-                      background: COR_MESA_B.bg,
-                      border: `1px solid ${COR_MESA_B.border}`,
-                      textAlign: "center",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: COR_MESA_B.accent,
-                      fontFamily: FONT.body,
+                      fontSize: 15,
+                      fontWeight: 800,
+                      color: t.text,
+                      fontFamily: FONT_TITLE,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
                     }}
                   >
-                    {labelMesaComparativoB}
-                  </div>
+                    Dados por mesa - Baccarat e Roleta
+                  </span>
                 </div>
-              )}
 
-              <div className="app-conversao-funil-duo">
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr>
-                          <th style={thStyle}>Data</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {linhasMesaA.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} style={{ ...tdStyle, color: t.textMuted, textAlign: "center" }}>
-                              Sem linhas para esta mesa no mês.
-                            </td>
-                          </tr>
-                        ) : (
-                          linhasMesaA.map((row, i) => {
-                            const ggr = row.ggr ?? 0;
-                            return (
-                              <tr
-                                key={row.dataIso}
-                                style={{
-                                  background: i % 2 === 1 ? "rgba(124,58,237,0.06)" : "transparent",
-                                }}
-                              >
-                                <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
-                                <td
-                                  style={{
-                                    ...tdNum,
-                                    color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {row.ggr != null ? fmtBRL(row.ggr) : "—"}
-                                </td>
-                                <td style={tdNum}>{row.turnover != null ? fmtBRL(row.turnover) : "—"}</td>
-                                <td style={tdNum}>{row.bets != null ? row.bets.toLocaleString("pt-BR") : "—"}</td>
-                                <td style={{ ...tdNum }}>
-                                  <MarginBadge value={row.margin_pct} />
-                                </td>
-                                <td style={tdNum}>
-                                  {row.bet_size != null ? fmtBRL(Number(row.bet_size)) : "—"}
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
+                <div className="app-conversao-funil-duo">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        marginBottom: 10,
+                        padding: "6px 10px",
+                        borderRadius: 10,
+                        background: "rgba(112,202,228,0.10)",
+                        border: "1px solid rgba(112,202,228,0.35)",
+                        textAlign: "center",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: BRAND.ciano,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      Speed Baccarat
+                    </div>
+                    {renderMesaDiaTabela(linhasSpeedBaccarat, "rgba(74,32,130,0.06)")}
                   </div>
-                </div>
-                <div
-                  className="app-conversao-funil-divider"
-                  style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr>
-                          <th style={thStyle}>Data</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
-                          <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {linhasMesaB.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} style={{ ...tdStyle, color: t.textMuted, textAlign: "center" }}>
-                              Sem linhas para esta mesa no mês.
-                            </td>
-                          </tr>
-                        ) : (
-                          linhasMesaB.map((row, i) => {
-                            const ggr = row.ggr ?? 0;
-                            return (
-                              <tr
-                                key={row.dataIso}
-                                style={{
-                                  background: i % 2 === 1 ? "rgba(30,54,248,0.06)" : "transparent",
-                                }}
-                              >
-                                <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
-                                <td
-                                  style={{
-                                    ...tdNum,
-                                    color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {row.ggr != null ? fmtBRL(row.ggr) : "—"}
-                                </td>
-                                <td style={tdNum}>{row.turnover != null ? fmtBRL(row.turnover) : "—"}</td>
-                                <td style={tdNum}>{row.bets != null ? row.bets.toLocaleString("pt-BR") : "—"}</td>
-                                <td style={{ ...tdNum }}>
-                                  <MarginBadge value={row.margin_pct} />
-                                </td>
-                                <td style={tdNum}>
-                                  {row.bet_size != null ? fmtBRL(Number(row.bet_size)) : "—"}
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
+                  <div
+                    className="app-conversao-funil-divider"
+                    style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        marginBottom: 10,
+                        padding: "6px 10px",
+                        borderRadius: 10,
+                        background: "rgba(124,58,237,0.10)",
+                        border: "1px solid rgba(124,58,237,0.30)",
+                        textAlign: "center",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: BRAND.roxoVivo,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      Roleta
+                    </div>
+                    {renderMesaDiaTabela(linhasRoleta, "rgba(74,32,130,0.06)")}
                   </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </>
       )}
