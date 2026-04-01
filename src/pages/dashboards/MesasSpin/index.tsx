@@ -24,7 +24,7 @@ import {
   Users,
   Coins,
 } from "lucide-react";
-import { GiCalendar, GiShield } from "react-icons/gi";
+import { GiCalendar, GiConvergenceTarget, GiShield } from "react-icons/gi";
 
 /** ─── Schema v2 (relatorio_* após migração 20260420100000): daily sem operadora; monthly só UAP+ARPU; por_tabela com dia + operadora/mesa texto. */
 
@@ -37,6 +37,18 @@ const BRAND = {
   ciano: "#70cae4",
   amarelo: "#f59e0b",
   rosa: "#ec4899",
+} as const;
+
+/** Paleta A/B — mesmo padrão do Comparativo de Funil (Conversão). */
+const COR_MESA_A = {
+  accent: "#7c3aed",
+  bg: "rgba(124,58,237,0.10)",
+  border: "rgba(124,58,237,0.35)",
+} as const;
+const COR_MESA_B = {
+  accent: "#1e36f8",
+  bg: "rgba(30,54,248,0.10)",
+  border: "rgba(30,54,248,0.35)",
 } as const;
 
 interface DailyRow {
@@ -351,6 +363,36 @@ function apostaMediaMesa(t: number | null, b: number | null): number | null {
   const bn = Number(b);
   if (!Number.isFinite(bn) || bn === 0) return null;
   return Number(t) / bn;
+}
+
+/** Uma linha no comparativo por mesa (dia a dia, como o Detalhamento Diário). */
+type LinhaMesaPorDia = {
+  dataIso: string;
+  labelData: string;
+  ggr: number | null;
+  turnover: number | null;
+  bets: number | null;
+  margin_pct: number | null;
+  bet_size: number | null;
+};
+
+function linhaMesaPorDiaFromRow(r: PorTabelaRow): LinhaMesaPorDia {
+  const t = r.turnover_d1;
+  const g = r.ggr_d1;
+  const b = r.bets_d1;
+  const margin_pct =
+    t != null && Number(t) !== 0 && g != null ? (Number(g) / Number(t)) * 100 : null;
+  const bet_size =
+    b != null && Number(b) !== 0 && t != null ? Number(t) / Number(b) : null;
+  return {
+    dataIso: r.data_relatorio,
+    labelData: fmtDataPtBr(r.data_relatorio),
+    ggr: g,
+    turnover: t,
+    bets: b,
+    margin_pct,
+    bet_size,
+  };
 }
 
 /** Uma linha na mini-tabela por mesa (d-1). */
@@ -724,6 +766,8 @@ export default function MesasSpin() {
   const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
   const [uploadMsg, setUploadMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
+  const [compMesaA, setCompMesaA] = useState("");
+  const [compMesaB, setCompMesaB] = useState("");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -947,23 +991,60 @@ export default function MesasSpin() {
   );
 
   /** Por dia (mais recente primeiro): todas as importações / dias com dados no mês. */
-  const porDiaPorOperadora = useMemo(() => {
-    const byDia = new Map<string, PorTabelaRow[]>();
+  /** Mesas distintas no período (chave = nome completo no DB), para drilldown A vs B. */
+  const mesasOpcoesComparativo = useMemo(() => {
+    const seen = new Map<string, PorTabelaRow>();
     for (const r of porTabelaFiltradas) {
-      const d = r.data_relatorio;
-      if (!byDia.has(d)) byDia.set(d, []);
-      byDia.get(d)!.push(r);
+      const k = r.nome_tabela.trim();
+      if (!k) continue;
+      if (!seen.has(k)) seen.set(k, r);
     }
-    const diasOrdenados = [...byDia.keys()].sort((a, b) => b.localeCompare(a));
-    return diasOrdenados.map((dia) => {
-      const rowsDia = byDia.get(dia)!;
-      const bySlug = agruparPorSlug(rowsDia);
-      const porOperadora = ordenarSlugs([...bySlug.keys()], operadorasListFmt)
-        .map((slug) => ({ slug, rows: bySlug.get(slug)! }))
-        .filter((b) => b.rows.length > 0);
-      return { dia, porOperadora };
+    const list = [...seen.entries()].map(([key, sample]) => {
+      const slug = slugOperadoraPorLinha(sample);
+      return {
+        key,
+        label: nomeMesaParaExibicao(sample, slug, operadorasListFmt),
+      };
     });
+    list.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+    return list;
   }, [porTabelaFiltradas, operadorasListFmt]);
+
+  const linhasMesaA = useMemo(() => {
+    if (!compMesaA) return [];
+    return porTabelaFiltradas
+      .filter((r) => r.nome_tabela.trim() === compMesaA)
+      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .map(linhaMesaPorDiaFromRow);
+  }, [porTabelaFiltradas, compMesaA]);
+
+  const linhasMesaB = useMemo(() => {
+    if (!compMesaB) return [];
+    return porTabelaFiltradas
+      .filter((r) => r.nome_tabela.trim() === compMesaB)
+      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .map(linhaMesaPorDiaFromRow);
+  }, [porTabelaFiltradas, compMesaB]);
+
+  useEffect(() => {
+    if (mesasOpcoesComparativo.length === 0) {
+      setCompMesaA("");
+      setCompMesaB("");
+      return;
+    }
+    setCompMesaA((prev) =>
+      prev && mesasOpcoesComparativo.some((x) => x.key === prev) ? prev : mesasOpcoesComparativo[0]!.key,
+    );
+  }, [mesasOpcoesComparativo]);
+
+  useEffect(() => {
+    if (mesasOpcoesComparativo.length === 0) return;
+    setCompMesaB((prev) => {
+      if (prev && mesasOpcoesComparativo.some((x) => x.key === prev) && prev !== compMesaA) return prev;
+      const alt = mesasOpcoesComparativo.find((x) => x.key !== compMesaA);
+      return alt?.key ?? mesasOpcoesComparativo[0]!.key;
+    });
+  }, [mesasOpcoesComparativo, compMesaA]);
 
   const porMesaPorMesHistorico = useMemo(() => {
     if (!historico || porTabelaHistAll.length === 0) return [];
@@ -1086,6 +1167,14 @@ export default function MesasSpin() {
     appearance: "none" as const,
     outline: "none",
   };
+
+  const selectStyleSimple: React.CSSProperties = {
+    ...selectStyle,
+    padding: "7px 12px",
+  };
+
+  const labelMesaComparativoA = mesasOpcoesComparativo.find((m) => m.key === compMesaA)?.label ?? "—";
+  const labelMesaComparativoB = mesasOpcoesComparativo.find((m) => m.key === compMesaB)?.label ?? "—";
 
   if (perm.canView === "nao") {
     return (
@@ -1436,8 +1525,7 @@ export default function MesasSpin() {
                 Nenhum dado para o período selecionado.
               </div>
             </div>
-          ) : porDiaPorOperadora.length === 0 ||
-            porDiaPorOperadora.every((b) => b.porOperadora.length === 0) ? (
+          ) : mesasOpcoesComparativo.length === 0 ? (
             <div style={{ ...card, marginBottom: 14 }}>
               <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
               <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -1445,89 +1533,273 @@ export default function MesasSpin() {
               </p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-              {porDiaPorOperadora.map(({ dia, porOperadora }) => {
-                if (porOperadora.length === 0) return null;
-                const temDailyNoDia = dailyData.some((r) => r.data === dia);
-                const rotulosDia: RotulosMesa = {
-                  d1: fmtDataPtBr(dia),
-                  usouFallbackDaily: !temDailyNoDia,
-                };
-                return (
-                  <div key={dia}>
-                    <h3
-                      style={{
-                        fontFamily: FONT_TITLE,
-                        fontSize: 13,
-                        fontWeight: 800,
-                        color: brand.primary,
-                        margin: "0 0 14px",
-                        letterSpacing: "0.04em",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Referência {fmtDataPtBr(dia)}
-                      <span
-                        style={{
-                          fontFamily: FONT.body,
-                          fontWeight: 500,
-                          fontSize: 11,
-                          color: t.textMuted,
-                          marginLeft: 8,
-                          textTransform: "none",
-                          letterSpacing: "normal",
-                        }}
-                      >
-                        · métricas d-1 (importação)
-                      </span>
-                    </h3>
-                    {rotulosDia.usouFallbackDaily && (
-                      <p
-                        style={{
-                          margin: "0 0 12px",
-                          fontSize: 12,
-                          color: t.textMuted,
-                          fontFamily: FONT.body,
-                        }}
-                      >
-                        Sem linha no detalhamento diário nesta data: rótulo alinhado à data do print.
-                      </p>
-                    )}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                      {porOperadora.map(({ slug, rows }) => (
-                        <div key={`${dia}-${slug}`} style={{ ...card, marginBottom: 0 }}>
-                          <SectionHeader
-                            icon={<Table2 size={15} />}
-                            title="Dados por mesa"
-                            sub={`· ${nomeTituloOperadora(slug, operadorasListFmt)}`}
-                          />
-                          {slug === OPERADORA_CASA_APOSTAS ? (
-                            <MesasCasaApostasGrid
-                              rows={rows}
-                              rotulos={rotulosDia}
-                              slugOperadora={slug}
-                              operadorasList={operadorasListFmt}
-                              thMini={thMini}
-                              tdMini={tdMini}
-                              tdMiniNum={tdMiniNum}
-                            />
-                          ) : (
-                            <MesasPorMesaListaVertical
-                              rows={rows}
-                              rotulos={rotulosDia}
-                              slugOperadora={slug}
-                              operadorasList={operadorasListFmt}
-                              thMini={thMini}
-                              tdMini={tdMini}
-                              tdMiniNum={tdMiniNum}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
+            <div style={{ ...card, marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                <span
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: brand.primaryIconBg,
+                    border: brand.primaryIconBorder,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: brand.primaryIconColor,
+                    flexShrink: 0,
+                  }}
+                >
+                  <GiConvergenceTarget size={15} />
+                </span>
+                <span
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: t.text,
+                    fontFamily: FONT_TITLE,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Dados por mesa
+                </span>
+                <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                  comparativo · uma linha por dia de importação (d-1)
+                </span>
+              </div>
+              <p
+                style={{
+                  margin: "0 0 16px",
+                  fontSize: 12,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  lineHeight: 1.45,
+                }}
+              >
+                Escolha duas mesas para comparar. As linhas seguem o mesmo critério do bloco «Detalhamento Diário» (GGR,
+                Turnover, Apostas, margem e aposta média).
+              </p>
+
+              <div className="app-conversao-vs-row">
+                <select
+                  value={compMesaA}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCompMesaA(v);
+                    if (v && v === compMesaB) {
+                      const o = mesasOpcoesComparativo.find((m) => m.key !== v);
+                      if (o) setCompMesaB(o.key);
+                    }
+                  }}
+                  style={{
+                    ...selectStyleSimple,
+                    borderColor: compMesaA ? COR_MESA_A.border : undefined,
+                    width: "100%",
+                  }}
+                >
+                  {mesasOpcoesComparativo
+                    .filter((m) => mesasOpcoesComparativo.length < 2 || m.key !== compMesaB)
+                    .map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {m.label}
+                      </option>
+                    ))}
+                </select>
+                <div
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: 999,
+                    border: "1px solid rgba(74,32,130,0.35)",
+                    background: "rgba(74,32,130,0.10)",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: t.textMuted,
+                    fontFamily: FONT.body,
+                    letterSpacing: "0.05em",
+                    textAlign: "center",
+                  }}
+                >
+                  VS
+                </div>
+                <select
+                  value={compMesaB}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCompMesaB(v);
+                    if (v && v === compMesaA) {
+                      const o = mesasOpcoesComparativo.find((m) => m.key !== v);
+                      if (o) setCompMesaA(o.key);
+                    }
+                  }}
+                  style={{
+                    ...selectStyleSimple,
+                    borderColor: compMesaB ? COR_MESA_B.border : undefined,
+                    width: "100%",
+                  }}
+                >
+                  {mesasOpcoesComparativo
+                    .filter((m) => mesasOpcoesComparativo.length < 2 || m.key !== compMesaA)
+                    .map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {m.label}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {(compMesaA || compMesaB) && (
+                <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
+                  <div
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 10,
+                      background: COR_MESA_A.bg,
+                      border: `1px solid ${COR_MESA_A.border}`,
+                      textAlign: "center",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: COR_MESA_A.accent,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    {labelMesaComparativoA}
                   </div>
-                );
-              })}
+                  <div
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 10,
+                      background: COR_MESA_B.bg,
+                      border: `1px solid ${COR_MESA_B.border}`,
+                      textAlign: "center",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: COR_MESA_B.accent,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    {labelMesaComparativoB}
+                  </div>
+                </div>
+              )}
+
+              <div className="app-conversao-funil-duo">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th style={thStyle}>Data</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {linhasMesaA.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ ...tdStyle, color: t.textMuted, textAlign: "center" }}>
+                              Sem linhas para esta mesa no mês.
+                            </td>
+                          </tr>
+                        ) : (
+                          linhasMesaA.map((row, i) => {
+                            const ggr = row.ggr ?? 0;
+                            return (
+                              <tr
+                                key={row.dataIso}
+                                style={{
+                                  background: i % 2 === 1 ? "rgba(124,58,237,0.06)" : "transparent",
+                                }}
+                              >
+                                <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
+                                <td
+                                  style={{
+                                    ...tdNum,
+                                    color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {row.ggr != null ? fmtBRL(row.ggr) : "—"}
+                                </td>
+                                <td style={tdNum}>{row.turnover != null ? fmtBRL(row.turnover) : "—"}</td>
+                                <td style={tdNum}>{row.bets != null ? row.bets.toLocaleString("pt-BR") : "—"}</td>
+                                <td style={{ ...tdNum }}>
+                                  <MarginBadge value={row.margin_pct} />
+                                </td>
+                                <td style={tdNum}>
+                                  {row.bet_size != null ? fmtBRL(Number(row.bet_size)) : "—"}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div
+                  className="app-conversao-funil-divider"
+                  style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th style={thStyle}>Data</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
+                          <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {linhasMesaB.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ ...tdStyle, color: t.textMuted, textAlign: "center" }}>
+                              Sem linhas para esta mesa no mês.
+                            </td>
+                          </tr>
+                        ) : (
+                          linhasMesaB.map((row, i) => {
+                            const ggr = row.ggr ?? 0;
+                            return (
+                              <tr
+                                key={row.dataIso}
+                                style={{
+                                  background: i % 2 === 1 ? "rgba(30,54,248,0.06)" : "transparent",
+                                }}
+                              >
+                                <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
+                                <td
+                                  style={{
+                                    ...tdNum,
+                                    color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {row.ggr != null ? fmtBRL(row.ggr) : "—"}
+                                </td>
+                                <td style={tdNum}>{row.turnover != null ? fmtBRL(row.turnover) : "—"}</td>
+                                <td style={tdNum}>{row.bets != null ? row.bets.toLocaleString("pt-BR") : "—"}</td>
+                                <td style={{ ...tdNum }}>
+                                  <MarginBadge value={row.margin_pct} />
+                                </td>
+                                <td style={tdNum}>
+                                  {row.bet_size != null ? fmtBRL(Number(row.bet_size)) : "—"}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </>
