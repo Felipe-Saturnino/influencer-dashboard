@@ -3,7 +3,7 @@
  * Secções: Daily summaries BRL | Monthly (só tabela à direita: Date+UAP+ARPU) | Per table BRL (d-1).
  */
 
-import { createWorker, type Worker } from "tesseract.js";
+import { createWorker, PSM, type Worker } from "tesseract.js";
 
 export interface DailyRowParsed {
   data: string;
@@ -296,6 +296,15 @@ function looksLikeNumericOcrToken(raw: string): boolean {
   if (t.length === 0 || t.length > 28) return false;
   if (/[a-zA-Z]{2,}/.test(t)) return false;
   return /[\d]/.test(t.replace(/O/gi, "0"));
+}
+
+/** Lixos típicos do Tesseract na 1.ª célula d-1 («em», «aus», …) — sem dígitos. */
+function looksLikeGarbageMetricToken(raw: string): boolean {
+  const t = raw.trim().replace(/\s/g, "");
+  if (t.length < 2 || t.length > 6) return false;
+  if (looksLikeNumericOcrToken(t)) return false;
+  if (isLayoutNoiseWord(t)) return false;
+  return /^[a-zA-Z]+$/.test(t);
 }
 
 /** 1.ª ocorrência de uma linha de mesa «Casa de Apostas …» (ignora «Per table BRL» à esquerda). */
@@ -1871,7 +1880,29 @@ export async function terminateMesasSpinOcrWorker(): Promise<void> {
   }
 }
 
-export async function prepareImageForOcr(file: File, maxWidth = 4800): Promise<string> {
+/** Contraste leve em tons de cinza — ajuda dígitos pequenos na coluna GGR d-1. */
+function enhanceCanvasGrayscaleContrast(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  factor = 1.2,
+): void {
+  const img = ctx.getImageData(0, 0, width, height);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i]!;
+    const g = d[i + 1]!;
+    const b = d[i + 2]!;
+    let v = 0.299 * r + 0.587 * g + 0.114 * b;
+    v = Math.min(255, Math.max(0, (v - 128) * factor + 128));
+    d[i] = v;
+    d[i + 1] = v;
+    d[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+export async function prepareImageForOcr(file: File, maxWidth = 6400): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
     const bmp = await createImageBitmap(await fetch(url).then((r) => r.blob()));
@@ -1885,9 +1916,132 @@ export async function prepareImageForOcr(file: File, maxWidth = 4800): Promise<s
     if (!ctx) throw new Error("Canvas 2D indisponível");
     ctx.drawImage(bmp, 0, 0, w, h);
     bmp.close();
+    enhanceCanvasGrayscaleContrast(ctx, w, h, 1.22);
     return canvas.toDataURL("image/png");
   } finally {
     URL.revokeObjectURL(url);
+  }
+}
+
+function loadDataUrlAsImage(dataUrl: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Falha ao carregar bitmap OCR"));
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * 2.ª leitura só da faixa GGR d-1 quando o 1.º token da coluna é lixo («em», «aus», …).
+ * Usa linha + âncoras do cabeçalho Per table; texto reconstruído passa a mostrar o valor lido.
+ */
+async function refinePerTableGgrD1GarbageWords(
+  sortedLayoutLines: OcrLineLayout[],
+  dataUrl: string,
+  worker: Worker,
+): Promise<void> {
+  const headerWs = findPerTableHeaderWords(sortedLayoutLines);
+  if (!headerWs) return;
+  const anchors = buildPerTableD1ColumnAnchors(headerWs);
+  if (!anchors) return;
+
+  const { first: firstIdx, last: lastIdx } = findFirstLastMesaLineIndices(sortedLayoutLines);
+  let imgW = 0;
+  let imgH = 0;
+  try {
+    const img = await loadDataUrlAsImage(dataUrl);
+    imgW = img.naturalWidth;
+    imgH = img.naturalHeight;
+  } catch {
+    return;
+  }
+
+  let refines = 0;
+  const maxRefines = 10;
+
+  try {
+  for (let li = 0; li < sortedLayoutLines.length; li++) {
+    if (refines >= maxRefines) break;
+    const line = sortedLayoutLines[li]!;
+    const raw = line.words ?? [];
+    if (raw.length < 4) continue;
+    const words = [...raw].sort((a, b) => a.bbox.x0 - b.bbox.x0);
+    const mesaHit = mesaStartOnLine(words);
+    if (!mesaHit) continue;
+
+    const isEdge =
+      (firstIdx != null && li === firstIdx) || (lastIdx != null && li === lastIdx);
+    const colSlack = isEdge ? 78 : 34;
+
+    const { startWi, canon } = mesaHit;
+    const subWords = words.slice(startWi);
+    const k = countPrefixWords(subWords, canon.raw);
+    if (k <= 0) continue;
+
+    const nameWs = subWords.slice(0, Math.max(k, 1));
+    const ys = nameWs.map((w) => wordCenterYWord(w)).sort((a, b) => a - b);
+    const yMed = ys.length > 0 ? ys[Math.floor(ys.length / 2)]! : lineCenterY(line);
+    const lineH = Math.max(
+      14,
+      (line.bbox?.y1 ?? 0) - (line.bbox?.y0 ?? 0),
+    );
+    const yTol = Math.max(44, lineH * 0.42);
+    const inSameTextRow = (w: OcrWordLayout) =>
+      Math.abs(wordCenterYWord(w) - yMed) <= yTol;
+
+    const metricWords = wordsToMetricWords(subWords.slice(k).filter(inSameTextRow));
+    const col0 = metricWords.filter((w) => wordCenterX(w) < anchors.boundGgrTurn + colSlack);
+    col0.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+    const w0 = col0[0];
+    if (!w0 || !looksLikeGarbageMetricToken(w0.text)) continue;
+
+    const x0 = Math.max(0, Math.floor(Math.min(...col0.map((w) => w.bbox.x0)) - 14));
+    const x1 = Math.min(imgW - 1, Math.ceil(anchors.boundGgrTurn + colSlack + 14));
+    const y0 = Math.max(0, Math.floor((line.bbox?.y0 ?? w0.bbox.y0) - 10));
+    const y1 = Math.min(imgH - 1, Math.ceil((line.bbox?.y1 ?? w0.bbox.y1) + 10));
+    const rw = Math.max(28, x1 - x0);
+    const rh = Math.max(22, y1 - y0);
+
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.SINGLE_LINE,
+      tessedit_char_whitelist: "0123456789.,-+ ",
+    });
+
+    try {
+      const { data } = await worker.recognize(dataUrl, {
+        rectangle: { left: x0, top: y0, width: rw, height: rh },
+      });
+      const snip = (data?.text ?? "").replace(/\|/g, " ").trim();
+      const normSnip = normalizeSignedNumberText(snip);
+      const nums = collectNumbersLeftToRight(splitLineParts(normSnip));
+      const n = nums.length > 0 ? nums[0]! : null;
+      if (n == null) continue;
+
+      let tokenOut = String(n);
+      for (const p of splitLineParts(normSnip)) {
+        const pv = parseNumericToken(p);
+        if (pv != null && Math.abs(pv - n) <= Math.max(1, Math.abs(n) * 0.0001)) {
+          tokenOut = p.trim();
+          break;
+        }
+      }
+      w0.text = tokenOut;
+      refines++;
+    } catch {
+      /* ignora falha de recorte */
+    }
+  }
+  } finally {
+    try {
+      await worker.setParameters({
+        tessedit_pageseg_mode: PSM.AUTO,
+        tessedit_char_whitelist: "",
+      });
+    } catch {
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+    }
   }
 }
 
@@ -1927,6 +2081,14 @@ export async function runMesasSpinOcrDetailed(
   const worker = await getWorker((p) => onProgress?.("ocr", p));
   const { data } = await worker.recognize(dataUrl);
   const layoutLines = Array.isArray(data.lines) ? (data.lines as OcrLineLayout[]) : null;
+  if (layoutLines && layoutLines.length > 0) {
+    const sortedForRefine = [...layoutLines].sort((a, b) => {
+      const ya = (a.bbox?.y0 ?? 0) + (a.bbox?.y1 ?? 0);
+      const yb = (b.bbox?.y0 ?? 0) + (b.bbox?.y1 ?? 0);
+      return ya - yb;
+    });
+    await refinePerTableGgrD1GarbageWords(sortedForRefine, dataUrl, worker);
+  }
   const text = buildSpatialOcrText({
     text: data.text,
     lines: layoutLines,
