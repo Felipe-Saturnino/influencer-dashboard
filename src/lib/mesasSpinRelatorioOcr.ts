@@ -103,7 +103,7 @@ export function parseNumericToken(raw: string): number | null {
   let t = raw.replace(/R\$/gi, "").replace(/%/g, "").replace(/\s/g, "").trim();
   if (!t) return null;
   if (t === "—" || t === "-" || t === "–" || /^n\/?a$/i.test(t)) return null;
-  t = t.replace(/^["'`´«»]+|["'`´«»]+$/g, "");
+  t = t.replace(/^["'`´«»\u201c\u201d\u201e\u2033]+|["'`´«»\u201c\u201d\u201e\u2033]+$/g, "");
   t = t.replace(/(\d)[a-zA-Z]{1,3}$/i, "$1");
   if (!t) return null;
   t = t.replace(/O/g, "0");
@@ -218,7 +218,8 @@ function fixPhantomDay20InDailyRows(rows: DailyRowParsed[], fullText: string): v
 function normalizeSignedNumberText(s: string): string {
   return s
     .replace(/[\u2212\u2013\u2014]/g, "-")
-    .replace(/-\s+(?=[\d,])/g, "-");
+    .replace(/-\s+(?=[\d,])/g, "-")
+    .replace(/[\u201c\u201d\u201e\u2033"'«»]\s*(?=[\d,])/g, "-");
 }
 
 /**
@@ -1323,20 +1324,36 @@ function impliedGgrFromMarginInDailyRest(raw: string, turnover: number): number 
     const pct = parseNumericToken(`${m[1]}%`);
     if (pct == null) continue;
     const ap = Math.abs(pct);
-    if (ap > 12 || ap < 0.05) continue;
-    const g = Math.round((turnover * pct) / 100);
-    if (Math.abs(g) > Math.abs(turnover) * 0.35) continue;
-    cands.push({ g, ap });
+    if (ap < 0.05) continue;
+    const pushCand = (p: number) => {
+      const g = Math.round((turnover * p) / 100);
+      if (Math.abs(g) > Math.abs(turnover) * 0.35) return;
+      cands.push({ g, ap: Math.abs(p) });
+    };
+    if (ap <= 12) {
+      pushCand(pct);
+    } else if (ap <= 55) {
+      const scaled = pct / 10;
+      const aps = Math.abs(scaled);
+      if (aps >= 0.2 && aps <= 12) pushCand(scaled);
+    }
   }
   const reLoose = /(-?\d+)\s*[.,]\s*(\d+)\s*%/g;
   while ((m = reLoose.exec(raw)) !== null) {
     const pct = parseNumericToken(`${m[1]}.${m[2]}%`) ?? parseNumericToken(`${m[1]},${m[2]}%`);
     if (pct == null) continue;
     const ap = Math.abs(pct);
-    if (ap > 12 || ap < 0.05) continue;
-    const g = Math.round((turnover * pct) / 100);
-    if (Math.abs(g) > Math.abs(turnover) * 0.35) continue;
-    cands.push({ g, ap });
+    if (ap < 0.05) continue;
+    const pushLoose = (p: number) => {
+      const g = Math.round((turnover * p) / 100);
+      if (Math.abs(g) > Math.abs(turnover) * 0.35) return;
+      cands.push({ g, ap: Math.abs(p) });
+    };
+    if (ap <= 12) pushLoose(pct);
+    else if (ap <= 55) {
+      const scaled = pct / 10;
+      if (Math.abs(scaled) >= 0.2 && Math.abs(scaled) <= 12) pushLoose(scaled);
+    }
   }
   if (cands.length === 0) return null;
   const neg = cands.filter((c) => c.g < 0);
@@ -1379,6 +1396,19 @@ function assignDailyMetrics(nr: number[]): {
   const t2 = nr[2];
   const t3 = nr[3];
 
+  /** OCR leu o GGR como margem (27 em vez de 2,7%): 2º número parece % e 3º já são apostas (milhares). */
+  if (
+    nr.length >= 5 &&
+    looksLikeMarginPercent(t1) &&
+    Math.abs(t1) <= 48 &&
+    t2 >= 4_000 &&
+    t3 >= 40 &&
+    t3 <= 900 &&
+    Math.abs(t1) < Math.abs(t0) * 0.01
+  ) {
+    return { turnover: t0, ggr: null, apostas: t2, uap: t3 };
+  }
+
   if (nr.length >= 7) {
     return { turnover: t0, ggr: t1, apostas: nr[3], uap: nr[4] };
   }
@@ -1416,6 +1446,51 @@ function assignDailyMetrics(nr: number[]): {
   return { turnover: t0, ggr: t1, apostas: t2, uap: nr[3]! };
 }
 
+/** Corrige turnover truncado (milhar) ou confundido com apostas: bet size típico ~2,5–20 vs contagem. */
+function fixDailyOcrTurnoverGgr(
+  turnover: number,
+  ggr: number | null,
+  bets: number,
+): { turnover: number; ggr: number | null } {
+  let t = turnover;
+  const g = ggr;
+  if (bets < 4000 || t <= 0) return { turnover: t, ggr: g };
+
+  const okRatio = (tt: number) => {
+    const r = tt / bets;
+    if (r < 2.2 || r > 21) return false;
+    if (g != null && Math.abs(g) > 80) {
+      const rg = Math.abs(g) / tt;
+      if (rg < 0.008 || rg > 0.2) return false;
+    }
+    return true;
+  };
+
+  if (okRatio(t)) return { turnover: t, ggr: g };
+
+  let bestT = t;
+  let bestScore = Number.POSITIVE_INFINITY;
+  const consider = (tt: number) => {
+    if (!okRatio(tt)) return;
+    const score = Math.abs(tt / bets - 6.5);
+    if (score < bestScore) {
+      bestScore = score;
+      bestT = tt;
+    }
+  };
+
+  for (const mul of [10, 100] as const) {
+    consider(Math.round(turnover * mul));
+  }
+  if (g != null && Math.abs(g) > 150) {
+    for (const m of [0.052, 0.056, 0.058, 0.062, 0.066, 0.07]) {
+      consider(Math.round(Math.abs(g) / m));
+    }
+  }
+
+  return { turnover: bestScore < Number.POSITIVE_INFINITY ? bestT : t, ggr: g };
+}
+
 function parseDailyBlock(
   lines: string[],
   start: number,
@@ -1450,10 +1525,22 @@ function parseDailyBlock(
       const fromArpu = inferGgrFromArpuTimesUap(metrics.turnover, metrics.uap, nr);
       if (fromArpu != null) metrics = { ...metrics, ggr: fromArpu };
     }
+    let turnover = metrics.turnover;
+    let ggr = metrics.ggr;
+    const scaled = fixDailyOcrTurnoverGgr(turnover, ggr, metrics.apostas);
+    turnover = scaled.turnover;
+    ggr = scaled.ggr;
+    if (ggr != null && turnover > 0) {
+      const rg = Math.abs(ggr) / turnover;
+      if (rg > 0.17) {
+        const alt = impliedGgrFromMarginInDailyRest(rest, turnover);
+        if (alt != null && Math.abs(alt) > 80) ggr = alt;
+      }
+    }
     out.push({
       data: dateHit.iso,
-      turnover: metrics.turnover,
-      ggr: metrics.ggr,
+      turnover,
+      ggr,
       apostas: Math.round(metrics.apostas),
       uap: Math.round(metrics.uap),
     });
