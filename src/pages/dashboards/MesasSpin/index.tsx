@@ -709,8 +709,16 @@ export default function MesasSpin() {
   const [dailyData, setDailyData] = useState<DailyRow[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
   const [porTabelaRows, setPorTabelaRows] = useState<PorTabelaRow[]>([]);
-  const [porTabelaSnapshot, setPorTabelaSnapshot] = useState<string | null>(null);
   const [porTabelaHistAll, setPorTabelaHistAll] = useState<PorTabelaRow[]>([]);
+  /** UAP/ARPU mensais oficiais (tabela monthly); quando null, KPI mostra "—". */
+  const [monthlyUapArpuSel, setMonthlyUapArpuSel] = useState<{
+    uap: number | null;
+    arpu: number | null;
+  } | null>(null);
+  const [monthlyUapArpuPrev, setMonthlyUapArpuPrev] = useState<{
+    uap: number | null;
+    arpu: number | null;
+  } | null>(null);
   /** Só para comparação MoM no carrossel: totais do mês anterior a partir do daily. */
   const [dailyDataPrevMonth, setDailyDataPrevMonth] = useState<DailyRow[]>([]);
   const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
@@ -752,8 +760,9 @@ export default function MesasSpin() {
   const carregar = useCallback(async () => {
     setLoading(true);
     setPorTabelaRows([]);
-    setPorTabelaSnapshot(null);
     setPorTabelaHistAll([]);
+    setMonthlyUapArpuSel(null);
+    setMonthlyUapArpuPrev(null);
     setDailyDataPrevMonth([]);
 
     try {
@@ -796,6 +805,20 @@ export default function MesasSpin() {
         setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         setMonthlyData([]);
 
+        const { data: mSel } = await supabase
+          .from("relatorio_monthly_summary")
+          .select("uap, arpu")
+          .eq("mes", inicio)
+          .maybeSingle();
+        setMonthlyUapArpuSel(
+          mSel
+            ? {
+                uap: mSel.uap != null ? Number(mSel.uap) : null,
+                arpu: mSel.arpu != null ? Number(mSel.arpu) : null,
+              }
+            : null,
+        );
+
         if (idxMes > 0) {
           const prev = mesesDisponiveis[idxMes - 1]!;
           const { inicio: pi, fim: pf } = getDatasDoMes(prev.ano, prev.mes);
@@ -809,29 +832,36 @@ export default function MesasSpin() {
               .range(from, to),
           );
           setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
-        }
-
-        const { data: snap } = await supabase
-          .from("relatorio_por_tabela")
-          .select("dia")
-          .gte("dia", inicio)
-          .lte("dia", fim)
-          .order("dia", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (snap?.dia) {
-          setPorTabelaSnapshot(snap.dia);
-          const mesasRaw = await fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_por_tabela")
-              .select("dia, operadora, mesa, ggr, turnover, apostas")
-              .eq("dia", snap.dia)
-              .order("mesa")
-              .range(from, to),
+          const { data: mPrev } = await supabase
+            .from("relatorio_monthly_summary")
+            .select("uap, arpu")
+            .eq("mes", pi)
+            .maybeSingle();
+          setMonthlyUapArpuPrev(
+            mPrev
+              ? {
+                  uap: mPrev.uap != null ? Number(mPrev.uap) : null,
+                  arpu: mPrev.arpu != null ? Number(mPrev.arpu) : null,
+                }
+              : null,
           );
-          setPorTabelaRows((mesasRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
+        } else {
+          setDailyDataPrevMonth([]);
+          setMonthlyUapArpuPrev(null);
         }
+
+        const mesasMesRaw = await fetchAllPages(async (from, to) =>
+          supabase
+            .from("relatorio_por_tabela")
+            .select("dia, operadora, mesa, ggr, turnover, apostas")
+            .gte("dia", inicio)
+            .lte("dia", fim)
+            .order("dia", { ascending: true })
+            .order("mesa", { ascending: true })
+            .range(from, to),
+        );
+        const mesasMapped = (mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2);
+        setPorTabelaRows(mesasMapped);
       }
     } finally {
       setLoading(false);
@@ -880,12 +910,28 @@ export default function MesasSpin() {
     );
   }, [historico, dailyData, monthlyData]);
 
-  const kpiExibir = useMemo(() => (dailyData.length === 0 ? null : aggDailyMesKpi(dailyData)), [dailyData]);
+  const kpiExibir = useMemo(() => {
+    const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
+    if (!base) return null;
+    if (historico) return base;
+    return {
+      ...base,
+      uap: monthlyUapArpuSel?.uap ?? null,
+      arpu: monthlyUapArpuSel?.arpu ?? null,
+    };
+  }, [dailyData, historico, monthlyUapArpuSel]);
 
   const kpiAntExibir = useMemo(() => {
-    if (historico || dailyDataPrevMonth.length === 0) return null;
-    return aggDailyMesKpi(dailyDataPrevMonth);
-  }, [historico, dailyDataPrevMonth]);
+    const base =
+      historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
+    if (!base) return null;
+    if (historico || idxMes === 0) return base;
+    return {
+      ...base,
+      uap: monthlyUapArpuPrev?.uap ?? null,
+      arpu: monthlyUapArpuPrev?.arpu ?? null,
+    };
+  }, [historico, idxMes, dailyDataPrevMonth, monthlyUapArpuPrev]);
 
   const operadorasListFmt = operadorasOcr;
 
@@ -900,20 +946,24 @@ export default function MesasSpin() {
     [porTabelaRows, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
   );
 
-  const porOperadoraSnapshot = useMemo(() => {
-    const m = agruparPorSlug(porTabelaFiltradas);
-    return ordenarSlugs([...m.keys()], operadorasListFmt).map((slug) => ({
-      slug,
-      rows: m.get(slug)!,
-    }));
-  }, [porTabelaFiltradas, operadorasListFmt]);
-
-  const rotulosPorMesaBrl = useMemo(() => {
-    if (!mesSelecionado) {
-      return { d1: "—", usouFallbackDaily: false };
+  /** Por dia (mais recente primeiro): todas as importações / dias com dados no mês. */
+  const porDiaPorOperadora = useMemo(() => {
+    const byDia = new Map<string, PorTabelaRow[]>();
+    for (const r of porTabelaFiltradas) {
+      const d = r.data_relatorio;
+      if (!byDia.has(d)) byDia.set(d, []);
+      byDia.get(d)!.push(r);
     }
-    return rotulosPorMesaParaMes(dailyData, porTabelaSnapshot, mesSelecionado.ano, mesSelecionado.mes);
-  }, [dailyData, porTabelaSnapshot, mesSelecionado]);
+    const diasOrdenados = [...byDia.keys()].sort((a, b) => b.localeCompare(a));
+    return diasOrdenados.map((dia) => {
+      const rowsDia = byDia.get(dia)!;
+      const bySlug = agruparPorSlug(rowsDia);
+      const porOperadora = ordenarSlugs([...bySlug.keys()], operadorasListFmt)
+        .map((slug) => ({ slug, rows: bySlug.get(slug)! }))
+        .filter((b) => b.rows.length > 0);
+      return { dia, porOperadora };
+    });
+  }, [porTabelaFiltradas, operadorasListFmt]);
 
   const porMesaPorMesHistorico = useMemo(() => {
     if (!historico || porTabelaHistAll.length === 0) return [];
@@ -1386,7 +1436,8 @@ export default function MesasSpin() {
                 Nenhum dado para o período selecionado.
               </div>
             </div>
-          ) : porOperadoraSnapshot.length === 0 ? (
+          ) : porDiaPorOperadora.length === 0 ||
+            porDiaPorOperadora.every((b) => b.porOperadora.length === 0) ? (
             <div style={{ ...card, marginBottom: 14 }}>
               <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" />
               <p style={{ margin: 0, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -1394,43 +1445,90 @@ export default function MesasSpin() {
               </p>
             </div>
           ) : (
-            <>
-              {rotulosPorMesaBrl.usouFallbackDaily && porTabelaFiltradas.length > 0 && (
-                <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  Sem resumo diário neste mês: a data da linha usa a véspera da data do print.
-                </p>
-              )}
-              {porOperadoraSnapshot.map(({ slug, rows }) => (
-                <div key={slug} style={{ ...card, marginBottom: 14 }}>
-                  <SectionHeader
-                    icon={<Table2 size={15} />}
-                    title="Dados por mesa"
-                    sub={`· ${nomeTituloOperadora(slug, operadorasListFmt)}`}
-                  />
-                  {slug === OPERADORA_CASA_APOSTAS ? (
-                    <MesasCasaApostasGrid
-                      rows={rows}
-                      rotulos={rotulosPorMesaBrl}
-                      slugOperadora={slug}
-                      operadorasList={operadorasListFmt}
-                      thMini={thMini}
-                      tdMini={tdMini}
-                      tdMiniNum={tdMiniNum}
-                    />
-                  ) : (
-                    <MesasPorMesaListaVertical
-                      rows={rows}
-                      rotulos={rotulosPorMesaBrl}
-                      slugOperadora={slug}
-                      operadorasList={operadorasListFmt}
-                      thMini={thMini}
-                      tdMini={tdMini}
-                      tdMiniNum={tdMiniNum}
-                    />
-                  )}
-                </div>
-              ))}
-            </>
+            <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+              {porDiaPorOperadora.map(({ dia, porOperadora }) => {
+                if (porOperadora.length === 0) return null;
+                const temDailyNoDia = dailyData.some((r) => r.data === dia);
+                const rotulosDia: RotulosMesa = {
+                  d1: fmtDataPtBr(dia),
+                  usouFallbackDaily: !temDailyNoDia,
+                };
+                return (
+                  <div key={dia}>
+                    <h3
+                      style={{
+                        fontFamily: FONT_TITLE,
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: brand.primary,
+                        margin: "0 0 14px",
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Referência {fmtDataPtBr(dia)}
+                      <span
+                        style={{
+                          fontFamily: FONT.body,
+                          fontWeight: 500,
+                          fontSize: 11,
+                          color: t.textMuted,
+                          marginLeft: 8,
+                          textTransform: "none",
+                          letterSpacing: "normal",
+                        }}
+                      >
+                        · métricas d-1 (importação)
+                      </span>
+                    </h3>
+                    {rotulosDia.usouFallbackDaily && (
+                      <p
+                        style={{
+                          margin: "0 0 12px",
+                          fontSize: 12,
+                          color: t.textMuted,
+                          fontFamily: FONT.body,
+                        }}
+                      >
+                        Sem linha no detalhamento diário nesta data: rótulo alinhado à data do print.
+                      </p>
+                    )}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                      {porOperadora.map(({ slug, rows }) => (
+                        <div key={`${dia}-${slug}`} style={{ ...card, marginBottom: 0 }}>
+                          <SectionHeader
+                            icon={<Table2 size={15} />}
+                            title="Dados por mesa"
+                            sub={`· ${nomeTituloOperadora(slug, operadorasListFmt)}`}
+                          />
+                          {slug === OPERADORA_CASA_APOSTAS ? (
+                            <MesasCasaApostasGrid
+                              rows={rows}
+                              rotulos={rotulosDia}
+                              slugOperadora={slug}
+                              operadorasList={operadorasListFmt}
+                              thMini={thMini}
+                              tdMini={tdMini}
+                              tdMiniNum={tdMiniNum}
+                            />
+                          ) : (
+                            <MesasPorMesaListaVertical
+                              rows={rows}
+                              rotulos={rotulosDia}
+                              slugOperadora={slug}
+                              operadorasList={operadorasListFmt}
+                              thMini={thMini}
+                              tdMini={tdMini}
+                              tdMiniNum={tdMiniNum}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </>
       )}

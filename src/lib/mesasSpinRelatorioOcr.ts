@@ -2233,14 +2233,26 @@ export async function prepareImageForOcr(file: File, maxWidth = 6400): Promise<s
   const url = URL.createObjectURL(file);
   try {
     const bmp = await createImageBitmap(await fetch(url).then((r) => r.blob()));
-    const scale = bmp.width > maxWidth ? maxWidth / bmp.width : 1;
-    const w = Math.round(bmp.width * scale);
-    const h = Math.round(bmp.height * scale);
+    const scaleDown = bmp.width > maxWidth ? maxWidth / bmp.width : 1;
+    let w = Math.round(bmp.width * scaleDown);
+    let h = Math.round(bmp.height * scaleDown);
+    /** Tesseract falha muito em «1»/«2» iniciais em colunas estreitas se o raster for baixo. */
+    const minLongSide = 2400;
+    const longSide = Math.max(w, h);
+    if (longSide > 0 && longSide < minLongSide) {
+      const up = Math.min(minLongSide / longSide, maxWidth / w, maxWidth / h, 3);
+      if (up > 1.01) {
+        w = Math.round(w * up);
+        h = Math.round(h * up);
+      }
+    }
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D indisponível");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.drawImage(bmp, 0, 0, w, h);
     bmp.close();
     enhanceCanvasGrayscaleContrast(ctx, w, h, 1.22);
