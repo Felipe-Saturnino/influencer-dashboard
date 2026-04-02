@@ -21,6 +21,7 @@ import {
   GiMegaphone,
   GiNotebook,
   GiOpenBook,
+  GiRingingBell,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -60,6 +61,7 @@ export const MENU: MenuSection[] = [
     section: "Operações",
     items: [
       { key: "gestao_dealers", label: "Gestão de Dealers", icon: GiCardRandom  },
+      { key: "central_notificacoes", label: "Central de Notificações", icon: GiRingingBell },
       { key: "financeiro",    label: "Financeiro",        icon: GiCash        },
       { key: "banca_jogo",    label: "Banca de Jogo",     icon: GiPokerHand   },
       { key: "campanhas",     label: "Campanhas",          icon: GiMegaphone   },

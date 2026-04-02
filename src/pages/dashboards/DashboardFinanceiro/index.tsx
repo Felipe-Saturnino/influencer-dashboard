@@ -8,6 +8,7 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
+import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
   GiCalendar, GiStarMedal, GiShield,
@@ -82,9 +83,6 @@ interface TotaisFinanceiros {
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-const pad = (n: number) => String(n).padStart(2, "0");
-const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
 function getMesesDisponiveis() {
   const hoje = new Date();
   const lista: { ano: number; mes: number; label: string }[] = [];
@@ -94,27 +92,6 @@ function getMesesDisponiveis() {
     mes++; if (mes > 11) { mes = 0; ano++; }
   }
   return lista;
-}
-
-function getDatasDoMes(ano: number, mes: number) {
-  return { inicio: fmt(new Date(ano, mes, 1)), fim: fmt(new Date(ano, mes + 1, 0)) };
-}
-
-function getDatasDoMesOuMtd(ano: number, mes: number) {
-  const hoje = new Date();
-  const isMesAtual = ano === hoje.getFullYear() && mes === hoje.getMonth();
-  const { inicio, fim } = getDatasDoMes(ano, mes);
-  return { inicio, fim: isMesAtual ? fmt(hoje) : fim };
-}
-
-function getDatasDoMesMtd(ano: number, mes: number) {
-  let anoAnt = ano, mesAnt = mes - 1;
-  if (mesAnt < 0) { mesAnt = 11; anoAnt--; }
-  const ultimoDia = new Date(anoAnt, mesAnt + 1, 0).getDate();
-  const hoje = new Date();
-  const dia = anoAnt === hoje.getFullYear() && mesAnt === hoje.getMonth()
-    ? Math.min(hoje.getDate(), ultimoDia) : ultimoDia;
-  return { inicio: fmt(new Date(anoAnt, mesAnt, 1)), fim: fmt(new Date(anoAnt, mesAnt, dia)) };
 }
 
 function fmtBRL(v: number) {
@@ -330,7 +307,7 @@ export default function DashboardFinanceiro() {
       const isMesAtual = !historico && mesSelecionado && mesSelecionado.ano === hojeNow.getFullYear() && mesSelecionado.mes === hojeNow.getMonth();
       const { inicio: periodoInicio, fim: periodoFim } = historico || !mesSelecionado
         ? { inicio: "2020-01-01", fim: hojeNow.toISOString().split("T")[0] }
-        : getDatasDoMesOuMtd(mesSelecionado.ano, mesSelecionado.mes);
+        : getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
 
       let metricas: { influencer_id: string; ftd_count: number; ftd_total: number; deposit_count: number; deposit_total: number; withdrawal_count: number; withdrawal_total: number; ggr: number }[] = [];
       try {
@@ -370,7 +347,7 @@ export default function DashboardFinanceiro() {
               .order("operadora_slug", { ascending: true })
               .range(from, to);
             if (!historico && mesSelecionado) {
-              const { inicio, fim } = getDatasDoMesOuMtd(mesSelecionado.ano, mesSelecionado.mes);
+              const { inicio, fim } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
               qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
             }
             if (filtroInfluencer !== "todos") qMetricas = qMetricas.eq("influencer_id", filtroInfluencer);
@@ -421,7 +398,7 @@ export default function DashboardFinanceiro() {
             .order("id", { ascending: true })
             .range(from, to);
           if (!historico && mesSelecionado) {
-            const { inicio, fim } = getDatasDoMesOuMtd(mesSelecionado.ano, mesSelecionado.mes);
+            const { inicio, fim } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
             qLives = qLives.gte("data", inicio).lte("data", fim);
           }
           if (filtroInfluencer !== "todos") qLives = qLives.eq("influencer_id", filtroInfluencer);
@@ -495,7 +472,7 @@ export default function DashboardFinanceiro() {
       setInvestimentoAgentes(investimentoAgentes ?? 0);
 
       if (!historico && mesSelecionado) {
-        const periodoAnt = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
+        const periodoAnt = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).anterior;
         const [investAnt, mA] = await Promise.all([
           buscarInvestimentoPago(
             { inicio: periodoAnt.inicio, fim: periodoAnt.fim },

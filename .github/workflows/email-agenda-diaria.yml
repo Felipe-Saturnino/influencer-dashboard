@@ -1,0 +1,54 @@
+# E-mail Agenda do dia (operacional) — mesma janela do relatório da diretoria
+#
+# Dispara a Edge Function `email-agenda-diaria` (apenas tabela de lives agendadas).
+# Requer secrets no GitHub: SUPABASE_URL, SUPABASE_ANON_KEY (os mesmos do workflow da diretoria).
+# Destinatários vêm de EMAIL_AGENDA_DESTINATARIOS nos Secrets do Supabase (Edge Functions).
+#
+# Cron: 9h UTC = ~6h em Brasília. Pode atrasar por fila do GitHub; ver comentários em
+# relatorio-diario-diretoria.yml para alternativas (Supabase Schedules, etc.).
+
+name: E-mail Agenda Diária (6h BRT)
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: email-agenda-diaria-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Horário da execução (UTC e Brasília)
+        run: |
+          echo "UTC:      $(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "Brasília: $(TZ=America/Sao_Paulo date '+%Y-%m-%d %H:%M:%S %Z')"
+
+      - name: Enviar e-mail de agenda
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Secrets SUPABASE_URL e SUPABASE_ANON_KEY devem estar configurados"
+            exit 1
+          fi
+          RES=$(curl -s -w "\n%{http_code}" -X POST \
+            "$SUPABASE_URL/functions/v1/email-agenda-diaria" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{}")
+          HTTP=$(echo "$RES" | tail -n1)
+          BODY=$(echo "$RES" | sed '$d')
+          echo "HTTP $HTTP"
+          echo "$BODY"
+          if [ "$HTTP" != "200" ]; then
+            exit 1
+          fi

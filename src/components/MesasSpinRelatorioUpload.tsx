@@ -3,18 +3,17 @@ import { Upload, FileImage, Loader2, CheckCircle2, AlertCircle } from "lucide-re
 import { supabase } from "../lib/supabase";
 import {
   parseRelatorioFromOcrText,
-  runMesasSpinOcr,
+  runMesasSpinOcrDetailed,
   type IngestRelatorioPayload,
-  type OperadoraRef,
 } from "../lib/mesasSpinRelatorioOcr";
 import type { Theme } from "../constants/theme";
 import { UPLOAD_PLS_DISPLAY_NAME } from "../lib/uploadPlsCommercial";
 
 const FONT = "'Inter', 'Helvetica Neue', Arial, sans-serif";
-
 const BRAND_ROXO = "#4a2082";
 const BRAND_AZUL = "#1e36f8";
-const DEFAULT_BTN_RADIUS = 10;
+const BRAND_ERR = "#e84025";
+const BRAND_OK = "#22c55e";
 
 function fmtResumo(p: IngestRelatorioPayload): string {
   return `${p.daily_summary.length} dia(s) · ${p.monthly_summary.length} mês(es) · ${p.por_tabela.length} mesa(s)`;
@@ -22,11 +21,10 @@ function fmtResumo(p: IngestRelatorioPayload): string {
 
 const DEFAULT_TITLE = "Importar relatório (OCR no navegador)";
 const DEFAULT_DESC =
-  "Carregue o print do BI. O texto é lido localmente (Tesseract.js); só o JSON extraído é enviado ao Supabase. A primeira execução pode demorar (descarga dos idiomas).";
+  "Print do BI (Daily / Monthly à direita / Per table). O texto é lido no browser (Tesseract); só o JSON segue para o Supabase. Primeira execução pode demorar.";
 
 export function MesasSpinRelatorioUpload({
   t,
-  operadoras,
   disabled,
   onImported,
   embedded = false,
@@ -37,11 +35,9 @@ export function MesasSpinRelatorioUpload({
   onUserMessage,
 }: {
   t: Theme;
-  operadoras: OperadoraRef[];
   disabled?: boolean;
   onImported: () => void;
   embedded?: boolean;
-  /** default = cartão; statusTable = célula da tabela Status das Integrações */
   variant?: "default" | "statusTable";
   title?: string;
   description?: string;
@@ -67,20 +63,20 @@ export function MesasSpinRelatorioUpload({
       setDoneMsg(null);
       setPreview(null);
       setBusy(true);
-      setStage("OCR…");
+      setStage("Preparando imagem…");
       setPct(0);
       try {
         if (!file.type.startsWith("image/")) {
           throw new Error("Envie uma imagem (PNG ou JPEG).");
         }
-        const text = await runMesasSpinOcr(file, (s, p) => {
-          setStage(s === "ocr" ? `OCR… ${p}%` : "Preparando imagem…");
+        const { text, layoutLines } = await runMesasSpinOcrDetailed(file, (s, p) => {
+          setStage(s === "ocr" ? "OCR…" : "Preparando imagem…");
           if (s === "ocr") setPct(p);
         });
         if (!text || text.length < 80) {
-          throw new Error("OCR retornou pouco texto — tente uma imagem mais nítida.");
+          throw new Error("OCR retornou pouco texto — use imagem mais nítida ou maior resolução.");
         }
-        const parsed = parseRelatorioFromOcrText(text, operadoras);
+        const parsed = parseRelatorioFromOcrText(text, layoutLines);
         setPreview(parsed);
         if (
           parsed.daily_summary.length === 0 &&
@@ -88,7 +84,7 @@ export function MesasSpinRelatorioUpload({
           parsed.por_tabela.length === 0
         ) {
           setError(
-            "Não encontrámos as secções “Daily summaries”, “Monthly summaries” ou “Per table”. Confira o texto reconhecido abaixo.",
+            "Não encontrámos Daily summaries, Monthly (UAP/ARPU) ou Per table. Veja o texto OCR abaixo.",
           );
         }
       } catch (e) {
@@ -100,7 +96,7 @@ export function MesasSpinRelatorioUpload({
         setStage("");
       }
     },
-    [disabled, operadoras, onUserMessage],
+    [disabled, onUserMessage],
   );
 
   async function enviarSupabase() {
@@ -119,7 +115,7 @@ export function MesasSpinRelatorioUpload({
     try {
       const { data, error: fnErr } = await supabase.functions.invoke("ingest-relatorio-mesas-ocr", {
         body: {
-          data_relatorio: preview.data_relatorio,
+          data_referencia_por_mesa: preview.data_referencia_por_mesa,
           daily_summary: preview.daily_summary,
           monthly_summary: preview.monthly_summary,
           por_tabela: preview.por_tabela,
@@ -128,25 +124,18 @@ export function MesasSpinRelatorioUpload({
       const res = data as { ok?: boolean; error?: string; inserted?: Record<string, number> } | null;
 
       if (fnErr) {
-        if (res?.error) {
-          throw new Error(res.error);
-        }
+        if (res?.error) throw new Error(res.error);
         const msg = typeof fnErr.message === "string" ? fnErr.message : "Falha ao contactar a Edge Function.";
         if (/non-2xx/i.test(msg)) {
           throw new Error(
-            "A função ingest-relatorio-mesas-ocr não está disponível ou devolveu erro. " +
-              "No Supabase → Edge Functions, confirme que existe uma função com este nome exato e que está publicada. " +
-              "Se acabou de criar, volte a fazer Deploy. Corpo do erro: " +
-              msg,
+            "Função ingest-relatorio-mesas-ocr indisponível ou erro. Publique a função no Supabase. " + msg,
           );
         }
         if (/404|not found/i.test(msg)) {
-          throw new Error(
-            "Edge Function ingest-relatorio-mesas-ocr não encontrada (404). Crie/publique a função no projeto Supabase.",
-          );
+          throw new Error("Edge Function ingest-relatorio-mesas-ocr não encontrada (404).");
         }
         if (/401|unauthorized/i.test(msg)) {
-          throw new Error("Sessão expirada ou não autorizado. Atualize a página e faça login novamente.");
+          throw new Error("Sessão expirada. Atualize a página e faça login novamente.");
         }
         throw new Error(msg);
       }
@@ -204,7 +193,7 @@ export function MesasSpinRelatorioUpload({
           alignItems: "center",
           gap: 8,
           padding: "8px 14px",
-          borderRadius: DEFAULT_BTN_RADIUS,
+          borderRadius: 10,
           border: `1px solid ${t.cardBorder}`,
           cursor: disabled || busy ? "not-allowed" : "pointer",
           opacity: disabled || busy ? 0.6 : 1,
@@ -230,7 +219,7 @@ export function MesasSpinRelatorioUpload({
 
         <label style={btnTableStyle}>
           <Upload size={variant === "statusTable" ? 14 : 16} />
-          <span>{variant === "statusTable" ? "Escolher imagem…" : "Escolher imagem…"}</span>
+          <span>Escolher imagem…</span>
           <input
             type="file"
             accept="image/*"
@@ -247,37 +236,19 @@ export function MesasSpinRelatorioUpload({
         {busy && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 12, color: t.textMuted }}>
             <Loader2 size={14} style={{ animation: "ocrSpin 0.9s linear infinite" }} />
-            {stage || "Processando…"} {pct > 0 && stage.includes("OCR") ? `${pct}%` : ""}
+            {stage === "OCR…" ? `OCR… ${pct}%` : stage || "Processando…"}
           </div>
         )}
 
         {error && (
-          <div
-            style={{
-              marginTop: 12,
-              display: "flex",
-              gap: 8,
-              alignItems: "flex-start",
-              fontSize: 12,
-              color: BRAND_ERR,
-            }}
-          >
+          <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12, color: BRAND_ERR }}>
             <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
             <span>{error}</span>
           </div>
         )}
 
         {doneMsg && (
-          <div
-            style={{
-              marginTop: 12,
-              display: "flex",
-              gap: 8,
-              alignItems: "center",
-              fontSize: 12,
-              color: BRAND_OK,
-            }}
-          >
+          <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center", fontSize: 12, color: BRAND_OK }}>
             <CheckCircle2 size={16} />
             {doneMsg}
           </div>
@@ -287,7 +258,9 @@ export function MesasSpinRelatorioUpload({
           <div style={{ marginTop: 14 }}>
             <div style={{ fontSize: 13, color: t.text, marginBottom: 8 }}>
               Pré-visualização: <strong>{fmtResumo(preview)}</strong>
-              <span style={{ color: t.textMuted, marginLeft: 8 }}>· data_relatorio {preview.data_relatorio}</span>
+              <span style={{ color: t.textMuted, marginLeft: 8 }}>
+                · dia referência (por mesa) {preview.data_referencia_por_mesa}
+              </span>
             </div>
             <button
               type="button"
@@ -331,6 +304,3 @@ export function MesasSpinRelatorioUpload({
     </>
   );
 }
-
-const BRAND_ERR = "#e84025";
-const BRAND_OK = "#22c55e";

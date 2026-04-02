@@ -4,6 +4,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { ChevronLeft, ChevronRight, Clock, Play, Heart, MessageCircle, Bookmark } from "lucide-react";
@@ -50,14 +51,6 @@ function getMesesDisponiveis() {
   return lista;
 }
 
-function getDatasDoMes(ano: number, mes: number) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return {
-    start: `${ano}-${pad(mes + 1)}-01`,
-    end:   `${ano}-${pad(mes + 1)}-${pad(new Date(ano, mes + 1, 0).getDate())}`,
-  };
-}
-
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface KpiDaily {
   channel: string;
@@ -96,6 +89,34 @@ const fmtNum = (n: number | null | undefined) => {
 
 const fmtPct = (n: number | null | undefined) =>
   n != null ? `${(n * 100).toFixed(1)}%` : "—";
+
+function totaisFromKpiRows(kpiData: KpiDaily[]) {
+  const byCh: Record<string, KpiDaily[]> = {};
+  for (const r of kpiData) {
+    if (!byCh[r.channel]) byCh[r.channel] = [];
+    byCh[r.channel].push(r);
+  }
+  const sum = (arr: KpiDaily[], f: keyof KpiDaily) => arr.reduce((a, r) => a + (Number(r[f]) || 0), 0);
+  const last = (arr: KpiDaily[], f: keyof KpiDaily) => {
+    const v = arr[arr.length - 1]?.[f];
+    return v != null ? Number(v) : null;
+  };
+  return {
+    seguidores: Object.values(byCh).reduce((a, arr) => a + (last(arr, "followers") || 0), 0),
+    impressoes: Object.values(byCh).reduce((a, arr) => a + sum(arr, "impressions"), 0),
+    engagements: Object.values(byCh).reduce((a, arr) => a + sum(arr, "engagements"), 0),
+    link_clicks: Object.values(byCh).reduce((a, arr) => a + sum(arr, "link_clicks"), 0),
+    byChannel: byCh,
+  };
+}
+
+function fmtComparativoMoM(atual: number, anterior: number): { pctLabel: string; up: boolean } | null {
+  const diff = atual - anterior;
+  if (anterior === 0 && atual === 0) return null;
+  const pct = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
+  const up = diff >= 0;
+  return { pctLabel: pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—", up };
+}
 
 /** Data/hora da publicação no carrossel (America/Sao_Paulo). */
 function fmtPostPublicacao(publishedAt: string | null | undefined, dataFallback: string): string {
@@ -218,16 +239,14 @@ function SectionTitle({
 function KpiCard({
   label,
   valor,
-  delta,
-  up,
+  momComparativo,
   accentVar,
   accentCor,
   icon,
 }: {
   label: string;
   valor: string;
-  delta?: string | null;
-  up?: boolean;
+  momComparativo?: { pctLabel: string; up: boolean; refLine: string } | null;
   accentVar?: string;
   accentCor: string;
   icon: React.ReactNode;
@@ -269,12 +288,19 @@ function KpiCard({
         <div style={{ fontSize: 22, fontWeight: 800, color: t.text, lineHeight: 1.1, marginBottom: 6, fontFamily: FONT.body }}>
           {valor}
         </div>
-        {delta && (
-          <div style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 5, fontFamily: FONT.body }}>
-            <span style={{ color: up ? BRAND.verde : BRAND.vermelho, fontWeight: 700, fontSize: 11 }}>
-              {up ? "↑" : "↓"} {delta}
-            </span>
-            <span style={{ color: t.textMuted, fontSize: 10, marginLeft: 4 }}>vs anterior</span>
+        {momComparativo && (
+          <div style={{ fontSize: 11, fontFamily: FONT.body, marginTop: 2 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{
+                color: momComparativo.up ? BRAND.verde : BRAND.vermelho,
+                fontWeight: 700,
+                fontSize: 12,
+                lineHeight: 1,
+              }}>
+                {momComparativo.up ? "↑" : "↓"} {momComparativo.pctLabel}
+              </span>
+            </div>
+            <span style={{ color: t.textMuted, fontSize: 10 }}>{momComparativo.refLine}</span>
           </div>
         )}
       </div>
@@ -311,16 +337,32 @@ export default function SocialMediaDashboard() {
     }
   }
 
-  // Datas do período selecionado
-  const { start, end } = useMemo(() => {
+  // Datas do período selecionado (atual + janela do mês anterior alinhada ao MTD)
+  const { start, end, startPrev, endPrev } = useMemo(() => {
     if (historico) {
-      return { start: "2020-01-01", end: hoje.toISOString().slice(0, 10) };
+      return {
+        start: "2020-01-01",
+        end: hoje.toISOString().slice(0, 10),
+        startPrev: null as string | null,
+        endPrev: null as string | null,
+      };
     }
     if (!mesSelecionado) {
-      return { start: "2026-01-01", end: hoje.toISOString().slice(0, 10) };
+      return {
+        start: "2026-01-01",
+        end: hoje.toISOString().slice(0, 10),
+        startPrev: null,
+        endPrev: null,
+      };
     }
-    return getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-  }, [historico, idxMes, mesSelecionado]);
+    const { atual, anterior } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+    return {
+      start: atual.inicio,
+      end: atual.fim,
+      startPrev: anterior.inicio,
+      endPrev: anterior.fim,
+    };
+  }, [historico, mesSelecionado]);
 
   const label = historico ? "Todo o período" : (mesSelecionado?.label ?? "");
 
@@ -328,6 +370,7 @@ export default function SocialMediaDashboard() {
   const [carIdx,   setCarIdx]   = useState(0);
   const [loading,  setLoading]  = useState(true);
   const [kpiData,  setKpiData]  = useState<KpiDaily[]>([]);
+  const [kpiAntRows, setKpiAntRows] = useState<KpiDaily[]>([]);
   const [posts,    setPosts]    = useState<PostUnificado[]>([]);
   const [formatos, setFormatos] = useState<{ tipo: string; total: number }[]>([]);
   const [funilTotais, setFunilTotais] = useState<{
@@ -367,6 +410,23 @@ export default function SocialMediaDashboard() {
 
       if (cancelled) return;
       setKpiData(kpi);
+
+      if (startPrev && endPrev) {
+        const kpiPrev = await fetchAllPages<KpiDaily>(async (from, to) =>
+          supabase
+            .from("kpi_daily")
+            .select("*")
+            .gte("date", startPrev)
+            .lte("date", endPrev)
+            .order("date", { ascending: true })
+            .order("channel", { ascending: true })
+            .range(from, to)
+        );
+        if (cancelled) return;
+        setKpiAntRows(kpiPrev);
+      } else {
+        setKpiAntRows([]);
+      }
 
       const [igRes, fbRes, ytRes] = await Promise.all([
         supabase.from("instagram_posts")
@@ -472,30 +532,27 @@ export default function SocialMediaDashboard() {
     }
     load();
     return () => { cancelled = true; };
-  }, [start, end]);
+  }, [start, end, startPrev, endPrev]);
 
   // ── Totais agregados ──────────────────────────────────────────────────────────
-  const totais = useMemo(() => {
-    const byCh: Record<string, KpiDaily[]> = {};
-    for (const r of kpiData) {
-      if (!byCh[r.channel]) byCh[r.channel] = [];
-      byCh[r.channel].push(r);
-    }
-    const sum  = (arr: KpiDaily[], f: keyof KpiDaily) => arr.reduce((a, r) => a + (Number(r[f]) || 0), 0);
-    const last = (arr: KpiDaily[], f: keyof KpiDaily) => { const v = arr[arr.length - 1]?.[f]; return v != null ? Number(v) : null; };
-    return {
-      seguidores:   Object.values(byCh).reduce((a, arr) => a + (last(arr, "followers") || 0), 0),
-      impressoes:   Object.values(byCh).reduce((a, arr) => a + sum(arr, "impressions"), 0),
-      engagements:  Object.values(byCh).reduce((a, arr) => a + sum(arr, "engagements"), 0),
-      link_clicks:  Object.values(byCh).reduce((a, arr) => a + sum(arr, "link_clicks"), 0),
-      byChannel: byCh,
-    };
-  }, [kpiData]);
+  const totais = useMemo(() => totaisFromKpiRows(kpiData), [kpiData]);
+  const totaisAntMom = useMemo(() => totaisFromKpiRows(kpiAntRows), [kpiAntRows]);
 
   const totalImpr = totais.impressoes || 1;
   const engMedio  = totalImpr > 0 && totais.engagements != null
     ? (totais.engagements / totalImpr) * 100
     : null;
+
+  const totalImprAnt = totaisAntMom.impressoes || 1;
+  const engMedioAnt =
+    !historico && totalImprAnt > 0 && totaisAntMom.engagements != null
+      ? (totaisAntMom.engagements / totalImprAnt) * 100
+      : null;
+
+  const cmpSeguidores = !historico ? fmtComparativoMoM(totais.seguidores, totaisAntMom.seguidores) : null;
+  const cmpImpressoes = !historico ? fmtComparativoMoM(totais.impressoes, totaisAntMom.impressoes) : null;
+  const cmpEngMedio =
+    !historico && engMedio != null && engMedioAnt != null ? fmtComparativoMoM(engMedio, engMedioAnt) : null;
 
   const lastVal = (arr: KpiDaily[], f: keyof KpiDaily): number | null => {
     const v = arr[arr.length - 1]?.[f]; return v != null ? Number(v) : null;
@@ -660,9 +717,54 @@ export default function SocialMediaDashboard() {
               KPIs de Mídias Sociais
             </SectionTitle>
             <div className="app-grid-kpi-3">
-              <KpiCard label="Seguidores totais" valor={fmtNum(totais.seguidores)}  accentVar="--brand-extra1" accentCor={BRAND.roxo}  icon={<GiMicrophone size={15} />} />
-              <KpiCard label="Impressões totais" valor={fmtNum(totais.impressoes)}  accentVar="--brand-extra2" accentCor={BRAND.azul}  icon={<GiStarMedal size={15} />} />
-              <KpiCard label="Engajamento médio" valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"} accentVar="--brand-extra3" accentCor={BRAND.ciano} icon={<GiPokerHand size={15} />} />
+              <KpiCard
+                label="Seguidores totais"
+                valor={fmtNum(totais.seguidores)}
+                accentVar="--brand-extra1"
+                accentCor={BRAND.roxo}
+                icon={<GiMicrophone size={15} />}
+                momComparativo={
+                  cmpSeguidores
+                    ? {
+                        pctLabel: cmpSeguidores.pctLabel,
+                        up: cmpSeguidores.up,
+                        refLine: `vs ${fmtNum(totaisAntMom.seguidores)} mês ant.`,
+                      }
+                    : null
+                }
+              />
+              <KpiCard
+                label="Impressões totais"
+                valor={fmtNum(totais.impressoes)}
+                accentVar="--brand-extra2"
+                accentCor={BRAND.azul}
+                icon={<GiStarMedal size={15} />}
+                momComparativo={
+                  cmpImpressoes
+                    ? {
+                        pctLabel: cmpImpressoes.pctLabel,
+                        up: cmpImpressoes.up,
+                        refLine: `vs ${fmtNum(totaisAntMom.impressoes)} mês ant.`,
+                      }
+                    : null
+                }
+              />
+              <KpiCard
+                label="Engajamento médio"
+                valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"}
+                accentVar="--brand-extra3"
+                accentCor={BRAND.ciano}
+                icon={<GiPokerHand size={15} />}
+                momComparativo={
+                  cmpEngMedio && engMedioAnt != null
+                    ? {
+                        pctLabel: cmpEngMedio.pctLabel,
+                        up: cmpEngMedio.up,
+                        refLine: `vs ${engMedioAnt.toFixed(1)}% mês ant.`,
+                      }
+                    : null
+                }
+              />
             </div>
           </div>
 

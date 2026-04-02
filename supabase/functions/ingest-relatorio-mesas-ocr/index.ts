@@ -1,6 +1,5 @@
-// Edge Function: ingest-relatorio-mesas-ocr
-// Recebe JSON parseado no cliente (OCR) e faz upsert nas tabelas relatorio_* com service_role.
-// Auth: JWT obrigatório + admin OU role_permissions(mesas_spin can_view sim|proprios).
+// Edge Function: ingest-relatorio-mesas-ocr — JSON pós-OCR → relatorio_* v2
+// Auth: JWT + admin OU permissão status_tecnico/mesas_spin can_editar
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -17,57 +16,39 @@ function corsHeaders(req: Request) {
 
 interface DailyRow {
   data: string;
-  operadora: string | null;
   turnover: number | null;
   ggr: number | null;
-  margin_pct: number | null;
-  bets: number | null;
+  apostas: number | null;
   uap: number | null;
-  bet_size: number | null;
-  arpu: number | null;
 }
 
 interface MonthlyRow {
   mes: string;
-  operadora: string | null;
-  turnover: number | null;
-  ggr: number | null;
-  margin_pct: number | null;
-  bets: number | null;
   uap: number | null;
-  bet_size: number | null;
   arpu: number | null;
 }
 
-interface PorTabelaRow {
-  data_relatorio: string;
-  nome_tabela: string;
-  operadora: string | null;
-  ggr_d1: number | null;
-  turnover_d1: number | null;
-  bets_d1: number | null;
-  ggr_d2: number | null;
-  turnover_d2: number | null;
-  bets_d2: number | null;
-  ggr_mtd: number | null;
-  turnover_mtd: number | null;
-  bets_mtd: number | null;
+interface PorRow {
+  dia: string;
+  operadora: string;
+  mesa: string;
+  ggr: number | null;
+  turnover: number | null;
+  apostas: number | null;
 }
 
 interface Body {
-  data_relatorio?: string;
+  data_referencia_por_mesa?: string;
   daily_summary?: DailyRow[];
   monthly_summary?: MonthlyRow[];
-  por_tabela?: PorTabelaRow[];
+  por_tabela?: PorRow[];
 }
 
 function isIsoDate(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
-function podeEditar(
-  v: string | null | undefined,
-): boolean {
+function podeEditar(v: string | null | undefined): boolean {
   return v === "sim" || v === "proprios";
 }
 
@@ -75,33 +56,25 @@ async function canIngest(
   supabaseSr: ReturnType<typeof createClient>,
   userId: string,
 ): Promise<boolean> {
-  const { data: prof, error: pe } = await supabaseSr
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
+  const { data: prof, error: pe } = await supabaseSr.from("profiles").select("role").eq("id", userId).maybeSingle();
   if (pe || !prof?.role) return false;
-  const { data: rpStatus } = await supabaseSr
-    .from("role_permissions")
-    .select("can_editar")
-    .eq("role", prof.role)
-    .eq("page_key", "status_tecnico")
-    .maybeSingle();
-  if (podeEditar(rpStatus?.can_editar)) return true;
-  const { data: rpMesas } = await supabaseSr
-    .from("role_permissions")
-    .select("can_editar")
-    .eq("role", prof.role)
-    .eq("page_key", "mesas_spin")
-    .maybeSingle();
-  return podeEditar(rpMesas?.can_editar);
+  for (const page of ["status_tecnico", "mesas_spin"] as const) {
+    const { data: rp } = await supabaseSr
+      .from("role_permissions")
+      .select("can_editar")
+      .eq("role", prof.role)
+      .eq("page_key", page)
+      .maybeSingle();
+    if (podeEditar(rp?.can_editar)) return true;
+  }
+  return false;
 }
+
+const INTEGRACAO_SLUG = "upload_pls_daily_commercial";
 
 serve(async (req) => {
   const cors = corsHeaders(req);
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: cors });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ ok: false, error: "Método não permitido" }), {
       status: 405,
@@ -112,9 +85,8 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
-    return new Response(JSON.stringify({ ok: false, error: "Configuração do servidor incompleta" }), {
+    return new Response(JSON.stringify({ ok: false, error: "Configuração incompleta" }), {
       status: 500,
       headers: { ...cors, "Content-Type": "application/json" },
     });
@@ -122,7 +94,7 @@ serve(async (req) => {
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ ok: false, error: "Token de autorização ausente" }), {
+    return new Response(JSON.stringify({ ok: false, error: "Token ausente" }), {
       status: 401,
       headers: { ...cors, "Content-Type": "application/json" },
     });
@@ -134,7 +106,7 @@ serve(async (req) => {
   });
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) {
-    return new Response(JSON.stringify({ ok: false, error: "Sessão inválida ou expirada" }), {
+    return new Response(JSON.stringify({ ok: false, error: "Sessão inválida" }), {
       status: 401,
       headers: { ...cors, "Content-Type": "application/json" },
     });
@@ -142,7 +114,7 @@ serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
   if (!(await canIngest(supabase, user.id))) {
-    return new Response(JSON.stringify({ ok: false, error: "Sem permissão para importar Mesas Spin" }), {
+    return new Response(JSON.stringify({ ok: false, error: "Sem permissão" }), {
       status: 403,
       headers: { ...cors, "Content-Type": "application/json" },
     });
@@ -161,9 +133,8 @@ serve(async (req) => {
   const daily = Array.isArray(body.daily_summary) ? body.daily_summary : [];
   const monthly = Array.isArray(body.monthly_summary) ? body.monthly_summary : [];
   const porTabela = Array.isArray(body.por_tabela) ? body.por_tabela : [];
-
   if (daily.length + monthly.length + porTabela.length === 0) {
-    return new Response(JSON.stringify({ ok: false, error: "Nenhum dado para importar" }), {
+    return new Response(JSON.stringify({ ok: false, error: "Nenhum dado" }), {
       status: 400,
       headers: { ...cors, "Content-Type": "application/json" },
     });
@@ -186,132 +157,97 @@ serve(async (req) => {
     }
   }
   for (const r of porTabela) {
-    if (!isIsoDate(r.data_relatorio)) {
-      return new Response(JSON.stringify({ ok: false, error: `data_relatorio inválida: ${r.data_relatorio}` }), {
+    if (!isIsoDate(r.dia)) {
+      return new Response(JSON.stringify({ ok: false, error: `Dia por mesa inválido: ${r.dia}` }), {
         status: 400,
         headers: { ...cors, "Content-Type": "application/json" },
       });
     }
-    if (!r.nome_tabela || r.nome_tabela.length > 500) {
-      return new Response(JSON.stringify({ ok: false, error: "nome_tabela inválido" }), {
+    if (!r.operadora?.trim() || !r.mesa?.trim()) {
+      return new Response(JSON.stringify({ ok: false, error: "operadora/mesa obrigatórios" }), {
         status: 400,
         headers: { ...cors, "Content-Type": "application/json" },
       });
     }
   }
 
-  const INTEGRACAO_SLUG = "upload_pls_daily_commercial";
   const t0 = Date.now();
-
   try {
+    let nDaily = 0;
+    let nMonthly = 0;
+    let nPor = 0;
+
     if (daily.length > 0) {
-      const datas = [...new Set(daily.map((r) => r.data))];
-      for (const d of datas) {
-        const { error: delErr } = await supabase
-          .from("relatorio_daily_summary")
-          .delete()
-          .eq("data", d)
-          .is("operadora", null);
-        if (delErr) throw delErr;
-      }
-      const ins = daily.map((r) => ({
-        data: r.data,
-        operadora: r.operadora,
-        turnover: r.turnover,
-        ggr: r.ggr,
-        margin_pct: r.margin_pct,
-        bets: r.bets,
-        uap: r.uap,
-        bet_size: r.bet_size,
-        arpu: r.arpu,
-      }));
-      const { error: dErr } = await supabase.from("relatorio_daily_summary").insert(ins);
-      if (dErr) throw dErr;
+      const { error } = await supabase.from("relatorio_daily_summary").upsert(
+        daily.map((r) => ({
+          data: r.data,
+          turnover: r.turnover,
+          ggr: r.ggr,
+          apostas: r.apostas,
+          uap: r.uap,
+        })),
+        { onConflict: "data" },
+      );
+      if (error) throw error;
+      nDaily = daily.length;
     }
 
     if (monthly.length > 0) {
-      const meses = [...new Set(monthly.map((r) => r.mes))];
-      for (const m of meses) {
-        const { error: delErr } = await supabase
-          .from("relatorio_monthly_summary")
-          .delete()
-          .eq("mes", m)
-          .is("operadora", null);
-        if (delErr) throw delErr;
-      }
-      const ins = monthly.map((r) => ({
-        mes: r.mes,
-        operadora: r.operadora,
-        turnover: r.turnover,
-        ggr: r.ggr,
-        margin_pct: r.margin_pct,
-        bets: r.bets,
-        uap: r.uap,
-        bet_size: r.bet_size,
-        arpu: r.arpu,
-      }));
-      const { error: mErr } = await supabase.from("relatorio_monthly_summary").insert(ins);
-      if (mErr) throw mErr;
+      const { error } = await supabase.from("relatorio_monthly_summary").upsert(
+        monthly.map((r) => ({
+          mes: r.mes,
+          uap: r.uap,
+          arpu: r.arpu,
+        })),
+        { onConflict: "mes" },
+      );
+      if (error) throw error;
+      nMonthly = monthly.length;
     }
 
     if (porTabela.length > 0) {
-      const { error: pErr } = await supabase.from("relatorio_por_tabela").upsert(
+      const { error } = await supabase.from("relatorio_por_tabela").upsert(
         porTabela.map((r) => ({
-          data_relatorio: r.data_relatorio,
-          nome_tabela: r.nome_tabela,
+          dia: r.dia,
           operadora: r.operadora,
-          ggr_d1: r.ggr_d1,
-          turnover_d1: r.turnover_d1,
-          bets_d1: r.bets_d1,
-          ggr_d2: r.ggr_d2,
-          turnover_d2: r.turnover_d2,
-          bets_d2: r.bets_d2,
-          ggr_mtd: r.ggr_mtd,
-          turnover_mtd: r.turnover_mtd,
-          bets_mtd: r.bets_mtd,
+          mesa: r.mesa,
+          ggr: r.ggr,
+          turnover: r.turnover,
+          apostas: r.apostas,
         })),
-        { onConflict: "data_relatorio,nome_tabela" },
+        { onConflict: "dia,operadora,mesa" },
       );
-      if (pErr) throw pErr;
+      if (error) throw error;
+      nPor = porTabela.length;
     }
 
-    const regsIn = daily.length + monthly.length + porTabela.length;
     const dur = Date.now() - t0;
-    try {
-      await supabase.from("sync_logs").insert({
-        integracao_slug: INTEGRACAO_SLUG,
-        status: "ok",
-        registros_inseridos: regsIn,
-        registros_atualizados: porTabela.length,
-        erros_count: 0,
-        mensagem_erro: null,
-        duracao_ms: dur,
-        periodo_inicio: null,
-        periodo_fim: null,
-      });
-    } catch (logErr) {
-      console.error("[ingest-relatorio-mesas-ocr] sync_logs ok:", logErr);
-    }
+    await supabase.from("sync_logs").insert({
+      integracao_slug: INTEGRACAO_SLUG,
+      status: "ok",
+      registros_inseridos: nDaily + nMonthly + nPor,
+      registros_atualizados: 0,
+      erros_count: 0,
+      mensagem_erro: null,
+      duracao_ms: dur,
+      periodo_inicio: null,
+      periodo_fim: null,
+    });
 
     return new Response(
       JSON.stringify({
         ok: true,
-        inserted: {
-          daily: daily.length,
-          monthly: monthly.length,
-          por_tabela: porTabela.length,
-        },
+        inserted: { daily: nDaily, monthly: nMonthly, por_tabela: nPor },
       }),
       { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    const dur = Date.now() - t0;
     try {
       await supabase.from("tech_logs").insert({
         integracao_slug: INTEGRACAO_SLUG,
         tipo: INTEGRACAO_SLUG,
-        descricao: `Erro no upload (OCR → relatorio_*): ${msg}`.slice(0, 2000),
+        descricao: `Erro ingest v2: ${msg}`.slice(0, 2000),
       });
       await supabase.from("sync_logs").insert({
         integracao_slug: INTEGRACAO_SLUG,
@@ -320,12 +256,12 @@ serve(async (req) => {
         registros_atualizados: 0,
         erros_count: 1,
         mensagem_erro: msg.slice(0, 500),
-        duracao_ms: dur,
+        duracao_ms: Date.now() - t0,
         periodo_inicio: null,
         periodo_fim: null,
       });
-    } catch (logErr) {
-      console.error("[ingest-relatorio-mesas-ocr] log falha:", logErr);
+    } catch {
+      /* empty */
     }
     return new Response(JSON.stringify({ ok: false, error: msg }), {
       status: 500,

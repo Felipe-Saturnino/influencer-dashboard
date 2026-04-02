@@ -51,6 +51,8 @@ Sem domínio verificado, use `onboarding@resend.dev` (limitado a testes).
 
 † Para o e-mail apenas com **Agenda do dia**. Deploy: `supabase functions deploy email-agenda-diaria`.
 
+**Automático:** após fazer merge na branch padrão, o workflow `.github/workflows/email-agenda-diaria.yml` dispara diariamente (mesmo horário aproximado do relatório da diretoria: 9h UTC). É possível rodar à mão em **Actions → E-mail Agenda Diária → Run workflow**. Sem esse ficheiro no remoto, o envio da agenda é só manual (botão no Status Técnico).
+
 ---
 
 ## 5. Deploy
