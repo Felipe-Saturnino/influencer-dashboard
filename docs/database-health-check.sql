@@ -25,7 +25,15 @@ WITH tabelas_esperadas AS (
     'profiles', 'influencer_perfil', 'influencer_operadoras', 'operadoras',
     'lives', 'live_resultados', 'influencer_metricas', 'ciclos_pagamento',
     'pagamentos', 'pagamentos_agentes', 'user_scopes', 'role_permissions',
-    'utm_aliases', 'scout_influencer', 'scout_anotacoes'
+    'utm_aliases', 'utm_metricas_diarias', 'scout_influencer', 'scout_anotacoes',
+    'campanhas', 'gestor_tipo_pages', 'operadora_pages',
+    'dealers', 'dealer_observacoes', 'guia_confirmacoes',
+    'roteiro_mesa_campanhas', 'roteiro_mesa_sugestoes', 'banca_jogo_solicitacoes',
+    'integrations', 'sync_logs', 'tech_logs', 'pipeline_runs', 'email_envios',
+    'relatorio_daily_summary', 'relatorio_monthly_summary', 'relatorio_por_tabela',
+    'relatorio_uap_por_jogo',
+    'kpi_daily', 'instagram_posts', 'facebook_posts', 'youtube_videos', 'linkedin_posts',
+    'alert_config'
   ]) AS nome
 )
 SELECT 
@@ -61,8 +69,18 @@ SELECT
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public'
-  AND p.proname IN ('get_metricas_financeiro')
-ORDER BY p.proname;
+  AND p.proname IN (
+    'get_metricas_financeiro',
+    'aplicar_mapeamento_utm',
+    'aprovar_pagamento',
+    'registrar_pagamento',
+    'get_campanha_funil_totais',
+    'get_campanhas_performance',
+    'get_investimento_pago',
+    'obter_utm_cda_emitido_para_influencer',
+    'registrar_utm_alias_tracking_casa_apostas'
+  )
+ORDER BY p.proname, pg_get_function_arguments(p.oid);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. RLS (Row Level Security) — tabelas com e sem RLS
@@ -175,3 +193,33 @@ BEGIN
     RAISE NOTICE 'scout_anotacoes: % registros', (SELECT COUNT(*) FROM scout_anotacoes);
   END IF;
 END $$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 9. FUNÇÕES SECURITY DEFINER (auditoria — ver docs/SUPABASE-CHECKLIST-NAO-TECNICO.md)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT
+  p.proname AS funcao,
+  pg_get_function_identity_arguments(p.oid) AS argumentos,
+  p.proconfig AS config_funcao
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.prokind = 'f'
+  AND p.prosecdef = true
+ORDER BY p.proname;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 10. POLÍTICAS RLS que citam get_my_role ou is_admin
+-- ─────────────────────────────────────────────────────────────────────────────
+
+SELECT tablename, policyname
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND (
+    coalesce(qual::text, '') ILIKE '%get_my_role%'
+    OR coalesce(with_check::text, '') ILIKE '%get_my_role%'
+    OR coalesce(qual::text, '') ILIKE '%is_admin%'
+    OR coalesce(with_check::text, '') ILIKE '%is_admin%'
+  )
+ORDER BY tablename, policyname;
