@@ -16,7 +16,7 @@ import {
   fmtDia,
   getMesesDisponiveis,
   getDatasDoMes,
-  getDatasDoMesMtd,
+  getPeriodoComparativoMoM,
 } from "../../../lib/dashboardHelpers";
 import {
   SectionTitle,
@@ -225,9 +225,13 @@ export default function DashboardOverviewInfluencer() {
       });
       setOperadoraInfMap(map);
 
+      const mom =
+        !historico && mesSelecionado
+          ? getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes)
+          : null;
       const { inicio, fim } = historico
         ? { inicio: "2020-01-01", fim: fmt(new Date()) }
-        : getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
+        : mom!.atual;
 
       const infIdsFiltro = influencersVisiveis.length === 0 ? [] : influencersVisiveis;
       const infIds = filtroInfluencer !== "todos"
@@ -347,8 +351,8 @@ export default function DashboardOverviewInfluencer() {
 
       setTotais(calcTotais(rows, liveRows, resultados, investTotal));
 
-      if (!historico && mesSelecionado) {
-        const { inicio: iA, fim: fA } = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
+      if (mom) {
+        const { inicio: iA, fim: fA } = mom.anterior;
         const [investAnt, mA, lA] = await Promise.all([
           buscarInvestimentoPago(
             { inicio: iA, fim: fA },

@@ -51,20 +51,52 @@ export function getDatasDoMes(ano: number, mes: number): { inicio: string; fim: 
   };
 }
 
-export function getDatasDoMesMtd(ano: number, mes: number): { inicio: string; fim: string } {
-  let anoAnt = ano;
-  let mesAnt = mes - 1;
+export type PeriodoDashboardMoM = { inicio: string; fim: string };
+
+/**
+ * Período principal do carrossel e período de comparação (mês civil anterior alinhado).
+ * - Mês civil atual: atual = 1..hoje; anterior = 1..mesmo dia no mês anterior (cap no último dia).
+ * - Mês fechado: atual = mês inteiro; anterior = mês civil anterior inteiro.
+ */
+export function getPeriodoComparativoMoM(
+  anoSel: number,
+  mesSel: number,
+): { atual: PeriodoDashboardMoM; anterior: PeriodoDashboardMoM } {
+  const hoje = new Date();
+  const isMesCivilAtual = anoSel === hoje.getFullYear() && mesSel === hoje.getMonth();
+
+  let anoAnt = anoSel;
+  let mesAnt = mesSel - 1;
   if (mesAnt < 0) {
     mesAnt = 11;
     anoAnt--;
   }
-  const hoje = new Date();
-  const ultimoDia = new Date(anoAnt, mesAnt + 1, 0).getDate();
-  const dia = Math.min(hoje.getDate(), ultimoDia);
+
+  if (isMesCivilAtual) {
+    const diaHoje = hoje.getDate();
+    const ultimoDiaAnt = new Date(anoAnt, mesAnt + 1, 0).getDate();
+    const diaFimAnt = Math.min(diaHoje, ultimoDiaAnt);
+    return {
+      atual: {
+        inicio: fmtDate(new Date(anoSel, mesSel, 1)),
+        fim: fmtDate(new Date(anoSel, mesSel, diaHoje)),
+      },
+      anterior: {
+        inicio: fmtDate(new Date(anoAnt, mesAnt, 1)),
+        fim: fmtDate(new Date(anoAnt, mesAnt, diaFimAnt)),
+      },
+    };
+  }
+
   return {
-    inicio: fmtDate(new Date(anoAnt, mesAnt, 1)),
-    fim: fmtDate(new Date(anoAnt, mesAnt, dia)),
+    atual: getDatasDoMes(anoSel, mesSel),
+    anterior: getDatasDoMes(anoAnt, mesAnt),
   };
+}
+
+/** Janela do mês anterior alinhada ao MTD/mês completo de `getPeriodoComparativoMoM` (só o objeto `anterior`). */
+export function getDatasDoMesMtd(ano: number, mes: number): { inicio: string; fim: string } {
+  return getPeriodoComparativoMoM(ano, mes).anterior;
 }
 
 export function getStatusROI(

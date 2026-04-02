@@ -13,8 +13,7 @@ import {
   fmtBRL,
   fmtHorasTotal,
   getMesesDisponiveis,
-  getDatasDoMes,
-  getDatasDoMesMtd,
+  getPeriodoComparativoMoM,
   getStatusROI,
 } from "../../../lib/dashboardHelpers";
 import {
@@ -303,6 +302,7 @@ export default function DashboardOverview() {
 
       let metricas: Metrica[] = [], lives: LiveData[] = [], resultados: LiveResultado[] = [];
       let periodo: { inicio: string; fim: string };
+      let mom: ReturnType<typeof getPeriodoComparativoMoM> | null = null;
       if (historico) {
         periodo = { inicio: "2020-01-01", fim: fmt(new Date()) };
         const mRaw = await fetchMetricasHistoricoPaginado(filtroOperadora, operadoraSlugsForcado);
@@ -316,7 +316,8 @@ export default function DashboardOverview() {
         lives = await fetchLivesHistoricoPaginado(operadoraSlugsForcado);
         resultados = await buscaResultados(lives);
       } else {
-        periodo = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
+        mom = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+        periodo = mom.atual;
         metricas   = await buscaMetricas(periodo.inicio, periodo.fim, false);
         lives      = await buscaLives(periodo.inicio, periodo.fim);
         resultados = await buscaResultados(lives);
@@ -330,8 +331,8 @@ export default function DashboardOverview() {
       setRanking(rowsVisiveis);
       setTotais(calculaTotais(rowsVisiveis, investimentoPago.total));
 
-      if (!historico && mesSelecionado) {
-        const periodoAnt = getDatasDoMesMtd(mesSelecionado.ano, mesSelecionado.mes);
+      if (mom) {
+        const periodoAnt = mom.anterior;
         const [investAnt, mA, lA] = await Promise.all([
           buscarInvestimentoPago(periodoAnt, {
             operadora_slug: operadoraSlugParaApi,

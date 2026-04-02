@@ -7,6 +7,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
 import KpiCard from "../../../components/dashboard/KpiCard";
 import {
@@ -25,6 +26,16 @@ import {
   Coins,
 } from "lucide-react";
 import { GiCalendar, GiConvergenceTarget, GiDiceSixFacesFour, GiShield } from "react-icons/gi";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 /** ─── Schema v2 (relatorio_* após migração 20260420100000): daily sem operadora; monthly só UAP+ARPU; por_tabela com dia + operadora/mesa texto. */
 
@@ -81,6 +92,8 @@ type LinhaDetalheTab = Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & {
   bet_size: number | null;
   arpu: number | null;
 };
+
+type UapPorJogoPlanRow = { data: string; jogo: string; uap: number };
 
 interface PorTabelaRow {
   data_relatorio: string;
@@ -884,6 +897,8 @@ export default function MesasSpin() {
   const [idxMes, setIdxMes] = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
   const [historico, setHistorico] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uapPorJogoRows, setUapPorJogoRows] = useState<UapPorJogoPlanRow[]>([]);
+  const [uapPorJogoLoading, setUapPorJogoLoading] = useState(true);
 
   const [dailyData, setDailyData] = useState<DailyRow[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
@@ -922,6 +937,46 @@ export default function MesasSpin() {
       setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
     } else setHistorico(true);
   }
+
+  useEffect(() => {
+    let alive = true;
+    async function loadUapPorJogo() {
+      setUapPorJogoLoading(true);
+      try {
+        const raw = await fetchAllPages<{ data: string; jogo: string; uap: number }>(
+          async (from, to) => {
+            let q = supabase
+              .from("relatorio_uap_por_jogo")
+              .select("data, jogo, uap")
+              .order("data", { ascending: true })
+              .order("jogo", { ascending: true })
+              .range(from, to);
+            if (!historico && mesSelecionado) {
+              const { inicio, fim } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
+              q = q.gte("data", inicio).lte("data", fim);
+            }
+            return q;
+          },
+        );
+        if (!alive) return;
+        setUapPorJogoRows(
+          raw.map((r) => ({
+            data: String(r.data).slice(0, 10),
+            jogo: r.jogo,
+            uap: Number(r.uap),
+          })),
+        );
+      } catch {
+        if (alive) setUapPorJogoRows([]);
+      } finally {
+        if (alive) setUapPorJogoLoading(false);
+      }
+    }
+    void loadUapPorJogo();
+    return () => {
+      alive = false;
+    };
+  }, [historico, mesSelecionado]);
 
   useEffect(() => {
     let alive = true;
@@ -973,7 +1028,8 @@ export default function MesasSpin() {
         setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         setPorTabelaHistAll((porAllRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
       } else if (mesSelecionado) {
-        const { inicio, fim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
+        const { atual, anterior } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+        const { inicio, fim } = atual;
         const dailyRaw = await fetchAllPages(async (from, to) =>
           supabase
             .from("relatorio_daily_summary")
@@ -1000,36 +1056,30 @@ export default function MesasSpin() {
             : null,
         );
 
-        if (idxMes > 0) {
-          const prev = mesesDisponiveis[idxMes - 1]!;
-          const { inicio: pi, fim: pf } = getDatasDoMes(prev.ano, prev.mes);
-          const dailyPrevRaw = await fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, uap")
-              .gte("data", pi)
-              .lte("data", pf)
-              .order("data", { ascending: true })
-              .range(from, to),
-          );
-          setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
-          const { data: mPrev } = await supabase
-            .from("relatorio_monthly_summary")
-            .select("uap, arpu")
-            .eq("mes", pi)
-            .maybeSingle();
-          setMonthlyUapArpuPrev(
-            mPrev
-              ? {
-                  uap: mPrev.uap != null ? Number(mPrev.uap) : null,
-                  arpu: mPrev.arpu != null ? Number(mPrev.arpu) : null,
-                }
-              : null,
-          );
-        } else {
-          setDailyDataPrevMonth([]);
-          setMonthlyUapArpuPrev(null);
-        }
+        const { inicio: pi, fim: pf } = anterior;
+        const dailyPrevRaw = await fetchAllPages(async (from, to) =>
+          supabase
+            .from("relatorio_daily_summary")
+            .select("data, turnover, ggr, apostas, uap")
+            .gte("data", pi)
+            .lte("data", pf)
+            .order("data", { ascending: true })
+            .range(from, to),
+        );
+        setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
+        const { data: mPrev } = await supabase
+          .from("relatorio_monthly_summary")
+          .select("uap, arpu")
+          .eq("mes", pi)
+          .maybeSingle();
+        setMonthlyUapArpuPrev(
+          mPrev
+            ? {
+                uap: mPrev.uap != null ? Number(mPrev.uap) : null,
+                arpu: mPrev.arpu != null ? Number(mPrev.arpu) : null,
+              }
+            : null,
+        );
 
         const mesasMesRaw = await fetchAllPages(async (from, to) =>
           supabase
@@ -1047,7 +1097,7 @@ export default function MesasSpin() {
     } finally {
       setLoading(false);
     }
-  }, [historico, mesSelecionado, idxMes, mesesDisponiveis]);
+  }, [historico, mesSelecionado]);
 
   useEffect(() => {
     void carregar();
@@ -1152,13 +1202,37 @@ export default function MesasSpin() {
     const base =
       historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
     if (!base) return null;
-    if (historico || idxMes === 0) return base;
+    if (historico) return base;
     return {
       ...base,
-      uap: monthlyUapArpuPrev?.uap ?? null,
-      arpu: monthlyUapArpuPrev?.arpu ?? null,
+      uap: monthlyUapArpuPrev?.uap ?? base.uap,
+      arpu: monthlyUapArpuPrev?.arpu ?? base.arpu,
     };
-  }, [historico, idxMes, dailyDataPrevMonth, monthlyUapArpuPrev]);
+  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev]);
+
+  /** Série diária por jogo (tabela relatorio_uap_por_jogo) para o gráfico. */
+  const uapJogoChartData = useMemo(() => {
+    const byDate = new Map<string, { Blackjack?: number; Roleta?: number; speedBaccarat?: number }>();
+    for (const r of uapPorJogoRows) {
+      if (!byDate.has(r.data)) byDate.set(r.data, {});
+      const o = byDate.get(r.data)!;
+      if (r.jogo === "Blackjack") o.Blackjack = r.uap;
+      else if (r.jogo === "Roleta") o.Roleta = r.uap;
+      else if (r.jogo === "Speed Baccarat") o.speedBaccarat = r.uap;
+    }
+    return [...byDate.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([dataIso, v]) => ({
+        dataIso,
+        label: new Date(dataIso + "T12:00:00").toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+        }),
+        Blackjack: v.Blackjack,
+        Roleta: v.Roleta,
+        speedBaccarat: v.speedBaccarat,
+      }));
+  }, [uapPorJogoRows]);
 
   const operadorasListFmt = operadorasOcr;
 
@@ -1310,7 +1384,7 @@ export default function MesasSpin() {
     });
   }, [mesasOpcoesBlackjack, compMesaA]);
 
-  const isHistoricoKpi = historico || idxMes === 0 || dailyDataPrevMonth.length === 0;
+  const isHistoricoKpi = historico || dailyDataPrevMonth.length === 0;
 
   const brand = useDashboardBrand();
 
@@ -1819,6 +1893,88 @@ export default function MesasSpin() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      <div style={{ ...card, marginBottom: 14 }}>
+        <SectionHeader
+          icon={<TrendingUp size={15} />}
+          title="UAP por Jogo"
+          sub={
+            historico
+              ? "Blackjack, Roleta e Speed Baccarat · série completa (Supabase)"
+              : `${mesSelecionado?.label ?? ""} · dia a dia (Supabase)`
+          }
+        />
+        {uapPorJogoLoading ? (
+          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
+            <Clock size={16} style={{ marginBottom: 8 }} />
+            <div>Carregando UAP por jogo…</div>
+          </div>
+        ) : uapJogoChartData.length === 0 ? (
+          <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+            Nenhum dado em relatorio_uap_por_jogo para este período. Inserir linhas via SQL (ver scripts no repositório).
+          </div>
+        ) : (
+          <div style={{ width: "100%", height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={uapJogoChartData} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.6} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: t.textMuted }} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 10, fill: t.textMuted }} width={36} />
+                <Tooltip
+                  contentStyle={{
+                    background: t.cardBg,
+                    border: `1px solid ${t.cardBorder}`,
+                    borderRadius: 10,
+                    fontSize: 12,
+                    color: t.text,
+                  }}
+                  labelFormatter={(_, payload) => {
+                    const p = payload?.[0]?.payload as { dataIso?: string } | undefined;
+                    return p?.dataIso
+                      ? new Date(p.dataIso + "T12:00:00").toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "";
+                  }}
+                  formatter={(value: number | string) =>
+                    [typeof value === "number" ? value.toLocaleString("pt-BR") : "—", "UAP"]
+                  }
+                />
+                <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted }} />
+                <Line
+                  type="monotone"
+                  name="Blackjack"
+                  dataKey="Blackjack"
+                  stroke={BRAND.roxoVivo}
+                  strokeWidth={2}
+                  dot={{ r: 2 }}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  name="Roleta"
+                  dataKey="Roleta"
+                  stroke={BRAND.verde}
+                  strokeWidth={2}
+                  dot={{ r: 2 }}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  name="Speed Baccarat"
+                  dataKey="speedBaccarat"
+                  stroke={BRAND.ciano}
+                  strokeWidth={2}
+                  dot={{ r: 2 }}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         )}
       </div>
