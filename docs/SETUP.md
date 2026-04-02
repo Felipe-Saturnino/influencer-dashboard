@@ -1,5 +1,17 @@
 # Setup e Deploy — Acquisition Hub
 
+## Documentação e base de dados (índice)
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [MIGRACOES-E-DOCS.md](./MIGRACOES-E-DOCS.md) | Regras sobre `supabase/migrations/` (não fundir migrações antigas; nomes com data). |
+| [SQL-LEGADO.md](./SQL-LEGADO.md) | Como interpretar `docs/*.sql` vs migrações formais. |
+| [ESTRUTURA-DATABASE.md](./ESTRUTURA-DATABASE.md) | Visão das tabelas e referências a scripts. |
+| [database-health-check.sql](./database-health-check.sql) | Queries de verificação no SQL Editor. |
+| [SUPABASE-CHECKLIST-NAO-TECNICO.md](./SUPABASE-CHECKLIST-NAO-TECNICO.md) | Passos simples no painel Supabase. |
+| [archive/README.md](./archive/README.md) | SQL arquivado (diagnósticos, *fixes* pontuais). |
+| [`../supabase/migrations/README.md`](../supabase/migrations/README.md) | Convenções da pasta de migrações. |
+
 ## Variáveis de ambiente
 
 O projeto usa variáveis de ambiente do Vite (prefixo `VITE_`). São embutidas no build em tempo de compilação.

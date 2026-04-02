@@ -1,6 +1,7 @@
 -- =============================================================================
 -- VERIFICAÇÃO DE SAÚDE DA BASE DE DADOS — INFLUENCER DASHBOARD
 -- Execute no Supabase SQL Editor para obter um diagnóstico completo
+-- Contexto: docs/SQL-LEGADO.md, docs/MIGRACOES-E-DOCS.md | Schema versionado: supabase/migrations/
 -- =============================================================================
 
 -- ─────────────────────────────────────────────────────────────────────────────

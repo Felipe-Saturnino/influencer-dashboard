@@ -1196,7 +1196,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) {
-        throw new Error("Não foi possível aprovar. Confira: (1) RPC aprovar_pagamento existe no Supabase? Execute docs/fix-financeiro-rpc-aprovar.sql. (2) Edge Function: supabase functions deploy aprovar-pagamento");
+        throw new Error("Não foi possível aprovar. Confira: (1) RPC aprovar_pagamento existe no Supabase? Execute docs/archive/fix-financeiro-rpc-aprovar.sql (se ainda aplicável ao estado da base). (2) Edge Function: supabase functions deploy aprovar-pagamento");
       }
     }
 
@@ -1239,7 +1239,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) {
-        throw new Error("Não foi possível registrar pagamento. Execute docs/fix-financeiro-rpc-aprovar.sql no Supabase.");
+        throw new Error("Não foi possível registrar pagamento. Execute docs/archive/fix-financeiro-rpc-aprovar.sql no Supabase (se ainda aplicável ao estado da base).");
       }
     }
 
