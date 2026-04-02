@@ -7,23 +7,12 @@ import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
-import { CicloPagamento, Pagamento, PagamentoStatus } from "../../../types";
+import { CicloPagamento, PagamentoStatus } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { GiShield } from "react-icons/gi";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
-
-interface PagamentoAgente {
-  id: string;
-  ciclo_id: string;
-  operadora_slug: string;
-  descricao: string;
-  total: number;
-  status: "em_analise" | "a_pagar" | "pago";
-  pago_em: string | null;
-  criado_em: string;
-}
 
 interface PagamentoRow {
   id: string;
@@ -290,7 +279,7 @@ function BtnAcao({ onClick, children, color }: {
   );
 }
 
-function ModalBase({ children, maxWidth = 440, onClose }: {
+function ModalBase({ children, maxWidth = 440, onClose: _onClose }: {
   children: React.ReactNode; maxWidth?: number; onClose: () => void;
 }) {
   const { theme: t } = useApp();
@@ -850,7 +839,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("financeiro");
-  const { podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap, operadorasList } = filtros;
+  const { podeVerInfluencer, podeVerOperadora: _podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap: _operadoraInfMap, operadorasList } = filtros;
 
   const cicloAtualAberto = ciclos.find(c => !c.fechado_em && cicloAberto(c));
   const [cicloId, setCicloId] = useState<string>(cicloAtualAberto?.id ?? ciclos[0]?.id ?? "");
@@ -1988,7 +1977,7 @@ export default function Financeiro() {
         }
       }
 
-      let ciclosVisiveis = fechados.filter(c => ciclosComPagVisible.has(c.id));
+      const ciclosVisiveis = fechados.filter(c => ciclosComPagVisible.has(c.id));
 
       if (abertos.length > 0) {
         const dataMin = abertos.reduce((acc, c) => (c.data_inicio || "") < acc ? c.data_inicio! : acc, abertos[0].data_inicio!);

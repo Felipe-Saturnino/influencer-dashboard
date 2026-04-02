@@ -348,8 +348,6 @@ export default function Scout() {
     return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar a página Scout.</div>;
   }
 
-  const prospectosLabel = filtered.length === 1 ? "1 prospecto" : `${filtered.length} prospectos`;
-
   // Ordem canônica das plataformas para os chips
   const PLATS_ORDEM = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok", "Discord", "WhatsApp", "Telegram"];
 

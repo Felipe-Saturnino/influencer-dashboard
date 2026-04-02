@@ -42,8 +42,6 @@ import {
   type StatusLabel,
 } from "../../../lib/dashboardConstants";
 
-const MES_INICIO = { ano: 2025, mes: 11 };
-
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Metrica {
   influencer_id: string;
@@ -166,7 +164,7 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_overview");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
@@ -185,7 +183,7 @@ export default function DashboardOverview() {
   const [operadoraInfMap, setOperadoraInfMap]   = useState<Record<string, string[]>>({});
   const [statusFiltro, setStatusFiltro]         = useState<StatusLabel | null>(null);
 
-  const [perfis, setPerfis]       = useState<InfluencerPerfil[]>([]);
+  const [, setPerfis]       = useState<InfluencerPerfil[]>([]);
   const [ranking, setRanking]     = useState<RankingRow[]>([]);
   const [rankingAnt, setRankingAnt] = useState<RankingRow[]>([]);
   const [totais, setTotais]       = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });

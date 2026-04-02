@@ -260,7 +260,7 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Influencers() {
-  const { theme: t, user, isDark, escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
+  const { theme: t, user, isDark, escoposVisiveis: _escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
   const brand = useDashboardBrand();
   const { operadoraSlugsForcado, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("influencers");

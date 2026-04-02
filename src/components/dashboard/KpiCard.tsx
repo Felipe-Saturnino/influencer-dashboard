@@ -20,7 +20,7 @@ export default function KpiCard({
   label,
   value,
   icon,
-  accentVar,
+  accentVar: _accentVar,
   accentColor,
   atual,
   anterior,

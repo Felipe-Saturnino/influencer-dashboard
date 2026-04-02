@@ -240,7 +240,7 @@ function KpiCard({
   label,
   valor,
   momComparativo,
-  accentVar,
+  accentVar: _accentVar,
   accentCor,
   icon,
 }: {

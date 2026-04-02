@@ -170,7 +170,7 @@ function maxBrDateIsoInText(text: string): string | null {
   let max: string | null = null;
   let rm: RegExpExecArray | null;
   while ((rm = re.exec(text)) !== null) {
-    let dd = rm[1].replace(/[oO]/g, "0").padStart(2, "0");
+    const dd = rm[1].replace(/[oO]/g, "0").padStart(2, "0");
     const mm = rm[2].replace(/[oO]/g, "0").padStart(2, "0");
     const yy = rm[3].replace(/[oO]/g, "0");
     const iso = `${yy}-${mm}-${dd}`;
@@ -276,15 +276,6 @@ export function resolveMesaOperadora(tableCell: string): { operadora: string; me
   if (low.startsWith("bet nacional")) return null;
   for (const m of MESA_RAW_TO_CANON) {
     if (low.startsWith(m.raw.toLowerCase())) return { operadora: m.operadora, mesa: m.mesa };
-  }
-  return null;
-}
-
-function canonEntryForLine(lineStr: string): (typeof MESA_RAW_TO_CANON)[number] | null {
-  const norm = normalizeOcrTableNameLine(lineStr).replace(/\s+/g, " ").replace(/\.\s*$/g, "").trim();
-  const low = norm.toLowerCase();
-  for (const m of MESA_RAW_TO_CANON) {
-    if (low.startsWith(m.raw.toLowerCase())) return m;
   }
   return null;
 }
@@ -1119,7 +1110,7 @@ function strictPerTableD1Triple(
     turnover = tTmp;
   }
 
-  let out = { ggr, turnover, apostas };
+  const out = { ggr, turnover, apostas };
   out.turnover = Math.abs(out.turnover);
   out.apostas = Math.abs(out.apostas);
   return out;
@@ -1309,7 +1300,8 @@ function parseFirstThreeMetrics(
   const raw = strictPerTableD1Triple(nums, mesa, tailForRoleta, roletaPool, trustCols, edgeRows);
   if (!raw) return null;
   const rep = finalRepairPerTableMetrics(mesa, raw.ggr, raw.turnover, raw.apostas, numPoolForRepair);
-  let { ggr, turnover, apostas } = rep;
+  let { ggr } = rep;
+  const { turnover, apostas } = rep;
   const tailForSign = layoutContext?.fullTail ?? norm;
   if (ggr != null) {
     if (ggr > 0 && minusBeforeFirstDigitInCell(tailForSign)) ggr = -Math.abs(ggr);
@@ -1589,7 +1581,7 @@ function fixDailyOcrTurnoverGgr(
   ggr: number | null,
   bets: number,
 ): { turnover: number; ggr: number | null } {
-  let t = turnover;
+  const t = turnover;
   const g = ggr;
   if (bets < 4000 || t <= 0) return { turnover: t, ggr: g };
 
@@ -1686,8 +1678,8 @@ function parseDailyBlock(
 /** Ordem típica GGR, Turnover; se o OCR colocar Turnover (>50k) à frente do GGR, corrige. */
 function normalizeSummaryGgrTurnoverPair(nums: number[]): { ggr: number; turnover: number } | null {
   if (nums.length < 2) return null;
-  let g = nums[0];
-  let t = nums[1];
+  const g = nums[0];
+  const t = nums[1];
   const ag = Math.abs(g);
   const at = Math.abs(t);
   if (ag > 50_000 && at < ag * 0.25 && at < 100_000) {
@@ -1790,7 +1782,7 @@ function scrapeMonthlyUapArpuGaps(text: string, byMes: Map<string, MonthlyRowPar
  */
 function pickBestUapArpuPairFromNumbers(allNums: number[]): { uap: number; arpu: number } | null {
   for (let k = allNums.length - 1; k >= 1; k--) {
-    let uapVal = allNums[k - 1]!;
+    const uapVal = allNums[k - 1]!;
     let arpuVal = allNums[k]!;
     if (uapVal < 100 || !Number.isFinite(uapVal)) continue;
     if (!Number.isFinite(arpuVal)) continue;

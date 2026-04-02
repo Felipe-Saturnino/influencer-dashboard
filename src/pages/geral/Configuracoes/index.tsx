@@ -3,7 +3,7 @@ import { Eye, EyeOff, Lock, Check, Sun, Moon, AlertCircle, CheckCircle2 } from "
 import { GiPalette, GiPadlock } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
-import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 

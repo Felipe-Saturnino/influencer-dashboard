@@ -12,7 +12,18 @@
 | [archive/README.md](./archive/README.md) | SQL arquivado (diagnósticos, *fixes* pontuais). |
 | [`../supabase/migrations/README.md`](../supabase/migrations/README.md) | Convenções da pasta de migrações. |
 
-No GitHub Actions: workflow **CI** (`.github/workflows/ci.yml`) corre `npm ci` e `npm run build` em pushes/PRs às branches `main`, `master` e `staging`.
+No GitHub Actions: workflow **CI** (`.github/workflows/ci.yml`) corre `npm ci`, **`npm run lint`** e `npm run build` em pushes/PRs às branches `main`, `master` e `staging`.
+
+## Lint (ESLint)
+
+Configuração na raiz: `eslint.config.js` (TypeScript, React Hooks, React Refresh, Prettier desativando regras conflituosas).
+
+| Comando | Uso |
+|---------|-----|
+| `npm run lint` | Verifica o projeto (o CI falha se houver **erros**). |
+| `npm run lint:fix` | Aplica correções automáticas onde o ESLint permitir (`prefer-const`, etc.). |
+
+Avisos (`warnings`), por exemplo `exhaustive-deps` ou `no-explicit-any` em modo aviso, **não** fazem falhar o `lint` por defeito; apenas os **erros** bloqueiam o CI.
 
 ## Variáveis de ambiente
 

@@ -244,7 +244,7 @@ export default function Home() {
       setLivesRealizadasRecentes(realizadas);
 
       const ids = realizadas.map((l) => l.id);
-      let map: Record<string, LiveResultado> = {};
+      const map: Record<string, LiveResultado> = {};
       if (ids.length > 0) {
         const { data: resRows } = await supabase.from("live_resultados").select("*").in("live_id", ids);
         if (resRows) {

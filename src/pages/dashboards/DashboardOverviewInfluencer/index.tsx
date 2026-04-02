@@ -15,13 +15,11 @@ import {
   fmtHorasTotal,
   fmtDia,
   getMesesDisponiveis,
-  getDatasDoMes,
   getPeriodoComparativoMoM,
 } from "../../../lib/dashboardHelpers";
 import {
   SectionTitle,
   KpiCard,
-  KpiCardDepositos,
   FunilVisual,
 } from "../../../components/dashboard";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
@@ -33,7 +31,6 @@ import {
 } from "react-icons/gi";
 
 const GiStarMedalFilter = GiStarMedal;
-const MES_INICIO = { ano: 2025, mes: 11 };
 const fmtHoras = fmtHorasTotal;
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
@@ -179,7 +176,7 @@ export default function DashboardOverviewInfluencer() {
   const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
+  const [, setOperadoraInfMap] = useState<Record<string, string[]>>({});
 
   const [totais, setTotais] = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
   const [totaisAnt, setTotaisAnt] = useState<TotaisData>(totais);
@@ -376,7 +373,6 @@ export default function DashboardOverviewInfluencer() {
       // Bloco 5: Comparativo Diário (só quando período = mês)
       if (!historico && mesSelecionado) {
         const dias: Record<string, DiaData> = {};
-        const { inicio: iIni, fim: iFim } = getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
         for (let d = new Date(mesSelecionado.ano, mesSelecionado.mes, 1); d <= new Date(mesSelecionado.ano, mesSelecionado.mes + 1, 0); d.setDate(d.getDate() + 1)) {
           const ds = fmt(d);
           dias[ds] = { data: ds, duracao: 0, media_views: 0, max_views: 0, acessos: 0, registros: 0, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 };

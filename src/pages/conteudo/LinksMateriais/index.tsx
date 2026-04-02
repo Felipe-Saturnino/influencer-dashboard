@@ -376,8 +376,6 @@ export default function LinksMateriais() {
     ? "color-mix(in srgb, var(--brand-primary) 22%, transparent)"
     : t.cardBorder;
 
-  const cardBorder = t.cardBorder;
-
   const emitirDesabilitado =
     !podeEmitir ||
     aguardandoOpcoes ||

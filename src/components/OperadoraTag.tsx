@@ -6,7 +6,7 @@ const FALLBACK_COLOR = BRAND.roxoVivo;
 /**
  * Retorna bg, color e border para uma tag baseada na cor primária da operadora.
  */
-function getOperadoraTagStyles(corPrimaria: string | null | undefined, dark: boolean) {
+function getOperadoraTagStyles(corPrimaria: string | null | undefined, _dark: boolean) {
   const cor = corPrimaria?.trim() || FALLBACK_COLOR;
   return {
     bg: `${cor}18`,
