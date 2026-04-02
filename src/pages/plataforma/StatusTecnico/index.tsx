@@ -880,7 +880,6 @@ export default function StatusTecnico() {
 
   const linhasCompletas = [...statusPorIntegracao, plsRow, socialKpisRow, emailDiretoriaRow, emailAgendaRow];
 
-  const maxFluxo = Math.max(...fluxoDados.map((f) => f.total), 1);
   const fluxoLabel = (k: string) =>
     ({
       cda: "CDA (Casa de Apostas)",

@@ -13,7 +13,7 @@ import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
-  GiFilmProjector, GiCalendar, GiStarMedal, GiShield,
+  GiFilmProjector, GiCalendar, GiShield,
 } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -178,7 +178,7 @@ function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDro
 export default function Agenda() {
   const { theme: t, isDark, user, setActivePage } = useApp();
   const brand = useDashboardBrand();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("agenda");
 
   const [view,    setView]    = useState<ViewMode>("mes");

@@ -7,7 +7,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
-import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
 import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
 import KpiCard from "../../../components/dashboard/KpiCard";
 import {
@@ -116,9 +116,6 @@ const MESES_PT = [
 ];
 const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-const pad = (n: number) => String(n).padStart(2, "0");
-const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
 function getMesesDisponiveis() {
   const hoje = new Date();
   const lista: { ano: number; mes: number; label: string }[] = [];
@@ -135,12 +132,7 @@ function getMesesDisponiveis() {
   return lista;
 }
 
-function getDatasDoMes(ano: number, mes: number) {
-  return { inicio: fmt(new Date(ano, mes, 1)), fim: fmt(new Date(ano, mes + 1, 0)) };
-}
-
 const OPERADORA_CASA_APOSTAS = "casa_apostas";
-const EXIBICAO_OPERADORA_CASA_APOSTAS = "Casa de Aposta";
 const OPERADORA_OUTRAS = "outras_mesas";
 
 function slugFromRelatorioOperadora(operadoraRaw: string): string {
@@ -237,13 +229,6 @@ function nomeMesaParaExibicao(
   return row.nome_tabela.trim();
 }
 
-function nomeTituloOperadora(slug: string, operadorasList: { slug: string; nome: string }[]): string {
-  if (slug === OPERADORA_OUTRAS) return "Outras mesas";
-  if (slug === OPERADORA_CASA_APOSTAS) return EXIBICAO_OPERADORA_CASA_APOSTAS;
-  const o = operadorasList.find((x) => x.slug === slug);
-  return o?.nome ?? slug.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 const LABELS_BLACKJACK_COMPARATIVO = new Set(["Blackjack 1", "Blackjack 2", "Blackjack VIP"]);
 
 function labelMesaCda(
@@ -274,36 +259,6 @@ function filtrarPorEscopoOperadora(
     if (!podeVerOperadoraFn(slug)) return false;
     if (permitir && !permitir.includes(slug)) return false;
     return true;
-  });
-}
-
-function agruparPorSlug(rows: PorTabelaRow[]): Map<string, PorTabelaRow[]> {
-  const m = new Map<string, PorTabelaRow[]>();
-  for (const r of rows) {
-    const slug = slugOperadoraPorLinha(r);
-    if (!m.has(slug)) m.set(slug, []);
-    m.get(slug)!.push(r);
-  }
-  return m;
-}
-
-function ordenarSlugs(slugs: string[], operadorasList: { slug: string; nome: string }[]): string[] {
-  return [...slugs].sort((a, b) =>
-    nomeTituloOperadora(a, operadorasList).localeCompare(nomeTituloOperadora(b, operadorasList), "pt-BR"),
-  );
-}
-
-function addDaysIso(isoYmd: string, delta: number): string {
-  const [y, m, d] = isoYmd.split("-").map(Number);
-  const dt = new Date(y, (m ?? 1) - 1, (d ?? 1) + delta);
-  return fmt(dt);
-}
-
-function fmtDataPtBr(isoYmd: string): string {
-  return new Date(isoYmd + "T12:00:00").toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
   });
 }
 
@@ -387,42 +342,6 @@ function aggDailyMesKpi(rows: DailyRow[]): MonthlyKpiSnapshot | null {
 
 function nKpi(v: number | null | undefined): number {
   return Number(v) || 0;
-}
-
-type RotulosMesa = { d1: string; usouFallbackDaily: boolean };
-
-function rotulosPorMesaParaMes(
-  dailyData: DailyRow[],
-  snapshotIso: string | null,
-  ano: number,
-  mes0a11: number,
-): RotulosMesa {
-  const { inicio, fim } = getDatasDoMes(ano, mes0a11);
-  const inMonth = dailyData.filter((r) => r.data >= inicio && r.data <= fim);
-  const ultimoDiaDailyIso =
-    inMonth.length === 0 ? null : inMonth.reduce((a, r) => (r.data > a ? r.data : a), inMonth[0].data);
-  const d1Referencia = ultimoDiaDailyIso ?? (snapshotIso ? addDaysIso(snapshotIso, -1) : null);
-  if (!d1Referencia) {
-    return { d1: "—", usouFallbackDaily: false };
-  }
-  return {
-    d1: fmtDataPtBr(d1Referencia),
-    usouFallbackDaily: ultimoDiaDailyIso === null,
-  };
-}
-
-/** Layout fixo Casa de Apostas: 2 quadros por linha (Roleta sozinha na 3.ª linha, coluna esquerda). */
-const CASA_APOSTAS_MESA_GRID: readonly (readonly [string, string | null])[] = [
-  ["Blackjack 1", "Blackjack 2"],
-  ["Blackjack VIP", "Speed Baccarat"],
-  ["Roleta", null],
-] as const;
-
-function apostaMediaMesa(t: number | null, b: number | null): number | null {
-  if (t == null || b == null) return null;
-  const bn = Number(b);
-  if (!Number.isFinite(bn) || bn === 0) return null;
-  return Number(t) / bn;
 }
 
 /** Uma linha no comparativo por mesa (dia a dia, como o Detalhamento Diário). */
@@ -558,125 +477,6 @@ function linhaComparativoJogoAgregadaMes(
   };
 }
 
-/** Uma linha na mini-tabela por mesa (d-1). */
-function MesaD1MiniTable({
-  row,
-  rotulos,
-  slugOperadora,
-  operadorasList,
-  thMini,
-  tdMini,
-  tdMiniNum,
-}: {
-  row: PorTabelaRow;
-  rotulos: RotulosMesa;
-  slugOperadora: string;
-  operadorasList: { slug: string; nome: string }[];
-  thMini: React.CSSProperties;
-  tdMini: React.CSSProperties;
-  tdMiniNum: React.CSSProperties;
-}) {
-  const { theme: tt } = useApp();
-  const am = apostaMediaMesa(row.turnover_d1, row.bets_d1);
-  return (
-    <div
-      style={{
-        border: `1px solid ${tt.cardBorder}`,
-        borderRadius: 14,
-        padding: 14,
-        background: "rgba(74,32,130,0.04)",
-        width: "100%",
-        boxSizing: "border-box",
-        minWidth: 0,
-      }}
-    >
-      <div
-        style={{
-          fontWeight: 800,
-          fontSize: 13,
-          color: tt.text,
-          marginBottom: 10,
-          fontFamily: FONT.body,
-          lineHeight: 1.35,
-          wordBreak: "break-word",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 10,
-            color: tt.textMuted,
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            display: "block",
-            marginBottom: 4,
-          }}
-        >
-          Mesa
-        </span>
-        {nomeMesaParaExibicao(row, slugOperadora, operadorasList)}
-      </div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 280 }}>
-          <thead>
-            <tr>
-              <th style={thMini}>Data</th>
-              <th style={{ ...thMini, textAlign: "right" }}>GGR</th>
-              <th style={{ ...thMini, textAlign: "right" }}>Turnover</th>
-              <th style={{ ...thMini, textAlign: "right" }}>Apostas</th>
-              <th style={{ ...thMini, textAlign: "right" }}>Aposta média</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style={{ background: "rgba(74,32,130,0.06)" }}>
-              <td style={tdMini}>{rotulos.d1}</td>
-              <td
-                style={{
-                  ...tdMiniNum,
-                  color: (row.ggr_d1 ?? 0) >= 0 ? BRAND.verde : BRAND.vermelho,
-                  fontWeight: 600,
-                }}
-              >
-                {row.ggr_d1 != null ? fmtBRL(Number(row.ggr_d1)) : "—"}
-              </td>
-              <td style={tdMiniNum}>{row.turnover_d1 != null ? fmtBRL(Number(row.turnover_d1)) : "—"}</td>
-              <td style={tdMiniNum}>{row.bets_d1 != null ? row.bets_d1.toLocaleString("pt-BR") : "—"}</td>
-              <td style={tdMiniNum}>{am != null ? fmtBRL(am) : "—"}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function partitionCasaApostasMesas(
-  rows: PorTabelaRow[],
-  slug: string,
-  operadorasList: { slug: string; nome: string }[],
-): { gridLinhas: (PorTabelaRow | null)[][]; rest: PorTabelaRow[] } | null {
-  if (slug !== OPERADORA_CASA_APOSTAS) return null;
-  const byName = new Map<string, PorTabelaRow>();
-  for (const r of rows) {
-    const name = nomeMesaParaExibicao(r, slug, operadorasList);
-    byName.set(name, r);
-  }
-  const placed = new Set<string>();
-  for (const [a, b] of CASA_APOSTAS_MESA_GRID) {
-    placed.add(a);
-    if (b) placed.add(b);
-  }
-  const gridLinhas = CASA_APOSTAS_MESA_GRID.map(([a, b]) =>
-    b == null ? [byName.get(a) ?? null] : [byName.get(a) ?? null, byName.get(b) ?? null],
-  );
-  const rest: PorTabelaRow[] = [];
-  for (const r of rows) {
-    const name = nomeMesaParaExibicao(r, slug, operadorasList);
-    if (!placed.has(name)) rest.push(r);
-  }
-  return { gridLinhas, rest };
-}
-
 function MarginBadge({ value }: { value: number | null }) {
   const { theme: tt } = useApp();
   if (value == null) return <span style={{ color: tt.textMuted }}>—</span>;
@@ -704,127 +504,6 @@ function MarginBadge({ value }: { value: number | null }) {
     >
       {fmtPct(v)}
     </span>
-  );
-}
-
-function MesasPorMesaListaVertical({
-  rows,
-  rotulos,
-  slugOperadora,
-  operadorasList,
-  thMini,
-  tdMini,
-  tdMiniNum,
-}: {
-  rows: PorTabelaRow[];
-  rotulos: RotulosMesa;
-  slugOperadora: string;
-  operadorasList: { slug: string; nome: string }[];
-  thMini: React.CSSProperties;
-  tdMini: React.CSSProperties;
-  tdMiniNum: React.CSSProperties;
-}) {
-  const sorted = [...rows].sort((a, b) =>
-    nomeMesaParaExibicao(a, slugOperadora, operadorasList).localeCompare(
-      nomeMesaParaExibicao(b, slugOperadora, operadorasList),
-      "pt-BR",
-    ),
-  );
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
-      {sorted.map((row) => (
-        <MesaD1MiniTable
-          key={`${row.data_relatorio}|${slugOperadora}|${row.nome_tabela}`}
-          row={row}
-          rotulos={rotulos}
-          slugOperadora={slugOperadora}
-          operadorasList={operadorasList}
-          thMini={thMini}
-          tdMini={tdMini}
-          tdMiniNum={tdMiniNum}
-        />
-      ))}
-    </div>
-  );
-}
-
-/** Casa de Apostas: 2 quadros por linha — BJ1+BJ2; VIP+Speed Baccarat; Roleta (1.ª coluna). */
-function MesasCasaApostasGrid({
-  rows,
-  rotulos,
-  slugOperadora,
-  operadorasList,
-  thMini,
-  tdMini,
-  tdMiniNum,
-}: {
-  rows: PorTabelaRow[];
-  rotulos: RotulosMesa;
-  slugOperadora: string;
-  operadorasList: { slug: string; nome: string }[];
-  thMini: React.CSSProperties;
-  tdMini: React.CSSProperties;
-  tdMiniNum: React.CSSProperties;
-}) {
-  const part = partitionCasaApostasMesas(rows, slugOperadora, operadorasList);
-  if (!part) {
-    return (
-      <MesasPorMesaListaVertical
-        rows={rows}
-        rotulos={rotulos}
-        slugOperadora={slugOperadora}
-        operadorasList={operadorasList}
-        thMini={thMini}
-        tdMini={tdMini}
-        tdMiniNum={tdMiniNum}
-      />
-    );
-  }
-  const { gridLinhas, rest } = part;
-  const grid2: React.CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 12,
-    width: "100%",
-  };
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%" }}>
-      {gridLinhas.map((cells, li) => {
-        if (!cells.some(Boolean)) return null;
-        return (
-          <div key={`cda-row-${li}`} style={grid2}>
-            {cells.map((row, ci) =>
-              row ? (
-                <MesaD1MiniTable
-                  key={`${row.data_relatorio}|cda-${li}-${ci}|${row.nome_tabela}`}
-                  row={row}
-                  rotulos={rotulos}
-                  slugOperadora={slugOperadora}
-                  operadorasList={operadorasList}
-                  thMini={thMini}
-                  tdMini={tdMini}
-                  tdMiniNum={tdMiniNum}
-                />
-              ) : (
-                <div key={`cda-empty-${li}-${ci}`} style={{ minWidth: 0 }} />
-              ),
-            )}
-            {cells.length === 1 ? <div key={`cda-empty-${li}-pad`} style={{ minWidth: 0 }} /> : null}
-          </div>
-        );
-      })}
-      {rest.length > 0 && (
-        <MesasPorMesaListaVertical
-          rows={rest}
-          rotulos={rotulos}
-          slugOperadora={slugOperadora}
-          operadorasList={operadorasList}
-          thMini={thMini}
-          tdMini={tdMini}
-          tdMiniNum={tdMiniNum}
-        />
-      )}
-    </div>
   );
 }
 
@@ -1200,24 +879,36 @@ export default function MesasSpin() {
     }
     const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
     if (!base) return null;
+    if (
+      mesSelecionado &&
+      isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
+    ) {
+      return base;
+    }
     return {
       ...base,
       uap: monthlyUapArpuSel?.uap ?? null,
       arpu: monthlyUapArpuSel?.arpu ?? null,
     };
-  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel]);
+  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, mesSelecionado]);
 
   const kpiAntExibir = useMemo(() => {
     const base =
       historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
     if (!base) return null;
     if (historico) return base;
+    if (
+      mesSelecionado &&
+      isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
+    ) {
+      return base;
+    }
     return {
       ...base,
       uap: monthlyUapArpuPrev?.uap ?? base.uap,
       arpu: monthlyUapArpuPrev?.arpu ?? base.arpu,
     };
-  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev]);
+  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado]);
 
   /**
    * Mês corrente: série diária (relatorio_uap_por_jogo).
@@ -1491,15 +1182,6 @@ export default function MesasSpin() {
   };
 
   const tdNum: React.CSSProperties = { ...tdStyle, textAlign: "right", fontVariantNumeric: "tabular-nums" };
-
-  const thMini: React.CSSProperties = {
-    ...thStyle,
-    fontSize: 10,
-    padding: "8px 10px",
-    whiteSpace: "nowrap",
-  };
-  const tdMini: React.CSSProperties = { ...tdStyle, fontSize: 12, padding: "8px 10px" };
-  const tdMiniNum: React.CSSProperties = { ...tdNum, fontSize: 12, padding: "8px 10px" };
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;

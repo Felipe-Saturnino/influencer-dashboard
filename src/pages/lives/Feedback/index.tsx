@@ -41,7 +41,7 @@ function getSemanasDisponiveis(): { start: Date; end: Date; label: string }[] {
   const lista: { start: Date; end: Date; label: string }[] = [];
   const inicioRef = new Date(2025, 10, 30); // domingo 30/11/2025 (semana com 01/12)
   const hoje = new Date();
-  let dom = new Date(inicioRef);
+  const dom = new Date(inicioRef);
   while (dom <= hoje) {
     const sab = new Date(dom);
     sab.setDate(dom.getDate() + 6);
@@ -244,7 +244,7 @@ export default function Feedback() {
       setInfluencers(unique);
 
       const allIds = visiveis.map(l => l.id);
-      let resMapAll: Record<string, LiveResultado> = {};
+      const resMapAll: Record<string, LiveResultado> = {};
       if (allIds.length > 0) {
         const { data: resAll } = await supabase.from("live_resultados").select("*").in("live_id", allIds);
         if (resAll) resAll.forEach((r: LiveResultado) => { resMapAll[r.live_id] = r; });
@@ -255,7 +255,7 @@ export default function Feedback() {
       setLives(filtered);
 
       const filteredIds = filtered.map(l => l.id);
-      let resMap: Record<string, LiveResultado> = {};
+      const resMap: Record<string, LiveResultado> = {};
       if (filteredIds.length > 0) {
         const { data: resData } = await supabase.from("live_resultados").select("*").in("live_id", filteredIds);
         if (resData) resData.forEach((r: LiveResultado) => { resMap[r.live_id] = r; });
@@ -699,7 +699,7 @@ export default function Feedback() {
 }
 
 // ─── MODAL EDITAR FEEDBACK ────────────────────────────────────────────────────
-function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, brand, onClose, onSalvo }: {
+function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, brand, onClose, onSalvo }: {
   live: LiveComObs; res?: LiveResultado;
   operadorasList: { slug: string; nome: string }[];
   t: ReturnType<typeof useApp>["theme"]; isDark: boolean;

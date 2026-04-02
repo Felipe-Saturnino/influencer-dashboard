@@ -30,4 +30,4 @@ WHERE id = (SELECT id FROM pagamentos LIMIT 1);
 SELECT id, status, total FROM pagamentos LIMIT 5;
 
 -- PASSO 4: Se o UPDATE acima funcionou, o problema era trigger ou RPC.
--- Recrie a RPC para garantir que está correta (execute fix-financeiro-rpc-aprovar.sql)
+-- Recrie a RPC para garantir que está correta (execute docs/archive/fix-financeiro-rpc-aprovar.sql se aplicável)

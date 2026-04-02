@@ -526,7 +526,6 @@ serve(async (req: Request) => {
       : smaticoToken ? { token: smaticoToken }
       : (() => { throw new Error('Configure CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME+SMARTICO_PASSWORD no Supabase Secrets.') })()
 
-    const authMethod = (smarticoUsername && smarticoPassword) ? 'SMARTICO_USERNAME+PASSWORD' : cdaApiKey ? 'CDA_INFLUENCERS_API_KEY' : 'SMARTICO_TOKEN'
     const useReportingApi = Deno.env.get('CDA_USE_REPORTING_API') === 'true'
     const reportingBaseUrl = Deno.env.get('SMARTICO_REPORTING_API_URL') ?? 'https://boapi3.smartico.ai'
     const reportingEndpoint = (Deno.env.get('CDA_REPORTING_ENDPOINT') ?? 'af2_media_report_af').toLowerCase()
@@ -644,7 +643,6 @@ serve(async (req: Request) => {
 
     let orfaosNovos: string[] = []
     let orfaosAtualizados: string[] = []
-    let orfaosErros: string[] = []
     let totalUtmsCda = 0
 
     if (!params.utm_source && !params.skip_orfaos) {
@@ -656,7 +654,6 @@ serve(async (req: Request) => {
         const resultado = await detectarERegistrarOrfaos(supabase, todosUtmsCda, utmsMapeados)
         orfaosNovos = resultado.novos
         orfaosAtualizados = resultado.atualizados
-        orfaosErros = resultado.erros
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           await enviarAlertaAuthCda()

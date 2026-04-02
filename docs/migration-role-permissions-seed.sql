@@ -8,7 +8,7 @@
 -- Execute no SQL Editor do Supabase
 -- =============================================================================
 
--- Garantir constraint de role (caso fix-role-permissions-agencia não tenha sido executado)
+-- Garantir constraint de role (caso docs/archive/fix-role-permissions-agencia não tenha sido executado)
 ALTER TABLE role_permissions DROP CONSTRAINT IF EXISTS role_permissions_role_check;
 ALTER TABLE role_permissions ADD CONSTRAINT role_permissions_role_check
   CHECK (role IN ('admin', 'gestor', 'executivo', 'influencer', 'operador', 'agencia'));

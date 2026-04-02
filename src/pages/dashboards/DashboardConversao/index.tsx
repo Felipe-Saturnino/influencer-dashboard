@@ -372,7 +372,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardConversao() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_conversao");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);

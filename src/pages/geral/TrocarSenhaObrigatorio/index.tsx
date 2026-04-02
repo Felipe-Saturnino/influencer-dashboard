@@ -8,7 +8,7 @@ import { BASE_COLORS, FONT } from "../../../constants/theme";
  * Não permite pular — usuário acabou de logar com a senha temporária.
  */
 export default function TrocarSenhaObrigatorio() {
-  const { user, setUser, theme: t } = useApp();
+  const { user, setUser } = useApp();
   const [newPass, setNewPass] = useState("");
   const [confPass, setConfPass] = useState("");
   const [err, setErr] = useState("");

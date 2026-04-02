@@ -157,7 +157,7 @@ ciclos_pagamento
 | `docs/migration-influencer-metricas-operadora.sql` | Coluna operadora_slug em influencer_metricas, backfill |
 | `docs/dashboard-financeiro-operadora.sql` | View e RPC com suporte a operadora |
 | `docs/scout-migrations.sql` | Scout + anotações |
-| `docs/fix-role-permissions-agencia.sql` | Adicionar role "agencia" em role_permissions |
+| `docs/archive/fix-role-permissions-agencia.sql` | Adicionar role "agencia" em role_permissions (legado; rever antes de aplicar) |
 | `docs/migration-role-permissions-seed.sql` | Seed completo de permissões para todos os roles (incl. gestor) |
 | `docs/migration-data-tables-rls-authenticated-read.sql` | RLS: permitir Gestor (e demais autenticados) ler tabelas de dados |
 | `docs/ARQUITETURA-ACESSOS.md` | Documentação da arquitetura de permissões e escopos |

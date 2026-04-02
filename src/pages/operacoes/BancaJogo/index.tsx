@@ -122,7 +122,7 @@ function BlocoLabel({ label }: { label: string }) {
   );
 }
 
-function ModalBase({ children, maxWidth = 440, onClose, zIndex = 1000 }: {
+function ModalBase({ children, maxWidth = 440, onClose: _onClose, zIndex = 1000 }: {
   children: React.ReactNode; maxWidth?: number; onClose: () => void;
   zIndex?: number;
 }) {

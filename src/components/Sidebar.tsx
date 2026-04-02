@@ -2,7 +2,6 @@ import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { MENU } from "../constants/menu";
-import { BASE_COLORS, FONT } from "../constants/theme";
 
 interface Props {
   activePage: string;

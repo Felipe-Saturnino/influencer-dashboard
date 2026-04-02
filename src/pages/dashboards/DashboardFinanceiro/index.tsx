@@ -163,7 +163,7 @@ function SectionTitle({ icon, children, sub }: {
 }
 
 // ─── KPI CARD (padrão unificado com Overview) ─────────────────────────────────
-function KpiCard({ label, value, subValue, icon, accentVar, accentColor, atual, anterior, isHistorico, isBRL, isInverso }: {
+function KpiCard({ label, value, subValue, icon, accentVar: _accentVar, accentColor, atual, anterior, isHistorico, isBRL, isInverso }: {
   label: string; value: string;
   subValue?: { label: string; value: string };
   icon: React.ReactNode; accentVar: string; accentColor: string;
@@ -222,7 +222,7 @@ function KpiCard({ label, value, subValue, icon, accentVar, accentColor, atual, 
               {up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
             </span>
             <span style={{ color: t.textMuted, fontSize: 10 }}>
-              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.
+              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} · mesmo período mês ant.
             </span>
           </div>
         )}
@@ -253,7 +253,7 @@ function PieTooltip({ active, payload, total, cardBg, cardBorder, text }: {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardFinanceiro() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("dash_financeiro");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);

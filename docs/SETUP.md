@@ -1,5 +1,30 @@
 # Setup e Deploy — Acquisition Hub
 
+## Documentação e base de dados (índice)
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [MIGRACOES-E-DOCS.md](./MIGRACOES-E-DOCS.md) | Regras sobre `supabase/migrations/` (não fundir migrações antigas; nomes com data). |
+| [SQL-LEGADO.md](./SQL-LEGADO.md) | Como interpretar `docs/*.sql` vs migrações formais. |
+| [ESTRUTURA-DATABASE.md](./ESTRUTURA-DATABASE.md) | Visão das tabelas e referências a scripts. |
+| [database-health-check.sql](./database-health-check.sql) | Queries de verificação no SQL Editor. |
+| [SUPABASE-CHECKLIST-NAO-TECNICO.md](./SUPABASE-CHECKLIST-NAO-TECNICO.md) | Passos simples no painel Supabase. |
+| [archive/README.md](./archive/README.md) | SQL arquivado (diagnósticos, *fixes* pontuais). |
+| [`../supabase/migrations/README.md`](../supabase/migrations/README.md) | Convenções da pasta de migrações. |
+
+No GitHub Actions: workflow **CI** (`.github/workflows/ci.yml`) corre `npm ci`, **`npm run lint`** e `npm run build` em pushes/PRs às branches `main`, `master` e `staging`.
+
+## Lint (ESLint)
+
+Configuração na raiz: `eslint.config.js` (TypeScript, React Hooks, React Refresh, Prettier desativando regras conflituosas).
+
+| Comando | Uso |
+|---------|-----|
+| `npm run lint` | Verifica o projeto (o CI falha se houver **erros**). |
+| `npm run lint:fix` | Aplica correções automáticas onde o ESLint permitir (`prefer-const`, etc.). |
+
+Avisos (`warnings`), por exemplo `exhaustive-deps` ou `no-explicit-any` em modo aviso, **não** fazem falhar o `lint` por defeito; apenas os **erros** bloqueiam o CI.
+
 ## Variáveis de ambiente
 
 O projeto usa variáveis de ambiente do Vite (prefixo `VITE_`). São embutidas no build em tempo de compilação.

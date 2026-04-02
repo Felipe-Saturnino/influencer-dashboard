@@ -7,23 +7,12 @@ import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
-import { CicloPagamento, Pagamento, PagamentoStatus } from "../../../types";
+import { CicloPagamento, PagamentoStatus } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { GiShield } from "react-icons/gi";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
-
-interface PagamentoAgente {
-  id: string;
-  ciclo_id: string;
-  operadora_slug: string;
-  descricao: string;
-  total: number;
-  status: "em_analise" | "a_pagar" | "pago";
-  pago_em: string | null;
-  criado_em: string;
-}
 
 interface PagamentoRow {
   id: string;
@@ -290,7 +279,7 @@ function BtnAcao({ onClick, children, color }: {
   );
 }
 
-function ModalBase({ children, maxWidth = 440, onClose }: {
+function ModalBase({ children, maxWidth = 440, onClose: _onClose }: {
   children: React.ReactNode; maxWidth?: number; onClose: () => void;
 }) {
   const { theme: t } = useApp();
@@ -348,8 +337,10 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   const [valor, setValor] = useState(String(row.total));
   const [lives, setLives] = useState<any[]>([]);
 
-  const valorNum = parseFloat(valor.replace(",", ".")) || 0;
-  const editado = valorNum !== row.total;
+  const rawValor = valor.replace(",", ".").trim();
+  const parsedValor = rawValor === "" ? NaN : Number.parseFloat(rawValor);
+  const valorNum = Number.isFinite(parsedValor) ? parsedValor : NaN;
+  const editado = Number.isFinite(valorNum) && valorNum !== row.total;
 
   useEffect(() => {
     if (!row.is_agente) carregarLives();
@@ -386,11 +377,11 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
     setLives(merged);
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(totalAprovar: number) {
     setError("");
     setSaving(true);
     try {
-      await onConfirm(row.id, valorNum, row.is_agente ?? false);
+      await onConfirm(row.id, totalAprovar, row.is_agente ?? false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.";
       setError(msg);
@@ -401,11 +392,11 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
     }
   }
   const handleConfirmClick = () => {
-    if (valorNum <= 0) {
-      alert("Valor deve ser maior que zero. Valor atual: " + valor);
+    if (!Number.isFinite(valorNum) || valorNum < 0) {
+      alert("Informe um valor válido (use 0,00 para zerar o valor da plataforma).");
       return;
     }
-    handleConfirm();
+    void handleConfirm(valorNum);
   };
 
   const rowStyle: React.CSSProperties = {
@@ -512,8 +503,8 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
         <button
           type="button"
           onClick={handleConfirmClick}
-          disabled={saving}
-          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || valorNum <= 0) ? "not-allowed" : "pointer", opacity: (saving || valorNum <= 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
+          disabled={saving || !Number.isFinite(valorNum) || valorNum < 0}
+          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || !Number.isFinite(valorNum) || valorNum < 0) ? "not-allowed" : "pointer", opacity: (saving || !Number.isFinite(valorNum) || valorNum < 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
         >
           {saving ? "⏳ Salvando..." : "✅ Aprovar valor"}
         </button>
@@ -850,7 +841,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("financeiro");
-  const { podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap, operadorasList } = filtros;
+  const { podeVerInfluencer, podeVerOperadora: _podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap: _operadoraInfMap, operadorasList } = filtros;
 
   const cicloAtualAberto = ciclos.find(c => !c.fechado_em && cicloAberto(c));
   const [cicloId, setCicloId] = useState<string>(cicloAtualAberto?.id ?? ciclos[0]?.id ?? "");
@@ -1196,7 +1187,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       const { data, error } = await supabase.from(tb).update({ status: "a_pagar", total: novoTotal }).eq("id", id).select("id");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) {
-        throw new Error("Não foi possível aprovar. Confira: (1) RPC aprovar_pagamento existe no Supabase? Execute docs/fix-financeiro-rpc-aprovar.sql. (2) Edge Function: supabase functions deploy aprovar-pagamento");
+        throw new Error("Não foi possível aprovar. Confira: (1) RPC aprovar_pagamento existe no Supabase? Execute docs/archive/fix-financeiro-rpc-aprovar.sql (se ainda aplicável ao estado da base). (2) Edge Function: supabase functions deploy aprovar-pagamento");
       }
     }
 
@@ -1239,7 +1230,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       const { data, error } = await supabase.from(tb).update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", id).select("id");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) {
-        throw new Error("Não foi possível registrar pagamento. Execute docs/fix-financeiro-rpc-aprovar.sql no Supabase.");
+        throw new Error("Não foi possível registrar pagamento. Execute docs/archive/fix-financeiro-rpc-aprovar.sql no Supabase (se ainda aplicável ao estado da base).");
       }
     }
 
@@ -1988,7 +1979,7 @@ export default function Financeiro() {
         }
       }
 
-      let ciclosVisiveis = fechados.filter(c => ciclosComPagVisible.has(c.id));
+      const ciclosVisiveis = fechados.filter(c => ciclosComPagVisible.has(c.id));
 
       if (abertos.length > 0) {
         const dataMin = abertos.reduce((acc, c) => (c.data_inicio || "") < acc ? c.data_inicio! : acc, abertos[0].data_inicio!);

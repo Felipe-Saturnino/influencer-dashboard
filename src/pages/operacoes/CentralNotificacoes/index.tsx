@@ -72,6 +72,18 @@ interface ObsComDealer {
   dealers: DealerObsEmbed | null;
 }
 
+type CampanhaComPerfil = RoteiroCampanha & {
+  profiles?: { name: string } | { name: string }[] | null;
+};
+
+function nomeCadastroCampanha(c: CampanhaComPerfil): string {
+  const p = c.profiles;
+  if (!p) return "Usuário não identificado";
+  const row = Array.isArray(p) ? p[0] : p;
+  const n = row?.name?.trim();
+  return n || "Usuário não identificado";
+}
+
 function normalizaObsRow(raw: {
   id: string;
   dealer_id: string;
@@ -99,7 +111,7 @@ export default function CentralNotificacoes() {
   const [historico, setHistorico] = useState(false);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
-  const [campanhas, setCampanhas] = useState<RoteiroCampanha[]>([]);
+  const [campanhas, setCampanhas] = useState<CampanhaComPerfil[]>([]);
   const [observacoes, setObservacoes] = useState<ObsComDealer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -159,7 +171,7 @@ export default function CentralNotificacoes() {
 
       let qCamp = supabase
         .from("roteiro_mesa_campanhas")
-        .select("*")
+        .select("*, profiles!created_by(name)")
         .gte("created_at", ini)
         .lte("created_at", fim)
         .order("created_at", { ascending: false });
@@ -170,7 +182,7 @@ export default function CentralNotificacoes() {
         qCamp = qCamp.eq("operadora_slug", filtroOperadora);
       }
 
-      let qObs = supabase
+      const qObs = supabase
         .from("dealer_observacoes")
         .select("id, dealer_id, texto, created_at, dealers(nickname, nome_real, genero, turno, jogos, operadora_slug)")
         .gte("created_at", ini)
@@ -182,7 +194,7 @@ export default function CentralNotificacoes() {
       if (errCamp) console.error("[CentralNotificacoes] campanhas:", errCamp);
       if (errObs) console.error("[CentralNotificacoes] observações:", errObs);
 
-      let listaCamp = (dataCamp ?? []) as RoteiroCampanha[];
+      const listaCamp = (dataCamp ?? []) as CampanhaComPerfil[];
       let listaObs = (dataObs ?? []).map((row) => normalizaObsRow(row as Parameters<typeof normalizaObsRow>[0]));
 
       if (operadoraSlugsForcado?.length) {
@@ -240,6 +252,13 @@ export default function CentralNotificacoes() {
     boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
   };
 
+  const blocoCampanhasEnvelope: React.CSSProperties = {
+    borderRadius: 14,
+    border: brand.primaryTransparentBorder,
+    background: brand.primaryTransparentBg,
+    padding: "16px 20px",
+  };
+
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -252,12 +271,7 @@ export default function CentralNotificacoes() {
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, paddingBottom: 32 }}>
       <div style={{ marginBottom: 18, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <GiRingingBell size={28} color={brand.accent} aria-hidden />
-        <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Central de Notificações</h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: t.textMuted }}>
-            Campanhas novas no Roteiro de Mesa e observações registradas na Gestão de Dealers, por período e operadora.
-          </p>
-        </div>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Central de Notificações</h1>
       </div>
 
       {/* Bloco 1: filtros (mesmo padrão do Overview) */}
@@ -355,52 +369,57 @@ export default function CentralNotificacoes() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
           <Megaphone size={20} color={brand.accent} />
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Campanhas</h2>
-          <span style={{ fontSize: 12, color: t.textMuted }}>(cadastro no Roteiro de Mesa)</span>
         </div>
-        {campanhas.length === 0 && !loading ? (
-          <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>Nenhuma campanha cadastrada neste período.</div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
-            {campanhas.map((c) => {
-              const op = operadoraBySlug[c.operadora_slug];
-              return (
-                <article key={c.id} style={cardShell}>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                    <OperadoraTag label={op?.nome ?? c.operadora_slug} corPrimaria={op?.cor_primaria} dark={tagDark} />
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 4,
-                        fontSize: 11,
-                        padding: "3px 9px",
-                        borderRadius: 20,
-                        background: "rgba(112,202,228,0.12)",
-                        color: "#70cae4",
-                        border: "1px solid rgba(112,202,228,0.28)",
-                        fontWeight: 600,
-                      }}
-                    >
-                      <GiDiceSixFacesFour size={12} />
-                      {labelJogosRoteiro(c.jogos as string[] | undefined)}
-                    </span>
-                  </div>
-                  <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: t.text }}>{c.titulo}</h3>
-                  <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
-                    <strong style={{ color: t.text }}>Início:</strong> {c.data_inicio ? fmtDia(c.data_inicio) : "—"} ·{" "}
-                    <strong style={{ color: t.text }}>Fim:</strong> {c.data_fim ? fmtDia(c.data_fim) : "—"}
-                  </div>
-                  <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{c.texto}</p>
-                  {c.created_at && (
-                    <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted }}>
-                      Cadastrado em {new Date(c.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                    </p>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        )}
+        <div style={blocoCampanhasEnvelope}>
+          {campanhas.length === 0 && !loading ? (
+            <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>Nenhuma campanha cadastrada neste período.</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
+              {campanhas.map((c) => {
+                const op = operadoraBySlug[c.operadora_slug];
+                const dataCadastro =
+                  c.created_at != null
+                    ? new Date(c.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+                    : null;
+                return (
+                  <article key={c.id} style={cardShell}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
+                      <OperadoraTag label={op?.nome ?? c.operadora_slug} corPrimaria={op?.cor_primaria} dark={tagDark} />
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontSize: 11,
+                          padding: "3px 9px",
+                          borderRadius: 20,
+                          background: "rgba(112,202,228,0.12)",
+                          color: "#70cae4",
+                          border: "1px solid rgba(112,202,228,0.28)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <GiDiceSixFacesFour size={12} />
+                        {labelJogosRoteiro(c.jogos as string[] | undefined)}
+                      </span>
+                    </div>
+                    <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: t.text }}>{c.titulo}</h3>
+                    <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
+                      <strong style={{ color: t.text }}>Início:</strong> {c.data_inicio ? fmtDia(c.data_inicio) : "—"} ·{" "}
+                      <strong style={{ color: t.text }}>Fim:</strong> {c.data_fim ? fmtDia(c.data_fim) : "—"}
+                    </div>
+                    <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{c.texto}</p>
+                    {dataCadastro ? (
+                      <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted }}>
+                        Cadastrado por {nomeCadastroCampanha(c)} em {dataCadastro}
+                      </p>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Bloco 3: observações de dealers */}
@@ -408,7 +427,6 @@ export default function CentralNotificacoes() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
           <MessageSquare size={20} color={brand.accent} />
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Observações de dealers</h2>
-          <span style={{ fontSize: 12, color: t.textMuted }}>(Gestão de Dealers)</span>
         </div>
         {observacoes.length === 0 && !loading ? (
           <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>Nenhuma observação registrada neste período.</div>

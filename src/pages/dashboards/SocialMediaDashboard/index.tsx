@@ -240,7 +240,7 @@ function KpiCard({
   label,
   valor,
   momComparativo,
-  accentVar,
+  accentVar: _accentVar,
   accentCor,
   icon,
 }: {
@@ -728,7 +728,7 @@ export default function SocialMediaDashboard() {
                     ? {
                         pctLabel: cmpSeguidores.pctLabel,
                         up: cmpSeguidores.up,
-                        refLine: `vs ${fmtNum(totaisAntMom.seguidores)} mês ant.`,
+                        refLine: `vs ${fmtNum(totaisAntMom.seguidores)} · mesmo período mês ant.`,
                       }
                     : null
                 }
@@ -744,7 +744,7 @@ export default function SocialMediaDashboard() {
                     ? {
                         pctLabel: cmpImpressoes.pctLabel,
                         up: cmpImpressoes.up,
-                        refLine: `vs ${fmtNum(totaisAntMom.impressoes)} mês ant.`,
+                        refLine: `vs ${fmtNum(totaisAntMom.impressoes)} · mesmo período mês ant.`,
                       }
                     : null
                 }
@@ -760,7 +760,7 @@ export default function SocialMediaDashboard() {
                     ? {
                         pctLabel: cmpEngMedio.pctLabel,
                         up: cmpEngMedio.up,
-                        refLine: `vs ${engMedioAnt.toFixed(1)}% mês ant.`,
+                        refLine: `vs ${engMedioAnt.toFixed(1)}% · mesmo período mês ant.`,
                       }
                     : null
                 }

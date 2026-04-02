@@ -413,7 +413,7 @@ serve(async (req) => {
       .order('horario', { ascending: true })
 
     const infIdsAgenda = [...new Set((livesHoje ?? []).map((l: { influencer_id: string }) => l.influencer_id))]
-    let nameMap: Record<string, string> = {}
+    const nameMap: Record<string, string> = {}
 
     if (infIdsAgenda.length > 0) {
       const { data: profs } = await supabase.from('profiles').select('id, name').in('id', infIdsAgenda)
