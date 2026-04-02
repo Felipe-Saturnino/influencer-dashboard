@@ -315,6 +315,15 @@ function fmtDiaMesPtBr(isoYmd: string): string {
   });
 }
 
+/** `YYYY-MM` → ex.: Jan/2026, Dez/2025 (coluna Mês na visão histórico). */
+function fmtMesAnoCurtoFromYm(ym: string): string {
+  const [ys, ms] = ym.split("-");
+  const mo = Number(ms);
+  const y = Number(ys);
+  if (!ys || !Number.isFinite(mo) || mo < 1 || mo > 12) return ym;
+  return `${MESES_CURTOS[mo - 1]}/${y}`;
+}
+
 function fmtBRL(v: number) {
   const sign = v < 0 ? "-" : "";
   return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -475,11 +484,6 @@ function aggregateCellFromPorTabelaRows(rows: PorTabelaRow[]): CelulaJogoMetrica
   return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size };
 }
 
-/** Última data de relatório num conjunto de linhas (mesmo mês). */
-function maxDataRelatorio(rows: PorTabelaRow[]): string {
-  return rows.reduce((a, r) => (r.data_relatorio > a ? r.data_relatorio : a), rows[0].data_relatorio);
-}
-
 /** Agrega `relatorio_por_tabela` por mês (YYYY-MM) numa linha por período. */
 function linhasMesaAgregadasPorMes(
   rows: PorTabelaRow[],
@@ -497,10 +501,9 @@ function linhasMesaAgregadasPorMes(
     .map((ym) => {
       const bucket = byYm.get(ym)!;
       const agg = aggregateCellFromPorTabelaRows(bucket);
-      const refDia = maxDataRelatorio(bucket);
       return {
-        dataIso: refDia,
-        labelData: fmtDiaMesPtBr(refDia),
+        dataIso: `${ym}-01`,
+        labelData: fmtMesAnoCurtoFromYm(ym),
         ggr: agg.ggr,
         turnover: agg.turnover,
         bets: agg.bets,
@@ -532,13 +535,9 @@ function linhaComparativoJogoAgregadaMes(
     else if (lbl === "Roleta") rl.push(r);
     else if (lbl === "Speed Baccarat") bc.push(r);
   }
-  const refDia =
-    rowsMonth.length > 0
-      ? maxDataRelatorio(rowsMonth)
-      : `${ym}-01`;
   return {
-    dataIso: refDia,
-    labelData: fmtDiaMesPtBr(refDia),
+    dataIso: `${ym}-01`,
+    labelData: fmtMesAnoCurtoFromYm(ym),
     blackjack: aggregateCellFromPorTabelaRows(bj),
     roleta: aggregateCellFromPorTabelaRows(rl),
     baccarat: aggregateCellFromPorTabelaRows(bc),
@@ -1130,12 +1129,8 @@ export default function MesasSpin() {
           const dias = dailyByYm.get(ym) ?? [];
           const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
           const m = monthlyByYm.get(ym);
-          const labelUltimoDia =
-            dias.length > 0
-              ? fmtDiaMesPtBr(dias.reduce((a, r) => (r.data > a ? r.data : a), dias[0].data))
-              : fmtDiaMesPtBr(`${ym}-01`);
           const base = enrich({
-            label: labelUltimoDia,
+            label: fmtMesAnoCurtoFromYm(ym),
             turnover: agg?.turnover ?? null,
             ggr: agg?.ggr ?? null,
             bets: agg?.bets ?? null,
@@ -1210,8 +1205,34 @@ export default function MesasSpin() {
     };
   }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev]);
 
-  /** Série diária por jogo (tabela relatorio_uap_por_jogo) para o gráfico. */
+  /** Série diária (mês corrente) ou média mensal (histórico) por jogo — relatorio_uap_por_jogo. */
   const uapJogoChartData = useMemo(() => {
+    const media = (arr: number[]) => (arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : undefined);
+    if (historico) {
+      const byMonth = new Map<
+        string,
+        { Blackjack: number[]; Roleta: number[]; speedBaccarat: number[] }
+      >();
+      for (const r of uapPorJogoRows) {
+        const ym = r.data.slice(0, 7);
+        if (!byMonth.has(ym)) {
+          byMonth.set(ym, { Blackjack: [], Roleta: [], speedBaccarat: [] });
+        }
+        const o = byMonth.get(ym)!;
+        if (r.jogo === "Blackjack") o.Blackjack.push(r.uap);
+        else if (r.jogo === "Roleta") o.Roleta.push(r.uap);
+        else if (r.jogo === "Speed Baccarat") o.speedBaccarat.push(r.uap);
+      }
+      return [...byMonth.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([ym, v]) => ({
+          dataIso: `${ym}-01`,
+          label: fmtMesAnoCurtoFromYm(ym),
+          Blackjack: media(v.Blackjack),
+          Roleta: media(v.Roleta),
+          speedBaccarat: media(v.speedBaccarat),
+        }));
+    }
     const byDate = new Map<string, { Blackjack?: number; Roleta?: number; speedBaccarat?: number }>();
     for (const r of uapPorJogoRows) {
       if (!byDate.has(r.data)) byDate.set(r.data, {});
@@ -1232,7 +1253,7 @@ export default function MesasSpin() {
         Roleta: v.Roleta,
         speedBaccarat: v.speedBaccarat,
       }));
-  }, [uapPorJogoRows]);
+  }, [uapPorJogoRows, historico]);
 
   const operadorasListFmt = operadorasOcr;
 
@@ -1898,15 +1919,7 @@ export default function MesasSpin() {
       </div>
 
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionHeader
-          icon={<TrendingUp size={15} />}
-          title="UAP por Jogo"
-          sub={
-            historico
-              ? "Blackjack, Roleta e Speed Baccarat · série completa (Supabase)"
-              : `${mesSelecionado?.label ?? ""} · dia a dia (Supabase)`
-          }
-        />
+        <SectionHeader icon={<TrendingUp size={15} />} title="UAP por Jogo" />
         {uapPorJogoLoading ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
             <Clock size={16} style={{ marginBottom: 8 }} />
@@ -1933,13 +1946,13 @@ export default function MesasSpin() {
                   }}
                   labelFormatter={(_, payload) => {
                     const p = payload?.[0]?.payload as { dataIso?: string } | undefined;
-                    return p?.dataIso
-                      ? new Date(p.dataIso + "T12:00:00").toLocaleDateString("pt-BR", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "";
+                    if (!p?.dataIso) return "";
+                    if (historico) return fmtMesAnoCurtoFromYm(p.dataIso.slice(0, 7));
+                    return new Date(p.dataIso + "T12:00:00").toLocaleDateString("pt-BR", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    });
                   }}
                   formatter={(value: number | string) =>
                     [typeof value === "number" ? value.toLocaleString("pt-BR") : "—", "UAP"]
