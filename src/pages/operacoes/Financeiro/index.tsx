@@ -337,8 +337,10 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   const [valor, setValor] = useState(String(row.total));
   const [lives, setLives] = useState<any[]>([]);
 
-  const valorNum = parseFloat(valor.replace(",", ".")) || 0;
-  const editado = valorNum !== row.total;
+  const rawValor = valor.replace(",", ".").trim();
+  const parsedValor = rawValor === "" ? NaN : Number.parseFloat(rawValor);
+  const valorNum = Number.isFinite(parsedValor) ? parsedValor : NaN;
+  const editado = Number.isFinite(valorNum) && valorNum !== row.total;
 
   useEffect(() => {
     if (!row.is_agente) carregarLives();
@@ -375,11 +377,11 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
     setLives(merged);
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(totalAprovar: number) {
     setError("");
     setSaving(true);
     try {
-      await onConfirm(row.id, valorNum, row.is_agente ?? false);
+      await onConfirm(row.id, totalAprovar, row.is_agente ?? false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.";
       setError(msg);
@@ -390,11 +392,11 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
     }
   }
   const handleConfirmClick = () => {
-    if (valorNum <= 0) {
-      alert("Valor deve ser maior que zero. Valor atual: " + valor);
+    if (!Number.isFinite(valorNum) || valorNum < 0) {
+      alert("Informe um valor válido (use 0,00 para zerar o valor da plataforma).");
       return;
     }
-    handleConfirm();
+    void handleConfirm(valorNum);
   };
 
   const rowStyle: React.CSSProperties = {
@@ -501,8 +503,8 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
         <button
           type="button"
           onClick={handleConfirmClick}
-          disabled={saving}
-          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || valorNum <= 0) ? "not-allowed" : "pointer", opacity: (saving || valorNum <= 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
+          disabled={saving || !Number.isFinite(valorNum) || valorNum < 0}
+          style={{ flex: 2, padding: "12px", borderRadius: "10px", border: "none", cursor: (saving || !Number.isFinite(valorNum) || valorNum < 0) ? "not-allowed" : "pointer", opacity: (saving || !Number.isFinite(valorNum) || valorNum < 0) ? 0.7 : 1, background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`, color: "#fff", fontSize: "13px", fontWeight: 700, fontFamily: FONT.body }}
         >
           {saving ? "⏳ Salvando..." : "✅ Aprovar valor"}
         </button>
