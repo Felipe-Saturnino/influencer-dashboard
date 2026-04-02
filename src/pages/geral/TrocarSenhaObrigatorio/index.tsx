@@ -1,14 +1,16 @@
 import { useState } from "react";
+import { AlertCircle, Check, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { AUTH_PLATFORM_TAGLINE, AUTH_TAGLINE_STYLE } from "../../../constants/authScreen";
 
 /**
  * Tela obrigatória para usuários que precisam trocar a senha no primeiro acesso.
  * Não permite pular — usuário acabou de logar com a senha temporária.
  */
 export default function TrocarSenhaObrigatorio() {
-  const { user, setUser } = useApp();
+  const { user, setUser, theme: t } = useApp();
   const [newPass, setNewPass] = useState("");
   const [confPass, setConfPass] = useState("");
   const [err, setErr] = useState("");
@@ -68,7 +70,7 @@ export default function TrocarSenhaObrigatorio() {
     borderRadius: 12,
     color: "#fff",
     fontSize: 14,
-    padding: "14px 44px 14px 16px",
+    padding: "14px 52px 14px 16px",
     outline: "none",
     fontFamily: FONT.body,
   };
@@ -91,29 +93,55 @@ export default function TrocarSenhaObrigatorio() {
         alignItems: "center",
         justifyContent: "center",
         fontFamily: FONT.body,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <div style={{ width: "100%", maxWidth: "min(400px, 100%)" }}>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
+      <div
+        className="auth-glow auth-glow--10s"
+        style={{
+          position: "absolute",
+          top: "-80px",
+          right: "-80px",
+          width: "280px",
+          height: "280px",
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${BASE_COLORS.purple}44, transparent 70%)`,
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        className="auth-glow auth-glow--14s"
+        style={{
+          position: "absolute",
+          bottom: "-50px",
+          left: "-50px",
+          width: "220px",
+          height: "220px",
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${BASE_COLORS.blue}33, transparent 70%)`,
+          pointerEvents: "none",
+        }}
+      />
+      <div style={{ width: "100%", maxWidth: "min(400px, 100%)", position: "relative", zIndex: 1 }}>
+        <div className="app-auth-logo-block" style={{ textAlign: "center", marginBottom: 24 }}>
           <img
             src="/Logo Spin Gaming White.png"
             alt="Spin Gaming"
             style={{
-              height: "clamp(72px, 22vw, 100px)",
+              height: "clamp(72px, 18vw, 120px)",
               objectFit: "contain",
               marginBottom: 8,
             }}
           />
           <div
             style={{
-              color: "#e5dce1",
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: "2px",
-              textTransform: "uppercase",
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              ...AUTH_TAGLINE_STYLE,
             }}
           >
-            Acquisition Hub
+            {AUTH_PLATFORM_TAGLINE}
           </div>
         </div>
 
@@ -128,8 +156,9 @@ export default function TrocarSenhaObrigatorio() {
           }}
         >
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>
-              🔒 Troque sua senha
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
+              <Lock size={20} strokeWidth={2} aria-hidden />
+              Troque sua senha
             </div>
             <p style={{ fontSize: 13, color: "#e5dce1", margin: 0 }}>
               Por segurança, você precisa definir uma nova senha no primeiro acesso.
@@ -138,6 +167,8 @@ export default function TrocarSenhaObrigatorio() {
 
           {ok && (
             <div
+              role="status"
+              aria-live="polite"
               style={{
                 background: "#27ae6018",
                 border: "1px solid #27ae6044",
@@ -146,13 +177,19 @@ export default function TrocarSenhaObrigatorio() {
                 padding: 12,
                 fontSize: 13,
                 marginBottom: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              ✓ Senha alterada! Redirecionando...
+              <Check size={18} strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
+              <span>Senha alterada! Redirecionando...</span>
             </div>
           )}
           {err && (
             <div
+              role="alert"
+              aria-live="polite"
               style={{
                 background: `${BASE_COLORS.red}18`,
                 border: `1px solid ${BASE_COLORS.red}44`,
@@ -161,9 +198,13 @@ export default function TrocarSenhaObrigatorio() {
                 padding: 12,
                 fontSize: 13,
                 marginBottom: 16,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              ⚠️ {err}
+              <AlertCircle size={18} strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
+              <span>{err}</span>
             </div>
           )}
 
@@ -172,6 +213,7 @@ export default function TrocarSenhaObrigatorio() {
             <div style={{ position: "relative" }}>
               <input
                 type={showNew ? "text" : "password"}
+                autoComplete="new-password"
                 value={newPass}
                 onChange={(e) => {
                   setNewPass(e.target.value);
@@ -181,19 +223,28 @@ export default function TrocarSenhaObrigatorio() {
                 style={inputStyle}
               />
               <button
+                type="button"
                 onClick={() => setShowNew(!showNew)}
+                aria-label={showNew ? "Ocultar senha" : "Mostrar senha"}
                 style={{
                   position: "absolute",
-                  right: 14,
+                  right: 6,
                   top: "50%",
                   transform: "translateY(-50%)",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  color: "#1a1a2e",
+                  color: t.textMuted,
+                  padding: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: 44,
+                  minHeight: 44,
+                  boxSizing: "border-box",
                 }}
               >
-                {showNew ? "🙈" : "👁"}
+                {showNew ? <EyeOff size={18} strokeWidth={2} aria-hidden /> : <Eye size={18} strokeWidth={2} aria-hidden />}
               </button>
             </div>
             {newPass.length > 0 && (
@@ -235,6 +286,7 @@ export default function TrocarSenhaObrigatorio() {
             <div style={{ position: "relative" }}>
               <input
                 type={showConf ? "text" : "password"}
+                autoComplete="new-password"
                 value={confPass}
                 onChange={(e) => {
                   setConfPass(e.target.value);
@@ -252,19 +304,28 @@ export default function TrocarSenhaObrigatorio() {
                 }}
               />
               <button
+                type="button"
                 onClick={() => setShowConf(!showConf)}
+                aria-label={showConf ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
                 style={{
                   position: "absolute",
-                  right: 14,
+                  right: 6,
                   top: "50%",
                   transform: "translateY(-50%)",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  color: "#1a1a2e",
+                  color: t.textMuted,
+                  padding: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: 44,
+                  minHeight: 44,
+                  boxSizing: "border-box",
                 }}
               >
-                {showConf ? "🙈" : "👁"}
+                {showConf ? <EyeOff size={18} strokeWidth={2} aria-hidden /> : <Eye size={18} strokeWidth={2} aria-hidden />}
               </button>
             </div>
             {confPass.length > 0 && confPass !== newPass && (
@@ -275,25 +336,41 @@ export default function TrocarSenhaObrigatorio() {
           </div>
 
           <button
+            type="button"
             onClick={handleTrocar}
             disabled={saving || newPass.length < 8 || newPass !== confPass}
+            aria-busy={saving}
             style={{
               width: "100%",
               border: "none",
               borderRadius: 12,
               padding: 15,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 700,
-              letterSpacing: "1px",
+              letterSpacing: "1.25px",
               textTransform: "uppercase",
               cursor: saving ? "not-allowed" : "pointer",
               opacity: saving ? 0.7 : 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
               background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
               color: "white",
               fontFamily: FONT.title,
             }}
           >
-            {saving ? "⏳ Salvando..." : "🔒 Definir nova senha"}
+            {saving ? (
+              <>
+                <Loader2 className="app-lucide-spin" size={20} strokeWidth={2} aria-hidden />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Lock size={18} strokeWidth={2} aria-hidden />
+                Definir nova senha
+              </>
+            )}
           </button>
         </div>
       </div>

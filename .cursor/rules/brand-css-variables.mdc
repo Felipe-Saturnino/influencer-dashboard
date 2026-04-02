@@ -1,0 +1,26 @@
+---
+description: Cores de marca via CSS variables (--brand-*) para white label operadoras
+alwaysApply: true
+---
+
+# Brandguide e variáveis CSS
+
+O `AppContext` chama `aplicarBrandguide()` e injeta no `document.documentElement` variáveis `--brand-primary`, `--brand-secondary`, `--brand-accent`, etc., com fallbacks definidos em `src/styles/global.css` (`:root`).
+
+## Regra
+
+Qualquer elemento que deva refletir a **cor de marca** (Spin padrão ou operadora) deve usar as variáveis CSS, **não** hexadecimal fixo da Spin.
+
+- Preferir `var(--brand-primary, #7c3aed)` (ou o fallback já documentado em `:root`) em vez de `#7c3aed` solto.
+- O mesmo raciocínio vale para secundária, accent e ícones quando fizer sentido: `var(--brand-secondary)`, `var(--brand-accent)`, `var(--brand-icon)`, sempre com fallback se o JSX/style exigir.
+
+## Onde se aplica em especial
+
+- Spinners e loaders (ex.: `Loader2` com `color` / `stroke`)
+- Badges de seção, destaques de título
+- Bordas de foco ativo ligadas à marca
+- Gradientes de CTA **quando for viável** sem quebrar contraste ou legado
+
+## Contexto sem operador logado
+
+Fora do perfil operador, as variáveis permanecem nos defaults do `:root` — o fallback garante a identidade Spin sem lógica extra no componente.

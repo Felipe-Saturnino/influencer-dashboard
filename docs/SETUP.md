@@ -1,4 +1,4 @@
-# Setup e Deploy — Acquisition Hub
+# Setup e Deploy — Data Intelligence (Spin Gaming)
 
 ## Documentação e base de dados (índice)
 

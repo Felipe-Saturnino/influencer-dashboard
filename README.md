@@ -1,4 +1,4 @@
-# Acquisition Hub — Influencer Dashboard
+# Data Intelligence — Influencer Dashboard (Spin Gaming)
 
 Dashboard da Spin Gaming para gestão de influencers, lives, conversões e financeiro.
 

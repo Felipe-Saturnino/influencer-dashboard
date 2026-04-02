@@ -1,4 +1,4 @@
-# Arquitetura de Acessos — Acquisition Hub
+# Arquitetura de Acessos — Data Intelligence (Spin Gaming)
 
 Este documento descreve o modelo de permissões e segregação de dados da plataforma.
 

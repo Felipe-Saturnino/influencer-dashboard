@@ -190,7 +190,7 @@ async function enviarAgenda(
   const from =
     fromRaw && /@[\w.-]+\.[a-z]{2,}/i.test(fromRaw)
       ? fromRaw
-      : 'Acquisition Hub <onboarding@resend.dev>'
+      : 'Data Intelligence <onboarding@resend.dev>'
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
   const logoUrl = supabaseUrl

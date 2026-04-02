@@ -47,7 +47,7 @@ async function enviarEmailBoasVindas(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px;">
       <div style="background: linear-gradient(135deg, #7c3aed, #2563eb); color: white; padding: 20px 24px; border-radius: 12px 12px 0 0;">
-        <h2 style="margin: 0; font-size: 18px;">Bem-vindo ao Acquisition Hub</h2>
+        <h2 style="margin: 0; font-size: 18px;">Bem-vindo ao Data Intelligence</h2>
       </div>
       <div style="background: #f9f9f9; border: 1px solid #e5e5e5; border-top: none; padding: 24px; border-radius: 0 0 12px 12px;">
         <p style="margin: 0 0 16px; color: #333;">Olá, <strong>${nome}</strong>!</p>
@@ -77,9 +77,9 @@ async function enviarEmailBoasVindas(
     method: 'POST',
     headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'Acquisition Hub <onboarding@resend.dev>',
+      from: 'Data Intelligence <onboarding@resend.dev>',
       to: [to],
-      subject: 'Sua conta no Acquisition Hub foi criada',
+      subject: 'Sua conta no Data Intelligence foi criada',
       html,
     }),
   })
@@ -139,7 +139,7 @@ serve(async (req) => {
   }
 
   const { email, nome, role, scopeInfluencers, scopeOperadoras, scopePares, scopeGestorTipos } = body
-  const loginUrl = (body.loginUrl ?? '').trim() || 'https://acquisition-hub.vercel.app'  // fallback
+  const loginUrl = (body.loginUrl ?? '').trim() || 'https://acquisition-hub.vercel.app' // fallback legado; envie loginUrl a partir do app
 
   // Garantir arrays (evita "forEach is not a function" quando vem string/objeto/undefined)
   const toStrArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []

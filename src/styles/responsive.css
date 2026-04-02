@@ -28,6 +28,13 @@
   }
 }
 
+/* Auth: landscape / viewport baixo — menos respiro para evitar scroll desnecessário */
+@media (max-height: 500px) {
+  .app-auth-logo-block {
+    margin-bottom: 12px !important;
+  }
+}
+
 /* ─── Shell das páginas logadas (padding fluido + largura segura no mobile) ─── */
 .app-page-shell {
   box-sizing: border-box;

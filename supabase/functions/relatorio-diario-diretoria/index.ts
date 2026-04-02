@@ -338,7 +338,7 @@ async function enviarRelatorio(
   const fromEnv = (Deno.env.get('RESEND_FROM') ?? '').trim()
   const from = fromEnv && /@[\w.-]+\.[a-z]{2,}/i.test(fromEnv)
     ? fromEnv
-    : 'Acquisition Hub <onboarding@resend.dev>'
+    : 'Data Intelligence <onboarding@resend.dev>'
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
   const logoUrl = supabaseUrl
