@@ -324,6 +324,20 @@ function fmtMesAnoCurtoFromYm(ym: string): string {
   return `${MESES_CURTOS[mo - 1]}/${y}`;
 }
 
+/** Último dia do mês com UAP em `relatorio_uap_por_jogo` (snapshot para pesos no histórico). */
+function uapUltimoDiaDoMesPorJogo(rows: UapPorJogoPlanRow[], ym: string, jogo: string): number | undefined {
+  let bestData: string | null = null;
+  let uap: number | undefined;
+  for (const r of rows) {
+    if (r.data.slice(0, 7) !== ym || r.jogo !== jogo) continue;
+    if (bestData == null || r.data > bestData) {
+      bestData = r.data;
+      uap = r.uap;
+    }
+  }
+  return uap;
+}
+
 function fmtBRL(v: number) {
   const sign = v < 0 ? "-" : "";
   return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -1205,33 +1219,68 @@ export default function MesasSpin() {
     };
   }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev]);
 
-  /** Série diária (mês corrente) ou média mensal (histórico) por jogo — relatorio_uap_por_jogo. */
+  /**
+   * Mês corrente: série diária (relatorio_uap_por_jogo).
+   * Histórico: UAP mensal = mesmo que Comparativo Mensal / `relatorio_monthly_summary` (fallback: soma UAP diários);
+   * reparte esse total entre jogos proporcionalmente ao último snapshot diário do mês em relatorio_uap_por_jogo.
+   */
   const uapJogoChartData = useMemo(() => {
-    const media = (arr: number[]) => (arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : undefined);
     if (historico) {
-      const byMonth = new Map<
-        string,
-        { Blackjack: number[]; Roleta: number[]; speedBaccarat: number[] }
-      >();
-      for (const r of uapPorJogoRows) {
+      const dailyByYm = new Map<string, DailyRow[]>();
+      for (const r of dailyData) {
         const ym = r.data.slice(0, 7);
-        if (!byMonth.has(ym)) {
-          byMonth.set(ym, { Blackjack: [], Roleta: [], speedBaccarat: [] });
-        }
-        const o = byMonth.get(ym)!;
-        if (r.jogo === "Blackjack") o.Blackjack.push(r.uap);
-        else if (r.jogo === "Roleta") o.Roleta.push(r.uap);
-        else if (r.jogo === "Speed Baccarat") o.speedBaccarat.push(r.uap);
+        if (!dailyByYm.has(ym)) dailyByYm.set(ym, []);
+        dailyByYm.get(ym)!.push(r);
       }
-      return [...byMonth.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([ym, v]) => ({
+      const monthlyByYm = new Map(monthlyData.map((m) => [m.mes.slice(0, 7), m] as const));
+      const allYm = new Set<string>([...dailyByYm.keys(), ...monthlyByYm.keys()]);
+      const out: {
+        dataIso: string;
+        label: string;
+        Blackjack?: number;
+        Roleta?: number;
+        speedBaccarat?: number;
+      }[] = [];
+      for (const ym of [...allYm].sort()) {
+        const dias = dailyByYm.get(ym) ?? [];
+        const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
+        const m = monthlyByYm.get(ym);
+        const T = m?.uap != null ? Number(m.uap) : agg?.uap ?? null;
+
+        const wB = uapUltimoDiaDoMesPorJogo(uapPorJogoRows, ym, "Blackjack") ?? 0;
+        const wR = uapUltimoDiaDoMesPorJogo(uapPorJogoRows, ym, "Roleta") ?? 0;
+        const wS = uapUltimoDiaDoMesPorJogo(uapPorJogoRows, ym, "Speed Baccarat") ?? 0;
+        const W = wB + wR + wS;
+
+        let Blackjack: number | undefined;
+        let Roleta: number | undefined;
+        let speedBaccarat: number | undefined;
+
+        if (T != null && T > 0 && W > 0) {
+          const b = Math.round((T * wB) / W);
+          const r0 = Math.round((T * wR) / W);
+          const s = Math.max(0, T - b - r0);
+          Blackjack = wB > 0 ? b : undefined;
+          Roleta = wR > 0 ? r0 : undefined;
+          speedBaccarat = wS > 0 ? s : undefined;
+        } else if (W > 0) {
+          Blackjack = wB > 0 ? Math.round(wB) : undefined;
+          Roleta = wR > 0 ? Math.round(wR) : undefined;
+          speedBaccarat = wS > 0 ? Math.round(wS) : undefined;
+        } else {
+          continue;
+        }
+
+        if (Blackjack == null && Roleta == null && speedBaccarat == null) continue;
+        out.push({
           dataIso: `${ym}-01`,
           label: fmtMesAnoCurtoFromYm(ym),
-          Blackjack: media(v.Blackjack),
-          Roleta: media(v.Roleta),
-          speedBaccarat: media(v.speedBaccarat),
-        }));
+          Blackjack,
+          Roleta,
+          speedBaccarat,
+        });
+      }
+      return out;
     }
     const byDate = new Map<string, { Blackjack?: number; Roleta?: number; speedBaccarat?: number }>();
     for (const r of uapPorJogoRows) {
@@ -1253,7 +1302,7 @@ export default function MesasSpin() {
         Roleta: v.Roleta,
         speedBaccarat: v.speedBaccarat,
       }));
-  }, [uapPorJogoRows, historico]);
+  }, [uapPorJogoRows, historico, dailyData, monthlyData]);
 
   const operadorasListFmt = operadorasOcr;
 
@@ -1927,7 +1976,7 @@ export default function MesasSpin() {
           </div>
         ) : uapJogoChartData.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-            Nenhum dado em relatorio_uap_por_jogo para este período. Inserir linhas via SQL (ver scripts no repositório).
+            Nenhum dado para o período selecionado.
           </div>
         ) : (
           <div style={{ width: "100%", height: 320 }}>
