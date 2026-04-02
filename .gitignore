@@ -24,3 +24,17 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Testes / cobertura (se passarem a existir)
+coverage/
+*.lcov
+
+# TypeScript / Vite cache
+*.tsbuildinfo
+.vite/
+
+# Ferramentas locais
+.turbo/
+*.pem
+.env.production
+.env.staging

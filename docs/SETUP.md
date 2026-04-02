@@ -12,6 +12,8 @@
 | [archive/README.md](./archive/README.md) | SQL arquivado (diagnósticos, *fixes* pontuais). |
 | [`../supabase/migrations/README.md`](../supabase/migrations/README.md) | Convenções da pasta de migrações. |
 
+No GitHub Actions: workflow **CI** (`.github/workflows/ci.yml`) corre `npm ci` e `npm run build` em pushes/PRs às branches `main`, `master` e `staging`.
+
 ## Variáveis de ambiente
 
 O projeto usa variáveis de ambiente do Vite (prefixo `VITE_`). São embutidas no build em tempo de compilação.

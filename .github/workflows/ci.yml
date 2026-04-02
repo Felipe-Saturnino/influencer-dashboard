@@ -1,0 +1,36 @@
+# Validação do frontend em PR e pushes às branches principais (TypeScript + build Vite).
+# Não usa segredos: variáveis VITE_* são placeholders só para o bundler não falhar.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master, staging]
+  pull_request:
+    branches: [main, master, staging]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck & production build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ci-placeholder-key"
