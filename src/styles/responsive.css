@@ -39,6 +39,18 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  .config-password-card-scroll {
+    max-height: min(85vh, 640px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 400px) {
+  .config-theme-radiogroup {
+    flex-direction: column !important;
+  }
 }
 
 /* ─── Shell das páginas logadas (padding fluido + largura segura no mobile) ─── */

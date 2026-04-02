@@ -5,6 +5,9 @@ export const FONT = {
   body:  "var(--brand-fontFamily, 'Inter', 'Helvetica Neue', Arial, sans-serif)",
 };
 
+/** KPIs / páginas densas — NHD Bold + brand; distinto de {@link FONT.title} (Barlow em seções). */
+export const FONT_TITLE = "var(--brand-fontFamily, 'NHD Bold', 'nhd-bold', sans-serif)";
+
 export const BASE_COLORS = {
   blue:   "#1e36f8",
   red:    "#e94025",

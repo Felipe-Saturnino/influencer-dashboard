@@ -1,5 +1,5 @@
 import type { Role, PageKey, PermissaoValor, GestorTipoSlug } from "../../../types";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE } from "../../../constants/theme";
 
 export { FONT_TITLE };
 
