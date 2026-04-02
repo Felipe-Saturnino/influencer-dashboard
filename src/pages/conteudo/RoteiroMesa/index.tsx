@@ -53,6 +53,7 @@ export interface RoteiroCampanha {
   data_fim?: string;
   ativo: boolean;
   ordem: number;
+  created_by?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -318,7 +319,12 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
     if (!titulo.trim() || !texto.trim() || !dataInicio || !dataFim || !operadoraFinal || operadoraFinal === "todas") return;
     setSaving(true);
     const payload = { titulo: titulo.trim(), texto: texto.trim(), jogos, data_inicio: dataInicio, data_fim: dataFim, ativo: true, updated_at: new Date().toISOString() };
-    const { error } = await supabase.from("roteiro_mesa_campanhas").insert({ operadora_slug: operadoraFinal, ordem: 0, ...payload });
+    const { error } = await supabase.from("roteiro_mesa_campanhas").insert({
+      operadora_slug: operadoraFinal,
+      ordem: 0,
+      created_by: user?.id ?? null,
+      ...payload,
+    });
     if (error) console.error("[RoteiroMesa] insert campanha:", error.message);
     setSaving(false);
     if (!error) { onSalvo(); onClose(); }
@@ -457,7 +463,7 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
         <span style={{ fontFamily: FONT.body, fontSize: 13, color: cfg.textColor(dark), lineHeight: 1.55 }}>{sugestao.texto}</span>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {operadoraNome && <OperadoraTag label={operadoraNome} corPrimaria={operadoraCor} dark={dark} />}
+          {operadoraNome && <OperadoraTag label={operadoraNome} corPrimaria={operadoraCor} />}
           {jogosList.map((jogo) => {
             const jcfg = JOGO_TAG_CONFIG[jogo as JogoTag];
             const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
@@ -515,7 +521,7 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
         </div>
         <span style={{ fontFamily: FONT.body, fontSize: 13, color: dark ? "#9898be" : "#4a4a6a", lineHeight: 1.55, fontStyle: "italic" }}>"{campanha.texto}"</span>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {operadoraNome && <OperadoraTag label={operadoraNome} corPrimaria={operadoraCor} dark={dark} />}
+          {operadoraNome && <OperadoraTag label={operadoraNome} corPrimaria={operadoraCor} />}
           {(campanha.jogos ?? ["todos"]).map((jogo) => {
             const jcfg = JOGO_TAG_CONFIG[jogo as JogoTag];
             const jogoLabel = JOGOS.find((j) => j.key === jogo)?.label ?? jogo;
