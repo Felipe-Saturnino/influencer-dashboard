@@ -97,6 +97,18 @@ html, body {
   min-height: 100vh;
 }
 
+/* Sidebar: item ativo — fundo sólido (fallback) + gradiente com color-mix (navegadores recentes) */
+.sidebar-nav-item--active {
+  background: var(--brand-primary, #7c3aed);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand-primary, #7c3aed) 80%, transparent),
+    color-mix(in srgb, var(--brand-secondary, #4a2082) 80%, transparent)
+  );
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--brand-primary, #7c3aed) 27%, transparent);
+}
+
 @supports (zoom: 1) {
   #root {
     zoom: var(--app-ui-zoom);

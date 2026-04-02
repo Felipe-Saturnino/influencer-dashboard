@@ -685,7 +685,7 @@ function DealerCard({
             {GENERO_OPTS.find((o) => o.value === dealer.genero)?.label ?? dealer.genero}
           </span>
           {op && (
-            <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} dark={isDark ?? false} />
+            <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} />
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -732,7 +732,7 @@ function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras:
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Gênero</span><br /><span style={{ fontSize: 14, color: t.text }}>{GENERO_OPTS.find((o) => o.value === dealer.genero)?.label}</span></div>
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Turno</span><br /><span style={{ fontSize: 14, color: t.text }}>{TURNO_OPTS.find((o) => o.value === dealer.turno)?.label}</span></div>
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Jogos</span><br /><span style={{ fontSize: 14, color: t.text }}>{(dealer.jogos ?? []).map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label).join(", ") || "—"}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br />{op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} dark={isDark ?? false} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}</div>
+          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br />{op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}</div>
           {dealer.perfil_influencer && (
             <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Perfil do Influencer</span><br /><span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span></div>
           )}

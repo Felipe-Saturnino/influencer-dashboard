@@ -5,7 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
-import { FONT, DARK_THEME } from "../../../constants/theme";
+import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fmt, getMesesDisponiveis, getDatasDoMes, fmtDia } from "../../../lib/dashboardHelpers";
@@ -216,7 +216,6 @@ export default function CentralNotificacoes() {
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
-  const tagDark = t.bg === DARK_THEME.bg;
 
   const selectStyle: React.CSSProperties = {
     padding: "6px 12px 6px 32px",
@@ -384,7 +383,7 @@ export default function CentralNotificacoes() {
                 return (
                   <article key={c.id} style={cardShell}>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                      <OperadoraTag label={op?.nome ?? c.operadora_slug} corPrimaria={op?.cor_primaria} dark={tagDark} />
+                      <OperadoraTag label={op?.nome ?? c.operadora_slug} corPrimaria={op?.cor_primaria} />
                       <span
                         style={{
                           display: "inline-flex",
@@ -439,9 +438,9 @@ export default function CentralNotificacoes() {
                 <article key={o.id} style={cardShell}>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                     {d?.operadora_slug ? (
-                      <OperadoraTag label={op?.nome ?? d.operadora_slug} corPrimaria={op?.cor_primaria} dark={tagDark} />
+                      <OperadoraTag label={op?.nome ?? d.operadora_slug} corPrimaria={op?.cor_primaria} />
                     ) : (
-                      <OperadoraTag label="Sem operadora" corPrimaria={null} dark={tagDark} />
+                      <OperadoraTag label="Sem operadora" corPrimaria={null} />
                     )}
                   </div>
                   {!d ? (

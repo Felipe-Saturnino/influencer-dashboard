@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { FONT } from "../constants/theme";
 
+export type SectionTitleHeading = "h1" | "h2" | "h3";
+
 export interface SectionTitleProps {
   /** Ícone dentro do badge (ex.: `<Lock size={14} color="#fff" strokeWidth={2} />`). */
   icon: ReactNode;
@@ -8,13 +10,24 @@ export interface SectionTitleProps {
   subtitle?: string;
   titleColor: string;
   subtitleColor?: string;
+  /** Nível do heading semântico (contextos aninhados). */
+  as?: SectionTitleHeading;
 }
 
 /**
- * Título de seção padrão: badge 28×28 (raio 8) com cor de marca + h2 Barlow Condensed em caixa alta.
+ * Título de seção padrão: badge 28×28 (raio 8) com cor de marca + heading Barlow Condensed em caixa alta.
  * Cor do badge: whitelabel via `--brand-primary`.
  */
-export function SectionTitle({ icon, label, subtitle, titleColor, subtitleColor }: SectionTitleProps) {
+export function SectionTitle({
+  icon,
+  label,
+  subtitle,
+  titleColor,
+  subtitleColor,
+  as = "h2",
+}: SectionTitleProps) {
+  const Tag = as;
+
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
@@ -32,7 +45,7 @@ export function SectionTitle({ icon, label, subtitle, titleColor, subtitleColor 
         >
           {icon}
         </div>
-        <h2
+        <Tag
           style={{
             fontSize: 22,
             fontWeight: 800,
@@ -44,7 +57,7 @@ export function SectionTitle({ icon, label, subtitle, titleColor, subtitleColor 
           }}
         >
           {label}
-        </h2>
+        </Tag>
       </div>
       {subtitle != null && subtitle !== "" && (
         <p

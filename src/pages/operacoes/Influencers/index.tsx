@@ -756,7 +756,6 @@ export default function Influencers() {
                           key={o.operadora_slug}
                           label={o.operadora_nome ?? o.operadora_slug}
                           corPrimaria={opsColorMap[o.operadora_slug]}
-                          dark={isDark ?? false}
                           icon={<GiPokerHand size={11} />}
                         />
                       ))}
