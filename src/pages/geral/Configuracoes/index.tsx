@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Eye, EyeOff, Lock, Check, Sun, Moon, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Lock, Check, Sun, Moon, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { GiPalette, GiPadlock } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
+import { SectionTitle } from "../../../components/SectionTitle";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
@@ -133,18 +134,17 @@ export default function Configuracoes() {
       {/* ── APARÊNCIA ── */}
       <div style={card}>
 
-        {/* Header — padrão SectionTitle */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <GiPalette size={14} color="#fff" />
-          </div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-            Aparência
-          </h2>
-        </div>
-        <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 20px 40px" }}>
-          {isOperador ? "Operadores usam sempre o modo escuro com a identidade da operadora." : "Escolha como a interface será exibida."}
-        </p>
+        <SectionTitle
+          icon={<GiPalette size={14} color="#fff" aria-hidden />}
+          label="Aparência"
+          subtitle={
+            isOperador
+              ? "Operadores usam sempre o modo escuro com a identidade da operadora."
+              : "Escolha como a interface será exibida."
+          }
+          titleColor={t.text}
+          subtitleColor={t.textMuted}
+        />
 
         {/* Cards de tema — oculto para operador (travado em Dark) */}
         {!isOperador && (
@@ -217,18 +217,13 @@ export default function Configuracoes() {
       {/* ── ALTERAR SENHA ── */}
       <div style={card}>
 
-        {/* Header — padrão SectionTitle */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: BRAND.roxo, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <GiPadlock size={14} color="#fff" />
-          </div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-            Alterar Senha
-          </h2>
-        </div>
-        <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 20px 40px" }}>
-          Para sua segurança, use uma senha forte.
-        </p>
+        <SectionTitle
+          icon={<GiPadlock size={14} color="#fff" aria-hidden />}
+          label="Alterar Senha"
+          subtitle="Para sua segurança, use uma senha forte."
+          titleColor={t.text}
+          subtitleColor={t.textMuted}
+        />
 
         {/* Feedback de sucesso */}
         {passOk && (
@@ -343,8 +338,10 @@ export default function Configuracoes() {
 
         {/* Botão principal — gradiente padrão + ícone Lucide */}
         <button
+          type="button"
           onClick={handleChangePassword}
           disabled={saving}
+          aria-busy={saving}
           style={{
             width:         "100%",
             border:        "none",
@@ -366,8 +363,17 @@ export default function Configuracoes() {
             transition:    "opacity 0.15s",
           }}
         >
-          <Lock size={14} />
-          {saving ? "Salvando..." : "Salvar Nova Senha"}
+          {saving ? (
+            <>
+              <Loader2 className="app-lucide-spin" size={14} strokeWidth={2} color="#fff" aria-hidden />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Lock size={14} aria-hidden />
+              Salvar Nova Senha
+            </>
+          )}
         </button>
       </div>
     </div>

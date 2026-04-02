@@ -289,7 +289,7 @@ export default function Login({ onLogin }: Props) {
           >
             {loading ? (
               <>
-                <Loader2 className="app-lucide-spin" size={20} strokeWidth={2} aria-hidden />
+                <Loader2 className="app-lucide-spin" size={20} strokeWidth={2} color="#fff" aria-hidden />
                 Entrando...
               </>
             ) : (

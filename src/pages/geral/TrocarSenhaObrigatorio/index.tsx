@@ -1,9 +1,25 @@
-import { useState } from "react";
-import { AlertCircle, Check, Eye, EyeOff, Loader2, Lock } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { AlertCircle, Check, CheckCircle2, Circle, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { AUTH_PLATFORM_TAGLINE, AUTH_TAGLINE_STYLE } from "../../../constants/authScreen";
+import { SectionTitle } from "../../../components/SectionTitle";
+
+const EYE_TOGGLE_COLOR = "rgba(229,220,225,0.6)";
+const SEMANTIC_GREEN = "#22c55e";
+const STAMINA_ORANGE = "#f59e0b";
+
+function mapPasswordUpdateError(raw: string | undefined): string {
+  const m = (raw ?? "").toLowerCase();
+  if (m.includes("different from the old") || m.includes("should be different") || m.includes("same as")) {
+    return "A nova senha deve ser diferente da atual.";
+  }
+  if (m.includes("session") || m.includes("missing") || m.includes("jwt") || m.includes("expired")) {
+    return "Sessão expirada. Faça login novamente.";
+  }
+  return "Erro ao atualizar senha. Tente novamente.";
+}
 
 /**
  * Tela obrigatória para usuários que precisam trocar a senha no primeiro acesso.
@@ -18,6 +34,13 @@ export default function TrocarSenhaObrigatorio() {
   const [saving, setSaving] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConf, setShowConf] = useState(false);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current != null) clearTimeout(redirectTimerRef.current);
+    };
+  }, []);
 
   const strength = [
     newPass.length >= 8,
@@ -25,7 +48,8 @@ export default function TrocarSenhaObrigatorio() {
     /\d/.test(newPass),
     /[^a-zA-Z0-9]/.test(newPass),
   ].filter(Boolean).length;
-  const strengthColor = ["#e94025", "#e94025", "#f5a623", "#27ae60"][strength];
+
+  const strengthColor = ["#e94025", "#e94025", "#e94025", STAMINA_ORANGE, SEMANTIC_GREEN][strength] ?? "#e94025";
   const strengthLabel = strength <= 1 ? "Fraca" : strength <= 2 ? "Média" : "Forte";
 
   const reqs = [
@@ -44,7 +68,10 @@ export default function TrocarSenhaObrigatorio() {
     setSaving(true);
     const { error } = await supabase.auth.updateUser({ password: newPass });
     setSaving(false);
-    if (error) return setErr(error.message ?? "Erro ao atualizar senha.");
+    if (error) {
+      setErr(mapPasswordUpdateError(error.message));
+      return;
+    }
 
     const { error: updErr } = await supabase
       .from("profiles")
@@ -59,10 +86,16 @@ export default function TrocarSenhaObrigatorio() {
     setNewPass("");
     setConfPass("");
     const u = { ...user!, must_change_password: false };
-    setUser(u);
+    if (redirectTimerRef.current != null) clearTimeout(redirectTimerRef.current);
+    redirectTimerRef.current = setTimeout(() => {
+      redirectTimerRef.current = null;
+      setUser(u);
+    }, 1500);
   }
 
-  const inputStyle: React.CSSProperties = {
+  const submitDisabled = saving || newPass.length < 8 || newPass !== confPass;
+
+  const inputStyle: CSSProperties = {
     width: "100%",
     boxSizing: "border-box",
     background: "rgba(255,255,255,0.07)",
@@ -74,7 +107,7 @@ export default function TrocarSenhaObrigatorio() {
     outline: "none",
     fontFamily: FONT.body,
   };
-  const labelStyle: React.CSSProperties = {
+  const labelStyle: CSSProperties = {
     display: "block",
     color: "#e5dce1",
     fontSize: 11,
@@ -146,6 +179,7 @@ export default function TrocarSenhaObrigatorio() {
         </div>
 
         <div
+          className="app-auth-card-scroll"
           style={{
             background: "rgba(15,15,26,0.85)",
             backdropFilter: "blur(20px)",
@@ -155,24 +189,22 @@ export default function TrocarSenhaObrigatorio() {
             boxShadow: "0 32px 64px rgba(0,0,0,0.6)",
           }}
         >
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
-              <Lock size={20} strokeWidth={2} aria-hidden />
-              Troque sua senha
-            </div>
-            <p style={{ fontSize: 13, color: "#e5dce1", margin: 0 }}>
-              Por segurança, você precisa definir uma nova senha no primeiro acesso.
-            </p>
-          </div>
+          <SectionTitle
+            icon={<Lock size={14} color="#fff" strokeWidth={2} aria-hidden />}
+            label="Troque sua senha"
+            subtitle="Por segurança, você precisa definir uma nova senha no primeiro acesso."
+            titleColor="#fff"
+            subtitleColor="#e5dce1"
+          />
 
           {ok && (
             <div
-              role="status"
+              role="alert"
               aria-live="polite"
               style={{
-                background: "#27ae6018",
-                border: "1px solid #27ae6044",
-                color: "#27ae60",
+                background: `${SEMANTIC_GREEN}18`,
+                border: `1px solid ${SEMANTIC_GREEN}44`,
+                color: SEMANTIC_GREEN,
                 borderRadius: 12,
                 padding: 12,
                 fontSize: 13,
@@ -182,7 +214,7 @@ export default function TrocarSenhaObrigatorio() {
                 gap: 8,
               }}
             >
-              <Check size={18} strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
+              <CheckCircle2 size={14} strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
               <span>Senha alterada! Redirecionando...</span>
             </div>
           )}
@@ -203,7 +235,7 @@ export default function TrocarSenhaObrigatorio() {
                 gap: 8,
               }}
             >
-              <AlertCircle size={18} strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
+              <AlertCircle size={14} strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
               <span>{err}</span>
             </div>
           )}
@@ -234,7 +266,7 @@ export default function TrocarSenhaObrigatorio() {
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  color: t.textMuted,
+                  color: EYE_TOGGLE_COLOR,
                   padding: "12px",
                   display: "flex",
                   alignItems: "center",
@@ -244,12 +276,16 @@ export default function TrocarSenhaObrigatorio() {
                   boxSizing: "border-box",
                 }}
               >
-                {showNew ? <EyeOff size={18} strokeWidth={2} aria-hidden /> : <Eye size={18} strokeWidth={2} aria-hidden />}
+                {showNew ? <EyeOff size={16} strokeWidth={2} aria-hidden /> : <Eye size={16} strokeWidth={2} aria-hidden />}
               </button>
             </div>
             {newPass.length > 0 && (
               <div style={{ marginTop: 8 }}>
-                <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                <div
+                  role="status"
+                  aria-label={`Força da senha: ${strengthLabel}`}
+                  style={{ display: "flex", gap: 4, marginBottom: 6 }}
+                >
                   {[1, 2, 3, 4].map((i) => (
                     <div
                       key={i}
@@ -257,7 +293,7 @@ export default function TrocarSenhaObrigatorio() {
                         flex: 1,
                         height: 4,
                         borderRadius: 4,
-                        background: i <= strength ? strengthColor : "#333",
+                        background: i <= strength ? strengthColor : "rgba(255,255,255,0.12)",
                       }}
                     />
                   ))}
@@ -269,12 +305,20 @@ export default function TrocarSenhaObrigatorio() {
                   <div
                     key={i}
                     style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
                       fontSize: 11,
-                      color: r.ok ? "#27ae60" : "#888",
+                      color: r.ok ? SEMANTIC_GREEN : "#888",
                       marginBottom: 3,
                     }}
                   >
-                    {r.ok ? "✓" : "○"} {r.label}
+                    {r.ok ? (
+                      <Check size={10} strokeWidth={2.5} color={SEMANTIC_GREEN} aria-hidden />
+                    ) : (
+                      <Circle size={10} strokeWidth={2} color="#888" aria-hidden />
+                    )}
+                    {r.label}
                   </div>
                 ))}
               </div>
@@ -296,17 +340,13 @@ export default function TrocarSenhaObrigatorio() {
                 style={{
                   ...inputStyle,
                   borderColor:
-                    confPass.length > 0
-                      ? confPass === newPass
-                        ? "#27ae60"
-                        : "#e94025"
-                      : undefined,
+                    confPass.length > 0 ? (confPass === newPass ? SEMANTIC_GREEN : "#e94025") : "rgba(229,220,225,0.15)",
                 }}
               />
               <button
                 type="button"
                 onClick={() => setShowConf(!showConf)}
-                aria-label={showConf ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
+                aria-label={showConf ? "Ocultar senha" : "Mostrar senha"}
                 style={{
                   position: "absolute",
                   right: 6,
@@ -315,7 +355,7 @@ export default function TrocarSenhaObrigatorio() {
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  color: t.textMuted,
+                  color: EYE_TOGGLE_COLOR,
                   padding: "12px",
                   display: "flex",
                   alignItems: "center",
@@ -325,7 +365,7 @@ export default function TrocarSenhaObrigatorio() {
                   boxSizing: "border-box",
                 }}
               >
-                {showConf ? <EyeOff size={18} strokeWidth={2} aria-hidden /> : <Eye size={18} strokeWidth={2} aria-hidden />}
+                {showConf ? <EyeOff size={16} strokeWidth={2} aria-hidden /> : <Eye size={16} strokeWidth={2} aria-hidden />}
               </button>
             </div>
             {confPass.length > 0 && confPass !== newPass && (
@@ -338,8 +378,10 @@ export default function TrocarSenhaObrigatorio() {
           <button
             type="button"
             onClick={handleTrocar}
-            disabled={saving || newPass.length < 8 || newPass !== confPass}
+            disabled={submitDisabled}
             aria-busy={saving}
+            aria-disabled={submitDisabled}
+            title={submitDisabled && !saving ? "Preencha todos os requisitos para continuar" : undefined}
             style={{
               width: "100%",
               border: "none",
@@ -349,25 +391,25 @@ export default function TrocarSenhaObrigatorio() {
               fontWeight: 700,
               letterSpacing: "1.25px",
               textTransform: "uppercase",
-              cursor: saving ? "not-allowed" : "pointer",
+              cursor: saving ? "not-allowed" : submitDisabled ? "not-allowed" : "pointer",
               opacity: saving ? 0.7 : 1,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: 10,
-              background: `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
+              background: "linear-gradient(135deg, var(--brand-primary, #7c3aed), var(--brand-accent, #1e36f8))",
               color: "white",
               fontFamily: FONT.title,
             }}
           >
             {saving ? (
               <>
-                <Loader2 className="app-lucide-spin" size={20} strokeWidth={2} aria-hidden />
+                <Loader2 className="app-lucide-spin" size={14} strokeWidth={2} color="#fff" aria-hidden />
                 Salvando...
               </>
             ) : (
               <>
-                <Lock size={18} strokeWidth={2} aria-hidden />
+                <Lock size={14} strokeWidth={2} aria-hidden />
                 Definir nova senha
               </>
             )}
