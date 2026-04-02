@@ -6,6 +6,9 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
 
+/** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
+const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
+
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
   roxo:     "#4a2082",
@@ -164,9 +167,11 @@ export default function StatusTecnico() {
     setLoading(true);
     const hoje = new Date().toISOString().split("T")[0];
 
-    // Integrações
+    // Integrações (sem upload PLS — descontinuado; pode sobrar linha no DB até migração)
     const { data: intData } = await supabase.from("integrations").select("*").eq("ativo", true);
-    setIntegrations(intData ?? []);
+    setIntegrations(
+      (intData ?? []).filter((i) => i.slug !== SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA),
+    );
 
     // Sync logs (últimos 7 dias)
     const { data: syncDataRaw } = await supabase
