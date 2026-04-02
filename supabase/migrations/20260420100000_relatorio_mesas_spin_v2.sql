@@ -65,15 +65,4 @@ CREATE POLICY relatorio_monthly_summary_all_service ON public.relatorio_monthly_
 CREATE POLICY relatorio_por_tabela_all_service ON public.relatorio_por_tabela
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- Integração PLS (removida pela migração de drop).
-INSERT INTO public.integrations (slug, nome, descricao, ativo)
-VALUES (
-  'upload_pls_daily_commercial',
-  'Upload de PLS / Daily Commercial Report',
-  'OCR (browser) → relatorio_daily_summary, relatorio_monthly_summary, relatorio_por_tabela (v2)',
-  true
-)
-ON CONFLICT (slug) DO UPDATE SET
-  nome = EXCLUDED.nome,
-  descricao = EXCLUDED.descricao,
-  ativo = EXCLUDED.ativo;
+-- Integração upload PLS / Daily Commercial foi removida (dados Mesas Spin manuais / SQL). Ver 20260424100000.

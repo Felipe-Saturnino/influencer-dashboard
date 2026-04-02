@@ -8,7 +8,6 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
-import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
 import KpiCard from "../../../components/dashboard/KpiCard";
 import {
   ChevronLeft,
@@ -16,7 +15,6 @@ import {
   Clock,
   LayoutGrid,
   Table2,
-  FileImage,
   Wallet,
   TrendingUp,
   ListOrdered,
@@ -608,7 +606,6 @@ export default function MesasSpin() {
   /** Só para comparação MoM no carrossel: totais do mês anterior a partir do daily. */
   const [dailyDataPrevMonth, setDailyDataPrevMonth] = useState<DailyRow[]>([]);
   const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
-  const [uploadMsg, setUploadMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
@@ -1457,43 +1454,6 @@ export default function MesasSpin() {
           </div>
         </div>
       </div>
-
-      {uploadMsg && (
-        <div
-          style={{
-            marginBottom: 14,
-            padding: 12,
-            borderRadius: 12,
-            border: `1px solid ${uploadMsg.tipo === "ok" ? BRAND.verde : BRAND.vermelho}`,
-            background: uploadMsg.tipo === "ok" ? `${BRAND.verde}14` : `${BRAND.vermelho}14`,
-            color: uploadMsg.tipo === "ok" ? BRAND.verde : BRAND.vermelho,
-            fontFamily: FONT.body,
-            fontSize: 13,
-          }}
-        >
-          {uploadMsg.tipo === "ok" ? "✅ " : "⚠️ "}
-          {uploadMsg.texto}
-        </div>
-      )}
-
-      {!perm.loading && perm.canEditarOk && (
-        <div style={{ ...card, marginBottom: 14 }}>
-          <SectionHeader
-            icon={<FileImage size={15} />}
-            title="Importar relatório (print)"
-            sub="· mesmo fluxo OCR do Status Técnico"
-          />
-          <MesasSpinRelatorioUpload
-            t={t}
-            disabled={perm.loading}
-            embedded
-            onImported={() => {
-              void carregar();
-            }}
-            onUserMessage={setUploadMsg}
-          />
-        </div>
-      )}
 
       {!loading && (
         <div style={{ ...card, marginBottom: 14 }}>
