@@ -53,6 +53,11 @@ export function getDatasDoMes(ano: number, mes: number): { inicio: string; fim: 
 
 export type PeriodoDashboardMoM = { inicio: string; fim: string };
 
+/** Carrossel no mês civil “em curso” → `getPeriodoComparativoMoM` usa recorte MTD (1..hoje) e o mesmo comprimento no mês anterior. */
+export function isCarrosselMesCivilAtual(anoSel: number, mesSel: number, ref: Date = new Date()): boolean {
+  return anoSel === ref.getFullYear() && mesSel === ref.getMonth();
+}
+
 /**
  * Período principal do carrossel e período de comparação (mês civil anterior alinhado).
  * - Mês civil atual: atual = 1..hoje; anterior = 1..mesmo dia no mês anterior (cap no último dia).
@@ -63,7 +68,7 @@ export function getPeriodoComparativoMoM(
   mesSel: number,
 ): { atual: PeriodoDashboardMoM; anterior: PeriodoDashboardMoM } {
   const hoje = new Date();
-  const isMesCivilAtual = anoSel === hoje.getFullYear() && mesSel === hoje.getMonth();
+  const isMesCivilAtual = isCarrosselMesCivilAtual(anoSel, mesSel, hoje);
 
   let anoAnt = anoSel;
   let mesAnt = mesSel - 1;

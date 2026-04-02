@@ -140,7 +140,7 @@ export default function KpiCard({
               {up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
             </span>
             <span style={{ color: t.textMuted, fontSize: 10 }}>
-              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} mês ant.
+              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} · mesmo período mês ant.
             </span>
           </div>
         )}

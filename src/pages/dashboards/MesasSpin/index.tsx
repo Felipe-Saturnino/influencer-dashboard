@@ -7,7 +7,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
-import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
 import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
 import KpiCard from "../../../components/dashboard/KpiCard";
 import {
@@ -879,24 +879,36 @@ export default function MesasSpin() {
     }
     const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
     if (!base) return null;
+    if (
+      mesSelecionado &&
+      isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
+    ) {
+      return base;
+    }
     return {
       ...base,
       uap: monthlyUapArpuSel?.uap ?? null,
       arpu: monthlyUapArpuSel?.arpu ?? null,
     };
-  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel]);
+  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, mesSelecionado]);
 
   const kpiAntExibir = useMemo(() => {
     const base =
       historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
     if (!base) return null;
     if (historico) return base;
+    if (
+      mesSelecionado &&
+      isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
+    ) {
+      return base;
+    }
     return {
       ...base,
       uap: monthlyUapArpuPrev?.uap ?? base.uap,
       arpu: monthlyUapArpuPrev?.arpu ?? base.arpu,
     };
-  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev]);
+  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado]);
 
   /**
    * Mês corrente: série diária (relatorio_uap_por_jogo).
