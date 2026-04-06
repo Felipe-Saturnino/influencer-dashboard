@@ -695,7 +695,7 @@ export default function DashboardFinanceiro() {
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle
           icon={<GiPokerHand size={14} />}
-          sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
+          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Financeiros
         </SectionTitle>
@@ -754,7 +754,9 @@ export default function DashboardFinanceiro() {
 
       {/* ══ BLOCO 3: INVESTIMENTO POR INFLUENCER ════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiCoins size={14} />}>Investimento por Influencer</SectionTitle>
+        <SectionTitle icon={<GiCoins size={14} />} sub={historico ? "acumulado" : undefined}>
+          Investimento por Influencer
+        </SectionTitle>
 
         {loading || pieInvestimento.length === 0 ? (
           <div style={{ minHeight: 360, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>
@@ -805,7 +807,9 @@ export default function DashboardFinanceiro() {
       {/* ══ BLOCO 4: RANKING FINANCEIRO ══════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiWhiteTower size={14} />}>Ranking Financeiro</SectionTitle>
+          <SectionTitle icon={<GiWhiteTower size={14} />} sub={historico ? "acumulado" : undefined}>
+            Ranking Financeiro
+          </SectionTitle>
           {/* Legenda de perfis */}
           <div style={{ display: "flex", gap: 6, fontSize: 11, flexWrap: "wrap" }}>
             {(["Whales","Core","Recreativos","Caçadores de Bônus"] as PerfilJogador[]).map((p) => {

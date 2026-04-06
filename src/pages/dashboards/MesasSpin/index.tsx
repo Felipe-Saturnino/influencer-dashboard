@@ -2034,7 +2034,11 @@ export default function MesasSpin() {
           <SectionHeader
             icon={<LayoutGrid size={15} />}
             title="KPIs Consolidados"
-            sub={historico ? "acumulado" : mesSelecionado?.label}
+            sub={
+              historico
+                ? "acumulado"
+                : "comparativo MTD vs mesmo período do mês anterior"
+            }
           />
           {loading ? (
             <>
@@ -2486,7 +2490,7 @@ export default function MesasSpin() {
                 <SectionHeader
                   icon={<GiDiceSixFacesFour size={15} />}
                   title="Comparativo de Jogo"
-                  sub="todos os meses"
+                  sub="mês a mês"
                 />
                 <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                   <Clock size={16} style={{ marginBottom: 8 }} />
@@ -2522,7 +2526,7 @@ export default function MesasSpin() {
                 <SectionHeader
                   icon={<GiDiceSixFacesFour size={15} />}
                   title="Comparativo de Jogo"
-                  sub="todos os meses"
+                  sub="mês a mês"
                 />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                   {MSG_SEM_DADOS_FILTRO}
@@ -2551,7 +2555,7 @@ export default function MesasSpin() {
                 <SectionHeader
                   icon={<GiDiceSixFacesFour size={15} />}
                   title="Comparativo de Jogo"
-                  sub="todos os meses"
+                  sub="mês a mês"
                 />
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>

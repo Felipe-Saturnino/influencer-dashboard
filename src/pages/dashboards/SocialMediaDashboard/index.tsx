@@ -709,7 +709,10 @@ export default function SocialMediaDashboard() {
       {loading ? (
         <>
           <div style={card}>
-            <SectionTitle icon={<GiPokerHand size={14} aria-hidden />}>
+            <SectionTitle
+              icon={<GiPokerHand size={14} aria-hidden />}
+              sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
+            >
               KPIs de Mídias Sociais
             </SectionTitle>
             <div className="app-grid-kpi-3">
@@ -737,7 +740,10 @@ export default function SocialMediaDashboard() {
         <>
           {/* KPIs GERAIS */}
           <div style={card}>
-            <SectionTitle icon={<GiPokerHand size={14} />}>
+            <SectionTitle
+              icon={<GiPokerHand size={14} />}
+              sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
+            >
               KPIs de Mídias Sociais
             </SectionTitle>
             <div className="app-grid-kpi-3">
@@ -840,7 +846,9 @@ export default function SocialMediaDashboard() {
               )}
             </div>
             <div style={{ ...card, marginBottom: 0 }}>
-              <SectionTitle icon={<GiPlayerNext size={14} />}>Funil de conversão</SectionTitle>
+              <SectionTitle icon={<GiPlayerNext size={14} />} sub={historico ? "acumulado" : undefined}>
+                Funil de conversão
+              </SectionTitle>
               {(() => {
                 const acessos   = funilTotais?.visitas   ?? 0;
                 const registros = funilTotais?.registros ?? 0;
@@ -927,7 +935,9 @@ export default function SocialMediaDashboard() {
 
           {/* Campanhas — Performance */}
           <div style={card}>
-            <SectionTitle icon={<GiShield size={14} />}>Campanhas — Performance de conversão</SectionTitle>
+            <SectionTitle icon={<GiShield size={14} />} sub={historico ? "acumulado" : undefined}>
+              Campanhas — Performance de conversão
+            </SectionTitle>
             {campanhasPerf.length > 0 ? (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
@@ -979,9 +989,6 @@ export default function SocialMediaDashboard() {
                     })}
                   </tbody>
                 </table>
-                <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 8, marginBottom: 0 }}>
-                  * GGR estimado = Depósitos − Saques atribuídos à campanha via UTM.
-                </p>
               </div>
             ) : (
               <div style={{ color: t.textMuted, fontSize: 12, padding: "24px 0", fontFamily: FONT.body }}>

@@ -16,6 +16,7 @@ import {
   fmtDia,
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
+  isCarrosselMesCivilAtual,
 } from "../../../lib/dashboardHelpers";
 import {
   SectionTitle,
@@ -35,6 +36,17 @@ import {
 
 const GiStarMedalFilter = GiStarMedal;
 const fmtHoras = fmtHorasTotal;
+
+const MESES_CURTOS_TAB = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+/** `YYYY-MM` → Jan/2026 (igual Mesas Spin / Detalhamento mensal). */
+function fmtMesAnoCurtoInfluencer(ym: string): string {
+  const [ys, ms] = ym.split("-");
+  const mo = Number(ms);
+  const y = Number(ys);
+  if (!ys || !Number.isFinite(mo) || mo < 1 || mo > 12) return ym;
+  return `${MESES_CURTOS_TAB[mo - 1]}/${y}`;
+}
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Metrica {
@@ -306,8 +318,72 @@ export default function DashboardOverviewInfluencer() {
         setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
       }
 
-      // Bloco 5: Comparativo Diário (só quando período = mês)
-      if (!historico && mesSelecionado) {
+      // Bloco 5: Comparativo Mensal (histórico) ou Comparativo Diário (mês no carrossel)
+      if (historico) {
+        const ymSet = new Set<string>();
+        rows.forEach((m) => ymSet.add(m.data.slice(0, 7)));
+        liveRows.forEach((l) => ymSet.add(l.data.slice(0, 7)));
+        const byYm: Record<string, DiaData> = {};
+        for (const ym of ymSet) {
+          byYm[ym] = {
+            data: `${ym}-01`,
+            duracao: 0,
+            media_views: 0,
+            max_views: 0,
+            acessos: 0,
+            registros: 0,
+            ftd_count: 0,
+            ftd_total: 0,
+            deposit_count: 0,
+            deposit_total: 0,
+            withdrawal_count: 0,
+            withdrawal_total: 0,
+            ggr: 0,
+          };
+        }
+        rows.forEach((m) => {
+          const ym = m.data.slice(0, 7);
+          if (!byYm[ym]) return;
+          byYm[ym].acessos += m.visit_count || 0;
+          byYm[ym].registros += m.registration_count || 0;
+          byYm[ym].ftd_count += m.ftd_count || 0;
+          byYm[ym].ftd_total += m.ftd_total || 0;
+          byYm[ym].deposit_count += m.deposit_count || 0;
+          byYm[ym].deposit_total += m.deposit_total || 0;
+          byYm[ym].withdrawal_count += m.withdrawal_count || 0;
+          byYm[ym].withdrawal_total += m.withdrawal_total || 0;
+          byYm[ym].ggr += m.ggr || 0;
+        });
+        const viewsPorMes: Record<string, number[]> = {};
+        liveRows.forEach((live) => {
+          const ym = live.data.slice(0, 7);
+          const res = resultados.find((r) => r.live_id === live.id);
+          if (!res || !byYm[ym]) return;
+          const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
+          byYm[ym].duracao += h;
+          const media = Number(res.media_views) || 0;
+          const pico =
+            res.max_views != null && Number(res.max_views) > 0
+              ? Number(res.max_views)
+              : media > 0
+                ? media
+                : 0;
+          if (media > 0) {
+            if (!viewsPorMes[ym]) viewsPorMes[ym] = [];
+            viewsPorMes[ym].push(media);
+          }
+          if (pico > 0) {
+            byYm[ym].max_views = Math.max(byYm[ym].max_views, pico);
+          }
+        });
+        Object.keys(viewsPorMes).forEach((ym) => {
+          if (byYm[ym]) {
+            const arr = viewsPorMes[ym];
+            byYm[ym].media_views = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+          }
+        });
+        setDiasData(Object.values(byYm).sort((a, b) => a.data.localeCompare(b.data)));
+      } else if (mesSelecionado) {
         const dias: Record<string, DiaData> = {};
         for (let d = new Date(mesSelecionado.ano, mesSelecionado.mes, 1); d <= new Date(mesSelecionado.ano, mesSelecionado.mes + 1, 0); d.setDate(d.getDate() + 1)) {
           const ds = fmt(d);
@@ -331,11 +407,19 @@ export default function DashboardOverviewInfluencer() {
           if (!res || !dias[live.data]) return;
           const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
           dias[live.data].duracao += h;
-          const views = res.media_views || res.max_views || 0;
-          if (views > 0) {
+          const media = Number(res.media_views) || 0;
+          const pico =
+            res.max_views != null && Number(res.max_views) > 0
+              ? Number(res.max_views)
+              : media > 0
+                ? media
+                : 0;
+          if (media > 0) {
             if (!viewsPorDia[live.data]) viewsPorDia[live.data] = [];
-            viewsPorDia[live.data].push(views);
-            dias[live.data].max_views = Math.max(dias[live.data].max_views, views);
+            viewsPorDia[live.data].push(media);
+          }
+          if (pico > 0) {
+            dias[live.data].max_views = Math.max(dias[live.data].max_views, pico);
           }
         });
         Object.keys(viewsPorDia).forEach((ds) => {
@@ -353,6 +437,17 @@ export default function DashboardOverviewInfluencer() {
     }
     carregar();
   }, [historico, idxMes, filtroInfluencer, filtroOperadora, podeVerInfluencer, influencersVisiveis, escoposVisiveis.operadorasVisiveis, mesSelecionado]);
+
+  /** Mês civil atual: só exibe dias até ontem (MTD “fechado”); meses passados = mês inteiro. */
+  const diasDataComparativoExibicao = useMemo(() => {
+    if (historico || !mesSelecionado) return diasData;
+    if (!isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)) return diasData;
+    const ontem = new Date();
+    ontem.setHours(0, 0, 0, 0);
+    ontem.setDate(ontem.getDate() - 1);
+    const limite = `${ontem.getFullYear()}-${String(ontem.getMonth() + 1).padStart(2, "0")}-${String(ontem.getDate()).padStart(2, "0")}`;
+    return diasData.filter((d) => d.data <= limite);
+  }, [diasData, historico, mesSelecionado]);
 
   const pctViewAcesso = totais.views > 0 ? ((totais.acessos / totais.views) * 100).toFixed(1) + "%" : "—";
   const pctAcessoReg = totais.acessos > 0 ? ((totais.registros / totais.acessos) * 100).toFixed(1) + "%" : "—";
@@ -498,7 +593,12 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPodiumWinner size={14} aria-hidden />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}>KPIs Executivos</SectionTitle>
+        <SectionTitle
+          icon={<GiPodiumWinner size={14} aria-hidden />}
+          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+        >
+          KPIs Executivos
+        </SectionTitle>
         <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
           <KpiCard label="GGR Total" value={fmtBRL(totais.ggr)} icon={<GiMoneyStack size={16} />} accentVar="--brand-extra1" accentColor={BRAND.roxo} atual={totais.ggr} anterior={totaisAnt.ggr} isBRL isHistorico={historico} />
           <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.azul} atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
@@ -519,13 +619,17 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 3: Funil de Conversão ───────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiFunnel size={14} />}>Funil de Conversão</SectionTitle>
+        <SectionTitle icon={<GiFunnel size={14} />} sub={historico ? "acumulado" : undefined}>
+          Funil de Conversão
+        </SectionTitle>
         <FunilVisual values={[totais.views, totais.acessos, totais.registros, totais.ftds]} taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]} />
       </div>
 
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiSpeedometer size={14} aria-hidden />}>Eficiência</SectionTitle>
+        <SectionTitle icon={<GiSpeedometer size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          Eficiência
+        </SectionTitle>
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
@@ -540,39 +644,53 @@ export default function DashboardOverviewInfluencer() {
         </div>
       </div>
 
-      {historico && (
-        <div style={{ ...card, marginBottom: 14 }}>
-          <SectionTitle icon={<GiCalendar size={14} aria-hidden />}>Comparativo Diário</SectionTitle>
-          <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            O comparativo diário está disponível apenas para meses específicos.
-            <br />
-            <span style={{ fontSize: 11 }}>Selecione um mês no navegador acima para ver o detalhamento dia a dia.</span>
-          </div>
-        </div>
-      )}
-
-      {/* ─── BLOCO 5: Comparativo Diário ──────────────────────────────────────── */}
-      {!historico && mesSelecionado && diasData.length > 0 && (
+      {/* ─── BLOCO 5: Comparativo Mensal (histórico) / Comparativo Diário (mês) ─ */}
+      {(historico || mesSelecionado) && diasData.length > 0 && (
         <div style={{ ...card, padding: 0, overflow: "hidden", marginBottom: 0 }}>
           <div style={{ padding: "20px 20px 16px" }}>
-            <SectionTitle icon={<GiCalendar size={14} aria-hidden />}>Comparativo Diário</SectionTitle>
+            <SectionTitle
+              icon={<GiCalendar size={14} aria-hidden />}
+              sub={historico ? "mês a mês" : undefined}
+            >
+              {historico ? "Comparativo Mensal" : "Comparativo Diário"}
+            </SectionTitle>
           </div>
           <div className="app-table-wrap">
             <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
               <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
-                Comparativo diário — {mesSelecionado?.label ?? ""}
+                {historico
+                  ? "Comparativo mensal — todo o período"
+                  : `Comparativo diário — ${mesSelecionado?.label ?? ""}`}
               </caption>
               <thead>
                 <tr>
-                  {["Data","Duração Live","Média Views","Máx Views","Acessos","Registros","# FTDs","R$ FTDs","# Depósitos","R$ Depósitos","# Saques","R$ Saques","R$ GGR"].map((h) => (
-                    <th key={h} scope="col" style={thStyle}>{h}</th>
+                  {[
+                    historico ? "Mês" : "Data",
+                    "Duração Live",
+                    "Média Views",
+                    "Máx Views",
+                    "Acessos",
+                    "Registros",
+                    "# FTDs",
+                    "R$ FTDs",
+                    "# Depósitos",
+                    "R$ Depósitos",
+                    "# Saques",
+                    "R$ Saques",
+                    "R$ GGR",
+                  ].map((h) => (
+                    <th key={h} scope="col" style={thStyle}>
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {diasData.map((d, i) => (
+                {diasDataComparativoExibicao.map((d, i) => (
                   <tr key={d.data} style={{ background: zebraStripe(i) }}>
-                    <td style={tdStyle}>{fmtDia(d.data)}</td>
+                    <td style={tdStyle}>
+                      {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
+                    </td>
                     <td style={tdStyle}>{d.duracao > 0 ? fmtHoras(d.duracao) : "—"}</td>
                     <td style={tdStyle}>{cel(d.media_views)}</td>
                     <td style={tdStyle}>{cel(d.max_views)}</td>
@@ -584,11 +702,20 @@ export default function DashboardOverviewInfluencer() {
                     <td style={tdStyle}>{cel(d.deposit_total, true)}</td>
                     <td style={tdStyle}>{cel(d.withdrawal_count)}</td>
                     <td style={tdStyle}>{cel(d.withdrawal_total, true)}</td>
-                    <td style={tdStyle}>{cel(d.ggr, true)}</td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        color: d.ggr > 0 ? BRAND.verde : d.ggr < 0 ? BRAND.vermelho : t.text,
+                        fontWeight: d.ggr !== 0 ? 600 : undefined,
+                      }}
+                    >
+                      {cel(d.ggr, true)}
+                    </td>
                   </tr>
                 ))}
-                {diasData.length > 0 && (() => {
-                  const tot = diasData.reduce((acc, d) => ({
+                {diasData.length > 0 &&
+                  (() => {
+                  const tot = diasDataComparativoExibicao.reduce((acc, d) => ({
                     duracao: acc.duracao + d.duracao,
                     acessos: acc.acessos + d.acessos,
                     registros: acc.registros + d.registros,
@@ -602,7 +729,7 @@ export default function DashboardOverviewInfluencer() {
                   }), { duracao: 0, acessos: 0, registros: 0, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
                   return (
                     <tr key="total" style={{ background: TOTAL_ROW_BG, fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
-                      <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>∑ Total</td>
+                      <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>Total</td>
                       <td style={tdStyle}>{tot.duracao > 0 ? fmtHoras(tot.duracao) : "—"}</td>
                       <td style={tdStyle}>—</td>
                       <td style={tdStyle}>—</td>
@@ -614,7 +741,15 @@ export default function DashboardOverviewInfluencer() {
                       <td style={tdStyle}>{cel(tot.deposit_total, true)}</td>
                       <td style={tdStyle}>{cel(tot.withdrawal_count)}</td>
                       <td style={tdStyle}>{cel(tot.withdrawal_total, true)}</td>
-                      <td style={tdStyle}>{cel(tot.ggr, true)}</td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          color: tot.ggr > 0 ? BRAND.verde : tot.ggr < 0 ? BRAND.vermelho : t.text,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {cel(tot.ggr, true)}
+                      </td>
                     </tr>
                   );
                 })()}

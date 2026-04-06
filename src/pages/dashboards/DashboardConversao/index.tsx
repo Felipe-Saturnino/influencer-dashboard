@@ -706,7 +706,9 @@ export default function DashboardConversao() {
 
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiConvergenceTarget size={14} />}>Comparativo de Funil</SectionTitle>
+        <SectionTitle icon={<GiConvergenceTarget size={14} />} sub={historico ? "acumulado" : undefined}>
+          Comparativo de Funil
+        </SectionTitle>
 
         {/* Selects com badge "vs" estilizado */}
         <div className="app-conversao-vs-row">
@@ -786,7 +788,9 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 4: COMPARATIVO DE TAXAS ═══════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiSpeedometer size={14} />}>Comparativo de Taxas</SectionTitle>
+          <SectionTitle icon={<GiSpeedometer size={14} />} sub={historico ? "acumulado" : undefined}>
+            Comparativo de Taxas
+          </SectionTitle>
 
           {/* Filtros de ação */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>

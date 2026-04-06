@@ -594,7 +594,10 @@ export default function DashboardOverview() {
 
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPokerHand size={15} aria-hidden />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}>
+        <SectionTitle
+          icon={<GiPokerHand size={15} aria-hidden />}
+          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+        >
           KPIs Executivos
         </SectionTitle>
 
@@ -664,7 +667,9 @@ export default function DashboardOverview() {
 
       {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPlayerNext size={15} aria-hidden />}>Funil de Conversão</SectionTitle>
+        <SectionTitle icon={<GiPlayerNext size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          Funil de Conversão
+        </SectionTitle>
         <FunilVisual
           values={[totaisExibidos.views, totaisExibidos.acessos, totaisExibidos.registros, totaisExibidos.ftds]}
           taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
@@ -674,7 +679,9 @@ export default function DashboardOverview() {
       {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiTrophy size={15} aria-hidden />}>Ranking de Influencers</SectionTitle>
+          <SectionTitle icon={<GiTrophy size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+            Ranking de Influencers
+          </SectionTitle>
 
           {/* Filtros de status */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
