@@ -5,13 +5,34 @@ import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
 import type { Theme } from "../../../constants/theme";
-import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS } from "./constants";
+import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, ROLES } from "./constants";
 import { ModalUsuario } from "./ModalUsuario";
-
-type FiltroStatus = "todos" | "ativos" | "desativados";
 
 interface AbaUsuariosProps {
   t: Theme;
+}
+
+function formatarUltimoLogin(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return "—";
+  }
+}
+
+/** Filtro de status: vazio = todos; pode ter ativo, desativado ou ambos (= todos). */
+function passaFiltroStatus(u: UsuarioCompleto, set: Set<"ativo" | "desativado">): boolean {
+  if (set.size === 0) return true;
+  const ok = u.ativo !== false;
+  return (set.has("ativo") && ok) || (set.has("desativado") && !ok);
+}
+
+function passaFiltroPerfil(u: UsuarioCompleto, set: Set<Role>): boolean {
+  if (set.size === 0) return true;
+  return set.has(u.role);
 }
 
 function formatarEscopo(scopes: UserScope[], ops: Operadora[]): string | null {
@@ -51,13 +72,17 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<UsuarioCompleto | null>(null);
   const [busca, setBusca] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todos");
+  const [filtroStatusSet, setFiltroStatusSet] = useState<Set<"ativo" | "desativado">>(new Set());
+  const [filtroPerfilSet, setFiltroPerfilSet] = useState<Set<Role>>(new Set());
   const [modalDesativar, setModalDesativar] = useState<UsuarioCompleto | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
     const [{ data: profiles }, { data: scopes }, { data: ops }] = await Promise.all([
-      supabase.from("profiles").select("id, name, email, role, ativo, created_at").order("created_at", { ascending: true }),
+      supabase
+        .from("profiles")
+        .select("id, name, email, role, ativo, created_at, last_sign_in_at")
+        .order("created_at", { ascending: true }),
       supabase.from("user_scopes").select("*"),
       supabase.from("operadoras").select("*").order("nome"),
     ]);
@@ -83,7 +108,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
     setModalOpen(true);
   };
 
-  const usuariosFiltrados = busca.trim()
+  const porBusca = busca.trim()
     ? usuarios.filter(
         (u) =>
           (u.name ?? "").toLowerCase().includes(busca.toLowerCase()) ||
@@ -91,12 +116,36 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
       )
     : usuarios;
 
-  const usuariosPorStatus = usuariosFiltrados.filter((u: UsuarioCompleto) => {
-    const ativo = u.ativo !== false;
-    if (filtroStatus === "todos") return true;
-    if (filtroStatus === "ativos") return ativo;
-    return !ativo;
-  });
+  const baseContagemStatus = porBusca.filter((u) => passaFiltroPerfil(u, filtroPerfilSet));
+  const qtdAtivos = baseContagemStatus.filter((u) => u.ativo !== false).length;
+  const qtdDesativados = baseContagemStatus.length - qtdAtivos;
+
+  const baseContagemPerfil = porBusca.filter((u) => passaFiltroStatus(u, filtroStatusSet));
+  const qtdPorPerfil = Object.fromEntries(
+    ROLES.map((r) => [r.value, baseContagemPerfil.filter((u) => u.role === r.value).length])
+  ) as Record<Role, number>;
+
+  const usuariosListaFinal = porBusca.filter(
+    (u) => passaFiltroStatus(u, filtroStatusSet) && passaFiltroPerfil(u, filtroPerfilSet)
+  );
+
+  const toggleFiltroStatus = (chave: "ativo" | "desativado") => {
+    setFiltroStatusSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(chave)) next.delete(chave);
+      else next.add(chave);
+      return next;
+    });
+  };
+
+  const toggleFiltroPerfil = (role: Role) => {
+    setFiltroPerfilSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(role)) next.delete(role);
+      else next.add(role);
+      return next;
+    });
+  };
 
   const desativarOuReativar = async (u: UsuarioCompleto) => {
     const novoAtivo = u.ativo === false;
@@ -109,17 +158,20 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ position: "relative" }}>
+      {/* Linha 1: pesquisa + novo usuário */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+        <div style={{ position: "relative", flex: "1 1 240px", minWidth: 200 }}>
           <Search
             size={14}
             color={t.textMuted}
             style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+            aria-hidden
           />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por nome ou e-mail..."
+            aria-label="Buscar usuários por nome ou e-mail"
             style={{
               width: "100%",
               boxSizing: "border-box",
@@ -133,73 +185,176 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
               outline: "none",
               transition: "border-color 0.18s",
             }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = t.cardBorder; }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = BRAND.roxoVivo;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = t.cardBorder;
+            }}
           />
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 6 }}>
-            {(["todos", "ativos", "desativados"] as const).map((f) => {
-              const ativo = filtroStatus === f;
-              return (
-                <button
-                  key={f}
-                  onClick={() => setFiltroStatus(f)}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 20,
-                    border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
-                    background: ativo ? `${BRAND.roxoVivo}22` : t.inputBg ?? "transparent",
-                    color: ativo ? BRAND.roxoVivo : t.textMuted,
-                    fontSize: 13,
-                    fontWeight: ativo ? 700 : 400,
-                    cursor: "pointer",
-                    fontFamily: FONT.body,
-                    transition: "all 0.18s",
-                  }}
-                >
-                  {f === "todos" ? "Todos" : f === "ativos" ? "Ativos" : "Desativados"}
-                </button>
-              );
-            })}
-          </div>
+        <button
+          type="button"
+          onClick={abrirNovo}
+          style={{
+            background: BRAND.gradiente,
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            padding: "10px 18px",
+            cursor: "pointer",
+            fontFamily: FONT.body,
+            fontSize: 13,
+            fontWeight: 600,
+            flexShrink: 0,
+          }}
+        >
+          + Novo Usuário
+        </button>
+      </div>
+
+      {/* Linha 2: status e perfis (nenhum selecionado = todos) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
           <span
             style={{
-              background: t.cardBorder,
-              borderRadius: 20,
+              fontSize: 10,
+              fontWeight: 700,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              marginRight: 4,
+            }}
+          >
+            Status
+          </span>
+          {(
+            [
+              { key: "ativo" as const, label: "Ativo", count: qtdAtivos, cor: BRAND.verde },
+              { key: "desativado" as const, label: "Desativado", count: qtdDesativados, cor: BRAND.cinza },
+            ] as const
+          ).map(({ key, label, count, cor }) => {
+            const sel = filtroStatusSet.has(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={sel}
+                onClick={() => toggleFiltroStatus(key)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  border: `1px solid ${sel ? cor : t.cardBorder}`,
+                  background: sel ? `${cor}22` : t.inputBg ?? "transparent",
+                  color: sel ? cor : t.textMuted,
+                  fontSize: 13,
+                  fontWeight: sel ? 700 : 500,
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  transition: "all 0.18s",
+                }}
+              >
+                {label}
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    opacity: sel ? 1 : 0.85,
+                    minWidth: 18,
+                    textAlign: "center",
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+          <span
+            style={{
+              marginLeft: 8,
               padding: "2px 10px",
               fontSize: 12,
               color: t.textMuted,
               fontFamily: FONT.body,
             }}
           >
-            {usuariosPorStatus.length} usuário{usuariosPorStatus.length !== 1 ? "s" : ""}
+            {usuariosListaFinal.length} usuário{usuariosListaFinal.length !== 1 ? "s" : ""}
           </span>
-          <div style={{ flex: 1 }} />
-          <button
-            onClick={abrirNovo}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+          <span
             style={{
-              background: BRAND.gradiente,
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              padding: "9px 18px",
-              cursor: "pointer",
+              fontSize: 10,
+              fontWeight: 700,
+              color: t.textMuted,
               fontFamily: FONT.body,
-              fontSize: 13,
-              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              marginRight: 4,
             }}
           >
-            + Novo Usuário
-          </button>
+            Perfis
+          </span>
+          {[...ROLES].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((r) => {
+            const cor = roleBadgeColor(r.value);
+            const sel = filtroPerfilSet.has(r.value);
+            const count = qtdPorPerfil[r.value];
+            return (
+              <button
+                key={r.value}
+                type="button"
+                aria-pressed={sel}
+                aria-label={`Filtrar por perfil ${r.label}`}
+                onClick={() => toggleFiltroPerfil(r.value)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  border: `1px solid ${sel ? cor : t.cardBorder}`,
+                  background: sel ? `${cor}22` : t.inputBg ?? "transparent",
+                  color: sel ? cor : t.textMuted,
+                  fontSize: 12,
+                  fontWeight: sel ? 700 : 500,
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  transition: "all 0.18s",
+                }}
+              >
+                {r.label}
+                <span style={{ fontSize: 11, fontWeight: 800, minWidth: 18, textAlign: "center" }}>{count}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {loading ? (
         <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
+      ) : usuariosListaFinal.length === 0 ? (
+        <div
+          style={{
+            padding: 40,
+            textAlign: "center",
+            color: t.textMuted,
+            fontSize: 14,
+            fontFamily: FONT.body,
+            border: `1px dashed ${t.cardBorder}`,
+            borderRadius: 14,
+          }}
+        >
+          {usuarios.length === 0
+            ? "Nenhum usuário cadastrado."
+            : "Nenhum usuário corresponde aos filtros ou à busca."}
+        </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 16 }}>
-          {usuariosPorStatus.map((u: UsuarioCompleto) => {
+          {usuariosListaFinal.map((u: UsuarioCompleto) => {
             const escopoTexto = formatarEscopo(u.scopes ?? [], operadoras);
             const ativo = u.ativo !== false;
             const corPerfil = roleBadgeColor(u.role as Role);
@@ -274,6 +429,17 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
                     {roleLabel(u.role as Role)}
                   </span>
                   {escopoTexto && <span style={{ fontSize: 12, color: t.textMuted }}>{escopoTexto}</span>}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: t.textMuted,
+                    fontFamily: FONT.body,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: t.textMuted }}>Último login:</span>{" "}
+                  <span style={{ color: t.text }}>{formatarUltimoLogin(u.last_sign_in_at)}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                   <button
