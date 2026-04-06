@@ -21,7 +21,9 @@ import {
   KpiCard,
   KpiCardDepositos,
   FunilVisual,
+  SelectComIcone,
 } from "../../../components/dashboard";
+import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
   GiPokerHand,
@@ -111,6 +113,8 @@ interface LiveResultado {
   media_views: number;
 }
 
+type RankingSortCol = "ggr" | "investimento" | "roi" | "ftds" | "lives" | "horas";
+
 interface RankingRow {
   influencer_id: string;
   nome: string;
@@ -182,6 +186,7 @@ export default function DashboardOverview() {
   const [operadorasList, setOperadorasList]     = useState<{ slug: string; nome: string }[]>([]);
   const [operadoraInfMap, setOperadoraInfMap]   = useState<Record<string, string[]>>({});
   const [statusFiltro, setStatusFiltro]         = useState<StatusLabel | null>(null);
+  const [sortRanking, setSortRanking]           = useState<{ col: RankingSortCol; dir: "asc" | "desc" }>({ col: "ggr", dir: "desc" });
 
   const [, setPerfis]       = useState<InfluencerPerfil[]>([]);
   const [ranking, setRanking]     = useState<RankingRow[]>([]);
@@ -362,13 +367,31 @@ export default function DashboardOverview() {
     return null;
   }, [operadoraSlugsForcado, filtroOperadora, operadoraInfMap]);
 
-  const rankingFiltrado = useMemo(() => {
+  const rankingBaseFiltro = useMemo(() => {
     let r = ranking;
     if (filtroInfluencer !== "todos") r = r.filter((row) => row.influencer_id === filtroInfluencer);
     if (idsOperadoraEfetiva) r = r.filter((row) => idsOperadoraEfetiva.has(row.influencer_id));
+    return r;
+  }, [ranking, filtroInfluencer, idsOperadoraEfetiva]);
+
+  const rankingFiltrado = useMemo(() => {
+    let r = rankingBaseFiltro;
     if (statusFiltro) r = r.filter((row) => row.statusLabel === statusFiltro);
     return r;
-  }, [ranking, filtroInfluencer, idsOperadoraEfetiva, statusFiltro]);
+  }, [rankingBaseFiltro, statusFiltro]);
+
+  const rankingOrdenado = useMemo(() => {
+    const list = [...rankingFiltrado];
+    const { col, dir } = sortRanking;
+    list.sort((a, b) => {
+      const va = (a[col] ?? 0) as number;
+      const vb = (b[col] ?? 0) as number;
+      const primary = dir === "desc" ? vb - va : va - vb;
+      if (primary !== 0) return primary;
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    });
+    return list;
+  }, [rankingFiltrado, sortRanking]);
 
   const rankingAntFiltrado = useMemo(() => {
     let r = rankingAnt;
@@ -407,34 +430,33 @@ export default function DashboardOverview() {
     boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
-  const thStyle: React.CSSProperties = {
-    textAlign: "left",
-    fontSize: 10,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: t.textMuted,
-    fontWeight: 600,
-    padding: "10px 12px",
-    borderBottom: `1px solid ${t.cardBorder}`,
-    background: "rgba(74,32,130,0.10)",
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-  };
-
-  const zebraStripe = (i: number) =>
-    i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)";
-
-  const tdStyle: React.CSSProperties = {
-    padding: "10px 12px",
-    fontSize: 13,
-    borderBottom: `1px solid rgba(255,255,255,0.04)`,
-    color: t.text,
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-  };
+  const thStyle = getThStyle(t);
+  const tdStyle = getTdStyle(t);
 
   const isPrimeiro = idxMes === 0;
   const isUltimo   = idxMes === mesesDisponiveis.length - 1;
+
+  function ThRankingSort({ col, label }: { col: RankingSortCol; label: string }) {
+    const ativo = sortRanking.col === col;
+    return (
+      <th
+        scope="col"
+        onClick={() =>
+          setSortRanking((s) => ({
+            col,
+            dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+          }))
+        }
+        style={{ ...thStyle, cursor: "pointer", userSelect: "none" }}
+        aria-sort={ativo ? (sortRanking.dir === "desc" ? "descending" : "ascending") : "none"}
+      >
+        {label}
+        <span style={{ marginLeft: 4, opacity: ativo ? 1 : 0.3 }} aria-hidden>
+          {ativo ? (sortRanking.dir === "desc" ? "↓" : "↑") : "↕"}
+        </span>
+      </th>
+    );
+  }
 
   // ── STATUS BADGES ─────────────────────────────────────────────────────────────
   const statusBadges = [
@@ -452,20 +474,6 @@ export default function DashboardOverview() {
       </div>
     );
   }
-
-  // ── ESTILOS FILTROS ───────────────────────────────────────────────────────────
-  const selectStyle: React.CSSProperties = {
-    padding: "6px 12px 6px 32px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg ?? t.cardBg,
-    color: t.text,
-    fontSize: 13,
-    fontFamily: FONT.body,
-    cursor: "pointer",
-    appearance: "none" as const,
-    outline: "none",
-  };
 
   const btnNavStyle: React.CSSProperties = {
     width: 30, height: 30, borderRadius: "50%",
@@ -490,10 +498,13 @@ export default function DashboardOverview() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             {/* Navegação de mês */}
             <button
+              type="button"
+              aria-label="Mês anterior"
               style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
-              onClick={irMesAnterior} disabled={historico || isPrimeiro}
+              onClick={irMesAnterior}
+              disabled={historico || isPrimeiro}
             >
-              <ChevronLeft size={14} />
+              <ChevronLeft size={14} aria-hidden />
             </button>
 
             <span style={{
@@ -506,14 +517,20 @@ export default function DashboardOverview() {
             </span>
 
             <button
+              type="button"
+              aria-label="Próximo mês"
               style={{ ...btnNavStyle, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
-              onClick={irMesProximo} disabled={historico || isUltimo}
+              onClick={irMesProximo}
+              disabled={historico || isUltimo}
             >
-              <ChevronRight size={14} />
+              <ChevronRight size={14} aria-hidden />
             </button>
 
             {/* Botão Histórico */}
             <button
+              type="button"
+              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
+              aria-pressed={historico}
               onClick={toggleHistorico}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
@@ -530,46 +547,45 @@ export default function DashboardOverview() {
                 transition: "all 0.15s",
               }}
             >
-              <GiCalendar size={15} />
+              <GiCalendar size={15} aria-hidden />
               Histórico
             </button>
 
             {/* Filtro Influencer */}
             {showFiltroInfluencer && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiStarMedal size={15} />
-                </span>
-                <select value={filtroInfluencer} onChange={(e) => setFiltroInfluencer(e.target.value)} style={selectStyle}>
-                  <option value="todos">Todos os influencers</option>
-                  {[...ranking].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => (
-                    <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-                  ))}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiStarMedal size={15} aria-hidden />}
+                label="Filtrar por influencer"
+                value={filtroInfluencer}
+                onChange={setFiltroInfluencer}
+              >
+                <option value="todos">Todos os influencers</option>
+                {[...ranking].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => (
+                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+                ))}
+              </SelectComIcone>
             )}
 
-            {/* Filtro Operadora */}
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={15} />
-                </span>
-                <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectStyle}>
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => (
-                      <option key={o.slug} value={o.slug}>{o.nome}</option>
-                    ))}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiShield size={15} aria-hidden />}
+                label="Filtrar por operadora"
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+              >
+                <option value="todas">Todas as operadoras</option>
+                {operadorasList
+                  .filter((o) => podeVerOperadora(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => (
+                    <option key={o.slug} value={o.slug}>{o.nome}</option>
+                  ))}
+              </SelectComIcone>
             )}
 
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} /> Carregando...
+                <Clock size={12} aria-hidden /> Carregando...
               </span>
             )}
           </div>
@@ -578,34 +594,77 @@ export default function DashboardOverview() {
 
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPokerHand size={15} />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}>
+        <SectionTitle icon={<GiPokerHand size={15} aria-hidden />} sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}>
           KPIs Executivos
         </SectionTitle>
 
+        <div
+          style={{
+            fontSize: 10,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            fontWeight: 600,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginBottom: 8,
+          }}
+        >
+          Financeiro
+        </div>
         <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-          <KpiCard label="GGR Total" value={fmtBRL(totaisExibidos.ggr)} icon={<GiPokerHand size={16} />} accentVar="--brand-extra1" accentColor={BRAND.receita} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
-          <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<GiCoins size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
-          <KpiCard label="ROI Geral" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<GiTrophy size={16} />} accentVar="--brand-extra2" accentColor={BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
+          <KpiCard label="GGR Total" value={fmtBRL(totaisExibidos.ggr)} icon={<GiPokerHand size={16} aria-hidden />} accentVar="--brand-extra1" accentColor={BRAND.receita} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
+          <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<GiCoins size={16} aria-hidden />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
+          <KpiCard label="ROI Geral" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<GiTrophy size={16} aria-hidden />} accentVar="--brand-extra2" accentColor={BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
         </div>
 
+        <div
+          style={{
+            borderTop: `1px solid ${t.cardBorder}`,
+            margin: "16px 0 12px",
+            paddingTop: 12,
+            fontSize: 10,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            fontWeight: 600,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+          }}
+        >
+          Operação
+        </div>
         <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
-          <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<GiFilmProjector size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
-          <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<GiSandsOfTime size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
-          <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<GiMicrophone size={16} />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
+          <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<GiFilmProjector size={16} aria-hidden />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
+          <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<GiSandsOfTime size={16} aria-hidden />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
+          <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<GiMicrophone size={16} aria-hidden />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
           <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico} />
         </div>
 
+        <div
+          style={{
+            borderTop: `1px solid ${t.cardBorder}`,
+            margin: "16px 0 12px",
+            paddingTop: 12,
+            fontSize: 10,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            fontWeight: 600,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+          }}
+        >
+          Conversão
+        </div>
         <div className="app-grid-kpi-4">
-          <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<GiPlayerNext size={16} />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
-          <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<GiReceiveMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
-          <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<GiTrophy size={16} />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
-          <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<GiPayMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
+          <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<GiPlayerNext size={16} aria-hidden />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
+          <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<GiReceiveMoney size={16} aria-hidden />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
+          <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<GiTrophy size={16} aria-hidden />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
+          <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<GiPayMoney size={16} aria-hidden />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
         </div>
       </div>
 
       {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPlayerNext size={15} />}>Funil de Conversão</SectionTitle>
+        <SectionTitle icon={<GiPlayerNext size={15} aria-hidden />}>Funil de Conversão</SectionTitle>
         <FunilVisual
           values={[totaisExibidos.views, totaisExibidos.acessos, totaisExibidos.registros, totaisExibidos.ftds]}
           taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]}
@@ -615,7 +674,7 @@ export default function DashboardOverview() {
       {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiTrophy size={15} />}>Ranking de Influencers</SectionTitle>
+          <SectionTitle icon={<GiTrophy size={15} aria-hidden />}>Ranking de Influencers</SectionTitle>
 
           {/* Filtros de status */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -643,6 +702,8 @@ export default function DashboardOverview() {
             })}
             {statusFiltro && (
               <button
+                type="button"
+                aria-label="Remover filtro de status"
                 onClick={() => setStatusFiltro(null)}
                 style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 11 }}
               >
@@ -664,16 +725,26 @@ export default function DashboardOverview() {
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Nenhum dado encontrado para o período/filtro selecionado.</div>
         ) : (
           <div className="app-table-wrap">
-            <table style={{ width: "100%", minWidth: 720, borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
+            <table style={{ width: "100%", minWidth: 640, borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
+              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                Ranking de influencers — {historico ? "Todo o período" : (mesSelecionado?.label ?? "Período")}
+              </caption>
               <thead>
                 <tr>
-                  {["Influencer","Lives","Horas","Views","Acessos","Registros","FTDs","GGR","Invest.","ROI","Status"].map((h) => (
-                    <th key={h} style={thStyle}>{h}</th>
-                  ))}
+                  <th scope="col" style={thStyle}>Influencer</th>
+                  <ThRankingSort col="lives" label="Lives" />
+                  <ThRankingSort col="horas" label="Horas" />
+                  <th scope="col" style={thStyle}>Views</th>
+                  <th scope="col" style={thStyle}>Acessos</th>
+                  <th scope="col" style={thStyle}>Registros</th>
+                  <ThRankingSort col="ftds" label="FTDs" />
+                  <ThRankingSort col="ggr" label="GGR" />
+                  <ThRankingSort col="investimento" label="Invest." />
+                  <ThRankingSort col="roi" label="Performance" />
                 </tr>
               </thead>
               <tbody>
-                {rankingFiltrado.map((r, i) => {
+                {rankingOrdenado.map((r, i) => {
                   const st = getStatusROI(r.roi, r.ggr, r.investimento);
                   const hT = Math.floor(r.horas);
                   const mT = Math.round((r.horas - hT) * 60);
@@ -682,7 +753,19 @@ export default function DashboardOverview() {
                       key={r.influencer_id}
                       style={{ background: zebraStripe(i) }}
                     >
-                      <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          fontWeight: 600,
+                          maxWidth: 160,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={r.nome}
+                      >
+                        {r.nome}
+                      </td>
                       <td style={tdStyle}>{r.lives}</td>
                       <td style={tdStyle}>{r.horas > 0 ? `${String(hT).padStart(2,"0")}:${String(mT).padStart(2,"0")}` : "—"}</td>
                       <td style={tdStyle}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
@@ -692,13 +775,19 @@ export default function DashboardOverview() {
                       <td style={{ ...tdStyle, color: r.ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(r.ggr)}</td>
                       <td style={tdStyle}>{r.investimento > 0 ? fmtBRL(r.investimento) : "—"}</td>
                       <td style={tdStyle}>
-                        <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body, fontWeight: 700 }}>
-                          {st.roiStr}
-                        </span>
-                      </td>
-                      <td style={tdStyle}>
-                        <span style={{ padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body }}>
+                        <span style={{
+                          padding: "4px 10px", borderRadius: 999,
+                          border: `1px solid ${st.border}`,
+                          background: st.bg, color: st.cor,
+                          fontSize: 11, fontFamily: FONT.body, fontWeight: 700,
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                        }}>
                           {st.label}
+                          {r.roi !== null && (
+                            <span style={{ opacity: 0.8 }}>
+                              ({r.roi >= 0 ? "+" : ""}{r.roi.toFixed(0)}%)
+                            </span>
+                          )}
                         </span>
                       </td>
                     </tr>

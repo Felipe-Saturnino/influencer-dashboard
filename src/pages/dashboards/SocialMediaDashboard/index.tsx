@@ -5,6 +5,8 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
+import { SkeletonKpiCard } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { ChevronLeft, ChevronRight, Clock, Play, Heart, MessageCircle, Bookmark } from "lucide-react";
@@ -151,16 +153,18 @@ function postStatPill(icon: ReactNode, value: string): ReactNode {
   );
 }
 
-function PostCarouselThumb({ p, height }: { p: PostUnificado; height: number }) {
+function PostCarouselThumb({ p }: { p: PostUnificado }) {
   const [imgFailed, setImgFailed] = useState(false);
   const hasUrl = Boolean(p.thumbnailUrl?.trim());
   const showBadge = !hasUrl || imgFailed;
 
   return (
     <div style={{
-      width: "100%", height,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      background: `${p.cor}18`, overflow: "hidden", position: "relative",
+      width: "100%",
+      paddingTop: "56.25%",
+      position: "relative",
+      background: `${p.cor}18`,
+      overflow: "hidden",
     }}>
       {hasUrl && !imgFailed && (
         <img
@@ -390,6 +394,10 @@ export default function SocialMediaDashboard() {
     utms_count: number;
   }>>([]);
 
+  useEffect(() => {
+    setCarIdx(0);
+  }, [posts]);
+
   // ── Busca de dados ────────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -612,10 +620,10 @@ export default function SocialMediaDashboard() {
     },
   ];
 
-  const POST_W    = 520;
-  const POST_GAP  = 20;
-  const POST_H_THUMB = 320;
-  const carMaxNew = Math.max(0, posts.length - 2);
+  const POST_W = 520;
+  const POST_GAP = 20;
+  const CAR_WINDOW = 5;
+  const carMaxStart = Math.max(0, posts.length - CAR_WINDOW);
   const totalFormatos = formatos.reduce((a, f) => a + f.total, 0);
 
   const brand = useDashboardBrand();
@@ -639,18 +647,8 @@ export default function SocialMediaDashboard() {
     display: "flex", alignItems: "center", justifyContent: "center",
   });
 
-  const thStyle: React.CSSProperties = {
-    textAlign: "left", fontSize: 10, letterSpacing: "0.1em",
-    textTransform: "uppercase", color: t.textMuted, fontWeight: 600,
-    padding: "10px 12px", borderBottom: `1px solid ${t.cardBorder}`,
-    background: "rgba(74,32,130,0.10)", fontFamily: FONT.body, whiteSpace: "nowrap",
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: "10px 12px", fontSize: 13,
-    borderBottom: `1px solid ${t.cardBorder}`,
-    color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap",
-  };
+  const thStyle = getThStyle(t);
+  const tdStyle = getTdStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
 
   if (perm.canView === "nao") {
     return (
@@ -672,16 +670,19 @@ export default function SocialMediaDashboard() {
           display: "flex", alignItems: "center", justifyContent: "center",
           gap: 10, flexWrap: "wrap" as const,
         }}>
-          <button style={btnNavStyle(historico || isPrimeiro)} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-            <ChevronLeft size={14} />
+          <button type="button" aria-label="Mês anterior" style={btnNavStyle(historico || isPrimeiro)} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
+            <ChevronLeft size={14} aria-hidden />
           </button>
           <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, minWidth: 220, textAlign: "center" }}>
             {label}
           </span>
-          <button style={btnNavStyle(historico || isUltimo)} onClick={irMesProximo} disabled={historico || isUltimo}>
-            <ChevronRight size={14} />
+          <button type="button" aria-label="Próximo mês" style={btnNavStyle(historico || isUltimo)} onClick={irMesProximo} disabled={historico || isUltimo}>
+            <ChevronRight size={14} aria-hidden />
           </button>
           <button
+            type="button"
+            aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
+            aria-pressed={historico}
             onClick={toggleHistorico}
             style={{
               display: "flex", alignItems: "center", gap: 6,
@@ -694,21 +695,44 @@ export default function SocialMediaDashboard() {
               transition: "all 0.15s",
             }}
           >
-            <GiCalendar size={15} />
+            <GiCalendar size={15} aria-hidden />
             Histórico
           </button>
           {loading && (
             <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-              <Clock size={12} /> Carregando...
+              <Clock size={12} aria-hidden /> Carregando...
             </span>
           )}
         </div>
       </div>
 
       {loading ? (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 48, color: t.textMuted, fontSize: 14 }}>
-          Carregando dados...
-        </div>
+        <>
+          <div style={card}>
+            <SectionTitle icon={<GiPokerHand size={14} aria-hidden />}>
+              KPIs de Mídias Sociais
+            </SectionTitle>
+            <div className="app-grid-kpi-3">
+              {[0, 1, 2].map((i) => (
+                <SkeletonKpiCard key={i} />
+              ))}
+            </div>
+          </div>
+          <div className="app-grid-kpi-3" style={{ marginBottom: 14 }}>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  borderRadius: 14,
+                  border: `1px solid ${t.cardBorder}`,
+                  height: 240,
+                  animation: "skeleton-pulse 1.5s ease-in-out infinite",
+                  background: "rgba(124,58,237,0.10)",
+                }}
+              />
+            ))}
+          </div>
+        </>
       ) : (
         <>
           {/* KPIs GERAIS */}
@@ -955,6 +979,9 @@ export default function SocialMediaDashboard() {
                     })}
                   </tbody>
                 </table>
+                <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 8, marginBottom: 0 }}>
+                  * GGR estimado = Depósitos − Saques atribuídos à campanha via UTM.
+                </p>
               </div>
             ) : (
               <div style={{ color: t.textMuted, fontSize: 12, padding: "24px 0", fontFamily: FONT.body }}>
@@ -970,18 +997,18 @@ export default function SocialMediaDashboard() {
               <>
                 <div style={{ overflow: "hidden" }}>
                   <div style={{
-                    display: "flex", gap: POST_GAP,
-                    transform: `translateX(-${carIdx * (POST_W + POST_GAP)}px)`,
+                    display: "flex",
+                    gap: POST_GAP,
                     transition: "transform .3s ease",
                   }}>
-                    {posts.map((p, i) => (
-                      <div key={i} style={{
+                    {posts.slice(carIdx, carIdx + CAR_WINDOW).map((p, i) => (
+                      <div key={`${carIdx}-${i}`} style={{
                         flex: `0 0 ${POST_W}px`, borderRadius: 18,
                         border: `1px solid ${t.cardBorder}`,
                         background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
                         overflow: "hidden",
                       }}>
-                        <PostCarouselThumb p={p} height={POST_H_THUMB} />
+                        <PostCarouselThumb p={p} />
                         <div style={{ padding: 24 }}>
                           <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 6, color: p.cor }}>
                             {p.url ? (
@@ -1015,8 +1042,10 @@ export default function SocialMediaDashboard() {
                     ))}
                   </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
                   <button
+                    type="button"
+                    aria-label="Postagens anteriores"
                     onClick={() => setCarIdx((i) => Math.max(0, i - 1))}
                     disabled={carIdx === 0}
                     style={{
@@ -1031,19 +1060,50 @@ export default function SocialMediaDashboard() {
                     ←
                   </button>
                   <button
-                    onClick={() => setCarIdx((i) => Math.min(carMaxNew, i + 1))}
-                    disabled={carIdx >= carMaxNew}
+                    type="button"
+                    aria-label="Próximas postagens"
+                    onClick={() => setCarIdx((i) => Math.min(carMaxStart, i + 1))}
+                    disabled={carIdx >= carMaxStart}
                     style={{
                       width: 40, height: 40, borderRadius: "50%",
                       border: `1px solid ${t.cardBorder}`, background: "transparent",
-                      color: t.text, cursor: carIdx >= carMaxNew ? "not-allowed" : "pointer",
-                      opacity: carIdx >= carMaxNew ? 0.35 : 1,
+                      color: t.text, cursor: carIdx >= carMaxStart ? "not-allowed" : "pointer",
+                      opacity: carIdx >= carMaxStart ? 0.35 : 1,
                       fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center",
                       transition: "opacity 0.15s",
                     }}
                   >
                     →
                   </button>
+                  <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                    {posts.length > 0 ? `${carIdx + 1}–${Math.min(carIdx + CAR_WINDOW, posts.length)} / ${posts.length}` : "0 / 0"}
+                  </span>
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    {posts.slice(0, Math.min(posts.length, 8)).map((_, i) => {
+                      const ativo = i === Math.min(carIdx, 7);
+                      return (
+                        <button
+                          type="button"
+                          key={i}
+                          aria-label={`Ir para janela ${i + 1}`}
+                          onClick={() => setCarIdx(Math.min(i, carMaxStart))}
+                          style={{
+                            width: ativo ? 18 : 6,
+                            height: 6,
+                            padding: 0,
+                            border: "none",
+                            borderRadius: 999,
+                            background: ativo ? brand.accent : t.cardBorder,
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                          }}
+                        />
+                      );
+                    })}
+                    {posts.length > 8 && (
+                      <span style={{ fontSize: 11, color: t.textMuted }}>…</span>
+                    )}
+                  </div>
                 </div>
               </>
             ) : (

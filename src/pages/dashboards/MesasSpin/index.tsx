@@ -9,9 +9,13 @@ import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
 import KpiCard from "../../../components/dashboard/KpiCard";
+import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
+import { getThStyle, getTdStyle, getTdNumStyle } from "../../../lib/tableStyles";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
   LayoutGrid,
   Table2,
@@ -475,33 +479,164 @@ function linhaComparativoJogoAgregadaMes(
   };
 }
 
-function MarginBadge({ value }: { value: number | null }) {
+/** Soma métricas de todas as linhas do comparativo (MTD por dia ou série mensal no histórico). */
+function mergeComparativoJogoTotals(rows: LinhaComparativoJogoTab[]): {
+  blackjack: CelulaJogoMetricas;
+  roleta: CelulaJogoMetricas;
+  baccarat: CelulaJogoMetricas;
+} {
+  const sumGame = (pick: (r: LinhaComparativoJogoTab) => CelulaJogoMetricas): CelulaJogoMetricas => {
+    if (rows.length === 0) return emptyCelulaJogo();
+    let ggr = 0;
+    let turnover = 0;
+    let bets = 0;
+    let gN = 0;
+    let tN = 0;
+    let bN = 0;
+    for (const row of rows) {
+      const c = pick(row);
+      if (c.ggr != null) {
+        ggr += c.ggr;
+        gN++;
+      }
+      if (c.turnover != null) {
+        turnover += c.turnover;
+        tN++;
+      }
+      if (c.bets != null) {
+        bets += c.bets;
+        bN++;
+      }
+    }
+    const ggrOut = gN > 0 ? ggr : null;
+    const turnoverOut = tN > 0 ? turnover : null;
+    const betsOut = bN > 0 ? bets : null;
+    const margin_pct =
+      turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
+    const bet_size =
+      betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
+    return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size };
+  };
+  return {
+    blackjack: sumGame((r) => r.blackjack),
+    roleta: sumGame((r) => r.roleta),
+    baccarat: sumGame((r) => r.baccarat),
+  };
+}
+
+const RESUMO_JOGO_META = [
+  {
+    key: "blackjack" as const,
+    title: "Blackjack",
+    accent: BRAND.roxoVivo,
+    bg: "rgba(124,58,237,0.10)",
+    border: "rgba(124,58,237,0.35)",
+  },
+  {
+    key: "roleta" as const,
+    title: "Roleta",
+    accent: BRAND.verde,
+    bg: "rgba(34,197,94,0.10)",
+    border: "rgba(34,197,94,0.35)",
+  },
+  {
+    key: "baccarat" as const,
+    title: "Speed Baccarat",
+    accent: BRAND.ciano,
+    bg: "rgba(112,202,228,0.12)",
+    border: "rgba(112,202,228,0.4)",
+  },
+];
+
+function ResumoComparativoJogoCards({
+  totals,
+  legenda,
+}: {
+  totals: ReturnType<typeof mergeComparativoJogoTotals>;
+  legenda: string;
+}) {
   const { theme: tt } = useApp();
-  if (value == null) return <span style={{ color: tt.textMuted }}>—</span>;
-  const v = Number(value);
-  let bg: string = "rgba(124,58,237,0.12)", color: string = BRAND.roxoVivo;
-  if (v > 10) {
-    bg = "rgba(34,197,94,0.12)";
-    color = BRAND.verde;
-  } else if (v < 0) {
-    bg = "rgba(232,64,37,0.12)";
-    color = BRAND.vermelho;
-  }
   return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 8px",
-        borderRadius: 999,
-        background: bg,
-        color,
-        fontSize: 11,
-        fontWeight: 600,
-        fontFamily: FONT.body,
-      }}
-    >
-      {fmtPct(v)}
-    </span>
+    <div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 12,
+          marginBottom: 10,
+        }}
+      >
+        {RESUMO_JOGO_META.map((meta) => {
+          const cell = totals[meta.key];
+          const ggrN = cell.ggr ?? 0;
+          const corGgr = ggrN > 0 ? BRAND.verde : ggrN < 0 ? BRAND.vermelho : tt.text;
+          return (
+            <div
+              key={meta.key}
+              role="region"
+              aria-label={`${meta.title}: resumo no período`}
+              style={{
+                borderRadius: 14,
+                border: `1px solid ${meta.border}`,
+                background: meta.bg,
+                padding: 14,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: meta.accent,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase" as const,
+                  marginBottom: 8,
+                  fontFamily: FONT.body,
+                }}
+              >
+                {meta.title}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: corGgr, fontFamily: FONT.body }}>
+                {cell.ggr != null ? fmtBRL(cell.ggr) : "—"}
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: tt.textMuted,
+                    marginTop: 4,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase" as const,
+                  }}
+                >
+                  GGR
+                </span>
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  fontSize: 11,
+                  color: tt.textMuted,
+                  fontFamily: FONT.body,
+                  lineHeight: 1.5,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                }}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  Margem: <MarginBadge value={cell.margin_pct} />
+                </span>
+                <span>Turnover: {cell.turnover != null ? fmtBRL(cell.turnover) : "—"}</span>
+                <span>Apostas: {cell.bets != null ? cell.bets.toLocaleString("pt-BR") : "—"}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p style={{ margin: 0, fontSize: 11, color: tt.textMuted, fontFamily: FONT.body, lineHeight: 1.45 }}>
+        {legenda}
+      </p>
+    </div>
   );
 }
 
@@ -609,6 +744,7 @@ export default function MesasSpin() {
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
+  const [compJogoDetalheAberto, setCompJogoDetalheAberto] = useState(false);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -1098,6 +1234,15 @@ export default function MesasSpin() {
     });
   }, [historico, dailyData, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
+  const totaisComparativoJogo = useMemo(
+    () => mergeComparativoJogoTotals(linhasComparativoJogo),
+    [linhasComparativoJogo],
+  );
+
+  useEffect(() => {
+    setCompJogoDetalheAberto(false);
+  }, [historico, idxMes]);
+
   const linhasMesaA = useMemo(() => {
     if (!compMesaA) return [];
     const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
@@ -1154,31 +1299,9 @@ export default function MesasSpin() {
     boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
   };
 
-  const thStyle: React.CSSProperties = {
-    textAlign: "left",
-    verticalAlign: "middle",
-    fontSize: 10,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: t.textMuted,
-    fontWeight: 600,
-    padding: "10px 12px",
-    borderBottom: `1px solid ${t.cardBorder}`,
-    background: "rgba(74,32,130,0.08)",
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: "9px 12px",
-    fontSize: 13,
-    borderBottom: `1px solid rgba(255,255,255,0.04)`,
-    color: t.text,
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-  };
-
-  const tdNum: React.CSSProperties = { ...tdStyle, textAlign: "right", fontVariantNumeric: "tabular-nums" };
+  const thStyle = getThStyle(t, { verticalAlign: "middle", background: "rgba(74,32,130,0.08)" });
+  const tdStyle = getTdStyle(t, { padding: "9px 12px" });
+  const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -1314,6 +1437,83 @@ export default function MesasSpin() {
     fontWeight: 600,
   };
 
+  const renderComparativoJogoTabela = (colTempoLabel: "Data" | "Mês", keyPrefix: string) => (
+    <div id="mesas-spin-comp-jogo-tabela" style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+        <caption
+          style={{
+            captionSide: "bottom" as const,
+            textAlign: "left",
+            fontSize: 11,
+            color: t.textMuted,
+            paddingTop: 10,
+            fontFamily: FONT.body,
+          }}
+        >
+          {colTempoLabel === "Data"
+            ? "Detalhe por dia: GGR, turnover, apostas e aposta média por jogo."
+            : "Detalhe por mês: GGR, turnover, apostas e aposta média por jogo."}
+        </caption>
+        <thead>
+          <tr>
+            <th rowSpan={2} style={thStyle}>
+              {colTempoLabel}
+            </th>
+            <th colSpan={3} style={thJogoMetricHead}>
+              GGR
+            </th>
+            <th colSpan={3} style={thJogoMetricHeadSep}>
+              Turnover
+            </th>
+            <th colSpan={3} style={thJogoMetricHeadSep}>
+              Apostas
+            </th>
+            <th colSpan={3} style={thJogoMetricHeadSep}>
+              Aposta média
+            </th>
+          </tr>
+          <tr>
+            {([0, 1, 2, 3] as const).flatMap((mi) =>
+              (["Blackjack", "Roleta", "Baccarat"] as const).map((nome, gi) => (
+                <th
+                  key={`${keyPrefix}-sub-${mi}-${nome}`}
+                  style={{
+                    ...thJogoSub,
+                    ...(mi > 0 && gi === 0 ? { borderLeft: `1px solid ${t.cardBorder}` } : {}),
+                  }}
+                  scope="col"
+                >
+                  {nome}
+                </th>
+              )),
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {linhasComparativoJogo.map((row, i) => (
+            <tr
+              key={row.dataIso}
+              style={{
+                background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
+              }}
+            >
+              <th scope="row" style={{ ...tdStyle, fontWeight: 600 }}>
+                {row.labelData}
+              </th>
+              {(["ggr", "turnover", "bets", "bet_size"] as const).flatMap((metric) =>
+                (["blackjack", "roleta", "baccarat"] as const).map((game) => (
+                  <Fragment key={`${row.dataIso}-${metric}-${game}`}>
+                    {renderJogoMetricCell(row[game], metric)}
+                  </Fragment>
+                )),
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -1346,6 +1546,8 @@ export default function MesasSpin() {
             }}
           >
             <button
+              type="button"
+              aria-label="Mês anterior"
               style={{
                 ...btnNav,
                 opacity: historico || isPrimeiro ? 0.35 : 1,
@@ -1354,7 +1556,7 @@ export default function MesasSpin() {
               onClick={irMesAnterior}
               disabled={historico || isPrimeiro}
             >
-              <ChevronLeft size={14} />
+              <ChevronLeft size={14} aria-hidden />
             </button>
             <span
               style={{
@@ -1369,6 +1571,8 @@ export default function MesasSpin() {
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button
+              type="button"
+              aria-label="Próximo mês"
               style={{
                 ...btnNav,
                 opacity: historico || isUltimo ? 0.35 : 1,
@@ -1377,10 +1581,13 @@ export default function MesasSpin() {
               onClick={irMesProximo}
               disabled={historico || isUltimo}
             >
-              <ChevronRight size={14} />
+              <ChevronRight size={14} aria-hidden />
             </button>
 
             <button
+              type="button"
+              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
+              aria-pressed={historico}
               onClick={toggleHistorico}
               style={{
                 display: "flex",
@@ -1402,39 +1609,26 @@ export default function MesasSpin() {
                 transition: "all 0.15s",
               }}
             >
-              <GiCalendar size={15} /> Histórico
+              <GiCalendar size={15} aria-hidden /> Histórico
             </button>
 
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 10,
-                    display: "flex",
-                    alignItems: "center",
-                    pointerEvents: "none",
-                    color: t.textMuted,
-                  }}
-                >
-                  <GiShield size={15} />
-                </span>
-                <select
-                  value={filtroOperadora}
-                  onChange={(e) => setFiltroOperadora(e.target.value)}
-                  style={selectStyle}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasOcr
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => (
-                      <option key={o.slug} value={o.slug}>
-                        {o.nome}
-                      </option>
-                    ))}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiShield size={15} aria-hidden />}
+                label="Filtrar por operadora"
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+              >
+                <option value="todas">Todas as operadoras</option>
+                {operadorasOcr
+                  .filter((o) => podeVerOperadora(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => (
+                    <option key={o.slug} value={o.slug}>
+                      {o.nome}
+                    </option>
+                  ))}
+              </SelectComIcone>
             )}
 
             {loading && (
@@ -1455,13 +1649,27 @@ export default function MesasSpin() {
         </div>
       </div>
 
-      {!loading && (
-        <div style={{ ...card, marginBottom: 14 }}>
+      <div style={{ ...card, marginBottom: 14 }}>
           <SectionHeader
             icon={<LayoutGrid size={15} />}
             title="KPIs Consolidados"
-            sub={historico ? undefined : "mês selecionado"}
+            sub={historico ? "acumulado" : mesSelecionado?.label}
           />
+          {loading || uapPorJogoLoading ? (
+            <>
+              <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
+                {[0, 1, 2, 3].map((i) => (
+                  <SkeletonKpiCard key={i} />
+                ))}
+              </div>
+              <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+                {[0, 1, 2].map((i) => (
+                  <SkeletonKpiCard key={i} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
           <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
             <KpiCard
               label="GGR"
@@ -1540,8 +1748,9 @@ export default function MesasSpin() {
               isHistorico={isHistoricoKpi}
             />
           </div>
+            </>
+          )}
         </div>
-      )}
 
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionHeader
@@ -1763,65 +1972,38 @@ export default function MesasSpin() {
                     Nenhum dado para o período selecionado.
                   </div>
                 ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-                      <thead>
-                        <tr>
-                          <th rowSpan={2} style={thStyle}>
-                            Data
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHead}>
-                            GGR
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Turnover
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Apostas
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Aposta média
-                          </th>
-                        </tr>
-                        <tr>
-                          {([0, 1, 2, 3] as const).flatMap((mi) =>
-                            (["Blackjack", "Roleta", "Baccarat"] as const).map((nome, gi) => (
-                              <th
-                                key={`sub-${mi}-${nome}`}
-                                style={{
-                                  ...thJogoSub,
-                                  ...(mi > 0 && gi === 0
-                                    ? { borderLeft: `1px solid ${t.cardBorder}` }
-                                    : {}),
-                                }}
-                              >
-                                {nome}
-                              </th>
-                            )),
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {linhasComparativoJogo.map((row, i) => (
-                          <tr
-                            key={row.dataIso}
-                            style={{
-                              background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
-                            }}
-                          >
-                            <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
-                            {(["ggr", "turnover", "bets", "bet_size"] as const).flatMap((metric) =>
-                              (["blackjack", "roleta", "baccarat"] as const).map((game) => (
-                                <Fragment key={`${row.dataIso}-${metric}-${game}`}>
-                                  {renderJogoMetricCell(row[game], metric)}
-                                </Fragment>
-                              )),
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <>
+                    <ResumoComparativoJogoCards
+                      totals={totaisComparativoJogo}
+                      legenda={`Totais somando todos os dias com dados em ${mesSelecionado?.label ?? ""}.`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCompJogoDetalheAberto((v) => !v)}
+                      aria-expanded={compJogoDetalheAberto}
+                      aria-controls="mesas-spin-comp-jogo-tabela"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginTop: 4,
+                        marginBottom: compJogoDetalheAberto ? 14 : 0,
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg ?? t.cardBg,
+                        color: t.text,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {compJogoDetalheAberto ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
+                      {compJogoDetalheAberto ? "Ocultar tabela detalhada" : "Ver tabela detalhada por dia"}
+                    </button>
+                    {compJogoDetalheAberto ? renderComparativoJogoTabela("Data", "dia") : null}
+                  </>
                 )}
               </div>
 
@@ -2100,65 +2282,38 @@ export default function MesasSpin() {
                     Nenhum dado para o período selecionado.
                   </div>
                 ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-                      <thead>
-                        <tr>
-                          <th rowSpan={2} style={thStyle}>
-                            Mês
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHead}>
-                            GGR
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Turnover
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Apostas
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Aposta média
-                          </th>
-                        </tr>
-                        <tr>
-                          {([0, 1, 2, 3] as const).flatMap((mi) =>
-                            (["Blackjack", "Roleta", "Baccarat"] as const).map((nome, gi) => (
-                              <th
-                                key={`hist-sub-${mi}-${nome}`}
-                                style={{
-                                  ...thJogoSub,
-                                  ...(mi > 0 && gi === 0
-                                    ? { borderLeft: `1px solid ${t.cardBorder}` }
-                                    : {}),
-                                }}
-                              >
-                                {nome}
-                              </th>
-                            )),
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {linhasComparativoJogo.map((row, i) => (
-                          <tr
-                            key={row.dataIso}
-                            style={{
-                              background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
-                            }}
-                          >
-                            <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
-                            {(["ggr", "turnover", "bets", "bet_size"] as const).flatMap((metric) =>
-                              (["blackjack", "roleta", "baccarat"] as const).map((game) => (
-                                <Fragment key={`${row.dataIso}-${metric}-${game}`}>
-                                  {renderJogoMetricCell(row[game], metric)}
-                                </Fragment>
-                              )),
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <>
+                    <ResumoComparativoJogoCards
+                      totals={totaisComparativoJogo}
+                      legenda="Totais somando todos os meses com dados no histórico."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCompJogoDetalheAberto((v) => !v)}
+                      aria-expanded={compJogoDetalheAberto}
+                      aria-controls="mesas-spin-comp-jogo-tabela"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginTop: 4,
+                        marginBottom: compJogoDetalheAberto ? 14 : 0,
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg ?? t.cardBg,
+                        color: t.text,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {compJogoDetalheAberto ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
+                      {compJogoDetalheAberto ? "Ocultar tabela detalhada" : "Ver tabela detalhada por mês"}
+                    </button>
+                    {compJogoDetalheAberto ? renderComparativoJogoTabela("Mês", "hist") : null}
+                  </>
                 )}
               </div>
 

@@ -269,3 +269,13 @@ aside *::-webkit-scrollbar-thumb {
 aside *::-webkit-scrollbar-thumb:hover {
   background: #5a5a8c;
 }
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
