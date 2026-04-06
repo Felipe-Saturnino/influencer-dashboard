@@ -11,7 +11,7 @@ import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
 import { GiChipsBag, GiShield } from "react-icons/gi";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 
@@ -51,6 +51,12 @@ function mascaraCPF(cpf: string): string {
   const d = (cpf ?? "").replace(/\D/g, "");
   if (d.length < 11) return "—";
   return "***.***.***-**";
+}
+
+function formatarCPFVisivel(cpf: string): string {
+  const d = (cpf ?? "").replace(/\D/g, "");
+  if (d.length !== 11) return (cpf ?? "").trim() || "—";
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
 function gerarMeses(): { value: string; label: string }[] {
@@ -602,6 +608,16 @@ function BlocoSolicitacoes({
   const [liberando, setLiberando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [confirmExcluir, setConfirmExcluir] = useState<BancaRowDb | null>(null);
+  const [cpfRevelados, setCpfRevelados] = useState<Set<string>>(() => new Set());
+
+  const toggleCpfRevelado = useCallback((id: string) => {
+    setCpfRevelados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const onBloqueioGate = useCallback((tipo: "perfil" | "playbook") => {
     setBloqueioSolicitacao(tipo);
@@ -707,7 +723,7 @@ function BlocoSolicitacoes({
                   scope="col"
                   style={{
                     ...th,
-                    ...(narrowMobile && (h === "CPF" || h === "Data") ? { display: "none" } : {}),
+                    ...(narrowMobile && h === "Data" ? { display: "none" } : {}),
                   }}
                 >
                   {h}
@@ -718,7 +734,7 @@ function BlocoSolicitacoes({
           <tbody>
             {lista.length === 0 ? (
               <tr>
-                <td colSpan={narrowMobile ? 5 : 7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 36 }}>
+                <td colSpan={narrowMobile ? 6 : 7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 36 }}>
                   Nenhuma solicitação em aberto neste filtro.
                 </td>
               </tr>
@@ -731,6 +747,9 @@ function BlocoSolicitacoes({
                 const showLiberar = staffPodeAcao && r.status === "aprovado";
                 const showExcluir = podeExcluirLinha(r);
                 const semAcao = !showAprovar && !showLiberar && !showExcluir;
+                const cpfDigits = (perf?.cpf ?? "").replace(/\D/g, "");
+                const cpfMascaravel = cpfDigits.length >= 11;
+                const cpfVisivel = cpfRevelados.has(r.id);
                 const rowHover = {
                   borderBottom: `1px solid ${t.cardBorder}` as const,
                   onMouseEnter: (e: MouseEvent<HTMLTableRowElement>) => {
@@ -744,17 +763,38 @@ function BlocoSolicitacoes({
                   <tr key={r.id} {...rowHover}>
                     <td style={td}>{perf?.nome ?? r.influencer_id}</td>
                     <td style={{ ...td, fontFamily: "monospace", fontSize: 12 }}>{(r.id_operadora_exibicao ?? "").trim() || "—"}</td>
-                    <td
-                      style={{
-                        ...td,
-                        fontFamily: "monospace",
-                        fontSize: 12,
-                        ...(narrowMobile ? { display: "none" } : {}),
-                      }}
-                    >
-                      <span title={(perf?.cpf ?? "").trim() || undefined} style={{ cursor: (perf?.cpf ?? "").trim() ? "help" : "default" }}>
-                        {mascaraCPF(perf?.cpf ?? "")}
-                      </span>
+                    <td style={{ ...td, fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span>
+                          {cpfMascaravel
+                            ? cpfVisivel
+                              ? formatarCPFVisivel(perf?.cpf ?? "")
+                              : mascaraCPF(perf?.cpf ?? "")
+                            : mascaraCPF(perf?.cpf ?? "")}
+                        </span>
+                        {cpfMascaravel ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleCpfRevelado(r.id)}
+                            aria-label={cpfVisivel ? "Ocultar CPF" : "Mostrar CPF"}
+                            aria-pressed={cpfVisivel}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: 4,
+                              borderRadius: 6,
+                              border: `1px solid ${t.cardBorder}`,
+                              background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                              color: t.textMuted,
+                              cursor: "pointer",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {cpfVisivel ? <EyeOff size={15} strokeWidth={2} aria-hidden /> : <Eye size={15} strokeWidth={2} aria-hidden />}
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                     <td style={{ ...td, fontWeight: 700 }}>{fmtMoeda(Number(r.valor))}</td>
                     <td style={td}>
