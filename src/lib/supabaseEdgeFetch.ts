@@ -1,44 +1,49 @@
 import { supabase } from "./supabase";
+import { FunctionsFetchError, FunctionsHttpError } from "@supabase/supabase-js";
 
-function functionsBaseUrl(): string {
-  const raw = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  if (!raw?.trim()) throw new Error("VITE_SUPABASE_URL não configurada.");
-  return raw.replace(/\/$/, "");
-}
+const DEFAULT_TIMEOUT_MS = 120_000;
 
 /**
- * POST para Edge Function do Supabase a partir do browser (evita depender do proxy /api do Cloudflare Pages).
- * Inclui Apikey + Authorization como o gateway Supabase exige.
+ * Chama Edge Function pelo SDK (`supabase.functions.invoke`).
+ * Usa o mesmo fetch autenticado do cliente (Authorization + apikey), evitando falhas do fetch manual ao gateway.
  */
-export async function postSupabaseEdgeFunction(
+export async function callSupabaseEdgeFunction<T = unknown>(
   functionName: string,
   body: object,
   options?: { timeoutMs?: number }
-): Promise<Response> {
-  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-  if (!anon?.trim()) throw new Error("VITE_SUPABASE_ANON_KEY não configurada.");
+): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body,
+    timeout: options?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  });
 
-  const timeoutMs = options?.timeoutMs ?? 120_000;
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    return await fetch(`${functionsBaseUrl()}/functions/v1/${functionName}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.access_token ?? ""}`,
-        apikey: anon,
-      },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-    });
-  } finally {
-    clearTimeout(t);
+  if (error) {
+    if (error instanceof FunctionsHttpError) {
+      const res = error.context as Response;
+      let msg = `Erro HTTP ${res.status}`;
+      try {
+        const j = (await res.clone().json()) as { error?: string; message?: string };
+        if (typeof j.error === "string" && j.error.trim()) msg = j.error;
+        else if (typeof j.message === "string" && j.message.trim()) msg = j.message;
+      } catch {
+        /* mantém msg */
+      }
+      throw new Error(msg);
+    }
+    if (error instanceof FunctionsFetchError) {
+      throw new Error(
+        "Falha de rede ou tempo esgotado ao chamar a Edge Function. Confirme que a função está deployada no projeto Supabase das variáveis VITE_* (ex.: supabase functions deploy " +
+          functionName +
+          " --no-verify-jwt)."
+      );
+    }
+    throw new Error(
+      error.message ||
+        "Não foi possível contatar a Edge Function. Verifique deploy, secrets (ex.: SENHA_PADRAO) e variáveis VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY."
+    );
   }
+
+  return data as T;
 }
 
 export function isAbortError(e: unknown): boolean {
