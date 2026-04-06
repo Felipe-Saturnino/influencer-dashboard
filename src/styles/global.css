@@ -279,3 +279,7 @@ aside *::-webkit-scrollbar-thumb:hover {
     opacity: 1;
   }
 }
+
+.app-skeleton-pulse {
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}

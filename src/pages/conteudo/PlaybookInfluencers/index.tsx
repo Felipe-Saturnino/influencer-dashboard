@@ -4,23 +4,13 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import type { Role } from "../../../types";
-import { FONT } from "../../../constants/theme";
+import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
   Check, ChevronRight, AlertTriangle, Info,
   BookOpen, Users, Calendar, Gamepad2,
   Zap, Wrench, Star, MonitorPlay, ShieldCheck,
 } from "lucide-react";
-
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  roxo:     "#4a2082",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-} as const;
 
 /** Texto introdutório fixo abaixo do título (visível em todas as abas). */
 const PLAYBOOK_SUBTITULO_PARAGRAFOS = [
@@ -332,6 +322,8 @@ const ConteudoAcesso: React.FC<{ dark: boolean }> = ({ dark }) => (
           <img
             src="/playbook/mesas-spin-gaming.png"
             alt="Interface do site: banner Mesas Exclusivas Liberadas, atalhos e mesas ao vivo (Roleta e Blackjack exclusivos)"
+            width={440}
+            height={780}
             loading="lazy"
             decoding="async"
             style={{ display: "block", width: "100%", height: "auto" }}
@@ -355,6 +347,8 @@ const ConteudoAcesso: React.FC<{ dark: boolean }> = ({ dark }) => (
           <img
             src="/playbook/games-global-slots.png"
             alt="Interface do cassino: aba CASSINO com a seção Games Global e carrossel de slots"
+            width={440}
+            height={780}
             loading="lazy"
             decoding="async"
             style={{ display: "block", width: "100%", height: "auto" }}
@@ -593,56 +587,76 @@ function BlocoCiencia({
       border: `1.5px solid ${confirmado ? "rgba(34,197,94,0.30)" : "rgba(232,64,37,0.30)"}`,
       transition: "all 0.3s ease",
     }}>
-      {confirmado ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${BRAND.verde}20`, border: `2px solid ${BRAND.verde}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Check size={16} color={BRAND.verde} />
+      <div aria-live="polite" aria-atomic="true">
+        {confirmado ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${BRAND.verde}20`, border: `2px solid ${BRAND.verde}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Check size={16} color={BRAND.verde} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>
+                Ciência confirmada
+              </div>
+              <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>
+                {confirmedAt ? `Confirmado em ${new Date(confirmedAt).toLocaleString("pt-BR")}` : ""}
+              </div>
+            </div>
           </div>
+        ) : (
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#86efac" : "#15803d", fontFamily: FONT.body }}>
-              Ciência confirmada
+            <div style={{ fontSize: 11, fontWeight: 700, color: BRAND.vermelho, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, marginBottom: 12 }}>
+              Confirmação obrigatória
             </div>
-            <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>
-              {confirmedAt ? `Confirmado em ${new Date(confirmedAt).toLocaleString("pt-BR")}` : ""}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={checked}
+                aria-label="Confirmar que li e compreendi as regras"
+                onClick={() => setChecked((c) => !c)}
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 4,
+                  flexShrink: 0,
+                  marginTop: 2,
+                  cursor: "pointer",
+                  border: `2px solid ${checked ? BRAND.vermelho : t.cardBorder}`,
+                  background: checked ? BRAND.vermelho : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.15s",
+                  padding: 0,
+                }}
+              >
+                {checked ? <Check size={12} color="#fff" aria-hidden /> : null}
+              </button>
+              <span style={{ fontFamily: FONT.body, fontSize: 13, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.55 }}>
+                Li e compreendi as regras de <strong>{label}</strong> e me comprometo a segui-las durante toda a campanha.
+              </span>
+            </div>
+            <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={handleConfirmar}
+                disabled={!checked || saving}
+                style={{
+                  padding: "9px 20px", borderRadius: 10, border: "none",
+                  background: checked ? BRAND.vermelho : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"),
+                  color: checked ? "#fff" : t.textMuted,
+                  fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
+                  cursor: checked && !saving ? "pointer" : "not-allowed",
+                  opacity: checked && !saving ? 1 : 0.65,
+                  transition: "all 0.2s",
+                }}
+              >
+                {saving ? "Confirmando..." : "Confirmar Ciência"}
+              </button>
             </div>
           </div>
-        </div>
-      ) : (
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: BRAND.vermelho, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: FONT.body, marginBottom: 12 }}>
-            Confirmação obrigatória
-          </div>
-          <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={checked}
-              onChange={(e) => setChecked(e.target.checked)}
-              style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0, accentColor: BRAND.vermelho }}
-            />
-            <span style={{ fontFamily: FONT.body, fontSize: 13, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.55 }}>
-              Li e compreendi as regras de <strong>{label}</strong> e me comprometo a segui-las durante toda a campanha.
-            </span>
-          </label>
-          <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
-            <button
-              type="button"
-              onClick={handleConfirmar}
-              disabled={!checked || saving}
-              style={{
-                padding: "9px 20px", borderRadius: 10, border: "none",
-                background: checked ? BRAND.vermelho : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"),
-                color: checked ? "#fff" : t.textMuted,
-                fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
-                cursor: checked && !saving ? "pointer" : "not-allowed",
-                opacity: checked && !saving ? 1 : 0.65,
-                transition: "all 0.2s",
-              }}
-            >
-              {saving ? "Confirmando..." : "Confirmar Ciência"}
-            </button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -743,7 +757,7 @@ export default function PlaybookInfluencers() {
               <BookOpen size={16} />
             </span>
             <h1 style={{
-              fontSize: 18, fontWeight: 800, color: brand.primary,
+              fontSize: 22, fontWeight: 800, color: brand.primary,
               fontFamily: FONT_TITLE, margin: 0,
               letterSpacing: "0.05em", textTransform: "uppercase",
             }}>
@@ -851,7 +865,9 @@ export default function PlaybookInfluencers() {
             <div style={{
               height: "100%",
               width: `${totalOb > 0 ? (confirmadosOb / totalOb) * 100 : 0}%`,
-              background: `linear-gradient(90deg, ${BRAND.vermelho}, ${BRAND.azul})`,
+              background: brand.useBrand
+                ? "linear-gradient(90deg, var(--brand-primary), var(--brand-accent))"
+                : `linear-gradient(90deg, ${BRAND.vermelho}, ${BRAND.azul})`,
               borderRadius: 3, transition: "width 0.4s ease",
             }} />
           </div>
@@ -859,7 +875,12 @@ export default function PlaybookInfluencers() {
       )}
 
       <div style={{ marginBottom: 0 }}>
-        <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 0, scrollbarWidth: "none" }}>
+        <div style={{ position: "relative", marginBottom: 0 }}>
+          <div
+            role="tablist"
+            aria-label="Seções do Playbook"
+            style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 0, scrollbarWidth: "none" }}
+          >
           {ABAS.map((aba) => {
             const isAtiva = abaAtiva === aba.key;
             const jaConfirmou = user?.role === "influencer" && aba.itemKey ? confirmacoes.has(aba.itemKey) : false;
@@ -867,6 +888,10 @@ export default function PlaybookInfluencers() {
               <button
                 key={aba.key}
                 type="button"
+                role="tab"
+                id={`tab-${aba.key}`}
+                aria-selected={isAtiva}
+                aria-controls={`panel-${aba.key}`}
                 onClick={() => setAbaAtiva(aba.key)}
                 style={{
                   display: "flex", alignItems: "center", gap: 6,
@@ -903,18 +928,36 @@ export default function PlaybookInfluencers() {
               </button>
             );
           })}
+          </div>
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              right: 0,
+              top: 0,
+              bottom: 1,
+              width: 60,
+              background: `linear-gradient(to left, ${brand.blockBg ?? t.cardBg} 0%, transparent 100%)`,
+              pointerEvents: "none",
+            }}
+          />
         </div>
         <div style={{ height: 1, background: t.cardBorder }} />
       </div>
 
-      <div style={{
+      <div
+        role="tabpanel"
+        id={`panel-${abaConfig.key}`}
+        aria-labelledby={`tab-${abaConfig.key}`}
+        style={{
         background: brand.blockBg ?? t.cardBg,
         border: `1px solid ${t.cardBorder}`,
         borderTop: "none",
         borderRadius: "0 0 14px 14px",
         padding: "24px 28px 28px",
         boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-      }}>
+      }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 4, height: 22, borderRadius: 2, background: abaConfig.accentColor, flexShrink: 0 }} />

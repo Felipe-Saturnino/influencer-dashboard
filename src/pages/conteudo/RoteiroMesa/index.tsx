@@ -4,27 +4,12 @@ import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { FONT } from "../../../constants/theme";
+import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, X, Check } from "lucide-react";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check } from "lucide-react";
 import { GiNotebook, GiShield } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
-
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  azul:           "#1e36f8",
-  azulLight:      "rgba(30,54,248,0.12)",
-  azulBorder:     "rgba(30,54,248,0.30)",
-  vermelho:       "#e84025",
-  vermelhoLight:  "rgba(232,64,37,0.10)",
-  vermelhoBorder: "rgba(232,64,37,0.30)",
-  roxo:           "#4a2082",
-  roxoLight:      "rgba(74,32,130,0.12)",
-  roxoBorder:     "rgba(74,32,130,0.30)",
-  ciano:          "#70cae4",
-  cianoLight:     "rgba(112,202,228,0.12)",
-  cianoBorder:    "rgba(112,202,228,0.30)",
-} as const;
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";
@@ -156,8 +141,8 @@ const TIPO_ICON: Record<TipoSugestao, typeof FileText> = {
   alerta:      AlertTriangle,
 };
 
-/** Coluna fixa ícone + rótulo do tipo: mesmo alinhamento do texto em Script / Alerta / Orientação */
-const ROTEIRO_IDENT_COL_PX = 108;
+/** Largura da coluna ícone + rótulo — estreita em viewport pequeno */
+const ROTEIRO_IDENT_COL = "min(108px, 30vw)";
 const ROTEIRO_TIPO_ICON_SIZE = 20;
 
 // ─── CONFIG VISUAL POR JOGO ───────────────────────────────────────────────────
@@ -193,6 +178,7 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
   podeVerOperadora: (slug: string) => boolean;
 }) {
   const { theme: t, user, isDark } = useApp();
+  const brand = useDashboardBrand();
   const dark = isDark ?? false;
   const mostraCampoOperadora = user?.role === "gestor" || user?.role === "admin";
   const [tipo, setTipo] = useState<TipoSugestao>("script");
@@ -225,18 +211,14 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
 
   const podeSalvar = texto.trim().length > 0 && operadoraFinal && operadoraFinal !== "todas";
   const blocoLabel = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
-  const cfg = BLOCO_CONFIG[bloco];
+
+  const salvarBg = brand.useBrand
+    ? "var(--brand-primary)"
+    : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`;
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }} onClick={onClose}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "24px 24px 20px", maxWidth: 500, width: "92%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 4, height: 20, borderRadius: 2, background: cfg.accent, flexShrink: 0 }} />
-            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>Novo Roteiro — {blocoLabel}</h3>
-          </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}><X size={16} /></button>
-        </div>
+    <ModalBase onClose={onClose} maxWidth={500}>
+      <ModalHeader title={`Novo Roteiro — ${blocoLabel}`} onClose={onClose} />
 
         {mostraCampoOperadora && operadorasFiltradas.length > 0 && (
           <>
@@ -276,11 +258,28 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "script" ? "Olá Jogadores, meu nome é [Nome]..." : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o dealer..."} rows={4} style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", outline: "none", marginBottom: 18 }} />
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
-          <button onClick={handleSalvar} disabled={!podeSalvar || saving} style={{ padding: "8px 20px", borderRadius: 10, border: "none", background: BRAND.azul, color: "#fff", fontFamily: FONT.body, fontSize: 13, fontWeight: 700, cursor: podeSalvar && !saving ? "pointer" : "not-allowed", opacity: podeSalvar && !saving ? 1 : 0.55 }}>{saving ? "Salvando..." : "Salvar"}</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
+          <button
+            type="button"
+            onClick={handleSalvar}
+            disabled={!podeSalvar || saving}
+            style={{
+              padding: "8px 20px",
+              borderRadius: 10,
+              border: "none",
+              background: salvarBg,
+              color: "#fff",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: podeSalvar && !saving ? "pointer" : "not-allowed",
+              opacity: podeSalvar && !saving ? 1 : 0.55,
+            }}
+          >
+            {saving ? "Salvando..." : "Salvar"}
+          </button>
         </div>
-      </div>
-    </div>
+    </ModalBase>
   );
 }
 
@@ -293,6 +292,7 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   podeVerOperadora: (slug: string) => boolean;
 }) {
   const { theme: t, user, isDark } = useApp();
+  const brand = useDashboardBrand();
   const dark = isDark ?? false;
   const mostraCampoOperadora = user?.role === "gestor" || user?.role === "admin";
   const [titulo, setTitulo] = useState("");
@@ -334,16 +334,13 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   const inp = { width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, boxSizing: "border-box" as const, outline: "none" };
   const lbl = { fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body, display: "block" };
 
+  const salvarBg = brand.useBrand
+    ? "var(--brand-primary)"
+    : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`;
+
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }} onClick={onClose}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "24px 24px 20px", maxWidth: 520, width: "92%", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 4, height: 20, borderRadius: 2, background: BRAND.ciano, flexShrink: 0 }} />
-            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.08em" }}>Nova Campanha</h3>
-          </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", color: t.textMuted, cursor: "pointer", padding: 4, display: "flex" }}><X size={16} /></button>
-        </div>
+    <ModalBase onClose={onClose} maxWidth={520}>
+      <ModalHeader title="Nova Campanha" onClose={onClose} />
 
         {mostraCampoOperadora && operadorasFiltradas.length > 0 && (
           <>
@@ -381,11 +378,28 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='O que o dealer deve falar...' rows={4} style={{ ...inp, resize: "vertical", marginBottom: 18 }} />
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
-          <button onClick={handleSalvar} disabled={!podeSalvar || saving} style={{ padding: "8px 20px", borderRadius: 10, border: "none", background: BRAND.ciano, color: "#0f6a8a", fontFamily: FONT.body, fontSize: 13, fontWeight: 700, cursor: podeSalvar && !saving ? "pointer" : "not-allowed", opacity: podeSalvar && !saving ? 1 : 0.55 }}>{saving ? "Salvando..." : "Salvar"}</button>
+          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
+          <button
+            type="button"
+            onClick={handleSalvar}
+            disabled={!podeSalvar || saving}
+            style={{
+              padding: "8px 20px",
+              borderRadius: 10,
+              border: "none",
+              background: salvarBg,
+              color: "#fff",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: podeSalvar && !saving ? "pointer" : "not-allowed",
+              opacity: podeSalvar && !saving ? 1 : 0.55,
+            }}
+          >
+            {saving ? "Salvando..." : "Salvar"}
+          </button>
         </div>
-      </div>
-    </div>
+    </ModalBase>
   );
 }
 
@@ -396,15 +410,20 @@ function FilterChip({ label, active, activeColor, activeBg, activeBorder, onClic
   onClick: () => void; dark: boolean;
 }) {
   return (
-    <button onClick={onClick} style={{
-      padding: "5px 13px", borderRadius: 20,
-      border: `1.5px solid ${active ? activeBorder : dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
-      background: active ? activeBg : "transparent",
-      color: active ? activeColor : dark ? "#7c7c9e" : "#666",
-      fontSize: 11, fontWeight: 700, fontFamily: FONT.body,
-      textTransform: "uppercase", letterSpacing: "0.06em",
-      cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
-    }}>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      style={{
+        padding: "5px 13px", borderRadius: 20,
+        border: `1.5px solid ${active ? activeBorder : dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
+        background: active ? activeBg : "transparent",
+        color: active ? activeColor : dark ? "#7c7c9e" : "#666",
+        fontSize: 11, fontWeight: 700, fontFamily: FONT.body,
+        textTransform: "uppercase", letterSpacing: "0.06em",
+        cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
+      }}
+    >
       {label}
     </button>
   );
@@ -420,6 +439,7 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
   const jogosList = sugestao.jogos ?? ["todos"];
   const cfg       = TIPO_CONFIG[tipo];
   const [hover,   setHover] = useState(false);
+  const [excluirConfirmando, setExcluirConfirmando] = useState(false);
   const IconComponent = TIPO_ICON[tipo];
   const isOrientacao = tipo === "orientacao";
   const rowBg = isOrientacao
@@ -428,10 +448,10 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
   const borderRightOrientacao = isOrientacao ? `3px solid ${dark ? "rgba(150,150,170,0.40)" : "rgba(107,114,128,0.35)"}` : undefined;
 
   const identCol: React.CSSProperties = {
-    width: ROTEIRO_IDENT_COL_PX,
-    minWidth: ROTEIRO_IDENT_COL_PX,
-    maxWidth: ROTEIRO_IDENT_COL_PX,
-    flex: `0 0 ${ROTEIRO_IDENT_COL_PX}px`,
+    width: ROTEIRO_IDENT_COL,
+    minWidth: ROTEIRO_IDENT_COL,
+    maxWidth: ROTEIRO_IDENT_COL,
+    flex: `0 0 ${ROTEIRO_IDENT_COL}`,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -472,8 +492,44 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
         </div>
       </div>
       {podeExcluir && (
-        <button onClick={() => onExcluir(sugestao)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Excluir sugestão" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
-          <Trash2 size={13} />
+        <button
+          type="button"
+          onClick={() => {
+            if (!excluirConfirmando) {
+              setExcluirConfirmando(true);
+              return;
+            }
+            onExcluir(sugestao);
+            setExcluirConfirmando(false);
+          }}
+          onBlur={() => setExcluirConfirmando(false)}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+          title={`Excluir: ${sugestao.texto.slice(0, 50)}${sugestao.texto.length > 50 ? "…" : ""}`}
+          aria-label={`${excluirConfirmando ? "Confirmar exclusão:" : "Excluir sugestão:"} ${sugestao.texto.slice(0, 60)}${sugestao.texto.length > 60 ? "…" : ""}`}
+          style={{
+            width: "auto",
+            minWidth: 34,
+            height: 34,
+            padding: excluirConfirmando ? "0 8px" : 0,
+            borderRadius: 8,
+            flexShrink: 0,
+            border: `1px solid ${excluirConfirmando || hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`,
+            background: excluirConfirmando ? BRAND.vermelho : hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
+            color: excluirConfirmando ? "#fff" : hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"),
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            transition: "all 0.15s",
+            fontSize: 10,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+          }}
+        >
+          <Trash2 size={13} aria-hidden />
+          {excluirConfirmando ? <span>Confirmar?</span> : null}
         </button>
       )}
     </div>
@@ -487,6 +543,7 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
   dark: boolean; operadoraNome?: string; operadoraCor?: string | null;
 }) {
   const [hover,    setHover]    = useState(false);
+  const [excluirConfirmando, setExcluirConfirmando] = useState(false);
   const cianoText = dark ? "#70cae4" : "#0f6a8a";
   const formatDate = (d?: string) => {
     if (!d) return null;
@@ -497,10 +554,10 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px", borderRadius: 10, border: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`, borderLeft: `3px solid ${BRAND.ciano}`, background: dark ? "rgba(112,202,228,0.05)" : "rgba(112,202,228,0.03)", transition: "background 0.15s" }}>
       <div style={{
-        width: ROTEIRO_IDENT_COL_PX,
-        minWidth: ROTEIRO_IDENT_COL_PX,
-        maxWidth: ROTEIRO_IDENT_COL_PX,
-        flex: `0 0 ${ROTEIRO_IDENT_COL_PX}px`,
+        width: ROTEIRO_IDENT_COL,
+        minWidth: ROTEIRO_IDENT_COL,
+        maxWidth: ROTEIRO_IDENT_COL,
+        flex: `0 0 ${ROTEIRO_IDENT_COL}`,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -533,8 +590,44 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
         </div>
       </div>
       {podeExcluir && (
-        <button onClick={() => onExcluir(campanha)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Excluir campanha" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, border: `1px solid ${hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`, background: hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), color: hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
-          <Trash2 size={13} />
+        <button
+          type="button"
+          onClick={() => {
+            if (!excluirConfirmando) {
+              setExcluirConfirmando(true);
+              return;
+            }
+            onExcluir(campanha);
+            setExcluirConfirmando(false);
+          }}
+          onBlur={() => setExcluirConfirmando(false)}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+          title={`Excluir campanha: ${campanha.titulo}`}
+          aria-label={`${excluirConfirmando ? "Confirmar exclusão da campanha:" : "Excluir campanha:"} ${campanha.titulo}`}
+          style={{
+            width: "auto",
+            minWidth: 34,
+            height: 34,
+            padding: excluirConfirmando ? "0 8px" : 0,
+            borderRadius: 8,
+            flexShrink: 0,
+            border: `1px solid ${excluirConfirmando || hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`,
+            background: excluirConfirmando ? BRAND.vermelho : hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
+            color: excluirConfirmando ? "#fff" : hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"),
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            transition: "all 0.15s",
+            fontSize: 10,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+          }}
+        >
+          <Trash2 size={13} aria-hidden />
+          {excluirConfirmando ? <span>Confirmar?</span> : null}
         </button>
       )}
     </div>
@@ -552,7 +645,6 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
   const [modalAberto, setModalAberto] = useState(false);
 
   const handleExcluir = async (s: RoteiroSugestao) => {
-    if (!window.confirm("Excluir este roteiro?")) return;
     const { error } = await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", s.id);
     if (!error) onCarregar();
   };
@@ -609,11 +701,14 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
   podeVerOperadora: (slug: string) => boolean;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const cianoTitle = dark ? "#70cae4" : "#0f6a8a";
   const [modalAberto, setModalAberto] = useState(false);
+  const btnNovaCampanhaBg = brand.useBrand
+    ? "var(--brand-primary)"
+    : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`;
 
   const handleExcluir = async (c: RoteiroCampanha) => {
-    if (!window.confirm("Excluir esta campanha?")) return;
     const { error } = await supabase.from("roteiro_mesa_campanhas").delete().eq("id", c.id);
     if (!error) onCarregar();
   };
@@ -633,7 +728,7 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
             </span>
           </div>
           {podeCriar && (
-            <button onClick={() => setModalAberto(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: BRAND.ciano, color: "#0f6a8a", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
+            <button type="button" onClick={() => setModalAberto(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: btnNovaCampanhaBg, color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
               <Plus size={12} />Nova Campanha
             </button>
           )}
@@ -761,7 +856,7 @@ export default function RoteiroMesa() {
             <GiNotebook size={16} />
           </span>
           <h1 style={{
-            fontSize: 18, fontWeight: 800, color: brand.primary,
+            fontSize: 22, fontWeight: 800, color: brand.primary,
             fontFamily: FONT_TITLE, margin: 0,
             letterSpacing: "0.05em", textTransform: "uppercase",
           }}>
