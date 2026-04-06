@@ -290,6 +290,13 @@ export default function StatusTecnico() {
     return () => document.removeEventListener("keydown", onKey);
   }, [confirmarSync, confirmarEmail]);
 
+  useEffect(() => {
+    const onResize = () => setFluxoLabelNarrow(window.innerWidth < 480);
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const executarSync = async () => {
     if (syncExecutando || !perm.canEditarOk) return;
     setSyncExecutando(true);
