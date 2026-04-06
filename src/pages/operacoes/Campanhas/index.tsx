@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -6,8 +6,11 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { Campanha } from "../../../types";
-import { X, Pencil, AlertCircle } from "lucide-react";
+import { Pencil, AlertCircle } from "lucide-react";
 import { GiMegaphone } from "react-icons/gi";
+import { PageHeader } from "../../../components/PageHeader";
+import { BlocoLabel } from "../../../components/BlocoLabel";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -21,7 +24,7 @@ const BRAND = {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function Campanhas() {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("campanhas");
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
@@ -81,55 +84,15 @@ export default function Campanhas() {
     );
   }
 
+  const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
   return (
     <div className="app-page-shell">
-      {/* ─── Header — primária ───────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            background: brand.primaryIconBg,
-            border: brand.primaryIconBorder,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            marginTop: 3,
-            color: brand.primaryIconColor,
-          }}
-        >
-          <GiMegaphone size={14} />
-        </div>
-        <div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: brand.primary,
-              fontFamily: FONT_TITLE,
-              margin: 0,
-              letterSpacing: "0.5px",
-              textTransform: "uppercase",
-            }}
-          >
-            Campanhas
-          </h1>
-          <p
-            style={{
-              color: t.textMuted,
-              marginTop: 5,
-              fontFamily: FONT.body,
-              fontSize: 13,
-              margin: "5px 0 0",
-            }}
-          >
-            Cadastre campanhas de mídias sociais. UTMs mapeados na Gestão de Links alimentam o
-            Dashboard de Mídias (funil e performance).
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<GiMegaphone size={14} aria-hidden />}
+        title="Campanhas"
+        subtitle="Cadastre campanhas de mídias sociais. UTMs mapeados na Gestão de Links alimentam o Dashboard de Mídias (funil e performance)."
+      />
 
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
       <div className="app-grid-kpi-3" style={{ marginBottom: 24 }}>
@@ -146,7 +109,7 @@ export default function Campanhas() {
               borderLeft: `3px solid ${c.cor}`,
               borderRadius: 18,
               padding: "16px 20px",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+              boxShadow: cardShadow,
             }}
           >
             <div
@@ -183,16 +146,19 @@ export default function Campanhas() {
           background: brand.blockBg,
           border: `1px solid ${t.cardBorder}`,
           borderRadius: 18,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+          boxShadow: cardShadow,
           overflow: "hidden",
         }}
       >
+        <div style={{ padding: "16px 20px 0" }}>
+          <BlocoLabel label="Campanhas cadastradas" />
+        </div>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "18px 20px 16px",
+            padding: "12px 20px 16px",
           }}
         >
           <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
@@ -247,19 +213,25 @@ export default function Campanhas() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={th}>Nome</th>
-                <th style={th}>Operadora</th>
-                <th style={th}>Status</th>
-                <th style={th}>Criada em</th>
-                {perm.canEditarOk && <th style={th}>Ações</th>}
+                <th scope="col" style={th}>Nome</th>
+                <th scope="col" style={th}>Operadora</th>
+                <th scope="col" style={th}>Status</th>
+                <th scope="col" style={th}>Criada em</th>
+                {perm.canEditarOk && <th scope="col" style={th}>Ações</th>}
               </tr>
             </thead>
             <tbody>
-              {campanhas.map((c, idx) => (
+              {campanhas.map((c, idx) => {
+                const zebra = idx % 2 === 1 ? (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
+                return (
                 <tr
                   key={c.id}
-                  style={{
-                    background: idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent",
+                  style={{ background: zebra }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = zebra;
                   }}
                 >
                   <td style={{ ...td, fontWeight: 600 }}>{c.nome}</td>
@@ -312,7 +284,8 @@ export default function Campanhas() {
                     </td>
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -348,6 +321,12 @@ function ModalCampanha({ t, brand, editando, operadoras, onClose, onSalvo }: Mod
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+  const nomeInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => nomeInputRef.current?.focus(), 100);
+    return () => window.clearTimeout(id);
+  }, []);
 
   const salvar = async () => {
     setErro("");
@@ -408,77 +387,20 @@ function ModalCampanha({ t, brand, editando, operadoras, onClose, onSalvo }: Mod
   const fieldStyle: React.CSSProperties = { marginBottom: 18 };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-        padding: 24,
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !salvando) onClose();
-      }}
-    >
-      <div
-        style={{
-          background: brand.blockBg,
-          borderRadius: 20,
-          padding: "28px 32px",
-          width: "100%",
-          maxWidth: 460,
-          border: `1px solid ${t.cardBorder}`,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 24,
-          }}
-        >
-          <h2
-            style={{
-              fontFamily: FONT_TITLE,
-              fontSize: 18,
-              fontWeight: 800,
-              color: t.text,
-              margin: 0,
-              letterSpacing: "0.03em",
-            }}
-          >
-            {editando ? "Editar Campanha" : "Nova Campanha"}
-          </h2>
-          <button
-            onClick={() => {
-              if (!salvando) onClose();
-            }}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: salvando ? "not-allowed" : "pointer",
-              color: t.textMuted,
-              display: "flex",
-              alignItems: "center",
-              padding: 4,
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+    <ModalBase onClose={() => { if (!salvando) onClose(); }} maxWidth={460}>
+      <ModalHeader
+        title={editando ? "Editar campanha" : "Nova campanha"}
+        onClose={() => { if (!salvando) onClose(); }}
+      />
 
         <div style={fieldStyle}>
           <label style={labelStyle}>Nome</label>
           <input
+            ref={nomeInputRef}
             style={inputStyle}
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             placeholder="Ex: Black Friday, Lançamento Produto X"
-            autoFocus
           />
         </div>
 
@@ -502,24 +424,34 @@ function ModalCampanha({ t, brand, editando, operadoras, onClose, onSalvo }: Mod
         </div>
 
         {editando && (
-          <div style={{ ...fieldStyle, display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ ...fieldStyle, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <label style={{ ...labelStyle, margin: 0 }}>Status</label>
-            <button
-              onClick={() => setAtivo((prev) => !prev)}
-              style={{
-                border: `1px solid ${ativo ? "#05966966" : t.cardBorder}`,
-                background: ativo ? "#05966922" : "transparent",
-                color: ativo ? "#059669" : t.textMuted,
-                borderRadius: 10,
-                padding: "6px 16px",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
-              {ativo ? "✓ Ativa" : "Inativa"}
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[
+                { val: true as const, label: "Ativa", cor: "#059669" },
+                { val: false as const, label: "Inativa", cor: BRAND.cinza },
+              ].map(({ val, label, cor }) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={ativo === val}
+                  onClick={() => setAtivo(val)}
+                  style={{
+                    padding: "6px 16px",
+                    borderRadius: 10,
+                    fontWeight: 600,
+                    fontFamily: FONT.body,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    border: `1px solid ${ativo === val ? cor : t.cardBorder}`,
+                    background: ativo === val ? `${cor}22` : "transparent",
+                    color: ativo === val ? cor : t.textMuted,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             {!ativo && (
               <div
                 style={{
@@ -594,7 +526,6 @@ function ModalCampanha({ t, brand, editando, operadoras, onClose, onSalvo }: Mod
             {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar campanha"}
           </button>
         </div>
-      </div>
-    </div>
+    </ModalBase>
   );
 }
