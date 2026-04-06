@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, Search, AlertCircle, KeyRound } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { postSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
 import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
@@ -107,17 +108,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
       setFeedbackAcao(null);
       setAcaoEmAndamento(`${u.id}:${action}`);
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const res = await fetch("/api/admin-usuario-acao", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token ?? ""}`,
-          },
-          body: JSON.stringify({ userId: u.id, action }),
-        });
+        const res = await postSupabaseEdgeFunction("admin-usuario-acao", { userId: u.id, action });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok || (fnData as { error?: string })?.error) {
           throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
@@ -133,10 +124,12 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
         setFeedbackAcao({ tipo: "ok", msg: okMsg });
         await carregar();
       } catch (e) {
-        setFeedbackAcao({
-          tipo: "erro",
-          msg: e instanceof Error ? e.message : "Não foi possível concluir a operação.",
-        });
+        const msg = isAbortError(e)
+          ? "Tempo esgotado ou rede indisponível. Confira se a função admin-usuario-acao está deployada no Supabase."
+          : e instanceof Error
+            ? e.message
+            : "Não foi possível concluir a operação.";
+        setFeedbackAcao({ tipo: "erro", msg });
       } finally {
         setAcaoEmAndamento(null);
       }

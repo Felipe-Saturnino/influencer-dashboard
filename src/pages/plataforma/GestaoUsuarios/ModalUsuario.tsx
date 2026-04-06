@@ -1,32 +1,12 @@
 import { useState, useEffect } from "react";
 import { X, AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { postSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import type { Theme } from "../../../constants/theme";
 import { BRAND, FONT_TITLE, ROLES, roleBadgeColor, GESTOR_TIPOS } from "./constants";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
-
-const POST_GESTAO_USUARIO_MS = 120_000;
-
-async function postGestaoUsuario(
-  url: string,
-  accessToken: string,
-  jsonBody: object
-): Promise<Response> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), POST_GESTAO_USUARIO_MS);
-  try {
-    return await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify(jsonBody),
-      signal: ctrl.signal,
-    });
-  } finally {
-    clearTimeout(t);
-  }
-}
 
 interface ModalUsuarioProps {
   t: Theme;
@@ -144,7 +124,6 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setSalvando(true);
     try {
       let uid = editando?.id ?? "";
-      const { data: { session } } = await supabase.auth.getSession();
       const scopeParesParaApi =
         role === "agencia"
           ? paresAgencia.filter((p) => p.influencerId && p.operadoraSlug).map((p) => `${p.influencerId}:${p.operadoraSlug}`)
@@ -157,38 +136,30 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       const scopeGestorTiposArr = role === "gestor" ? (Array.isArray(scopeGestorTipos) ? scopeGestorTipos : []) : [];
 
       if (editando) {
-        const res = await postGestaoUsuario(
-          "/api/atualizar-perfil",
-          session?.access_token ?? "",
-          {
-            userId: uid,
-            name: nome.trim(),
-            role,
-            scopeInfluencers: scopeInfluencersArr,
-            scopeOperadoras: scopeOperadorasArr,
-            scopePares: scopeParesParaApi,
-            scopeGestorTipos: scopeGestorTiposArr,
-          }
-        );
+        const res = await postSupabaseEdgeFunction("atualizar-perfil", {
+          userId: uid,
+          name: nome.trim(),
+          role,
+          scopeInfluencers: scopeInfluencersArr,
+          scopeOperadoras: scopeOperadorasArr,
+          scopePares: scopeParesParaApi,
+          scopeGestorTipos: scopeGestorTiposArr,
+        });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
         if ((fnData as { error?: string })?.error) throw new Error((fnData as { error: string }).error);
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
-        const res = await postGestaoUsuario(
-          "/api/criar-usuario",
-          session?.access_token ?? "",
-          {
-            email: email.trim().toLowerCase(),
-            nome: nome.trim(),
-            role,
-            scopeInfluencers: scopeInfluencersArr,
-            scopeOperadoras: scopeOperadorasArr,
-            scopePares: scopeParesParaApi,
-            scopeGestorTipos: role === "gestor" ? scopeGestorTiposArr : [],
-            loginUrl,
-          }
-        );
+        const res = await postSupabaseEdgeFunction("criar-usuario", {
+          email: email.trim().toLowerCase(),
+          nome: nome.trim(),
+          role,
+          scopeInfluencers: scopeInfluencersArr,
+          scopeOperadoras: scopeOperadorasArr,
+          scopePares: scopeParesParaApi,
+          scopeGestorTipos: role === "gestor" ? scopeGestorTiposArr : [],
+          loginUrl,
+        });
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
         if ((fnData as { error?: string })?.error) throw new Error((fnData as { error: string }).error);
@@ -198,12 +169,9 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       onSalvo();
       onClose();
     } catch (e: unknown) {
-      const abort =
-        (typeof DOMException !== "undefined" && e instanceof DOMException && e.name === "AbortError") ||
-        (e instanceof Error && e.name === "AbortError");
-      if (abort) {
+      if (isAbortError(e)) {
         setErro(
-          "Tempo esgotado ao falar com o servidor. Confira a conexão e se a função criar-usuario está publicada no Supabase."
+          "Tempo esgotado ou rede indisponível. Confira se as funções criar-usuario e atualizar-perfil estão deployadas no Supabase (CLI: supabase functions deploy)."
         );
       } else {
         setErro(e instanceof Error ? e.message : "Erro ao salvar.");
