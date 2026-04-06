@@ -52,3 +52,6 @@ export function isAbortError(e: unknown): boolean {
     (e instanceof Error && e.name === "AbortError")
   );
 }
+
+/** Alias do nome antigo — evita falha de build se algum arquivo ainda importar `postSupabaseEdgeFunction`. */
+export { callSupabaseEdgeFunction as postSupabaseEdgeFunction };
