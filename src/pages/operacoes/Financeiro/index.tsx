@@ -243,7 +243,9 @@ function SelectInput({ value, onChange, options, style }: {
         outline: "none", cursor: "pointer", ...style,
       }}
     >
-      {[...options].sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "", "pt-BR")).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
     </select>
   );
 }
