@@ -20,6 +20,14 @@ const ROLES_BLOQUEADOS = ['admin', 'gestor']  // Admin sem escopo; gestor usa ti
 
 const GESTOR_TIPO_SLUGS = ['operacoes', 'marketing', 'afiliados', 'geral'] as const
 
+/** Evita timers/listeners de Auth no cliente service_role (comum em Edge Functions travarem o isolate). */
+const supabaseServiceOptions = {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+} as const
+
 type SupabaseSvc = ReturnType<typeof createClient>
 
 type ScoutRowForSync = {
@@ -168,7 +176,7 @@ serve(async (req) => {
     })
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey)
+  const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
 
   let body: CriarUsuarioRequest
   try {
@@ -302,15 +310,24 @@ serve(async (req) => {
           novasLinhas.push({ user_id: uid, scope_type: 'agencia_par', scope_ref: par })
         )
       } else {
-        scopeInfluencersArr.forEach((ref) =>
+        const influenciadoresUnicos = [...new Set(scopeInfluencersArr)]
+        const operadorasUnicas = [...new Set(scopeOperadorasArr)]
+        influenciadoresUnicos.forEach((ref) =>
           novasLinhas.push({ user_id: uid, scope_type: 'influencer', scope_ref: ref })
         )
-        scopeOperadorasArr.forEach((ref) =>
+        operadorasUnicas.forEach((ref) =>
           novasLinhas.push({ user_id: uid, scope_type: 'operadora', scope_ref: ref })
         )
       }
       if (novasLinhas.length > 0) {
-        await supabase.from('user_scopes').insert(novasLinhas)
+        const { error: scopeInsertErr } = await supabase.from('user_scopes').insert(novasLinhas)
+        if (scopeInsertErr) {
+          await supabase.auth.admin.deleteUser(uid)
+          return new Response(
+            JSON.stringify({ error: `Erro ao salvar escopos: ${scopeInsertErr.message}` }),
+            { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
+          )
+        }
       }
 
       // 4. Se influencer: influencer_perfil e influencer_operadoras
@@ -346,13 +363,13 @@ serve(async (req) => {
       }
     }
 
-    // 5. Enviar e-mail (não bloqueia a resposta)
-    enviarEmailBoasVindas(
+    // 5. E-mail em background (não await — não segura o isolate até o Responder)
+    void enviarEmailBoasVindas(
       email.trim().toLowerCase(),
       nome.trim(),
       senhaPadrao,
       loginUrl
-    ).catch(e => console.error('[criar-usuario] Erro ao enviar e-mail:', e))
+    ).catch((e) => console.error('[criar-usuario] Erro ao enviar e-mail:', e))
 
     return new Response(JSON.stringify({ success: true, userId: uid }), {
       status: 200,

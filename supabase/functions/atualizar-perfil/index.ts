@@ -18,6 +18,10 @@ const ROLES_BLOQUEADOS = ['admin', 'gestor']
 
 const GESTOR_TIPO_SLUGS = ['operacoes', 'marketing', 'afiliados', 'geral'] as const
 
+const supabaseServiceOptions = {
+  auth: { autoRefreshToken: false, persistSession: false },
+} as const
+
 function corsHeaders(req: Request) {
   const origin = req.headers.get('origin') || '*'
   return {
@@ -86,7 +90,7 @@ serve(async (req) => {
     })
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey)
+  const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
 
   let body: AtualizarPerfilRequest
   try {
