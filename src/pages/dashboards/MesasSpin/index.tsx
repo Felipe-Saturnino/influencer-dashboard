@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useMemo, useCallback } from "react";
+import { Fragment, useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -295,6 +295,31 @@ function uapUltimoDiaDoMesPorJogo(rows: UapPorJogoPlanRow[], ym: string, jogo: s
   return uap;
 }
 
+const UAP_JOGO_MAP: Record<string, "blackjack" | "roleta" | "baccarat"> = {
+  Blackjack: "blackjack",
+  Roleta: "roleta",
+  "Speed Baccarat": "baccarat",
+};
+
+function buildUapPorJogoQuery(
+  historico: boolean,
+  mesRef: { ano: number; mes: number } | undefined,
+  from: number,
+  to: number,
+) {
+  let q = supabase
+    .from("relatorio_uap_por_jogo")
+    .select("data, jogo, uap")
+    .order("data", { ascending: true })
+    .order("jogo", { ascending: true })
+    .range(from, to);
+  if (!historico && mesRef) {
+    const { inicio, fim } = getPeriodoComparativoMoM(mesRef.ano, mesRef.mes).atual;
+    q = q.gte("data", inicio).lte("data", fim);
+  }
+  return q;
+}
+
 function fmtBRL(v: number) {
   const sign = v < 0 ? "-" : "";
   return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -376,14 +401,21 @@ function linhaMesaPorDiaFromRow(r: PorTabelaRow): LinhaMesaPorDia {
   };
 }
 
-/** Métricas por jogo no comparativo (mesma linha que `LinhaMesaPorDia`, sem data). */
-type CelulaJogoMetricas = Pick<LinhaMesaPorDia, "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size">;
+/** Métricas por jogo no comparativo (UAP vem de `relatorio_uap_por_jogo`). */
+type CelulaJogoMetricas = {
+  ggr: number | null;
+  turnover: number | null;
+  bets: number | null;
+  margin_pct: number | null;
+  bet_size: number | null;
+  uap: number | null;
+};
 
 function emptyCelulaJogo(): CelulaJogoMetricas {
-  return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null };
+  return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null, uap: null };
 }
 
-/** Soma GGR, turnover e apostas d-1; margem e aposta média a partir dos totais (ex.: Blackjack = BJ1+BJ2+VIP). */
+/** Soma GGR, turnover e apostas d-1; margem e aposta média a partir dos totais (ex.: Blackjack = BJ1+BJ2+VIP). UAP é preenchido à parte. */
 function aggregateCellFromPorTabelaRows(rows: PorTabelaRow[]): CelulaJogoMetricas {
   if (rows.length === 0) return emptyCelulaJogo();
   let ggr = 0;
@@ -413,7 +445,7 @@ function aggregateCellFromPorTabelaRows(rows: PorTabelaRow[]): CelulaJogoMetrica
     turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
   const bet_size =
     betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
-  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size };
+  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size, uap: null };
 }
 
 /** Agrega `relatorio_por_tabela` por mês (YYYY-MM) numa linha por período. */
@@ -457,6 +489,7 @@ function linhaComparativoJogoAgregadaMes(
   ym: string,
   rowsMonth: PorTabelaRow[],
   operadorasListFmt: { slug: string; nome: string }[],
+  uapRows: UapPorJogoPlanRow[],
 ): LinhaComparativoJogoTab {
   const bj: PorTabelaRow[] = [];
   const rl: PorTabelaRow[] = [];
@@ -470,56 +503,98 @@ function linhaComparativoJogoAgregadaMes(
   return {
     dataIso: `${ym}-01`,
     labelData: fmtMesAnoCurtoFromYm(ym),
-    blackjack: aggregateCellFromPorTabelaRows(bj),
-    roleta: aggregateCellFromPorTabelaRows(rl),
-    baccarat: aggregateCellFromPorTabelaRows(bc),
+    blackjack: {
+      ...aggregateCellFromPorTabelaRows(bj),
+      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Blackjack") ?? null,
+    },
+    roleta: {
+      ...aggregateCellFromPorTabelaRows(rl),
+      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Roleta") ?? null,
+    },
+    baccarat: {
+      ...aggregateCellFromPorTabelaRows(bc),
+      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Speed Baccarat") ?? null,
+    },
   };
 }
 
-type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size";
+const COR_BLACKJACK = "#7c3aed";
+const COR_ROLETA = "#22c55e";
+const COR_BACCARAT = "#1e36f8";
 
-const KPIS_DISPONIVEIS: { key: KpiJogoKey; label: string }[] = [
-  { key: "ggr", label: "GGR" },
-  { key: "turnover", label: "Turnover" },
-  { key: "bets", label: "Apostas" },
-  { key: "margin_pct", label: "Margem" },
-  { key: "bet_size", label: "Aposta média" },
+type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap";
+
+type KpiJogoDef = {
+  key: KpiJogoKey;
+  label: string;
+  somavel: boolean;
+  tipoGrafico: "barra" | "linha";
+};
+
+const KPIS_DISPONIVEIS: KpiJogoDef[] = [
+  { key: "ggr", label: "GGR", somavel: true, tipoGrafico: "barra" },
+  { key: "turnover", label: "Turnover", somavel: true, tipoGrafico: "barra" },
+  { key: "bets", label: "Apostas", somavel: true, tipoGrafico: "barra" },
+  { key: "uap", label: "UAP", somavel: true, tipoGrafico: "linha" },
+  { key: "margin_pct", label: "Margem", somavel: false, tipoGrafico: "linha" },
+  { key: "bet_size", label: "Aposta média", somavel: false, tipoGrafico: "linha" },
 ];
 
 const JOGOS_COMPARATIVO = [
-  { key: "blackjack" as const, label: "Blackjack", cor: BRAND.roxoVivo },
-  { key: "roleta" as const, label: "Roleta", cor: BRAND.verde },
-  { key: "baccarat" as const, label: "Baccarat", cor: BRAND.ciano },
+  { key: "blackjack" as const, label: "Blackjack", cor: COR_BLACKJACK },
+  { key: "roleta" as const, label: "Roleta", cor: COR_ROLETA },
+  { key: "baccarat" as const, label: "Baccarat", cor: COR_BACCARAT },
 ] as const;
 
-function somarCelulasJogo(row: LinhaComparativoJogoTab, key: "ggr" | "turnover" | "bets"): number | null {
+function somarCelulasComparativo(row: LinhaComparativoJogoTab, key: "ggr" | "turnover" | "bets" | "uap"): number | null {
   const vals = JOGOS_COMPARATIVO.map((j) => row[j.key][key] as number | null).filter((v): v is number => v != null);
   return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) : null;
 }
 
 function margemTotalComparativoRow(row: LinhaComparativoJogoTab): number | null {
-  const t = somarCelulasJogo(row, "turnover");
-  const g = somarCelulasJogo(row, "ggr");
+  const t = somarCelulasComparativo(row, "turnover");
+  const g = somarCelulasComparativo(row, "ggr");
   return t != null && t !== 0 && g != null ? (g / t) * 100 : null;
 }
 
 function betSizeTotalComparativoRow(row: LinhaComparativoJogoTab): number | null {
-  const t = somarCelulasJogo(row, "turnover");
-  const b = somarCelulasJogo(row, "bets");
+  const t = somarCelulasComparativo(row, "turnover");
+  const b = somarCelulasComparativo(row, "bets");
   return t != null && b != null && b !== 0 ? t / b : null;
 }
 
-function pctDoTotalJogo(valorJogo: number | null, total: number | null, kpi: KpiJogoKey): number | null {
-  if (kpi === "margin_pct" || kpi === "bet_size") return null;
+function calcularTotaisDiaComparativo(row: LinhaComparativoJogoTab): Record<KpiJogoKey, number | null> {
+  return {
+    ggr: somarCelulasComparativo(row, "ggr"),
+    turnover: somarCelulasComparativo(row, "turnover"),
+    bets: somarCelulasComparativo(row, "bets"),
+    uap: somarCelulasComparativo(row, "uap"),
+    margin_pct: margemTotalComparativoRow(row),
+    bet_size: betSizeTotalComparativoRow(row),
+  };
+}
+
+function calcularPctComparativo(valorJogo: number | null, total: number | null, kpi: KpiJogoDef): number | null {
+  if (!kpi.somavel) return null;
   if (valorJogo == null || total == null || total === 0) return null;
   return (valorJogo / total) * 100;
 }
 
-function formatarValorKpiStr(kpi: KpiJogoKey, valor: number | null): string {
+function renderValorKpiComparativo(kpi: KpiJogoDef, valor: number | null): ReactNode {
   if (valor == null) return "—";
-  if (kpi === "ggr" || kpi === "turnover" || kpi === "bet_size") return fmtBRL(valor);
-  if (kpi === "bets") return valor.toLocaleString("pt-BR");
-  return `${valor.toFixed(1)}%`;
+  switch (kpi.key) {
+    case "ggr":
+    case "turnover":
+    case "bet_size":
+      return fmtBRL(valor);
+    case "bets":
+    case "uap":
+      return valor.toLocaleString("pt-BR");
+    case "margin_pct":
+      return <MarginBadge value={valor} />;
+    default:
+      return String(valor);
+  }
 }
 
 function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
@@ -591,7 +666,7 @@ function mapMonthlyV2(r: { mes: string; uap: number | null; arpu: number | null 
 }
 
 export default function MesasSpin() {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("mesas_spin");
 
@@ -605,7 +680,6 @@ export default function MesasSpin() {
   const [historico, setHistorico] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uapPorJogoRows, setUapPorJogoRows] = useState<UapPorJogoPlanRow[]>([]);
-  const [uapPorJogoLoading, setUapPorJogoLoading] = useState(true);
 
   const [dailyData, setDailyData] = useState<DailyRow[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
@@ -627,8 +701,9 @@ export default function MesasSpin() {
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
   const [kpisSelecionados, setKpisSelecionados] = useState<Set<KpiJogoKey>>(
-    () => new Set<KpiJogoKey>(["ggr", "turnover", "bets", "margin_pct", "bet_size"]),
+    () => new Set<KpiJogoKey>(["ggr", "turnover", "bets", "margin_pct", "bet_size", "uap"]),
   );
+  const [kpiGrafico, setKpiGrafico] = useState<KpiJogoKey>("ggr");
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
@@ -647,46 +722,6 @@ export default function MesasSpin() {
       setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
     } else setHistorico(true);
   }
-
-  useEffect(() => {
-    let alive = true;
-    async function loadUapPorJogo() {
-      setUapPorJogoLoading(true);
-      try {
-        const raw = await fetchAllPages<{ data: string; jogo: string; uap: number }>(
-          async (from, to) => {
-            let q = supabase
-              .from("relatorio_uap_por_jogo")
-              .select("data, jogo, uap")
-              .order("data", { ascending: true })
-              .order("jogo", { ascending: true })
-              .range(from, to);
-            if (!historico && mesSelecionado) {
-              const { inicio, fim } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
-              q = q.gte("data", inicio).lte("data", fim);
-            }
-            return q;
-          },
-        );
-        if (!alive) return;
-        setUapPorJogoRows(
-          raw.map((r) => ({
-            data: String(r.data).slice(0, 10),
-            jogo: r.jogo,
-            uap: Number(r.uap),
-          })),
-        );
-      } catch {
-        if (alive) setUapPorJogoRows([]);
-      } finally {
-        if (alive) setUapPorJogoLoading(false);
-      }
-    }
-    void loadUapPorJogo();
-    return () => {
-      alive = false;
-    };
-  }, [historico, mesSelecionado]);
 
   useEffect(() => {
     let alive = true;
@@ -710,47 +745,92 @@ export default function MesasSpin() {
     setMonthlyUapArpuSel(null);
     setMonthlyUapArpuPrev(null);
     setDailyDataPrevMonth([]);
+    setUapPorJogoRows([]);
 
     try {
       if (historico) {
-        const monthlyRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_monthly_summary")
-            .select("mes, uap, arpu")
-            .order("mes", { ascending: true })
-            .range(from, to),
-        );
-        const dailyRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_daily_summary")
-            .select("data, turnover, ggr, apostas, uap")
-            .order("data", { ascending: true })
-            .range(from, to),
-        );
-        const porAllRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_por_tabela")
-            .select("dia, operadora, mesa, ggr, turnover, apostas")
-            .order("dia", { ascending: true })
-            .range(from, to),
-        );
+        const [monthlyRaw, dailyRaw, porAllRaw, uapRaw] = await Promise.all([
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_monthly_summary")
+              .select("mes, uap, arpu")
+              .order("mes", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_daily_summary")
+              .select("data, turnover, ggr, apostas, uap")
+              .order("data", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_por_tabela")
+              .select("dia, operadora, mesa, ggr, turnover, apostas")
+              .order("dia", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) => buildUapPorJogoQuery(true, undefined, from, to)),
+        ]);
         setMonthlyData((monthlyRaw as { mes: string; uap: number | null; arpu: number | null }[]).map(mapMonthlyV2));
         setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         setPorTabelaHistAll((porAllRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
+        setUapPorJogoRows(
+          (uapRaw as { data: string; jogo: string; uap: number }[]).map((r) => ({
+            data: String(r.data).slice(0, 10),
+            jogo: r.jogo,
+            uap: Number(r.uap),
+          })),
+        );
       } else if (mesSelecionado) {
         const { atual, anterior } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
         const { inicio, fim } = atual;
-        const dailyRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_daily_summary")
-            .select("data, turnover, ggr, apostas, uap")
-            .gte("data", inicio)
-            .lte("data", fim)
-            .order("data", { ascending: true })
-            .range(from, to),
-        );
+        const { inicio: pi, fim: pf } = anterior;
+
+        const [dailyRaw, dailyPrevRaw, mesasMesRaw, uapRaw] = await Promise.all([
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_daily_summary")
+              .select("data, turnover, ggr, apostas, uap")
+              .gte("data", inicio)
+              .lte("data", fim)
+              .order("data", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_daily_summary")
+              .select("data, turnover, ggr, apostas, uap")
+              .gte("data", pi)
+              .lte("data", pf)
+              .order("data", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_por_tabela")
+              .select("dia, operadora, mesa, ggr, turnover, apostas")
+              .gte("dia", inicio)
+              .lte("dia", fim)
+              .order("dia", { ascending: true })
+              .order("mesa", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) => buildUapPorJogoQuery(false, mesSelecionado, from, to)),
+        ]);
+
         setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         setMonthlyData([]);
+        setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
+        setPorTabelaRows((mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
+        setUapPorJogoRows(
+          (uapRaw as { data: string; jogo: string; uap: number }[]).map((r) => ({
+            data: String(r.data).slice(0, 10),
+            jogo: r.jogo,
+            uap: Number(r.uap),
+          })),
+        );
 
         const { data: mSel } = await supabase
           .from("relatorio_monthly_summary")
@@ -766,17 +846,6 @@ export default function MesasSpin() {
             : null,
         );
 
-        const { inicio: pi, fim: pf } = anterior;
-        const dailyPrevRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_daily_summary")
-            .select("data, turnover, ggr, apostas, uap")
-            .gte("data", pi)
-            .lte("data", pf)
-            .order("data", { ascending: true })
-            .range(from, to),
-        );
-        setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         const { data: mPrev } = await supabase
           .from("relatorio_monthly_summary")
           .select("uap, arpu")
@@ -790,20 +859,9 @@ export default function MesasSpin() {
               }
             : null,
         );
-
-        const mesasMesRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_por_tabela")
-            .select("dia, operadora, mesa, ggr, turnover, apostas")
-            .gte("dia", inicio)
-            .lte("dia", fim)
-            .order("dia", { ascending: true })
-            .order("mesa", { ascending: true })
-            .range(from, to),
-        );
-        const mesasMapped = (mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2);
-        setPorTabelaRows(mesasMapped);
       }
+    } catch {
+      setUapPorJogoRows([]);
     } finally {
       setLoading(false);
     }
@@ -928,91 +986,6 @@ export default function MesasSpin() {
     };
   }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado]);
 
-  /**
-   * Mês corrente: série diária (relatorio_uap_por_jogo).
-   * Histórico: UAP mensal = mesmo que Comparativo Mensal / `relatorio_monthly_summary` (fallback: soma UAP diários);
-   * reparte esse total entre jogos proporcionalmente ao último snapshot diário do mês em relatorio_uap_por_jogo.
-   */
-  const uapJogoChartData = useMemo(() => {
-    if (historico) {
-      const dailyByYm = new Map<string, DailyRow[]>();
-      for (const r of dailyData) {
-        const ym = r.data.slice(0, 7);
-        if (!dailyByYm.has(ym)) dailyByYm.set(ym, []);
-        dailyByYm.get(ym)!.push(r);
-      }
-      const monthlyByYm = new Map(monthlyData.map((m) => [m.mes.slice(0, 7), m] as const));
-      const allYm = new Set<string>([...dailyByYm.keys(), ...monthlyByYm.keys()]);
-      const out: {
-        dataIso: string;
-        label: string;
-        Blackjack?: number;
-        Roleta?: number;
-        speedBaccarat?: number;
-      }[] = [];
-      for (const ym of [...allYm].sort()) {
-        const dias = dailyByYm.get(ym) ?? [];
-        const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
-        const m = monthlyByYm.get(ym);
-        const T = m?.uap != null ? Number(m.uap) : agg?.uap ?? null;
-
-        const wB = uapUltimoDiaDoMesPorJogo(uapPorJogoRows, ym, "Blackjack") ?? 0;
-        const wR = uapUltimoDiaDoMesPorJogo(uapPorJogoRows, ym, "Roleta") ?? 0;
-        const wS = uapUltimoDiaDoMesPorJogo(uapPorJogoRows, ym, "Speed Baccarat") ?? 0;
-        const W = wB + wR + wS;
-
-        let Blackjack: number | undefined;
-        let Roleta: number | undefined;
-        let speedBaccarat: number | undefined;
-
-        if (T != null && T > 0 && W > 0) {
-          const b = Math.round((T * wB) / W);
-          const r0 = Math.round((T * wR) / W);
-          const s = Math.max(0, T - b - r0);
-          Blackjack = wB > 0 ? b : undefined;
-          Roleta = wR > 0 ? r0 : undefined;
-          speedBaccarat = wS > 0 ? s : undefined;
-        } else if (W > 0) {
-          Blackjack = wB > 0 ? Math.round(wB) : undefined;
-          Roleta = wR > 0 ? Math.round(wR) : undefined;
-          speedBaccarat = wS > 0 ? Math.round(wS) : undefined;
-        } else {
-          continue;
-        }
-
-        if (Blackjack == null && Roleta == null && speedBaccarat == null) continue;
-        out.push({
-          dataIso: `${ym}-01`,
-          label: fmtMesAnoCurtoFromYm(ym),
-          Blackjack,
-          Roleta,
-          speedBaccarat,
-        });
-      }
-      return out;
-    }
-    const byDate = new Map<string, { Blackjack?: number; Roleta?: number; speedBaccarat?: number }>();
-    for (const r of uapPorJogoRows) {
-      if (!byDate.has(r.data)) byDate.set(r.data, {});
-      const o = byDate.get(r.data)!;
-      if (r.jogo === "Blackjack") o.Blackjack = r.uap;
-      else if (r.jogo === "Roleta") o.Roleta = r.uap;
-      else if (r.jogo === "Speed Baccarat") o.speedBaccarat = r.uap;
-    }
-    return [...byDate.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([dataIso, v]) => ({
-        dataIso,
-        label: new Date(dataIso + "T12:00:00").toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "2-digit",
-        }),
-        Blackjack: v.Blackjack,
-        Roleta: v.Roleta,
-        speedBaccarat: v.speedBaccarat,
-      }));
-  }, [uapPorJogoRows, historico, dailyData, monthlyData]);
-
   const operadorasListFmt = operadorasOcr;
 
   const porTabelaFiltradas = useMemo(
@@ -1091,7 +1064,9 @@ export default function MesasSpin() {
       }
       return [...byYm.keys()]
         .sort()
-        .map((ym) => linhaComparativoJogoAgregadaMes(ym, byYm.get(ym)!, operadorasListFmt));
+        .map((ym) =>
+          linhaComparativoJogoAgregadaMes(ym, byYm.get(ym)!, operadorasListFmt, uapPorJogoRows),
+        );
     }
     const byDate = new Map<
       string,
@@ -1106,77 +1081,70 @@ export default function MesasSpin() {
       else if (label === "Roleta") bucket.roleta.push(r);
       else if (label === "Speed Baccarat") bucket.baccarat.push(r);
     }
+
+    const uapByDateJogo = new Map<string, Partial<Record<"blackjack" | "roleta" | "baccarat", number>>>();
+    for (const r of uapPorJogoRows) {
+      if (!uapByDateJogo.has(r.data)) uapByDateJogo.set(r.data, {});
+      const jogoKey = UAP_JOGO_MAP[r.jogo];
+      if (jogoKey) uapByDateJogo.get(r.data)![jogoKey] = r.uap;
+    }
+
     return dailyData.map((dr) => {
       const dataIso = dr.data;
       const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [] };
+      const uapDia = uapByDateJogo.get(dataIso) ?? {};
+      const bjCell = aggregateCellFromPorTabelaRows(b.bj);
+      const rlCell = aggregateCellFromPorTabelaRows(b.roleta);
+      const bcCell = aggregateCellFromPorTabelaRows(b.baccarat);
       return {
         dataIso,
         labelData: fmtDiaMesPtBr(dataIso),
-        blackjack: aggregateCellFromPorTabelaRows(b.bj),
-        roleta: aggregateCellFromPorTabelaRows(b.roleta),
-        baccarat: aggregateCellFromPorTabelaRows(b.baccarat),
+        blackjack: { ...bjCell, uap: uapDia.blackjack ?? null },
+        roleta: { ...rlCell, uap: uapDia.roleta ?? null },
+        baccarat: { ...bcCell, uap: uapDia.baccarat ?? null },
       };
     });
-  }, [historico, dailyData, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
+  }, [
+    historico,
+    dailyData,
+    porTabelaFiltradasHist,
+    porTabelaFiltradas,
+    operadorasListFmt,
+    uapPorJogoRows,
+  ]);
 
   const kpisAtivosComparativo = useMemo(
     () => KPIS_DISPONIVEIS.filter((k) => kpisSelecionados.has(k.key)),
     [kpisSelecionados],
   );
 
-  const graficoComparativoJogo = useMemo(() => {
-    if (kpisSelecionados.has("ggr")) {
-      const kpi = "ggr" as const;
-      return {
-        kpi,
-        data: linhasComparativoJogo.map((row) => ({
-          label: row.labelData,
-          Blackjack: Number(row.blackjack[kpi] ?? 0),
-          Roleta: Number(row.roleta[kpi] ?? 0),
-          Baccarat: Number(row.baccarat[kpi] ?? 0),
-        })),
-      };
-    }
-    if (kpisSelecionados.has("turnover")) {
-      const kpi = "turnover" as const;
-      return {
-        kpi,
-        data: linhasComparativoJogo.map((row) => ({
-          label: row.labelData,
-          Blackjack: Number(row.blackjack[kpi] ?? 0),
-          Roleta: Number(row.roleta[kpi] ?? 0),
-          Baccarat: Number(row.baccarat[kpi] ?? 0),
-        })),
-      };
-    }
-    if (kpisSelecionados.has("bets")) {
-      const kpi = "bets" as const;
-      return {
-        kpi,
-        data: linhasComparativoJogo.map((row) => ({
-          label: row.labelData,
-          Blackjack: Number(row.blackjack[kpi] ?? 0),
-          Roleta: Number(row.roleta[kpi] ?? 0),
-          Baccarat: Number(row.baccarat[kpi] ?? 0),
-        })),
-      };
-    }
-    return { kpi: null as null, data: [] as { label: string; Blackjack: number; Roleta: number; Baccarat: number }[] };
-  }, [linhasComparativoJogo, kpisSelecionados]);
+  const kpiGraficoConfig = useMemo(
+    () => KPIS_DISPONIVEIS.find((k) => k.key === kpiGrafico) ?? KPIS_DISPONIVEIS[0]!,
+    [kpiGrafico],
+  );
 
-  const kpiGraficoComparativoLabel =
-    graficoComparativoJogo.kpi === "ggr"
-      ? "GGR"
-      : graficoComparativoJogo.kpi === "turnover"
-        ? "Turnover"
-        : graficoComparativoJogo.kpi === "bets"
-          ? "Apostas"
-          : "";
+  const dadosGraficoComparativoJogo = useMemo(() => {
+    return linhasComparativoJogo.map((row) => {
+      const val = (jogoKey: "blackjack" | "roleta" | "baccarat") => {
+        const v = row[jogoKey][kpiGrafico as keyof CelulaJogoMetricas];
+        return v != null ? Number(v) : null;
+      };
+      const totaisDia = calcularTotaisDiaComparativo(row);
+      return {
+        label: row.labelData,
+        dataIso: row.dataIso,
+        Blackjack: val("blackjack"),
+        Roleta: val("roleta"),
+        Baccarat: val("baccarat"),
+        Total: totaisDia[kpiGrafico],
+      };
+    });
+  }, [linhasComparativoJogo, kpiGrafico]);
 
-  const kpiGraficoComparativoIsBRL =
-    graficoComparativoJogo.kpi === "ggr" || graficoComparativoJogo.kpi === "turnover";
+  const isBRLKpiGrafico = ["ggr", "turnover", "bet_size"].includes(kpiGrafico);
 
-  const minWidthTabelaComparativoJogo = 120 + kpisAtivosComparativo.length * 4 * 80;
+  const minWidthTabelaComparativoJogo =
+    120 + kpisAtivosComparativo.length * (100 + 3 * 90);
 
   const linhasMesaA = useMemo(() => {
     if (!compMesaA) return [];
@@ -1338,6 +1306,112 @@ export default function MesasSpin() {
     fontWeight: 600,
   };
 
+  const COR_TOTAL_COMP = isDark ? "#ffffff" : "#000000";
+  const COR_PCT_COMP = isDark ? "#ffffff" : "#000000";
+
+  const thStickyComparativo: React.CSSProperties = {
+    ...thStyle,
+    position: "sticky",
+    left: 0,
+    zIndex: 3,
+    background: brand.blockBg,
+    boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
+  };
+
+  const tdStickyComparativo = (i: number): React.CSSProperties => ({
+    ...tdStyle,
+    position: "sticky",
+    left: 0,
+    zIndex: 2,
+    fontWeight: 600,
+    background:
+      i % 2 === 1
+        ? `color-mix(in srgb, ${brand.blockBg} 95%, rgba(74,32,130,0.06))`
+        : brand.blockBg,
+    boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
+  });
+
+  function TooltipComparativoJogo({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: { name: string; value: number; color: string }[];
+    label?: string;
+  }) {
+    if (!active || !payload?.length) return null;
+    const somavel = kpiGraficoConfig.somavel;
+    const total = somavel ? payload.reduce((s, p) => s + (Number(p.value) || 0), 0) : null;
+    const formatar = (v: number) =>
+      isBRLKpiGrafico
+        ? fmtBRL(v)
+        : kpiGrafico === "margin_pct"
+          ? `${v.toFixed(1)}%`
+          : v.toLocaleString("pt-BR");
+
+    return (
+      <div
+        style={{
+          background: t.cardBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: 10,
+          padding: "10px 14px",
+          fontSize: 12,
+          color: t.text,
+          fontFamily: FONT.body,
+          minWidth: 160,
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
+        {payload.map((p) => (
+          <div
+            key={p.name}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 4,
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: p.color,
+                  flexShrink: 0,
+                }}
+              />
+              {p.name}
+            </span>
+            <span style={{ fontWeight: 600 }}>
+              {p.value != null ? formatar(Number(p.value)) : "—"}
+            </span>
+          </div>
+        ))}
+        {somavel && total != null && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginTop: 6,
+              paddingTop: 6,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+          >
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>Total</span>
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>{formatar(total)}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const renderComparativoJogoInterativo = (colTempoLabel: "Data" | "Mês") => (
     <>
       <div
@@ -1350,67 +1424,86 @@ export default function MesasSpin() {
           marginBottom: 16,
         }}
       >
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          <span
-            style={{
-              fontSize: 10,
-              color: t.textMuted,
-              fontFamily: FONT.body,
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase" as const,
-              marginRight: 2,
-            }}
-          >
-            KPIs visíveis:
-          </span>
-          {KPIS_DISPONIVEIS.map((kpi) => {
-            const ativo = kpisSelecionados.has(kpi.key);
-            return (
-              <button
-                type="button"
-                key={kpi.key}
-                aria-pressed={ativo}
-                aria-label={`${ativo ? "Desativar" : "Ativar"} KPI ${kpi.label}`}
-                onClick={() => {
-                  setKpisSelecionados((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(kpi.key) && next.size === 1) return prev;
-                    if (next.has(kpi.key)) next.delete(kpi.key);
-                    else next.add(kpi.key);
-                    return next;
-                  });
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "4px 12px",
-                  borderRadius: 999,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 11,
-                  fontWeight: ativo ? 700 : 400,
-                  border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
-                  color: ativo ? BRAND.roxoVivo : t.textMuted,
-                  transition: "all 0.15s",
-                }}
-              >
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: ativo ? BRAND.roxoVivo : t.cardBorder,
-                    flexShrink: 0,
-                    transition: "background 0.15s",
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <span
+              style={{
+                fontSize: 10,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase" as const,
+                marginRight: 2,
+              }}
+            >
+              KPIs visíveis:
+            </span>
+            {KPIS_DISPONIVEIS.map((kpi) => {
+              const ativo =
+                modoVisualizacao === "tabela"
+                  ? kpisSelecionados.has(kpi.key)
+                  : kpiGrafico === kpi.key;
+              return (
+                <button
+                  type="button"
+                  role="button"
+                  key={kpi.key}
+                  aria-pressed={ativo}
+                  aria-label={
+                    modoVisualizacao === "tabela"
+                      ? `${ativo ? "Desativar" : "Ativar"} KPI ${kpi.label}`
+                      : `KPI do gráfico: ${kpi.label}`
+                  }
+                  onClick={() => {
+                    if (modoVisualizacao === "tabela") {
+                      setKpisSelecionados((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(kpi.key) && next.size === 1) return prev;
+                        if (next.has(kpi.key)) next.delete(kpi.key);
+                        else next.add(kpi.key);
+                        return next;
+                      });
+                    } else {
+                      setKpiGrafico(kpi.key);
+                    }
                   }}
-                />
-                {kpi.label}
-              </button>
-            );
-          })}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "4px 12px",
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                    fontSize: 11,
+                    fontWeight: ativo ? 700 : 400,
+                    border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
+                    background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
+                    color: ativo ? BRAND.roxoVivo : t.textMuted,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: ativo ? BRAND.roxoVivo : t.cardBorder,
+                      flexShrink: 0,
+                      transition: "background 0.15s",
+                    }}
+                  />
+                  {kpi.label}
+                </button>
+              );
+            })}
+          </div>
+          {modoVisualizacao === "grafico" && (
+            <span style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
+              Selecione um KPI para o gráfico
+            </span>
+          )}
         </div>
 
         <div
@@ -1456,7 +1549,7 @@ export default function MesasSpin() {
       </div>
 
       {modoVisualizacao === "tabela" ? (
-        <div className="app-table-wrap">
+        <div className="app-table-wrap" style={{ borderRadius: 14, overflow: "hidden" }}>
           <div style={{ overflowX: "auto" }}>
             <table
               style={{
@@ -1470,7 +1563,7 @@ export default function MesasSpin() {
               </caption>
               <thead>
                 <tr>
-                  <th rowSpan={2} scope="col" style={thStyle}>
+                  <th rowSpan={2} scope="col" style={thStickyComparativo}>
                     {colTempoLabel}
                   </th>
                   {kpisAtivosComparativo.map((kpi) => (
@@ -1526,14 +1619,7 @@ export default function MesasSpin() {
               </thead>
               <tbody>
                 {linhasComparativoJogo.map((row, i) => {
-                  const totaisDia: Record<KpiJogoKey, number | null> = {
-                    ggr: somarCelulasJogo(row, "ggr"),
-                    turnover: somarCelulasJogo(row, "turnover"),
-                    bets: somarCelulasJogo(row, "bets"),
-                    margin_pct: margemTotalComparativoRow(row),
-                    bet_size: betSizeTotalComparativoRow(row),
-                  };
-                  const ggrT = totaisDia.ggr ?? 0;
+                  const totaisDia = calcularTotaisDiaComparativo(row);
                   return (
                     <tr
                       key={row.dataIso}
@@ -1541,7 +1627,7 @@ export default function MesasSpin() {
                         background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
                       }}
                     >
-                      <th scope="row" style={{ ...tdStyle, fontWeight: 600 }}>
+                      <th scope="row" style={tdStickyComparativo(i)}>
                         {row.labelData}
                       </th>
                       {kpisAtivosComparativo.map((kpi) => (
@@ -1549,35 +1635,32 @@ export default function MesasSpin() {
                           <td
                             style={{
                               ...tdNum,
+                              textAlign: "right",
+                              fontVariantNumeric: "tabular-nums",
                               borderLeft: `2px solid ${t.cardBorder}`,
                               fontWeight: 700,
-                              color:
-                                kpi.key === "ggr"
-                                  ? ggrT > 0
-                                    ? BRAND.verde
-                                    : ggrT < 0
-                                      ? BRAND.vermelho
-                                      : t.text
-                                  : t.text,
+                              color: COR_TOTAL_COMP,
                             }}
                           >
-                            {kpi.key === "margin_pct" ? (
-                              <MarginBadge value={totaisDia.margin_pct} />
-                            ) : (
-                              formatarValorKpiStr(kpi.key, totaisDia[kpi.key])
-                            )}
+                            {renderValorKpiComparativo(kpi, totaisDia[kpi.key])}
                           </td>
                           {JOGOS_COMPARATIVO.map((jogo) => {
                             const cel = row[jogo.key];
                             const valorJogo = cel[kpi.key] as number | null;
-                            const pct = pctDoTotalJogo(valorJogo, totaisDia[kpi.key], kpi.key);
-                            const ggrJ = valorJogo ?? 0;
+                            const pct = calcularPctComparativo(valorJogo, totaisDia[kpi.key], kpi);
                             return (
-                              <td key={jogo.key} style={tdNum}>
-                                {kpi.key === "margin_pct" ? (
-                                  <MarginBadge value={valorJogo} />
-                                ) : valorJogo != null ? (
-                                  <span
+                              <td
+                                key={jogo.key}
+                                style={{
+                                  ...tdNum,
+                                  textAlign: "right",
+                                  fontVariantNumeric: "tabular-nums",
+                                  color: jogo.cor,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {valorJogo != null ? (
+                                  <div
                                     style={{
                                       display: "flex",
                                       flexDirection: "column",
@@ -1585,32 +1668,20 @@ export default function MesasSpin() {
                                       gap: 1,
                                     }}
                                   >
-                                    <span
-                                      style={
-                                        kpi.key === "ggr"
-                                          ? {
-                                              color:
-                                                ggrJ > 0 ? BRAND.verde : ggrJ < 0 ? BRAND.vermelho : t.text,
-                                              fontWeight: 600,
-                                            }
-                                          : undefined
-                                      }
-                                    >
-                                      {formatarValorKpiStr(kpi.key, valorJogo)}
-                                    </span>
-                                    {pct != null && (
+                                    <span>{renderValorKpiComparativo(kpi, valorJogo)}</span>
+                                    {kpi.somavel && pct != null && (
                                       <span
                                         style={{
                                           fontSize: 10,
-                                          color: jogo.cor,
-                                          fontWeight: 600,
-                                          opacity: 0.85,
+                                          color: COR_PCT_COMP,
+                                          fontWeight: 700,
+                                          opacity: 0.75,
                                         }}
                                       >
                                         {pct.toFixed(0)}%
                                       </span>
                                     )}
-                                  </span>
+                                  </div>
                                 ) : (
                                   "—"
                                 )}
@@ -1626,7 +1697,7 @@ export default function MesasSpin() {
             </table>
           </div>
         </div>
-      ) : graficoComparativoJogo.kpi == null ? (
+      ) : linhasComparativoJogo.length === 0 ? (
         <div
           style={{
             padding: "24px 0",
@@ -1636,7 +1707,7 @@ export default function MesasSpin() {
             fontFamily: FONT.body,
           }}
         >
-          Selecione GGR, Turnover ou Apostas para ver o gráfico.
+          {MSG_SEM_DADOS_FILTRO}
         </div>
       ) : (
         <>
@@ -1649,53 +1720,100 @@ export default function MesasSpin() {
               marginTop: 0,
             }}
           >
-            Exibindo <strong style={{ color: t.text }}>{kpiGraficoComparativoLabel}</strong> por jogo
-            {kpisSelecionados.size > 1 &&
-              " — o gráfico usa a primeira métrica somável ativa (GGR, depois Turnover, depois Apostas)."}
+            Exibindo <strong style={{ color: t.text }}>{kpiGraficoConfig.label}</strong> por jogo
           </p>
           <div style={{ width: "100%", height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={graficoComparativoJogo.data}
-                margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
-                barCategoryGap="28%"
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                  interval="preserveStartEnd"
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                  width={kpiGraficoComparativoIsBRL ? 72 : 40}
-                  tickFormatter={(v) =>
-                    kpiGraficoComparativoIsBRL ? `R$${(v / 1000).toFixed(0)}k` : v.toLocaleString("pt-BR")
-                  }
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: t.cardBg,
-                    border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 10,
-                    fontSize: 12,
-                    color: t.text,
-                    fontFamily: FONT.body,
-                  }}
-                  formatter={(value: number | string, name: string) => [
-                    kpiGraficoComparativoIsBRL ? fmtBRL(Number(value)) : Number(value).toLocaleString("pt-BR"),
-                    name,
-                  ]}
-                  labelStyle={{ fontWeight: 700, marginBottom: 4 }}
-                />
-                <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
-                <Bar dataKey="Blackjack" stackId="a" fill={BRAND.roxoVivo} />
-                <Bar dataKey="Roleta" stackId="a" fill={BRAND.verde} />
-                <Bar dataKey="Baccarat" stackId="a" fill={BRAND.ciano} radius={[4, 4, 0, 0]} />
-              </BarChart>
+              {kpiGraficoConfig.tipoGrafico === "barra" ? (
+                <BarChart
+                  data={dadosGraficoComparativoJogo}
+                  margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                  barCategoryGap="30%"
+                  barGap={3}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    interval="preserveStartEnd"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    width={isBRLKpiGrafico ? 72 : 44}
+                    tickFormatter={(v) =>
+                      isBRLKpiGrafico ? `R$${(v / 1000).toFixed(0)}K` : v.toLocaleString("pt-BR")
+                    }
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<TooltipComparativoJogo />} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                  <Bar
+                    dataKey="Blackjack"
+                    fill={COR_BLACKJACK}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={32}
+                  />
+                  <Bar dataKey="Roleta" fill={COR_ROLETA} radius={[4, 4, 0, 0]} maxBarSize={32} />
+                  <Bar dataKey="Baccarat" fill={COR_BACCARAT} radius={[4, 4, 0, 0]} maxBarSize={32} />
+                </BarChart>
+              ) : (
+                <LineChart
+                  data={dadosGraficoComparativoJogo}
+                  margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    interval="preserveStartEnd"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    width={isBRLKpiGrafico ? 72 : 44}
+                    tickFormatter={(v) =>
+                      isBRLKpiGrafico
+                        ? `R$${(v / 1000).toFixed(0)}K`
+                        : kpiGrafico === "margin_pct"
+                          ? `${v.toFixed(0)}%`
+                          : v.toLocaleString("pt-BR")
+                    }
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<TooltipComparativoJogo />} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                  <Line
+                    type="monotone"
+                    name="Blackjack"
+                    dataKey="Blackjack"
+                    stroke={COR_BLACKJACK}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    name="Roleta"
+                    dataKey="Roleta"
+                    stroke={COR_ROLETA}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    name="Baccarat"
+                    dataKey="Baccarat"
+                    stroke={COR_BACCARAT}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    connectNulls
+                  />
+                </LineChart>
+              )}
             </ResponsiveContainer>
           </div>
         </>
@@ -1844,7 +1962,7 @@ export default function MesasSpin() {
             title="KPIs Consolidados"
             sub={historico ? "acumulado" : mesSelecionado?.label}
           />
-          {loading || uapPorJogoLoading ? (
+          {loading ? (
             <>
               <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
                 {[0, 1, 2, 3].map((i) => (
@@ -2003,80 +2121,6 @@ export default function MesasSpin() {
                 })}
               </tbody>
             </table>
-          </div>
-        )}
-      </div>
-
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionHeader icon={<TrendingUp size={15} />} title="UAP por Jogo" />
-        {uapPorJogoLoading ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-            <Clock size={16} style={{ marginBottom: 8 }} />
-            <div>Carregando UAP por jogo…</div>
-          </div>
-        ) : uapJogoChartData.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-            {MSG_SEM_DADOS_FILTRO}
-          </div>
-        ) : (
-          <div style={{ width: "100%", height: 320 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={uapJogoChartData} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.6} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: t.textMuted }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 10, fill: t.textMuted }} width={36} />
-                <Tooltip
-                  contentStyle={{
-                    background: t.cardBg,
-                    border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 10,
-                    fontSize: 12,
-                    color: t.text,
-                  }}
-                  labelFormatter={(_, payload) => {
-                    const p = payload?.[0]?.payload as { dataIso?: string } | undefined;
-                    if (!p?.dataIso) return "";
-                    if (historico) return fmtMesAnoCurtoFromYm(p.dataIso.slice(0, 7));
-                    return new Date(p.dataIso + "T12:00:00").toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    });
-                  }}
-                  formatter={(value: number | string) =>
-                    [typeof value === "number" ? value.toLocaleString("pt-BR") : "—", "UAP"]
-                  }
-                />
-                <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted }} />
-                <Line
-                  type="monotone"
-                  name="Blackjack"
-                  dataKey="Blackjack"
-                  stroke={BRAND.roxoVivo}
-                  strokeWidth={2}
-                  dot={{ r: 2 }}
-                  connectNulls
-                />
-                <Line
-                  type="monotone"
-                  name="Roleta"
-                  dataKey="Roleta"
-                  stroke={BRAND.verde}
-                  strokeWidth={2}
-                  dot={{ r: 2 }}
-                  connectNulls
-                />
-                <Line
-                  type="monotone"
-                  name="Speed Baccarat"
-                  dataKey="speedBaccarat"
-                  stroke={BRAND.ciano}
-                  strokeWidth={2}
-                  dot={{ r: 2 }}
-                  connectNulls
-                />
-              </LineChart>
-            </ResponsiveContainer>
           </div>
         )}
       </div>
