@@ -1,0 +1,967 @@
+---
+description: Regras específicas para todas as páginas da seção de Operações. Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/operacoes/**/*.tsx
+  - src/pages/operacoes/**/*.ts
+alwaysApply: false
+---
+# Seção Operações — Regras Específicas
+
+**Escopo (Cursor):** globs cobrem tudo em `src/pages/operacoes/`. Páginas atuais: BancaJogo · Campanhas · CentralNotificacoes · Financeiro · GestaoDealers · GestaoLinks.
+
+**Perfil de uso:** nível operacional multíperfil (gestor, operador, influencer, agência). Mais denso em dados que os Dashboards, menos executivo. O usuário realiza ações — não só lê métricas. Cada página tem fluxos de criação, aprovação, mapeamento ou validação.
+
+**Marca / operadora (whitelabel):** em todas as páginas desta pasta, chamar `useDashboardBrand()` e usar `blockBg`, `primary`, `secondary`, `accent`, `primaryTransparentBg`, `primaryTransparentBorder`, `primaryIconBg` / `primaryIconBorder` / `primaryIconColor`. Com `brand.useBrand === true` (perfil **operador** com `operadoraBrand`), o hook já resolve para `var(--brand-*)` injetadas por `aplicarBrandguide()` — alinhado a `global.mdc` e `brand-css-variables.mdc`.
+
+- **Gradientes de CTA** (“+ Criar”, “Salvar” primário): `brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : fallback Spin` — texto do botão **branco** `#fff`.
+- **`color-mix` / estado ativo** (Histórico, chip de filtro, aba): `color-mix(in srgb, var(--brand-accent) 15%, transparent)` quando `useBrand`; senão o equivalente em roxo Spin documentado no snippet.
+- **Não** trocar hex de **estado de negócio** (Pago, Recusado, Solicitado, contador vermelho de pendentes, excluir `#ef4444`, etc.) por `--brand-primary` — mantém leitura universal; só identidade (header, filtros, CTAs de marca) segue operadora.
+- **Spinners:** fora de botão, fundo neutro → `color="var(--brand-primary, #7c3aed)"` no `Loader2` (ou classe `app-lucide-spin`). **Dentro de botão com gradiente de marca** → spinner **`#fff`**, para contraste em qualquer whitelabel (regra em `brand-css-variables.mdc`).
+
+**Header:** quando o layout for só título + ícone + ações, preferir o componente compartilhado `PageHeader` de `src/components/PageHeader.tsx` (já usa `useDashboardBrand` internamente) em vez de duplicar o bloco 28×28 inline.
+
+---
+
+## Personas por Página
+
+| Página | Persona | Objetivo principal |
+|---|---|---|
+| BancaJogo | Gestor / Operador / Influencer / Agência | Solicitar, aprovar e liberar valores de banca por ciclo |
+| Campanhas | Gestor | Cadastrar campanhas e vincular a UTMs |
+| CentralNotificacoes | Operador / Gestor | Monitorar campanhas de roteiro e observações de dealers |
+| Financeiro | Gestor Financeiro / Influencer | Aprovar e registrar pagamentos por ciclo semanal |
+| GestaoDealers | Gestor / Operador | Gerenciar elenco de dealers (cadastro, foto, turnos) |
+| GestaoLinks | Gestor | Mapear links UTM órfãos a influencers ou campanhas |
+
+---
+
+## Header de Página — Padrão Obrigatório
+
+Toda página da seção deve usar o padrão de header com ícone envolto em `div` 28×28. Referência de implementação correta: `Campanhas`, `GestaoDealers`, `GestaoLinks`.
+
+**Nunca** usar emoji no `<h1>`. **Nunca** usar ícone GI/Lucide raw sem o wrapper de `div`. **Nunca** usar `fontSize: 26` — o padrão da seção é `22`.
+
+```tsx
+// Padrão obrigatório — ou importar { PageHeader } from "../../../components/PageHeader"
+<div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+    <div style={{
+      width: 28, height: 28, borderRadius: 8,
+      background: brand.primaryIconBg,
+      border: brand.primaryIconBorder,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      flexShrink: 0, color: brand.primaryIconColor,
+    }}>
+      <IconeDoComponente size={14} aria-hidden="true" />
+    </div>
+    <div>
+      <h1 style={{
+        fontSize: 22, fontWeight: 800, color: brand.primary,
+        fontFamily: FONT_TITLE, margin: 0,
+        letterSpacing: "0.5px", textTransform: "uppercase",
+      }}>
+        Título da Página
+      </h1>
+      <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
+        Subtítulo descritivo da página.
+      </p>
+    </div>
+  </div>
+  {/* Botão de ação principal (opcional) */}
+  {podeCriar && (
+    <button onClick={...} style={{
+      background: brand.useBrand
+        ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+        : `linear-gradient(135deg, #4a2082, #1e36f8)`,
+      color: "#fff", border: "none", borderRadius: 10,
+      padding: "10px 18px", cursor: "pointer",
+      fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
+    }}>
+      + Criar Novo
+    </button>
+  )}
+</div>
+```
+
+---
+
+## Bloco de Filtros — Padrão Obrigatório
+
+Toda barra de filtros da seção usa fundo transparente de marca, idêntico ao padrão dos Dashboards e Lives.
+
+**Nunca** usar `brand.blockBg`, `t.cardBg` ou fundo sólido no bloco de filtros.
+**Nunca** posicionar o filtro de operadora fora deste wrapper (ver problema da GestaoLinks).
+
+```tsx
+<div style={{ marginBottom: 20 }}>
+  <div style={{
+    borderRadius: 14,
+    border: brand.primaryTransparentBorder,
+    background: brand.primaryTransparentBg,
+    padding: "12px 20px",
+  }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+      {/* Carrossel de período (quando aplicável) */}
+      {/* Chips de filtro */}
+      {/* Select de operadora com ícone GiShield */}
+      {/* Select de status */}
+      {/* InfluencerMultiSelect */}
+    </div>
+  </div>
+</div>
+```
+
+### Carrossel de período (mês/semana)
+
+```tsx
+// Botões de navegação
+const btnNavStyle: React.CSSProperties = {
+  width: 32, height: 32, borderRadius: "50%",
+  border: `1px solid ${t.cardBorder}`, background: "transparent",
+  color: t.text, cursor: "pointer",
+  display: "flex", alignItems: "center", justifyContent: "center",
+};
+
+<button
+  type="button"
+  onClick={prevPeriodo}
+  style={{ ...btnNavStyle, opacity: desabilitado ? 0.35 : 1, cursor: desabilitado ? "not-allowed" : "pointer" }}
+  disabled={desabilitado}
+  aria-label="Período anterior"
+>
+  <ChevronLeft size={14} aria-hidden="true" />
+</button>
+
+<span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+  {historico ? "Total" : labelPeriodo}
+</span>
+
+<button
+  type="button"
+  onClick={nextPeriodo}
+  style={{ ...btnNavStyle, opacity: desabilitado ? 0.35 : 1, cursor: desabilitado ? "not-allowed" : "pointer" }}
+  disabled={desabilitado}
+  aria-label="Próximo período"
+>
+  <ChevronRight size={14} aria-hidden="true" />
+</button>
+```
+
+### Botão Histórico
+
+```tsx
+<button
+  type="button"
+  aria-pressed={historico}
+  aria-label={historico ? "Desativar modo histórico" : "Ver todo o período"}
+  onClick={() => setHistorico(h => !h)}
+  style={{
+    padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+    fontFamily: FONT.body, fontSize: 13,
+    border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+    background: historico
+      ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)")
+      : "transparent",
+    color: historico ? brand.accent : t.textMuted,
+    fontWeight: historico ? 700 : 400,
+    transition: "all 0.15s",
+  }}
+>
+  Histórico
+</button>
+```
+
+### Select de operadora com ícone
+
+```tsx
+<div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+  <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
+    <GiShield size={13} aria-hidden="true" />
+  </span>
+  <select
+    value={filterOperadora}
+    onChange={(e) => setFilterOperadora(e.target.value)}
+    aria-label="Filtrar por operadora"
+    style={{
+      padding: "6px 14px 6px 30px", borderRadius: 999,
+      border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+      background: filterOperadora !== "todas"
+        ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "#4a208222")
+        : (t.inputBg ?? t.cardBg),
+      color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
+      fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
+      fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
+    }}
+  >
+    <option value="todas">Todas as operadoras</option>
+    {operadorasList
+      .filter((o) => podeVerOperadora(o.slug))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+      .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+  </select>
+</div>
+```
+
+---
+
+## BlocoLabel — Sub-títulos Internos de Bloco
+
+`BlocoLabel` exibe labels uppercase de seção dentro de um card. **Nunca** passar emoji como parte do label — usar apenas texto, ou combinar com ícone externo.
+
+```tsx
+// ❌ Proibido
+<BlocoLabel label="📋 Solicitações" />
+<BlocoLabel label="💰 KPIs" />
+
+// ✅ Correto — só texto
+<BlocoLabel label="Solicitações" />
+
+// ✅ Correto — ícone externo ao componente
+<div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+  <FileText size={12} color={brand.secondary} aria-hidden="true" />
+  <BlocoLabel label="Solicitações" />
+</div>
+```
+
+---
+
+## Tabelas Operacionais
+
+Tabelas nesta seção são **acionáveis** (contêm botões de ação, expand/collapse). Seguir o padrão abaixo em todos os arquivos.
+
+```tsx
+const th: React.CSSProperties = {
+  padding: "11px 14px", textAlign: "left",
+  fontSize: 10, fontWeight: 700, letterSpacing: "1.2px",
+  textTransform: "uppercase", color: t.textMuted,
+  background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+  borderBottom: `1px solid ${t.cardBorder}`,
+};
+const td: React.CSSProperties = {
+  padding: "13px 14px", fontSize: 13,
+  color: t.text, fontFamily: FONT.body,
+};
+
+// Zebra striping — nunca hardcodar roxo
+const zebra = (i: number): React.CSSProperties =>
+  i % 2 === 1
+    ? { background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }
+    : {};
+
+// Hover nas linhas de dados — obrigatório
+<tr
+  style={{ borderBottom: `1px solid ${t.cardBorder}` }}
+  onMouseEnter={(e) => (e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)")}
+  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+>
+
+// Linha clicável (expand/collapse) — tabIndex obrigatório
+<tr
+  style={{ cursor: "pointer", borderBottom: `1px solid ${t.cardBorder}` }}
+  tabIndex={0}
+  onClick={() => toggleExpand(id)}
+  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleExpand(id); } }}
+  onMouseEnter={(e) => (e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)")}
+  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+>
+
+// <th> sempre com scope
+<th scope="col" style={th}>Nome da coluna</th>
+
+// Wrapper com overflow
+<div style={{ overflowX: "auto", borderRadius: 12, border: `1px solid ${t.cardBorder}` }}>
+  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+```
+
+### Ícone de expand/collapse — nunca `▶`
+
+```tsx
+// ❌ Proibido
+<span>▶</span>
+
+// ✅ Correto — ChevronRight com rotação
+import { ChevronRight } from "lucide-react";
+<ChevronRight
+  size={14}
+  color={t.textMuted}
+  style={{
+    transform: open ? "rotate(90deg)" : "rotate(0deg)",
+    transition: "transform 0.2s",
+    flexShrink: 0,
+  }}
+  aria-hidden="true"
+/>
+```
+
+### Botões de ação em tabela
+
+```tsx
+// Ação afirmativa (aprovar, liberar, mapear)
+<button type="button" onClick={...} style={{
+  padding: "5px 12px", borderRadius: 8,
+  border: `1px solid ${cor}44`, background: `${cor}15`, color: cor,
+  fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+}}>
+  Aprovar
+</button>
+
+// Ação destrutiva (excluir) — sempre separada das ações afirmativas
+// Usar divisor vertical antes do botão destrutivo quando coexistirem
+{(showAprovar || showLiberar) && showExcluir && (
+  <div style={{ width: 1, height: 20, background: t.cardBorder, margin: "0 6px" }} />
+)}
+{showExcluir && (
+  <button type="button" onClick={() => setConfirmExcluir(row)} style={{
+    padding: "5px 12px", borderRadius: 8,
+    border: "1px solid #ef444444", background: "#ef444415", color: "#ef4444",
+    fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+  }}>
+    Excluir
+  </button>
+)}
+```
+
+---
+
+## Modais — Padrão Obrigatório com Acessibilidade
+
+Todo modal da seção deve ter `role`, `aria-modal`, `aria-labelledby`, listener de Escape e focus no primeiro elemento ao montar.
+
+O `ModalBase` deve ser a versão atualizada abaixo — não a versão sem acessibilidade.
+
+```tsx
+function ModalBase({ children, maxWidth = 440, onClose, zIndex = 1000, titleId }: {
+  children: React.ReactNode;
+  maxWidth?: number;
+  onClose: () => void;
+  zIndex?: number;
+  titleId?: string;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    const first = containerRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const id = setTimeout(() => first?.focus(), 50);
+    return () => clearTimeout(id);
+  }, []);
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "#00000090", display: "flex", alignItems: "center", justifyContent: "center", zIndex, padding: "20px" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        style={{
+          background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
+          borderRadius: "20px", padding: "28px",
+          width: "100%", maxWidth,
+          maxHeight: "90dvh", overflowY: "auto",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ModalHeader({ title, onClose, id }: { title: string; onClose: () => void; id?: string }) {
+  const { theme: t } = useApp();
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+      <h2 id={id} style={{ margin: 0, fontSize: "17px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>
+        {title}
+      </h2>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Fechar modal"
+        style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}
+      >
+        <X size={18} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+```
+
+**Nunca usar `✕` unicode no botão fechar — sempre `<X>` do Lucide.**
+
+### Erros em modais — sempre inline, nunca `alert()`
+
+```tsx
+// ❌ Proibido
+alert("Informe um valor válido.");
+alert("Erro ao salvar: " + msg);
+
+// ✅ Correto — estado inline já existente nos modais
+const [err, setErr] = useState("");
+// ...
+setErr("Informe um valor maior que zero.");
+// No JSX — sempre imediatamente acima do botão de ação:
+{err && (
+  <div
+    role="alert"
+    aria-live="polite"
+    style={{ color: "#ef4444", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+  >
+    {err}
+  </div>
+)}
+```
+
+### Confirmação de exclusão — nunca `window.confirm()`
+
+```tsx
+// ❌ Proibido
+if (!window.confirm("Excluir esta solicitação permanentemente?")) return;
+
+// ✅ Correto — ModalConfirmDelete reutilizável
+function ModalConfirmDelete({ texto, onCancel, onConfirm, loading }: {
+  texto: string; onCancel: () => void; onConfirm: () => void; loading?: boolean;
+}) {
+  const { theme: t } = useApp();
+  return (
+    <ModalBase onClose={onCancel} maxWidth={400} titleId="confirm-delete-title">
+      <ModalHeader id="confirm-delete-title" title="Confirmar exclusão" onClose={onCancel} />
+      <p style={{ fontSize: 14, color: t.text, fontFamily: FONT.body, lineHeight: 1.55, margin: "0 0 24px" }}>
+        {texto}
+      </p>
+      <div style={{ display: "flex", gap: 10 }}>
+        <button type="button" onClick={onCancel} disabled={loading}
+          style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+          Cancelar
+        </button>
+        <button type="button" onClick={onConfirm} disabled={loading}
+          style={{ flex: 1, padding: 12, borderRadius: 10, border: "none", background: "#ef4444", color: "#fff", fontWeight: 700, fontFamily: FONT.body, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}>
+          {loading ? "Excluindo..." : "Excluir permanentemente"}
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
+```
+
+---
+
+## Status Badges — Paleta Semântica da Seção
+
+```typescript
+// Workflow de banca e financeiro
+const STATUS_CORES = {
+  solicitado: "#f59e0b",  // amarelo — aguardando
+  aprovado:   "#6b7fff",  // azul    — aprovado internamente
+  liberado:   "#10b981",  // verde   — entregue ao influencer
+  em_analise: "#f59e0b",  // amarelo — aguardando análise
+  a_pagar:    "#6b7fff",  // azul    — aprovado, aguardando pagamento
+  pago:       "#10b981",  // verde   — concluído
+};
+
+// Status de conta (banca)
+const CONTA_CORES = {
+  liberada:  "#10b981",
+  bloqueada: "#ef4444",
+};
+
+// Status de influencer (consolidados)
+const INFLUENCER_CORES = {
+  ativo:     "#10b981",
+  inativo:   "#94a3b8",
+  cancelado: "#ef4444",
+};
+
+// Dealer
+const DEALER_CORES = {
+  aprovado: "#22c55e",
+  pendente: "#f59e0b",
+};
+```
+
+```tsx
+// Padrão de renderização — igual em toda a seção
+<span style={{
+  display: "inline-flex", alignItems: "center",
+  fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20,
+  background: `${cor}22`, color: cor, border: `1px solid ${cor}44`,
+  whiteSpace: "nowrap",
+}}>
+  {label}
+</span>
+```
+
+---
+
+## Sombra de Cards
+
+```typescript
+// Usar sempre — não hardcodar valores diferentes
+const cardShadow = t.isDark
+  ? "0 4px 20px rgba(0,0,0,0.25)"
+  : "0 2px 8px rgba(0,0,0,0.07)";
+```
+
+---
+
+## Regras Específicas por Página
+
+---
+
+### BancaJogo (`src/pages/operacoes/BancaJogo/index.tsx`)
+
+**Workflow de 3 etapas:** Solicitado (amarelo) → Aprovado (azul) → Liberado (verde). A progressão é sempre unidirecional. Nunca permitir pular etapas na UI.
+
+**CPF — sempre mascarado na tabela:**
+```tsx
+function mascaraCPF(cpf: string): string {
+  return cpf?.trim().length >= 11 ? "***.***.***-**" : "—";
+}
+// Renderizar com title para acesso autorizado:
+<td style={{ ...td, fontFamily: "monospace", fontSize: 12 }}>
+  <span title={perf?.cpf ?? ""} style={{ cursor: "help" }}>
+    {mascaraCPF(perf?.cpf ?? "")}
+  </span>
+</td>
+```
+
+**Exclusão — sempre via `ModalConfirmDelete`:**
+```tsx
+// Texto descritivo com contexto da linha
+texto={`Excluir a solicitação de ${nome} no valor de ${fmtMoeda(valor)}? Esta ação é irreversível.`}
+```
+
+**Status da conta (Liberada/Bloqueada) — botões pill, nunca radio nativo:**
+```tsx
+<div style={{ display: "flex", gap: 10 }}>
+  {(["liberada", "bloqueada"] as BancaStatusConta[]).map((opt) => {
+    const cor = opt === "liberada" ? "#10b981" : "#ef4444";
+    const ativo = (paraLiberada && opt === "liberada") || (!paraLiberada && opt === "bloqueada");
+    return (
+      <button key={opt} type="button" aria-pressed={ativo}
+        onClick={() => setParaLiberada(opt === "liberada")}
+        style={{
+          flex: 1, padding: "10px 16px", borderRadius: 10, fontWeight: 700,
+          fontFamily: FONT.body, fontSize: 13, cursor: "pointer",
+          border: `1px solid ${ativo ? cor : t.cardBorder}`,
+          background: ativo ? `${cor}22` : "transparent",
+          color: ativo ? cor : t.textMuted,
+        }}>
+        {opt === "liberada" ? "Liberada" : "Bloqueada"}
+      </button>
+    );
+  })}
+</div>
+```
+
+**Filtro de status** deve ter o mesmo estilo de chip ativo que o filtro de operadora (borda e fundo com `brand.accent` quando selecionado).
+
+---
+
+### Campanhas (`src/pages/operacoes/Campanhas/index.tsx`)
+
+**Toggle de status — dois botões pill com `aria-pressed`, nunca botão único que alterna:**
+```tsx
+// ❌ Proibido
+<button onClick={() => setAtivo(prev => !prev)}>{ativo ? "✓ Ativa" : "Inativa"}</button>
+
+// ✅ Correto
+{[{ val: true, label: "Ativa", cor: "#059669" }, { val: false, label: "Inativa", cor: "#6b7280" }].map(({ val, label, cor }) => (
+  <button key={label} type="button" aria-pressed={ativo === val} onClick={() => setAtivo(val)}
+    style={{
+      padding: "6px 16px", borderRadius: 10, fontWeight: 600,
+      fontFamily: FONT.body, fontSize: 13, cursor: "pointer",
+      border: `1px solid ${ativo === val ? cor : t.cardBorder}`,
+      background: ativo === val ? `${cor}22` : "transparent",
+      color: ativo === val ? cor : t.textMuted,
+    }}>
+    {label}
+  </button>
+))}
+```
+
+**`autoFocus` em modal — sempre com delay para evitar scroll em iOS:**
+```tsx
+const inputRef = useRef<HTMLInputElement>(null);
+useEffect(() => {
+  const id = setTimeout(() => inputRef.current?.focus(), 100);
+  return () => clearTimeout(id);
+}, []);
+<input ref={inputRef} ... /> // sem autoFocus diretamente
+```
+
+**KPI cards — sombra dinâmica por tema:**
+```tsx
+boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)"
+```
+
+---
+
+### CentralNotificacoes (`src/pages/operacoes/CentralNotificacoes/index.tsx`)
+
+**Cards de campanha — semântica correta:**
+```tsx
+<article key={c.id} style={cardShell} aria-label={`Campanha: ${c.titulo}`}>
+<article key={o.id} style={cardShell} aria-label={`Observação do dealer ${d?.nickname ?? "inativo"}`}>
+```
+
+**Datas de campanha — destaque visual e indicador de vigência:**
+```tsx
+const hoje = new Date().toISOString().split("T")[0];
+const vigente = c.data_inicio && c.data_fim && hoje >= c.data_inicio && hoje <= c.data_fim;
+
+<div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+  <span style={{ fontSize: 13, fontWeight: 700, color: vigente ? "#10b981" : t.text, fontFamily: FONT.body }}>
+    {fmtDia(c.data_inicio ?? "")} → {fmtDia(c.data_fim ?? "")}
+  </span>
+  {vigente && (
+    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "#10b98122", color: "#10b981", border: "1px solid #10b98144" }}>
+      VIGENTE
+    </span>
+  )}
+</div>
+```
+
+**Texto de observação — sempre com clamp e botão de expansão:**
+```tsx
+const CLAMP = 4;
+const longo = texto.length > 280;
+// Usar -webkit-line-clamp quando não expandido; botão "Ver mais"/"Ver menos" abaixo
+```
+
+**Dealer removido — nunca mensagem genérica:**
+```tsx
+// ❌ "Dealer removido ou indisponível."
+// ✅ identificar com id + tag
+<div>
+  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: `${t.textMuted}22`, color: t.textMuted, border: `1px solid ${t.textMuted}44` }}>
+    DEALER INATIVO
+  </span>
+  <span style={{ fontSize: 12, color: t.textMuted, marginLeft: 6 }}>ID: {o.dealer_id}</span>
+</div>
+```
+
+---
+
+### Financeiro (`src/pages/operacoes/Financeiro/index.tsx`)
+
+**Datas de ciclo — formato legível, nunca ISO:**
+```tsx
+function fmtCicloDatas(inicio: string, fim: string): string {
+  const fmt = (s: string) => {
+    const [, m, d] = s.split("-");
+    return `${d}/${m}`;
+  };
+  return `${fmt(inicio)} – ${fmt(fim)}/${fim.split("-")[0].slice(2)}`;
+}
+// Aplicar no label do SelectInput de ciclos
+label: `${fmtCicloDatas(c.data_inicio, c.data_fim)}${cicloAberto(c) ? " (atual)" : ""}`
+```
+
+**Empty state — dois níveis, nunca terminologia técnica:**
+```tsx
+{user?.role === "influencer" ? (
+  <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+    Os ciclos são criados automaticamente. Caso suas lives não apareçam, aguarde até 24h ou entre em contato com a equipe.
+  </p>
+) : (
+  <>
+    <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+      Nenhum ciclo encontrado. Os ciclos são gerados automaticamente a cada semana (quinta a quarta).
+    </p>
+    <details style={{ marginTop: 8 }}>
+      <summary style={{ fontSize: 12, color: t.textMuted, cursor: "pointer", fontFamily: FONT.body }}>
+        Detalhes técnicos
+      </summary>
+      <code style={{ fontSize: 11, color: t.textMuted, display: "block", marginTop: 6 }}>
+        Verificar permissão INSERT em ciclos_pagamento.
+      </code>
+    </details>
+  </>
+)}
+```
+
+**Alertas inline — nunca emoji como único indicador:**
+```tsx
+// ❌ <div>⚠️ Valor editado manualmente.</div>
+// ✅
+import { AlertTriangle } from "lucide-react";
+<div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#f59e0b", fontFamily: FONT.body }}>
+  <AlertTriangle size={12} aria-hidden="true" />
+  Valor editado manualmente.
+</div>
+```
+
+**Preview de ciclo aberto — sempre com banner explicativo:**
+```tsx
+{isAberto && rows.length > 0 && (
+  <div style={{
+    display: "flex", alignItems: "center", gap: 8,
+    padding: "10px 14px", borderRadius: 10, marginBottom: 16,
+    background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)",
+    fontSize: 12, color: "#f59e0b", fontFamily: FONT.body,
+  }}
+    role="status"
+    aria-live="polite"
+  >
+    Prévia em tempo real — ciclo aberto. Os pagamentos serão gerados ao encerrar o período.
+  </div>
+)}
+```
+
+---
+
+### GestaoDealers (`src/pages/operacoes/GestaoDealers/index.tsx`)
+
+**Label de bio — nunca "Perfil do Influencer":**
+```tsx
+// ❌ <label>Perfil do Influencer</label>
+// ✅
+<label style={labelStyle}>Bio do Dealer</label>
+<textarea placeholder="Descrição, carisma, estilo de jogo..." ... />
+```
+
+**Query de observações — sempre com `.limit()`:**
+```typescript
+const { data } = await supabase
+  .from("dealer_observacoes")
+  .select("id, dealer_id, usuario_id, texto, created_at")
+  .eq("dealer_id", dealer.id)
+  .order("created_at", { ascending: false })
+  .limit(20); // sempre — nunca query sem limite em listas de conteúdo gerado
+```
+
+**Badge PENDENTE no DealerCard — sempre visível quando status é "pendente":**
+```tsx
+// Na área de badges sobre a foto
+{dealer.status === "pendente" && (
+  <span style={{ background: "#f59e0b", color: "#1a1a2e", padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, fontFamily: FONT.body }}>
+    PENDENTE
+  </span>
+)}
+```
+
+**DealerCard — usar `<article>`, nunca `<div>` para o card externo:**
+```tsx
+<article
+  style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, overflow: "hidden", boxShadow: cardShadow }}
+  aria-label={`Dealer: ${dealer.nickname}`}
+>
+```
+
+**Botões de gênero e jogo no painel de filtros — `aria-pressed` obrigatório:**
+```tsx
+<button
+  type="button"
+  aria-pressed={filtroGenero === o.value}
+  onClick={() => setFiltroGenero(filtroGenero === o.value ? "todos" : o.value)}
+  ...
+>
+```
+
+**Skeleton durante loading — nunca só texto "Carregando...":**
+```tsx
+{loading ? (
+  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
+    {Array.from({ length: 6 }).map((_, i) => (
+      <div key={i} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, overflow: "hidden" }}>
+        <div style={{ aspectRatio: "16/10", background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+        <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ height: 18, width: "60%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
+          <div style={{ height: 12, width: "40%", borderRadius: 6, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+        </div>
+      </div>
+    ))}
+  </div>
+) : ( /* grid de cards */ )}
+```
+
+---
+
+### GestaoLinks (`src/pages/operacoes/GestaoLinks/index.tsx`)
+
+**Filtro de operadora — sempre dentro do bloco padrão, nunca isolado:**
+```tsx
+// ❌ Proibido — filtro solto entre header e abas
+<div style={{ margin: "20px 0", display: "flex" }}><select .../></div>
+
+// ✅ Dentro do wrapper de filtros padrão
+<div style={{ marginBottom: 18 }}>
+  <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "10px 16px" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+      {/* select de operadora com GiShield */}
+    </div>
+  </div>
+</div>
+```
+
+**Info box — nunca expor nomes de tabelas ou funções do backend:**
+```tsx
+// ❌ "...linhas são criadas em influencer_metricas. Novos dias são incluídos pela automação diária..."
+// ✅
+<div style={{ ... }}>
+  Ao mapear um link, os dados históricos são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.
+</div>
+```
+
+**Abas — semântica ARIA obrigatória:**
+```tsx
+<div role="tablist" aria-label="Status dos links" style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
+  {(["pendentes", "mapeados", "ignorados"] as Aba[]).map((a) => (
+    <button
+      key={a}
+      role="tab"
+      aria-selected={aba === a}
+      onClick={() => setAba(a)}
+      style={{
+        ...chipStyle,
+        border: `1px solid ${aba === a ? brand.accent : theme.cardBorder}`,
+        color: aba === a ? brand.accent : theme.textMuted,
+        fontWeight: aba === a ? 700 : 400,
+      }}
+    >
+      {a.charAt(0).toUpperCase() + a.slice(1)}
+      {a === "pendentes" && totalPendentes > 0 && (
+        <span style={{ background: "#e84025", color: "#fff", borderRadius: 10, padding: "0px 6px", fontSize: 10, fontWeight: 700 }}>
+          {totalPendentes}
+        </span>
+      )}
+    </button>
+  ))}
+</div>
+```
+
+**Tabela com `tableLayout: "fixed"` — colunas responsivas:**
+```tsx
+// Prioridade de colunas mobile (< 768px): UTM Source, FTDs, Ações
+// Ocultar em mobile: Depósitos, GGR
+// Nunca fixar larguras que resultariam em < 40px em viewport 375px
+```
+
+---
+
+## Estados de Interface
+
+### Loading de página inteira
+
+```tsx
+// Nunca spinner com emoji 32px como único estado de boot
+return (
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
+    <div style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+      <Loader2 size={24} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden="true" style={{ marginBottom: 12 }} />
+      <div style={{ fontSize: 13 }}>Carregando...</div>
+    </div>
+  </div>
+);
+```
+
+### Vazio por filtro
+
+```
+"Nenhuma solicitação em aberto neste filtro."       → BancaJogo
+"Sem dados para o período selecionado."              → Financeiro (KPIs)
+"Nenhum dealer encontrado."                          → GestaoDealers
+"Nenhum link pendente. Tudo mapeado!"                → GestaoLinks (aba pendentes)
+"Nenhuma campanha cadastrada neste período."         → CentralNotificacoes
+```
+
+Nunca usar: `"Sem dados"`, `"Nenhum dado encontrado"`, `"No data"`.
+
+### Sem permissão
+
+```tsx
+return (
+  <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+    Você não tem permissão para visualizar esta página.
+  </div>
+);
+```
+
+---
+
+## Responsividade
+
+### Colunas de tabela por breakpoint
+
+**BancaJogo** — 7 colunas (Influencer, ID operadora, CPF, Valor, Status, Data, Ação):
+- Em `< 768px`: ocultar CPF e Data; mover para tooltip ou expand
+- Em `< 480px`: colapsar a tabela em cards verticais
+
+**Financeiro** — até 8 colunas condicionais:
+- Em `< 768px`: ocultar Horas Realizadas; ocultar coluna Operadora se filtro ativo
+- Em `< 480px`: mostrar apenas Influencer, Total/Estimativa, Status/Ação
+
+**GestaoLinks** — 7 colunas fixas:
+- Em `< 768px`: ocultar Depósitos e GGR; manter UTM Source, FTDs, Ações
+
+### Modais
+
+- Sempre `maxHeight: "90dvh"` (não `90vh`) para respeitar teclado virtual e safe area em iOS
+- `padding: "20px"` no overlay já garante espaço em telas estreitas — manter
+
+### Grids de cards (GestaoDealers)
+
+```tsx
+// Este padrão está correto — não alterar
+gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))"
+```
+
+---
+
+## Acessibilidade — Mínimo Obrigatório
+
+```
+✅ role="dialog" + aria-modal="true" + aria-labelledby em todos os modais
+✅ Listener de Escape em todos os modais
+✅ Focus no primeiro elemento ao abrir modal
+✅ <th scope="col"> em todas as tabelas
+✅ aria-pressed em botões de seleção binária (status, filtros ativos)
+✅ aria-label em botões icon-only (fechar, anterior, próximo)
+✅ aria-hidden="true" em todos os ícones decorativos
+✅ aria-label em inputs sem label visual visível
+✅ role="tablist" + role="tab" + aria-selected nas abas de GestaoLinks
+✅ inputMode="decimal" em inputs numéricos de valor monetário
+✅ tabIndex={0} + onKeyDown em linhas de tabela clicáveis
+✅ role="alert" + aria-live="polite" nos blocos de erro inline
+```
+
+---
+
+## O Que Nunca Fazer Nesta Seção
+
+- Nunca usar emoji no `<h1>` de página nem em `BlocoLabel`
+- Nunca usar ícone GI/Lucide raw no header sem o wrapper `div` 28×28
+- Nunca usar `fontSize: 26` no título — sempre 22 com FONT_TITLE uppercase
+- Nunca usar `window.confirm()` para confirmação de exclusão — usar `ModalConfirmDelete`
+- Nunca usar `window.alert()` ou `alert()` para erros — usar `setErr()` com bloco inline
+- Nunca usar `▶` unicode para expand/collapse — usar `<ChevronRight>` com rotação CSS
+- Nunca hardcodar `"rgba(74,32,130,0.06)"` como zebra — usar `t.isDark ? rgba(255/255/255,0.03) : rgba(0/0/0,0.02)`
+- Nunca usar sombra `"0 4px 20px rgba(0,0,0,0.18)"` igual em light e dark — ajustar por tema
+- Nunca deixar tabela sem `hover state` nas linhas
+- Nunca deixar `<th>` sem `scope="col"`
+- Nunca usar `<input type="radio">` sem estilização — usar botões pill com `aria-pressed`
+- Nunca posicionar filtro de operadora fora do bloco `brand.primaryTransparentBg/Border`
+- Nunca expor nomes de tabelas, funções ou detalhes de infraestrutura em mensagens de usuário final
+- Nunca usar `90vh` em modais — sempre `90dvh`
+- Nunca deixar query de lista de conteúdo gerado por usuário sem `.limit()`
+- Nunca usar `"Perfil do Influencer"` como label de campo de dealer — usar "Bio do Dealer"
+- Nunca exibir CPF sem máscara em tabelas
+- Nunca usar fundo sólido no bloco de filtros — sempre `primaryTransparentBg/Border`
+- Nunca usar `autoFocus` diretamente em input de modal — usar ref com setTimeout(100)
+- Nunca usar `tabIndex` em `<tr>` sem o `onKeyDown` correspondente (Enter/Space)
+- Nunca omitir skeleton de cards durante loading em GestaoDealers — grid de placeholders obrigatório
+- Nunca carregar observações de dealers sem `.limit()` — risco de timeout com histórico extenso
