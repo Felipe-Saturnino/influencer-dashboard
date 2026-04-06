@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, Search, AlertCircle, KeyRound } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
-import { postSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
+import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
 import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
@@ -108,11 +108,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
       setFeedbackAcao(null);
       setAcaoEmAndamento(`${u.id}:${action}`);
       try {
-        const res = await postSupabaseEdgeFunction("admin-usuario-acao", { userId: u.id, action });
-        const fnData = await res.json().catch(() => ({}));
-        if (!res.ok || (fnData as { error?: string })?.error) {
-          throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
-        }
+        await callSupabaseEdgeFunction("admin-usuario-acao", { userId: u.id, action });
         setModalDesativar(null);
         setModalResetSenha(null);
         const okMsg =

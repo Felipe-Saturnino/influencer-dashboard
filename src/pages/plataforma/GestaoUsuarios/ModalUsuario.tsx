@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
-import { postSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
+import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import type { Theme } from "../../../constants/theme";
@@ -136,7 +136,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       const scopeGestorTiposArr = role === "gestor" ? (Array.isArray(scopeGestorTipos) ? scopeGestorTipos : []) : [];
 
       if (editando) {
-        const res = await postSupabaseEdgeFunction("atualizar-perfil", {
+        await callSupabaseEdgeFunction("atualizar-perfil", {
           userId: uid,
           name: nome.trim(),
           role,
@@ -145,12 +145,9 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           scopePares: scopeParesParaApi,
           scopeGestorTipos: scopeGestorTiposArr,
         });
-        const fnData = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
-        if ((fnData as { error?: string })?.error) throw new Error((fnData as { error: string }).error);
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
-        const res = await postSupabaseEdgeFunction("criar-usuario", {
+        const fnData = await callSupabaseEdgeFunction<{ userId?: string }>("criar-usuario", {
           email: email.trim().toLowerCase(),
           nome: nome.trim(),
           role,
@@ -160,10 +157,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           scopeGestorTipos: role === "gestor" ? scopeGestorTiposArr : [],
           loginUrl,
         });
-        const fnData = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
-        if ((fnData as { error?: string })?.error) throw new Error((fnData as { error: string }).error);
-        uid = (fnData as { userId?: string })?.userId ?? "";
+        uid = fnData.userId ?? "";
         if (!uid) throw new Error("Usuário criado mas ID não retornado");
       }
       onSalvo();
