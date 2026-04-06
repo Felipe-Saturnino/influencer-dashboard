@@ -20,6 +20,48 @@ const ROLES_BLOQUEADOS = ['admin', 'gestor']  // Admin sem escopo; gestor usa ti
 
 const GESTOR_TIPO_SLUGS = ['operacoes', 'marketing', 'afiliados', 'geral'] as const
 
+type SupabaseSvc = ReturnType<typeof createClient>
+
+type ScoutRowForSync = {
+  id: string
+  user_id: string | null
+  operadora_slug: string | null
+  cache_negociado: unknown
+}
+
+/** Mesma lógica que criar-usuario-scout (cachê vindo do Scout). */
+function parseCacheNumeric(v: unknown): number {
+  if (v == null || v === '') return 0
+  if (typeof v === 'number') return Number.isFinite(v) ? Math.max(0, v) : 0
+  const s = String(v).trim()
+  if (!s) return 0
+  let n = Number(s)
+  if (!Number.isFinite(n) && s.includes(',')) {
+    n = Number(s.replace(/\./g, '').replace(',', '.'))
+  }
+  return Number.isFinite(n) ? Math.max(0, n) : 0
+}
+
+/** Prospecto sem outro usuário vinculado (para não colidir contas). */
+async function buscarScoutUsavelPorEmail(
+  supabase: SupabaseSvc,
+  emailLower: string,
+): Promise<ScoutRowForSync | null> {
+  const e = emailLower.trim().toLowerCase()
+  if (!e) return null
+  const { data, error } = await supabase
+    .from('scout_influencer')
+    .select('id, user_id, operadora_slug, cache_negociado, updated_at')
+    .ilike('email', e)
+    .order('updated_at', { ascending: false })
+  if (error || !data?.length) return null
+  for (const raw of data) {
+    const r = raw as ScoutRowForSync
+    if (r.user_id == null || r.user_id === '') return r
+  }
+  return null
+}
+
 function corsHeaders(req: Request) {
   const origin = req.headers.get('origin') || '*'
   return {
@@ -144,7 +186,7 @@ serve(async (req) => {
   // Garantir arrays (evita "forEach is not a function" quando vem string/objeto/undefined)
   const toStrArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
   const scopeInfluencersArr = toStrArr(scopeInfluencers)
-  const scopeOperadorasArr = toStrArr(scopeOperadoras)
+  let scopeOperadorasArr = toStrArr(scopeOperadoras)
   const scopeParesArr = toStrArr(scopePares)
   const scopeGestorTiposArr = toStrArr(scopeGestorTipos).filter((s) =>
     (GESTOR_TIPO_SLUGS as readonly string[]).includes(s)
@@ -155,6 +197,18 @@ serve(async (req) => {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
+  }
+
+  let influencerScoutRow: ScoutRowForSync | null = null
+  if (role === 'influencer') {
+    influencerScoutRow = await buscarScoutUsavelPorEmail(supabase, email.trim().toLowerCase())
+    const slug = String(influencerScoutRow?.operadora_slug ?? '').trim()
+    if (slug && !scopeOperadorasArr.includes(slug)) {
+      const { data: op } = await supabase.from('operadoras').select('slug').eq('slug', slug).maybeSingle()
+      if (op?.slug) {
+        scopeOperadorasArr = [...scopeOperadorasArr, slug]
+      }
+    }
   }
 
   const bloqueado = ROLES_BLOQUEADOS.includes(role)
@@ -261,13 +315,16 @@ serve(async (req) => {
 
       // 4. Se influencer: influencer_perfil e influencer_operadoras
       if (role === 'influencer') {
+        const cacheHoraScout = influencerScoutRow
+          ? parseCacheNumeric(influencerScoutRow.cache_negociado)
+          : 0
         await supabase.from('influencer_perfil').upsert(
           {
             id: uid,
             nome_artistico: nome.trim(),
             nome_completo: nome.trim(),
             status: 'ativo',
-            cache_hora: 0,
+            cache_hora: cacheHoraScout,
           },
           { onConflict: 'id', ignoreDuplicates: false }
         )
@@ -278,6 +335,13 @@ serve(async (req) => {
               { onConflict: 'influencer_id,operadora_slug', ignoreDuplicates: true }
             )
           }
+        }
+        if (influencerScoutRow?.id) {
+          await supabase
+            .from('scout_influencer')
+            .update({ user_id: uid })
+            .eq('id', influencerScoutRow.id)
+            .is('user_id', null)
         }
       }
     }
