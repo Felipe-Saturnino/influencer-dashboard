@@ -1,0 +1,216 @@
+---
+description: Regras globais de UI/UX para toda a plataforma Data Intelligence Spin Gaming. Aplicar em qualquer arquivo dentro de src/.
+globs: src/**/*.tsx, src/**/*.ts
+alwaysApply: true
+---
+
+# Plataforma Data Intelligence — Spin Gaming
+Stack: React + TypeScript + Vite + Supabase + Cloudflare Pages
+
+## Identidade Visual
+
+A plataforma transmite credibilidade de dado com energia de marca. Nunca fria, nunca genérica.
+
+## Marca da operadora vs semântica de dado
+
+O `AppContext` chama `aplicarBrandguide()` e injeta no `document.documentElement` as variáveis `--brand-primary`, `--brand-secondary`, `--brand-accent`, `--brand-icon`, `--brand-success`, etc., com fallbacks em `src/styles/global.css` (`:root`). Quando o perfil é **operador** e há `operadoraBrand`, o guia da operadora passa a valer nessas variáveis — **sem lógica condicional por página**: basta usar `var(--brand-*, fallback)`.
+
+- **Marca / whitelabel** (identidade, destaques que devem seguir a operadora): usar `var(--brand-primary, #7c3aed)`, `var(--brand-secondary, #4a2082)`, `var(--brand-accent, #1e36f8)`, `var(--brand-icon, #70cae4)`, etc., em vez de hex fixo só da Spin. Detalhes de foco, CTA e spinners: ver a regra `brand-css-variables.mdc`.
+- **Semântica de dado** (bom/ruim/atenção com significado analítico fixo — ex. Rentável / Não rentável, faixas de WD Ratio, paleta de badges de ROI): manter os hex acordados na seção **Paleta semântica** abaixo; **não** substituir por `--brand-primary` só para “ficar roxo da operadora”, senão o usuário perde o significado compartilhado dos indicadores.
+- **Dashboards com operador:** usar `useDashboardBrand()` para `blockBg`, `primary`, `accent`, `primaryTransparentBg`, `primaryTransparentBorder`, etc.; o hook já aponta para `var(--brand-*)` quando `brand.useBrand` é true.
+- Demais páginas (`lives/`, `operacoes/`, `plataforma/`, `conteudo/`, `geral/`): tokens de UI (`t.*` via `useApp`) para fundo, texto e bordas neutras; onde o elemento é **destaque de marca** (badge de seção, ícone institucional, barra de destaque), preferir `--brand-*` com fallback.
+
+## Estrutura de Arquivos
+
+```
+src/
+├── components/         # Componentes compartilhados — usar antes de criar local
+│   └── dashboard/      # KpiCard, SectionTitle, FunilVisual, KpiCardDepositos
+├── constants/          # theme.ts (FONT), menu.ts, authScreen.ts, platforms.ts
+├── context/            # AppContext — fonte de theme, permissions, operadoraBrand
+├── hooks/              # useDashboardBrand, useDashboardFiltros, usePermission, useMediaQuery
+├── lib/                # dashboardConstants, dashboardHelpers, tableStyles, supabase, investimentoPago
+├── pages/              # Páginas por seção
+│   ├── dashboards/
+│   ├── conteudo/
+│   ├── geral/
+│   ├── lives/
+│   ├── operacoes/
+│   └── plataforma/
+├── styles/
+│   ├── global.css      # Reset, temas dark/light, breakpoints, animações, --brand-*
+│   └── responsive.css  # app-page-shell, app-grid-*, app-table-wrap, app-conversao-*
+└── types/
+```
+
+## Regras de Tema e Cores
+
+- Sempre usar `const { theme: t } = useApp()` para tokens de tema (t.bg, t.text, t.cardBorder, t.textMuted, t.cardBg, t.inputBg).
+- Evitar hex solto para **superfícies de UI** (fundo de página, texto principal, borda de card): preferir `t.*` ou, em dashboards com operador, `useDashboardBrand()`.
+- Para páginas de operadora nos dashboards: sempre `useDashboardBrand()` → `brand.blockBg`, `brand.primary`, `brand.accent`, `brand.useBrand`.
+- Quando `brand.useBrand` for true, usar `color-mix(in srgb, var(--brand-accent) X%, transparent)` (ou a cor de marca relevante) em vez de hex RGBA fixo da Spin.
+
+**Paleta semântica de dados (imutável — não sobrescrever com cor de marca):**
+
+```
+Verde   #22c55e → positivo, sucesso, GGR+, ROI+, Rentável
+Vermelho #e84025 → negativo, perigo, GGR-, ROI-, saques altos
+Amarelo #f59e0b → atenção, aviso
+Roxo    #a78bfa → especial, Bônus, FTD/Hora
+Cinza   #6b7280 → neutro, sem dados
+```
+
+**Regra absoluta:** Verde = bom, Vermelho = ruim. A única exceção é via prop `isInverso` no KpiCard — nunca inverter manualmente.
+
+## Fontes
+
+```typescript
+import { FONT } from "../constants/theme";
+// FONT.body  → corpo, dados, labels, cells
+// FONT_TITLE → section titles, nomes de canal, cabeçalhos de card
+import { FONT_TITLE } from "../lib/dashboardConstants";
+```
+
+Nunca hardcodar string de fonte. Sempre `fontFamily: FONT.body` ou `fontFamily: FONT_TITLE`.
+
+## CSS Classes — Nunca Recriar Inline
+
+Estas classes existem em `responsive.css` — usar sempre via `className`:
+
+```
+app-page-shell          → wrapper de toda página logada (padding fluido)
+app-page-shell--pb64    → variante com padding-bottom maior
+app-grid-kpi-3          → grid 3 colunas colapsável
+app-grid-kpi-4          → grid 4 colunas colapsável
+app-grid-kpi-5          → grid 5 colunas colapsável
+app-grid-kpi-6          → grid 6 colunas colapsável
+app-grid-2              → grid 2 colunas colapsável (min 280px)
+app-grid-2-tight        → grid 2 colunas colapsável (min 240px)
+app-grid-3              → grid 3 colunas colapsável (min 200px)
+app-table-wrap          → wrapper de tabela com scroll horizontal
+app-conversao-vs-row    → layout A vs B (grid 1fr auto 1fr)
+app-conversao-funil-duo → dois painéis lado a lado com colapso mobile
+```
+
+## Componentes Compartilhados — Importar, Nunca Redeclarar
+
+```typescript
+// Tabelas — SEMPRE importar de lib/tableStyles
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../lib/tableStyles";
+
+// Constantes de marca e status
+import { BRAND, FONT_TITLE, STATUS_ORDEM } from "../lib/dashboardConstants";
+
+// Helpers de formatação
+import { fmtBRL, fmtHorasTotal, getMesesDisponiveis, getPeriodoComparativoMoM } from "../lib/dashboardHelpers";
+```
+
+Se `tableStyles.ts` não tiver uma função necessária, adicionar lá — nunca declarar localmente.
+
+## Componentes Proibidos de Redeclarar Localmente
+
+Se um componente existe em `src/components/dashboard/`, importar — nunca redeclarar:
+
+- `KpiCard` — card de métrica com MoM
+- `KpiCardDepositos` — card de depósitos com qtd + valor
+- `SectionTitle` — título de seção com ícone
+- `FunilVisual` — funil de conversão SVG responsivo
+- `SelectComIcone` — select com ícone interno e indicador ▾ (quando existir)
+- `SkeletonCard` — placeholder de loading (quando existir)
+
+## Permissões e Acesso
+
+Toda página começa com verificação de permissão:
+
+```typescript
+const perm = usePermission("nome_da_permissao");
+if (perm.canView === "nao") {
+  return (
+    <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+      Você não tem permissão para visualizar este dashboard.
+    </div>
+  );
+}
+```
+
+## Estados de Interface
+
+**Loading:** Usar skeleton (`SkeletonCard`) para conteúdo principal. Manter `<Clock size={12} /> Carregando...` apenas como indicador secundário na FilterBar.
+
+**Vazio:** Sempre usar exatamente esta string:
+
+```
+"Sem dados para o período selecionado."
+```
+
+Nunca usar: "Sem dados", "Nenhum dado encontrado", "Nenhum dado para o período/filtro selecionado."
+
+**Sem permissão:** Usar string exata:
+
+```
+"Você não tem permissão para visualizar este dashboard."
+```
+
+**Estrutura do estado vazio:**
+
+```tsx
+<div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+  Sem dados para o período selecionado.
+</div>
+```
+
+## Tabelas
+
+Toda tabela deve:
+
+1. Usar `getThStyle(t)` e `getTdStyle(t)` de `lib/tableStyles`
+2. Estar dentro de `<div className="app-table-wrap">`
+3. Ter `borderCollapse: "separate"`, `borderSpacing: 0`, `borderRadius: 14`, `overflow: "hidden"`
+4. Zebra stripe via `zebraStripe(i)` — nunca inline
+5. Coluna de nome/texto: `textAlign: left`
+6. Coluna de valor: `textAlign: right`, `fontVariantNumeric: "tabular-nums"`
+7. Coluna de nome longo: `maxWidth: 160, overflow: hidden, textOverflow: ellipsis, title={valor}`
+
+## Acessibilidade — Mínimo Obrigatório
+
+```tsx
+// Botões de navegação de período
+<button aria-label="Mês anterior" ...><ChevronLeft aria-hidden="true" /></button>
+<button aria-label="Próximo mês" ...><ChevronRight aria-hidden="true" /></button>
+
+// Selects com filtro
+<select aria-label="Filtrar por influencer" ...>
+
+// Ícones decorativos (dentro de células, badges, sem texto)
+<GiTrophy aria-hidden="true" />
+
+// Tabelas
+<caption style={{ display: "none" }}>Descrição da tabela</caption>
+<th scope="col" ...>
+```
+
+## Breakpoints (via global.css)
+
+```
+< 480px  → --app-ui-zoom: 0.80 | 1 coluna
+480–900px → --app-ui-zoom: 0.84 | drawer sidebar
+> 900px  → --app-ui-zoom: 0.90 | sidebar fixa 240px
+```
+
+Nunca usar `@media` inline em componentes. Usar classes do `responsive.css`.
+
+## Dados Ausentes
+
+- Usar `"—"` (travessão Unicode U+2014) quando o cálculo é impossível (denominador zero)
+- Usar `"0"` quando o dado existe e é genuinamente zero
+- Nunca usar `null`, `undefined`, `"N/A"`, `"0%"` para dado impossível de calcular
+
+## Formatos de Valor
+
+```typescript
+fmtBRL(v)                    // R$ 12.450,00
+v.toLocaleString("pt-BR")    // 1.234
+fmtHorasTotal(h)             // 24:30
+`${v} pts`                   // scores/índices (PVI, etc.) — nunca "%"
+`${v.toFixed(1)}%`           // percentuais reais
+```
