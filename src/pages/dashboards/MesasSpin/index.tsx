@@ -4,7 +4,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
@@ -12,10 +12,8 @@ import KpiCard from "../../../components/dashboard/KpiCard";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
 import { getThStyle, getTdStyle, getTdNumStyle } from "../../../lib/tableStyles";
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Clock,
   LayoutGrid,
   Table2,
@@ -32,6 +30,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -379,9 +379,6 @@ function linhaMesaPorDiaFromRow(r: PorTabelaRow): LinhaMesaPorDia {
 /** Métricas por jogo no comparativo (mesma linha que `LinhaMesaPorDia`, sem data). */
 type CelulaJogoMetricas = Pick<LinhaMesaPorDia, "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size">;
 
-type JogoMetricKey = keyof CelulaJogoMetricas;
-type JogoComparativoMetricKey = Exclude<JogoMetricKey, "margin_pct">;
-
 function emptyCelulaJogo(): CelulaJogoMetricas {
   return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null };
 }
@@ -479,165 +476,50 @@ function linhaComparativoJogoAgregadaMes(
   };
 }
 
-/** Soma métricas de todas as linhas do comparativo (MTD por dia ou série mensal no histórico). */
-function mergeComparativoJogoTotals(rows: LinhaComparativoJogoTab[]): {
-  blackjack: CelulaJogoMetricas;
-  roleta: CelulaJogoMetricas;
-  baccarat: CelulaJogoMetricas;
-} {
-  const sumGame = (pick: (r: LinhaComparativoJogoTab) => CelulaJogoMetricas): CelulaJogoMetricas => {
-    if (rows.length === 0) return emptyCelulaJogo();
-    let ggr = 0;
-    let turnover = 0;
-    let bets = 0;
-    let gN = 0;
-    let tN = 0;
-    let bN = 0;
-    for (const row of rows) {
-      const c = pick(row);
-      if (c.ggr != null) {
-        ggr += c.ggr;
-        gN++;
-      }
-      if (c.turnover != null) {
-        turnover += c.turnover;
-        tN++;
-      }
-      if (c.bets != null) {
-        bets += c.bets;
-        bN++;
-      }
-    }
-    const ggrOut = gN > 0 ? ggr : null;
-    const turnoverOut = tN > 0 ? turnover : null;
-    const betsOut = bN > 0 ? bets : null;
-    const margin_pct =
-      turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
-    const bet_size =
-      betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
-    return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size };
-  };
-  return {
-    blackjack: sumGame((r) => r.blackjack),
-    roleta: sumGame((r) => r.roleta),
-    baccarat: sumGame((r) => r.baccarat),
-  };
-}
+type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size";
 
-const RESUMO_JOGO_META = [
-  {
-    key: "blackjack" as const,
-    title: "Blackjack",
-    accent: BRAND.roxoVivo,
-    bg: "rgba(124,58,237,0.10)",
-    border: "rgba(124,58,237,0.35)",
-  },
-  {
-    key: "roleta" as const,
-    title: "Roleta",
-    accent: BRAND.verde,
-    bg: "rgba(34,197,94,0.10)",
-    border: "rgba(34,197,94,0.35)",
-  },
-  {
-    key: "baccarat" as const,
-    title: "Speed Baccarat",
-    accent: BRAND.ciano,
-    bg: "rgba(112,202,228,0.12)",
-    border: "rgba(112,202,228,0.4)",
-  },
+const KPIS_DISPONIVEIS: { key: KpiJogoKey; label: string }[] = [
+  { key: "ggr", label: "GGR" },
+  { key: "turnover", label: "Turnover" },
+  { key: "bets", label: "Apostas" },
+  { key: "margin_pct", label: "Margem" },
+  { key: "bet_size", label: "Aposta média" },
 ];
 
-function ResumoComparativoJogoCards({
-  totals,
-  legenda,
-}: {
-  totals: ReturnType<typeof mergeComparativoJogoTotals>;
-  legenda: string;
-}) {
-  const { theme: tt } = useApp();
-  return (
-    <div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 12,
-          marginBottom: 10,
-        }}
-      >
-        {RESUMO_JOGO_META.map((meta) => {
-          const cell = totals[meta.key];
-          const ggrN = cell.ggr ?? 0;
-          const corGgr = ggrN > 0 ? BRAND.verde : ggrN < 0 ? BRAND.vermelho : tt.text;
-          return (
-            <div
-              key={meta.key}
-              role="region"
-              aria-label={`${meta.title}: resumo no período`}
-              style={{
-                borderRadius: 14,
-                border: `1px solid ${meta.border}`,
-                background: meta.bg,
-                padding: 14,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 800,
-                  color: meta.accent,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase" as const,
-                  marginBottom: 8,
-                  fontFamily: FONT.body,
-                }}
-              >
-                {meta.title}
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: corGgr, fontFamily: FONT.body }}>
-                {cell.ggr != null ? fmtBRL(cell.ggr) : "—"}
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: tt.textMuted,
-                    marginTop: 4,
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase" as const,
-                  }}
-                >
-                  GGR
-                </span>
-              </div>
-              <div
-                style={{
-                  marginTop: 12,
-                  fontSize: 11,
-                  color: tt.textMuted,
-                  fontFamily: FONT.body,
-                  lineHeight: 1.5,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                  Margem: <MarginBadge value={cell.margin_pct} />
-                </span>
-                <span>Turnover: {cell.turnover != null ? fmtBRL(cell.turnover) : "—"}</span>
-                <span>Apostas: {cell.bets != null ? cell.bets.toLocaleString("pt-BR") : "—"}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <p style={{ margin: 0, fontSize: 11, color: tt.textMuted, fontFamily: FONT.body, lineHeight: 1.45 }}>
-        {legenda}
-      </p>
-    </div>
-  );
+const JOGOS_COMPARATIVO = [
+  { key: "blackjack" as const, label: "Blackjack", cor: BRAND.roxoVivo },
+  { key: "roleta" as const, label: "Roleta", cor: BRAND.verde },
+  { key: "baccarat" as const, label: "Baccarat", cor: BRAND.ciano },
+] as const;
+
+function somarCelulasJogo(row: LinhaComparativoJogoTab, key: "ggr" | "turnover" | "bets"): number | null {
+  const vals = JOGOS_COMPARATIVO.map((j) => row[j.key][key] as number | null).filter((v): v is number => v != null);
+  return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) : null;
+}
+
+function margemTotalComparativoRow(row: LinhaComparativoJogoTab): number | null {
+  const t = somarCelulasJogo(row, "turnover");
+  const g = somarCelulasJogo(row, "ggr");
+  return t != null && t !== 0 && g != null ? (g / t) * 100 : null;
+}
+
+function betSizeTotalComparativoRow(row: LinhaComparativoJogoTab): number | null {
+  const t = somarCelulasJogo(row, "turnover");
+  const b = somarCelulasJogo(row, "bets");
+  return t != null && b != null && b !== 0 ? t / b : null;
+}
+
+function pctDoTotalJogo(valorJogo: number | null, total: number | null, kpi: KpiJogoKey): number | null {
+  if (kpi === "margin_pct" || kpi === "bet_size") return null;
+  if (valorJogo == null || total == null || total === 0) return null;
+  return (valorJogo / total) * 100;
+}
+
+function formatarValorKpiStr(kpi: KpiJogoKey, valor: number | null): string {
+  if (valor == null) return "—";
+  if (kpi === "ggr" || kpi === "turnover" || kpi === "bet_size") return fmtBRL(valor);
+  if (kpi === "bets") return valor.toLocaleString("pt-BR");
+  return `${valor.toFixed(1)}%`;
 }
 
 function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
@@ -744,7 +626,10 @@ export default function MesasSpin() {
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
-  const [compJogoDetalheAberto, setCompJogoDetalheAberto] = useState(false);
+  const [kpisSelecionados, setKpisSelecionados] = useState<Set<KpiJogoKey>>(
+    () => new Set<KpiJogoKey>(["ggr", "turnover", "bets", "margin_pct", "bet_size"]),
+  );
+  const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -1234,14 +1119,64 @@ export default function MesasSpin() {
     });
   }, [historico, dailyData, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
-  const totaisComparativoJogo = useMemo(
-    () => mergeComparativoJogoTotals(linhasComparativoJogo),
-    [linhasComparativoJogo],
+  const kpisAtivosComparativo = useMemo(
+    () => KPIS_DISPONIVEIS.filter((k) => kpisSelecionados.has(k.key)),
+    [kpisSelecionados],
   );
 
-  useEffect(() => {
-    setCompJogoDetalheAberto(false);
-  }, [historico, idxMes]);
+  const graficoComparativoJogo = useMemo(() => {
+    if (kpisSelecionados.has("ggr")) {
+      const kpi = "ggr" as const;
+      return {
+        kpi,
+        data: linhasComparativoJogo.map((row) => ({
+          label: row.labelData,
+          Blackjack: Number(row.blackjack[kpi] ?? 0),
+          Roleta: Number(row.roleta[kpi] ?? 0),
+          Baccarat: Number(row.baccarat[kpi] ?? 0),
+        })),
+      };
+    }
+    if (kpisSelecionados.has("turnover")) {
+      const kpi = "turnover" as const;
+      return {
+        kpi,
+        data: linhasComparativoJogo.map((row) => ({
+          label: row.labelData,
+          Blackjack: Number(row.blackjack[kpi] ?? 0),
+          Roleta: Number(row.roleta[kpi] ?? 0),
+          Baccarat: Number(row.baccarat[kpi] ?? 0),
+        })),
+      };
+    }
+    if (kpisSelecionados.has("bets")) {
+      const kpi = "bets" as const;
+      return {
+        kpi,
+        data: linhasComparativoJogo.map((row) => ({
+          label: row.labelData,
+          Blackjack: Number(row.blackjack[kpi] ?? 0),
+          Roleta: Number(row.roleta[kpi] ?? 0),
+          Baccarat: Number(row.baccarat[kpi] ?? 0),
+        })),
+      };
+    }
+    return { kpi: null as null, data: [] as { label: string; Blackjack: number; Roleta: number; Baccarat: number }[] };
+  }, [linhasComparativoJogo, kpisSelecionados]);
+
+  const kpiGraficoComparativoLabel =
+    graficoComparativoJogo.kpi === "ggr"
+      ? "GGR"
+      : graficoComparativoJogo.kpi === "turnover"
+        ? "Turnover"
+        : graficoComparativoJogo.kpi === "bets"
+          ? "Apostas"
+          : "";
+
+  const kpiGraficoComparativoIsBRL =
+    graficoComparativoJogo.kpi === "ggr" || graficoComparativoJogo.kpi === "turnover";
+
+  const minWidthTabelaComparativoJogo = 120 + kpisAtivosComparativo.length * 4 * 80;
 
   const linhasMesaA = useMemo(() => {
     if (!compMesaA) return [];
@@ -1361,7 +1296,7 @@ export default function MesasSpin() {
           {linhas.length === 0 ? (
             <tr>
               <td colSpan={6} style={{ ...tdStyle, color: t.textMuted, textAlign: "center" }}>
-                Nenhum dado para o período selecionado.
+                {MSG_SEM_DADOS_FILTRO}
               </td>
             </tr>
           ) : (
@@ -1394,41 +1329,7 @@ export default function MesasSpin() {
     </div>
   );
 
-  const renderJogoMetricCell = (cell: CelulaJogoMetricas, metric: JogoComparativoMetricKey) => {
-    switch (metric) {
-      case "ggr": {
-        const ggr = cell.ggr ?? 0;
-        return (
-          <td
-            style={{
-              ...tdNum,
-              color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
-              fontWeight: 600,
-            }}
-          >
-            {cell.ggr != null ? fmtBRL(cell.ggr) : "—"}
-          </td>
-        );
-      }
-      case "turnover":
-        return <td style={tdNum}>{cell.turnover != null ? fmtBRL(cell.turnover) : "—"}</td>;
-      case "bets":
-        return <td style={tdNum}>{cell.bets != null ? cell.bets.toLocaleString("pt-BR") : "—"}</td>;
-      case "bet_size":
-        return <td style={tdNum}>{cell.bet_size != null ? fmtBRL(cell.bet_size) : "—"}</td>;
-    }
-  };
-
-  const thJogoMetricHead: React.CSSProperties = {
-    ...thStyle,
-    textAlign: "right",
-  };
-  const thJogoMetricHeadSep: React.CSSProperties = {
-    ...thStyle,
-    textAlign: "right",
-    borderLeft: `1px solid ${t.cardBorder}`,
-  };
-  const thJogoSub: React.CSSProperties = {
+  const thJogoComparativoSub: React.CSSProperties = {
     ...thStyle,
     textAlign: "right",
     fontSize: 9,
@@ -1437,81 +1338,369 @@ export default function MesasSpin() {
     fontWeight: 600,
   };
 
-  const renderComparativoJogoTabela = (colTempoLabel: "Data" | "Mês", keyPrefix: string) => (
-    <div id="mesas-spin-comp-jogo-tabela" style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-        <caption
+  const renderComparativoJogoInterativo = (colTempoLabel: "Data" | "Mês") => (
+    <>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <span
+            style={{
+              fontSize: 10,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase" as const,
+              marginRight: 2,
+            }}
+          >
+            KPIs visíveis:
+          </span>
+          {KPIS_DISPONIVEIS.map((kpi) => {
+            const ativo = kpisSelecionados.has(kpi.key);
+            return (
+              <button
+                type="button"
+                key={kpi.key}
+                aria-pressed={ativo}
+                aria-label={`${ativo ? "Desativar" : "Ativar"} KPI ${kpi.label}`}
+                onClick={() => {
+                  setKpisSelecionados((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(kpi.key) && next.size === 1) return prev;
+                    if (next.has(kpi.key)) next.delete(kpi.key);
+                    else next.add(kpi.key);
+                    return next;
+                  });
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 11,
+                  fontWeight: ativo ? 700 : 400,
+                  border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
+                  background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
+                  color: ativo ? BRAND.roxoVivo : t.textMuted,
+                  transition: "all 0.15s",
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: ativo ? BRAND.roxoVivo : t.cardBorder,
+                    flexShrink: 0,
+                    transition: "background 0.15s",
+                  }}
+                />
+                {kpi.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div
           style={{
-            captionSide: "bottom" as const,
-            textAlign: "left",
-            fontSize: 11,
+            display: "flex",
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: 10,
+            overflow: "hidden",
+          }}
+        >
+          {(
+            [
+              { modo: "tabela" as const, icon: <Table2 size={14} aria-hidden />, label: "Tabela" },
+              { modo: "grafico" as const, icon: <ChartColumnBig size={14} aria-hidden />, label: "Gráfico" },
+            ] as const
+          ).map(({ modo, icon, label }) => (
+            <button
+              type="button"
+              key={modo}
+              aria-label={`Ver em ${label}`}
+              aria-pressed={modoVisualizacao === modo}
+              onClick={() => setModoVisualizacao(modo)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "6px 12px",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 11,
+                fontWeight: modoVisualizacao === modo ? 700 : 400,
+                background: modoVisualizacao === modo ? "rgba(124,58,237,0.12)" : "transparent",
+                color: modoVisualizacao === modo ? BRAND.roxoVivo : t.textMuted,
+                transition: "all 0.15s",
+                borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
+              }}
+            >
+              {icon} {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {modoVisualizacao === "tabela" ? (
+        <div className="app-table-wrap">
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                minWidth: minWidthTabelaComparativoJogo,
+              }}
+            >
+              <caption style={{ display: "none" }}>
+                Comparativo de jogo {colTempoLabel === "Mês" ? "histórico" : (mesSelecionado?.label ?? "")}
+              </caption>
+              <thead>
+                <tr>
+                  <th rowSpan={2} scope="col" style={thStyle}>
+                    {colTempoLabel}
+                  </th>
+                  {kpisAtivosComparativo.map((kpi) => (
+                    <th
+                      key={kpi.key}
+                      colSpan={4}
+                      scope="colgroup"
+                      style={{
+                        ...thStyle,
+                        textAlign: "center",
+                        borderLeft: `2px solid ${t.cardBorder}`,
+                        borderBottom: "none",
+                      }}
+                    >
+                      {kpi.label}
+                    </th>
+                  ))}
+                </tr>
+                <tr>
+                  {kpisAtivosComparativo.map((kpi) => (
+                    <Fragment key={`sub-${kpi.key}`}>
+                      <th
+                        scope="col"
+                        style={{
+                          ...thJogoComparativoSub,
+                          borderLeft: `2px solid ${t.cardBorder}`,
+                          fontSize: 9,
+                          color: t.text,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Total
+                      </th>
+                      {JOGOS_COMPARATIVO.map((jogo) => (
+                        <th
+                          key={jogo.key}
+                          scope="col"
+                          style={{
+                            ...thJogoComparativoSub,
+                            fontSize: 9,
+                            fontWeight: 600,
+                            color: jogo.cor,
+                            letterSpacing: "0.04em",
+                            textTransform: "none",
+                          }}
+                        >
+                          {jogo.label}
+                        </th>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {linhasComparativoJogo.map((row, i) => {
+                  const totaisDia: Record<KpiJogoKey, number | null> = {
+                    ggr: somarCelulasJogo(row, "ggr"),
+                    turnover: somarCelulasJogo(row, "turnover"),
+                    bets: somarCelulasJogo(row, "bets"),
+                    margin_pct: margemTotalComparativoRow(row),
+                    bet_size: betSizeTotalComparativoRow(row),
+                  };
+                  const ggrT = totaisDia.ggr ?? 0;
+                  return (
+                    <tr
+                      key={row.dataIso}
+                      style={{
+                        background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
+                      }}
+                    >
+                      <th scope="row" style={{ ...tdStyle, fontWeight: 600 }}>
+                        {row.labelData}
+                      </th>
+                      {kpisAtivosComparativo.map((kpi) => (
+                        <Fragment key={`${row.dataIso}-${kpi.key}`}>
+                          <td
+                            style={{
+                              ...tdNum,
+                              borderLeft: `2px solid ${t.cardBorder}`,
+                              fontWeight: 700,
+                              color:
+                                kpi.key === "ggr"
+                                  ? ggrT > 0
+                                    ? BRAND.verde
+                                    : ggrT < 0
+                                      ? BRAND.vermelho
+                                      : t.text
+                                  : t.text,
+                            }}
+                          >
+                            {kpi.key === "margin_pct" ? (
+                              <MarginBadge value={totaisDia.margin_pct} />
+                            ) : (
+                              formatarValorKpiStr(kpi.key, totaisDia[kpi.key])
+                            )}
+                          </td>
+                          {JOGOS_COMPARATIVO.map((jogo) => {
+                            const cel = row[jogo.key];
+                            const valorJogo = cel[kpi.key] as number | null;
+                            const pct = pctDoTotalJogo(valorJogo, totaisDia[kpi.key], kpi.key);
+                            const ggrJ = valorJogo ?? 0;
+                            return (
+                              <td key={jogo.key} style={tdNum}>
+                                {kpi.key === "margin_pct" ? (
+                                  <MarginBadge value={valorJogo} />
+                                ) : valorJogo != null ? (
+                                  <span
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      alignItems: "flex-end",
+                                      gap: 1,
+                                    }}
+                                  >
+                                    <span
+                                      style={
+                                        kpi.key === "ggr"
+                                          ? {
+                                              color:
+                                                ggrJ > 0 ? BRAND.verde : ggrJ < 0 ? BRAND.vermelho : t.text,
+                                              fontWeight: 600,
+                                            }
+                                          : undefined
+                                      }
+                                    >
+                                      {formatarValorKpiStr(kpi.key, valorJogo)}
+                                    </span>
+                                    {pct != null && (
+                                      <span
+                                        style={{
+                                          fontSize: 10,
+                                          color: jogo.cor,
+                                          fontWeight: 600,
+                                          opacity: 0.85,
+                                        }}
+                                      >
+                                        {pct.toFixed(0)}%
+                                      </span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  "—"
+                                )}
+                              </td>
+                            );
+                          })}
+                        </Fragment>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : graficoComparativoJogo.kpi == null ? (
+        <div
+          style={{
+            padding: "24px 0",
+            textAlign: "center",
             color: t.textMuted,
-            paddingTop: 10,
+            fontSize: 12,
             fontFamily: FONT.body,
           }}
         >
-          {colTempoLabel === "Data"
-            ? "Detalhe por dia: GGR, turnover, apostas e aposta média por jogo."
-            : "Detalhe por mês: GGR, turnover, apostas e aposta média por jogo."}
-        </caption>
-        <thead>
-          <tr>
-            <th rowSpan={2} style={thStyle}>
-              {colTempoLabel}
-            </th>
-            <th colSpan={3} style={thJogoMetricHead}>
-              GGR
-            </th>
-            <th colSpan={3} style={thJogoMetricHeadSep}>
-              Turnover
-            </th>
-            <th colSpan={3} style={thJogoMetricHeadSep}>
-              Apostas
-            </th>
-            <th colSpan={3} style={thJogoMetricHeadSep}>
-              Aposta média
-            </th>
-          </tr>
-          <tr>
-            {([0, 1, 2, 3] as const).flatMap((mi) =>
-              (["Blackjack", "Roleta", "Baccarat"] as const).map((nome, gi) => (
-                <th
-                  key={`${keyPrefix}-sub-${mi}-${nome}`}
-                  style={{
-                    ...thJogoSub,
-                    ...(mi > 0 && gi === 0 ? { borderLeft: `1px solid ${t.cardBorder}` } : {}),
+          Selecione GGR, Turnover ou Apostas para ver o gráfico.
+        </div>
+      ) : (
+        <>
+          <p
+            style={{
+              fontSize: 11,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              marginBottom: 8,
+              marginTop: 0,
+            }}
+          >
+            Exibindo <strong style={{ color: t.text }}>{kpiGraficoComparativoLabel}</strong> por jogo
+            {kpisSelecionados.size > 1 &&
+              " — o gráfico usa a primeira métrica somável ativa (GGR, depois Turnover, depois Apostas)."}
+          </p>
+          <div style={{ width: "100%", height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={graficoComparativoJogo.data}
+                margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                barCategoryGap="28%"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                  interval="preserveStartEnd"
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                  width={kpiGraficoComparativoIsBRL ? 72 : 40}
+                  tickFormatter={(v) =>
+                    kpiGraficoComparativoIsBRL ? `R$${(v / 1000).toFixed(0)}k` : v.toLocaleString("pt-BR")
+                  }
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: t.cardBg,
+                    border: `1px solid ${t.cardBorder}`,
+                    borderRadius: 10,
+                    fontSize: 12,
+                    color: t.text,
+                    fontFamily: FONT.body,
                   }}
-                  scope="col"
-                >
-                  {nome}
-                </th>
-              )),
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {linhasComparativoJogo.map((row, i) => (
-            <tr
-              key={row.dataIso}
-              style={{
-                background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
-              }}
-            >
-              <th scope="row" style={{ ...tdStyle, fontWeight: 600 }}>
-                {row.labelData}
-              </th>
-              {(["ggr", "turnover", "bets", "bet_size"] as const).flatMap((metric) =>
-                (["blackjack", "roleta", "baccarat"] as const).map((game) => (
-                  <Fragment key={`${row.dataIso}-${metric}-${game}`}>
-                    {renderJogoMetricCell(row[game], metric)}
-                  </Fragment>
-                )),
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                  formatter={(value: number | string, name: string) => [
+                    kpiGraficoComparativoIsBRL ? fmtBRL(Number(value)) : Number(value).toLocaleString("pt-BR"),
+                    name,
+                  ]}
+                  labelStyle={{ fontWeight: 700, marginBottom: 4 }}
+                />
+                <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                <Bar dataKey="Blackjack" stackId="a" fill={BRAND.roxoVivo} />
+                <Bar dataKey="Roleta" stackId="a" fill={BRAND.verde} />
+                <Bar dataKey="Baccarat" stackId="a" fill={BRAND.ciano} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+    </>
   );
 
   if (perm.canView === "nao") {
@@ -1766,7 +1955,7 @@ export default function MesasSpin() {
           </div>
         ) : tabelaRows.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-            Nenhum dado para o período selecionado.
+            {MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
@@ -1827,7 +2016,7 @@ export default function MesasSpin() {
           </div>
         ) : uapJogoChartData.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-            Nenhum dado para o período selecionado.
+            {MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
           <div style={{ width: "100%", height: 320 }}>
@@ -1939,7 +2128,7 @@ export default function MesasSpin() {
                   sub={mesSelecionado?.label}
                 />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
               <div style={{ ...card, marginBottom: 14 }}>
@@ -1949,13 +2138,13 @@ export default function MesasSpin() {
                   sub="Blackjack"
                 />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
               <div style={{ ...card, marginBottom: 14 }}>
                 <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
             </>
@@ -1969,41 +2158,10 @@ export default function MesasSpin() {
                 />
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    Nenhum dado para o período selecionado.
+                    {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
-                  <>
-                    <ResumoComparativoJogoCards
-                      totals={totaisComparativoJogo}
-                      legenda={`Totais somando todos os dias com dados em ${mesSelecionado?.label ?? ""}.`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setCompJogoDetalheAberto((v) => !v)}
-                      aria-expanded={compJogoDetalheAberto}
-                      aria-controls="mesas-spin-comp-jogo-tabela"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginTop: 4,
-                        marginBottom: compJogoDetalheAberto ? 14 : 0,
-                        padding: "10px 14px",
-                        borderRadius: 10,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg ?? t.cardBg,
-                        color: t.text,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        fontFamily: FONT.body,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {compJogoDetalheAberto ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
-                      {compJogoDetalheAberto ? "Ocultar tabela detalhada" : "Ver tabela detalhada por dia"}
-                    </button>
-                    {compJogoDetalheAberto ? renderComparativoJogoTabela("Data", "dia") : null}
-                  </>
+                  renderComparativoJogoInterativo("Data")
                 )}
               </div>
 
@@ -2027,7 +2185,7 @@ export default function MesasSpin() {
 
                 {mesasOpcoesBlackjack.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    Nenhum dado para o período selecionado.
+                    {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
                   <>
@@ -2249,7 +2407,7 @@ export default function MesasSpin() {
                   sub="todos os meses"
                 />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
               <div style={{ ...card, marginBottom: 14 }}>
@@ -2259,13 +2417,13 @@ export default function MesasSpin() {
                   sub="Blackjack"
                 />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
               <div style={{ ...card, marginBottom: 14 }}>
                 <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
             </>
@@ -2279,41 +2437,10 @@ export default function MesasSpin() {
                 />
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    Nenhum dado para o período selecionado.
+                    {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
-                  <>
-                    <ResumoComparativoJogoCards
-                      totals={totaisComparativoJogo}
-                      legenda="Totais somando todos os meses com dados no histórico."
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setCompJogoDetalheAberto((v) => !v)}
-                      aria-expanded={compJogoDetalheAberto}
-                      aria-controls="mesas-spin-comp-jogo-tabela"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginTop: 4,
-                        marginBottom: compJogoDetalheAberto ? 14 : 0,
-                        padding: "10px 14px",
-                        borderRadius: 10,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg ?? t.cardBg,
-                        color: t.text,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        fontFamily: FONT.body,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {compJogoDetalheAberto ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
-                      {compJogoDetalheAberto ? "Ocultar tabela detalhada" : "Ver tabela detalhada por mês"}
-                    </button>
-                    {compJogoDetalheAberto ? renderComparativoJogoTabela("Mês", "hist") : null}
-                  </>
+                  renderComparativoJogoInterativo("Mês")
                 )}
               </div>
 
@@ -2337,7 +2464,7 @@ export default function MesasSpin() {
 
                 {mesasOpcoesBlackjack.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    Nenhum dado para o período selecionado.
+                    {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
                   <>

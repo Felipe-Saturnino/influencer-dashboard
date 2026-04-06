@@ -3,7 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { SkeletonKpiCard } from "../../../components/dashboard";
@@ -836,7 +836,7 @@ export default function SocialMediaDashboard() {
                   </div>
                 ))
               ) : (
-                <div style={{ color: t.textMuted, fontSize: 12, padding: "8px 0" }}>Sem dados de posts no período.</div>
+                <div style={{ color: t.textMuted, fontSize: 12, padding: "8px 0" }}>{MSG_SEM_DADOS_FILTRO}</div>
               )}
             </div>
             <div style={{ ...card, marginBottom: 0 }}>

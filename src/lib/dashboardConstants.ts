@@ -25,5 +25,8 @@ export const MESES_PT = [
 export const STATUS_ORDEM = ["Rentável", "Atenção", "Não Rentável", "Bônus", "Sem dados"] as const;
 export type StatusLabel = (typeof STATUS_ORDEM)[number];
 
+/** Empty state quando não há dados para o período e filtros atuais (tabelas, gráficos, KPIs). */
+export const MSG_SEM_DADOS_FILTRO = "Sem dados para o filtro selecionado";
+
 export const FUNIL_COLORS = ["#4a2082", "#1e36f8", "#70cae4", "#22c55e"] as const;
 export const FUNIL_VARS = ["--brand-extra1", "--brand-extra2", "--brand-extra3", "--brand-extra4"] as const;

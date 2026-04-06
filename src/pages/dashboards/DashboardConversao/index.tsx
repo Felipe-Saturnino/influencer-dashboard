@@ -4,7 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { SelectComIcone } from "../../../components/dashboard";
 import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { supabase } from "../../../lib/supabase";
@@ -279,7 +279,9 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
   }, [ranking]);
 
   if (!ranking.length) {
-    return <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem dados no período</div>;
+    return (
+      <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>{MSG_SEM_DADOS_FILTRO}</div>
+    );
   }
 
   const top3  = ranking.slice(0, 3);
@@ -835,7 +837,7 @@ export default function DashboardConversao() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando dados...</div>
         ) : rowsFiltrados.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Nenhum dado encontrado.</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>

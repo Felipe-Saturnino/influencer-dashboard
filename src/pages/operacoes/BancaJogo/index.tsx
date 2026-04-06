@@ -4,6 +4,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
@@ -1093,7 +1094,7 @@ function BlocoConsolidadoBanca({
             {filtradaBusca.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40 }}>
-                  Nenhum dado para os filtros atuais.
+                  {MSG_SEM_DADOS_FILTRO}
                 </td>
               </tr>
             ) : (

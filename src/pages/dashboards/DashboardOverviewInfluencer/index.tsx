@@ -8,7 +8,7 @@ import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
-import { BRAND } from "../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
@@ -492,7 +492,7 @@ export default function DashboardOverviewInfluencer() {
           }}
           role="status"
         >
-          Filtro de influencer removido — sem dados no período selecionado.
+          Filtro de influencer removido — {MSG_SEM_DADOS_FILTRO}.
         </div>
       )}
 

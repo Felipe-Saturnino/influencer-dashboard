@@ -3,7 +3,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
@@ -1047,7 +1047,7 @@ export default function StatusTecnico() {
         {loading ? (
           <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
         ) : fluxoDados.length === 0 ? (
-          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Nenhum dado no período.</p>
+          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>{MSG_SEM_DADOS_FILTRO}</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[...fluxoDados.slice(-14)].reverse().map((f) => {

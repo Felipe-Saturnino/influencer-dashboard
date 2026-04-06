@@ -4,7 +4,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { SelectComIcone } from "../../../components/dashboard";
 import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { supabase } from "../../../lib/supabase";
@@ -758,7 +758,7 @@ export default function DashboardFinanceiro() {
 
         {loading || pieInvestimento.length === 0 ? (
           <div style={{ minHeight: 360, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>
-            {loading ? "Carregando..." : "Sem dados"}
+            {loading ? "Carregando..." : MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
           <div style={{ display: "flex", gap: 48, flexWrap: "wrap", alignItems: "center", justifyContent: "center" }}>
@@ -822,7 +822,7 @@ export default function DashboardFinanceiro() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando dados...</div>
         ) : rowsParaExibir.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Nenhum dado encontrado para o período selecionado.</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
