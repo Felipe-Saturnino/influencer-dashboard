@@ -477,12 +477,56 @@ function linhasMesaAgregadasPorMes(
     });
 }
 
+/** Mesmos totais do bloco Detalhamento Diário (`relatorio_daily_summary` / mensal). A coluna Total do comparativo usa isto; as células por jogo somam só mesas BJ/Roleta/Speed Baccarat em `por_tabela`. */
+type TotaisOficiaisComparativo = {
+  ggr: number | null;
+  turnover: number | null;
+  bets: number | null;
+  margin_pct: number | null;
+  bet_size: number | null;
+  uap: number | null;
+};
+
+function totaisOficiaisFromDailyRow(dr: DailyRow): TotaisOficiaisComparativo {
+  const t = dr.turnover;
+  const g = dr.ggr;
+  const b = dr.bets;
+  const u = dr.uap;
+  const margin_pct =
+    t != null && Number(t) !== 0 && g != null ? (Number(g) / Number(t)) * 100 : null;
+  const bet_size =
+    b != null && Number(b) !== 0 && t != null ? Number(t) / Number(b) : null;
+  return { turnover: t, ggr: g, bets: b, uap: u, margin_pct, bet_size };
+}
+
+function totaisOficiaisHistoricoMes(
+  ym: string,
+  dailyByYm: Map<string, DailyRow[]>,
+  monthlyByYm: Map<string, MonthlyRow>,
+): TotaisOficiaisComparativo {
+  const dias = dailyByYm.get(ym) ?? [];
+  const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
+  const m = monthlyByYm.get(ym);
+  const turnover = agg?.turnover ?? null;
+  const ggr = agg?.ggr ?? null;
+  const bets = agg?.bets ?? null;
+  const uap = m?.uap != null ? Number(m.uap) : agg?.uap ?? null;
+  const margin_pct =
+    turnover != null && Number(turnover) !== 0 && ggr != null
+      ? (Number(ggr) / Number(turnover)) * 100
+      : null;
+  const bet_size =
+    bets != null && Number(bets) !== 0 && turnover != null ? Number(turnover) / Number(bets) : null;
+  return { turnover, ggr, bets, uap, margin_pct, bet_size };
+}
+
 type LinhaComparativoJogoTab = {
   dataIso: string;
   labelData: string;
   blackjack: CelulaJogoMetricas;
   roleta: CelulaJogoMetricas;
   baccarat: CelulaJogoMetricas;
+  totaisOficiais: TotaisOficiaisComparativo;
 };
 
 function linhaComparativoJogoAgregadaMes(
@@ -490,6 +534,7 @@ function linhaComparativoJogoAgregadaMes(
   rowsMonth: PorTabelaRow[],
   operadorasListFmt: { slug: string; nome: string }[],
   uapRows: UapPorJogoPlanRow[],
+  totaisOficiais: TotaisOficiaisComparativo,
 ): LinhaComparativoJogoTab {
   const bj: PorTabelaRow[] = [];
   const rl: PorTabelaRow[] = [];
@@ -515,6 +560,7 @@ function linhaComparativoJogoAgregadaMes(
       ...aggregateCellFromPorTabelaRows(bc),
       uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Speed Baccarat") ?? null,
     },
+    totaisOficiais,
   };
 }
 
@@ -535,9 +581,9 @@ const KPIS_DISPONIVEIS: KpiJogoDef[] = [
   { key: "ggr", label: "GGR", somavel: true, tipoGrafico: "barra" },
   { key: "turnover", label: "Turnover", somavel: true, tipoGrafico: "barra" },
   { key: "bets", label: "Apostas", somavel: true, tipoGrafico: "barra" },
-  { key: "uap", label: "UAP", somavel: true, tipoGrafico: "linha" },
   { key: "margin_pct", label: "Margem", somavel: false, tipoGrafico: "linha" },
   { key: "bet_size", label: "Aposta média", somavel: false, tipoGrafico: "linha" },
+  { key: "uap", label: "UAP", somavel: true, tipoGrafico: "linha" },
 ];
 
 const JOGOS_COMPARATIVO = [
@@ -546,36 +592,15 @@ const JOGOS_COMPARATIVO = [
   { key: "baccarat" as const, label: "Baccarat", cor: COR_BACCARAT },
 ] as const;
 
-function somarCelulasComparativo(row: LinhaComparativoJogoTab, key: "ggr" | "turnover" | "bets" | "uap"): number | null {
-  const vals = JOGOS_COMPARATIVO.map((j) => row[j.key][key] as number | null).filter((v): v is number => v != null);
-  return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) : null;
-}
-
-function margemTotalComparativoRow(row: LinhaComparativoJogoTab): number | null {
-  const t = somarCelulasComparativo(row, "turnover");
-  const g = somarCelulasComparativo(row, "ggr");
-  return t != null && t !== 0 && g != null ? (g / t) * 100 : null;
-}
-
-function betSizeTotalComparativoRow(row: LinhaComparativoJogoTab): number | null {
-  const t = somarCelulasComparativo(row, "turnover");
-  const b = somarCelulasComparativo(row, "bets");
-  return t != null && b != null && b !== 0 ? t / b : null;
-}
-
-function calcularTotaisDiaComparativo(row: LinhaComparativoJogoTab): Record<KpiJogoKey, number | null> {
-  return {
-    ggr: somarCelulasComparativo(row, "ggr"),
-    turnover: somarCelulasComparativo(row, "turnover"),
-    bets: somarCelulasComparativo(row, "bets"),
-    uap: somarCelulasComparativo(row, "uap"),
-    margin_pct: margemTotalComparativoRow(row),
-    bet_size: betSizeTotalComparativoRow(row),
-  };
-}
-
-function calcularPctComparativo(valorJogo: number | null, total: number | null, kpi: KpiJogoDef): number | null {
+function calcularPctComparativoOficial(
+  valorJogo: number | null,
+  row: LinhaComparativoJogoTab,
+  kpi: KpiJogoDef,
+): number | null {
   if (!kpi.somavel) return null;
+  const key = kpi.key;
+  if (key !== "ggr" && key !== "turnover" && key !== "bets" && key !== "uap") return null;
+  const total = row.totaisOficiais[key];
   if (valorJogo == null || total == null || total === 0) return null;
   return (valorJogo / total) * 100;
 }
@@ -591,7 +616,7 @@ function renderValorKpiComparativo(kpi: KpiJogoDef, valor: number | null): React
     case "uap":
       return valor.toLocaleString("pt-BR");
     case "margin_pct":
-      return <MarginBadge value={valor} />;
+      return fmtPct(valor);
     default:
       return String(valor);
   }
@@ -1056,6 +1081,14 @@ export default function MesasSpin() {
   /** Dia a dia (mês selecionado) ou mês a mês (histórico). */
   const linhasComparativoJogo = useMemo((): LinhaComparativoJogoTab[] => {
     if (historico) {
+      const dailyByYm = new Map<string, DailyRow[]>();
+      for (const r of dailyData) {
+        const ym = r.data.slice(0, 7);
+        if (!dailyByYm.has(ym)) dailyByYm.set(ym, []);
+        dailyByYm.get(ym)!.push(r);
+      }
+      const monthlyByYm = new Map(monthlyData.map((m) => [m.mes.slice(0, 7), m] as const));
+
       const byYm = new Map<string, PorTabelaRow[]>();
       for (const r of porTabelaFiltradasHist) {
         const ym = r.data_relatorio.slice(0, 7);
@@ -1065,7 +1098,13 @@ export default function MesasSpin() {
       return [...byYm.keys()]
         .sort()
         .map((ym) =>
-          linhaComparativoJogoAgregadaMes(ym, byYm.get(ym)!, operadorasListFmt, uapPorJogoRows),
+          linhaComparativoJogoAgregadaMes(
+            ym,
+            byYm.get(ym)!,
+            operadorasListFmt,
+            uapPorJogoRows,
+            totaisOficiaisHistoricoMes(ym, dailyByYm, monthlyByYm),
+          ),
         );
     }
     const byDate = new Map<
@@ -1102,11 +1141,13 @@ export default function MesasSpin() {
         blackjack: { ...bjCell, uap: uapDia.blackjack ?? null },
         roleta: { ...rlCell, uap: uapDia.roleta ?? null },
         baccarat: { ...bcCell, uap: uapDia.baccarat ?? null },
+        totaisOficiais: totaisOficiaisFromDailyRow(dr),
       };
     });
   }, [
     historico,
     dailyData,
+    monthlyData,
     porTabelaFiltradasHist,
     porTabelaFiltradas,
     operadorasListFmt,
@@ -1129,14 +1170,15 @@ export default function MesasSpin() {
         const v = row[jogoKey][kpiGrafico as keyof CelulaJogoMetricas];
         return v != null ? Number(v) : null;
       };
-      const totaisDia = calcularTotaisDiaComparativo(row);
+      const totalOficial =
+        row.totaisOficiais[kpiGrafico as keyof TotaisOficiaisComparativo] ?? null;
       return {
         label: row.labelData,
         dataIso: row.dataIso,
         Blackjack: val("blackjack"),
         Roleta: val("roleta"),
         Baccarat: val("baccarat"),
-        Total: totaisDia[kpiGrafico],
+        Total: totalOficial != null ? Number(totalOficial) : null,
       };
     });
   }, [linhasComparativoJogo, kpiGrafico]);
@@ -1337,18 +1379,42 @@ export default function MesasSpin() {
     label,
   }: {
     active?: boolean;
-    payload?: { name: string; value: number; color: string }[];
+    payload?: {
+      name?: string;
+      value?: unknown;
+      color?: string;
+      payload?: { Total?: number | null };
+    }[];
     label?: string;
   }) {
     if (!active || !payload?.length) return null;
     const somavel = kpiGraficoConfig.somavel;
-    const total = somavel ? payload.reduce((s, p) => s + (Number(p.value) || 0), 0) : null;
+    const full = payload[0]?.payload;
+    const totalOficial = full?.Total;
+    const totalSomavelFallback = payload.reduce((s, p) => {
+      const n = Number(p.value);
+      return s + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    const totalSomavel =
+      totalOficial != null && Number.isFinite(Number(totalOficial))
+        ? Number(totalOficial)
+        : totalSomavelFallback;
     const formatar = (v: number) =>
       isBRLKpiGrafico
         ? fmtBRL(v)
         : kpiGrafico === "margin_pct"
           ? `${v.toFixed(1)}%`
           : v.toLocaleString("pt-BR");
+
+    const mostrarRodapeTotal =
+      somavel ||
+      kpiGrafico === "margin_pct" ||
+      kpiGrafico === "bet_size";
+
+    const valorRodape =
+      totalOficial != null && Number.isFinite(Number(totalOficial))
+        ? Number(totalOficial)
+        : null;
 
     return (
       <div
@@ -1366,7 +1432,7 @@ export default function MesasSpin() {
         <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
         {payload.map((p) => (
           <div
-            key={p.name}
+            key={String(p.name)}
             style={{
               display: "flex",
               justifyContent: "space-between",
@@ -1388,11 +1454,13 @@ export default function MesasSpin() {
               {p.name}
             </span>
             <span style={{ fontWeight: 600 }}>
-              {p.value != null ? formatar(Number(p.value)) : "—"}
+              {p.value != null && p.value !== ""
+                ? formatar(Number(p.value))
+                : "—"}
             </span>
           </div>
         ))}
-        {somavel && total != null && (
+        {mostrarRodapeTotal && (
           <div
             style={{
               display: "flex",
@@ -1405,7 +1473,13 @@ export default function MesasSpin() {
             }}
           >
             <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>Total</span>
-            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>{formatar(total)}</span>
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>
+              {somavel
+                ? formatar(totalSomavel)
+                : valorRodape != null
+                  ? formatar(valorRodape)
+                  : "—"}
+            </span>
           </div>
         )}
       </div>
@@ -1548,6 +1622,20 @@ export default function MesasSpin() {
         </div>
       </div>
 
+      <p
+        style={{
+          fontSize: 10,
+          color: t.textMuted,
+          fontFamily: FONT.body,
+          marginBottom: 12,
+          marginTop: 0,
+          maxWidth: 720,
+          lineHeight: 1.45,
+        }}
+      >
+        A coluna Total replica o Detalhamento Diário (resumo oficial por dia ou mês). As colunas por jogo somam apenas mesas Blackjack 1, 2, VIP, Roleta e Speed Baccarat em por mesa; o UAP por jogo vem de outra fonte — só o total de UAP aqui iguala o detalhamento.
+      </p>
+
       {modoVisualizacao === "tabela" ? (
         <div className="app-table-wrap" style={{ borderRadius: 14, overflow: "hidden" }}>
           <div style={{ overflowX: "auto" }}>
@@ -1619,7 +1707,7 @@ export default function MesasSpin() {
               </thead>
               <tbody>
                 {linhasComparativoJogo.map((row, i) => {
-                  const totaisDia = calcularTotaisDiaComparativo(row);
+                  const totaisOficiais = row.totaisOficiais;
                   return (
                     <tr
                       key={row.dataIso}
@@ -1642,12 +1730,12 @@ export default function MesasSpin() {
                               color: COR_TOTAL_COMP,
                             }}
                           >
-                            {renderValorKpiComparativo(kpi, totaisDia[kpi.key])}
+                            {renderValorKpiComparativo(kpi, totaisOficiais[kpi.key])}
                           </td>
                           {JOGOS_COMPARATIVO.map((jogo) => {
                             const cel = row[jogo.key];
                             const valorJogo = cel[kpi.key] as number | null;
-                            const pct = calcularPctComparativo(valorJogo, totaisDia[kpi.key], kpi);
+                            const pct = calcularPctComparativoOficial(valorJogo, row, kpi);
                             return (
                               <td
                                 key={jogo.key}
