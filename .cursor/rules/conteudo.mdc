@@ -1,0 +1,366 @@
+---
+description: Regras específicas para todas as páginas da seção Conteúdo. Complementa global.mdc, brand-css-variables.mdc, operacoes.mdc e lives.mdc.
+globs:
+  - src/pages/conteudo/**/*.tsx
+  - src/pages/conteudo/**/*.ts
+alwaysApply: false
+---
+
+# Seção Conteúdo — Regras Específicas
+
+**Escopo (Cursor):** globs cobrem tudo em `src/pages/conteudo/`. Páginas atuais: **LinksMateriais** · **PlaybookInfluencers** · **RoteiroMesa**.
+
+**Perfil de uso:** fluxos críticos — emissão de link de rastreamento (gate de aquisição), confirmação de ciência do Playbook (gate de transmissão), e gestão de roteiros de mesa por bloco e operadora.
+
+**Marca / operadora (whitelabel):** alinhado a `operacoes.mdc` e `lives.mdc`.
+
+- Chamar `useDashboardBrand()` em cada página (e em modais com bloco de marca).
+- Usar `brand.primary`, `brand.accent`, `brand.blockBg`, `primaryTransparentBg`, `primaryTransparentBorder`, `primaryIconBg` / `primaryIconBorder` / `primaryIconColor`, e `brand.secondary` quando fizer sentido.
+- Com `brand.useBrand === true` (operador + `operadoraBrand`), o hook resolve para `var(--brand-*)` via `aplicarBrandguide()` — ver `global.mdc` e `brand-css-variables.mdc`.
+- **Gradientes de CTA** (“Salvar”, “Emitir”, primários): `brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : linear-gradient Spin` e texto **`#fff`**.
+- **Estado ativo / chip:** `color-mix(in srgb, var(--brand-accent) 15%, transparent)` quando `useBrand`; senão equivalente roxo Spin do código.
+- **Semântica** (estado de produto, erro, alerta, progresso com faixa vermelho→azul legada): não trocar por `--brand-primary` só por whitelabel quando o significado for universal — ver secções por página e barra de progresso brand-aware abaixo.
+- **Spinners (`Loader2`):** fora de botão, fundo neutro → `color="var(--brand-primary, #7c3aed)"` / `app-lucide-spin`. **Dentro de CTA com gradiente** → spinner **`#fff`** (`brand-css-variables.mdc`).
+
+**Paleta semântica local:** não declarar `const BRAND = { ... }` com hex duplicados — importar **`BRAND_SEMANTIC as BRAND`** de `constants/theme` **ou** `BRAND` de `lib/dashboardConstants`, conforme o módulo já usa na página.
+
+---
+
+## Personas por Página
+
+| Página | Persona | Objetivo principal |
+|---|---|---|
+| LinksMateriais | Influencer / Gestor | Gerar link UTM de rastreamento e baixar QR Code branded |
+| PlaybookInfluencers | Influencer (leitura + ciência) / Gestor (auditoria) | Garantir leitura e confirmação das seções obrigatórias antes de transmitir |
+| RoteiroMesa | Gestor / Admin | CRUD de roteiros e campanhas de mesa por bloco e operadora |
+
+---
+
+## Header de Página — Padrão da Seção
+
+**Conteúdo** (e várias **Lives**) usam **`fontSize: 18`** no `h1` e ícone **32×32** — diferente de **Operações** (`PageHeader`: 28×28 + título 22). Até unificação explícita de produto, **manter 18 / 32 nesta seção**.
+
+```tsx
+// Padrão atual de Conteúdo (e várias Lives)
+<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+  <span style={{
+    width: 32, height: 32, borderRadius: 9,
+    background: brand.primaryIconBg,
+    border: brand.primaryIconBorder,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    color: brand.primaryIconColor, flexShrink: 0,
+  }}>
+    <IconeDoComponente size={16} aria-hidden="true" />
+  </span>
+  <h1 style={{
+    fontSize: 18, fontWeight: 800, color: brand.primary,
+    fontFamily: FONT_TITLE, margin: 0,
+    letterSpacing: "0.05em", textTransform: "uppercase",
+  }}>
+    Título da Página
+  </h1>
+</div>
+```
+
+*Opcional:* se a página for só título + ações e quiseres alinhar a Operações, podes usar `PageHeader` — aceita o padrão 28/22 e já inclui `useDashboardBrand`.
+
+---
+
+## Bloco de Filtros — Padrão Obrigatório
+
+Mesmo padrão das demais secções — fundo transparente de marca (ex. **RoteiroMesa** envolve com `marginBottom` + wrapper externo quando aplicável).
+
+```tsx
+<div style={{
+  borderRadius: 14,
+  border: brand.primaryTransparentBorder,
+  background: brand.primaryTransparentBg,
+  padding: "12px 20px",
+}}>
+```
+
+**LinksMateriais:** manter `primaryTransparent*` em strips e secções conforme implementação atual.
+
+---
+
+## Abas (Tab Panels) — ARIA Obrigatório
+
+**PlaybookInfluencers** e páginas futuras com abas: semântica ARIA completa.
+
+```tsx
+<div
+  role="tablist"
+  aria-label="Descrição do grupo de abas"
+  style={{ display: "flex", gap: 4, overflowX: "auto", scrollbarWidth: "none" }}
+>
+  {ABAS.map((aba) => (
+    <button
+      key={aba.key}
+      type="button"
+      role="tab"
+      id={`tab-${aba.key}`}
+      aria-selected={abaAtiva === aba.key}
+      aria-controls={`panel-${aba.key}`}
+      onClick={() => setAbaAtiva(aba.key)}
+      style={{ ... }}
+    >
+      {aba.label}
+    </button>
+  ))}
+</div>
+
+<div
+  role="tabpanel"
+  id={`panel-${abaConfig.key}`}
+  aria-labelledby={`tab-${abaConfig.key}`}
+>
+  {/* conteúdo */}
+</div>
+```
+
+### Indicador de overflow em abas com scroll horizontal
+
+```tsx
+<div style={{ position: "relative" }}>
+  <div style={{ display: "flex", gap: 4, overflowX: "auto", scrollbarWidth: "none" }}>
+    {/* botões de aba */}
+  </div>
+  <div
+    aria-hidden="true"
+    style={{
+      position: "absolute", right: 0, top: 0, bottom: 0,
+      width: 60,
+      background: `linear-gradient(to left, ${brand.blockBg ?? t.cardBg} 0%, transparent 100%)`,
+      pointerEvents: "none",
+    }}
+  />
+</div>
+```
+
+---
+
+## Checkbox Customizado — Nunca Nativo
+
+Não usar `<input type="checkbox">` sem estilização completa.
+
+```tsx
+<button
+  type="button"
+  role="checkbox"
+  aria-checked={checked}
+  aria-label="Descrição do que está sendo marcado"
+  onClick={() => setChecked(c => !c)}
+  style={{
+    width: 20, height: 20, borderRadius: 4,
+    flexShrink: 0, cursor: "pointer",
+    border: `2px solid ${checked ? corAtiva : t.cardBorder}`,
+    background: checked ? corAtiva : "transparent",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "all 0.15s", padding: 0,
+  }}
+>
+  {checked && <Check size={12} color="#fff" aria-hidden="true" />}
+</button>
+```
+
+---
+
+## Exclusão em Lista — Nunca `window.confirm()`
+
+Dois cliques + `onBlur` cancel (como `operacoes.mdc` / `lives.mdc`).
+
+```tsx
+const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
+
+<button
+  type="button"
+  onClick={() => {
+    if (confirmandoId !== item.id) {
+      setConfirmandoId(item.id);
+      return;
+    }
+    void handleExcluir(item);
+    setConfirmandoId(null);
+  }}
+  onBlur={() => setConfirmandoId(null)}
+  aria-label={`${confirmandoId === item.id ? "Confirmar exclusão:" : "Excluir:"} ${item.titulo ?? item.texto?.slice(0, 50)}`}
+  style={{
+    border: `1px solid ${confirmandoId === item.id ? "rgba(232,64,37,0.6)" : hoverStyle}`,
+    background: confirmandoId === item.id ? "rgba(232,64,37,0.15)" : hoverBg,
+    color: confirmandoId === item.id ? "#ef4444" : defaultColor,
+    transition: "all 0.15s",
+  }}
+>
+  <Trash2 size={13} aria-hidden="true" />
+  {confirmandoId === item.id && (
+    <span style={{ fontSize: 10, marginLeft: 4, fontWeight: 700 }}>Confirmar?</span>
+  )}
+</button>
+```
+
+---
+
+## Modais — Padrão com Acessibilidade
+
+Alinhado a **Operações**: sem `backdropFilter: blur()`; overlay escuro; `role="dialog"`, `aria-modal="true"`, `aria-labelledby`; Escape + foco; `maxHeight: "90dvh"`.
+
+```tsx
+style={{
+  position: "fixed", inset: 0,
+  background: "rgba(0,0,0,0.65)",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  zIndex: 1000,
+}}
+```
+
+---
+
+## Botões de Ação em Modais — Brand-Aware
+
+Primário do modal: gradiente de marca quando `useBrand`; fallback Spin; sempre texto claro sobre o botão.
+
+```tsx
+background: brand.useBrand
+  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+  : `linear-gradient(135deg, #4a2082, #1e36f8)`
+color: "#fff"
+```
+
+---
+
+## Imagens Lazy — Dimensões Obrigatórias
+
+```tsx
+<img
+  src={url}
+  alt="Descrição completa do conteúdo da imagem"
+  width={440}
+  height={780}
+  loading="lazy"
+  decoding="async"
+  style={{ display: "block", width: "100%", height: "auto" }}
+/>
+```
+
+---
+
+## Feedback de Estado — `aria-live`
+
+Transições fortes de UI (ex.: formulário ↔ confirmação no Playbook):
+
+```tsx
+<div aria-live="polite" aria-atomic="true">
+  {confirmado ? (
+    <div>Ciência confirmada em {data}</div>
+  ) : (
+    <div>{/* formulário */}</div>
+  )}
+</div>
+```
+
+---
+
+## Barra de Progresso — Brand-Aware
+
+```tsx
+background: brand.useBrand
+  ? "linear-gradient(90deg, var(--brand-primary), var(--brand-accent))"
+  : `linear-gradient(90deg, #e84025, #1e36f8)`
+```
+
+---
+
+## Skeletons de Loading
+
+Em contentores com proporção fixa (ex. pré-visualização QR), não deixar só texto que colapsa o layout.
+
+```tsx
+<div
+  aria-hidden="true"
+  style={{
+    width: "100%",
+    aspectRatio: "600 / 760",
+    borderRadius: 14,
+    background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+  }}
+/>
+```
+
+---
+
+## FilterChips com `aria-pressed`
+
+```tsx
+<button type="button" aria-pressed={active} onClick={onClick} style={{ ... }}>
+  {label}
+</button>
+```
+
+---
+
+## Permissões, vazio e erros
+
+- `usePermission("roteiro_mesa" | "playbook_influencers" | "links_materiais")` conforme `PageKey`; mensagem sem permissão alinhada a `global.mdc`.
+- Dados ligados a **período:** **"Sem dados para o período selecionado."** quando couber.
+- Evitar `alert()` — estado + `role="alert"` ou UI inline.
+
+---
+
+## Integração com Lives
+
+Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgendaLive`, etc.): caminhos reais em `src/pages/lives/...` e `src/lib/...`.
+
+---
+
+## Regras Específicas por Página
+
+### LinksMateriais (`src/pages/conteudo/LinksMateriais/index.tsx`)
+
+- Botão **Emitir:** `aria-disabled` além de `disabled`; `title` contextual quando bloqueado; não remover o botão por permissão — desabilitar + aviso.
+- **Previews QR:** manter `aspectRatio: "600 / 760"` durante loading; placeholder com mesma proporção; `aria-label` nos downloads.
+- **Lucide:** default `strokeWidth` (2), salvo exceção documentada.
+- **Strip URL:** `brand.primaryTransparentBorder/Bg` no exterior; divisor interno `t.cardBorder` ou `primaryTransparentBorder`; input UTM `aria-label="Valor do utm_source"`.
+
+### PlaybookInfluencers (`src/pages/conteudo/PlaybookInfluencers/index.tsx`)
+
+- Abas: `role="tablist"` / `tab` / `aria-selected` / `aria-controls` / `id`; fade de overflow em mobile; dots de status nas abas — manter.
+- **BlocoCiencia:** sem checkbox nativo; `aria-live` na transição; feedback de data ao confirmar.
+- **PainelAuditoria:** filtro ativos via `influencerPerfilEstaAtivo()`; painéis confirmados/pendentes com verde/vermelho semânticos.
+- Imagens: `width`/`height` no `<img>`.
+- Barra de progresso: branch `brand.useBrand` obrigatória.
+
+### RoteiroMesa (`src/pages/conteudo/RoteiroMesa/index.tsx`)
+
+- Exclusão: dois cliques, nunca `window.confirm()`; `aria-label` com identificador do item.
+- Modais: sem blur; ARIA + Escape + foco; Salvar brand-aware (sem `BRAND.azul` / `BRAND.ciano` hardcoded no primário).
+- FilterChips: `aria-pressed` sempre; separadores entre grupos — manter.
+- **`ROTEIRO_IDENT_COL_PX = 108`:** constante centralizada; em mobile estreito, `Math.min(108, viewportWidth * 0.30)` se necessário.
+- **`BLOCO_CONFIG` / `TIPO_CONFIG`:** fonte única de cor/gradiente/ícone — não duplicar inline.
+
+---
+
+## Referência cruzada
+
+- Tabelas alinhadas a dashboards → `dashboards.mdc` e `lib/tableStyles`.
+- Acessibilidade geral → `global.mdc`.
+
+---
+
+## O Que Nunca Fazer Nesta Seção
+
+- Nunca declarar objeto de paleta semântica **local** — usar `BRAND_SEMANTIC` / `theme` ou `BRAND` de `dashboardConstants` conforme o ficheiro.
+- Nunca `window.confirm()` para exclusão — dois cliques + `onBlur`.
+- Nunca `backdropFilter: blur()` em overlays de modal.
+- Nunca hardcodar cor no **botão primário** do modal sem ramo `brand.useBrand` / vars CSS.
+- Nunca `<input type="checkbox">` sem padrão acessível completo — botão com `role="checkbox"`.
+- Nunca abas sem `role="tablist"`, `role="tab"`, `aria-selected`, ids e `tabpanel` ligados.
+- Nunca `overflowX: auto` em abas sem indicador de overflow (fade).
+- Nunca só texto solto em contentor com proporção fixa durante loading — skeleton.
+- Nunca `<img>` sem `width` e `height` quando evitável — CLS.
+- Nunca `strokeWidth` custom em Lucide nesta secção sem documentar.
+- Nunca mudança bruta de bloco sem `aria-live` quando o utilizador perde contexto.
+- Nunca chip de filtro ativo sem `aria-pressed`.
+- Nunca `aria-label` genérico em exclusão — contextualizar com o item.
+- Nunca barra de progresso só com hex legado sem alternativa `brand.useBrand`.
+- Nunca novos ecrãs com header/filtros de marca **sem** `useDashboardBrand()`.
+- Nunca `window.alert()` para erros — padrão inline/modal do resto da app.
