@@ -8,7 +8,8 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
-import { X } from "lucide-react";
+import { PlatLogo } from "../../../components/PlatLogo";
+import { X, Loader2, AlertTriangle, Info, Trash2 } from "lucide-react";
 import {
   GiNotebook, GiShield, GiCheckMark,
 } from "react-icons/gi";
@@ -24,19 +25,7 @@ const BRAND = {
   amarelo:  "#f59e0b",
 } as const;
 
-// ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
-import { PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK } from "../../../constants/platforms";
-
-function PlatLogo({ plataforma, size = 20, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
-  const [err, setErr] = useState(false);
-  const src = isDark ? (PLAT_LOGO_DARK[plataforma] ?? PLAT_LOGO[plataforma]) : PLAT_LOGO[plataforma];
-  if (err || !src) return <span style={{ fontSize: size * 0.65, color: PLAT_COLOR[plataforma] ?? "#fff" }}>●</span>;
-  return (
-    <img src={src} alt={plataforma} width={size} height={size}
-      onError={() => setErr(true)}
-      style={{ display: "block", flexShrink: 0 }} />
-  );
-}
+import { PLAT_COLOR } from "../../../constants/platforms";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_OPTS: { value: LiveStatus; label: string; color: string }[] = [
@@ -88,6 +77,7 @@ export default function Resultados() {
   const [filterOperadora,   setFilterOperadora]   = useState<string>("todas");
   const [influencerList,    setInfluencerList]    = useState<{ id: string; name: string }[]>([]);
   const [operadorasList,    setOperadorasList]    = useState<{ slug: string; nome: string }[]>([]);
+  const [excluindo,         setExcluindo]         = useState<Live | null>(null);
 
   const influencerListVisiveis = useMemo(
     () => influencerList.filter((i) => podeVerInfluencer(i.id)),
@@ -165,8 +155,22 @@ export default function Resultados() {
 
   // ── LiveCard ─────────────────────────────────────────────────────────────────
   function LiveCard({ live }: { live: Live }) {
+    const [confirmExcluir, setConfirmExcluir] = useState(false);
     const nomeCompleto = nomeCompletos[live.influencer_id] ?? "";
     const platColor    = PLAT_COLOR[live.plataforma];
+    const podeExcluir  = perm.canExcluirOk && (perm.canExcluir !== "proprios" || podeVerInfluencer(live.influencer_id));
+    const isExcluindo  = excluindo?.id === live.id;
+
+    async function handleExcluirConfirmado() {
+      if (!perm.canExcluirOk) return;
+      setExcluindo(live);
+      await supabase.from("live_resultados").delete().eq("live_id", live.id);
+      const { error } = await supabase.from("lives").delete().eq("id", live.id);
+      setExcluindo(null);
+      setConfirmExcluir(false);
+      if (modal?.id === live.id) setModal(null);
+      if (!error) loadData();
+    }
 
     return (
       <div style={{
@@ -206,33 +210,62 @@ export default function Resultados() {
                 </span>
                 {/* Badge pendente */}
                 <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
                   fontSize: 11, padding: "3px 9px", borderRadius: 20,
                   background: `${BRAND.amarelo}22`, color: BRAND.amarelo,
                   fontWeight: 600, fontFamily: FONT.body,
                   border: `1px solid ${BRAND.amarelo}44`,
                 }}>
-                  ⚠ Pendente validação
+                  <AlertTriangle size={10} aria-hidden="true" />
+                  Pendente validação
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Botão Validar */}
-          {perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(live.influencer_id)) && (
-            <button
-              onClick={() => setModal(live)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "8px 16px", borderRadius: 10, border: "none",
-                cursor: "pointer",
-                background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-                color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
-              }}
-            >
-              <GiCheckMark size={13} />
-              Validar
-            </button>
-          )}
+          <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap", alignItems: "center" }}>
+            {perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(live.influencer_id)) && (
+              <button
+                type="button"
+                onClick={() => setModal(live)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "8px 16px", borderRadius: 10, border: "none",
+                  cursor: "pointer",
+                  background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                  color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
+                }}
+              >
+                <GiCheckMark size={13} />
+                Validar
+              </button>
+            )}
+            {podeExcluir && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!confirmExcluir) { setConfirmExcluir(true); return; }
+                  void handleExcluirConfirmado();
+                }}
+                onBlur={() => setConfirmExcluir(false)}
+                disabled={isExcluindo}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  padding: "8px 16px", borderRadius: 10,
+                  border: `1px solid ${BRAND.vermelho}50`,
+                  background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}10`,
+                  color: confirmExcluir ? "#fff" : BRAND.vermelho,
+                  fontSize: 12, fontWeight: 600,
+                  cursor: isExcluindo ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body, opacity: isExcluindo ? 0.6 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                <Trash2 size={12} aria-hidden="true" />
+                {isExcluindo ? "..." : confirmExcluir ? "Confirmar?" : "Excluir"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -318,7 +351,7 @@ export default function Resultados() {
                 Validar Live
               </h2>
             </div>
-            <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+            <button type="button" onClick={() => setModal(null)} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
               <X size={18} />
             </button>
           </div>
@@ -331,7 +364,7 @@ export default function Resultados() {
           {/* Erro */}
           {error && (
             <div style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
-              ⚠️ {error}
+              {error}
             </div>
           )}
 
@@ -355,6 +388,21 @@ export default function Resultados() {
               ))}
             </div>
           </div>
+
+          {status === "nao_realizada" && (
+            <div style={{
+              background: `${BRAND.amarelo}12`,
+              border: `1px solid ${BRAND.amarelo}35`,
+              color: BRAND.amarelo,
+              borderRadius: 10,
+              padding: "10px 14px",
+              fontSize: 12,
+              marginBottom: 14,
+              fontFamily: FONT.body,
+            }}>
+              Live marcada como Não Realizada — nenhum resultado será registrado.
+            </div>
+          )}
 
           {/* Operadora — obrigatória para realizada (Financeiro) */}
           {showResultFields && operadorasList.length > 0 && (
@@ -427,7 +475,7 @@ export default function Resultados() {
                 background: `${BRAND.azul}0d`,
                 border: `1px solid ${BRAND.azul}30`,
               }}>
-                <span style={{ color: BRAND.azul, flexShrink: 0, marginTop: 1, fontSize: 13 }}>ℹ</span>
+                <Info size={13} color={BRAND.azul} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
                 <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.5 }}>
                   Salvar irá marcar a live como <strong style={{ color: BRAND.verde }}>Realizada</strong> automaticamente.
                 </span>
@@ -538,7 +586,8 @@ export default function Resultados() {
 
       {/* ── CONTEÚDO ── */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body }}>
+        <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" />
           Carregando...
         </div>
       ) : livesFiltered.length === 0 ? (
@@ -547,7 +596,7 @@ export default function Resultados() {
           borderRadius: 16, padding: 48,
           textAlign: "center", color: t.textMuted, fontFamily: FONT.body,
         }}>
-          <GiCheckMark size={24} style={{ marginBottom: 8, color: BRAND.verde }} />
+          <GiCheckMark size={24} style={{ marginBottom: 8, color: BRAND.verde }} aria-hidden="true" />
           <div style={{ fontSize: 14, fontWeight: 600 }}>Nenhuma live pendente de validação.</div>
         </div>
       ) : (
@@ -558,7 +607,7 @@ export default function Resultados() {
             fontSize: 13, color: BRAND.amarelo,
             fontFamily: FONT.body, marginBottom: 16, fontWeight: 600,
           }}>
-            <span style={{ fontSize: 15 }}>⚠</span>
+            <AlertTriangle size={15} aria-hidden="true" />
             {livesFiltered.length} live{livesFiltered.length !== 1 ? "s" : ""} aguardando validação
           </div>
           {livesFiltered.map(l => <LiveCard key={l.id} live={l} />)}

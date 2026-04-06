@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { Live, Plataforma } from "../../../types";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
-import { X } from "lucide-react";
+import { X, Trash2, Lock } from "lucide-react";
 import { GiFilmProjector } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -39,15 +40,8 @@ function tomorrowISOLocal(): string {
   return dateToISOLocal(d);
 }
 
-// ─── PLATAFORMAS ──────────────────────────────────────────────────────────────
-import { PLATAFORMAS, PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK, PLAT_LINK_KEY } from "../../../constants/platforms";
-
-function PlatLogo({ plataforma, size = 14, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
-  const [err, setErr] = useState(false);
-  const src = isDark ? (PLAT_LOGO_DARK[plataforma] ?? PLAT_LOGO[plataforma]) : PLAT_LOGO[plataforma];
-  if (err || !src) return <span style={{ fontSize: size * 0.7, color: PLAT_COLOR[plataforma] ?? "#fff" }}>●</span>;
-  return <img src={src} alt={plataforma} width={size} height={size} onError={() => setErr(true)} style={{ display: "block" }} />;
-}
+import { PLATAFORMAS, PLAT_COLOR, PLAT_LINK_KEY } from "../../../constants/platforms";
+import { PlatLogo } from "../../../components/PlatLogo";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -59,6 +53,7 @@ interface Props {
 // ─── MODAL ────────────────────────────────────────────────────────────────────
 export default function ModalLive({ live, onClose, onSave }: Props) {
   const { theme: t, user, isDark, setActivePage } = useApp();
+  const brand = useDashboardBrand();
   const { podeVerInfluencer } = useDashboardFiltros();
   const perm = usePermission("agenda");
   const isInfluencer = user?.role === "influencer";
@@ -209,10 +204,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{
               width: 28, height: 28, borderRadius: 8,
-              background: "rgba(74,32,130,0.18)",
-              border: "1px solid rgba(74,32,130,0.30)",
+              background: brand.primaryIconBg,
+              border: brand.primaryIconBorder,
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: BRAND.ciano,
+              color: brand.primaryIconColor,
             }}>
               <GiFilmProjector size={14} />
             </span>
@@ -220,7 +215,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               {isEdit ? "Editar Live" : "Nova Live"}
             </h2>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
             <X size={18} />
           </button>
         </div>
@@ -228,14 +223,15 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         {/* Mensagem de erro */}
         {error && (
           <div style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
-            ⚠️ {error}
+            {error}
           </div>
         )}
 
         {/* Bloqueio: apenas Admin/Gestor podem editar lives realizadas ou não realizadas */}
         {isEdit && statusValidado && !isAdminOuGestor && (
-          <div style={{ background: `${BRAND.amarelo}18`, border: `1px solid ${BRAND.amarelo}44`, color: BRAND.amarelo, borderRadius: 10, padding: "10px 14px", fontSize: 12, marginBottom: 14, fontFamily: FONT.body }}>
-            🔒 Apenas Admin e Gestor podem editar ou excluir lives com status realizada ou não realizada.
+          <div style={{ background: `${BRAND.amarelo}18`, border: `1px solid ${BRAND.amarelo}44`, color: BRAND.amarelo, borderRadius: 10, padding: "10px 14px", fontSize: 12, marginBottom: 14, fontFamily: FONT.body, display: "flex", alignItems: "flex-start", gap: 6 }}>
+            <Lock size={12} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>Apenas Admin e Gestor podem editar ou excluir lives com status realizada ou não realizada.</span>
           </div>
         )}
 
@@ -347,7 +343,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
           />
           {linkAutoPreenchido ? (
             <span style={{ fontSize: 11, color: BRAND.roxoVivo, fontFamily: FONT.body, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
-              ✨ Pré-preenchido com o link do perfil do influencer.
+              Pré-preenchido com o link do perfil do influencer.
             </span>
           ) : (
             <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
@@ -363,7 +359,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               onClick={() => setConfirm(true)}
               style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${BRAND.vermelho}`, background: `${BRAND.vermelho}11`, color: BRAND.vermelho, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
             >
-              🗑 Excluir
+              <Trash2 size={14} aria-hidden="true" /> Excluir
             </button>
           )}
           {podeExcluir && confirm && (

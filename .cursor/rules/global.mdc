@@ -1,6 +1,8 @@
 ---
 description: Regras globais de UI/UX para toda a plataforma Data Intelligence Spin Gaming. Aplicar em qualquer arquivo dentro de src/.
-globs: src/**/*.tsx, src/**/*.ts
+globs:
+  - src/**/*.tsx
+  - src/**/*.ts
 alwaysApply: true
 ---
 

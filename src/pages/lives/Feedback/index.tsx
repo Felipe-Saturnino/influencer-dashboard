@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -7,11 +7,13 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
-import { X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import {
-  GiStarMedal, GiShield, GiPencil,
+  GiShield, GiPencil,
   GiChatBubble, GiCalendar,
 } from "react-icons/gi";
+import { PlatLogo } from "../../../components/PlatLogo";
+import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -24,15 +26,7 @@ const BRAND = {
   amarelo:  "#f59e0b",
 } as const;
 
-// ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
-import { PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK } from "../../../constants/platforms";
-
-function PlatLogo({ plataforma, size = 20, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
-  const [err, setErr] = useState(false);
-  const src = isDark ? (PLAT_LOGO_DARK[plataforma] ?? PLAT_LOGO[plataforma]) : PLAT_LOGO[plataforma];
-  if (err || !src) return <span style={{ fontSize: size * 0.65, color: PLAT_COLOR[plataforma] ?? "#fff" }}>●</span>;
-  return <img src={src} alt={plataforma} width={size} height={size} onError={() => setErr(true)} style={{ display: "block", flexShrink: 0 }} />;
-}
+import { PLAT_COLOR } from "../../../constants/platforms";
 
 // ─── CARROSSEL DE SEMANAS (a partir de 01/12/2025) ────────────────────────────
 const MESES_ABREV = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -77,108 +71,6 @@ function fmtData(iso: string): string {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y.slice(2)}`;
-}
-
-// ─── DROPDOWN INFLUENCER ──────────────────────────────────────────────────────
-interface DropdownItem { id: string; name: string; }
-
-function InfluencerDropdown({ items, selected, onChange, accent }: {
-  items: DropdownItem[]; selected: string[]; onChange: (next: string[]) => void; accent?: string;
-}) {
-  const { theme: t, isDark } = useApp();
-  const accentColor = accent ?? BRAND.azul;
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
-
-  function toggle(id: string) {
-    onChange(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
-  }
-
-  const label =
-    selected.length === 0 ? "Todos os influencers" :
-    selected.length === 1 ? (items.find(i => i.id === selected[0])?.name ?? "1 selecionado") :
-    `${selected.length} selecionados`;
-
-  const isActive = selected.length > 0;
-
-  return (
-    <div ref={ref} style={{ position: "relative", minWidth: 210 }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: "100%", padding: "7px 14px", borderRadius: 999,
-          border: `1px solid ${isActive ? accentColor : t.cardBorder}`,
-          background: isActive ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}18`) : (t.inputBg ?? t.cardBg),
-          color: isActive ? accentColor : t.textMuted,
-          fontSize: 13, fontWeight: isActive ? 700 : 400, cursor: "pointer", fontFamily: FONT.body,
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
-          transition: "all 0.15s",
-        }}
-      >
-        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <GiStarMedal size={13} />
-          {label}
-        </span>
-        <span style={{ fontSize: 9, opacity: 0.7, display: "inline-block", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
-      </button>
-
-      {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 6px)",
-          left: "50%", transform: "translateX(-50%)",
-          width: 230, background: t.cardBg,
-          border: `1.5px solid ${t.cardBorder}`, borderRadius: 14,
-          boxShadow: isDark ? "0 12px 32px rgba(0,0,0,0.6)" : "0 8px 24px rgba(0,0,0,0.12)",
-          zIndex: 100, overflow: "hidden",
-        }}>
-          <div style={{ padding: "10px 14px 8px", borderBottom: `1px solid ${t.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.8px", fontFamily: FONT.body }}>
-              Influencer
-            </span>
-            {selected.length > 0 && (
-              <button onClick={() => onChange([])} style={{ fontSize: 10, color: BRAND.vermelho, background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: FONT.body }}>
-                Limpar
-              </button>
-            )}
-          </div>
-          <div style={{ maxHeight: 220, overflowY: "auto", padding: "6px 0" }}>
-            {items.map(inf => {
-              const ativo = selected.includes(inf.id);
-              return (
-                <div key={inf.id} onClick={() => toggle(inf.id)} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "8px 14px", cursor: "pointer",
-                  background: ativo ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}18`) : "transparent",
-                  transition: "background 0.1s",
-                }}>
-                  <div style={{
-                    width: 16, height: 16, borderRadius: 5, flexShrink: 0,
-                    border: `2px solid ${ativo ? accentColor : t.cardBorder}`,
-                    background: ativo ? accentColor : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "all 0.15s",
-                  }}>
-                    {ativo && <span style={{ fontSize: 9, color: "#fff", fontWeight: 900 }}>✓</span>}
-                  </div>
-                  <span style={{ fontSize: 13, fontFamily: FONT.body, color: ativo ? t.text : t.textMuted, fontWeight: ativo ? 600 : 400 }}>
-                    {inf.name}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
@@ -301,15 +193,6 @@ export default function Feedback() {
     ? Math.round(realizadasComRes.reduce((acc, l) => acc + (resultadosAll[l.id]?.media_views ?? 0), 0) / realizadasComRes.length)
     : 0;
 
-  async function handleExcluir(live: LiveComObs) {
-    if (!perm.canExcluirOk || !confirm("Tem certeza que deseja excluir esta live?")) return;
-    setExcluindo(live);
-    await supabase.from("live_resultados").delete().eq("live_id", live.id);
-    const { error } = await supabase.from("lives").delete().eq("id", live.id);
-    setExcluindo(null);
-    if (!error) loadData();
-  }
-
   // ── Estilos (padrão Agenda) ───────────────────────────────────────────────
   const btnNav: React.CSSProperties = {
     width: 30, height: 30, borderRadius: "50%",
@@ -329,6 +212,7 @@ export default function Feedback() {
 
   // ── LiveCard ──────────────────────────────────────────────────────────────
   function LiveCard({ live }: { live: LiveComObs }) {
+    const [confirmExcluir, setConfirmExcluir] = useState(false);
     const res         = resultados[live.id];
     const isRealizada = live.status === "realizada";
     const statusColor = isRealizada ? BRAND.verde : BRAND.vermelho;
@@ -336,6 +220,16 @@ export default function Feedback() {
     const podeEditar  = perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(live.influencer_id));
     const podeExcluir = perm.canExcluirOk && (perm.canExcluir !== "proprios" || podeVerInfluencer(live.influencer_id));
     const isExcluindo = excluindo?.id === live.id;
+
+    async function handleExcluirConfirmado() {
+      if (!perm.canExcluirOk) return;
+      setExcluindo(live);
+      await supabase.from("live_resultados").delete().eq("live_id", live.id);
+      const { error } = await supabase.from("lives").delete().eq("id", live.id);
+      setExcluindo(null);
+      setConfirmExcluir(false);
+      if (!error) loadData();
+    }
 
     return (
       <div style={{
@@ -397,16 +291,28 @@ export default function Feedback() {
                 </button>
               )}
               {podeExcluir && (
-                <button onClick={() => handleExcluir(live)} disabled={isExcluindo} style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  padding: "6px 12px", borderRadius: 8,
-                  border: `1px solid ${BRAND.vermelho}50`,
-                  background: `${BRAND.vermelho}10`, color: BRAND.vermelho,
-                  fontSize: 11, fontWeight: 600,
-                  cursor: isExcluindo ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body, opacity: isExcluindo ? 0.6 : 1,
-                }}>
-                  <Trash2 size={11} /> {isExcluindo ? "..." : "Excluir"}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!confirmExcluir) { setConfirmExcluir(true); return; }
+                    void handleExcluirConfirmado();
+                  }}
+                  onBlur={() => setConfirmExcluir(false)}
+                  disabled={isExcluindo}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    padding: "6px 12px", borderRadius: 8,
+                    border: `1px solid ${BRAND.vermelho}50`,
+                    background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}10`,
+                    color: confirmExcluir ? "#fff" : BRAND.vermelho,
+                    fontSize: 11, fontWeight: 600,
+                    cursor: isExcluindo ? "not-allowed" : "pointer",
+                    fontFamily: FONT.body, opacity: isExcluindo ? 0.6 : 1,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <Trash2 size={11} aria-hidden="true" />
+                  {isExcluindo ? "..." : confirmExcluir ? "Confirmar?" : "Excluir"}
                 </button>
               )}
             </div>
@@ -500,9 +406,11 @@ export default function Feedback() {
           {/* Linha 1: Carrossel de semanas e Histórico */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
             <button
+              type="button"
               style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
               onClick={() => { setHistorico(false); setIdxSemana((i) => Math.max(0, i - 1)); }}
               disabled={historico || isPrimeiro}
+              aria-label="Semana anterior"
             >
               <ChevronLeft size={14} />
             </button>
@@ -510,9 +418,11 @@ export default function Feedback() {
               {historico ? "Todo o período" : semanaSelecionada?.label}
             </span>
             <button
+              type="button"
               style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
               onClick={() => { setHistorico(false); setIdxSemana((i) => Math.min(semanasDisponiveis.length - 1, i + 1)); }}
               disabled={historico || isUltimo}
+              aria-label="Próxima semana"
             >
               <ChevronRight size={14} />
             </button>
@@ -562,7 +472,7 @@ export default function Feedback() {
                   >
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
                     {STATUS_LABEL[status]}
-                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                    {active && <X size={9} aria-hidden="true" />}
                   </button>
                 );
               })}
@@ -672,10 +582,13 @@ export default function Feedback() {
 
       {/* Lista */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
+        <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" />
+          Carregando...
+        </div>
       ) : livesFiltered.length === 0 ? (
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-          Nenhuma live encontrada para o período selecionado.
+          Sem dados para o período selecionado.
         </div>
       ) : (
         livesFiltered.map(l => <LiveCard key={l.id} live={l} />)
@@ -689,7 +602,6 @@ export default function Feedback() {
           operadorasList={operadorasList}
           t={t}
           isDark={isDark ?? false}
-          brand={brand}
           onClose={() => setEditando(null)}
           onSalvo={() => { setEditando(null); loadData(); }}
         />
@@ -699,13 +611,13 @@ export default function Feedback() {
 }
 
 // ─── MODAL EDITAR FEEDBACK ────────────────────────────────────────────────────
-function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, brand, onClose, onSalvo }: {
+function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onClose, onSalvo }: {
   live: LiveComObs; res?: LiveResultado;
   operadorasList: { slug: string; nome: string }[];
   t: ReturnType<typeof useApp>["theme"]; isDark: boolean;
-  brand: ReturnType<typeof useDashboardBrand>;
   onClose: () => void; onSalvo: () => void;
 }) {
+  const brand = useDashboardBrand();
   const [observacao,   setObservacao]   = useState(live.observacao ?? "");
   const [operadoraSlug, setOperadoraSlug] = useState(live.operadora_slug ?? "");
   const [status,       setStatus]       = useState<LiveStatus>(
@@ -783,7 +695,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, bran
               Editar Feedback
             </h2>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
             <X size={18} />
           </button>
         </div>
@@ -794,7 +706,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, bran
 
         {error && (
           <div style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
-            ⚠️ {error}
+            {error}
           </div>
         )}
 

@@ -1,10 +1,14 @@
 ---
 description: Regras específicas para todas as páginas da seção de Dashboards. Complementa global.mdc.
-globs: src/pages/dashboards/**/*.tsx, src/pages/dashboards/**/*.ts
+globs:
+  - src/pages/dashboards/**/*.tsx
+  - src/pages/dashboards/**/*.ts
 alwaysApply: false
 ---
 
 # Seção Dashboards — Regras Específicas
+
+**Escopo (Cursor):** não é preciso listar cada página à mão — o frontmatter usa **globs**. Qualquer arquivo novo em `src/pages/dashboards/` (incluindo subpastas) entra no escopo ao você editar esse caminho; vale para **todas** as páginas atuais e futuras da seção Dashboards.
 
 Páginas: Overview, Conversão, Financeiro, Mídias Sociais, Mesas Spin, Overview Influencer
 

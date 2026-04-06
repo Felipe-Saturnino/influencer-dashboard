@@ -4,9 +4,11 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { PLATAFORMAS, PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK, type Plataforma } from "../../../constants/platforms";
+import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
-import { X, Eye, Pencil, Trash2 } from "lucide-react";
+import { fmtBRL } from "../../../lib/dashboardHelpers";
+import { PlatLogo } from "../../../components/PlatLogo";
+import { X, Eye, Pencil, Trash2, ChevronDown, Loader2 } from "lucide-react";
 import { GiSpyglass, GiEyeball, GiTwoCoins, GiPokerHand } from "react-icons/gi";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
@@ -38,15 +40,6 @@ async function vincularOperadoraInfluencerViaApi(userId: string, operadoraSlug: 
   if (!res.ok) throw new Error((fnData as { error?: string }).error ?? `Erro ${res.status}`);
 }
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-function PlatLogo({ plataforma, size = 14, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
-  const [err, setErr] = useState(false);
-  const p = plataforma as Plataforma;
-  const src = isDark ? (PLAT_LOGO_DARK[p] ?? PLAT_LOGO[p]) : PLAT_LOGO[p];
-  if (err || !src) return <span style={{ fontSize: size * 0.65, color: PLAT_COLOR[p] ?? "#fff" }}>●</span>;
-  return <img src={src} alt={plataforma} width={size} height={size} onError={() => setErr(true)} style={{ display: "block", flexShrink: 0 }} />;
-}
-
 export type StatusScout = "visualizado" | "contato" | "negociacao" | "fechado";
 const STATUS_SCOUT_OPTS: StatusScout[] = ["visualizado", "contato", "negociacao", "fechado"];
 const STATUS_SCOUT_LABEL: Record<StatusScout, string> = {
@@ -60,8 +53,14 @@ const CATEGORIAS = ["Vida Real", "Jogos Populares", "Variedades", "Esportes", "C
 
 // Métrica exibida por plataforma (apenas front — não altera DB)
 const PLAT_METRICA: Record<string, string> = {
-  YouTube: "Average Viewers", Instagram: "Followers", Twitch: "Average Viewers", Kick: "Average Viewers",
-  TikTok: "Average Viewers", Discord: "Followers", WhatsApp: "Followers", Telegram: "Followers",
+  YouTube: "Média de Views",
+  Instagram: "Seguidores",
+  Twitch: "Média de Views",
+  Kick: "Média de Views",
+  TikTok: "Média de Views",
+  Discord: "Seguidores",
+  WhatsApp: "Seguidores",
+  Telegram: "Seguidores",
 };
 
 const TIPO_CONTATO_OPTS = [
@@ -119,10 +118,6 @@ interface ScoutAnotacao {
   texto: string;
   created_at: string;
   usuario_nome?: string;
-}
-
-function formatBRL(value: number): string {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function getViewsTotal(s: ScoutInfluencer): number {
@@ -195,16 +190,20 @@ function StatusScoutBadge({ value, onChange, readonly }: { value: StatusScout; o
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <button
+        type="button"
         onClick={() => { if (!readonly) setOpen((o) => !o); }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Status: ${STATUS_SCOUT_LABEL[value]}`}
         style={{ padding: "4px 12px", borderRadius: 20, border: `1.5px solid ${color}`, background: `${color}18`, color, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: readonly ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5 }}
       >
         {STATUS_SCOUT_LABEL[value]}
-        {!readonly && <span style={{ fontSize: 9, opacity: 0.7 }}>▼</span>}
+        {!readonly && <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.3)", zIndex: 200, minWidth: 140, overflow: "hidden" }}>
+        <div role="menu" style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.3)", zIndex: 200, minWidth: 140, overflow: "hidden" }}>
           {STATUS_SCOUT_OPTS.map((s) => (
-            <button key={s} onClick={() => { onChange(s); setOpen(false); }}
+            <button key={s} type="button" role="menuitem" onClick={() => { onChange(s); setOpen(false); }}
               style={{ display: "block", width: "100%", padding: "9px 14px", border: "none", background: s === value ? `${STATUS_SCOUT_COLOR[s]}18` : "transparent", color: STATUS_SCOUT_COLOR[s], fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "left", fontFamily: FONT.body }}>
               {STATUS_SCOUT_LABEL[s]}
             </button>
@@ -233,6 +232,7 @@ export default function Scout() {
   const [viewsMax, setViewsMax] = useState(100000);
   const [viewsLimit, setViewsLimit] = useState(100000);
   const [operadorasOpt, setOperadorasOpt] = useState<OperadoraScoutOpt[]>([]);
+  const [statusError, setStatusError] = useState("");
 
   useEffect(() => {
     supabase.from("operadoras").select("slug, nome").order("nome").then(({ data }) => {
@@ -282,7 +282,7 @@ export default function Scout() {
       const { data: freshRow } = await supabase.from("scout_influencer").select("*").eq("id", scout.id).maybeSingle();
       if (freshRow) effective = { ...scout, ...(freshRow as ScoutInfluencer) };
       const val = validarParaFechado(effective);
-      if (!val.ok) { alert(val.msg); return; }
+      if (!val.ok) { setStatusError(val.msg ?? "Dados incompletos para marcar como Fechado."); return; }
     }
     if (newStatus === "fechado" && !effective.user_id) {
       try {
@@ -320,7 +320,7 @@ export default function Scout() {
           if (syncErr) console.warn("[Scout] Falha ao sincronizar cachê em influencer_perfil:", syncErr.message);
         }
         loadData();
-      } catch (e) { alert(e instanceof Error ? e.message : "Erro ao criar usuário. Verifique permissões."); }
+      } catch (e) { setStatusError(e instanceof Error ? e.message : "Erro ao criar usuário. Verifique permissões."); }
       return;
     }
     setList((prev) => prev.map((s) => (s.id === scout.id ? { ...s, status: newStatus } : s)));
@@ -333,7 +333,7 @@ export default function Scout() {
         try {
           await vincularOperadoraInfluencerViaApi(effective.user_id, slugOp, scout.id);
         } catch (e) {
-          alert(e instanceof Error ? e.message : "Erro ao vincular operadora ao influencer.");
+          setStatusError(e instanceof Error ? e.message : "Erro ao vincular operadora.");
         }
       }
       const cacheHora = toCacheNumber(effective.cache_negociado);
@@ -396,7 +396,7 @@ export default function Scout() {
               Cobertura de Plataformas
             </div>
             <div className="app-table-wrap">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(100px, 1fr))", gap: 12, width: "100%", minWidth: 640 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, width: "100%" }}>
               {PLATS_ORDEM.map((plat) => {
                 const count = porPlat[plat] ?? 0;
                 const cor = PLAT_COLOR[plat as Plataforma];
@@ -432,8 +432,9 @@ export default function Scout() {
       {/* Bloco 2: Filtros (estilo Influencers) */}
       <div style={{ marginBottom: 20 }}>
         <div style={{
-          borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-          background: brand.blockBg,
+          borderRadius: 14,
+          border: brand.primaryTransparentBorder,
+          background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
           {/* Linha 1: Status / Plataforma */}
@@ -455,7 +456,7 @@ export default function Scout() {
                 >
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
                   {STATUS_SCOUT_LABEL[s]}
-                  {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  {active && <X size={9} aria-hidden="true" />}
                 </button>
               );
             })}
@@ -478,7 +479,7 @@ export default function Scout() {
                 >
                   <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
                   {plat}
-                  {active && <span style={{ fontSize: 9 }}>✕</span>}
+                  {active && <X size={9} aria-hidden="true" />}
                 </button>
               );
             })}
@@ -494,17 +495,30 @@ export default function Scout() {
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body }}>
                   <GiTwoCoins size={13} style={{ color: brand.secondary }} /> Cachê por Hora — até
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : formatBRL(cacheLimit) + "/h"}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : fmtBRL(cacheLimit) + "/h"}</span>
               </div>
               <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
                 <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
                 <div style={{ position: "absolute", left: 0, width: `${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}%`, height: 4, borderRadius: 2, background: brand.useBrand ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
-                <input type="range" min={0} max={cacheMax || 1} step={50} value={cacheLimit} onChange={(e) => setCacheLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+                <input
+                  type="range"
+                  min={0}
+                  max={cacheMax || 1}
+                  step={50}
+                  value={cacheLimit}
+                  onChange={(e) => setCacheLimit(Number(e.target.value))}
+                  aria-label="Filtrar por cachê máximo negociado"
+                  aria-valuemin={0}
+                  aria-valuemax={cacheMax || 1}
+                  aria-valuenow={cacheLimit}
+                  aria-valuetext={(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : `Até ${fmtBRL(cacheLimit)}/h`}
+                  style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }}
+                />
                 <div style={{ position: "absolute", left: `calc(${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
                 <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
-                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax || 5000)}/h</span>
+                <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{fmtBRL(cacheMax || 5000)}/h</span>
               </div>
             </div>
             <div>
@@ -517,7 +531,20 @@ export default function Scout() {
               <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
                 <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
                 <div style={{ position: "absolute", left: 0, width: `${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}%`, height: 4, borderRadius: 2, background: brand.useBrand ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
-                <input type="range" min={0} max={viewsMax || 1} step={1000} value={viewsLimit} onChange={(e) => setViewsLimit(Number(e.target.value))} style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+                <input
+                  type="range"
+                  min={0}
+                  max={viewsMax || 1}
+                  step={1000}
+                  value={viewsLimit}
+                  onChange={(e) => setViewsLimit(Number(e.target.value))}
+                  aria-label="Filtrar por views máximas"
+                  aria-valuemin={0}
+                  aria-valuemax={viewsMax || 1}
+                  aria-valuenow={viewsLimit}
+                  aria-valuetext={(viewsMax <= 0 || viewsLimit >= viewsMax) ? "Todos" : `Até ${viewsLimit.toLocaleString("pt-BR")} views`}
+                  style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }}
+                />
                 <div style={{ position: "absolute", left: `calc(${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
@@ -545,6 +572,7 @@ export default function Scout() {
           {(filterStatus !== "todos" || filterPlat !== "todas" || search || (cacheMax > 0 && cacheLimit < cacheMax) || (viewsMax > 0 && viewsLimit < viewsMax)) && (
             <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
               <button
+                type="button"
                 onClick={() => { setFilterStatus("todos"); setFilterPlat("todas"); setSearch(""); setCacheLimit(cacheMax); setViewsLimit(viewsMax); }}
                 style={{
                   padding: "5px 14px", borderRadius: 999,
@@ -552,9 +580,12 @@ export default function Scout() {
                   background: `${BRAND.vermelho}11`,
                   color: BRAND.vermelho, fontSize: 12, fontWeight: 600,
                   fontFamily: FONT.body, cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
                 }}
               >
-                ✕ Limpar filtros
+                <X size={12} aria-hidden="true" /> Limpar filtros
               </button>
             </div>
           )}
@@ -563,8 +594,40 @@ export default function Scout() {
 
       {/* Bloco 3: Lista */}
       {!loading && <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14 }}><span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> {filtered.length === 1 ? "prospecto" : "prospectos"}</div>}
+      {statusError && (
+        <div
+          style={{
+            background: `${BRAND.vermelho}18`,
+            border: `1px solid ${BRAND.vermelho}44`,
+            color: BRAND.vermelho,
+            borderRadius: 10,
+            padding: "10px 14px",
+            fontSize: 13,
+            marginBottom: 14,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+          role="alert"
+          aria-live="polite"
+        >
+          {statusError}
+          <button
+            type="button"
+            onClick={() => setStatusError("")}
+            aria-label="Fechar erro"
+            style={{ background: "none", border: "none", cursor: "pointer", color: BRAND.vermelho, display: "flex" }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
+        <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" />
+          Carregando...
+        </div>
       ) : filtered.length === 0 ? (
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum prospecto encontrado.</div>
       ) : (
@@ -618,7 +681,7 @@ export default function Scout() {
                     )}
                     {toCacheNumber(s.cache_negociado) > 0 && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: `${BRAND.roxo}18`, border: `1px solid ${BRAND.roxo}44`, fontSize: 11, fontWeight: 600, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
-                        {formatBRL(toCacheNumber(s.cache_negociado))}
+                        {fmtBRL(toCacheNumber(s.cache_negociado))}
                       </span>
                     )}
                     {s.live_cassino === "sim" && (
@@ -714,7 +777,7 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
             <div style={row}><label style={labelStyle}>Tipo de Contato</label>{val(scout.tipo_contato ? TIPO_CONTATO_OPTS.find((o) => o.value === scout.tipo_contato)?.label : null)}</div>
             {scout.tipo_contato === "agente" && <div style={row}><label style={labelStyle}>Nome do Agente</label>{val(scout.nome_agente)}</div>}
             <div style={row}><label style={labelStyle}>Telefone</label>{val(scout.telefone)}</div>
-            <div style={row}><label style={labelStyle}>Cachê Negociado</label>{val(toCacheNumber(scout.cache_negociado) > 0 ? formatBRL(toCacheNumber(scout.cache_negociado)) : null)}</div>
+            <div style={row}><label style={labelStyle}>Cachê Negociado</label>{val(toCacheNumber(scout.cache_negociado) > 0 ? fmtBRL(toCacheNumber(scout.cache_negociado)) : null)}</div>
             <div style={row}><label style={labelStyle}>Live Cassino</label>{val(getLiveCassinoLabel(scout.live_cassino))}</div>
             <div style={row}><label style={labelStyle}>Operadora (parceria)</label>{val(scout.operadora_slug ? (operadorasList.find((o) => o.slug === scout.operadora_slug)?.nome ?? scout.operadora_slug) : null)}</div>
           </>
@@ -797,6 +860,8 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [confirmExcluir, setConfirmExcluir] = useState(false);
+  const [criandoUsuario, setCriandoUsuario] = useState(false);
 
   useEffect(() => {
     if (scout) {
@@ -930,8 +995,13 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
     try {
       let userId: string | null = null;
       if (status === "fechado" && (!scout?.user_id || !scout)) {
-        const scoutData = getScoutData();
-        userId = await criarUsuarioFechado(scout?.id ? { ...scoutData, id: scout.id } : scoutData);
+        setCriandoUsuario(true);
+        try {
+          const scoutData = getScoutData();
+          userId = await criarUsuarioFechado(scout?.id ? { ...scoutData, id: scout.id } : scoutData);
+        } finally {
+          setCriandoUsuario(false);
+        }
         if (!userId) throw new Error("Falha ao criar usuário para ativação.");
       }
 
@@ -1040,11 +1110,14 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
   }
 
   async function handleExcluir() {
-    if (!scout?.id || !perm.canExcluirOk || (perm.canExcluir === "proprios" && scout.created_by !== user?.id) || !confirm("Tem certeza que deseja excluir este prospecto?")) return;
+    if (!scout?.id || !perm.canExcluirOk) return;
+    if (perm.canExcluir === "proprios" && scout.created_by !== user?.id) return;
+    if (!confirmExcluir) { setConfirmExcluir(true); return; }
+
     const { error } = await supabase.from("scout_anotacoes").delete().eq("scout_id", scout.id);
-    if (error) { setError(error.message); return; }
+    if (error) { setError(error.message); setConfirmExcluir(false); return; }
     const { error: err2 } = await supabase.from("scout_influencer").delete().eq("id", scout.id);
-    if (err2) { setError(err2.message); return; }
+    if (err2) { setError(err2.message); setConfirmExcluir(false); return; }
     onSaved();
   }
 
@@ -1249,16 +1322,36 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
 
         <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
           {scout && perm.canExcluirOk && (perm.canExcluir !== "proprios" || scout.created_by === user?.id) && (
-            <button onClick={handleExcluir} disabled={saving}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", borderRadius: 10, border: `1px solid ${BRAND.vermelho}80`, background: `${BRAND.vermelho}18`, color: BRAND.vermelho, fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1 }}>
-              <Trash2 size={14} /> Excluir
+            <button
+              type="button"
+              onClick={() => void handleExcluir()}
+              disabled={saving}
+              onBlur={() => setConfirmExcluir(false)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", borderRadius: 10,
+                border: `1px solid ${confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}80`}`,
+                background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}18`,
+                color: confirmExcluir ? "#fff" : BRAND.vermelho,
+                fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
+                cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1,
+                transition: "all 0.15s",
+              }}
+            >
+              <Trash2 size={14} aria-hidden="true" />
+              {confirmExcluir ? "Confirmar exclusão?" : "Excluir"}
             </button>
           )}
           <div style={{ flex: 1, minWidth: 0 }} />
           <button onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
-          <button onClick={handleSave} disabled={saving}
+          <button type="button" onClick={() => void handleSave()} disabled={saving}
             style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
-            {saving ? "Salvando..." : "Salvar"}
+            {saving && criandoUsuario ? (
+              <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Criando usuário...</>
+            ) : saving ? (
+              <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Salvando...</>
+            ) : (
+              "Salvar"
+            )}
           </button>
         </div>
       </div>

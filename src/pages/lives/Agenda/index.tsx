@@ -11,7 +11,8 @@ import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PlatLogo } from "../../../components/PlatLogo";
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Loader2, Clock, Link2 } from "lucide-react";
 import {
   GiFilmProjector, GiCalendar, GiShield,
 } from "react-icons/gi";
@@ -26,8 +27,7 @@ const BRAND = {
   verde:    "#22c55e",
 } as const;
 
-// ─── LOGOS OFICIAIS DAS PLATAFORMAS (Simple Icons CDN) ───────────────────────
-import { PLAT_LOGO, PLAT_LOGO_DARK, PLAT_COLOR } from "../../../constants/platforms";
+import { PLAT_COLOR } from "../../../constants/platforms";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
@@ -71,22 +71,6 @@ function toISO(d: Date) {
   return d.toISOString().split("T")[0];
 }
 
-// ─── LOGO COMPONENTE ─────────────────────────────────────────────────────────
-function PlatLogo({ plataforma, size = 18, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
-  const [err, setErr] = useState(false);
-  const src = isDark ? (PLAT_LOGO_DARK[plataforma] ?? PLAT_LOGO[plataforma]) : PLAT_LOGO[plataforma];
-  if (err || !src) {
-    return <span style={{ fontSize: size * 0.7, color: PLAT_COLOR[plataforma] ?? "#fff" }}>●</span>;
-  }
-  return (
-    <img
-      src={src} alt={plataforma} width={size} height={size}
-      onError={() => setErr(true)}
-      style={{ display: "block", flexShrink: 0 }}
-    />
-  );
-}
-
 // ─── SINGLE DROPDOWN (Visualização) ──────────────────────────────────────────
 interface SingleDropdownProps {
   value: string;
@@ -128,7 +112,7 @@ function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDro
       >
         {icon && <span style={{ display: "flex", alignItems: "center" }}>{icon}</span>}
         {current?.label}
-        <span style={{ fontSize: 9, opacity: 0.7 }}>{open ? "▲" : "▼"}</span>
+        {open ? <ChevronUp size={9} style={{ opacity: 0.7 }} aria-hidden="true" /> : <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
       </button>
 
       {open && (
@@ -317,14 +301,18 @@ export default function Agenda() {
   // ── Chip de live no calendário ───────────────────────────────────────────────
   function LiveChip({ live }: { live: Live }) {
     return (
-      <div
+      <button
+        type="button"
         onClick={() => setModal({ open: true, live })}
+        aria-label={`${live.horario.slice(0, 5)} · ${live.influencer_name ?? live.plataforma} — ${STATUS_LABEL[live.status]}`}
         style={{
           display: "flex", alignItems: "center", gap: 6,
           padding: "5px 8px", borderRadius: 8, cursor: "pointer",
           background: `${PLAT_COLOR[live.plataforma]}22`,
           border: `1px solid ${PLAT_COLOR[live.plataforma]}44`,
           marginBottom: 4,
+          width: "100%",
+          textAlign: "left",
         }}
       >
         <span style={{
@@ -334,7 +322,7 @@ export default function Agenda() {
         <span style={{ fontSize: 12, fontWeight: 500, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {live.horario.slice(0, 5)}{live.influencer_name ? ` · ${live.influencer_name}` : ""}
         </span>
-      </div>
+      </button>
     );
   }
 
@@ -352,7 +340,7 @@ export default function Agenda() {
             </div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "220px", gap: 4 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "minmax(140px, auto)", gap: 4 }}>
           {cells.map((date, i) => {
             if (!date) return <div key={i} />;
             const dayLives = livesForDay(date);
@@ -361,7 +349,7 @@ export default function Agenda() {
                 key={i}
                 onClick={() => { setCurrent(date); setView("dia"); }}
                 style={{
-                  height: 220, padding: 8, borderRadius: 10, cursor: "pointer",
+                  minHeight: 140, padding: 8, borderRadius: 10, cursor: "pointer",
                   display: "flex", flexDirection: "column", overflow: "hidden",
                   boxSizing: "border-box", transition: "background 0.15s",
                   ...dayStyle(date, todayISO),
@@ -379,7 +367,30 @@ export default function Agenda() {
                 </div>
                 <div className="agenda-day-scroll" style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}>
                   {dayLives.slice(0, 8).map(l => <LiveChip key={l.id} live={l} />)}
-                  {dayLives.length > 8 && <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>+{dayLives.length - 8}</span>}
+                  {dayLives.length > 8 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrent(date);
+                        setView("dia");
+                      }}
+                      aria-label={`Ver mais ${dayLives.length - 8} lives`}
+                      style={{
+                        fontSize: 11,
+                        color: t.textMuted,
+                        fontFamily: FONT.body,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: 0,
+                        textDecoration: "underline",
+                        textUnderlineOffset: 2,
+                      }}
+                    >
+                      +{dayLives.length - 8} mais
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -502,8 +513,9 @@ export default function Agenda() {
                       {STATUS_LABEL[l.status]}
                     </span>
                     {/* Horário */}
-                    <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-                      🕐 {l.horario.slice(0, 5)}
+                    <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <Clock size={11} aria-hidden="true" />
+                      {l.horario.slice(0, 5)}
                     </span>
                   </div>
                   {l.link && (
@@ -513,7 +525,8 @@ export default function Agenda() {
                       onClick={e => e.stopPropagation()}
                       style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 11, color: BRAND.azul, fontFamily: FONT.body, textDecoration: "none", wordBreak: "break-all" }}
                     >
-                      🔗 {l.link}
+                      <Link2 size={11} aria-hidden="true" />
+                      {l.link}
                     </a>
                   )}
                 </div>
@@ -612,13 +625,13 @@ export default function Agenda() {
         }}>
           {/* Linha principal — centralizada */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            <button onClick={prev} style={btnNav}>
+            <button type="button" onClick={prev} style={btnNav} aria-label="Período anterior">
               <ChevronLeft size={14} />
             </button>
             <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {headerTitle()}
             </span>
-            <button onClick={next} style={btnNav}>
+            <button type="button" onClick={next} style={btnNav} aria-label="Próximo período">
               <ChevronRight size={14} />
             </button>
 
@@ -690,7 +703,7 @@ export default function Agenda() {
                   >
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
                     {STATUS_LABEL[status]}
-                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                    {active && <X size={9} aria-hidden="true" />}
                   </button>
                 );
               })}
@@ -715,13 +728,14 @@ export default function Agenda() {
                   >
                     <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
                     {plat}
-                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                    {active && <X size={9} aria-hidden="true" />}
                   </button>
                 );
               })}
             </div>
             {hasActiveFilters && (
               <button
+                type="button"
                 onClick={() => { setFilterStatus(null); setFilterPlat(null); setFilterInfluencers([]); setFilterOperadora("todas"); }}
                 style={{
                   padding: "5px 14px", borderRadius: 999,
@@ -729,9 +743,12 @@ export default function Agenda() {
                   background: `${BRAND.vermelho}11`,
                   color: BRAND.vermelho, fontSize: 12, fontWeight: 600,
                   fontFamily: FONT.body, cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
                 }}
               >
-                ✕ Limpar filtros
+                <X size={12} aria-hidden="true" /> Limpar filtros
               </button>
             )}
           </div>
@@ -741,7 +758,8 @@ export default function Agenda() {
       {/* ── CALENDÁRIO ── */}
       <div style={card}>
         {loading ? (
-          <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body }}>
+          <div style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" />
             Carregando...
           </div>
         ) : (
