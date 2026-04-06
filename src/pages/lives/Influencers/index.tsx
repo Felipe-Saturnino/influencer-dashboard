@@ -118,6 +118,9 @@ interface Perfil {
   agencia?:         string;
   conta?:           string;
   chave_pix?:       string;
+  created_at?:      string;
+  updated_at?:      string;
+  status_alterado_em?: string;
 }
 
 interface Influencer {
@@ -356,17 +359,28 @@ export default function Influencers() {
     if (!podeAlterarStatus) return;
     const previousStatus = list.find((i) => i.id === infId)?.perfil?.status;
 
+    const agoraIso = new Date().toISOString();
     setList((prev) =>
       prev.map((i) =>
         i.id === infId
-          ? { ...i, perfil: { ...(i.perfil ?? emptyPerfil(i.id)), status: newStatus } }
+          ? {
+              ...i,
+              perfil: {
+                ...(i.perfil ?? emptyPerfil(i.id)),
+                status: newStatus,
+                ...(previousStatus !== newStatus ? { status_alterado_em: agoraIso } : {}),
+              },
+            }
           : i
       )
     );
 
+    const upsertPatch: Record<string, unknown> = { id: infId, status: newStatus };
+    if (previousStatus !== newStatus) upsertPatch.status_alterado_em = agoraIso;
+
     const { error } = await supabase
       .from("influencer_perfil")
-      .upsert({ id: infId, status: newStatus }, { onConflict: "id" });
+      .upsert(upsertPatch, { onConflict: "id" });
 
     if (error) {
       setList((prev) =>
@@ -544,14 +558,14 @@ export default function Influencers() {
             background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}>
-            {/* Linha 1: Status / Plataforma / Operadora */}
+            {/* Linha 1: Status / Operadora */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
               {STATUS_OPTS.map((s) => {
                 const active = filterStatus === s;
                 const color = STATUS_COLOR[s];
                 return (
-                  <button key={s} onClick={() => setFilterStatus(active ? "todos" : s)}
+                  <button key={s} type="button" onClick={() => setFilterStatus(active ? "todos" : s)}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
                       padding: "5px 12px", borderRadius: 999, cursor: "pointer",
@@ -563,29 +577,6 @@ export default function Influencers() {
                   >
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
                     {STATUS_LABEL[s]}
-                    {active && <X size={9} aria-hidden="true" />}
-                  </button>
-                );
-              })}
-              <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
-              {PLATAFORMAS.map((plat) => {
-                const active = filterPlat === plat;
-                const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
-                return (
-                  <button key={plat} onClick={() => setFilterPlat(active ? "todas" : plat)}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                      border: `1px solid ${active ? color : color + "55"}`,
-                      background: active ? `${color}22` : `${color}11`,
-                      color: active ? color : color + "cc",
-                      fontSize: 12, fontWeight: active ? 700 : 500,
-                      fontFamily: FONT.body, transition: "all 0.15s",
-                    }}
-                  >
-                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                    {plat}
                     {active && <X size={9} aria-hidden="true" />}
                   </button>
                 );
@@ -618,7 +609,33 @@ export default function Influencers() {
               )}
             </div>
 
-            {/* Linha 2: Filtro de Cachê */}
+            {/* Linha 2: Plataforma */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
+              {PLATAFORMAS.map((plat) => {
+                const active = filterPlat === plat;
+                const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
+                return (
+                  <button key={plat} type="button" onClick={() => setFilterPlat(active ? "todas" : plat)}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : `${color}11`,
+                      color: active ? color : color + "cc",
+                      fontSize: 12, fontWeight: active ? 700 : 500,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
+                    {plat}
+                    {active && <X size={9} aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Linha 3: Filtro de Cachê */}
             {cacheMax > 0 && (
               <div style={{
                 paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`,
@@ -658,7 +675,7 @@ export default function Influencers() {
               </div>
             )}
 
-            {/* Linha 3: Barra de Pesquisa */}
+            {/* Linha 4: Barra de Pesquisa */}
             <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
               <input
                 value={search} onChange={(e) => setSearch(e.target.value)}
@@ -870,14 +887,24 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }:
   const { theme: t } = useApp();
   const b = brand ?? { blockBg: t.cardBg, accent: "#7c3aed", secondary: "#7c3aed", useBrand: false };
   const p = influencer.perfil;
-  const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
+  const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras" | "historico">("cadastral");
 
   const tabs = [
     { key: "cadastral"   as const, label: "Cadastral"  },
     { key: "canais"      as const, label: "Canais"     },
     { key: "financeiro"  as const, label: "Financeiro" },
     { key: "operadoras"  as const, label: "Operadoras" },
+    { key: "historico"   as const, label: "Histórico" },
   ];
+
+  function fmtTs(iso?: string | null) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+    } catch {
+      return "—";
+    }
+  }
 
   const labelStyle: React.CSSProperties = {
     display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px",
@@ -1003,6 +1030,17 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }:
             )}
           </>
         )}
+
+        {tab === "historico" && (
+          <>
+            <div style={row}><label style={labelStyle}>Data de criação (cadastro)</label>{val(fmtTs(p?.created_at))}</div>
+            <div style={row}><label style={labelStyle}>Data da última atualização</label>{val(fmtTs(p?.updated_at))}</div>
+            <div style={row}><label style={labelStyle}>Data da última alteração de status</label>{val(fmtTs(p?.status_alterado_em))}</div>
+            <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, margin: 0, lineHeight: 1.45 }}>
+              As datas vêm do cadastro do influencer. A alteração de status é registrada a partir desta versão do sistema.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1069,7 +1107,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
       await supabase.from("profiles").update({ name: form.nome_artistico.trim() }).eq("id", influencer.id);
     }
 
-    const payload: Perfil & { nome_completo: string; updated_at: string } = {
+    const payload: Perfil & { nome_completo: string; updated_at: string; status_alterado_em?: string } = {
       ...form,
       nome_completo: editNomeCompleto.trim(),
       updated_at: new Date().toISOString(),
@@ -1080,6 +1118,9 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
       payload.cache_hora = existing.cache_hora ?? 0;
     } else if (existing && (payload.cache_hora == null || Number.isNaN(Number(payload.cache_hora)))) {
       payload.cache_hora = existing.cache_hora ?? 0;
+    }
+    if (existing && podeAlterarStatusCache && form.status !== existing.status) {
+      payload.status_alterado_em = new Date().toISOString();
     }
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)

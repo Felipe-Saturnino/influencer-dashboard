@@ -149,6 +149,18 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
     setSaving(true);
     const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    let operadoraSlugInfluencer: string | null = null;
+    if (!isEdit && isInfluencer && user?.id) {
+      const { data: opRows } = await supabase
+        .from("influencer_operadoras")
+        .select("operadora_slug")
+        .eq("influencer_id", user.id)
+        .eq("ativo", true)
+        .order("operadora_slug");
+      if (opRows?.length) operadoraSlugInfluencer = (opRows[0] as { operadora_slug: string }).operadora_slug;
+    }
+
     const payload: Record<string, unknown> = {
       data:          form.data,
       horario:       form.horario,
@@ -156,6 +168,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
       link:          form.link.trim(),
       influencer_id: isInfluencer ? user?.id : form.influencer_id || undefined,
     };
+    if (operadoraSlugInfluencer) payload.operadora_slug = operadoraSlugInfluencer;
     if (isEdit) {
       // Na edição, não alterar status — definido em Resultados, editável em Feedback
     } else {

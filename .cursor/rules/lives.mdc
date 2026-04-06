@@ -1,0 +1,716 @@
+---
+description: Regras específicas para as páginas da seção Lives (menu lateral). Complementa global.mdc e brand-css-variables.mdc.
+globs:
+  - src/pages/lives/**/*.tsx
+  - src/pages/lives/**/*.ts
+alwaysApply: false
+---
+
+# Seção Lives — Regras Específicas
+
+**Escopo (Cursor):** globs cobrem **tudo** em `src/pages/lives/` (Agenda com modais, Resultados, Feedback, Influencers, Scout). Não há pasta duplicada em `operacoes/` — Influencers e Scout foram movidos para `lives/`.
+
+Páginas: Agenda · Resultados · Feedback · Influencers · Scout
+
+**Marca / operadora:** usar `useDashboardBrand()` como nas dashboards — `primaryTransparentBg`, `primaryTransparentBorder`, `accent`, `primaryIconBg` / `primaryIconBorder` / `primaryIconColor`, `blockBg` onde aplicável. Com `brand.useBrand`, o hook já resolve para `var(--brand-*)`. Destaques institucionais: `color-mix(in srgb, var(--brand-accent) X%, transparent)` em vez de RGBA fixo da Spin. **Não** substituir cores **semânticas** de status (live realizada/agendada, erro, alerta de produto) por cor de marca só por whitelabel — manter `BRAND.*` ou tons acordados. Spinners: fora de botão CTA, preferir cor da marca com `var(--brand-primary, #7c3aed)` (ver `brand-css-variables.mdc`); dentro de CTA com gradiente, spinner branco.
+
+**Tokens:** `t.*` via `useApp()` para fundo de página, texto, bordas neutras e cards quando não for bloco “da operadora”.
+
+---
+
+## Personas por Página
+
+| Página | Persona | Bloco prioritário |
+|---|---|---|
+| Agenda | Gestor de Operações / Influencer | Calendário do período atual |
+| Resultados | Gestor de Operações | Lista de lives pendentes de validação |
+| Feedback | Gestor de Operações | KPIs da semana (Total, Horas, Média Views) |
+| Influencers | Gestor de Operações / Influencer | Quadro de resumo + lista filtrada |
+| Scout | Gestor de Operações | Funil de prospecção (KPI cards por status) |
+
+---
+
+## Componentes Compartilhados — Importar, Nunca Redeclarar
+
+```typescript
+// Logo de plataforma com fallback gracioso
+import { PlatLogo } from "../../../components/PlatLogo";
+
+import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
+```
+
+**`PlatLogo`** recebe `{ plataforma: string; size?: number; isDark: boolean }`.
+Nunca declarar localmente. Nunca usar `●` como único fallback sem o componente.
+
+**`InfluencerDropdown`** recebe `{ items, selected, onChange, accent? }` — usar em **Feedback** e em telas novas; `accent={brand.accent}` reflete operadora. **Legado:** **Agenda** e **Resultados** ainda usam `InfluencerMultiSelect` no código atual; ao refatorar filtros, preferir migrar para `InfluencerDropdown` para alinhar UX (checkbox, "Limpar", acento).
+
+---
+
+## Bloco de Filtros — Padrão Obrigatório
+
+Todo bloco de filtros desta seção usa fundo transparente de marca.
+**Nunca** usar `brand.blockBg` ou `t.cardBg` como fundo de filtros.
+
+```tsx
+<div style={{ marginBottom: 14 }}>
+  <div style={{
+    borderRadius: 14,
+    border: brand.primaryTransparentBorder,
+    background: brand.primaryTransparentBg,
+    padding: "12px 20px",
+  }}>
+    {/* conteúdo dos filtros */}
+  </div>
+</div>
+```
+
+### Botões de navegação de período / semana
+
+```tsx
+const btnNav: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: "50%",
+  border: `1px solid ${t.cardBorder}`,
+  background: "transparent", color: t.text,
+  cursor: disabled ? "not-allowed" : "pointer",
+  opacity: disabled ? 0.35 : 1,
+  display: "flex", alignItems: "center", justifyContent: "center",
+};
+
+// Sempre com aria-label:
+<button onClick={prev} style={btnNav} aria-label="Período anterior">
+  <ChevronLeft size={14} aria-hidden="true" />
+</button>
+<button onClick={next} style={btnNav} aria-label="Próximo período">
+  <ChevronRight size={14} aria-hidden="true" />
+</button>
+
+// Para semanas (Feedback):
+aria-label="Semana anterior" / aria-label="Próxima semana"
+```
+
+### Badges de filtro ativo
+
+```tsx
+// Sempre usar <X> do Lucide — nunca "✕" unicode
+import { X } from "lucide-react";
+
+<button
+  onClick={() => setFiltro(ativo ? null : valor)}
+  role="button"
+  aria-pressed={ativo}
+  style={{ ... }}
+>
+  <span style={{ width: 8, height: 8, borderRadius: "50%", background: cor }} />
+  {label}
+  {ativo && <X size={9} aria-hidden="true" />}
+</button>
+```
+
+### Botão Histórico (páginas com carrossel de semanas)
+
+```tsx
+<button
+  aria-label={historico ? "Desativar modo histórico" : "Ver todo o período"}
+  aria-pressed={historico}
+  onClick={toggleHistorico}
+  style={{
+    display: "flex", alignItems: "center", gap: 6,
+    padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+    fontFamily: FONT.body, fontSize: 13,
+    border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+    background: historico
+      ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)")
+      : "transparent",
+    color: historico ? brand.accent : t.textMuted,
+    fontWeight: historico ? 700 : 400,
+    transition: "all 0.15s",
+  }}
+>
+  <GiCalendar size={15} aria-hidden="true" /> Histórico
+</button>
+```
+
+---
+
+## Estados de Interface
+
+### Loading
+
+```tsx
+import { Loader2 } from "lucide-react";
+
+// Em bloco de conteúdo (fundo neutro — cor do spinner: marca):
+{loading ? (
+  <div style={{
+    textAlign: "center", padding: 60,
+    color: t.textMuted, fontFamily: FONT.body,
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+  }}>
+    <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+    Carregando...
+  </div>
+) : ( ... )}
+
+// Em botão CTA durante saving (nunca trocar o gradiente):
+<button disabled={saving} style={{ opacity: saving ? 0.65 : 1 }}>
+  {saving
+    ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Salvando...</>
+    : "Salvar"
+  }
+</button>
+```
+
+### Estado vazio
+
+```tsx
+// Com filtro de data (Feedback, Resultados em modo histórico):
+<div style={{
+  padding: "40px 0", textAlign: "center",
+  color: t.textMuted, fontSize: 13, fontFamily: FONT.body,
+}}>
+  Sem dados para o período selecionado.
+</div>
+
+// Sem filtro de data (Influencers, Scout):
+// Usar texto descritivo do contexto — ex:
+// "Nenhum influencer encontrado com os filtros aplicados."
+// "Nenhum prospecto encontrado."
+// "Nenhuma live pendente de validação."
+```
+
+Alinhar com `global.mdc`: para estados atrelados a **período** (ex.: blocos estilo dashboard), usar **"Sem dados para o período selecionado."** quando for o caso. Evitar genéricos curtos tipo "Sem dados" / "Nenhum dado encontrado." e textos em inglês na UI.
+
+### Erro de operação — nunca usar `alert()`
+
+```tsx
+const [error, setError] = useState("");
+
+// Bloco de erro — sempre imediatamente acima do botão de ação:
+{error && (
+  <div
+    role="alert"
+    aria-live="polite"
+    style={{
+      background: `${BRAND.vermelho}18`,
+      border: `1px solid ${BRAND.vermelho}44`,
+      color: BRAND.vermelho,
+      borderRadius: 10,
+      padding: "10px 14px",
+      fontSize: 13,
+      marginBottom: 14,
+      fontFamily: FONT.body,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+    }}
+  >
+    {error}
+    <button
+      onClick={() => setError("")}
+      aria-label="Fechar erro"
+      style={{ background: "none", border: "none", cursor: "pointer", color: BRAND.vermelho, display: "flex" }}
+    >
+      <X size={14} />
+    </button>
+  </div>
+)}
+```
+
+---
+
+## Confirmação de Exclusão — nunca usar `confirm()`
+
+Padrão de dois cliques sem modal. O `onBlur` cancela o estado de confirmação caso o
+usuário clique fora sem confirmar.
+
+```tsx
+const [confirmando, setConfirmando] = useState(false);
+
+<button
+  onClick={() => {
+    if (!confirmando) { setConfirmando(true); return; }
+    handleDelete();
+    setConfirmando(false);
+  }}
+  onBlur={() => setConfirmando(false)}
+  style={{
+    color: confirmando ? "#fff" : BRAND.vermelho,
+    background: confirmando ? BRAND.vermelho : `${BRAND.vermelho}10`,
+    border: `1px solid ${confirmando ? BRAND.vermelho : `${BRAND.vermelho}50`}`,
+    transition: "all 0.15s",
+    // ... resto do estilo
+  }}
+>
+  <Trash2 size={14} aria-hidden="true" />
+  {confirmando ? "Confirmar exclusão?" : "Excluir"}
+</button>
+```
+
+---
+
+## Ícones — Mapeamento Obrigatório
+
+Nunca usar caracteres unicode como ícone de interface nesta seção.
+
+| Situação | ❌ Proibido | ✅ Correto |
+|---|---|---|
+| Chevron abrir dropdown | `▼` `▲` | `<ChevronDown>` / `<ChevronUp>` |
+| Fechar / limpar filtro | `✕` | `<X size={9}>` |
+| Alerta / aviso inline | `⚠` `⚠️` | `<AlertTriangle>` |
+| Informação / hint | `ℹ` | `<Info>` |
+| Excluir item | `🗑` | `<Trash2>` |
+| Editar item | ✏️ | `<Pencil>` |
+| Horário de live | `🕐` | `<Clock>` ou texto puro |
+| Estrela / destaque | ✨ | Texto simples sem emoji |
+| Cadeado / bloqueio | `🔒` | `<Lock>` |
+| Checkbox marcado | `✓` | `<Check size={9} color="#fff">` |
+| Ícone decorativo (GI ou Lucide ao lado de texto visível) | — | `aria-hidden="true"` no ícone |
+
+Todos os botões icon-only devem ter `aria-label` descritivo.
+Todos os ícones decorativos (dentro de badges, células) devem ter `aria-hidden="true"`.
+
+---
+
+## Dropdowns de Status — ARIA Obrigatório
+
+Padrão para `StatusBadge` (Influencers), `StatusScoutBadge` (Scout) e qualquer
+dropdown de seleção inline:
+
+```tsx
+// Trigger:
+<button
+  onClick={() => { if (!readonly) setOpen(o => !o); }}
+  aria-haspopup="menu"
+  aria-expanded={open}
+  aria-label={`Status: ${STATUS_LABEL[value]}`}
+  style={{ ... }}
+>
+  {STATUS_LABEL[value]}
+  {!readonly && <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
+</button>
+
+// Container:
+<div role="menu" style={{ ... }}>
+
+// Cada opção:
+<button role="menuitem" onClick={() => { onChange(s); setOpen(false); }}>
+  {STATUS_LABEL[s]}
+</button>
+```
+
+---
+
+## Sliders de Filtro (range input) — ARIA Obrigatório
+
+```tsx
+<input
+  type="range"
+  min={min}
+  max={max}
+  step={step}
+  value={value}
+  onChange={e => onChange(Number(e.target.value))}
+  aria-label="Filtrar por cachê máximo por hora"
+  aria-valuemin={min}
+  aria-valuemax={max}
+  aria-valuenow={value}
+  aria-valuetext={value >= max ? "Todos" : `Até ${fmtBRL(value)}/h`}
+  style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }}
+/>
+```
+
+Sempre inicializar `useState` com valor de placeholder (`5000` para cachê, `100000` para views)
+para evitar layout shift — atualizar após `loadData()`.
+
+---
+
+## Update Optimista — Sempre com Rollback
+
+Quando um componente atualiza o estado local antes de confirmar com o backend:
+
+```tsx
+// 1. Capturar o valor anterior
+const anterior = list.find(i => i.id === id)?.campo;
+
+// 2. Update local imediato
+setList(prev => prev.map(i => i.id === id ? { ...i, campo: novoValor } : i));
+
+// 3. Persistir
+const { error } = await supabase.from("tabela").update({ campo: novoValor }).eq("id", id);
+
+// 4. Rollback se falhou
+if (error) {
+  setList(prev => prev.map(i => i.id === id ? { ...i, campo: anterior } : i));
+  setError("Erro ao salvar. Tente novamente.");
+}
+```
+
+Nunca fazer update optimista sem rollback. O usuário não pode ver um estado que não foi salvo.
+
+---
+
+## Idioma da Interface — PT-BR Exclusivo
+
+Toda string visível ao usuário deve estar em português do Brasil.
+
+| ❌ Proibido | ✅ Correto |
+|---|---|
+| "Average Viewers" | "Média de Views" |
+| "Followers" | "Seguidores" |
+| "Loading..." | "Carregando..." |
+| "N/A" | "—" (travessão) |
+| "Checkbox" | não aparece para o usuário |
+
+**Exceções:** Nomes de plataformas (Twitch, YouTube, TikTok), siglas do setor
+(GGR, FTD, ROI, UAP, ARPU, PVI, MoM, MTD), termos de jogo sem tradução (Blackjack, Baccarat).
+
+---
+
+## Regras Específicas por Página
+
+### Agenda
+
+**Calendário — `gridAutoRows`:**
+```tsx
+// Modo Mês — nunca altura fixa:
+gridAutoRows: "minmax(140px, auto)"
+
+// Célula do dia — nunca height fixo:
+style={{ minHeight: 140, padding: 8, ... }}
+```
+
+**`LiveChip` — sempre `<button>`, nunca `<div onClick>`:**
+```tsx
+<button
+  type="button"
+  onClick={() => setModal({ open: true, live })}
+  aria-label={`${live.horario.slice(0, 5)} · ${live.influencer_name ?? live.plataforma} — ${STATUS_LABEL[live.status]}`}
+  style={{
+    display: "flex", alignItems: "center", gap: 6,
+    padding: "5px 8px", borderRadius: 8, cursor: "pointer",
+    background: `${PLAT_COLOR[live.plataforma]}22`,
+    border: `1px solid ${PLAT_COLOR[live.plataforma]}44`,
+    marginBottom: 4, width: "100%", textAlign: "left",
+    // Sem border: none — preservar a borda de plataforma
+  }}
+>
+  <span style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_COLOR[live.status], flexShrink: 0 }} />
+  <PlatLogo plataforma={live.plataforma} size={11} isDark={isDark ?? false} />
+  <span style={{ fontSize: 12, fontWeight: 500, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+    {live.horario.slice(0, 5)}{live.influencer_name ? ` · ${live.influencer_name}` : ""}
+  </span>
+</button>
+```
+
+**`"+N" mais` — clicável:**
+```tsx
+{dayLives.length > MAX_CHIPS && (
+  <button
+    onClick={(e) => { e.stopPropagation(); setCurrent(date); setView("dia"); }}
+    aria-label={`Ver mais ${dayLives.length - MAX_CHIPS} lives`}
+    style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+  >
+    +{dayLives.length - MAX_CHIPS} mais
+  </button>
+)}
+```
+
+**`SingleDropdown` (seletor de visualização) — Lucide para chevrons, ARIA completo:**
+```tsx
+<button
+  onClick={() => setOpen(!open)}
+  aria-haspopup="menu"
+  aria-expanded={open}
+  style={{ ... }}
+>
+  {icon}
+  {current?.label}
+  {open ? <ChevronUp size={9} style={{ opacity: 0.7 }} aria-hidden="true" />
+        : <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
+</button>
+<div role="menu" style={{ ... }}>
+  {options.map(opt => (
+    <button key={opt.value} role="menuitem" onClick={() => { onChange(opt.value); setOpen(false); }}>
+      {/* radio visual + label */}
+    </button>
+  ))}
+</div>
+```
+
+**Badge de ícone no `ModalLive` — sempre via `brand`:**
+```tsx
+// Nunca hardcodar rgba(74,32,130,0.18)
+const brand = useDashboardBrand(); // chamar dentro do modal
+
+<span style={{
+  width: 28, height: 28, borderRadius: 8,
+  background: brand.primaryIconBg,
+  border: brand.primaryIconBorder,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  color: brand.primaryIconColor,
+}}>
+  <GiFilmProjector size={14} aria-hidden="true" />
+</span>
+```
+
+---
+
+### Resultados
+
+**Janela de elegibilidade — não alterar sem validação de produto:**
+```typescript
+// Só entram lives cujo horário agendado já passou há mais de 5 horas
+const RESULTADOS_JANELA_MS = 5 * 60 * 60 * 1000;
+```
+
+**Mensagem ao selecionar "Não Realizada" no modal — sempre exibir:**
+```tsx
+{status === "nao_realizada" && (
+  <div style={{
+    background: `${BRAND.amarelo}12`,
+    border: `1px solid ${BRAND.amarelo}35`,
+    color: BRAND.amarelo,
+    borderRadius: 10, padding: "10px 14px",
+    fontSize: 12, marginBottom: 14, fontFamily: FONT.body,
+  }}>
+    Live marcada como Não Realizada — nenhum resultado será registrado.
+  </div>
+)}
+```
+
+**Ícone no estado vazio (nenhuma live pendente):**
+```tsx
+<GiCheckMark size={24} style={{ marginBottom: 8, color: BRAND.verde }} aria-hidden="true" />
+<div style={{ fontSize: 14, fontWeight: 600 }}>Nenhuma live pendente de validação.</div>
+```
+
+---
+
+### Feedback
+
+**`InfluencerDropdown` — usar sempre o componente compartilhado:**
+```tsx
+import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
+
+// Nunca declarar InfluencerDropdown localmente nesta ou em qualquer outra página
+```
+
+**`ModalFeedbackEdit` — usar `useDashboardBrand()` internamente:**
+```tsx
+// O modal nunca recebe brand como prop
+function ModalFeedbackEdit({ live, res, operadorasList, t, isDark, onClose, onSalvo }) {
+  const brand = useDashboardBrand(); // ← interno ao modal
+  // ...
+}
+```
+
+**Carrossel de semanas — índice inicial na semana corrente:**
+```tsx
+const semanasDisponiveis = useMemo(() => getSemanasDisponiveis(), []);
+const hoje = new Date();
+const idxInicial = semanasDisponiveis.findIndex(s => s.start <= hoje && s.end >= hoje);
+const [idxSemana, setIdxSemana] = useState(
+  idxInicial >= 0 ? idxInicial : semanasDisponiveis.length - 1
+);
+```
+
+---
+
+### Influencers
+
+**`StatusBadge` — ARIA completo (ver seção "Dropdowns de Status" acima).**
+
+**`SensitiveField` — `aria-label` dinâmico obrigatório:**
+```tsx
+<button
+  onClick={() => visible ? setVisible(false) : reveal()}
+  aria-label={visible ? `Ocultar ${label ?? "dado sensível"}` : `Revelar ${label ?? "dado sensível"}`}
+  style={{ ... }}
+>
+  {visible ? <EyeOff size={13} /> : <Eye size={13} />}
+</button>
+```
+
+**`CurrencyInput` com `disabled` — cursor explícito:**
+```tsx
+// Quando disabled={true}:
+style={{ ...style, opacity: 0.8, cursor: "not-allowed" }}
+```
+
+**Update optimista de status — rollback obrigatório (ver seção acima).**
+
+**Slider de cachê — inicialização sem CLS:**
+```tsx
+// Nunca inicializar com 0 — o slider some até o load
+const [cacheMax,   setCacheMax]   = useState(5000); // placeholder
+const [cacheLimit, setCacheLimit] = useState(5000);
+
+// Em loadData(), atualizar com os dados reais:
+if (caches.length > 0) {
+  const mx = Math.max(...caches, 5000);
+  setCacheMax(mx); setCacheLimit(mx);
+}
+```
+
+**Helpers — nunca declarar `formatBRL` localmente:**
+```tsx
+// Remover declaração local e importar:
+import { fmtBRL } from "../../../lib/dashboardHelpers";
+// fmtBRL(value) → "R$ 12.450,00"
+```
+
+---
+
+### Scout
+
+**`StatusScoutBadge` — ARIA completo (ver seção "Dropdowns de Status" acima).**
+
+**`PLAT_METRICA` — sempre em PT-BR:**
+```typescript
+const PLAT_METRICA: Record<string, string> = {
+  YouTube:   "Média de Views",
+  Instagram: "Seguidores",
+  Twitch:    "Média de Views",
+  Kick:      "Média de Views",
+  TikTok:    "Média de Views",
+  Discord:   "Seguidores",
+  WhatsApp:  "Seguidores",
+  Telegram:  "Seguidores",
+};
+```
+
+**Grade de cobertura de plataformas — responsiva:**
+```tsx
+// Nunca repeat(8, ...) com minWidth fixo:
+<div style={{
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+  gap: 12,
+  width: "100%",
+}}>
+```
+
+**Fluxo de fechamento de scout — feedback específico para criação de usuário:**
+```tsx
+const [criandoUsuario, setCriandoUsuario] = useState(false);
+
+// No handleSave, ao chamar criarUsuarioFechado():
+setCriandoUsuario(true);
+userId = await criarUsuarioFechado(...);
+setCriandoUsuario(false);
+
+// Botão Salvar:
+<button disabled={saving}>
+  {saving && criandoUsuario
+    ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Criando usuário...</>
+    : saving
+    ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Salvando...</>
+    : "Salvar"
+  }
+</button>
+```
+
+**Validação antes de fechar — `validarParaFechado()` retorna `{ ok, msg }`:**
+```typescript
+// Nunca usar alert() para exibir msg — usar setError() inline
+if (!val.ok) {
+  setError(val.msg ?? "Dados incompletos para marcar como Fechado.");
+  return;
+}
+```
+
+**Erros de vincularOperadora — inline, nunca alert():**
+```tsx
+try {
+  await vincularOperadoraInfluencerViaApi(userId, slug, scoutId);
+} catch (e) {
+  setError(e instanceof Error ? e.message : "Erro ao vincular operadora.");
+}
+```
+
+---
+
+## Modais — Padrão Geral
+
+```tsx
+// Overlay
+<div style={{
+  position: "fixed", inset: 0, background: "#00000088",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  zIndex: 1000, padding: 20,
+}}>
+
+// Container
+<div style={{
+  background: t.cardBg,               // ou brand.blockBg quando adequado
+  border: `1px solid ${t.cardBorder}`,
+  borderRadius: 20,
+  padding: 28,
+  width: "100%", maxWidth: 480,
+  maxHeight: "90vh", overflowY: "auto",
+}}>
+
+// Header — badge de ícone SEMPRE via brand:
+<span style={{
+  width: 28, height: 28, borderRadius: 8,
+  background: brand.primaryIconBg,
+  border: brand.primaryIconBorder,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  color: brand.primaryIconColor,
+}}>
+  {/* ícone GI ou Lucide com aria-hidden="true" */}
+</span>
+
+// Botão fechar — sempre com aria-label:
+<button onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+  <X size={18} />
+</button>
+```
+
+---
+
+## Cores de Status — Referência Rápida
+
+```typescript
+// Status de live
+const STATUS_COLOR = {
+  agendada:      BRAND.azul,     // #1e36f8
+  realizada:     BRAND.verde,    // #22c55e
+  nao_realizada: BRAND.vermelho, // #e84025
+};
+
+// Status de influencer
+const STATUS_COLOR = {
+  ativo:     "#22c55e",
+  inativo:   "#f59e0b",
+  cancelado: "#e84025",
+};
+
+// Status de scout (funil de prospecção)
+const STATUS_SCOUT_COLOR = {
+  visualizado: "#6b7280",
+  contato:     "#1e36f8",
+  negociacao:  "#f59e0b",
+  fechado:     "#22c55e",
+};
+```
+
+---
+
+## O Que Nunca Fazer Nesta Seção
+
+- Nunca declarar `PlatLogo` localmente — importar de `src/components/PlatLogo`
+- Nunca declarar `InfluencerDropdown` localmente — importar de `src/components/InfluencerDropdown`
+- Nunca usar `window.confirm()` — padrão de dois cliques com estado inline
+- Nunca usar `window.alert()` — `setError()` com bloco vermelho inline
+- Nunca usar `▼ ▲ ✕ ✓ ⚠ ℹ 🗑 🕐 ✨ 🔒` como ícones — usar Lucide equivalente
+- Nunca usar `"Average Viewers"`, `"Followers"` ou qualquer string em inglês na UI
+- Nunca usar fundo sólido no bloco de filtros — sempre `primaryTransparentBg/Border`
+- Nunca fazer update optimista sem rollback visual em caso de erro
+- Nunca inicializar slider de range em `0` — usar valor de placeholder para evitar CLS
+- Nunca passar `brand` como prop para modais — usar `useDashboardBrand()` internamente
+- Nunca usar `height` ou `gridAutoRows` com valor fixo em pixels no calendário
+- Nunca usar `<div onClick>` para elementos interativos — usar `<button>` com ARIA
+- Nunca usar `formatBRL` declarada localmente — importar `fmtBRL` de `dashboardHelpers`
+- Nunca usar `repeat(N, ...)` com `N` fixo em grids que devem ser responsivos — usar `auto-fit`
+- Nunca usar mensagens vazias genéricas em inglês ou `"Nenhum dado encontrado."` — para período, **"Sem dados para o período selecionado."**; para listas, mensagem contextual em PT-BR (ver Estados de Interface)

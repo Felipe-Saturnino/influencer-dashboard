@@ -392,24 +392,37 @@ export default function Scout() {
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 10, paddingLeft: 2 }}>
-              Cobertura de Plataformas
+            <div style={{ marginBottom: 10, paddingLeft: 2 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body }}>
+                Cobertura de Plataformas
+              </div>
+              <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4 }}>
+                Clique em uma plataforma para filtrar a lista; clique de novo para ver todos.
+              </div>
             </div>
             <div className="app-table-wrap">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, width: "100%" }}>
               {PLATS_ORDEM.map((plat) => {
                 const count = porPlat[plat] ?? 0;
                 const cor = PLAT_COLOR[plat as Plataforma];
+                const filtroAtivo = filterPlat === plat;
                 return (
-                  <div
+                  <button
                     key={plat}
+                    type="button"
+                    onClick={() => setFilterPlat(filtroAtivo ? "todas" : plat)}
+                    aria-pressed={filtroAtivo}
+                    aria-label={filtroAtivo ? `Remover filtro ${plat}` : `Filtrar por ${plat}`}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
                       padding: "12px 16px", borderRadius: 18,
                       background: brand.blockBg,
-                      border: `1.5px solid ${cor}55`,
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      border: filtroAtivo ? `2px solid ${cor}` : `1.5px solid ${cor}55`,
+                      boxShadow: filtroAtivo ? `0 0 0 2px ${cor}33` : "0 2px 8px rgba(0,0,0,0.08)",
                       minWidth: 0,
+                      cursor: "pointer",
+                      font: "inherit",
+                      textAlign: "center",
                     }}
                   >
                     <PlatLogo plataforma={plat} size={14} isDark={isDark ?? false} />
@@ -420,7 +433,7 @@ export default function Scout() {
                     <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0 }}>
                       {count}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -437,14 +450,14 @@ export default function Scout() {
           background: brand.primaryTransparentBg,
           padding: "12px 20px",
         }}>
-          {/* Linha 1: Status / Plataforma */}
+          {/* Linha 1: Status (filtro de plataforma: chips em Cobertura de Plataformas) */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
             {STATUS_SCOUT_OPTS.map((s) => {
               const active = filterStatus === s;
               const color = STATUS_SCOUT_COLOR[s];
               return (
-                <button key={s} onClick={() => setFilterStatus(active ? "todos" : s)}
+                <button key={s} type="button" onClick={() => setFilterStatus(active ? "todos" : s)}
                   style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "5px 12px", borderRadius: 999, cursor: "pointer",
@@ -456,29 +469,6 @@ export default function Scout() {
                 >
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
                   {STATUS_SCOUT_LABEL[s]}
-                  {active && <X size={9} aria-hidden="true" />}
-                </button>
-              );
-            })}
-            <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
-            <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
-            {PLATAFORMAS.map((plat) => {
-              const active = filterPlat === plat;
-              const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
-              return (
-                <button key={plat} onClick={() => setFilterPlat(active ? "todas" : plat)}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                    border: `1px solid ${active ? color : color + "55"}`,
-                    background: active ? `${color}22` : `${color}11`,
-                    color: active ? color : color + "cc",
-                    fontSize: 12, fontWeight: active ? 700 : 500,
-                    fontFamily: FONT.body, transition: "all 0.15s",
-                  }}
-                >
-                  <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                  {plat}
                   {active && <X size={9} aria-hidden="true" />}
                 </button>
               );

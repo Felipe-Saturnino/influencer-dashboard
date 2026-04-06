@@ -289,9 +289,9 @@ export default function Resultados() {
 
     async function handleSave() {
       setError("");
+      if (!operadoraSlug?.trim())
+        return setError("Selecione a operadora. É obrigatório para salvar a validação (realizada ou não realizada).");
       if (showResultFields) {
-        if (!operadoraSlug?.trim())
-          return setError("Selecione a operadora. É obrigatório para o Financeiro.");
         if (duracaoHoras === 0 && duracaoMin === 0)
           return setError("Informe a duração da live.");
         if (maxViews < mediaViews)
@@ -299,8 +299,11 @@ export default function Resultados() {
       }
 
       setSaving(true);
-      const liveUpdate: Record<string, unknown> = { status, observacao: observacao || null };
-      if (operadoraSlug?.trim()) (liveUpdate as Record<string, string>).operadora_slug = operadoraSlug.trim();
+      const liveUpdate: Record<string, unknown> = {
+        status,
+        observacao: observacao || null,
+        operadora_slug: operadoraSlug.trim(),
+      };
       if (showResultFields && horarioReal) (liveUpdate as Record<string, string>).horario = horarioReal;
 
       const { error: updateError } = await supabase.from("lives").update(liveUpdate).eq("id", live.id);
@@ -404,8 +407,8 @@ export default function Resultados() {
             </div>
           )}
 
-          {/* Operadora — obrigatória para realizada (Financeiro) */}
-          {showResultFields && operadorasList.length > 0 && (
+          {/* Operadora — obrigatória para qualquer status ao validar */}
+          {operadorasList.length > 0 && (
             <div style={row}>
               <label style={labelStyle}>Operadora <span style={{ color: BRAND.vermelho }}>*</span></label>
               <select
@@ -420,7 +423,7 @@ export default function Resultados() {
                   .map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
               </select>
               <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
-                Obrigatório para o Financeiro considerar a live no cálculo de pagamentos.
+                Obrigatório para salvar. Em lives realizadas, o Financeiro usa a operadora no cálculo de pagamentos.
               </span>
             </div>
           )}
