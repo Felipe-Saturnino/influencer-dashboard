@@ -7,6 +7,27 @@ import type { Theme } from "../../../constants/theme";
 import { BRAND, FONT_TITLE, ROLES, roleBadgeColor, GESTOR_TIPOS } from "./constants";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
 
+const POST_GESTAO_USUARIO_MS = 120_000;
+
+async function postGestaoUsuario(
+  url: string,
+  accessToken: string,
+  jsonBody: object
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), POST_GESTAO_USUARIO_MS);
+  try {
+    return await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(jsonBody),
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 interface ModalUsuarioProps {
   t: Theme;
   editando: UsuarioCompleto | null;
@@ -136,10 +157,10 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       const scopeGestorTiposArr = role === "gestor" ? (Array.isArray(scopeGestorTipos) ? scopeGestorTipos : []) : [];
 
       if (editando) {
-        const res = await fetch("/api/atualizar-perfil", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
-          body: JSON.stringify({
+        const res = await postGestaoUsuario(
+          "/api/atualizar-perfil",
+          session?.access_token ?? "",
+          {
             userId: uid,
             name: nome.trim(),
             role,
@@ -147,17 +168,17 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             scopeOperadoras: scopeOperadorasArr,
             scopePares: scopeParesParaApi,
             scopeGestorTipos: scopeGestorTiposArr,
-          }),
-        });
+          }
+        );
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
         if ((fnData as { error?: string })?.error) throw new Error((fnData as { error: string }).error);
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
-        const res = await fetch("/api/criar-usuario", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
-          body: JSON.stringify({
+        const res = await postGestaoUsuario(
+          "/api/criar-usuario",
+          session?.access_token ?? "",
+          {
             email: email.trim().toLowerCase(),
             nome: nome.trim(),
             role,
@@ -166,8 +187,8 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             scopePares: scopeParesParaApi,
             scopeGestorTipos: role === "gestor" ? scopeGestorTiposArr : [],
             loginUrl,
-          }),
-        });
+          }
+        );
         const fnData = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
         if ((fnData as { error?: string })?.error) throw new Error((fnData as { error: string }).error);
@@ -177,7 +198,16 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       onSalvo();
       onClose();
     } catch (e: unknown) {
-      setErro(e instanceof Error ? e.message : "Erro ao salvar.");
+      const abort =
+        (typeof DOMException !== "undefined" && e instanceof DOMException && e.name === "AbortError") ||
+        (e instanceof Error && e.name === "AbortError");
+      if (abort) {
+        setErro(
+          "Tempo esgotado ao falar com o servidor. Confira a conexão e se a função criar-usuario está publicada no Supabase."
+        );
+      } else {
+        setErro(e instanceof Error ? e.message : "Erro ao salvar.");
+      }
     } finally {
       setSalvando(false);
     }

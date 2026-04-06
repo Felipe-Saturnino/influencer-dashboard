@@ -10,6 +10,10 @@ verify_jwt = false
 verify_jwt = false
 # Verificação de admin é feita manualmente dentro da função
 
+[functions.admin-usuario-acao]
+verify_jwt = false
+# Desativar/ativar usuário e reset de senha (service_role); admin verificado na função
+
 [functions.criar-usuario-scout]
 verify_jwt = false
 # Cria influencer a partir do Scout; usa service_role internamente

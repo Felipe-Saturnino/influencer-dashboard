@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Search, AlertCircle } from "lucide-react";
+import { X, Search, AlertCircle, KeyRound } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
@@ -75,6 +75,13 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
   const [filtroStatusSet, setFiltroStatusSet] = useState<Set<"ativo" | "desativado">>(new Set());
   const [filtroPerfilSet, setFiltroPerfilSet] = useState<Set<Role>>(new Set());
   const [modalDesativar, setModalDesativar] = useState<UsuarioCompleto | null>(null);
+  const [modalResetSenha, setModalResetSenha] = useState<UsuarioCompleto | null>(null);
+  const [feedbackAcao, setFeedbackAcao] = useState<{ tipo: "erro" | "ok"; msg: string } | null>(null);
+  /** `${userId}:${action}` enquanto a Edge Function processa */
+  const [acaoEmAndamento, setAcaoEmAndamento] = useState<string | null>(null);
+
+  const isCardBusy = (uid: string) => acaoEmAndamento?.startsWith(`${uid}:`) ?? false;
+  const isEstaAcao = (uid: string, action: string) => acaoEmAndamento === `${uid}:${action}`;
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -94,6 +101,48 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
     setOperadoras(ops ?? []);
     setLoading(false);
   }, []);
+
+  const executarAcaoAdmin = useCallback(
+    async (u: UsuarioCompleto, action: "desativar" | "ativar" | "reset_senha") => {
+      setFeedbackAcao(null);
+      setAcaoEmAndamento(`${u.id}:${action}`);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const res = await fetch("/api/admin-usuario-acao", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token ?? ""}`,
+          },
+          body: JSON.stringify({ userId: u.id, action }),
+        });
+        const fnData = await res.json().catch(() => ({}));
+        if (!res.ok || (fnData as { error?: string })?.error) {
+          throw new Error((fnData as { error?: string })?.error ?? `Erro ${res.status}`);
+        }
+        setModalDesativar(null);
+        setModalResetSenha(null);
+        const okMsg =
+          action === "reset_senha"
+            ? "Senha redefinida para a padrão. No próximo login o usuário deverá definir uma nova senha."
+            : action === "desativar"
+              ? "Usuário desativado. O acesso à plataforma foi bloqueado."
+              : "Usuário ativado novamente.";
+        setFeedbackAcao({ tipo: "ok", msg: okMsg });
+        await carregar();
+      } catch (e) {
+        setFeedbackAcao({
+          tipo: "erro",
+          msg: e instanceof Error ? e.message : "Não foi possível concluir a operação.",
+        });
+      } finally {
+        setAcaoEmAndamento(null);
+      }
+    },
+    [carregar]
+  );
 
   useEffect(() => {
     carregar();
@@ -145,15 +194,6 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
       else next.add(role);
       return next;
     });
-  };
-
-  const desativarOuReativar = async (u: UsuarioCompleto) => {
-    const novoAtivo = u.ativo === false;
-    const { error } = await supabase.from("profiles").update({ ativo: novoAtivo }).eq("id", u.id);
-    if (!error) {
-      setModalDesativar(null);
-      carregar();
-    }
   };
 
   return (
@@ -334,6 +374,23 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
         </div>
       </div>
 
+      {feedbackAcao && (
+        <div
+          role="alert"
+          style={{
+            padding: "12px 16px",
+            borderRadius: 10,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            border: `1px solid ${feedbackAcao.tipo === "ok" ? BRAND.verde : BRAND.vermelho}`,
+            background: feedbackAcao.tipo === "ok" ? `${BRAND.verde}18` : `${BRAND.vermelho}14`,
+            color: feedbackAcao.tipo === "ok" ? BRAND.verde : BRAND.vermelho,
+          }}
+        >
+          {feedbackAcao.msg}
+        </div>
+      )}
+
       {loading ? (
         <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
       ) : usuariosListaFinal.length === 0 ? (
@@ -441,15 +498,18 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
                   <span style={{ fontWeight: 600, color: t.textMuted }}>Último login:</span>{" "}
                   <span style={{ color: t.text }}>{formatarUltimoLogin(u.last_sign_in_at)}</span>
                 </div>
-                <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+                <div style={{ display: "flex", gap: 8, marginTop: "auto", flexWrap: "wrap" }}>
                   <button
+                    type="button"
+                    disabled={isCardBusy(u.id)}
                     onClick={() => abrirEditar(u)}
                     style={{
                       background: `${BRAND.roxoVivo}12`,
                       border: `1px solid ${BRAND.roxoVivo}44`,
                       borderRadius: 8,
                       padding: "6px 14px",
-                      cursor: "pointer",
+                      cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
+                      opacity: isCardBusy(u.id) ? 0.55 : 1,
                       fontFamily: FONT.body,
                       fontSize: 12,
                       color: BRAND.roxoVivo,
@@ -457,6 +517,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
                       transition: "all 0.15s",
                     }}
                     onMouseEnter={(e) => {
+                      if (isCardBusy(u.id)) return;
                       e.currentTarget.style.background = `${BRAND.roxoVivo}22`;
                       e.currentTarget.style.borderColor = BRAND.roxoVivo;
                     }}
@@ -467,41 +528,75 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
                   >
                     Editar
                   </button>
+                  <button
+                    type="button"
+                    disabled={isCardBusy(u.id)}
+                    onClick={() => setModalResetSenha(u)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: `${BRAND.amarelo}18`,
+                      border: `1px solid ${BRAND.amarelo}`,
+                      borderRadius: 8,
+                      padding: "6px 14px",
+                      cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
+                      opacity: isCardBusy(u.id) ? 0.55 : 1,
+                      fontFamily: FONT.body,
+                      fontSize: 12,
+                      color: BRAND.amarelo,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <KeyRound size={14} aria-hidden />
+                    {isEstaAcao(u.id, "reset_senha") ? "…" : "Reset senha"}
+                  </button>
                   {ativo ? (
                     <button
+                      type="button"
+                      disabled={isCardBusy(u.id)}
                       onClick={() => setModalDesativar(u)}
                       style={{
                         background: "none",
                         border: `1px solid ${BRAND.vermelho}`,
                         borderRadius: 8,
                         padding: "6px 14px",
-                        cursor: "pointer",
+                        cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
+                        opacity: isCardBusy(u.id) ? 0.55 : 1,
                         fontFamily: FONT.body,
                         fontSize: 12,
                         color: BRAND.vermelho,
                         transition: "background 0.15s",
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = `${BRAND.vermelho}18`; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                      onMouseEnter={(e) => {
+                        if (isCardBusy(u.id)) return;
+                        e.currentTarget.style.background = `${BRAND.vermelho}18`;
+                      }}
+                      onMouseLeave={(e) => {
+                         e.currentTarget.style.background = "none";
+                      }}
                     >
-                      Desativar
+                      {isEstaAcao(u.id, "desativar") ? "…" : "Desativar"}
                     </button>
                   ) : (
                     <button
-                      onClick={() => desativarOuReativar(u)}
+                      type="button"
+                      disabled={isCardBusy(u.id)}
+                      onClick={() => executarAcaoAdmin(u, "ativar")}
                       style={{
                         background: `${BRAND.verde}22`,
                         border: `1px solid ${BRAND.verde}`,
                         borderRadius: 8,
                         padding: "6px 14px",
-                        cursor: "pointer",
+                        cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
+                        opacity: isCardBusy(u.id) ? 0.55 : 1,
                         fontFamily: FONT.body,
                         fontSize: 12,
                         color: BRAND.verde,
                         fontWeight: 600,
                       }}
                     >
-                      Reativar
+                      {isEstaAcao(u.id, "ativar") ? "…" : "ATIVAR"}
                     </button>
                   )}
                 </div>
@@ -522,7 +617,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
             justifyContent: "center",
             zIndex: 1000,
           }}
-          onClick={() => setModalDesativar(null)}
+          onClick={() => !acaoEmAndamento && setModalDesativar(null)}
         >
           <div
             style={{
@@ -537,6 +632,8 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <button
+              type="button"
+              disabled={!!acaoEmAndamento}
               onClick={() => setModalDesativar(null)}
               style={{
                 position: "absolute",
@@ -544,7 +641,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
                 right: 14,
                 background: "none",
                 border: "none",
-                cursor: "pointer",
+                cursor: acaoEmAndamento ? "not-allowed" : "pointer",
                 color: t.textMuted,
                 display: "flex",
                 padding: 4,
@@ -576,6 +673,8 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
+                type="button"
+                disabled={!!acaoEmAndamento}
                 onClick={() => setModalDesativar(null)}
                 style={{
                   padding: "8px 18px",
@@ -584,14 +683,16 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
                   background: "transparent",
                   color: t.text,
                   fontSize: 13,
-                  cursor: "pointer",
+                  cursor: acaoEmAndamento ? "not-allowed" : "pointer",
                   fontFamily: FONT.body,
                 }}
               >
                 Cancelar
               </button>
               <button
-                onClick={() => desativarOuReativar(modalDesativar)}
+                type="button"
+                disabled={!!acaoEmAndamento}
+                onClick={() => modalDesativar && executarAcaoAdmin(modalDesativar, "desativar")}
                 style={{
                   padding: "8px 18px",
                   borderRadius: 8,
@@ -600,11 +701,120 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
                   color: "#fff",
                   fontSize: 13,
                   fontWeight: 600,
-                  cursor: "pointer",
+                  cursor: acaoEmAndamento ? "not-allowed" : "pointer",
+                  opacity: acaoEmAndamento ? 0.7 : 1,
                   fontFamily: FONT.body,
                 }}
               >
-                Desativar
+                {modalDesativar && isEstaAcao(modalDesativar.id, "desativar") ? "…" : "Desativar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalResetSenha && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => !acaoEmAndamento && setModalResetSenha(null)}
+        >
+          <div
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: 20,
+              padding: "28px 32px",
+              maxWidth: 420,
+              width: "90%",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              disabled={!!acaoEmAndamento}
+              onClick={() => setModalResetSenha(null)}
+              style={{
+                position: "absolute",
+                top: 14,
+                right: 14,
+                background: "none",
+                border: "none",
+                cursor: acaoEmAndamento ? "not-allowed" : "pointer",
+                color: t.textMuted,
+                display: "flex",
+                padding: 4,
+              }}
+            >
+              <X size={18} />
+            </button>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+                background: `${BRAND.amarelo}18`,
+                border: `1px solid ${BRAND.amarelo}48`,
+                borderRadius: 10,
+                padding: "12px 14px",
+                marginBottom: 20,
+              }}
+            >
+              <KeyRound size={16} color={BRAND.amarelo} style={{ flexShrink: 0, marginTop: 1 }} aria-hidden />
+              <div>
+                <div style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>
+                  Redefinir senha
+                </div>
+                <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: 0, lineHeight: 1.45 }}>
+                  A senha de <strong>{modalResetSenha.name}</strong> voltará à <strong>senha padrão</strong> (mesma do
+                  cadastro de novos usuários). No próximo login será obrigatório definir uma nova senha.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                disabled={!!acaoEmAndamento}
+                onClick={() => setModalResetSenha(null)}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: 8,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: "transparent",
+                  color: t.text,
+                  fontSize: 13,
+                  cursor: acaoEmAndamento ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!!acaoEmAndamento}
+                onClick={() => modalResetSenha && executarAcaoAdmin(modalResetSenha, "reset_senha")}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: BRAND.amarelo,
+                  color: "#1a1a1a",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: acaoEmAndamento ? "not-allowed" : "pointer",
+                  opacity: acaoEmAndamento ? 0.85 : 1,
+                  fontFamily: FONT.body,
+                }}
+              >
+                {modalResetSenha && isEstaAcao(modalResetSenha.id, "reset_senha") ? "…" : "Confirmar reset"}
               </button>
             </div>
           </div>

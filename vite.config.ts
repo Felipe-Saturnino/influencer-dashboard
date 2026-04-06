@@ -55,6 +55,17 @@ export default defineConfig(({ mode }) => {
             });
           },
         },
+        "/api/admin-usuario-acao": {
+          target: supabaseUrl || "https://dzyuqibobeujzedomlsc.supabase.co",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, "/functions/v1"),
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq, _req) => {
+              const key = env.VITE_SUPABASE_ANON_KEY;
+              if (key) proxyReq.setHeader("Apikey", key);
+            });
+          },
+        },
       },
     },
   };
