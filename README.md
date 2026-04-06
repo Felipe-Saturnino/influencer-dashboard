@@ -68,8 +68,8 @@ src/
 │   ├── dashboards/
 │   ├── conteudo/
 │   ├── geral/
-│   ├── lives/
-│   ├── operacoes/
+│   ├── lives/      # Agenda, Resultados, Feedback, Influencers, Scout (alinha ao menu “Lives”)
+│   ├── operacoes/  # Dealers, notificações, financeiro operacional, banca, campanhas, links
 │   └── plataforma/
 ├── constants/      # Tema, menu, authScreen, platforms
 ├── styles/         # global.css, responsive.css

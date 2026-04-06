@@ -1622,20 +1622,6 @@ export default function MesasSpin() {
         </div>
       </div>
 
-      <p
-        style={{
-          fontSize: 10,
-          color: t.textMuted,
-          fontFamily: FONT.body,
-          marginBottom: 12,
-          marginTop: 0,
-          maxWidth: 720,
-          lineHeight: 1.45,
-        }}
-      >
-        A coluna Total replica o Detalhamento Diário (resumo oficial por dia ou mês). As colunas por jogo somam apenas mesas Blackjack 1, 2, VIP, Roleta e Speed Baccarat em por mesa; o UAP por jogo vem de outra fonte — só o total de UAP aqui iguala o detalhamento.
-      </p>
-
       {modoVisualizacao === "tabela" ? (
         <div className="app-table-wrap" style={{ borderRadius: 14, overflow: "hidden" }}>
           <div style={{ overflowX: "auto" }}>

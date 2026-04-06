@@ -708,7 +708,7 @@ function DealerCard({
 
 // ─── Modal Ver ────────────────────────────────────────────────────────────────
 function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras: Operadora[]; onClose: () => void }) {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
   const fotoUrl = (dealer.fotos ?? [])[0];
 

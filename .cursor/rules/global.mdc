@@ -34,8 +34,8 @@ src/
 │   ├── dashboards/
 │   ├── conteudo/
 │   ├── geral/
-│   ├── lives/
-│   ├── operacoes/
+│   ├── lives/          # Agenda, Resultados, Feedback, Influencers, Scout
+│   ├── operacoes/      # Demais itens do menu Operações
 │   └── plataforma/
 ├── styles/
 │   ├── global.css      # Reset, temas dark/light, breakpoints, animações, --brand-*

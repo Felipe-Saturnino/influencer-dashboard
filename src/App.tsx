@@ -44,8 +44,8 @@ const SocialMediaDashboard      = lazyWithRetry(() => import("./pages/dashboards
 const Agenda     = lazyWithRetry(() => import("./pages/lives/Agenda"));
 const Resultados = lazyWithRetry(() => import("./pages/lives/Resultados"));
 const Feedback   = lazyWithRetry(() => import("./pages/lives/Feedback"));
-const Influencers = lazyWithRetry(() => import("./pages/operacoes/Influencers"));
-const Scout = lazyWithRetry(() => import("./pages/operacoes/Scout"));
+const Influencers = lazyWithRetry(() => import("./pages/lives/Influencers"));
+const Scout = lazyWithRetry(() => import("./pages/lives/Scout"));
 const Financeiro  = lazyWithRetry(() => import("./pages/operacoes/Financeiro"));
 const BancaJogo   = lazyWithRetry(() => import("./pages/operacoes/BancaJogo"));
 const GestaoLinks = lazyWithRetry(() => import("./pages/operacoes/GestaoLinks"));
