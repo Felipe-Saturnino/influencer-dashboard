@@ -1,14 +1,19 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
+import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { GiShield } from "react-icons/gi";
+import { PageHeader } from "../../../components/PageHeader";
+import { BlocoLabel } from "../../../components/BlocoLabel";
+import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { GiChipsBag, GiShield } from "react-icons/gi";
+import { useMediaQuery } from "../../../hooks/useMediaQuery";
 
 type BancaStatus = "solicitado" | "aprovado" | "liberado";
 type BancaStatusConta = "liberada" | "bloqueada";
@@ -40,6 +45,18 @@ const STATUS_BANCA: Record<BancaStatus, { label: string; color: string }> = {
 
 function fmtMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function mascaraCPF(cpf: string): string {
+  const d = (cpf ?? "").replace(/\D/g, "");
+  if (d.length < 11) return "—";
+  return "***.***.***-**";
+}
+
+function formatarCPFVisivel(cpf: string): string {
+  const d = (cpf ?? "").replace(/\D/g, "");
+  if (d.length !== 11) return (cpf ?? "").trim() || "—";
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
 function gerarMeses(): { value: string; label: string }[] {
@@ -106,53 +123,6 @@ function Avatar({ name, size = 28 }: { name: string; size?: number }) {
       color: "#fff", fontWeight: 800, fontSize: size * 0.4,
     }}>
       {letra}
-    </div>
-  );
-}
-
-function BlocoLabel({ label }: { label: string }) {
-  const brand = useDashboardBrand();
-  return (
-    <span style={{
-      fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px",
-      textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body,
-    }}>
-      {label}
-    </span>
-  );
-}
-
-function ModalBase({ children, maxWidth = 440, onClose: _onClose, zIndex = 1000 }: {
-  children: React.ReactNode; maxWidth?: number; onClose: () => void;
-  zIndex?: number;
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "#00000090",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      zIndex, padding: "20px",
-    }}
-    >
-      <div style={{
-        background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
-        borderRadius: "20px", padding: "28px",
-        width: "100%", maxWidth, maxHeight: "90vh", overflowY: "auto",
-      }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
-  const { theme: t } = useApp();
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-      <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>{title}</h2>
-      <button type="button" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }} aria-label="Fechar">✕</button>
     </div>
   );
 }
@@ -622,8 +592,9 @@ function BlocoSolicitacoes({
   influencerListAgencia: { id: string; name: string }[];
   nomeUsuario: string;
 }) {
-  const { theme: t, user } = useApp();
+  const { theme: t, user, isDark } = useApp();
   const brand = useDashboardBrand();
+  const narrowMobile = useMediaQuery("(max-width: 479px)");
   const {
     podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp,
     mesFiltro, historico, statusFiltro,
@@ -636,6 +607,17 @@ function BlocoSolicitacoes({
   const [modalLiberar, setModalLiberar] = useState<BancaRowDb | null>(null);
   const [liberando, setLiberando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [confirmExcluir, setConfirmExcluir] = useState<BancaRowDb | null>(null);
+  const [cpfRevelados, setCpfRevelados] = useState<Set<string>>(() => new Set());
+
+  const toggleCpfRevelado = useCallback((id: string) => {
+    setCpfRevelados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const onBloqueioGate = useCallback((tipo: "perfil" | "playbook") => {
     setBloqueioSolicitacao(tipo);
@@ -693,10 +675,10 @@ function BlocoSolicitacoes({
 
   async function excluirSolicitacao(r: BancaRowDb) {
     if (!podeExcluirLinha(r)) return;
-    if (!window.confirm("Excluir esta solicitação permanentemente?")) return;
     setExcluindoId(r.id);
     const { error } = await supabase.from("banca_jogo_solicitacoes").delete().eq("id", r.id);
     setExcluindoId(null);
+    setConfirmExcluir(null);
     if (!error) onRecarregar();
   }
 
@@ -715,7 +697,7 @@ function BlocoSolicitacoes({
   return (
     <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
-        <BlocoLabel label="📋 Solicitações" />
+        <BlocoLabel label="Solicitações" />
         {podeSolicitar ? (
           <button
             type="button"
@@ -735,15 +717,24 @@ function BlocoSolicitacoes({
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              {["Influencer", "ID operadora", "CPF", "Valor", "Status", "Data", "Ação"].map((h) => (
-                <th key={h} style={th}>{h}</th>
+              {(["Influencer", "ID operadora", "CPF", "Valor", "Status", "Data", "Ação"] as const).map((h) => (
+                <th
+                  key={h}
+                  scope="col"
+                  style={{
+                    ...th,
+                    ...(narrowMobile && h === "Data" ? { display: "none" } : {}),
+                  }}
+                >
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {lista.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 36 }}>
+                <td colSpan={narrowMobile ? 6 : 7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 36 }}>
                   Nenhuma solicitação em aberto neste filtro.
                 </td>
               </tr>
@@ -756,18 +747,62 @@ function BlocoSolicitacoes({
                 const showLiberar = staffPodeAcao && r.status === "aprovado";
                 const showExcluir = podeExcluirLinha(r);
                 const semAcao = !showAprovar && !showLiberar && !showExcluir;
+                const cpfDigits = (perf?.cpf ?? "").replace(/\D/g, "");
+                const cpfMascaravel = cpfDigits.length >= 11;
+                const cpfVisivel = cpfRevelados.has(r.id);
+                const rowHover = {
+                  borderBottom: `1px solid ${t.cardBorder}` as const,
+                  onMouseEnter: (e: MouseEvent<HTMLTableRowElement>) => {
+                    e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)";
+                  },
+                  onMouseLeave: (e: MouseEvent<HTMLTableRowElement>) => {
+                    e.currentTarget.style.background = "transparent";
+                  },
+                };
                 return (
-                  <tr key={r.id} style={{ borderBottom: `1px solid ${t.cardBorder}` }}>
+                  <tr key={r.id} {...rowHover}>
                     <td style={td}>{perf?.nome ?? r.influencer_id}</td>
                     <td style={{ ...td, fontFamily: "monospace", fontSize: 12 }}>{(r.id_operadora_exibicao ?? "").trim() || "—"}</td>
-                    <td style={{ ...td, fontFamily: "monospace", fontSize: 12 }}>{(perf?.cpf ?? "").trim() || "—"}</td>
+                    <td style={{ ...td, fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span>
+                          {cpfMascaravel
+                            ? cpfVisivel
+                              ? formatarCPFVisivel(perf?.cpf ?? "")
+                              : mascaraCPF(perf?.cpf ?? "")
+                            : mascaraCPF(perf?.cpf ?? "")}
+                        </span>
+                        {cpfMascaravel ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleCpfRevelado(r.id)}
+                            aria-label={cpfVisivel ? "Ocultar CPF" : "Mostrar CPF"}
+                            aria-pressed={cpfVisivel}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: 4,
+                              borderRadius: 6,
+                              border: `1px solid ${t.cardBorder}`,
+                              background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                              color: t.textMuted,
+                              cursor: "pointer",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {cpfVisivel ? <EyeOff size={15} strokeWidth={2} aria-hidden /> : <Eye size={15} strokeWidth={2} aria-hidden />}
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
                     <td style={{ ...td, fontWeight: 700 }}>{fmtMoeda(Number(r.valor))}</td>
                     <td style={td}>
                       <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: `${st.color}22`, color: st.color, border: `1px solid ${st.color}44` }}>
                         {st.label}
                       </span>
                     </td>
-                    <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>{dataStr}</td>
+                    <td style={{ ...td, color: t.textMuted, fontSize: 12, ...(narrowMobile ? { display: "none" } : {}) }}>{dataStr}</td>
                     <td style={td}>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
                         {showAprovar ? (
@@ -780,11 +815,15 @@ function BlocoSolicitacoes({
                             Liberar
                           </button>
                         ) : null}
+                        {(showAprovar || showLiberar) && showExcluir ? (
+                          <div style={{ width: 1, height: 20, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
+                        ) : null}
                         {showExcluir ? (
                           <button
                             type="button"
                             disabled={excluindoId === r.id}
-                            onClick={() => void excluirSolicitacao(r)}
+                            aria-disabled={excluindoId === r.id}
+                            onClick={() => setConfirmExcluir(r)}
                             style={{
                               padding: "5px 12px", borderRadius: 8, border: "1px solid #ef444444", background: "#ef444415",
                               color: "#ef4444", fontSize: 11, fontWeight: 700, fontFamily: FONT.body,
@@ -836,6 +875,14 @@ function BlocoSolicitacoes({
           onCancel={() => { if (!liberando) setModalLiberar(null); }}
           onSeguir={() => void executarLiberar(modalLiberar)}
           loading={liberando}
+        />
+      ) : null}
+      {confirmExcluir ? (
+        <ModalConfirmDelete
+          texto={`Excluir a solicitação de ${perfilMap[confirmExcluir.influencer_id]?.nome ?? "influencer"} no valor de ${fmtMoeda(Number(confirmExcluir.valor))}? Esta ação é irreversível.`}
+          onCancel={() => setConfirmExcluir(null)}
+          onConfirm={() => void excluirSolicitacao(confirmExcluir)}
+          loading={excluindoId === confirmExcluir.id}
         />
       ) : null}
     </div>
@@ -921,15 +968,29 @@ function ModalAlterarStatusConta({
       <p style={{ margin: "0 0 18px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.55 }}>
         Garanta que a conta esteja Bloqueada enquanto a ação continua ativa para evitar saques por parte do Influencer do dinheiro destinado a ação.
       </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontFamily: FONT.body, fontSize: 14, color: t.text }}>
-          <input type="radio" name="stconta" checked={paraLiberada} onChange={() => setParaLiberada(true)} />
-          Liberada
-        </label>
-        <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontFamily: FONT.body, fontSize: 14, color: t.text }}>
-          <input type="radio" name="stconta" checked={!paraLiberada} onChange={() => setParaLiberada(false)} />
-          Bloqueada
-        </label>
+      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+        {(["liberada", "bloqueada"] as BancaStatusConta[]).map((opt) => (
+          <button
+            key={opt}
+            type="button"
+            aria-pressed={paraLiberada === (opt === "liberada")}
+            onClick={() => setParaLiberada(opt === "liberada")}
+            style={{
+              flex: 1,
+              padding: "10px 16px",
+              borderRadius: 10,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              fontSize: 13,
+              cursor: "pointer",
+              border: `1px solid ${paraLiberada === (opt === "liberada") ? (opt === "liberada" ? "#10b981" : "#ef4444") : t.cardBorder}`,
+              background: paraLiberada === (opt === "liberada") ? (opt === "liberada" ? "#10b98122" : "#ef444422") : "transparent",
+              color: paraLiberada === (opt === "liberada") ? (opt === "liberada" ? "#10b981" : "#ef4444") : t.textMuted,
+            }}
+          >
+            {opt === "liberada" ? "Liberada" : "Bloqueada"}
+          </button>
+        ))}
       </div>
       {err ? <div style={{ color: "#ef4444", fontSize: 12, marginTop: 12, fontFamily: FONT.body }}>{err}</div> : null}
       <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
@@ -974,7 +1035,7 @@ function BlocoConsolidadoBanca({
   podeEditarStatusConta: boolean;
   onPerfisAtualizados: () => void;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const brand = useDashboardBrand();
   const {
     podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp,
@@ -1064,11 +1125,11 @@ function BlocoConsolidadoBanca({
   return (
     <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
-        <BlocoLabel label="🎰 Consolidado de bancas" />
+        <BlocoLabel label="Consolidado de bancas" />
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="🔍 Buscar por nome ou e-mail..."
+          placeholder="Buscar por nome ou e-mail..."
           style={{
             flex: 1, minWidth: 280, maxWidth: 420,
             padding: "8px 14px", borderRadius: 10,
@@ -1083,9 +1144,9 @@ function BlocoConsolidadoBanca({
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th style={{ ...th, width: 32 }} />
+              <th style={{ ...th, width: 32 }} scope="col" aria-label="Expandir" />
               {["Influencer", "Total liberado", "Total solicitado", "Data de bloqueio", "Data de desbloqueio", "Status da conta"].map((h) => (
-                <th key={h} style={th}>{h}</th>
+                <th key={h} scope="col" style={th}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -1093,7 +1154,7 @@ function BlocoConsolidadoBanca({
             {filtradaBusca.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40 }}>
-                  Nenhum dado para os filtros atuais.
+                  {MSG_SEM_DADOS_FILTRO}
                 </td>
               </tr>
             ) : (
@@ -1105,10 +1166,29 @@ function BlocoConsolidadoBanca({
                   <Fragment key={row.influencer_id}>
                     <tr
                       style={{ borderBottom: `1px solid ${t.cardBorder}`, cursor: "pointer" }}
+                      tabIndex={0}
+                      role="row"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
                       onClick={() => setExpandido(open ? null : row.influencer_id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setExpandido(open ? null : row.influencer_id);
+                        }
+                      }}
                     >
                       <td style={td}>
-                        <span style={{ fontSize: 10, color: t.textMuted, display: "inline-block", transform: open ? "rotate(90deg)" : "rotate(0)", transition: "transform 0.2s" }}>▶</span>
+                        <ChevronRight
+                          size={14}
+                          color={t.textMuted}
+                          style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}
+                          aria-hidden
+                        />
                       </td>
                       <td style={td}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1142,7 +1222,7 @@ function BlocoConsolidadoBanca({
                       </td>
                     </tr>
                     {open ? (
-                      <tr style={{ background: t.isDark ? "rgba(74,48,130,0.06)" : "rgba(74,48,130,0.03)" }}>
+                      <tr style={{ background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}>
                         <td colSpan={7} style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
                           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: t.textMuted, marginBottom: 10, fontFamily: FONT.body }}>
                             Bancas solicitadas — {row.nome}
@@ -1154,13 +1234,22 @@ function BlocoConsolidadoBanca({
                               <thead>
                                 <tr>
                                   {["Data", "Operadora", "ID operadora", "Valor", "Status"].map((h) => (
-                                    <th key={h} style={{ ...th, background: "transparent", fontSize: 10, padding: "6px 10px" }}>{h}</th>
+                                    <th key={h} scope="col" style={{ ...th, background: "transparent", fontSize: 10, padding: "6px 10px" }}>{h}</th>
                                   ))}
                                 </tr>
                               </thead>
                               <tbody>
                                 {itens.map((h) => (
-                                  <tr key={h.id} style={{ borderBottom: `1px solid ${t.divider}` }}>
+                                  <tr
+                                    key={h.id}
+                                    style={{ borderBottom: `1px solid ${t.divider}` }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = "transparent";
+                                    }}
+                                  >
                                     <td style={{ ...td, fontSize: 12, padding: "8px 10px" }}>
                                       {new Date(h.solicitado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                                     </td>
@@ -1389,10 +1478,11 @@ export default function BancaJogo() {
 
   return (
     <div className="app-page-shell">
-      <h1 style={{ fontFamily: FONT.title, fontSize: 26, fontWeight: 900, marginBottom: 6, color: brand.primary }}>🎰 Banca de Jogo</h1>
-      <p style={{ fontSize: 13, color: t.textMuted, marginBottom: 14, fontFamily: FONT.body }}>
-        Solicitações de pagamento de banca por influencer e operadora.
-      </p>
+      <PageHeader
+        icon={<GiChipsBag size={14} aria-hidden />}
+        title="Banca de Jogo"
+        subtitle="Solicitações de pagamento de banca por influencer e operadora."
+      />
 
       <div style={{ marginBottom: 20 }}>
         <div style={{

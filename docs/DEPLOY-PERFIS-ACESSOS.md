@@ -56,7 +56,7 @@ Siga esta ordem para fazer o deploy das alterações de perfis e acessos.
 | `src/pages/lives/Resultados/index.tsx` | Idem |
 | `src/pages/lives/Feedback/index.tsx` | Idem |
 | `src/pages/operacoes/Financeiro/index.tsx` | Usa `podeVerOperadora` em filtros e modal |
-| `src/pages/operacoes/Influencers/index.tsx` | Usa `podeVerOperadora` para operadoras no escopo |
+| `src/pages/lives/Influencers/index.tsx` | Usa `podeVerOperadora` para operadoras no escopo |
 | `docs/PLANO-IDEAIS-PERFIS-E-ACESSOS.md` | Plano aprovado |
 | `docs/DEPLOY-PERFIS-ACESSOS.md` | Este guia |
 

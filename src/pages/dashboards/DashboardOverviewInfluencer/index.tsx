@@ -8,7 +8,7 @@ import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
-import { BRAND } from "../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
@@ -16,12 +16,16 @@ import {
   fmtDia,
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
+  isCarrosselMesCivilAtual,
 } from "../../../lib/dashboardHelpers";
 import {
   SectionTitle,
   KpiCard,
   FunilVisual,
+  SelectComIcone,
+  RateCard,
 } from "../../../components/dashboard";
+import { getThStyle, getTdStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
   GiPodiumWinner, GiFunnel, GiSpeedometer, GiCalendar,
@@ -32,6 +36,17 @@ import {
 
 const GiStarMedalFilter = GiStarMedal;
 const fmtHoras = fmtHorasTotal;
+
+const MESES_CURTOS_TAB = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+/** `YYYY-MM` → Jan/2026 (igual Mesas Spin / Detalhamento mensal). */
+function fmtMesAnoCurtoInfluencer(ym: string): string {
+  const [ys, ms] = ym.split("-");
+  const mo = Number(ms);
+  const y = Number(ys);
+  if (!ys || !Number.isFinite(mo) || mo < 1 || mo > 12) return ym;
+  return `${MESES_CURTOS_TAB[mo - 1]}/${y}`;
+}
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Metrica {
@@ -84,77 +99,6 @@ interface DiaData {
   withdrawal_total: number; ggr: number;
 }
 
-// ─── SELECT COM ÍCONE INTERNO ─────────────────────────────────────────────────
-// Replica exatamente o padrão do botão "Histórico": ícone à esquerda + texto
-function SelectComIcone({
-  icon, value, onChange, children, t,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  onChange: (v: string) => void;
-  children: React.ReactNode;
-  t: any;
-}) {
-  return (
-    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-      <span style={{
-        position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-        pointerEvents: "none", display: "flex", alignItems: "center",
-        color: t.textMuted, zIndex: 1,
-      }}>
-        {icon}
-      </span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          padding: "6px 28px 6px 30px",
-          borderRadius: 999,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.inputBg ?? t.cardBg,
-          color: t.text,
-          fontSize: 13,
-          fontFamily: FONT.body,
-          cursor: "pointer",
-          outline: "none",
-          appearance: "none" as const,
-        }}
-      >
-        {children}
-      </select>
-      <span style={{
-        position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-        pointerEvents: "none", color: t.textMuted, fontSize: 10, lineHeight: 1,
-      }}>▾</span>
-    </div>
-  );
-}
-
-// ─── RATE CARD (específico do OverviewInfluencer) ──────────────────────────────
-function RateCard({ label, value, highlight }: {
-  label: string; value: string; highlight?: boolean | "purple";
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  const highlightColor = highlight
-    ? (brand.useBrand ? "var(--brand-accent)" : (highlight === "purple" ? BRAND.roxoVivo : BRAND.azul))
-    : null;
-
-  const border = highlightColor
-    ? (brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-accent) 28%, transparent)" : `1px solid ${highlightColor}44`)
-    : `1px solid ${t.cardBorder}`;
-  const bg = highlightColor
-    ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${highlightColor}12`)
-    : "transparent";
-
-  return (
-    <div style={{ padding: "10px 14px", borderRadius: 10, border, background: bg }}>
-      <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.08em", fontWeight: 700 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: highlightColor ?? t.text, margin: "5px 0 0", fontFamily: FONT.body }}>{value}</div>
-    </div>
-  );
-}
-
 function cel(v: number, isBRL = false) {
   if (v === 0 || (typeof v === "number" && isNaN(v))) return "—";
   return isBRL ? fmtBRL(v) : v.toLocaleString("pt-BR");
@@ -183,6 +127,7 @@ export default function DashboardOverviewInfluencer() {
   const [diasData, setDiasData] = useState<DiaData[]>([]);
   const [perfis, setPerfis] = useState<InfluencerPerfil[]>([]);
   const [influencersComDadosIds, setInfluencersComDadosIds] = useState<string[]>([]);
+  const [filtroResetado, setFiltroResetado] = useState(false);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -198,6 +143,9 @@ export default function DashboardOverviewInfluencer() {
   useEffect(() => {
     if (filtroInfluencer !== "todos" && influencersComDadosIds.length > 0 && !influencersComDadosIds.includes(filtroInfluencer)) {
       setFiltroInfluencer("todos");
+      setFiltroResetado(true);
+      const id = window.setTimeout(() => setFiltroResetado(false), 4000);
+      return () => window.clearTimeout(id);
     }
   }, [filtroInfluencer, influencersComDadosIds]);
 
@@ -370,8 +318,72 @@ export default function DashboardOverviewInfluencer() {
         setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
       }
 
-      // Bloco 5: Comparativo Diário (só quando período = mês)
-      if (!historico && mesSelecionado) {
+      // Bloco 5: Comparativo Mensal (histórico) ou Comparativo Diário (mês no carrossel)
+      if (historico) {
+        const ymSet = new Set<string>();
+        rows.forEach((m) => ymSet.add(m.data.slice(0, 7)));
+        liveRows.forEach((l) => ymSet.add(l.data.slice(0, 7)));
+        const byYm: Record<string, DiaData> = {};
+        for (const ym of ymSet) {
+          byYm[ym] = {
+            data: `${ym}-01`,
+            duracao: 0,
+            media_views: 0,
+            max_views: 0,
+            acessos: 0,
+            registros: 0,
+            ftd_count: 0,
+            ftd_total: 0,
+            deposit_count: 0,
+            deposit_total: 0,
+            withdrawal_count: 0,
+            withdrawal_total: 0,
+            ggr: 0,
+          };
+        }
+        rows.forEach((m) => {
+          const ym = m.data.slice(0, 7);
+          if (!byYm[ym]) return;
+          byYm[ym].acessos += m.visit_count || 0;
+          byYm[ym].registros += m.registration_count || 0;
+          byYm[ym].ftd_count += m.ftd_count || 0;
+          byYm[ym].ftd_total += m.ftd_total || 0;
+          byYm[ym].deposit_count += m.deposit_count || 0;
+          byYm[ym].deposit_total += m.deposit_total || 0;
+          byYm[ym].withdrawal_count += m.withdrawal_count || 0;
+          byYm[ym].withdrawal_total += m.withdrawal_total || 0;
+          byYm[ym].ggr += m.ggr || 0;
+        });
+        const viewsPorMes: Record<string, number[]> = {};
+        liveRows.forEach((live) => {
+          const ym = live.data.slice(0, 7);
+          const res = resultados.find((r) => r.live_id === live.id);
+          if (!res || !byYm[ym]) return;
+          const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
+          byYm[ym].duracao += h;
+          const media = Number(res.media_views) || 0;
+          const pico =
+            res.max_views != null && Number(res.max_views) > 0
+              ? Number(res.max_views)
+              : media > 0
+                ? media
+                : 0;
+          if (media > 0) {
+            if (!viewsPorMes[ym]) viewsPorMes[ym] = [];
+            viewsPorMes[ym].push(media);
+          }
+          if (pico > 0) {
+            byYm[ym].max_views = Math.max(byYm[ym].max_views, pico);
+          }
+        });
+        Object.keys(viewsPorMes).forEach((ym) => {
+          if (byYm[ym]) {
+            const arr = viewsPorMes[ym];
+            byYm[ym].media_views = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+          }
+        });
+        setDiasData(Object.values(byYm).sort((a, b) => a.data.localeCompare(b.data)));
+      } else if (mesSelecionado) {
         const dias: Record<string, DiaData> = {};
         for (let d = new Date(mesSelecionado.ano, mesSelecionado.mes, 1); d <= new Date(mesSelecionado.ano, mesSelecionado.mes + 1, 0); d.setDate(d.getDate() + 1)) {
           const ds = fmt(d);
@@ -395,11 +407,19 @@ export default function DashboardOverviewInfluencer() {
           if (!res || !dias[live.data]) return;
           const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
           dias[live.data].duracao += h;
-          const views = res.media_views || res.max_views || 0;
-          if (views > 0) {
+          const media = Number(res.media_views) || 0;
+          const pico =
+            res.max_views != null && Number(res.max_views) > 0
+              ? Number(res.max_views)
+              : media > 0
+                ? media
+                : 0;
+          if (media > 0) {
             if (!viewsPorDia[live.data]) viewsPorDia[live.data] = [];
-            viewsPorDia[live.data].push(views);
-            dias[live.data].max_views = Math.max(dias[live.data].max_views, views);
+            viewsPorDia[live.data].push(media);
+          }
+          if (pico > 0) {
+            dias[live.data].max_views = Math.max(dias[live.data].max_views, pico);
           }
         });
         Object.keys(viewsPorDia).forEach((ds) => {
@@ -417,6 +437,17 @@ export default function DashboardOverviewInfluencer() {
     }
     carregar();
   }, [historico, idxMes, filtroInfluencer, filtroOperadora, podeVerInfluencer, influencersVisiveis, escoposVisiveis.operadorasVisiveis, mesSelecionado]);
+
+  /** Mês civil atual: só exibe dias até ontem (MTD “fechado”); meses passados = mês inteiro. */
+  const diasDataComparativoExibicao = useMemo(() => {
+    if (historico || !mesSelecionado) return diasData;
+    if (!isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)) return diasData;
+    const ontem = new Date();
+    ontem.setHours(0, 0, 0, 0);
+    ontem.setDate(ontem.getDate() - 1);
+    const limite = `${ontem.getFullYear()}-${String(ontem.getMonth() + 1).padStart(2, "0")}-${String(ontem.getDate()).padStart(2, "0")}`;
+    return diasData.filter((d) => d.data <= limite);
+  }, [diasData, historico, mesSelecionado]);
 
   const pctViewAcesso = totais.views > 0 ? ((totais.acessos / totais.views) * 100).toFixed(1) + "%" : "—";
   const pctAcessoReg = totais.acessos > 0 ? ((totais.registros / totais.acessos) * 100).toFixed(1) + "%" : "—";
@@ -437,15 +468,12 @@ export default function DashboardOverviewInfluencer() {
   const brand = useDashboardBrand();
   const card: React.CSSProperties = { background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
-  const thStyle: React.CSSProperties = {
-    textAlign: "left", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase",
-    color: t.textMuted, padding: "10px 12px",
-    background: "rgba(74,32,130,0.10)",
-    borderBottom: `1px solid ${t.cardBorder}`, fontFamily: FONT.body, whiteSpace: "nowrap", fontWeight: 700,
-  };
-  const zebraStripe = (i: number) => i % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent";
-  const totalRowBg = "rgba(74,32,130,0.12)";
-  const tdStyle: React.CSSProperties = { padding: "10px 12px", fontSize: 13, color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap", borderBottom: `1px solid ${t.cardBorder}` };
+  const thStyle = getThStyle(t, {
+    fontSize: 11,
+    letterSpacing: "0.08em",
+    fontWeight: 700,
+  });
+  const tdStyle = getTdStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -468,18 +496,21 @@ export default function DashboardOverviewInfluencer() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
             {/* Navegação de mês */}
-            <button style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-              <ChevronLeft size={14} />
+            <button type="button" aria-label="Mês anterior" style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
+              <ChevronLeft size={14} aria-hidden />
             </button>
             <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
-            <button style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
-              <ChevronRight size={14} />
+            <button type="button" aria-label="Próximo mês" style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
+              <ChevronRight size={14} aria-hidden />
             </button>
 
             {/* Botão Histórico — padrão Overview */}
             <button
+              type="button"
+              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
+              aria-pressed={historico}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
@@ -499,9 +530,10 @@ export default function DashboardOverviewInfluencer() {
             {showFiltroInfluencer && (
               <SelectComIcone
                 icon={<GiStarMedalFilter size={15} />}
+                label="Filtrar por influencer"
+                pill
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
-                t={t}
               >
                 <option value="todos">Todos os influencers</option>
                 {perfis
@@ -516,10 +548,11 @@ export default function DashboardOverviewInfluencer() {
             {/* Filtro Operadora — ícone dentro do campo */}
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<GiShield size={15} />}
+                icon={<GiShield size={15} aria-hidden />}
+                label="Filtrar por operadora"
+                pill
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
-                t={t}
               >
                 <option value="todas">Todas as operadoras</option>
                 {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
@@ -530,16 +563,42 @@ export default function DashboardOverviewInfluencer() {
 
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} /> Carregando...
+                <Clock size={12} aria-hidden /> Carregando...
               </span>
             )}
           </div>
         </div>
       </div>
 
+      {filtroResetado && (
+        <div
+          style={{
+            margin: "0 0 14px",
+            padding: "10px 16px",
+            borderRadius: 10,
+            background: "rgba(245,158,11,0.10)",
+            border: "1px solid rgba(245,158,11,0.35)",
+            color: BRAND.amarelo,
+            fontSize: 12,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+          role="status"
+        >
+          Filtro de influencer removido — {MSG_SEM_DADOS_FILTRO}.
+        </div>
+      )}
+
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPodiumWinner size={14} />} sub={!historico ? "· MTD vs mês anterior" : undefined}>KPIs Executivos</SectionTitle>
+        <SectionTitle
+          icon={<GiPodiumWinner size={14} aria-hidden />}
+          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+        >
+          KPIs Executivos
+        </SectionTitle>
         <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
           <KpiCard label="GGR Total" value={fmtBRL(totais.ggr)} icon={<GiMoneyStack size={16} />} accentVar="--brand-extra1" accentColor={BRAND.roxo} atual={totais.ggr} anterior={totaisAnt.ggr} isBRL isHistorico={historico} />
           <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.azul} atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
@@ -560,14 +619,23 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 3: Funil de Conversão ───────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiFunnel size={14} />}>Funil de Conversão</SectionTitle>
+        <SectionTitle icon={<GiFunnel size={14} />} sub={historico ? "acumulado" : undefined}>
+          Funil de Conversão
+        </SectionTitle>
         <FunilVisual values={[totais.views, totais.acessos, totais.registros, totais.ftds]} taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]} />
       </div>
 
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiSpeedometer size={14} />}>Eficiência</SectionTitle>
-        <div className="app-grid-kpi-5">
+        <SectionTitle icon={<GiSpeedometer size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          Eficiência
+        </SectionTitle>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gap: 12,
+        }}
+        >
           <RateCard label="FTD/Hora" value={ftdPorHora} />
           <RateCard label="Ticket Médio FTD" value={ticketFTD} />
           <RateCard label="Ticket Médio Depósito" value={ticketDep} />
@@ -576,25 +644,53 @@ export default function DashboardOverviewInfluencer() {
         </div>
       </div>
 
-      {/* ─── BLOCO 5: Comparativo Diário ──────────────────────────────────────── */}
-      {!historico && mesSelecionado && diasData.length > 0 && (
+      {/* ─── BLOCO 5: Comparativo Mensal (histórico) / Comparativo Diário (mês) ─ */}
+      {(historico || mesSelecionado) && diasData.length > 0 && (
         <div style={{ ...card, padding: 0, overflow: "hidden", marginBottom: 0 }}>
           <div style={{ padding: "20px 20px 16px" }}>
-            <SectionTitle icon={<GiCalendar size={14} />}>Comparativo Diário</SectionTitle>
+            <SectionTitle
+              icon={<GiCalendar size={14} aria-hidden />}
+              sub={historico ? "mês a mês" : undefined}
+            >
+              {historico ? "Comparativo Mensal" : "Comparativo Diário"}
+            </SectionTitle>
           </div>
           <div className="app-table-wrap">
             <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
+              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                {historico
+                  ? "Comparativo mensal — todo o período"
+                  : `Comparativo diário — ${mesSelecionado?.label ?? ""}`}
+              </caption>
               <thead>
                 <tr>
-                  {["Data","Duração Live","Média Views","Máx Views","Acessos","Registros","# FTDs","R$ FTDs","# Depósitos","R$ Depósitos","# Saques","R$ Saques","R$ GGR"].map((h) => (
-                    <th key={h} style={thStyle}>{h}</th>
+                  {[
+                    historico ? "Mês" : "Data",
+                    "Duração Live",
+                    "Média Views",
+                    "Máx Views",
+                    "Acessos",
+                    "Registros",
+                    "# FTDs",
+                    "R$ FTDs",
+                    "# Depósitos",
+                    "R$ Depósitos",
+                    "# Saques",
+                    "R$ Saques",
+                    "R$ GGR",
+                  ].map((h) => (
+                    <th key={h} scope="col" style={thStyle}>
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {diasData.map((d, i) => (
+                {diasDataComparativoExibicao.map((d, i) => (
                   <tr key={d.data} style={{ background: zebraStripe(i) }}>
-                    <td style={tdStyle}>{fmtDia(d.data)}</td>
+                    <td style={tdStyle}>
+                      {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
+                    </td>
                     <td style={tdStyle}>{d.duracao > 0 ? fmtHoras(d.duracao) : "—"}</td>
                     <td style={tdStyle}>{cel(d.media_views)}</td>
                     <td style={tdStyle}>{cel(d.max_views)}</td>
@@ -606,11 +702,20 @@ export default function DashboardOverviewInfluencer() {
                     <td style={tdStyle}>{cel(d.deposit_total, true)}</td>
                     <td style={tdStyle}>{cel(d.withdrawal_count)}</td>
                     <td style={tdStyle}>{cel(d.withdrawal_total, true)}</td>
-                    <td style={tdStyle}>{cel(d.ggr, true)}</td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        color: d.ggr > 0 ? BRAND.verde : d.ggr < 0 ? BRAND.vermelho : t.text,
+                        fontWeight: d.ggr !== 0 ? 600 : undefined,
+                      }}
+                    >
+                      {cel(d.ggr, true)}
+                    </td>
                   </tr>
                 ))}
-                {diasData.length > 0 && (() => {
-                  const tot = diasData.reduce((acc, d) => ({
+                {diasData.length > 0 &&
+                  (() => {
+                  const tot = diasDataComparativoExibicao.reduce((acc, d) => ({
                     duracao: acc.duracao + d.duracao,
                     acessos: acc.acessos + d.acessos,
                     registros: acc.registros + d.registros,
@@ -623,8 +728,8 @@ export default function DashboardOverviewInfluencer() {
                     ggr: acc.ggr + d.ggr,
                   }), { duracao: 0, acessos: 0, registros: 0, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
                   return (
-                    <tr key="total" style={{ background: totalRowBg, fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
-                      <td style={tdStyle}>Total</td>
+                    <tr key="total" style={{ background: TOTAL_ROW_BG, fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
+                      <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>Total</td>
                       <td style={tdStyle}>{tot.duracao > 0 ? fmtHoras(tot.duracao) : "—"}</td>
                       <td style={tdStyle}>—</td>
                       <td style={tdStyle}>—</td>
@@ -636,7 +741,15 @@ export default function DashboardOverviewInfluencer() {
                       <td style={tdStyle}>{cel(tot.deposit_total, true)}</td>
                       <td style={tdStyle}>{cel(tot.withdrawal_count)}</td>
                       <td style={tdStyle}>{cel(tot.withdrawal_total, true)}</td>
-                      <td style={tdStyle}>{cel(tot.ggr, true)}</td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          color: tot.ggr > 0 ? BRAND.verde : tot.ggr < 0 ? BRAND.vermelho : t.text,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {cel(tot.ggr, true)}
+                      </td>
                     </tr>
                   );
                 })()}

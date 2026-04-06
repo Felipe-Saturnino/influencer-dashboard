@@ -5,13 +5,14 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
-import { FONT, DARK_THEME } from "../../../constants/theme";
+import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fmt, getMesesDisponiveis, getDatasDoMes, fmtDia } from "../../../lib/dashboardHelpers";
 import type { RoteiroCampanha } from "../../conteudo/RoteiroMesa";
 import type { DealerGenero, DealerJogo, DealerTurno, Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
+import { PageHeader } from "../../../components/PageHeader";
 
 const GENERO_LABEL: Record<DealerGenero, string> = {
   feminino: "Feminino",
@@ -94,6 +95,53 @@ function normalizaObsRow(raw: {
   const d = raw.dealers;
   const embed = Array.isArray(d) ? d[0] ?? null : d;
   return { id: raw.id, dealer_id: raw.dealer_id, texto: raw.texto, created_at: raw.created_at, dealers: embed };
+}
+
+function ObservacaoTextoClamp({ texto }: { texto: string }) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const [expandido, setExpandido] = useState(false);
+  const longo = texto.length > 300;
+  return (
+    <div>
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 10,
+          background: "rgba(74,32,130,0.08)",
+          border: `1px solid ${t.cardBorder}`,
+          fontSize: 13,
+          color: t.text,
+          lineHeight: 1.45,
+          whiteSpace: "pre-wrap",
+          overflow: expandido ? "visible" : "hidden",
+          display: expandido ? "block" : "-webkit-box",
+          WebkitLineClamp: expandido ? undefined : 4,
+          WebkitBoxOrient: "vertical",
+        }}
+      >
+        {texto}
+      </div>
+      {longo ? (
+        <button
+          type="button"
+          onClick={() => setExpandido((e) => !e)}
+          style={{
+            marginTop: 6,
+            fontSize: 11,
+            color: brand.accent,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontFamily: FONT.body,
+            padding: 0,
+          }}
+        >
+          {expandido ? "Ver menos" : "Ver mais"}
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 export default function CentralNotificacoes() {
@@ -216,7 +264,6 @@ export default function CentralNotificacoes() {
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
-  const tagDark = t.bg === DARK_THEME.bg;
 
   const selectStyle: React.CSSProperties = {
     padding: "6px 12px 6px 32px",
@@ -269,10 +316,7 @@ export default function CentralNotificacoes() {
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, paddingBottom: 32 }}>
-      <div style={{ marginBottom: 18, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <GiRingingBell size={28} color={brand.accent} aria-hidden />
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Central de Notificações</h1>
-      </div>
+      <PageHeader icon={<GiRingingBell size={14} aria-hidden />} title="Central de Notificações" />
 
       {/* Bloco 1: filtros (mesmo padrão do Overview) */}
       <div style={{ marginBottom: 18 }}>
@@ -381,10 +425,12 @@ export default function CentralNotificacoes() {
                   c.created_at != null
                     ? new Date(c.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
                     : null;
+                const hoje = new Date().toISOString().split("T")[0];
+                const vigente = !!(c.data_inicio && c.data_fim && hoje >= c.data_inicio && hoje <= c.data_fim);
                 return (
-                  <article key={c.id} style={cardShell}>
+                  <article key={c.id} style={cardShell} aria-label={`Campanha: ${c.titulo}`}>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                      <OperadoraTag label={op?.nome ?? c.operadora_slug} corPrimaria={op?.cor_primaria} dark={tagDark} />
+                      <OperadoraTag label={op?.nome ?? c.operadora_slug} corPrimaria={op?.cor_primaria} />
                       <span
                         style={{
                           display: "inline-flex",
@@ -404,9 +450,32 @@ export default function CentralNotificacoes() {
                       </span>
                     </div>
                     <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: t.text }}>{c.titulo}</h3>
-                    <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
-                      <strong style={{ color: t.text }}>Início:</strong> {c.data_inicio ? fmtDia(c.data_inicio) : "—"} ·{" "}
-                      <strong style={{ color: t.text }}>Fim:</strong> {c.data_fim ? fmtDia(c.data_fim) : "—"}
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: vigente ? "#10b981" : t.textMuted,
+                          fontFamily: FONT.body,
+                        }}
+                      >
+                        {fmtDia(c.data_inicio ?? "")} → {fmtDia(c.data_fim ?? "")}
+                      </span>
+                      {vigente ? (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: 20,
+                            background: "#10b98122",
+                            color: "#10b981",
+                            border: "1px solid #10b98144",
+                          }}
+                        >
+                          VIGENTE
+                        </span>
+                      ) : null}
                     </div>
                     <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{c.texto}</p>
                     {dataCadastro ? (
@@ -436,16 +505,35 @@ export default function CentralNotificacoes() {
               const d = o.dealers;
               const op = d?.operadora_slug ? operadoraBySlug[d.operadora_slug] : undefined;
               return (
-                <article key={o.id} style={cardShell}>
+                <article
+                  key={o.id}
+                  style={cardShell}
+                  aria-label={`Observação de dealer: ${d?.nickname ?? "Dealer inativo"}`}
+                >
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                     {d?.operadora_slug ? (
-                      <OperadoraTag label={op?.nome ?? d.operadora_slug} corPrimaria={op?.cor_primaria} dark={tagDark} />
+                      <OperadoraTag label={op?.nome ?? d.operadora_slug} corPrimaria={op?.cor_primaria} />
                     ) : (
-                      <OperadoraTag label="Sem operadora" corPrimaria={null} dark={tagDark} />
+                      <OperadoraTag label="Sem operadora" corPrimaria={null} />
                     )}
                   </div>
                   {!d ? (
-                    <p style={{ margin: 0, fontSize: 13, color: t.textMuted }}>Dealer removido ou indisponível.</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: 20,
+                          background: `${t.textMuted}22`,
+                          color: t.textMuted,
+                          border: `1px solid ${t.textMuted}44`,
+                        }}
+                      >
+                        DEALER INATIVO
+                      </span>
+                      ID: {o.dealer_id}
+                    </div>
                   ) : (
                     <>
                       <div style={{ fontSize: 13, color: t.text, marginBottom: 6 }}>
@@ -466,20 +554,7 @@ export default function CentralNotificacoes() {
                           <dd style={{ display: "inline", margin: 0 }}>{labelJogosDealer(d.jogos)}</dd>
                         </div>
                       </dl>
-                      <div
-                        style={{
-                          padding: 12,
-                          borderRadius: 10,
-                          background: "rgba(74,32,130,0.08)",
-                          border: `1px solid ${t.cardBorder}`,
-                          fontSize: 13,
-                          color: t.text,
-                          lineHeight: 1.45,
-                          whiteSpace: "pre-wrap",
-                        }}
-                      >
-                        {o.texto}
-                      </div>
+                      <ObservacaoTextoClamp texto={o.texto} />
                     </>
                   )}
                   <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted }}>

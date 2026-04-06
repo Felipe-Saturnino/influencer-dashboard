@@ -2,32 +2,44 @@ import { useState, useRef, useEffect } from "react";
 import { Settings, HelpCircle, LogOut, Menu } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { MENU } from "../constants/menu";
-import { BASE_COLORS, FONT } from "../constants/theme";
+import { FONT } from "../constants/theme";
 
 interface Props {
   activePage: string;
   onNavigate: (page: string) => void;
-  onLogout:   () => void;
-  /** Menu hamburger (layout estreito) */
+  onLogout: () => void;
   showMenuButton?: boolean;
   onMenuClick?: () => void;
 }
 
-function getSectionForPage(pageKey: string): string | null {
+/** Páginas fora do MENU lateral (acesso pelo dropdown). */
+const HEADER_EXTRA_LABELS: Record<string, string> = {
+  configuracoes: "CONFIGURAÇÕES",
+  ajuda: "AJUDA",
+};
+
+function getHeaderLabel(pageKey: string): string | null {
   if (pageKey === "home") return "Bem-vindo";
+  const extra = HEADER_EXTRA_LABELS[pageKey];
+  if (extra) return extra;
   for (const sec of MENU) {
-    if (sec.items.some(i => i.key === pageKey)) return sec.section.toUpperCase();
+    const item = sec.items.find((i) => i.key === pageKey);
+    if (item) return item.label.toUpperCase();
   }
   return null;
 }
 
-const BRAND_VERMELHO = "#e84025";
+const SEMANTIC_RED = "#e84025";
+
+const AVATAR_GRADIENT =
+  "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-primary, #7c3aed))";
 
 export default function Header({ activePage, onNavigate, onLogout, showMenuButton = false, onMenuClick }: Props) {
   const { theme: t, user, operadoraBrand } = useApp();
-  const [open,  setOpen]  = useState(false);
-  const [hover, setHover]  = useState(false);
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -37,45 +49,79 @@ export default function Header({ activePage, onNavigate, onLogout, showMenuButto
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      const root = menuRef.current;
+      if (!root) return;
+      const items = [...root.querySelectorAll('[role="menuitem"]')] as HTMLButtonElement[];
+      if (items.length === 0) return;
+      const cur = items.indexOf(document.activeElement as HTMLButtonElement);
+      let next = cur;
+      if (e.key === "ArrowDown") next = cur < 0 ? 0 : (cur + 1) % items.length;
+      else next = cur <= 0 ? items.length - 1 : cur - 1;
+      items[next]?.focus();
+      e.preventDefault();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => {
+      const first = menuRef.current?.querySelector('[role="menuitem"]') as HTMLButtonElement | null;
+      first?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [open]);
+
   if (!user) return null;
 
-  const section = getSectionForPage(activePage);
+  const headerLabel = getHeaderLabel(activePage);
+  const initial = user.name?.[0]?.toUpperCase() ?? "?";
 
   const dropdownItem: React.CSSProperties = {
-    display:    "flex",
+    display: "flex",
     alignItems: "center",
-    gap:        "10px",
-    width:      "100%",
-    padding:    "11px 16px",
-    border:     "none",
+    gap: "10px",
+    width: "100%",
+    padding: "11px 16px",
+    border: "none",
     background: "transparent",
-    cursor:     "pointer",
-    fontSize:   "13px",
+    cursor: "pointer",
+    fontSize: "13px",
     fontWeight: 500,
-    color:      t.text,
+    color: t.text,
     fontFamily: FONT.body,
-    textAlign:  "left",
+    textAlign: "left",
     transition: "background 0.12s",
   };
 
-  const headerBg = user?.role === "operador" && operadoraBrand?.cor_background && t.isDark
-    ? operadoraBrand.cor_background
-    : t.headerBg;
+  const headerBg =
+    user?.role === "operador" && operadoraBrand?.cor_background && t.isDark ? operadoraBrand.cor_background : t.headerBg;
+
+  const triggerHot = open || hover;
 
   return (
     <header
       className="app-header-responsive"
       style={{
-      background:    headerBg,
-      borderBottom:  `1px solid ${t.headerBorder}`,
-      padding:       "0 32px",
-      height:        "60px",
-      display:       "flex",
-      alignItems:    "center",
-      justifyContent:"space-between",
-      flexShrink:    0,
-      gap:           12,
-    }}
+        background: headerBg,
+        borderBottom: `1px solid ${t.headerBorder}`,
+        padding: "0 32px",
+        height: "60px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexShrink: 0,
+        gap: 12,
+      }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
         {showMenuButton && onMenuClick && (
@@ -103,123 +149,150 @@ export default function Header({ activePage, onNavigate, onLogout, showMenuButto
         )}
         <span
           style={{
-            color:          t.headerText,
-            fontWeight:     800,
-            fontSize:       "15px",
-            letterSpacing:  "1px",
-            textTransform:  "uppercase",
-            fontFamily:     FONT.title,
-            overflow:       "hidden",
-            textOverflow:   "ellipsis",
-            whiteSpace:     "nowrap",
+            color: t.headerText,
+            fontWeight: 800,
+            fontSize: "15px",
+            letterSpacing: "1px",
+            textTransform: "uppercase",
+            fontFamily: FONT.title,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
         >
-          {section ?? ""}
+          {headerLabel ?? ""}
         </span>
       </div>
 
-      {/* Avatar + Dropdown */}
       <div ref={ref} style={{ position: "relative" }}>
-        <div
-          onClick={() => setOpen(o => !o)}
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          aria-label="Menu do usuário"
+          title={user.name || undefined}
+          onClick={() => setOpen((o) => !o)}
           onMouseEnter={() => setHover(true)}
           onMouseLeave={() => setHover(false)}
           style={{
-            display:    "flex",
+            display: "flex",
             alignItems: "center",
-            gap:        "10px",
-            cursor:     "pointer",
-            padding:    "6px 10px",
+            gap: "10px",
+            cursor: "pointer",
+            padding: "6px 10px",
             borderRadius: "12px",
-            background: open || hover ? `${BASE_COLORS.purple}14` : "transparent",
-            transition: "background 0.15s",
-            boxShadow:  open || hover ? `0 0 0 1px ${BASE_COLORS.purple}22` : "none",
+            border: "none",
+            background: triggerHot
+              ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 8%, transparent)"
+              : "transparent",
+            transition: "background 0.15s, box-shadow 0.15s",
+            boxShadow: triggerHot
+              ? "0 0 0 1px color-mix(in srgb, var(--brand-primary, #7c3aed) 13%, transparent)"
+              : "none",
           }}
         >
           <p
             className="app-header-user-name"
             style={{
-            margin:     0,
-            fontSize:   "13px",
-            fontWeight: 600,
-            color:      t.headerText,
-            fontFamily: FONT.body,
-            maxWidth:   140,
-            overflow:   "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
+              margin: 0,
+              fontSize: "13px",
+              fontWeight: 600,
+              color: t.headerText,
+              fontFamily: FONT.body,
+              maxWidth: 140,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
           >
             {user.name}
           </p>
-          <div style={{
-            width:        "36px",
-            height:       "36px",
-            borderRadius: "50%",
-            background:   `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
-            display:      "flex",
-            alignItems:   "center",
-            justifyContent: "center",
-            color:        "white",
-            fontSize:     "14px",
-            fontWeight:   700,
-          }}>
-            {user.name[0]}
+          <div
+            title={user.name || undefined}
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "50%",
+              background: AVATAR_GRADIENT,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              fontSize: "14px",
+              fontWeight: 700,
+              flexShrink: 0,
+            }}
+          >
+            {initial}
           </div>
-        </div>
+        </button>
 
         {open && (
-          <div style={{
-            position:     "absolute",
-            top:          "calc(100% + 8px)",
-            right:        0,
-            background:   t.cardBg,
-            border:       `1px solid ${t.cardBorder}`,
-            borderRadius: "14px",
-            boxShadow:    "0 8px 32px rgba(0,0,0,0.15)",
-            minWidth:     "190px",
-            zIndex:       200,
-            overflow:     "hidden",
-            padding:      "6px 0",
-          }}>
-
-            {/* Configurações */}
+          <div
+            ref={menuRef}
+            role="menu"
+            style={{
+              position: "absolute",
+              top: "calc(100% + 8px)",
+              right: 0,
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: "14px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+              minWidth: "190px",
+              zIndex: 300,
+              overflow: "hidden",
+              padding: "6px 0",
+            }}
+          >
             <button
-              onClick={() => { onNavigate("configuracoes"); setOpen(false); }}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onNavigate("configuracoes");
+                setOpen(false);
+              }}
               style={dropdownItem}
-              onMouseEnter={e => (e.currentTarget.style.background = t.inputBg ?? t.bg)}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = t.inputBg ?? t.bg)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              <Settings size={14} color={t.textMuted} />
+              <Settings size={14} color={t.textMuted} aria-hidden />
               Configurações
             </button>
 
-            {/* Ajuda */}
             <button
-              onClick={() => { onNavigate("ajuda"); setOpen(false); }}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onNavigate("ajuda");
+                setOpen(false);
+              }}
               style={dropdownItem}
-              onMouseEnter={e => (e.currentTarget.style.background = t.inputBg ?? t.bg)}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = t.inputBg ?? t.bg)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              <HelpCircle size={14} color={t.textMuted} />
+              <HelpCircle size={14} color={t.textMuted} aria-hidden />
               Ajuda
             </button>
 
-            {/* Separador antes de ação destrutiva */}
             <div style={{ height: "1px", background: t.cardBorder, margin: "6px 0" }} />
 
-            {/* Sair */}
             <button
-              onClick={() => { onLogout(); setOpen(false); }}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onLogout();
+                setOpen(false);
+              }}
               style={{
                 ...dropdownItem,
-                color:      BRAND_VERMELHO,
+                color: SEMANTIC_RED,
                 fontWeight: 600,
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = `${BRAND_VERMELHO}12`)}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = `${SEMANTIC_RED}12`)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              <LogOut size={14} color={BRAND_VERMELHO} />
+              <LogOut size={14} color={SEMANTIC_RED} aria-hidden />
               Sair
             </button>
           </div>

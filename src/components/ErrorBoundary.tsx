@@ -1,6 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
-/** Detecta erros de carregamento de chunks (ex.: versão antiga após novo deploy) */
 function isChunkLoadError(error: Error | null): boolean {
   if (!error?.message) return false;
   const msg = error.message.toLowerCase();
@@ -17,7 +17,6 @@ interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onReset?: () => void;
-  /** Fundo do fallback padrão (para combinar com o tema) */
   background?: string;
 }
 
@@ -26,11 +25,15 @@ interface State {
   error: Error | null;
 }
 
-/**
- * Captura erros de carregamento de chunks (lazy) e erros de render.
- * Para ChunkLoadError: recarrega a página automaticamente (nova versão após deploy).
- * Para outros erros: exibe mensagem amigável e botão "Tentar novamente".
- */
+const btnBase: React.CSSProperties = {
+  padding: "10px 24px",
+  borderRadius: 10,
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
 export default class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, error: null };
 
@@ -40,7 +43,6 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary] Erro capturado:", error?.message ?? error, errorInfo);
-    // ChunkLoadError: app foi atualizado e chunks antigos não existem mais. Recarrega para buscar versão nova.
     if (isChunkLoadError(error)) {
       console.warn("[ErrorBoundary] ChunkLoadError detectado — recarregando para aplicar nova versão.");
       window.location.reload();
@@ -60,10 +62,10 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
       const isChunk = isChunkLoadError(this.state.error);
-      // ChunkLoadError: mostra mensagem curta enquanto componentDidCatch dispara reload
       if (isChunk) {
         return (
           <div
+            aria-live="polite"
             style={{
               flex: 1,
               display: "flex",
@@ -76,15 +78,27 @@ export default class ErrorBoundary extends Component<Props, State> {
               fontFamily: "Inter, sans-serif",
               color: "#e5dce1",
               fontSize: 14,
+              gap: 12,
             }}
           >
-            ⏳ Atualizando a página...
+            <Loader2
+              size={18}
+              color="var(--brand-primary, #7c3aed)"
+              strokeWidth={2}
+              aria-hidden
+              style={{ animation: "spin 1s linear infinite" }}
+            />
+            Atualizando...
           </div>
         );
       }
-      // Erro de código: mensagem detalhada + Tentar novamente
+      const borderMix = "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 50%, transparent)";
+      const bgPrimary = "color-mix(in srgb, var(--brand-primary, #7c3aed) 20%, transparent)";
+
       return (
         <div
+          role="alert"
+          aria-live="polite"
           style={{
             flex: 1,
             display: "flex",
@@ -98,7 +112,9 @@ export default class ErrorBoundary extends Component<Props, State> {
           }}
         >
           <div style={{ textAlign: "center", maxWidth: 380 }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+            <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+              <AlertTriangle size={48} color="#e94025" aria-hidden />
+            </div>
             <h3
               style={{
                 margin: "0 0 8px 0",
@@ -121,33 +137,25 @@ export default class ErrorBoundary extends Component<Props, State> {
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
               <button
+                type="button"
                 onClick={this.handleRetry}
                 style={{
-                  padding: "10px 24px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(124, 58, 237, 0.5)",
-                  background: "rgba(124, 58, 237, 0.2)",
+                  ...btnBase,
+                  border: borderMix,
+                  background: bgPrimary,
                   color: "#c4b5d4",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
                 }}
               >
                 Tentar novamente
               </button>
               <button
+                type="button"
                 onClick={this.handleReload}
                 style={{
-                  padding: "10px 24px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(124, 58, 237, 0.5)",
+                  ...btnBase,
+                  border: borderMix,
                   background: "transparent",
                   color: "#c4b5d4",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
                 }}
               >
                 Recarregar página

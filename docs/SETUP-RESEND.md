@@ -1,4 +1,4 @@
-# Configuração do Resend — Acquisition Hub
+# Configuração do Resend — Data Intelligence (Spin Gaming)
 
 Guia para configurar o Resend e os e-mails do sistema.
 
@@ -15,7 +15,7 @@ Guia para configurar o Resend e os e-mails do sistema.
 ## 2. Obter API Key
 
 1. Resend Dashboard → **API Keys** → **Create API Key**
-2. Nome: `Acquisition Hub`
+2. Nome: `Data Intelligence` (ou marca exibida no remetente)
 3. Permissão: **Sending access**
 4. Copie a chave (`re_...`) — exibida apenas uma vez
 
@@ -42,7 +42,7 @@ Sem domínio verificado, use `onboarding@resend.dev` (limitado a testes).
 | Secret | Obrigatório | Descrição |
 |--------|-------------|-----------|
 | `RESEND_API_KEY` | Sim | Chave da API Resend |
-| `RESEND_FROM` | Produção | Ex: `Acquisition Hub <noreply@spingaming.com.br>` |
+| `RESEND_FROM` | Produção | Ex: `Data Intelligence <noreply@spingaming.com.br>` |
 | `RELATORIO_DIRETORIA_DESTINATARIOS` | Sim* | E-mails da diretoria (função `relatorio-diario-diretoria`), separados por vírgula |
 | `EMAIL_AGENDA_DESTINATARIOS` | Sim† | E-mails do time operacional (função `email-agenda-diaria`), separados por vírgula |
 | `EMAIL_AGENDA_FROM` | Não | Remetente só para a agenda; se vazio, usa `RESEND_FROM` |

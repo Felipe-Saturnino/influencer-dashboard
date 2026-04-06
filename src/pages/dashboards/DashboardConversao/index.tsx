@@ -4,7 +4,9 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { SelectComIcone } from "../../../components/dashboard";
+import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
@@ -161,10 +163,25 @@ function FunilSVG({ row, cor, idPrefix }: { row: ConversaoRow; cor: typeof COR_A
     fmtPct(pct(row.ftds, row.registros)),
   ];
 
+  const ariaFunil = `Funil de conversão: ${values[0].toLocaleString("pt-BR")} views, ${values[1].toLocaleString("pt-BR")} acessos, ${values[2].toLocaleString("pt-BR")} registros, ${values[3].toLocaleString("pt-BR")} FTDs`;
+
   return (
-    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-      {/* SVG funil */}
-      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ flexShrink: 0 }}>
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+      <svg
+        role="img"
+        aria-label={ariaFunil}
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        style={{ maxWidth: W, flexShrink: 0, display: "block" }}
+      >
+        <defs>
+          {FUNIL_STEPS_CONFIG.map((_, i) => (
+            <linearGradient key={i} id={`fg-${idPrefix}-${i}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={FUNIL_CORES[i]} stopOpacity="0.88" />
+              <stop offset="100%" stopColor={FUNIL_CORES[i]} stopOpacity="0.58" />
+            </linearGradient>
+          ))}
+        </defs>
         {FUNIL_STEPS_CONFIG.map((step, i) => {
           const wTop = widths[i];
           const wBot = widths[i + 1] ?? widths[i] * 0.72;
@@ -172,16 +189,9 @@ function FunilSVG({ row, cor, idPrefix }: { row: ConversaoRow; cor: typeof COR_A
           const xBot = (W - wBot) / 2;
           const yTop = i * stepH;
           const yBot = yTop + stepH - 2;
-          const col  = FUNIL_CORES[i];
           const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
           return (
             <g key={step.key}>
-              <defs>
-                <linearGradient id={`fg-${idPrefix}-${i}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={col} stopOpacity="0.88" />
-                  <stop offset="100%" stopColor={col} stopOpacity="0.58" />
-                </linearGradient>
-              </defs>
               <path d={path} fill={`url(#fg-${idPrefix}-${i})`} />
               <text x={W / 2} y={yTop + stepH / 2 - 5}
                 textAnchor="middle" fill="#fff"
@@ -264,8 +274,14 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
   const { theme: t } = useApp();
   const [pagResto, setPagResto] = useState<number>(0);
 
+  useEffect(() => {
+    setPagResto(0);
+  }, [ranking]);
+
   if (!ranking.length) {
-    return <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Sem dados no período</div>;
+    return (
+      <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>{MSG_SEM_DADOS_FILTRO}</div>
+    );
   }
 
   const top3  = ranking.slice(0, 3);
@@ -349,9 +365,27 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
             })}
           </div>
           {totalPags > 1 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 8 }}>
+            <>
+              <div style={{
+                textAlign: "center",
+                fontSize: 11,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                marginBottom: 6,
+              }}>
+                {(() => {
+                  const startResto = pagResto * PARES_POR_PAG * 2;
+                  const endResto = Math.min(startResto + PARES_POR_PAG * 2, resto.length);
+                  const startRank = 4 + startResto;
+                  const endRank = 4 + endResto - 1;
+                  return endResto > startResto
+                    ? `${startRank}–${endRank} de ${ranking.length} influencers`
+                    : null;
+                })()}
+              </div>
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 0 }}>
               {Array.from({ length: totalPags }).map((_, i) => (
-                <button key={i} onClick={() => setPagResto(i)} style={{
+                <button type="button" key={i} aria-label={`Página ${i + 1} da lista FTD por hora`} onClick={() => setPagResto(i)} style={{
                   width: 28, height: 28, borderRadius: "50%",
                   border: `1px solid ${pagResto === i ? BRAND.roxoVivo : t.cardBorder}`,
                   background: pagResto === i ? "rgba(124,58,237,0.15)" : "transparent",
@@ -362,6 +396,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
                 </button>
               ))}
             </div>
+            </>
           )}
         </div>
       )}
@@ -536,10 +571,10 @@ export default function DashboardConversao() {
   const rankingFtdHora = rowsFiltradosEscopo.filter((r) => r.ftdPorHora > 0).sort((a, b) => b.ftdPorHora - a.ftdPorHora);
 
   const acoesDisponiveis = [
-    { label: "Divulgar o link",  icon: <GiShare size={11} />,        cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" },
-    { label: "Converter visita", icon: <GiGamepad size={11} />,      cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" },
-    { label: "Ativar cadastro",  icon: <GiArcheryTarget size={11} />, cor: BRAND.azul,   bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  },
-    { label: "Em dia",           icon: <GiCheckMark size={11} />,    cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
+    { label: "Divulgar o link",  icon: <GiShare size={11} aria-hidden />,        cor: BRAND.amarelo, bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.30)" },
+    { label: "Converter visita", icon: <GiGamepad size={11} aria-hidden />,      cor: "#a855f7",     bg: "rgba(168,85,247,0.10)", border: "rgba(168,85,247,0.28)" },
+    { label: "Ativar cadastro",  icon: <GiArcheryTarget size={11} aria-hidden />, cor: BRAND.azul,   bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  },
+    { label: "Em dia",           icon: <GiCheckMark size={11} aria-hidden />,    cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
   ];
   const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
 
@@ -554,28 +589,8 @@ export default function DashboardConversao() {
     boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
-  const thStyle: React.CSSProperties = {
-    textAlign: "left",
-    fontSize: 10,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: t.textMuted,
-    fontWeight: 600,
-    padding: "10px 12px",
-    borderBottom: `1px solid ${t.cardBorder}`,
-    background: "rgba(74,32,130,0.10)",
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: "10px 12px",
-    fontSize: 13,
-    borderBottom: `1px solid rgba(255,255,255,0.04)`,
-    color: t.text,
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-  };
+  const thStyle = getThStyle(t);
+  const tdStyle = getTdStyle(t);
 
   const btnNavStyle: React.CSSProperties = {
     width: 30, height: 30, borderRadius: "50%",
@@ -623,21 +638,21 @@ export default function DashboardConversao() {
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
-            <button style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+            <button type="button" aria-label="Mês anterior" style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
               onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-              <ChevronLeft size={14} />
+              <ChevronLeft size={14} aria-hidden />
             </button>
 
             <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
 
-            <button style={{ ...btnNavStyle, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+            <button type="button" aria-label="Próximo mês" style={{ ...btnNavStyle, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
               onClick={irMesProximo} disabled={historico || isUltimo}>
-              <ChevronRight size={14} />
+              <ChevronRight size={14} aria-hidden />
             </button>
 
-            <button onClick={toggleHistorico} style={{
+            <button type="button" aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"} aria-pressed={historico} onClick={toggleHistorico} style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
@@ -646,39 +661,43 @@ export default function DashboardConversao() {
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
-              <GiCalendar size={14} /> Histórico
+              <GiCalendar size={14} aria-hidden /> Histórico
             </button>
 
             {showFiltroInfluencer && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiStarMedal size={14} />
-                </span>
-                <select value={filtroInfluencer} onChange={(e) => setFiltroInfluencer(e.target.value)} style={selectStyle}>
-                  <option value="todos">Todos os influencers</option>
-                  {[...rows].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>)}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiStarMedal size={14} />}
+                label="Filtrar por influencer"
+                value={filtroInfluencer}
+                onChange={setFiltroInfluencer}
+              >
+                <option value="todos">Todos os influencers</option>
+                {[...rows].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => (
+                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+                ))}
+              </SelectComIcone>
             )}
 
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={14} />
-                </span>
-                <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectStyle}>
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiShield size={14} />}
+                label="Filtrar por operadora"
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+              >
+                <option value="todas">Todas as operadoras</option>
+                {operadorasList
+                  .filter((o) => podeVerOperadora(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => (
+                    <option key={o.slug} value={o.slug}>{o.nome}</option>
+                  ))}
+              </SelectComIcone>
             )}
 
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} /> Carregando...
+                <Clock size={12} aria-hidden /> Carregando...
               </span>
             )}
           </div>
@@ -687,11 +706,13 @@ export default function DashboardConversao() {
 
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiConvergenceTarget size={14} />}>Comparativo de Funil</SectionTitle>
+        <SectionTitle icon={<GiConvergenceTarget size={14} />} sub={historico ? "acumulado" : undefined}>
+          Comparativo de Funil
+        </SectionTitle>
 
         {/* Selects com badge "vs" estilizado */}
         <div className="app-conversao-vs-row">
-          <select value={compA} onChange={(e) => setCompA(e.target.value)}
+          <select aria-label="Influencer A no comparativo de funil" value={compA} onChange={(e) => setCompA(e.target.value)}
             style={{ ...selectStyleSimple, borderColor: compA ? COR_A.border : undefined, width: "100%" }}>
             <option value="">— Selecione —</option>
             {rowsFiltradosEscopo
@@ -714,7 +735,7 @@ export default function DashboardConversao() {
             VS
           </div>
 
-          <select value={compB} onChange={(e) => setCompB(e.target.value)}
+          <select aria-label="Influencer B no comparativo de funil" value={compB} onChange={(e) => setCompB(e.target.value)}
             style={{ ...selectStyleSimple, borderColor: compB ? COR_B.border : undefined, width: "100%" }}>
             <option value="">— Selecione —</option>
             {rowsFiltradosEscopo
@@ -767,7 +788,9 @@ export default function DashboardConversao() {
       {/* ══ BLOCO 4: COMPARATIVO DE TAXAS ═══════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiSpeedometer size={14} />}>Comparativo de Taxas</SectionTitle>
+          <SectionTitle icon={<GiSpeedometer size={14} />} sub={historico ? "acumulado" : undefined}>
+            Comparativo de Taxas
+          </SectionTitle>
 
           {/* Filtros de ação */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -775,23 +798,30 @@ export default function DashboardConversao() {
               const ativo = acaoFiltro === a.label;
               const qtd   = rowsFiltradosEscopo.filter((r) => r.acaoLabel === a.label).length;
               return (
-                <button key={a.label} onClick={() => setAcaoFiltro(ativo ? null : a.label)} style={{
-                  display: "flex", alignItems: "center", gap: 5,
-                  padding: "4px 10px", borderRadius: 999, cursor: "pointer",
-                  fontFamily: FONT.body, fontSize: 11,
-                  border: `1px solid ${ativo ? a.cor : a.border}`,
-                  background: ativo ? a.bg : "transparent",
-                  color: ativo ? a.cor : t.textMuted,
-                  fontWeight: ativo ? 700 : 400,
-                  opacity: qtd === 0 ? 0.35 : 1,
-                  transition: "all 0.15s",
-                }}>
+                <button
+                  type="button"
+                  key={a.label}
+                  aria-pressed={ativo}
+                  aria-label={`Filtrar por ação ${a.label}${qtd > 0 ? `, ${qtd} influencers` : ""}`}
+                  onClick={() => setAcaoFiltro(ativo ? null : a.label)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    padding: "4px 10px", borderRadius: 999, cursor: "pointer",
+                    fontFamily: FONT.body, fontSize: 11,
+                    border: `1px solid ${ativo ? a.cor : a.border}`,
+                    background: ativo ? a.bg : "transparent",
+                    color: ativo ? a.cor : t.textMuted,
+                    fontWeight: ativo ? 700 : 400,
+                    opacity: qtd === 0 ? 0.35 : 1,
+                    transition: "all 0.15s",
+                  }}
+                >
                   {a.icon} {a.label} {qtd > 0 && <span style={{ opacity: 0.7 }}>({qtd})</span>}
                 </button>
               );
             })}
             {acaoFiltro && (
-              <button onClick={() => setAcaoFiltro(null)} style={{
+              <button type="button" aria-label="Remover filtro de ação" onClick={() => setAcaoFiltro(null)} style={{
                 padding: "4px 10px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`,
                 background: "transparent", color: t.textMuted, fontSize: 11,
@@ -811,14 +841,17 @@ export default function DashboardConversao() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando dados...</div>
         ) : rowsFiltrados.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Nenhum dado encontrado.</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
+              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                Comparativo de taxas de conversão — {historico ? "Todo o período" : (mesSelecionado?.label ?? "")}
+              </caption>
               <thead>
                 <tr>
                   {["Influencer","Views","View→Acesso","Acessos","Acesso→Reg","Registros","Reg→FTD","FTDs","Ação"].map((h) => (
-                    <th key={h} style={thStyle}>{h}</th>
+                    <th key={h} scope="col" style={thStyle}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -832,11 +865,35 @@ export default function DashboardConversao() {
                     <tr key={r.influencer_id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)" }}>
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
                       <td style={tdStyle}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={{ ...tdStyle, fontSize: 12, fontWeight: hl1 ? 700 : 400, color: hl1 ? BRAND.amarelo : t.textMuted, background: hl1 ? "rgba(245,158,11,0.06)" : undefined }}>{fmtPct(r.pctViewAcesso)}</td>
+                      <td style={{
+                        ...tdStyle,
+                        fontSize: 12,
+                        fontWeight: hl1 ? 700 : 400,
+                        color: hl1 ? BRAND.amarelo : t.textMuted,
+                        borderLeft: hl1 ? `3px solid rgba(245,158,11,0.7)` : "none",
+                        background: hl1 ? "rgba(245,158,11,0.08)" : undefined,
+                        paddingLeft: hl1 ? 9 : 12,
+                      }}>{fmtPct(r.pctViewAcesso)}</td>
                       <td style={tdStyle}>{r.acessos.toLocaleString("pt-BR")}</td>
-                      <td style={{ ...tdStyle, fontSize: 12, fontWeight: hl2 ? 700 : 400, color: hl2 ? "#a855f7" : t.textMuted, background: hl2 ? "rgba(168,85,247,0.06)" : undefined }}>{fmtPct(r.pctAcessoReg)}</td>
+                      <td style={{
+                        ...tdStyle,
+                        fontSize: 12,
+                        fontWeight: hl2 ? 700 : 400,
+                        color: hl2 ? "#a855f7" : t.textMuted,
+                        borderLeft: hl2 ? `3px solid rgba(168,85,247,0.7)` : "none",
+                        background: hl2 ? "rgba(168,85,247,0.08)" : undefined,
+                        paddingLeft: hl2 ? 9 : 12,
+                      }}>{fmtPct(r.pctAcessoReg)}</td>
                       <td style={tdStyle}>{r.registros.toLocaleString("pt-BR")}</td>
-                      <td style={{ ...tdStyle, fontSize: 12, fontWeight: hl3 ? 700 : 400, color: hl3 ? BRAND.azul : t.textMuted, background: hl3 ? "rgba(30,54,248,0.06)" : undefined }}>{fmtPct(r.pctRegFTD)}</td>
+                      <td style={{
+                        ...tdStyle,
+                        fontSize: 12,
+                        fontWeight: hl3 ? 700 : 400,
+                        color: hl3 ? BRAND.azul : t.textMuted,
+                        borderLeft: hl3 ? `3px solid rgba(30,54,248,0.7)` : "none",
+                        background: hl3 ? "rgba(30,54,248,0.08)" : undefined,
+                        paddingLeft: hl3 ? 9 : 12,
+                      }}>{fmtPct(r.pctRegFTD)}</td>
                       <td style={{ ...tdStyle, fontWeight: 700, color: r.ftds > 0 ? BRAND.verde : t.text }}>{r.ftds.toLocaleString("pt-BR")}</td>
                       <td style={tdStyle}>
                         <span style={{

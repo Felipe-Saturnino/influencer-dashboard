@@ -16,6 +16,9 @@ import ModalBloqueioAgendaLive from "../../lives/Agenda/ModalBloqueioAgendaLive"
 import { Link2, Copy, Check, AlertCircle, QrCode, Download } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { GiShare } from "react-icons/gi";
+import { useMediaQuery } from "../../../hooks/useMediaQuery";
+
+const LINK_SECTION_TITLE_ID = "link-rastreamento-title";
 
 const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source=";
 const PREVIA_QUADRO_MAX_W = 280;
@@ -68,6 +71,7 @@ export default function LinksMateriais() {
   const brand = useDashboardBrand();
   const perm = usePermission("links_materiais");
   const dark = isDark ?? false;
+  const narrowMobile = useMediaQuery("(max-width: 479px)");
 
   const precisaSelecionarInfluencer = !!user && user.role !== "influencer";
   const podeEmitir = perm.canEditarOk && !perm.loading;
@@ -383,6 +387,23 @@ export default function LinksMateriais() {
     verificandoGateEmissao ||
     (precisaSelecionarInfluencer && influenciadores.length === 0);
 
+  const emitirTitle =
+    !podeEmitir
+      ? "Você não tem permissão para emitir links"
+      : salvando
+        ? "Emitindo link…"
+        : verificandoGateEmissao
+          ? "Verificando elegibilidade…"
+          : aguardandoOpcoes
+            ? "Carregando opções…"
+            : precisaSelecionarInfluencer && influenciadores.length === 0
+              ? "Nenhum influencer disponível no seu escopo"
+              : precisaSelecionarInfluencer && !influencerSelecionado
+                ? "Selecione um influencer primeiro"
+                : !utmInput.trim()
+                  ? "Preencha o valor do UTM antes de emitir"
+                  : undefined;
+
   return (
     <div className="app-page-shell">
       <div style={{ marginBottom: 20 }}>
@@ -397,7 +418,7 @@ export default function LinksMateriais() {
             <GiShare size={16} />
           </span>
           <h1 style={{
-            fontSize: 18, fontWeight: 800, color: brand.primary,
+            fontSize: 22, fontWeight: 800, color: brand.primary,
             fontFamily: FONT_TITLE, margin: 0,
             letterSpacing: "0.05em", textTransform: "uppercase",
           }}>
@@ -421,6 +442,7 @@ export default function LinksMateriais() {
       </div>
 
       <section
+        aria-labelledby={LINK_SECTION_TITLE_ID}
         style={{
           boxSizing: "border-box",
           width: "100%",
@@ -438,17 +460,20 @@ export default function LinksMateriais() {
             display: "flex", alignItems: "center", justifyContent: "center",
             color: brand.primaryIconColor, flexShrink: 0,
           }}>
-            <Link2 size={14} strokeWidth={2.25} />
+            <Link2 size={14} />
           </span>
-          <h2 style={{
-            margin: 0,
-            fontSize: 13,
-            fontWeight: 700,
-            color: brand.primary,
-            fontFamily: FONT_TITLE,
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-          }}>
+          <h2
+            id={LINK_SECTION_TITLE_ID}
+            style={{
+              margin: 0,
+              fontSize: 13,
+              fontWeight: 700,
+              color: brand.primary,
+              fontFamily: FONT_TITLE,
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}
+          >
             Link de rastreamento
           </h2>
         </div>
@@ -602,7 +627,7 @@ export default function LinksMateriais() {
                     aria-label="Valor do utm_source"
                     style={{
                       flex: "1 1 140px",
-                      minWidth: 120,
+                      minWidth: narrowMobile ? 100 : 120,
                       boxSizing: "border-box",
                       padding: "10px 12px",
                       border: "none",
@@ -625,6 +650,8 @@ export default function LinksMateriais() {
                 type="button"
                 onClick={() => void emitir()}
                 disabled={emitirDesabilitado}
+                title={emitirTitle}
+                aria-disabled={emitirDesabilitado}
                 style={{
                   flexShrink: 0,
                   padding: "12px 22px",
@@ -709,7 +736,7 @@ export default function LinksMateriais() {
                   color: brand.primaryIconColor,
                   flexShrink: 0,
                 }}>
-                  <QrCode size={14} strokeWidth={2.25} />
+                  <QrCode size={14} />
                 </span>
                 <h3 style={{
                   margin: 0,
@@ -728,7 +755,7 @@ export default function LinksMateriais() {
                 style={{
                   display: "flex",
                   flexWrap: "wrap",
-                  gap: 28,
+                  gap: narrowMobile ? 16 : 28,
                   justifyContent: "center",
                   alignItems: "flex-start",
                 }}
@@ -786,6 +813,7 @@ export default function LinksMateriais() {
                     type="button"
                     onClick={() => void baixarQrPng()}
                     disabled={baixandoQr !== null}
+                    aria-label="Baixar QR Code — apenas o código — PNG"
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -806,7 +834,7 @@ export default function LinksMateriais() {
                       opacity: baixandoQr !== null && baixandoQr !== "plain" ? 0.45 : 1,
                     }}
                   >
-                    <Download size={16} strokeWidth={2.25} />
+                    <Download size={16} />
                     {baixandoQr === "plain" ? "Gerando…" : "Baixar PNG"}
                   </button>
                 </div>
@@ -845,9 +873,17 @@ export default function LinksMateriais() {
                     boxSizing: "border-box",
                   }}>
                     {carregandoPreviewsQuadro || !previewEscuro ? (
-                      <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, padding: 24 }}>
-                        {carregandoPreviewsQuadro ? "Gerando prévia…" : "—"}
-                      </span>
+                      <div
+                        aria-hidden
+                        className={carregandoPreviewsQuadro ? "app-skeleton-pulse" : undefined}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          minHeight: 240,
+                          borderRadius: 14,
+                          background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+                        }}
+                      />
                     ) : (
                       <img
                         src={previewEscuro}
@@ -865,6 +901,7 @@ export default function LinksMateriais() {
                     type="button"
                     onClick={() => void baixarQuadroSpin("dark")}
                     disabled={baixandoQr !== null}
+                    aria-label="Baixar QR Code — quadro gradiente escuro — PNG"
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -920,9 +957,17 @@ export default function LinksMateriais() {
                     boxSizing: "border-box",
                   }}>
                     {carregandoPreviewsQuadro || !previewClaro ? (
-                      <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, padding: 24 }}>
-                        {carregandoPreviewsQuadro ? "Gerando prévia…" : "—"}
-                      </span>
+                      <div
+                        aria-hidden
+                        className={carregandoPreviewsQuadro ? "app-skeleton-pulse" : undefined}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          minHeight: 240,
+                          borderRadius: 14,
+                          background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+                        }}
+                      />
                     ) : (
                       <img
                         src={previewClaro}
@@ -940,6 +985,7 @@ export default function LinksMateriais() {
                     type="button"
                     onClick={() => void baixarQuadroSpin("light")}
                     disabled={baixandoQr !== null}
+                    aria-label="Baixar QR Code — quadro gradiente claro — PNG"
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -956,7 +1002,7 @@ export default function LinksMateriais() {
                       opacity: baixandoQr !== null && baixandoQr !== "light" ? 0.45 : 1,
                     }}
                   >
-                    <Download size={16} strokeWidth={2.25} />
+                    <Download size={16} />
                     {baixandoQr === "light" ? "Gerando…" : "Baixar PNG"}
                   </button>
                 </div>

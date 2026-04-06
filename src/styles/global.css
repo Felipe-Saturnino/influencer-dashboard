@@ -97,6 +97,18 @@ html, body {
   min-height: 100vh;
 }
 
+/* Sidebar: item ativo — fundo sólido (fallback) + gradiente com color-mix (navegadores recentes) */
+.sidebar-nav-item--active {
+  background: var(--brand-primary, #7c3aed);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand-primary, #7c3aed) 80%, transparent),
+    color-mix(in srgb, var(--brand-secondary, #4a2082) 80%, transparent)
+  );
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--brand-primary, #7c3aed) 27%, transparent);
+}
+
 @supports (zoom: 1) {
   #root {
     zoom: var(--app-ui-zoom);
@@ -137,6 +149,45 @@ html, body {
 }
 [data-theme="light"] .agenda-day-scroll::-webkit-scrollbar-thumb:hover {
   background: #a0a0b8;
+}
+
+/* Loader (Lucide) — nome canônico para spinner em toda a app */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.app-lucide-spin {
+  flex-shrink: 0;
+  animation: spin 1s linear infinite;
+}
+
+/* Glows das telas de login — micro-movimento */
+@keyframes auth-glow-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+.auth-glow {
+  will-change: transform;
+  animation-name: auth-glow-float;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.auth-glow--10s {
+  animation-duration: 10s;
+}
+
+.auth-glow--14s {
+  animation-duration: 14s;
+  animation-direction: alternate;
 }
 
 /* ─── Responsivo: tablet / celular (CSS puro + mesma largura que o hook useMediaQuery) ─── */
@@ -217,4 +268,18 @@ aside *::-webkit-scrollbar-thumb {
 }
 aside *::-webkit-scrollbar-thumb:hover {
   background: #5a5a8c;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.app-skeleton-pulse {
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
 }

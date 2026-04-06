@@ -61,6 +61,7 @@ export function ParesAgenciaUI({
         {pares.map((par, idx) => (
           <div key={idx} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <select
+              aria-label={`Influencer — par ${idx + 1}`}
               style={{ ...selectStyle, flex: 1, minWidth: 140 }}
               value={par.influencerId}
               onChange={(e) => onUpdate(idx, "influencerId", e.target.value)}
@@ -74,6 +75,7 @@ export function ParesAgenciaUI({
             </select>
             <span style={{ color: t.textMuted, fontSize: 14 }}>×</span>
             <select
+              aria-label={`Operadora — par ${idx + 1}`}
               style={{ ...selectStyle, flex: 1, minWidth: 140 }}
               value={par.operadoraSlug}
               onChange={(e) => onUpdate(idx, "operadoraSlug", e.target.value)}

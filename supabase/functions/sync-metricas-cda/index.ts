@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Edge Function: sync-metricas-cda | Acquisition Hub (Spin Gaming)
+// Edge Function: sync-metricas-cda | Data Intelligence (Spin Gaming)
 // Integração CDA (Casa de Apostas): busca métricas da API Plywood OU Reporting API
 // e faz upsert em influencer_metricas. Múltiplas UTMs por influencer são SOMADAS.
 // Use CDA_USE_REPORTING_API=true para a Reporting API (recomendado se Plywood retorna 403)
@@ -203,9 +203,9 @@ async function enviarAlertaAuthCda(): Promise<void> {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'Acquisition Hub <onboarding@resend.dev>',
+        from: 'Data Intelligence <onboarding@resend.dev>',
         to: ['felipe.saturnino@spingaming.com.br'],
-        subject: '⚠️ [Acquisition Hub] Erro de autenticação CDA (403)',
+        subject: '⚠️ [Data Intelligence] Erro de autenticação CDA (403)',
         html,
       }),
     })

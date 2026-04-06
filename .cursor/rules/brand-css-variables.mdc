@@ -1,0 +1,33 @@
+---
+description: Cores de marca via CSS variables (--brand-*) para white label operadoras
+alwaysApply: true
+---
+
+# Brandguide e variáveis CSS
+
+O `AppContext` chama `aplicarBrandguide()` e injeta no `document.documentElement` variáveis `--brand-primary`, `--brand-secondary`, `--brand-accent`, etc., com fallbacks definidos em `src/styles/global.css` (`:root`).
+
+## Regra
+
+Qualquer elemento que deva refletir a **cor de marca** (Spin padrão ou operadora) deve usar as variáveis CSS, **não** hexadecimal fixo da Spin.
+
+- Preferir `var(--brand-primary, #7c3aed)` (ou o fallback já documentado em `:root`) em vez de `#7c3aed` solto.
+- O mesmo raciocínio vale para secundária, accent e ícones quando fizer sentido: `var(--brand-secondary)`, `var(--brand-accent)`, `var(--brand-icon)`, sempre com fallback se o JSX/style exigir.
+
+## Spinners (`Loader2` e afins)
+
+A cor **não** é única globalmente: depende do fundo.
+
+1. **Dentro de botão CTA** com fundo colorido ou **gradiente** (Login, Trocar senha obrigatória, Configurações, etc.) → cor do spinner **`#fff`**. Garante contraste sobre qualquer combinação de gradiente whitelabel; se `--brand-primary` for clara (bege, amarelo, branco), `var(--brand-primary)` no botão quebraria o contraste — o branco é a âncora segura no CTA.
+
+2. **Fora de botão**, sobre fundo neutro (área da página, fullscreen de boot — ex.: `PageLoadingFallback` e estado `checking` em `App.tsx`) → **`var(--brand-primary, #7c3aed)`**. Reflete a marca sobre fundo neutro claro ou escuro.
+
+## Onde se aplica em especial
+
+- Badges de seção, destaques de título
+- Bordas de foco ativo ligadas à marca
+- Gradientes de CTA **quando for viável** sem quebrar contraste ou legado
+
+## Contexto sem operador logado
+
+Fora do perfil operador, as variáveis permanecem nos defaults do `:root` — o fallback garante a identidade Spin sem lógica extra no componente.

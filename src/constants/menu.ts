@@ -39,11 +39,11 @@ export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
     items: [
+      { key: "mesas_spin",               label: "Mesas Spin",          icon: GiDiceSixFacesFour   },
       { key: "dash_overview",            label: "Overview",            icon: GiHistogram          },
       { key: "dash_conversao",           label: "Conversão",           icon: GiConvergenceTarget  },
       { key: "dash_financeiro",          label: "Financeiro",          icon: GiMoneyStack         },
       { key: "dash_midias_sociais",      label: "Mídias Sociais",      icon: GiShare              },
-      { key: "mesas_spin",               label: "Mesas Spin",          icon: GiDiceSixFacesFour   },
       { key: "dash_overview_influencer", label: "Overview Influencer", icon: GiMicrophone         },
     ],
   },

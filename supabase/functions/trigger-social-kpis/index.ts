@@ -1,4 +1,4 @@
-// Edge Function: trigger-social-kpis | Acquisition Hub
+// Edge Function: trigger-social-kpis | Data Intelligence (Spin Gaming)
 // Dispara o workflow GitHub Actions "Sync Social Media KPIs" via API
 // Secrets: GITHUB_TOKEN, GITHUB_REPO (ex: owner/repo)
 

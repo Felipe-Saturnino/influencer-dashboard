@@ -1,0 +1,226 @@
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+} from "react";
+import { X } from "lucide-react";
+import { useApp } from "../context/AppContext";
+import { useDashboardBrand } from "../hooks/useDashboardBrand";
+import { FONT } from "../constants/theme";
+
+const DialogTitleIdContext = createContext<string>("");
+
+function useDialogTitleId() {
+  return useContext(DialogTitleIdContext);
+}
+
+export function ModalBase({
+  children,
+  maxWidth = 440,
+  onClose,
+  zIndex = 1000,
+}: {
+  children: ReactNode;
+  maxWidth?: number;
+  onClose: () => void;
+  zIndex?: number;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const titleId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    const first = containerRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    first?.focus();
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#00000090",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex,
+        padding: "20px",
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      role="presentation"
+    >
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: brand.blockBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: "20px",
+          padding: "28px",
+          width: "100%",
+          maxWidth,
+          maxHeight: "90dvh",
+          overflowY: "auto",
+        }}
+      >
+        <DialogTitleIdContext.Provider value={titleId}>{children}</DialogTitleIdContext.Provider>
+      </div>
+    </div>
+  );
+}
+
+export function ModalHeader({
+  title,
+  onClose,
+}: {
+  title: string;
+  onClose: () => void;
+}) {
+  const { theme: t } = useApp();
+  const titleId = useDialogTitleId();
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "20px",
+      }}
+    >
+      <h2
+        id={titleId}
+        style={{
+          margin: 0,
+          fontSize: "17px",
+          fontWeight: 900,
+          color: t.text,
+          fontFamily: FONT.title,
+        }}
+      >
+        {title}
+      </h2>
+      <button
+        type="button"
+        onClick={onClose}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: t.textMuted,
+        }}
+        aria-label="Fechar modal"
+      >
+        <X size={20} strokeWidth={2} aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+export function ModalConfirmDelete({
+  texto,
+  onCancel,
+  onConfirm,
+  loading,
+  title = "Confirmar exclusão",
+  confirmLabel = "Excluir",
+  destructive = true,
+  zIndex = 1000,
+}: {
+  texto: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  loading?: boolean;
+  /** Quando não for exclusão (ex.: descartar seleção no modal). */
+  title?: string;
+  confirmLabel?: string;
+  destructive?: boolean;
+  zIndex?: number;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  return (
+    <ModalBase onClose={onCancel} maxWidth={400} zIndex={zIndex}>
+      <ModalHeader title={title} onClose={onCancel} />
+      <p
+        style={{
+          fontSize: 14,
+          color: t.text,
+          fontFamily: FONT.body,
+          lineHeight: 1.55,
+          margin: "0 0 24px",
+        }}
+      >
+        {texto}
+      </p>
+      <div style={{ display: "flex", gap: 10 }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={loading}
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+            color: t.textMuted,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={loading}
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 10,
+            border: "none",
+            background: destructive
+              ? "#ef4444"
+              : brand.useBrand
+                ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                : "linear-gradient(135deg, #4a2082, #1e36f8)",
+            color: "#fff",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.7 : 1,
+          }}
+        >
+          {loading ? (destructive ? "Excluindo..." : "Aguarde...") : confirmLabel}
+        </button>
+      </div>
+    </ModalBase>
+  );
+}

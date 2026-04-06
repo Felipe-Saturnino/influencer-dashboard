@@ -139,7 +139,7 @@ O código da integração com Casa de Apostas **não está neste repositório**.
 - Supabase Edge Functions
 - Serviço separado (backend)
 - Cron job ou pipeline de dados
-- Outro projeto no Acquisition Hub
+- Outro projeto no ecossistema Data Intelligence / Spin Gaming
 
 Ao localizar o código que faz INSERT/UPDATE em `influencer_metricas`:
 

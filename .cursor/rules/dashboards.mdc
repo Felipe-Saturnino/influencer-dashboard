@@ -1,0 +1,435 @@
+---
+description: Regras específicas para todas as páginas da seção de Dashboards. Complementa global.mdc.
+globs:
+  - src/pages/dashboards/**/*.tsx
+  - src/pages/dashboards/**/*.ts
+alwaysApply: false
+---
+
+# Seção Dashboards — Regras Específicas
+
+**Escopo (Cursor):** não é preciso listar cada página à mão — o frontmatter usa **globs**. Qualquer arquivo novo em `src/pages/dashboards/` (incluindo subpastas) entra no escopo ao você editar esse caminho; vale para **todas** as páginas atuais e futuras da seção Dashboards.
+
+Páginas: Overview, Conversão, Financeiro, Mídias Sociais, Mesas Spin, Overview Influencer
+
+**Marca:** estrutura e FilterBar já usam `useDashboardBrand()`. Onde a regra abaixo indica `var(--brand-*, fallback)`, as cores acompanham o perfil da operadora (variáveis injetadas no `:root`). Badges e faixas de **semântica analítica** (Rentável, WD Ratio, etc.) permanecem nos hex fixos indicados — não misturar com cor institucional.
+
+## Personas por Página
+
+| Página | Persona | Primeiro bloco após filtros |
+|---|---|---|
+| DashboardOverview | Gestor Executivo | KPIs Financeiros (GGR, Investimento, ROI) |
+| DashboardConversao | Gestor de Influencers | Comparativo de Funil |
+| DashboardFinanceiro | CFO / Financeiro | KPIs Financeiros |
+| SocialMediaDashboard | Gestor de Marketing | KPIs de Mídias Sociais |
+| MesasSpin | Gerente de Operações | KPIs Consolidados das Mesas |
+| DashboardOverviewInfluencer | Influencer / Agente | KPIs Executivos (GGR, ROI) |
+
+## Estrutura Obrigatória de Toda Página de Dashboard
+
+```tsx
+<div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+
+  {/* BLOCO 1 — FilterBar: sempre primeiro, sempre centralizada */}
+  <div style={{ marginBottom: 14 }}>
+    <div style={{
+      borderRadius: 14,
+      border: brand.primaryTransparentBorder,
+      background: brand.primaryTransparentBg,
+      padding: "12px 20px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+        {/* Nav mês, botão Histórico, filtros condicionais, loading indicator */}
+      </div>
+    </div>
+  </div>
+
+  {/* BLOCOS DE CONTEÚDO: card + marginBottom: 14, exceto o último */}
+  <div style={{ ...card, marginBottom: 14 }}>
+    <SectionTitle ...>Nome da Seção</SectionTitle>
+    {/* conteúdo */}
+  </div>
+
+</div>
+```
+
+## Card (bloco de conteúdo)
+
+```typescript
+const card: React.CSSProperties = {
+  background: brand.blockBg,
+  border: `1px solid ${t.cardBorder}`,
+  borderRadius: 18,
+  padding: 20,
+  boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+};
+```
+
+Nunca declarar `card` com valores diferentes. Nunca inline sem usar esta constante.
+
+## FilterBar — Navegação de Período
+
+```tsx
+// Botões de navegação
+<button
+  aria-label="Mês anterior"
+  style={{
+    width: 30, height: 30, borderRadius: "50%",
+    border: `1px solid ${t.cardBorder}`,
+    background: "transparent", color: t.text,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.35 : 1,
+    display: "flex", alignItems: "center", justifyContent: "center",
+  }}
+  onClick={irMesAnterior}
+  disabled={historico || isPrimeiro}
+>
+  <ChevronLeft size={14} aria-hidden="true" />
+</button>
+
+// Label do período
+<span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+  {historico ? "Todo o período" : mesSelecionado?.label}
+</span>
+
+// Botão Histórico
+<button
+  aria-label={historico ? "Desativar modo histórico" : "Ver todo o período"}
+  aria-pressed={historico}
+  onClick={toggleHistorico}
+  style={{
+    display: "flex", alignItems: "center", gap: 6,
+    padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+    fontFamily: FONT.body, fontSize: 13,
+    border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+    background: historico
+      ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)")
+      : "transparent",
+    color: historico ? brand.accent : t.textMuted,
+    fontWeight: historico ? 700 : 400,
+    transition: "all 0.15s",
+  }}
+>
+  <GiCalendar size={15} aria-hidden="true" /> Histórico
+</button>
+```
+
+**Selects na FilterBar:** sempre via `SelectComIcone` de `src/components/dashboard/`. Nunca `<div style="relative"> + <span>ícone + <select>` inline.
+
+**Loading indicator na FilterBar:** sempre o último item, nunca bloqueia os controles:
+
+```tsx
+{loading && (
+  <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
+    <Clock size={12} aria-hidden="true" /> Carregando...
+  </span>
+)}
+```
+
+## KPI Cards — Agrupamento Semântico
+
+Nunca colocar mais de 4 KpiCards em sequência sem separador semântico.
+
+Quando um bloco tem múltiplos grids de KPI, separar com label de grupo:
+
+```tsx
+<div style={{
+  fontSize: 10, color: t.textMuted, fontFamily: FONT.body,
+  fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase",
+  marginBottom: 8,
+}}>
+  Financeiro
+</div>
+<div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+  {/* KPIs financeiros */}
+</div>
+
+<div style={{
+  borderTop: `1px solid ${t.cardBorder}`,
+  margin: "16px 0 8px",
+  paddingTop: 12,
+  fontSize: 10, color: t.textMuted, fontFamily: FONT.body,
+  fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase",
+}}>
+  Operação
+</div>
+<div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
+  {/* KPIs operacionais */}
+</div>
+```
+
+## KpiCard — Props e Regras
+
+```typescript
+// SEMPRE usar KpiCard de src/components/dashboard/KpiCard
+// Props obrigatórias:
+label        // string — usar nomenclatura do glossário (ver abaixo)
+value        // string formatada
+icon         // ReactNode, size={16}, com aria-hidden="true"
+accentColor  // hex da constante BRAND.* (ícone KPI; semântica do card)
+atual        // number — valor atual
+anterior     // number — valor do período anterior (MoM)
+isHistorico  // boolean — oculta MoM quando true
+
+// Props opcionais:
+subValue     // { label: string, value: string }
+isInverso    // boolean — Saques, WD Ratio (valores que cair = bom)
+isBRL        // boolean — formata referência MoM como BRL
+```
+
+**Labels padronizados de KPI (usar exatamente):**
+
+```
+"GGR Total"              → receita bruta do jogo
+"Investimento"           → custo total com influencers
+"ROI Geral" / "ROI"      → retorno sobre investimento
+"FTDs"                   → quantidade de primeiros depósitos
+"R$ FTD"                 → valor total dos primeiros depósitos
+"Lives"                  → transmissões realizadas
+"Horas Realizadas"       → tempo total de live
+"Influencers Ativos"     → influencers com ao menos 1 live
+"Registros"              → cadastros realizados
+"Custo por FTD"          → investimento ÷ FTDs
+"Custo por Registro"     → investimento ÷ Registros
+"Depósitos"              → volume total de depósitos
+"Saques"                 → volume total de saques
+"WD Ratio"               → razão saques/depósitos em %
+"GGR por Jogador"        → GGR ÷ FTDs
+"PVI"                    → Player Value Index (0–100 pts)
+"Turnover"               → volume apostado nas mesas
+"Apostas"                → quantidade de apostas
+"Margem"                 → GGR ÷ Turnover em %
+"Aposta média"           → turnover ÷ apostas
+"UAP"                    → jogadores únicos ativos
+"ARPU"                   → GGR ÷ UAP
+"Seguidores totais"      → total de seguidores/inscritos
+"Impressões totais"      → total de exibições de conteúdo
+"Engajamento médio"      → engajamentos ÷ impressões em %
+```
+
+**PVI nunca usa "%"** — sempre `"${v} pts"` ou `"${v} / 100"`.
+
+## SectionTitle — Sub-títulos Padronizados
+
+```tsx
+// Bloco com comparativo MoM:
+sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
+
+// Bloco com período específico:
+sub={historico ? "acumulado" : mesSelecionado?.label}
+
+// Bloco com granularidade:
+sub={historico ? "mês a mês" : "dia a dia"}
+```
+
+## Tabelas de Dashboard
+
+Importar de `lib/tableStyles`:
+
+```typescript
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
+const thStyle = getThStyle(t);
+const tdStyle = getTdStyle(t);
+```
+
+**Quando a tabela tem linha de total:**
+
+```tsx
+<tr style={{ background: TOTAL_ROW_BG, fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
+  <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>
+    ∑ Total
+  </td>
+```
+
+**Nomenclatura de headers de tabela:**
+
+```
+"Influencer"    → nome do influencer
+"Lives"         → quantidade de transmissões
+"Horas"         → tempo no formato HH:MM
+"Views"         → média de views por live
+"Acessos"       → visitas ao link
+"Registros"     → cadastros
+"FTDs"          → primeiros depósitos (quantidade)
+"GGR"           → receita bruta (R$)
+"Invest."       → investimento (R$, abreviado na coluna)
+"ROI"           → retorno (badge colorido)
+"Status"        → classificação (badge colorido)
+"Turnover"      → volume apostado (R$)
+"Apostas"       → quantidade
+"Margem"        → margem da casa (badge colorido)
+"Aposta média"  → valor médio (R$)
+"UAP"           → jogadores únicos
+"ARPU"          → receita por jogador (R$)
+"Performance"   → unifica ROI numérico + Status label em um único badge
+```
+
+## Comparativos Duais (A vs B)
+
+Usar **variáveis de marca** para os lados do comparativo (com fallbacks iguais ao tema Spin padrão em `global.css`):
+
+- **Lado A:** `accent: "var(--brand-primary, #7c3aed)"`, `bg: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)"`, `border: "color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)"`
+- **Lado B:** `accent: "var(--brand-accent, #1e36f8)"`, `bg: "color-mix(in srgb, var(--brand-accent, #1e36f8) 10%, transparent)"`, `border: "color-mix(in srgb, var(--brand-accent, #1e36f8) 35%, transparent)"`
+- **Badge VS:** `border: color-mix(in srgb, var(--brand-secondary, #4a2082) 35%, transparent)`, `background: color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, transparent)`, `fontSize: 12, fontWeight: 800` (texto: `var(--brand-secondary, #4a2082)` ou `t.text` conforme contraste)
+- Divider vertical: `width: 1, background: t.cardBorder, flexShrink: 0`
+- Usar classe `app-conversao-vs-row` para o row de seletores
+- Usar classe `app-conversao-funil-duo` para o container lado a lado
+
+## Badges de Classificação — Cores Exatas
+
+**Status ROI do influencer:**
+
+```
+Rentável      → #22c55e  bg: rgba(34,197,94,0.10)    border: rgba(34,197,94,0.28)
+Atenção       → #f59e0b  bg: rgba(245,158,11,0.10)   border: rgba(245,158,11,0.28)
+Não Rentável  → #e84025  bg: rgba(232,64,37,0.10)    border: rgba(232,64,37,0.28)
+Bônus         → #a855f7  bg: rgba(168,85,247,0.10)   border: rgba(168,85,247,0.28)
+Sem dados     → #6b7280  bg: rgba(107,114,128,0.10)  border: rgba(107,114,128,0.22)
+```
+
+**Ação de conversão:**
+
+```
+Divulgar o link   → #f59e0b  (pctViewAcesso < 10%)
+Converter visita  → #a855f7  (pctAcessoReg < 10%)
+Ativar cadastro   → var(--brand-accent, #1e36f8)  (pctRegFTD < 60%)
+Em dia            → #22c55e  (todos os thresholds OK)
+```
+
+**Perfil do jogador (PVI):**
+
+```
+Whales             → var(--brand-primary, #7c3aed)  PVI ≥ 80
+Core               → var(--brand-accent, #1e36f8)  PVI ≥ 60
+Recreativos        → var(--brand-icon, #70cae4)    PVI ≥ 15
+Caçadores de Bônus → #e84025  PVI < 15
+```
+
+**WD Ratio (cor contextual na tabela):**
+
+```
+< 60%    → #22c55e verde
+60–80%   → #f59e0b amarelo
+> 80%    → #e84025 vermelho
+```
+
+**Margem das mesas (MarginBadge):**
+
+```
+> 10%   → #22c55e verde
+0–10%   → var(--brand-primary, #7c3aed)
+< 0%    → #e84025 vermelho
+```
+
+## SVG de Funil
+
+Cores por nível (de cima para baixo). **Primeiros níveis** seguem marca (`--brand-*`); FTDs permanece verde de leitura (`--brand-success` alinha operadoras ao verde padrão):
+
+```
+Views:     var(--brand-primary, #7c3aed)
+Acessos:   var(--brand-accent, #1e36f8)
+Registros: var(--brand-icon, #70cae4)
+FTDs:      var(--brand-success, #22c55e)
+```
+
+Sempre responsivo:
+
+```tsx
+<svg
+  role="img"
+  aria-label="Funil de conversão: ..."
+  viewBox="0 0 220 230"
+  width="100%"
+  style={{ maxWidth: 280, display: "block" }}
+>
+  <defs>
+    {/* TODOS os gradientes em um único bloco <defs>, nunca dentro do .map() */}
+  </defs>
+```
+
+## GGR — Definição de Cálculo
+
+GGR = Total de Depósitos − Total de Saques em TODAS as páginas.
+A diferença entre páginas é o canal de origem dos dados:
+
+- Overview / Conversão / Financeiro / Overview Influencer → canal: influencers
+- Mídias Sociais → canal: campanhas de social media (UTM)
+- Mesas Spin → todos os canais de aquisição
+
+O cálculo é o mesmo. O número difere por design — não é inconsistência.
+
+## Modo Histórico
+
+Quando `historico === true`:
+
+- Desabilitar botões ← → com `opacity: 0.35` e `cursor: not-allowed`
+- Exibir "Todo o período" no lugar do mês
+- Ocultar comparativo MoM nos KpiCards (`isHistorico={true}`)
+- Se algum bloco não suporta histórico, exibir mensagem explicativa (não sumir silenciosamente):
+
+```tsx
+{historico && (
+  <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+    Este bloco está disponível apenas para meses específicos.
+    <br />
+    <span style={{ fontSize: 11 }}>Selecione um mês no navegador acima.</span>
+  </div>
+)}
+```
+
+## Paginação
+
+Quando houver paginação interna em um bloco, sempre exibir contexto:
+
+```tsx
+<div style={{ textAlign: "center", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
+  {inicio + 1}–{fim} de {total} itens
+</div>
+```
+
+Resetar página ativa (`useState(0)`) sempre que os dados do bloco mudarem.
+
+## Carrossel de Posts (Mídias Sociais)
+
+- Renderizar apenas a janela visível (máx. 5 cards simultâneos no DOM)
+- Sempre exibir indicador de posição: `"X / Y"` + dots (máx. 8, depois `…`)
+- Thumbnail em proporção 16:9 via `paddingTop: "56.25%"` + `position: relative`
+- `will-change: transform` no container de animação
+
+## Notificações Inline
+
+Para alertas não-bloqueantes dentro da página (ex: filtro resetado automaticamente):
+
+```tsx
+<div style={{
+  margin: "0 0 14px",
+  padding: "10px 16px",
+  borderRadius: 10,
+  background: "rgba(245,158,11,0.10)",
+  border: "1px solid rgba(245,158,11,0.35)",
+  color: "#f59e0b",
+  fontSize: 12,
+  fontFamily: FONT.body,
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+}}>
+  ⚠ Mensagem de aviso aqui.
+</div>
+```
+
+Auto-dismiss com `setTimeout(() => setAviso(false), 4000)`.
+
+## O Que Nunca Fazer em Dashboards
+
+- Nunca declarar `thStyle`, `tdStyle`, `zebraStripe` localmente — sempre importar de `lib/tableStyles`
+- Nunca declarar `card` com valores diferentes do padrão estabelecido
+- Nunca usar `width` fixo em pixels em SVGs de funil
+- Nunca colocar `<defs>` de gradiente SVG dentro de `.map()`
+- Nunca usar `"%"` para PVI — usar `"pts"` ou `"/ 100"`
+- Nunca deixar estado vazio sem mensagem — nem vazio nem apenas spinner
+- Nunca esconder bloco silenciosamente em modo histórico — sempre explicar
+- Nunca renderizar lista completa de posts/itens sem virtualização quando > 50 itens
+- Nunca usar `"Carregando..."` como único loading state para conteúdo principal
+- Nunca usar `"Nenhum dado encontrado"` — usar `"Sem dados para o período selecionado."`
+- Nunca hardcodar `#7c3aed` / `#1e36f8` em **comparativo A vs B** ou **primeiros estágios do funil** se puder usar `var(--brand-primary)` / `var(--brand-accent)` com fallback (ver seções acima)

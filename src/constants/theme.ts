@@ -5,11 +5,34 @@ export const FONT = {
   body:  "var(--brand-fontFamily, 'Inter', 'Helvetica Neue', Arial, sans-serif)",
 };
 
+/** KPIs / páginas densas — NHD Bold + brand; distinto de {@link FONT.title} (Barlow em seções). */
+export const FONT_TITLE = "var(--brand-fontFamily, 'NHD Bold', 'nhd-bold', sans-serif)";
+
 export const BASE_COLORS = {
   blue:   "#1e36f8",
   red:    "#e94025",
   purple: "#4a3082",
 };
+
+/** Cores semânticas Spin (conteúdo / roteiro) — evita duplicar hex em cada página. */
+export const BRAND_SEMANTIC = {
+  azul: BASE_COLORS.blue,
+  vermelho: BASE_COLORS.red,
+  roxo: "#4a2082",
+  ciano: "#70cae4",
+  verde: "#22c55e",
+  amarelo: "#f59e0b",
+  azulLight: "rgba(30,54,248,0.12)",
+  azulBorder: "rgba(30,54,248,0.30)",
+  vermelhoLight: "rgba(232,64,37,0.10)",
+  vermelhoBorder: "rgba(232,64,37,0.30)",
+  roxoLight: "rgba(74,32,130,0.12)",
+  roxoBorder: "rgba(74,32,130,0.30)",
+  cianoLight: "rgba(112,202,228,0.12)",
+  cianoBorder: "rgba(112,202,228,0.30)",
+  roxoVivo: "#7c3aed",
+  cinza: "#6b7280",
+} as const;
 
 export const DARK_THEME = {
   bg:           "#0f0f1a",

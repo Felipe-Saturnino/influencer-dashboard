@@ -14,7 +14,7 @@ E-mail automático enviado **todo dia pela manhã (~6h BRT via GitHub Actions)**
 | Secret | Descrição |
 |-------|-----------|
 | `RESEND_API_KEY` | Chave da API Resend (ver `docs/SETUP-RESEND.md`) |
-| `RESEND_FROM` | Remetente (ex: `Acquisition Hub <noreply@spingaming.com.br>`) |
+| `RESEND_FROM` | Remetente (ex: `Data Intelligence <noreply@spingaming.com.br>`) |
 | `RELATORIO_DIRETORIA_DESTINATARIOS` | E-mails separados por vírgula (ex: `dir1@empresa.com,dir2@empresa.com`) |
 
 ### 2. Deploy

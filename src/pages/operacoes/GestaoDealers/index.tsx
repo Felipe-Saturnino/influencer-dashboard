@@ -7,9 +7,11 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
-import { X, Eye, Pencil, MessageSquare, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
+import { Eye, Pencil, MessageSquare, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
 import { GiCardRandom, GiShield, GiFemale, GiMale, GiCardPick, GiCardAceSpades, GiCrown } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
+import { PageHeader } from "../../../components/PageHeader";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -76,8 +78,10 @@ const ICONE_JOGO: Record<DealerJogo, ReactNode> = {
 };
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
+const OBS_PAGE = 20;
+
 export default function GestaoDealers() {
-  const { theme: t, user, podeVerOperadora, escoposVisiveis } = useApp();
+  const { theme: t, user, podeVerOperadora, escoposVisiveis, isDark } = useApp();
   const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
@@ -268,35 +272,27 @@ export default function GestaoDealers() {
   return (
     <div className="app-page-shell">
 
-      {/* ─── Header — primária ───────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: brand.primaryIconBg, border: brand.primaryIconBorder, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: brand.primaryIconColor }}>
-            <GiCardRandom size={14} />
-          </div>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-              Gestão de Dealers
-            </h1>
-            <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13 }}>
-              Gerencie o elenco de dealers de casino.
-            </p>
-          </div>
-        </div>
-        {podeCriarDealer && (
-          <button
-            onClick={() => setModalCriar(true)}
-            style={{
-              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-              color: "#fff", border: "none", borderRadius: 10,
-              padding: "10px 18px", cursor: "pointer",
-              fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
-            }}
-          >
-            + Adicionar Dealer
-          </button>
-        )}
-      </div>
+      <PageHeader
+        icon={<GiCardRandom size={14} aria-hidden />}
+        title="Gestão de Dealers"
+        subtitle="Gerencie o elenco de dealers de casino."
+        actions={
+          podeCriarDealer ? (
+            <button
+              type="button"
+              onClick={() => setModalCriar(true)}
+              style={{
+                background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                color: "#fff", border: "none", borderRadius: 10,
+                padding: "10px 18px", cursor: "pointer",
+                fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
+              }}
+            >
+              + Adicionar Dealer
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
       <div style={{ marginBottom: 14 }}>
@@ -417,6 +413,7 @@ export default function GestaoDealers() {
                     <button
                       key={o.value}
                       type="button"
+                      aria-pressed={ativo}
                       onClick={() => setFiltroGenero(ativo ? "todos" : o.value)}
                       style={{
                         display: "flex",
@@ -461,6 +458,7 @@ export default function GestaoDealers() {
                     <button
                       key={o.value}
                       type="button"
+                      aria-pressed={ativo}
                       onClick={() => setFiltroJogos(ativo ? "todos" : o.value)}
                       style={{
                         display: "flex",
@@ -518,7 +516,17 @@ export default function GestaoDealers() {
         <span style={{ color: brand.accent, fontWeight: 700 }}>{filtered.length}</span> {filtered.length === 1 ? "dealer" : "dealers"}
       </div>
       {loading ? (
-        <div style={{ padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, overflow: "hidden" }}>
+              <div style={{ aspectRatio: "16/10", background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+              <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ height: 18, width: "60%", borderRadius: 6, background: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
+                <div style={{ height: 12, width: "40%", borderRadius: 6, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum dealer encontrado.</div>
       ) : (
@@ -586,13 +594,16 @@ function DealerCard({
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
 
   return (
-    <div style={{
+    <article
+      aria-label={`Dealer: ${dealer.nickname}`}
+      style={{
       background: brand.blockBg,
       border: `1px solid ${t.cardBorder}`,
       borderRadius: 18,
       overflow: "hidden",
-      boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-    }}>
+      boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+    }}
+    >
       {/* Área da foto */}
       <div style={{
         aspectRatio: "16/10",
@@ -613,6 +624,9 @@ function DealerCard({
         <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
           {dealer.status === "aprovado" && (
             <span style={{ background: BRAND.verde, color: "#fff", padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, fontFamily: FONT.body }}>APROVADO</span>
+          )}
+          {dealer.status === "pendente" && (
+            <span style={{ background: "#f59e0b", color: "#1a1a2e", padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, fontFamily: FONT.body }}>PENDENTE</span>
           )}
           {dealer.vip && (
             <span style={{ background: BRAND.amarelo, color: "#1a1a2e", padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, fontFamily: FONT.body }}>★ VIP</span>
@@ -685,7 +699,7 @@ function DealerCard({
             {GENERO_OPTS.find((o) => o.value === dealer.genero)?.label ?? dealer.genero}
           </span>
           {op && (
-            <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} dark={isDark ?? false} />
+            <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} />
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -702,26 +716,19 @@ function DealerCard({
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
 // ─── Modal Ver ────────────────────────────────────────────────────────────────
 function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras: Operadora[]; onClose: () => void }) {
-  const { theme: t, isDark } = useApp();
+  const { theme: t } = useApp();
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
   const fotoUrl = (dealer.fotos ?? [])[0];
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 24 }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, borderRadius: 20, padding: 28, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", border: `1px solid ${t.cardBorder}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{dealer.nickname}</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}>
-            <X size={18} />
-          </button>
-        </div>
+    <ModalBase onClose={onClose} maxWidth={480}>
+      <ModalHeader title={dealer.nickname} onClose={onClose} />
         {fotoUrl && (
           <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: "16/10" }}>
             <img src={fotoUrl} alt={dealer.nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -732,53 +739,76 @@ function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras:
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Gênero</span><br /><span style={{ fontSize: 14, color: t.text }}>{GENERO_OPTS.find((o) => o.value === dealer.genero)?.label}</span></div>
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Turno</span><br /><span style={{ fontSize: 14, color: t.text }}>{TURNO_OPTS.find((o) => o.value === dealer.turno)?.label}</span></div>
           <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Jogos</span><br /><span style={{ fontSize: 14, color: t.text }}>{(dealer.jogos ?? []).map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label).join(", ") || "—"}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br />{op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} dark={isDark ?? false} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}</div>
+          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br />{op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}</div>
           {dealer.perfil_influencer && (
-            <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Perfil do Influencer</span><br /><span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span></div>
+            <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Dealer</span><br /><span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span></div>
           )}
         </div>
         <div style={{ marginTop: 20 }}>
-          <button onClick={onClose} style={{ width: "100%", padding: "10px 18px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-            VER PERFIL &gt;
+          <button type="button" onClick={onClose} style={{ width: "100%", padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+            Fechar
           </button>
         </div>
-      </div>
-    </div>
+    </ModalBase>
   );
 }
 
 // ─── Modal Observações ─────────────────────────────────────────────────────────
+async function enrichObsComNomes(lista: DealerObservacao[]): Promise<DealerObservacao[]> {
+  const ids = [...new Set(lista.map((a) => a.usuario_id).filter(Boolean))] as string[];
+  if (ids.length === 0) return lista;
+  const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+  const map: Record<string, string> = {};
+  (profs ?? []).forEach((p: { id: string; name: string }) => { map[p.id] = p.name ?? p.id; });
+  return lista.map((a) => ({ ...a, usuario_nome: a.usuario_id ? map[a.usuario_id] ?? "—" : "—" }));
+}
+
 function ModalObservacoes({ dealer, onClose }: { dealer: Dealer; onClose: () => void }) {
   const { theme: t, user } = useApp();
   const [obs, setObs] = useState<DealerObservacao[]>([]);
   const [novoTexto, setNovoTexto] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [temMais, setTemMais] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setObs([]);
     (async () => {
       const { data } = await supabase
         .from("dealer_observacoes")
         .select("id, dealer_id, usuario_id, texto, created_at")
         .eq("dealer_id", dealer.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(0, OBS_PAGE - 1);
       if (cancelled) return;
       const lista = (data ?? []) as DealerObservacao[];
-      const ids = [...new Set(lista.map((a) => a.usuario_id).filter(Boolean))] as string[];
-      if (ids.length > 0) {
-        const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
-        if (cancelled) return;
-        const map: Record<string, string> = {};
-        (profs ?? []).forEach((p: { id: string; name: string }) => { map[p.id] = p.name ?? p.id; });
-        setObs(lista.map((a) => ({ ...a, usuario_nome: a.usuario_id ? map[a.usuario_id] ?? "—" : "—" })));
-      } else {
-        setObs(lista);
-      }
-      if (!cancelled) setLoading(false);
+      const enriched = await enrichObsComNomes(lista);
+      if (cancelled) return;
+      setObs(enriched);
+      setTemMais(lista.length >= OBS_PAGE);
+      setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [dealer.id]);
+
+  async function carregarMais() {
+    if (loadingMore || !temMais) return;
+    setLoadingMore(true);
+    const from = obs.length;
+    const { data } = await supabase
+      .from("dealer_observacoes")
+      .select("id, dealer_id, usuario_id, texto, created_at")
+      .eq("dealer_id", dealer.id)
+      .order("created_at", { ascending: false })
+      .range(from, from + OBS_PAGE - 1);
+    const lista = (data ?? []) as DealerObservacao[];
+    const enriched = await enrichObsComNomes(lista);
+    setObs((prev) => [...prev, ...enriched]);
+    setTemMais(lista.length >= OBS_PAGE);
+    setLoadingMore(false);
+  }
 
   const adicionar = async () => {
     if (!novoTexto.trim()) return;
@@ -790,18 +820,11 @@ function ModalObservacoes({ dealer, onClose }: { dealer: Dealer; onClose: () => 
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 24 }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, borderRadius: 20, padding: 28, width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", border: `1px solid ${t.cardBorder}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Observações — {dealer.nickname}</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}>
-            <X size={18} />
-          </button>
-        </div>
+    <ModalBase onClose={onClose} maxWidth={460}>
+      <ModalHeader title={`Observações — ${dealer.nickname}`} onClose={onClose} />
         <div style={{ marginBottom: 16 }}>
           <textarea value={novoTexto} onChange={(e) => setNovoTexto(e.target.value)} placeholder="Nova observação..." style={{ width: "100%", minHeight: 80, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13, fontFamily: FONT.body, outline: "none", boxSizing: "border-box" }} />
-          <button onClick={adicionar} style={{ marginTop: 8, padding: "8px 16px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+          <button type="button" onClick={() => void adicionar()} style={{ marginTop: 8, padding: "8px 16px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
             Adicionar
           </button>
         </div>
@@ -813,8 +836,28 @@ function ModalObservacoes({ dealer, onClose }: { dealer: Dealer; onClose: () => 
             </div>
           ))}
         </div>
-      </div>
-    </div>
+        {temMais && !loading ? (
+          <button
+            type="button"
+            onClick={() => void carregarMais()}
+            disabled={loadingMore}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: "transparent",
+              color: t.textMuted,
+              fontSize: 12,
+              fontFamily: FONT.body,
+              cursor: loadingMore ? "not-allowed" : "pointer",
+              width: "100%",
+              marginTop: 8,
+            }}
+          >
+            {loadingMore ? "Carregando..." : "Carregar mais observações"}
+          </button>
+        ) : null}
+    </ModalBase>
   );
 }
 
@@ -930,18 +973,8 @@ function ModalDealer({
   const fieldStyle: CSSProperties = { marginBottom: 18 };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 24 }}
-      onClick={(e) => { if (e.target === e.currentTarget && !salvando) onClose(); }}>
-      <div style={{ background: t.cardBg, borderRadius: 20, padding: "28px 32px", width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto", border: `1px solid ${t.cardBorder}` }}>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-          <h2 style={{ fontFamily: FONT_TITLE, fontSize: 18, fontWeight: 800, color: t.text, margin: 0 }}>
-            {editando ? "Editar Dealer" : "Novo Dealer"}
-          </h2>
-          <button onClick={() => { if (!salvando) onClose(); }} style={{ background: "none", border: "none", cursor: salvando ? "not-allowed" : "pointer", color: t.textMuted }}>
-            <X size={18} />
-          </button>
-        </div>
+    <ModalBase onClose={() => { if (!salvando) onClose(); }} maxWidth={520}>
+      <ModalHeader title={editando ? "Editar Dealer" : "Novo Dealer"} onClose={() => { if (!salvando) onClose(); }} />
 
         <div style={fieldStyle}>
           <label style={labelStyle}>Nome Real</label>
@@ -993,6 +1026,7 @@ function ModalDealer({
               <button
                 key={o.value}
                 type="button"
+                aria-pressed={jogos.includes(o.value)}
                 onClick={() => toggleJogo(o.value)}
                 style={{
                   padding: "8px 14px", borderRadius: 20, border: `1px solid ${jogos.includes(o.value) ? BRAND.roxoVivo : t.cardBorder}`,
@@ -1024,8 +1058,8 @@ function ModalDealer({
         </div>
 
         <div style={fieldStyle}>
-          <label style={labelStyle}>Perfil do Influencer</label>
-          <textarea value={perfilInfluencer} onChange={(e) => setPerfilInfluencer(e.target.value)} placeholder="Descrição, carisma, resenha..." style={{ ...inputStyle, minHeight: 100, resize: "vertical" }} />
+          <label style={labelStyle}>Bio do Dealer</label>
+          <textarea value={perfilInfluencer} onChange={(e) => setPerfilInfluencer(e.target.value)} placeholder="Descrição, carisma, estilo de jogo..." style={{ ...inputStyle, minHeight: 100, resize: "vertical" }} />
         </div>
 
         {editando && (
@@ -1058,7 +1092,6 @@ function ModalDealer({
             {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar dealer"}
           </button>
         </div>
-      </div>
-    </div>
+    </ModalBase>
   );
 }

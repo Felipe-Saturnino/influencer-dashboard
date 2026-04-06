@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -7,10 +7,13 @@ import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
-import { CicloPagamento, PagamentoStatus } from "../../../types";
+import { CicloPagamento, PagamentoStatus, type Role } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { GiShield } from "react-icons/gi";
+import { PageHeader } from "../../../components/PageHeader";
+import { BlocoLabel } from "../../../components/BlocoLabel";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { GiReceiveMoney, GiShield } from "react-icons/gi";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
 
@@ -126,6 +129,24 @@ function cicloAberto(ciclo: CicloPagamento): boolean {
   return hoje <= fim;
 }
 
+/** Só perfis de operação interna veem `pagamentos_agentes` (influencer e agência: apenas pagamentos dos influencers da gestão). */
+const ROLES_VER_PAGAMENTO_AGENTE: readonly Role[] = ["admin", "gestor", "executivo", "operador"];
+
+function podeVerPagamentosAgenteFinanceiro(role: string | undefined): boolean {
+  return !!role && (ROLES_VER_PAGAMENTO_AGENTE as readonly string[]).includes(role);
+}
+
+/** Rótulo curto para select de ciclos (ex.: 18/03 – 24/03/26). */
+function fmtCicloDatas(inicio: string, fim: string): string {
+  if (!inicio || !fim || inicio.length < 10 || fim.length < 10) return `${inicio} – ${fim}`;
+  const fmt = (s: string) => {
+    const [, m, d] = s.split("-");
+    return `${d}/${m}`;
+  };
+  const anoFim = fim.split("-")[0] ?? "";
+  return `${fmt(inicio)} – ${fmt(fim)}/${anoFim.slice(2)}`;
+}
+
 function mesCalendarioDeHoje(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -229,7 +250,9 @@ function SelectInput({ value, onChange, options, style }: {
         outline: "none", cursor: "pointer", ...style,
       }}
     >
-      {[...options].sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "", "pt-BR")).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
     </select>
   );
 }
@@ -276,50 +299,6 @@ function BtnAcao({ onClick, children, color }: {
     >
       {children}
     </button>
-  );
-}
-
-function ModalBase({ children, maxWidth = 440, onClose: _onClose }: {
-  children: React.ReactNode; maxWidth?: number; onClose: () => void;
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "#00000090",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      zIndex: 1000, padding: "20px",
-    }}>
-      <div style={{
-        background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
-        borderRadius: "20px", padding: "28px",
-        width: "100%", maxWidth, maxHeight: "90vh", overflowY: "auto",
-      }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
-  const { theme: t } = useApp();
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-      <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 900, color: t.text, fontFamily: FONT.title }}>{title}</h2>
-      <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: t.textMuted }}>✕</button>
-    </div>
-  );
-}
-
-function BlocoLabel({ label }: { label: string }) {
-  const brand = useDashboardBrand();
-  return (
-    <span style={{
-      fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px",
-      textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body,
-    }}>
-      {label}
-    </span>
   );
 }
 
@@ -386,14 +365,13 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
       const msg = e instanceof Error ? e.message : "Erro ao salvar. Tente novamente.";
       setError(msg);
       console.error("[ModalAnalisar] Erro ao aprovar:", e);
-      alert("Erro ao aprovar: " + msg);
     } finally {
       setSaving(false);
     }
   }
   const handleConfirmClick = () => {
     if (!Number.isFinite(valorNum) || valorNum < 0) {
-      alert("Informe um valor válido (use 0,00 para zerar o valor da plataforma).");
+      setError("Informe um valor válido. Use 0,00 para zerar o valor da plataforma.");
       return;
     }
     void handleConfirm(valorNum);
@@ -408,13 +386,14 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   return (
     <ModalBase maxWidth={480} onClose={onClose}>
       <ModalHeader
-        title={row.is_agente ? "⏳ Analisar — Agente" : `⏳ Analisar — ${row.influencer_name}`}
+        title={row.is_agente ? "Analisar — Agente" : `Analisar — ${row.influencer_name}`}
         onClose={onClose}
       />
 
       {error && (
-        <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
-          ⚠️ {error}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
+          <span>{error}</span>
         </div>
       )}
 
@@ -469,6 +448,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <input
             type="number"
+            inputMode="decimal"
             min={0}
             step="0.01"
             value={valor}
@@ -490,8 +470,9 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
           {editado && <span style={{ fontSize: "11px", color: "#f59e0b", whiteSpace: "nowrap" }}>era {fmtMoeda(row.total)}</span>}
         </div>
         {editado && (
-          <div style={{ marginTop: "8px", fontSize: "11px", color: "#f59e0b", fontFamily: FONT.body }}>
-            ⚠️ Valor editado manualmente.
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: "8px", fontSize: "11px", color: "#f59e0b", fontFamily: FONT.body }}>
+            <AlertTriangle size={12} aria-hidden />
+            Valor editado manualmente.
           </div>
         )}
       </div>
@@ -551,10 +532,11 @@ function ModalPagar({ row, onClose, onConfirm, onRetornar }: {
 
   return (
     <ModalBase maxWidth={380} onClose={onClose}>
-      <ModalHeader title="💰 Registrar Pagamento" onClose={onClose} />
+      <ModalHeader title="Registrar pagamento" onClose={onClose} />
       {error && (
-        <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
-          ⚠️ {error}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: 10, padding: "12px 14px", fontSize: 13, marginBottom: 16, fontFamily: FONT.body }}>
+          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
+          <span>{error}</span>
         </div>
       )}
       <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "20px" }}>
@@ -640,7 +622,7 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerOperador
 
   return (
     <ModalBase maxWidth={400} onClose={onClose}>
-      <ModalHeader title="➕ Pagamento de Agente" onClose={onClose} />
+      <ModalHeader title="Pagamento de agente" onClose={onClose} />
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {precisaSelecionarOp && (
           <div>
@@ -716,7 +698,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
   const [horas, setHoras] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora]);
+  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, user?.role]);
 
   async function carregar() {
     setLoading(true);
@@ -737,10 +719,12 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     }
 
     // Total pago: usa mesma fonte que os Dashboards (RPC ou fallback) — garante alinhamento
+    const incluirAgentesKpi = podeVerPagamentosAgenteFinanceiro(user?.role);
     if (periodo) {
       const { total } = await buscarInvestimentoPago(periodo, {
         influencerIds: filterInfluencers.length > 0 ? filterInfluencers : undefined,
         operadora_slug: filtroOp?.length ? filtroOp[0] : (filterOperadora !== "todas" ? filterOperadora : undefined),
+        includeAgentes: incluirAgentesKpi,
       });
       setTotalPago(total);
     }
@@ -749,9 +733,11 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
       ? supabase.from("pagamentos").select("influencer_id, total, horas_realizadas, status, operadora_slug").in("ciclo_id", cicloIds)
       : supabase.from("pagamentos").select("influencer_id, total, horas_realizadas, status, operadora_slug");
 
-    const aQuery = periodo
-      ? supabase.from("pagamentos_agentes").select("total, status, operadora_slug").in("ciclo_id", cicloIds)
-      : supabase.from("pagamentos_agentes").select("total, status, operadora_slug");
+    const aQuery = incluirAgentesKpi
+      ? (periodo
+          ? supabase.from("pagamentos_agentes").select("total, status, operadora_slug").in("ciclo_id", cicloIds)
+          : supabase.from("pagamentos_agentes").select("total, status, operadora_slug"))
+      : Promise.resolve({ data: [] as { total: number; status: string; operadora_slug: string }[] });
 
     const [{ data: pags }, { data: agentes }] = await Promise.all([pQuery, aQuery]);
 
@@ -762,7 +748,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     } else if (filterOperadora && filterOperadora !== "todas") {
       allPags = allPags.filter((p: any) => p.operadora_slug === filterOperadora);
     }
-    let allAgs = user?.role === "influencer" ? [] : (agentes ?? []);
+    let allAgs = incluirAgentesKpi ? (agentes ?? []) : [];
     if (filtroOp?.length) {
       allAgs = allAgs.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
     } else if (filterOperadora && filterOperadora !== "todas") {
@@ -802,7 +788,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
       marginBottom: "24px",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-        <BlocoLabel label="📊 KPIs" />
+        <BlocoLabel label="KPIs" />
       </div>
 
       <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
@@ -838,7 +824,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   onRecarregar: () => void;
   filtros: BlocoFiltros;
 }) {
-  const { theme: t, user } = useApp();
+  const { theme: t, user, isDark } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("financeiro");
   const { podeVerInfluencer, podeVerOperadora: _podeVerOperadora, filterInfluencers, filterOperadora, filtroOp, operadoraInfMap: _operadoraInfMap, operadorasList } = filtros;
@@ -852,6 +838,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const [modalAgente, setModalAgente] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [enviarPagamentoLoading, setEnviarPagamentoLoading] = useState(false);
+  const [enviarPagamentoError, setEnviarPagamentoError] = useState("");
 
   const ciclo = ciclos.find(c => c.id === cicloId) ?? ciclos[0] ?? null;
   const isAberto = ciclo ? cicloAberto(ciclo) : false;
@@ -1017,15 +1004,18 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }
 
   async function carregarPagamentos(c: CicloPagamento) {
+    const incluirLinhasAgente = podeVerPagamentosAgenteFinanceiro(user?.role);
     const [{ data: pags }, { data: agentes }, { data: livesCiclo }] = await Promise.all([
       supabase.from("pagamentos")
         .select("*")
         .eq("ciclo_id", c.id)
         .order("total", { ascending: false }),
-      supabase.from("pagamentos_agentes")
-        .select("*")
-        .eq("ciclo_id", c.id)
-        .order("criado_em", { ascending: true }),
+      incluirLinhasAgente
+        ? supabase.from("pagamentos_agentes")
+            .select("*")
+            .eq("ciclo_id", c.id)
+            .order("criado_em", { ascending: true })
+        : Promise.resolve({ data: [] as any[] }),
       supabase.from("lives")
         .select("id, influencer_id, operadora_slug")
         .eq("status", "realizada")
@@ -1128,7 +1118,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       };
     });
 
-    let agentesFiltrados = user?.role === "influencer" ? [] : (agentes ?? []);
+    let agentesFiltrados = incluirLinhasAgente ? (agentes ?? []) : [];
     if (filtroOp?.length) {
       agentesFiltrados = agentesFiltrados.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
     } else if (filterOperadora && filterOperadora !== "todas") {
@@ -1258,15 +1248,16 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
   async function handleEnviarPagamentoEmail() {
     if (!ciclo || isAberto || !temAguardandoPagamento) return;
+    setEnviarPagamentoError("");
     setEnviarPagamentoLoading(true);
     try {
       const res = await enviarPagamentoEmailCiclo(supabase, ciclo.id);
       if (!res.ok) {
-        alert(res.error);
+        setEnviarPagamentoError(res.error ?? "Não foi possível enviar a notificação.");
         return;
       }
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Erro ao enviar notificação de pagamento.");
+      setEnviarPagamentoError(e instanceof Error ? e.message : "Erro ao enviar notificação de pagamento.");
     } finally {
       setEnviarPagamentoLoading(false);
     }
@@ -1284,7 +1275,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
   const opcioesCiclo = ciclos.map(c => ({
     value: c.id,
-    label: `${c.data_inicio} – ${c.data_fim}${cicloAberto(c) ? " (atual)" : ""}`,
+    label: `${fmtCicloDatas(c.data_inicio, c.data_fim)}${cicloAberto(c) ? " (atual)" : ""}`,
   }));
 
   return (
@@ -1293,7 +1284,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       {/* Cabeçalho */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <BlocoLabel label="📅 CICLO DE PAGAMENTO" />
+          <BlocoLabel label="Ciclo de pagamento" />
 
           {ciclo && (
             <span style={{
@@ -1302,7 +1293,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
               color: isAberto ? "#f59e0b" : "#10b981",
               border: `1px solid ${isAberto ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.3)"}`,
             }}>
-              {isAberto ? "🔓 Atual" : "✅ Fechado"}
+              {isAberto ? "Atual" : "Fechado"}
             </span>
           )}
 
@@ -1313,21 +1304,28 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           />
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          {ciclo && !isAberto && temAguardandoPagamento && perm.canEditarOk && (
-            <BtnPrimary
-              onClick={() => void handleEnviarPagamentoEmail()}
-              disabled={enviarPagamentoLoading}
-              title="Notificar por e-mail (automação em configuração)"
-            >
-              {enviarPagamentoLoading ? "⏳ Enviando..." : "Enviar Pagamento"}
-            </BtnPrimary>
-          )}
-          {ciclo && perm.canEditarOk && (
-            <BtnPrimary onClick={() => setModalAgente(true)}>
-              ➕ Pagamento de Agente
-            </BtnPrimary>
-          )}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+          {enviarPagamentoError ? (
+            <div style={{ maxWidth: 420, fontSize: 12, color: "#ef4444", fontFamily: FONT.body, textAlign: "right" }}>
+              {enviarPagamentoError}
+            </div>
+          ) : null}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            {ciclo && !isAberto && temAguardandoPagamento && perm.canEditarOk && (
+              <BtnPrimary
+                onClick={() => void handleEnviarPagamentoEmail()}
+                disabled={enviarPagamentoLoading}
+                title="Notificar por e-mail (automação em configuração)"
+              >
+                {enviarPagamentoLoading ? "Enviando..." : "Enviar pagamento"}
+              </BtnPrimary>
+            )}
+            {ciclo && perm.canEditarOk && podeVerPagamentosAgenteFinanceiro(user?.role) && (
+              <BtnPrimary onClick={() => setModalAgente(true)}>
+                Pagamento de agente
+              </BtnPrimary>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1351,7 +1349,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       {/* Badge preview */}
       {isAberto && rows.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", borderRadius: "10px", marginBottom: "16px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", fontSize: "12px", color: "#f59e0b", fontFamily: FONT.body }}>
-          🔴 Prévia em tempo real — ciclo aberto. Os pagamentos serão gerados ao encerrar o período.
+          Prévia em tempo real — ciclo aberto. Os pagamentos serão gerados ao encerrar o período.
         </div>
       )}
 
@@ -1363,11 +1361,11 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={th}>Influencer</th>
-                {filterOperadora === "todas" && <th style={th}>Operadora</th>}
+                <th scope="col" style={th}>Influencer</th>
+                {filterOperadora === "todas" && <th scope="col" style={th}>Operadora</th>}
                 {isAberto
-                  ? ["Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} style={th}>{h}</th>)
-                  : ["Lives", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} style={th}>{h}</th>)
+                  ? ["Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} scope="col" style={th}>{h}</th>)
+                  : ["Lives", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} scope="col" style={th}>{h}</th>)
                 }
               </tr>
             </thead>
@@ -1383,8 +1381,19 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     </div>
                   </td>
                 </tr>
-              ) : rows.map((row, i) => (
-                <tr key={row.id} style={{ borderBottom: i < rows.length - 1 ? `1px solid ${t.cardBorder}` : "none" }}>
+              ) : rows.map((row, i) => {
+                const zebra = i % 2 === 1 ? (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
+                return (
+                <tr
+                  key={row.id}
+                  style={{ borderBottom: i < rows.length - 1 ? `1px solid ${t.cardBorder}` : "none", background: zebra }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = zebra;
+                  }}
+                >
                   <td style={td}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <Avatar name={row.is_agente ? "A" : row.influencer_name} />
@@ -1438,12 +1447,13 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     </>
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
 
             {rows.length > 0 && (
               <tfoot>
-                <tr style={{ background: t.isDark ? "rgba(74,48,130,0.1)" : "rgba(74,48,130,0.05)", borderTop: `2px solid rgba(74,48,130,0.35)` }}>
+                <tr style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", borderTop: `2px solid ${t.cardBorder}` }}>
                   <td style={{ ...td, fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>
                     {isAberto ? "ESTIMATIVA TOTAL" : "TOTAL"}
                   </td>
@@ -1477,7 +1487,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       {modalPagar && (
         <ModalPagar row={modalPagar} onClose={() => setModalPagar(null)} onConfirm={handlePagar} onRetornar={handleRetornar} />
       )}
-      {modalAgente && ciclo && (
+      {modalAgente && ciclo && podeVerPagamentosAgenteFinanceiro(user?.role) && (
         <ModalAgente
           cicloId={ciclo.id}
           filterOperadora={filterOperadora}
@@ -1494,7 +1504,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 // ── BLOCO 3: CONSOLIDADO ───────────────────────────────────────────────────────
 
 function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
-  const { theme: t, user } = useApp();
+  const { theme: t, user, isDark } = useApp();
   const brand = useDashboardBrand();
   const { podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
   const mes = historico ? "" : mesFiltro;
@@ -1520,7 +1530,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const [historicoPagamentos, setHistoricoPagamentos] = useState<Record<string, any[]>>({});
   const [loadingHist, setLoadingHist] = useState<string | null>(null);
 
-  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp]);
+  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
 
   async function carregar() {
     setLoading(true);
@@ -1556,14 +1566,17 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
     let pagamentosData: any[] = [];
     let agentesData: any[] = [];
+    const incluirAgentesConsolidado = podeVerPagamentosAgenteFinanceiro(user?.role);
     if (!periodo || cicloIds.length > 0) {
       const [{ data: pags }, { data: agts }] = await Promise.all([
         periodo
           ? supabase.from("pagamentos").select("*").in("ciclo_id", cicloIds)
           : supabase.from("pagamentos").select("*"),
-        periodo
-          ? supabase.from("pagamentos_agentes").select("*").in("ciclo_id", cicloIds)
-          : supabase.from("pagamentos_agentes").select("*"),
+        incluirAgentesConsolidado
+          ? (periodo
+              ? supabase.from("pagamentos_agentes").select("*").in("ciclo_id", cicloIds)
+              : supabase.from("pagamentos_agentes").select("*"))
+          : Promise.resolve({ data: [] as any[] }),
       ]);
       pagamentosData = pags ?? [];
       agentesData = agts ?? [];
@@ -1606,9 +1619,9 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
       };
     }).filter(r => r.totalPago > 0 || r.totalHoras > 0 || r.pendente > 0);
 
-    // Linha especial de agentes (só aparece se tiver algum dado; influencer não vê)
+    // Linha especial de agentes (só operação interna; influencer e agência não veem)
     setAgentesRow(
-      user?.role !== "influencer" && (agtTotalPago > 0 || agtPendente > 0)
+      incluirAgentesConsolidado && (agtTotalPago > 0 || agtPendente > 0)
         ? { totalPago: agtTotalPago, pendente: agtPendente, ultimoPagamento: agtUltimoPag }
         : null
     );
@@ -1649,11 +1662,11 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   return (
     <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "22px", marginBottom: "24px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginBottom: "18px" }}>
-        <BlocoLabel label="👥 CONSOLIDADO DE INFLUENCERS" />
+        <BlocoLabel label="Consolidado de influencers" />
         <input
           value={busca}
           onChange={e => setBusca(e.target.value)}
-          placeholder="🔍 Buscar por nome ou e-mail..."
+          placeholder="Buscar por nome ou e-mail..."
           style={{
             flex: 1, minWidth: 280, maxWidth: 420,
             padding: "8px 14px", borderRadius: "10px",
@@ -1671,9 +1684,9 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={{ ...th, width: "32px" }}></th>
+                <th scope="col" style={{ ...th, width: "32px" }} aria-label="Expandir" />
                 {["Influencer", "Total pago", "Total horas", "Pendente", "Último pagamento", "Status"].map(h => (
-                  <th key={h} style={th}>{h}</th>
+                  <th key={h} scope="col" style={th}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1690,14 +1703,32 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                 const sl = STATUS_INFLUENCER[row.statusInfluencer] ?? { label: row.statusInfluencer, color: "#94a3b8" };
 
                 return (
-                  <>
+                  <Fragment key={row.influencer_id}>
                     <tr
-                      key={row.influencer_id}
                       style={{ cursor: "pointer", borderBottom: `1px solid ${t.cardBorder}` }}
+                      tabIndex={0}
+                      role="row"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
                       onClick={() => toggleExpand(row.influencer_id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleExpand(row.influencer_id);
+                        }
+                      }}
                     >
                       <td style={td}>
-                        <span style={{ fontSize: "10px", color: t.textMuted, display: "inline-block", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▶</span>
+                        <ChevronRight
+                          size={14}
+                          color={t.textMuted}
+                          style={{ transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}
+                          aria-hidden
+                        />
                       </td>
                       <td style={td}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1724,7 +1755,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                     </tr>
 
                     {isOpen && (
-                      <tr key={`exp-${row.influencer_id}`} style={{ background: t.isDark ? "rgba(74,48,130,0.06)" : "rgba(74,48,130,0.03)" }}>
+                      <tr key={`exp-${row.influencer_id}`} style={{ background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}>
                         <td colSpan={7} style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
                           <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted, marginBottom: "10px", fontFamily: FONT.body }}>
                             Histórico — {row.nome_artistico}
@@ -1744,7 +1775,16 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                               </thead>
                               <tbody>
                                 {hist.map((h: any) => (
-                                  <tr key={h.id} style={{ borderBottom: `1px solid ${t.divider}` }}>
+                                  <tr
+                                    key={h.id}
+                                    style={{ borderBottom: `1px solid ${t.divider}` }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = "transparent";
+                                    }}
+                                  >
                                     <td style={{ ...td, fontSize: "12px", padding: "8px 10px" }}>
                                       {h.ciclos_pagamento?.data_inicio} – {h.ciclos_pagamento?.data_fim}
                                     </td>
@@ -1764,13 +1804,21 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
 
               {/* Linha de Agentes — sempre no fim */}
               {agentesRow && (
-                <tr style={{ borderBottom: `1px solid ${t.cardBorder}`, background: t.isDark ? "rgba(245,158,11,0.04)" : "rgba(245,158,11,0.03)" }}>
+                <tr
+                  style={{ borderBottom: `1px solid ${t.cardBorder}`, background: t.isDark ? "rgba(245,158,11,0.04)" : "rgba(245,158,11,0.03)" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = isDark ? "rgba(245,158,11,0.08)" : "rgba(245,158,11,0.06)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = t.isDark ? "rgba(245,158,11,0.04)" : "rgba(245,158,11,0.03)";
+                  }}
+                >
                   <td style={td}>
                     <span style={{ fontSize: "10px", color: t.textMuted }}>—</span>
                   </td>
@@ -1959,7 +2007,7 @@ export default function Financeiro() {
 
       const [pagsRes, agtsRes] = await Promise.all([
         fechadoIds.length > 0 ? supabase.from("pagamentos").select("ciclo_id, influencer_id, operadora_slug").in("ciclo_id", fechadoIds) : { data: [] as any[] },
-        fechadoIds.length > 0 && user?.role !== "influencer"
+        fechadoIds.length > 0 && podeVerPagamentosAgenteFinanceiro(user?.role)
           ? supabase.from("pagamentos_agentes").select("ciclo_id, operadora_slug").in("ciclo_id", fechadoIds)
           : { data: [] as any[] },
       ]);
@@ -2068,7 +2116,6 @@ export default function Financeiro() {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: "400px" }}>
         <div style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-          <div style={{ fontSize: "32px", marginBottom: "12px" }}>⏳</div>
           Carregando financeiro...
         </div>
       </div>
@@ -2078,20 +2125,34 @@ export default function Financeiro() {
   if (ciclos.length === 0) {
     return (
       <div className="app-page-shell">
-        <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: brand.primary }}>💰 Financeiro</h1>
-        <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "28px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos de influencers.</p>
+        <PageHeader
+          icon={<GiReceiveMoney size={14} aria-hidden />}
+          title="Financeiro"
+          subtitle="Gestão de pagamentos e ciclos semanais de influencers."
+        />
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "16px", padding: "48px", textAlign: "center" }}>
-          <div style={{ fontSize: "40px", marginBottom: "16px" }}>📅</div>
           <p style={{ fontFamily: FONT.title, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
             {user?.role === "influencer" ? "Nenhum pagamento cadastrado" : "Nenhum ciclo cadastrado"}
           </p>
-          <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
-            {user?.role === "influencer" ? (
-              <>Os ciclos são criados automaticamente (qui–qua). Verifique se você realizou lives no período; caso tenha problemas, entre em contato.</>
-            ) : (
-              <>Os ciclos são criados automaticamente (qui–qua). Verifique as permissões da tabela <code style={{ background: "rgba(0,0,0,0.1)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>ciclos_pagamento</code> no Supabase (INSERT permitido para autenticados).</>
-            )}
-          </p>
+          {user?.role === "influencer" ? (
+            <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "16px" }}>
+              Os ciclos são criados automaticamente. Caso tenha realizado lives recentemente e os dados não apareçam, aguarde até 24h ou entre em contato com a equipe.
+            </p>
+          ) : (
+            <>
+              <p style={{ fontSize: "13px", color: t.textMuted, fontFamily: FONT.body, marginBottom: "8px" }}>
+                Nenhum ciclo encontrado. Os ciclos são gerados automaticamente a cada semana (quinta a quarta).
+              </p>
+              <details style={{ marginTop: 8, textAlign: "left", maxWidth: 520, marginInline: "auto" }}>
+                <summary style={{ fontSize: 12, color: t.textMuted, cursor: "pointer", fontFamily: FONT.body }}>
+                  Detalhes técnicos
+                </summary>
+                <p style={{ fontSize: 12, color: t.textMuted, fontFamily: "monospace", marginTop: 8 }}>
+                  Verificar permissões de INSERT em ciclos_pagamento no Supabase.
+                </p>
+              </details>
+            </>
+          )}
           <button
             onClick={() => { carregarCiclos(); }}
             style={{
@@ -2110,8 +2171,11 @@ export default function Financeiro() {
 
   return (
     <div className="app-page-shell">
-      <h1 style={{ fontFamily: FONT.title, fontSize: "26px", fontWeight: 900, marginBottom: "6px", color: brand.primary }}>💰 Financeiro</h1>
-      <p style={{ fontSize: "13px", color: t.textMuted, marginBottom: "14px", fontFamily: FONT.body }}>Gestão de pagamentos e ciclos semanais de influencers.</p>
+      <PageHeader
+        icon={<GiReceiveMoney size={14} aria-hidden />}
+        title="Financeiro"
+        subtitle="Gestão de pagamentos e ciclos semanais de influencers."
+      />
 
       {/* Bloco de filtros (similar Agenda) */}
       <div style={{ marginBottom: 20 }}>

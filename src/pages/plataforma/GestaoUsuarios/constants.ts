@@ -1,18 +1,11 @@
 import type { Role, PageKey, PermissaoValor, GestorTipoSlug } from "../../../types";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
 
 export { FONT_TITLE };
 
 export const BRAND = {
-  roxo: "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul: "#1e36f8",
-  vermelho: "#e84025",
-  ciano: "#70cae4",
-  verde: "#22c55e",
-  amarelo: "#f59e0b",
-  cinza: "#6b7280",
-  gradiente: "linear-gradient(135deg, #4a2082, #1e36f8)",
+  ...BRAND_SEMANTIC,
+  gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
 /** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores) */
@@ -43,11 +36,11 @@ export const PAGES: {
   { key: "agenda", label: "Agenda", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "resultados", label: "Resultados", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "feedback", label: "Feedback", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: true },
+  { key: "mesas_spin", label: "Mesas Spin", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview", label: "Overview", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_conversao", label: "Conversão", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_financeiro", label: "Financeiro", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "mesas_spin", label: "Mesas Spin", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_midias_sociais", label: "Mídias Sociais", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "influencers", label: "Influencers", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "scout", label: "Scout", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },

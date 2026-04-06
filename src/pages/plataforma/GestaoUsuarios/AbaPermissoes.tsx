@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Role, PageKey, PermissaoValor, RolePermission } from "../../../types";
@@ -15,6 +15,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
   const [perms, setPerms] = useState<Record<string, Partial<RolePermission>>>({});
   const [salvando, setSalvando] = useState(false);
   const [salvoOk, setSalvoOk] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -52,7 +53,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
     setSalvando(false);
     if (error) {
       console.error("[GestaoUsuarios] Erro ao salvar permissões:", error);
-      alert(`Erro ao salvar permissões: ${error.message}`);
+      setErroSalvar("Erro ao salvar permissões. Tente novamente.");
       return;
     }
     setSalvoOk(true);
@@ -78,7 +79,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
     letterSpacing: "1px",
     padding: "12px 14px",
     textAlign: "center",
-    background: "rgba(74,32,130,0.10)",
+    background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
   };
 
   const tdBase: React.CSSProperties = {
@@ -120,8 +121,11 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
       );
     }
 
+    const zebraOdd = t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)";
+    const secaoCellBg = t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)";
+
     pagesDaSec.forEach((page, idx) => {
-      const zebra = idx % 2 !== 0 ? "rgba(74,32,130,0.06)" : "transparent";
+      const zebra = idx % 2 !== 0 ? zebraOdd : "transparent";
 
       linhas.push(
         <tr key={page.key} style={{ background: zebra }}>
@@ -138,7 +142,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
                 verticalAlign: "middle",
                 borderLeft: `3px solid ${BRAND.roxo}`,
                 borderRight: `1px solid ${t.cardBorder}`,
-                background: "rgba(74,32,130,0.10)",
+                background: secaoCellBg,
                 paddingLeft: 12,
               }}
             >
@@ -203,13 +207,18 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div role="tablist" aria-label="Perfil de permissões" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {ROLES_PERMISSOES.map((r) => {
           const ativo = roleAtivo === r;
           const cor = roleBadgeColor(r);
           return (
             <button
               key={r}
+              type="button"
+              role="tab"
+              id={`tab-perm-${r}`}
+              aria-selected={ativo}
+              aria-controls="panel-permissoes-matriz"
               onClick={() => setRoleAtivo(r)}
               style={{
                 border: `${ativo ? "1.5px" : "1px"} solid ${ativo ? cor : t.cardBorder}`,
@@ -231,6 +240,9 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
       </div>
 
       <div
+        role="tabpanel"
+        id="panel-permissoes-matriz"
+        aria-labelledby={`tab-perm-${roleAtivo}`}
         style={{
           overflowX: "auto",
           borderRadius: 12,
@@ -263,40 +275,63 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
         </table>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
-        {salvoOk && (
-          <span
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "stretch" }}>
+        {erroSalvar && (
+          <div
+            role="alert"
             style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              background: "rgba(232,64,37,0.12)",
+              border: "1px solid rgba(232,64,37,0.35)",
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              color: BRAND.verde,
-              fontFamily: FONT.body,
-              fontSize: 13,
+              gap: 8,
             }}
           >
-            <ShieldCheck size={14} /> Permissões salvas com sucesso
-          </span>
+            <AlertCircle size={14} color="#e84025" aria-hidden />
+            {erroSalvar}
+          </div>
         )}
-        <button
-          onClick={salvar}
-          disabled={salvando}
-          style={{
-            background: salvando ? BRAND.cinza : BRAND.gradiente,
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            padding: "10px 22px",
-            cursor: salvando ? "not-allowed" : "pointer",
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 600,
-            opacity: salvando ? 0.7 : 1,
-            transition: "opacity 0.15s",
-          }}
-        >
-          {salvando ? "Salvando..." : `Salvar permissões — ${roleLabel(roleAtivo)}`}
-        </button>
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+          {salvoOk && (
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                color: BRAND.verde,
+                fontFamily: FONT.body,
+                fontSize: 13,
+              }}
+            >
+              <ShieldCheck size={14} /> Permissões salvas com sucesso
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={salvar}
+            disabled={salvando}
+            style={{
+              background: salvando ? BRAND.cinza : BRAND.gradiente,
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              padding: "10px 22px",
+              cursor: salvando ? "not-allowed" : "pointer",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 600,
+              opacity: salvando ? 0.7 : 1,
+              transition: "opacity 0.15s",
+            }}
+          >
+            {salvando ? "Salvando..." : `Salvar permissões — ${roleLabel(roleAtivo)}`}
+          </button>
+        </div>
       </div>
     </div>
   );

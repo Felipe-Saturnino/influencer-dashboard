@@ -1,6 +1,5 @@
 import { useApp } from "../../context/AppContext";
-import { FONT } from "../../constants/theme";
-import { FONT_TITLE } from "../../lib/dashboardConstants";
+import { FONT, FONT_TITLE } from "../../constants/theme";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 
 interface Props {

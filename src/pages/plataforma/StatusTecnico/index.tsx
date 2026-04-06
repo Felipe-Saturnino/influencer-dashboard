@@ -2,34 +2,27 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
-import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
+import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
-import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
-import { UPLOAD_PLS_COMMERCIAL_SLUG, UPLOAD_PLS_DISPLAY_NAME } from "../../../lib/uploadPlsCommercial";
+import { CheckCircle2, AlertTriangle, XCircle, RefreshCw } from "lucide-react";
 
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-} as const;
+/** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
+const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
 
 // ─── SectionTitle (padrão da plataforma) ─────────────────────────────────────
 function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: "rgba(74,32,130,0.18)",
-        border: "1px solid rgba(74,32,130,0.30)",
+        background: brand.primaryIconBg,
+        border: brand.primaryIconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: BRAND.ciano, flexShrink: 0,
+        color: brand.primaryIconColor, flexShrink: 0,
       }}>
         {icon}
       </span>
@@ -118,12 +111,12 @@ interface FluxoDia {
   cda: number;
   social: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
-  pls: number;
   total: number;
 }
 
 export default function StatusTecnico() {
   const { theme: t } = useApp();
+  const dashBrand = useDashboardBrand();
   const perm = usePermission("status_tecnico");
   const [loading, setLoading] = useState(true);
   const [syncExecutando, setSyncExecutando] = useState(false);
@@ -145,8 +138,11 @@ export default function StatusTecnico() {
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [, setPlsUploadBusy] = useState(false);
-  const [plsMensagem, setPlsMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | null>(null);
+  const [confirmarEmail, setConfirmarEmail] = useState<"diretoria" | "agenda" | null>(null);
+  const [fluxoLabelNarrow, setFluxoLabelNarrow] = useState(
+    typeof window !== "undefined" && window.innerWidth < 480,
+  );
   const card: React.CSSProperties = {
     background: t.cardBg,
     borderRadius: 16,
@@ -157,7 +153,7 @@ export default function StatusTecnico() {
     fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
     color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px",
     padding: "10px 14px", textAlign: "left",
-    background: "rgba(74,32,130,0.10)",
+    background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
     borderBottom: `1px solid ${t.cardBorder}`,
   };
   const tdStyle: React.CSSProperties = {
@@ -169,9 +165,11 @@ export default function StatusTecnico() {
     setLoading(true);
     const hoje = new Date().toISOString().split("T")[0];
 
-    // Integrações
+    // Integrações (sem upload PLS — descontinuado; pode sobrar linha no DB até migração)
     const { data: intData } = await supabase.from("integrations").select("*").eq("ativo", true);
-    setIntegrations(intData ?? []);
+    setIntegrations(
+      (intData ?? []).filter((i) => i.slug !== SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA),
+    );
 
     // Sync logs (últimos 7 dias)
     const { data: syncDataRaw } = await supabase
@@ -247,19 +245,10 @@ export default function StatusTecnico() {
     setEmailUltimoAgenda(ultimoPorTipo("email_agenda_diaria"));
     setEmailEnviosCount((resEmails.data ?? []).length);
 
-    const plsPorData = syncData.reduce<Record<string, number>>((acc, l) => {
-      if (l.integracao_slug !== UPLOAD_PLS_COMMERCIAL_SLUG || l.status !== "ok") return acc;
-      const d = String(l.executado_em).slice(0, 10);
-      const n = (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0);
-      acc[d] = (acc[d] ?? 0) + Math.max(n, 1);
-      return acc;
-    }, {});
-
     const datasSet = new Set<string>([
       ...Object.keys(cdaPorData),
       ...Object.keys(socialPorData),
       ...Object.keys(emailsPorData),
-      ...Object.keys(plsPorData),
       hoje,
     ]);
     const fluxoArray: FluxoDia[] = Array.from(datasSet)
@@ -269,14 +258,12 @@ export default function StatusTecnico() {
         const social = socialPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
-        const pls = plsPorData[data] ?? 0;
         return {
           data,
           cda,
           social,
           emails,
-          pls,
-          total: cda + social + emailTotal + pls,
+          total: cda + social + emailTotal,
         };
       });
     setFluxoDados(fluxoArray);
@@ -289,6 +276,26 @@ export default function StatusTecnico() {
     const interval = setInterval(carregar, 60000); // refresh a cada 1 min
     return () => clearInterval(interval);
   }, [carregar]);
+
+  useEffect(() => {
+    if (confirmarSync == null && confirmarEmail == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setConfirmarSync(null);
+        setConfirmarEmail(null);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [confirmarSync, confirmarEmail]);
+
+  useEffect(() => {
+    const onResize = () => setFluxoLabelNarrow(window.innerWidth < 480);
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const executarSync = async () => {
     if (syncExecutando || !perm.canEditarOk) return;
@@ -646,21 +653,16 @@ export default function StatusTecnico() {
     !!emailUltimoAgenda &&
     (!ultimoTechLogAgenda || emailUltimoAgenda >= ultimoTechLogAgenda);
 
-  const plsLogsAll = syncLogs.filter((l) => l.integracao_slug === UPLOAD_PLS_COMMERCIAL_SLUG);
-  const ultimoPlsSync = plsLogsAll[0] ?? null;
-  const plsStatusOk = ultimoPlsSync?.status === "ok";
-
-  const integracoesAtivasCount = [cdaStatusOk, socialStatusOk, emailStatusDiretoriaOk, emailStatusAgendaOk, plsStatusOk].filter(Boolean)
+  const integracoesAtivasCount = [cdaStatusOk, socialStatusOk, emailStatusDiretoriaOk, emailStatusAgendaOk].filter(Boolean)
     .length;
-  const totalIntegracoes = 5;
+  const totalIntegracoes = 4;
 
-  // Último Sync: mais recente entre CDA, Social, e-mails e PLS (por data de execução)
+  // Último Sync: mais recente entre CDA, Social e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
   if (ultimoSyncCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncCdaLog.executado_em, label: "CDA" });
   if (ultimoPipelineRun?.created_at) timestamps.push({ ts: ultimoPipelineRun.created_at, label: "Social" });
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
   if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
-  if (ultimoPlsSync?.executado_em) timestamps.push({ ts: ultimoPlsSync.executado_em, label: "Upload PLS" });
   const ultimoSyncQualquer = timestamps.length > 0 ? timestamps.reduce((a, b) => (a.ts > b.ts ? a : b)) : null;
 
   // Registros Hoje: soma do fluxo total (CDA + Social Media + E-mails)
@@ -676,9 +678,8 @@ export default function StatusTecnico() {
     l.tipo === "relatorio_diretoria" || l.tipo === "email_agenda_diaria",
   ).length;
   const emailTotal = emailEnviosCount + emailFalhas;
-  const plsFalhasSync = plsLogsAll.filter((l) => l.status === "falha").length;
-  const totalTentativas = cdaTotal + socialTotal + Math.max(emailTotal, 1) + plsLogsAll.length;
-  const totalFalhas = cdaFalhas + socialFalhas + emailFalhas + plsFalhasSync;
+  const totalTentativas = cdaTotal + socialTotal + Math.max(emailTotal, 1);
+  const totalFalhas = cdaFalhas + socialFalhas + emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
 
   // Alertas derivados — ordem: CDA, Social Media, E-mail
@@ -781,21 +782,8 @@ export default function StatusTecnico() {
     alertas.push({ nivel: "aviso", msg: "E-mail - Agenda do dia (Resend) não enviado hoje" });
   }
 
-  // ── Upload PLS / Daily Commercial Report (sync_logs) ──
-  const plsFalhaRecente24h = plsLogsAll.filter((l) => {
-    if (l.status !== "falha") return false;
-    return new Date(l.executado_em) >= vinteQuatroHoras;
-  });
-  if (plsFalhaRecente24h.length > 0) {
-    alertas.push({
-      nivel: "erro",
-      msg: "Upload PLS / Daily Commercial Report falhou nas últimas 24h — confira Logs Recentes e tente novamente com imagem mais nítida.",
-    });
-  }
-
   // Status por integração (última execução)
   const statusPorIntegracao = integrations
-    .filter((int) => int.slug !== UPLOAD_PLS_COMMERCIAL_SLUG)
     .map((int) => {
     const logsInt = syncLogs.filter((l) => l.integracao_slug === int.slug);
     const ultimo = logsInt[0];
@@ -850,41 +838,12 @@ export default function StatusTecnico() {
     syncTipo: "email_agenda" as const,
   };
 
-  const syncsHojePls = plsLogsAll.filter((l) => l.executado_em?.startsWith(hojeIso));
-  const regsHojePls = syncsHojePls.reduce(
-    (s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0),
-    0,
-  );
-  const regsExibirPls =
-    regsHojePls ||
-    (ultimoPlsSync?.status === "ok"
-      ? (ultimoPlsSync.registros_inseridos ?? 0) + (ultimoPlsSync.registros_atualizados ?? 0)
-      : 0);
-  let plsRowStatus: "ok" | "warning" | "falha" = "falha";
-  if (ultimoPlsSync?.status === "ok") {
-    plsRowStatus = ultimoPlsSync.erros_count && ultimoPlsSync.erros_count > 0 ? "warning" : "ok";
-  } else if (ultimoPlsSync?.status === "falha") {
-    plsRowStatus = "falha";
-  }
-  const plsRow = {
-    slug: UPLOAD_PLS_COMMERCIAL_SLUG,
-    nome: UPLOAD_PLS_DISPLAY_NAME,
-    descricao: "OCR no navegador → relatórios Mesas Spin (daily, monthly, por mesa)",
-    ativo: true,
-    ultimoSync: ultimoPlsSync?.executado_em ?? null,
-    registrosHoje: regsExibirPls,
-    erros: ultimoPlsSync?.erros_count ?? 0,
-    status: plsRowStatus,
-    syncTipo: "pls_upload" as const,
-  };
-
-  const linhasCompletas = [...statusPorIntegracao, plsRow, socialKpisRow, emailDiretoriaRow, emailAgendaRow];
+  const linhasCompletas = [...statusPorIntegracao, socialKpisRow, emailDiretoriaRow, emailAgendaRow];
 
   const fluxoLabel = (k: string) =>
     ({
       cda: "CDA (Casa de Apostas)",
       social: "Social Media",
-      pls: UPLOAD_PLS_DISPLAY_NAME,
       relatorio_diretoria: "E-mail: Relatório Diretoria",
       email_agenda_diaria: "E-mail: Agenda do dia",
     }[k] ?? `E-mail: ${k}`);
@@ -892,7 +851,6 @@ export default function StatusTecnico() {
     ({
       cda: BRAND.roxoVivo,
       social: BRAND.azul,
-      pls: "#c026d3",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
     }[k] ?? "#10b981");
@@ -902,9 +860,14 @@ export default function StatusTecnico() {
 
   const btnAcao = (disabled: boolean): React.CSSProperties => ({
     padding: "6px 14px", borderRadius: 8, border: "none",
-    background: disabled ? "#6b7280" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+    background: disabled
+      ? BRAND.cinza
+      : dashBrand.useBrand
+        ? "var(--brand-primary)"
+        : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
     color: "#fff", fontSize: 12, fontWeight: 700,
     fontFamily: FONT.body, cursor: disabled ? "not-allowed" : "pointer",
+    display: "inline-flex", alignItems: "center", gap: 6,
   });
   const formatarHora = (iso: string) => {
     const d = new Date(iso);
@@ -929,15 +892,16 @@ export default function StatusTecnico() {
       {/* ── Header — padrão da plataforma ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+          width: 28, height: 28, borderRadius: 8,
+          background: dashBrand.primaryIconBg,
+          border: dashBrand.primaryIconBorder,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: BRAND.ciano, flexShrink: 0,
+          color: dashBrand.primaryIconColor, flexShrink: 0,
         }}>
-          <GiRadarSweep size={18} />
+          <GiRadarSweep size={14} />
         </span>
         <div>
-          <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: t.text, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: dashBrand.primary, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Status Técnico
           </h1>
           <p style={{ color: t.textMuted, margin: "4px 0 0", fontFamily: FONT.body, fontSize: 13 }}>
@@ -977,14 +941,13 @@ export default function StatusTecnico() {
       {/* ── Status das Integrações ── */}
       <div style={card}>
         <SectionTitle icon={<GiCircuitry size={14} />}>Status das Integrações</SectionTitle>
-        {(syncMensagem || syncSocialMensagem || emailMensagem || emailAgendaMensagem || plsMensagem) && (
+        {(syncMensagem || syncSocialMensagem || emailMensagem || emailAgendaMensagem) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
             {[
               syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
               emailMensagem && { prefix: "E-mail Diretoria", msg: emailMensagem },
               emailAgendaMensagem && { prefix: "E-mail Agenda", msg: emailAgendaMensagem },
-              plsMensagem && { prefix: "", msg: plsMensagem },
             ]
               .filter(Boolean)
               .map((item, i) => {
@@ -996,10 +959,17 @@ export default function StatusTecnico() {
                     border: `1px solid ${msg.tipo === "ok" ? BRAND.verde : BRAND.vermelho}`,
                     color: msg.tipo === "ok" ? BRAND.verde : BRAND.vermelho,
                     fontFamily: FONT.body, fontSize: 12,
+                    display: "flex", alignItems: "flex-start", gap: 8,
                   }}>
-                    {msg.tipo === "ok" ? "✅ " : "⚠️ "}
-                    {prefix ? `${prefix}: ` : ""}
-                    {msg.texto}
+                    {msg.tipo === "ok" ? (
+                      <CheckCircle2 size={16} color={BRAND.verde} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
+                    ) : (
+                      <AlertTriangle size={16} color={BRAND.vermelho} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
+                    )}
+                    <span>
+                      {prefix ? `${prefix}: ` : ""}
+                      {msg.texto}
+                    </span>
                   </div>
                 );
               })}
@@ -1024,7 +994,6 @@ export default function StatusTecnico() {
                 {linhasCompletas.map((row, idx) => {
                   const isCda = row.syncTipo === "cda";
                   const isSocial = row.syncTipo === "social";
-                  const isPlsUpload = row.syncTipo === "pls_upload";
                   const isEmailDir = row.syncTipo === "email";
                   const isEmailAgenda = row.syncTipo === "email_agenda";
                   const syncExecutandoRow = isCda
@@ -1032,12 +1001,11 @@ export default function StatusTecnico() {
                     : isSocial
                       ? syncSocialExecutando
                       : false;
-                  const onSync = isCda ? executarSync : isSocial ? executarSyncSocial : () => {};
                   const ultimoSync = "ultimoSync" in row ? row.ultimoSync : null;
                   const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
                   const erros = "erros" in row ? row.erros : 0;
                   const status = "status" in row ? row.status : null;
-                  const rowBg = idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent";
+                  const rowBg = idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
                   return (
                     <tr key={row.slug} style={{ background: rowBg }}>
                       <td style={tdStyle}>
@@ -1055,37 +1023,44 @@ export default function StatusTecnico() {
                             borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700,
                             border: `1px solid ${status === "ok" ? `${BRAND.verde}44` : status === "warning" ? `${BRAND.amarelo}44` : `${BRAND.vermelho}44`}`,
                           }}>
-                            {status === "ok" && "🟢 OK"}
-                            {status === "warning" && "🟡 Warning"}
-                            {status === "falha" && "🔴 Falha"}
+                            {status === "ok" && <CheckCircle2 size={13} aria-hidden="true" />}
+                            {status === "warning" && <AlertTriangle size={13} aria-hidden="true" />}
+                            {status === "falha" && <XCircle size={13} aria-hidden="true" />}
+                            {status === "ok" ? "OK" : status === "warning" ? "Atenção" : "Falha"}
                           </span>
                         )}
                       </td>
                       <td style={tdStyle}>
                         {(isCda || isSocial) && (
-                          <button onClick={onSync} disabled={syncExecutandoRow || !perm.canEditarOk} style={btnAcao(syncExecutandoRow)}>
-                            {syncExecutandoRow ? "..." : "🔄 Sync"}
+                          <button
+                            type="button"
+                            onClick={() => setConfirmarSync(isCda ? "cda" : "social")}
+                            disabled={syncExecutandoRow || !perm.canEditarOk}
+                            style={btnAcao(syncExecutandoRow)}
+                          >
+                            <RefreshCw size={13} aria-hidden="true" />
+                            {syncExecutandoRow ? "Sincronizando..." : "Sync"}
                           </button>
                         )}
                         {isEmailDir && (
-                          <button onClick={enviarEmailDiretoria} disabled={emailEnviando || !perm.canEditarOk} style={btnAcao(emailEnviando)}>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmarEmail("diretoria")}
+                            disabled={emailEnviando || !perm.canEditarOk}
+                            style={btnAcao(emailEnviando)}
+                          >
                             {emailEnviando ? "Enviando..." : "Enviar"}
                           </button>
                         )}
                         {isEmailAgenda && (
-                          <button onClick={enviarEmailAgenda} disabled={emailAgendaEnviando || !perm.canEditarOk} style={btnAcao(emailAgendaEnviando)}>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmarEmail("agenda")}
+                            disabled={emailAgendaEnviando || !perm.canEditarOk}
+                            style={btnAcao(emailAgendaEnviando)}
+                          >
                             {emailAgendaEnviando ? "Enviando..." : "Enviar"}
                           </button>
-                        )}
-                        {isPlsUpload && (
-                          <MesasSpinRelatorioUpload
-                            t={t}
-                            variant="statusTable"
-                            disabled={!perm.canEditarOk}
-                            onImported={carregar}
-                            onBusyChange={setPlsUploadBusy}
-                            onUserMessage={setPlsMensagem}
-                          />
                         )}
                       </td>
                     </tr>
@@ -1106,7 +1081,6 @@ export default function StatusTecnico() {
           {[
             { key: "cda", label: "CDA" },
             { key: "social", label: "Social Media" },
-            { key: "pls", label: "PLS / Commercial" },
             { key: "relatorio_diretoria", label: "E-mail Diretoria" },
             { key: "email_agenda_diaria", label: "E-mail Agenda" },
           ].map((item) => (
@@ -1120,7 +1094,7 @@ export default function StatusTecnico() {
         {loading ? (
           <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Carregando...</p>
         ) : fluxoDados.length === 0 ? (
-          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>Nenhum dado no período.</p>
+          <p style={{ color: t.textMuted, fontFamily: FONT.body }}>{MSG_SEM_DADOS_FILTRO}</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[...fluxoDados.slice(-14)].reverse().map((f) => {
@@ -1133,7 +1107,7 @@ export default function StatusTecnico() {
                   onMouseEnter={() => setFluxoHover(f.data)}
                   onMouseLeave={() => setFluxoHover(null)}
                 >
-                  <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: 100, flexShrink: 0 }}>
+                  <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: fluxoLabelNarrow ? 80 : 100, flexShrink: 0 }}>
                     {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
                   </span>
                   <div style={{ flex: 1, height: 24, background: t.cardBorder, borderRadius: 6, overflow: "hidden", display: "flex" }}>
@@ -1147,12 +1121,6 @@ export default function StatusTecnico() {
                       <div
                         title={`${fluxoLabel("social")}: ${f.social.toLocaleString("pt-BR")}`}
                         style={{ width: `${pct(f.social)}%`, minWidth: f.social > 0 ? 8 : 0, height: "100%", background: fluxoCor("social"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
-                      />
-                    )}
-                    {f.pls > 0 && (
-                      <div
-                        title={`${fluxoLabel("pls")}: ${f.pls.toLocaleString("pt-BR")}`}
-                        style={{ width: `${pct(f.pls)}%`, minWidth: f.pls > 0 ? 8 : 0, height: "100%", background: fluxoCor("pls"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
                     {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
@@ -1170,15 +1138,25 @@ export default function StatusTecnico() {
                   {/* Tooltip on hover */}
                   {isHover && f.total > 0 && (
                     <div style={{
-                      position: "absolute", left: 116, top: "50%", transform: "translateY(-50%)",
-                      marginLeft: 4, padding: "8px 12px",
-                      background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-                      borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                      fontSize: 12, fontFamily: FONT.body, color: t.text, zIndex: 10, whiteSpace: "nowrap",
+                      position: "absolute",
+                      left: fluxoLabelNarrow ? 88 : 110,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      marginLeft: 4,
+                      padding: "8px 12px",
+                      background: t.cardBg,
+                      border: `1px solid ${t.cardBorder}`,
+                      borderRadius: 8,
+                      boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+                      fontSize: 12,
+                      fontFamily: FONT.body,
+                      color: t.text,
+                      zIndex: 10,
+                      maxWidth: "calc(100% - 120px)",
+                      overflow: "hidden",
                     }}>
                       {f.cda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}</div>}
                       {f.social > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}</div>}
-                      {f.pls > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("pls"), fontWeight: 600 }}>●</span> {fluxoLabel("pls")}: {f.pls.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }}>●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
                       ))}
@@ -1195,7 +1173,10 @@ export default function StatusTecnico() {
       <div style={card}>
         <SectionTitle icon={<GiSiren size={14} />}>Alertas</SectionTitle>
         {alertas.length === 0 ? (
-          <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0 }}>✅ Nenhum alerta no momento.</p>
+          <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <CheckCircle2 size={16} color={BRAND.verde} aria-hidden="true" />
+            Nenhum alerta no momento.
+          </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {alertas.map((a, i) => (
@@ -1228,9 +1209,10 @@ export default function StatusTecnico() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{
               width: 28, height: 28, borderRadius: 8,
-              background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+              background: dashBrand.primaryIconBg,
+              border: dashBrand.primaryIconBorder,
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: BRAND.ciano, flexShrink: 0,
+              color: dashBrand.primaryIconColor, flexShrink: 0,
             }}>
               <GiCircuitry size={13} />
             </span>
@@ -1242,6 +1224,9 @@ export default function StatusTecnico() {
             {(["1h", "24h", "48h"] as const).map((f) => (
               <button
                 key={f}
+                type="button"
+                aria-pressed={logFiltro === f}
+                aria-label={f === "1h" ? "Filtrar logs da última hora" : f === "24h" ? "Filtrar logs das últimas 24 horas" : "Filtrar logs das últimas 48 horas"}
                 onClick={() => setLogFiltro(f)}
                 style={{
                   padding: "6px 12px", borderRadius: 8,
@@ -1279,9 +1264,7 @@ export default function StatusTecnico() {
                   {techLogsFiltrados.map((log, idx) => {
                     const integracaoLabel =
                       log.integracao_slug
-                        ? log.integracao_slug === UPLOAD_PLS_COMMERCIAL_SLUG
-                          ? UPLOAD_PLS_DISPLAY_NAME
-                          : (integrations.find((i) => i.slug === log.integracao_slug)?.nome ?? log.integracao_slug)
+                        ? integrations.find((i) => i.slug === log.integracao_slug)?.nome ?? log.integracao_slug
                         : {
                             instagram: "Social Media (Instagram)", facebook: "Social Media (Facebook)",
                             youtube: "Social Media (YouTube)", linkedin: "Social Media (LinkedIn)",
@@ -1290,7 +1273,7 @@ export default function StatusTecnico() {
                             resend: "E-mail (Resend)",
                           }[log.tipo] ?? log.tipo;
                     return (
-                      <tr key={log.id} style={{ background: idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
+                      <tr key={log.id} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
                         <td style={tdStyle}>{formatarHora(log.created_at)}</td>
                         <td style={tdStyle}>{integracaoLabel}</td>
                         <td style={tdStyle}>
@@ -1309,7 +1292,7 @@ export default function StatusTecnico() {
 
       {/* Configuração de Alertas */}
       <div style={card}>
-        <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
+        <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
           Configuração de Alertas
         </h2>
         <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, marginBottom: 16 }}>
@@ -1319,7 +1302,7 @@ export default function StatusTecnico() {
           <p style={{ color: t.textMuted }}>Carregando...</p>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
               <thead>
                 <tr>
                   <th style={thStyle}>Alerta</th>
@@ -1375,15 +1358,111 @@ export default function StatusTecnico() {
                   <td style={tdStyle}>E-mail - Agenda do dia (Resend) não enviado hoje</td>
                   <td style={tdStyle}>Sem email_envios hoje (tipo email_agenda_diaria)</td>
                 </tr>
-                <tr>
-                  <td style={tdStyle}>Upload PLS / Daily Commercial Report — falha recente</td>
-                  <td style={tdStyle}>sync_logs status=falha para upload_pls_daily_commercial (últimas 24h)</td>
-                </tr>
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {(confirmarSync || confirmarEmail) && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="status-tecnico-confirm-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            padding: 20,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setConfirmarSync(null);
+              setConfirmarEmail(null);
+            }
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: 16,
+              padding: 24,
+              maxWidth: 420,
+              width: "100%",
+            }}
+          >
+            <h2 id="status-tecnico-confirm-title" style={{ marginTop: 0, fontFamily: FONT_TITLE, fontSize: 17, color: t.text }}>
+              {confirmarSync === "cda" && "Confirmar Sync CDA"}
+              {confirmarSync === "social" && "Confirmar Sync Social"}
+              {confirmarEmail === "diretoria" && "Confirmar envio — E-mail Diretoria"}
+              {confirmarEmail === "agenda" && "Confirmar envio — E-mail Agenda"}
+            </h2>
+            <p style={{ fontFamily: FONT.body, fontSize: 14, color: t.textMuted, marginBottom: 0 }}>
+              {confirmarSync
+                ? "Esta ação irá sincronizar dados conforme a configuração do período. Continuar?"
+                : "Esta ação irá disparar o envio do e-mail. Continuar?"}
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmarSync(null);
+                  setConfirmarEmail(null);
+                }}
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${t.cardBorder}`,
+                  borderRadius: 10,
+                  padding: "9px 16px",
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  color: t.text,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirmarSync === "cda") {
+                    setConfirmarSync(null);
+                    void executarSync();
+                  } else if (confirmarSync === "social") {
+                    setConfirmarSync(null);
+                    void executarSyncSocial();
+                  } else if (confirmarEmail === "diretoria") {
+                    setConfirmarEmail(null);
+                    void enviarEmailDiretoria();
+                  } else if (confirmarEmail === "agenda") {
+                    setConfirmarEmail(null);
+                    void enviarEmailAgenda();
+                  }
+                }}
+                style={{
+                  background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "9px 16px",
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

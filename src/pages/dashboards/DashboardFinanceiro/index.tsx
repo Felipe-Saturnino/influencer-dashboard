@@ -4,7 +4,9 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { SelectComIcone } from "../../../components/dashboard";
+import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
@@ -129,6 +131,12 @@ function getPerfilJogador(pvi: number): PerfilJogador {
   return "Caçadores de Bônus";
 }
 
+function wdRatioColor(pct: number): string {
+  if (pct < 60) return BRAND.verde;
+  if (pct <= 80) return BRAND.amarelo;
+  return BRAND.vermelho;
+}
+
 // ─── SECTION TITLE (padrão Overview / Conversão) ──────────────────────────────
 function SectionTitle({ icon, children, sub }: {
   icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
@@ -232,20 +240,29 @@ function KpiCard({ label, value, subValue, icon, accentVar: _accentVar, accentCo
 }
 
 // ─── TOOLTIP CUSTOMIZADO DA PIZZA ─────────────────────────────────────────────
-function PieTooltip({ active, payload, total, cardBg, cardBorder, text }: {
+function PieTooltip({ active, payload, total }: {
   active?: boolean; payload?: { name: string; value: number; payload: { color: string; nomeCompleto: string } }[];
-  total: number; cardBg: string; cardBorder: string; text: string;
+  total: number;
 }) {
+  const { theme: tt, isDark } = useApp();
   if (!active || !payload?.length) return null;
   const p = payload[0];
   const pct = total > 0 ? ((p.value / total) * 100).toFixed(1) : "0";
   return (
-    <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 10, padding: "8px 12px", fontSize: 12, color: text, boxShadow: "0 6px 20px rgba(0,0,0,0.35)" }}>
+    <div style={{
+      background: tt.cardBg,
+      border: `1px solid ${tt.cardBorder}`,
+      borderRadius: 10,
+      padding: "8px 12px",
+      fontSize: 12,
+      color: tt.text,
+      boxShadow: isDark ? "0 6px 20px rgba(0,0,0,0.35)" : "0 4px 16px rgba(0,0,0,0.12)",
+    }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: p.payload.color, display: "inline-block" }} />
         <span style={{ fontWeight: 700 }}>{p.payload.nomeCompleto}</span>
       </div>
-      <div>{fmtBRL(p.value)} <span style={{ color: "#9ca3af" }}>· {pct}%</span></div>
+      <div>{fmtBRL(p.value)} <span style={{ color: tt.textMuted }}>· {pct}%</span></div>
     </div>
   );
 }
@@ -582,32 +599,16 @@ export default function DashboardFinanceiro() {
     borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
-  const thStyle: React.CSSProperties = {
-    textAlign: "left", fontSize: 10, letterSpacing: "0.1em",
-    textTransform: "uppercase", color: t.textMuted, fontWeight: 600,
-    padding: "10px 12px", borderBottom: `1px solid ${t.cardBorder}`,
-    background: "rgba(74,32,130,0.10)", fontFamily: FONT.body, whiteSpace: "nowrap",
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: "10px 12px", fontSize: 13,
-    borderBottom: `1px solid rgba(255,255,255,0.04)`,
-    color: t.text, fontFamily: FONT.body, whiteSpace: "nowrap",
-  };
+  const thStyle = getThStyle(t);
+  const thGroup = getThStyle(t, { textAlign: "center", borderBottom: "none" });
+  const thSub = getThStyle(t, { fontSize: 9, fontWeight: 500, letterSpacing: "0.06em" });
+  const tdStyle = getTdStyle(t);
 
   const btnNavStyle: React.CSSProperties = {
     width: 30, height: 30, borderRadius: "50%",
     border: `1px solid ${t.cardBorder}`, background: "transparent",
     color: t.text, cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center",
-  };
-
-  const selectStyle: React.CSSProperties = {
-    padding: "6px 12px 6px 32px", borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg ?? t.cardBg,
-    color: t.text, fontSize: 13, fontFamily: FONT.body,
-    cursor: "pointer", appearance: "none", outline: "none",
   };
 
   if (perm.canView === "nao") {
@@ -630,18 +631,18 @@ export default function DashboardFinanceiro() {
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-            <button style={{ ...btnNavStyle, opacity: historico||isPrimeiro?0.35:1, cursor: historico||isPrimeiro?"not-allowed":"pointer" }}
+            <button type="button" aria-label="Mês anterior" style={{ ...btnNavStyle, opacity: historico||isPrimeiro?0.35:1, cursor: historico||isPrimeiro?"not-allowed":"pointer" }}
               onClick={irMesAnterior} disabled={historico||isPrimeiro}>
-              <ChevronLeft size={14} />
+              <ChevronLeft size={14} aria-hidden />
             </button>
             <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
-            <button style={{ ...btnNavStyle, opacity: historico||isUltimo?0.35:1, cursor: historico||isUltimo?"not-allowed":"pointer" }}
+            <button type="button" aria-label="Próximo mês" style={{ ...btnNavStyle, opacity: historico||isUltimo?0.35:1, cursor: historico||isUltimo?"not-allowed":"pointer" }}
               onClick={irMesProximo} disabled={historico||isUltimo}>
-              <ChevronRight size={14} />
+              <ChevronRight size={14} aria-hidden />
             </button>
-            <button onClick={toggleHistorico} style={{
+            <button type="button" aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"} aria-pressed={historico} onClick={toggleHistorico} style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
@@ -650,38 +651,40 @@ export default function DashboardFinanceiro() {
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
-              <GiCalendar size={14} /> Histórico
+              <GiCalendar size={14} aria-hidden /> Histórico
             </button>
             {showFiltroInfluencer && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiStarMedal size={14} />
-                </span>
-                <select value={filtroInfluencer} onChange={(e) => setFiltroInfluencer(e.target.value)} style={selectStyle}>
-                  <option value="todos">Todos os influencers</option>
-                  {[...rows].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>)}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiStarMedal size={14} aria-hidden />}
+                label="Filtrar por influencer"
+                value={filtroInfluencer}
+                onChange={setFiltroInfluencer}
+              >
+                <option value="todos">Todos os influencers</option>
+                {[...rows].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((r) => (
+                  <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
+                ))}
+              </SelectComIcone>
             )}
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={14} />
-                </span>
-                <select value={operadoraFiltro} onChange={(e) => setOperadoraFiltro(e.target.value)} style={selectStyle}>
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => (
-                      <option key={o.slug} value={o.slug}>{o.nome}</option>
-                    ))}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiShield size={14} aria-hidden />}
+                label="Filtrar por operadora"
+                value={operadoraFiltro}
+                onChange={setOperadoraFiltro}
+              >
+                <option value="todas">Todas as operadoras</option>
+                {operadorasList
+                  .filter((o) => podeVerOperadora(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => (
+                    <option key={o.slug} value={o.slug}>{o.nome}</option>
+                  ))}
+              </SelectComIcone>
             )}
             {loading && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} /> Carregando...
+                <Clock size={12} aria-hidden /> Carregando...
               </span>
             )}
           </div>
@@ -692,7 +695,7 @@ export default function DashboardFinanceiro() {
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle
           icon={<GiPokerHand size={14} />}
-          sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
+          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Financeiros
         </SectionTitle>
@@ -740,7 +743,8 @@ export default function DashboardFinanceiro() {
           />
           <KpiCard
             label="PVI"
-            value={totaisExibir.pvi > 0 ? `${totaisExibir.pvi}%` : "—"}
+            value={totaisExibir.pvi > 0 ? `${totaisExibir.pvi} pts` : "—"}
+            subValue={{ label: "Player Value Index (0–100)", value: "" }}
             icon={<GiSpeedometer size={14} />} accentVar="--brand-extra2" accentColor={BRAND.verde}
             atual={totaisExibir.pvi} anterior={totaisAnt.pvi}
             isHistorico={historico}
@@ -750,11 +754,13 @@ export default function DashboardFinanceiro() {
 
       {/* ══ BLOCO 3: INVESTIMENTO POR INFLUENCER ════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiCoins size={14} />}>Investimento por Influencer</SectionTitle>
+        <SectionTitle icon={<GiCoins size={14} />} sub={historico ? "acumulado" : undefined}>
+          Investimento por Influencer
+        </SectionTitle>
 
         {loading || pieInvestimento.length === 0 ? (
           <div style={{ minHeight: 360, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted, fontSize: 13 }}>
-            {loading ? "Carregando..." : "Sem dados"}
+            {loading ? "Carregando..." : MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
           <div style={{ display: "flex", gap: 48, flexWrap: "wrap", alignItems: "center", justifyContent: "center" }}>
@@ -767,7 +773,7 @@ export default function DashboardFinanceiro() {
                       <Cell key={i} fill={entry.color} stroke="none" />
                     ))}
                   </Pie>
-                  <Tooltip content={<PieTooltip total={pieTotal} cardBg={brand.blockBg} cardBorder={t.cardBorder} text={t.text} />} />
+                  <Tooltip content={<PieTooltip total={pieTotal} />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -801,14 +807,16 @@ export default function DashboardFinanceiro() {
       {/* ══ BLOCO 4: RANKING FINANCEIRO ══════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiWhiteTower size={14} />}>Ranking Financeiro</SectionTitle>
+          <SectionTitle icon={<GiWhiteTower size={14} />} sub={historico ? "acumulado" : undefined}>
+            Ranking Financeiro
+          </SectionTitle>
           {/* Legenda de perfis */}
           <div style={{ display: "flex", gap: 6, fontSize: 11, flexWrap: "wrap" }}>
             {(["Whales","Core","Recreativos","Caçadores de Bônus"] as PerfilJogador[]).map((p) => {
               const st = PERFIL_CORES[p];
               return (
                 <span key={p} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontFamily: FONT.body }}>
-                  <GiPerson size={11} /> {p}
+                  <GiPerson size={11} aria-hidden /> {p}
                 </span>
               );
             })}
@@ -818,15 +826,32 @@ export default function DashboardFinanceiro() {
         {loading ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando dados...</div>
         ) : rowsParaExibir.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Nenhum dado encontrado para o período selecionado.</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
+              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+                Ranking financeiro — {historico ? "Todo o período" : (mesSelecionado?.label ?? "")}
+              </caption>
               <thead>
                 <tr>
-                  {["Influencer","R$ FTD","Ticket Médio","R$ Depósito","Ticket Médio","R$ Saques","Ticket Médio","R$ GGR","GGR/Jogador","WD Ratio","PVI","Perfil Jogador"].map((h) => (
-                    <th key={h} style={thStyle}>{h}</th>
-                  ))}
+                  <th rowSpan={2} scope="col" style={thStyle}>Influencer</th>
+                  <th colSpan={2} scope="colgroup" style={thGroup}>FTD</th>
+                  <th colSpan={2} scope="colgroup" style={{ ...thGroup, borderLeft: `1px solid ${t.cardBorder}` }}>Depósitos</th>
+                  <th colSpan={2} scope="colgroup" style={{ ...thGroup, borderLeft: `1px solid ${t.cardBorder}` }}>Saques</th>
+                  <th rowSpan={2} scope="col" style={thStyle}>R$ GGR</th>
+                  <th rowSpan={2} scope="col" style={thStyle}>GGR/Jogador</th>
+                  <th rowSpan={2} scope="col" style={thStyle}>WD Ratio</th>
+                  <th rowSpan={2} scope="col" style={thStyle}>PVI</th>
+                  <th rowSpan={2} scope="col" style={thStyle}>Perfil</th>
+                </tr>
+                <tr>
+                  <th scope="col" style={thSub}>R$ Total</th>
+                  <th scope="col" style={thSub}>Ticket Médio</th>
+                  <th scope="col" style={{ ...thSub, borderLeft: `1px solid ${t.cardBorder}` }}>R$ Total</th>
+                  <th scope="col" style={thSub}>Ticket Médio</th>
+                  <th scope="col" style={{ ...thSub, borderLeft: `1px solid ${t.cardBorder}` }}>R$ Total</th>
+                  <th scope="col" style={thSub}>Ticket Médio</th>
                 </tr>
               </thead>
               <tbody>
@@ -843,11 +868,17 @@ export default function DashboardFinanceiro() {
                       <td style={tdStyle}>{r.saque_ticket_medio > 0 ? fmtBRL(r.saque_ticket_medio) : "—"}</td>
                       <td style={{ ...tdStyle, color: r.ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(r.ggr)}</td>
                       <td style={tdStyle}>{r.ftds > 0 ? fmtBRL(r.ggr_por_jogador) : "—"}</td>
-                      <td style={tdStyle}>{r.depositos > 0 ? `${r.wd_ratio.toFixed(1)}%` : "—"}</td>
-                      <td style={tdStyle}>{r.pvi}%</td>
+                      <td style={{
+                        ...tdStyle,
+                        color: r.depositos > 0 ? wdRatioColor(r.wd_ratio) : t.text,
+                        fontWeight: r.depositos > 0 ? 700 : 400,
+                      }}>
+                        {r.depositos > 0 ? `${r.wd_ratio.toFixed(1)}%` : "—"}
+                      </td>
+                      <td style={tdStyle}>{r.pvi} pts</td>
                       <td style={tdStyle}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body, whiteSpace: "nowrap" }}>
-                          <GiPerson size={11} /> {r.perfil_jogador}
+                          <GiPerson size={11} aria-hidden /> {r.perfil_jogador}
                         </span>
                       </td>
                     </tr>

@@ -1,6 +1,8 @@
-# Acquisition Hub — Influencer Dashboard
+# Data Intelligence — Influencer Dashboard (Spin Gaming)
 
 Dashboard da Spin Gaming para gestão de influencers, lives, conversões e financeiro.
+
+Stack principal: React, TypeScript, Vite, Supabase; deploy típico em **Cloudflare Pages** (variáveis `VITE_*` no painel). Detalhes em [docs/SETUP.md](docs/SETUP.md).
 
 ## Pré-requisitos
 
@@ -42,30 +44,36 @@ Dashboard da Spin Gaming para gestão de influencers, lives, conversões e finan
 
 ## Scripts disponíveis
 
-| Comando       | Descrição                    |
-|---------------|------------------------------|
-| `npm run dev` | Servidor de desenvolvimento  |
-| `npm run build` | Build para produção        |
-| `npm run preview` | Preview do build local   |
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` | Build para produção |
+| `npm run preview` | Preview do build local |
+| `npm run lint` | ESLint (o CI de PR/push também roda lint + build nas branches configuradas) |
+| `npm run lint:fix` | Aplica correções automáticas do ESLint onde possível |
 
 ## Documentação adicional
 
-- [Setup detalhado e deploy](docs/SETUP.md)
+- [Setup detalhado, lint e deploy](docs/SETUP.md)
 
 ## Estrutura do projeto
 
 ```
 src/
-├── components/     # Componentes compartilhados
-├── context/        # AppContext (auth, permissões, tema)
-├── hooks/          # usePermission, useDashboardFiltros
-├── lib/            # Cliente Supabase
-├── pages/          # Páginas da aplicação
+├── components/     # Componentes compartilhados (ex.: dashboard/*)
+├── context/        # AppContext (auth, permissões, tema, brandguide operadora)
+├── hooks/          # usePermission, useDashboardFiltros, useDashboardBrand, etc.
+├── lib/            # Supabase, dashboardConstants, dashboardHelpers, tableStyles, etc.
+├── pages/          # Páginas por seção
 │   ├── dashboards/
-│   ├── lives/
-│   ├── operacoes/
-│   ├── plataforma/
-│   └── geral/
-├── constants/      # Tema, menu
+│   ├── conteudo/
+│   ├── geral/
+│   ├── lives/      # Agenda, Resultados, Feedback, Influencers, Scout (alinha ao menu “Lives”)
+│   ├── operacoes/  # Dealers, notificações, financeiro operacional, banca, campanhas, links
+│   └── plataforma/
+├── constants/      # Tema, menu, authScreen, platforms
+├── styles/         # global.css, responsive.css
 └── types/          # Tipos TypeScript
 ```
+
+`functions/` na raiz: endpoints Cloudflare Pages (API) quando aplicável.

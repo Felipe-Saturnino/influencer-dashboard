@@ -1,4 +1,4 @@
-# Relatório de Saúde do Código — Acquisition Hub
+# Relatório de Saúde do Código — Data Intelligence (Spin Gaming)
 
 *Última verificação: março 2025*
 

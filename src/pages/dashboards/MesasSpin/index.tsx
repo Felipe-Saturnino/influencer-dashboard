@@ -1,22 +1,22 @@
-import { Fragment, useState, useEffect, useMemo, useCallback } from "react";
+import { Fragment, useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
-import { MesasSpinRelatorioUpload } from "../../../components/MesasSpinRelatorioUpload";
 import KpiCard from "../../../components/dashboard/KpiCard";
+import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
+import { getThStyle, getTdStyle, getTdNumStyle } from "../../../lib/tableStyles";
 import {
   ChevronLeft,
   ChevronRight,
   Clock,
   LayoutGrid,
   Table2,
-  FileImage,
   Wallet,
   TrendingUp,
   ListOrdered,
@@ -30,6 +30,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -293,6 +295,31 @@ function uapUltimoDiaDoMesPorJogo(rows: UapPorJogoPlanRow[], ym: string, jogo: s
   return uap;
 }
 
+const UAP_JOGO_MAP: Record<string, "blackjack" | "roleta" | "baccarat"> = {
+  Blackjack: "blackjack",
+  Roleta: "roleta",
+  "Speed Baccarat": "baccarat",
+};
+
+function buildUapPorJogoQuery(
+  historico: boolean,
+  mesRef: { ano: number; mes: number } | undefined,
+  from: number,
+  to: number,
+) {
+  let q = supabase
+    .from("relatorio_uap_por_jogo")
+    .select("data, jogo, uap")
+    .order("data", { ascending: true })
+    .order("jogo", { ascending: true })
+    .range(from, to);
+  if (!historico && mesRef) {
+    const { inicio, fim } = getPeriodoComparativoMoM(mesRef.ano, mesRef.mes).atual;
+    q = q.gte("data", inicio).lte("data", fim);
+  }
+  return q;
+}
+
 function fmtBRL(v: number) {
   const sign = v < 0 ? "-" : "";
   return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -374,17 +401,21 @@ function linhaMesaPorDiaFromRow(r: PorTabelaRow): LinhaMesaPorDia {
   };
 }
 
-/** Métricas por jogo no comparativo (mesma linha que `LinhaMesaPorDia`, sem data). */
-type CelulaJogoMetricas = Pick<LinhaMesaPorDia, "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size">;
-
-type JogoMetricKey = keyof CelulaJogoMetricas;
-type JogoComparativoMetricKey = Exclude<JogoMetricKey, "margin_pct">;
+/** Métricas por jogo no comparativo (UAP vem de `relatorio_uap_por_jogo`). */
+type CelulaJogoMetricas = {
+  ggr: number | null;
+  turnover: number | null;
+  bets: number | null;
+  margin_pct: number | null;
+  bet_size: number | null;
+  uap: number | null;
+};
 
 function emptyCelulaJogo(): CelulaJogoMetricas {
-  return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null };
+  return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null, uap: null };
 }
 
-/** Soma GGR, turnover e apostas d-1; margem e aposta média a partir dos totais (ex.: Blackjack = BJ1+BJ2+VIP). */
+/** Soma GGR, turnover e apostas d-1; margem e aposta média a partir dos totais (ex.: Blackjack = BJ1+BJ2+VIP). UAP é preenchido à parte. */
 function aggregateCellFromPorTabelaRows(rows: PorTabelaRow[]): CelulaJogoMetricas {
   if (rows.length === 0) return emptyCelulaJogo();
   let ggr = 0;
@@ -414,7 +445,7 @@ function aggregateCellFromPorTabelaRows(rows: PorTabelaRow[]): CelulaJogoMetrica
     turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
   const bet_size =
     betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
-  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size };
+  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size, uap: null };
 }
 
 /** Agrega `relatorio_por_tabela` por mês (YYYY-MM) numa linha por período. */
@@ -446,18 +477,64 @@ function linhasMesaAgregadasPorMes(
     });
 }
 
+/** Mesmos totais do bloco Detalhamento Diário (`relatorio_daily_summary` / mensal). A coluna Total do comparativo usa isto; as células por jogo somam só mesas BJ/Roleta/Speed Baccarat em `por_tabela`. */
+type TotaisOficiaisComparativo = {
+  ggr: number | null;
+  turnover: number | null;
+  bets: number | null;
+  margin_pct: number | null;
+  bet_size: number | null;
+  uap: number | null;
+};
+
+function totaisOficiaisFromDailyRow(dr: DailyRow): TotaisOficiaisComparativo {
+  const t = dr.turnover;
+  const g = dr.ggr;
+  const b = dr.bets;
+  const u = dr.uap;
+  const margin_pct =
+    t != null && Number(t) !== 0 && g != null ? (Number(g) / Number(t)) * 100 : null;
+  const bet_size =
+    b != null && Number(b) !== 0 && t != null ? Number(t) / Number(b) : null;
+  return { turnover: t, ggr: g, bets: b, uap: u, margin_pct, bet_size };
+}
+
+function totaisOficiaisHistoricoMes(
+  ym: string,
+  dailyByYm: Map<string, DailyRow[]>,
+  monthlyByYm: Map<string, MonthlyRow>,
+): TotaisOficiaisComparativo {
+  const dias = dailyByYm.get(ym) ?? [];
+  const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
+  const m = monthlyByYm.get(ym);
+  const turnover = agg?.turnover ?? null;
+  const ggr = agg?.ggr ?? null;
+  const bets = agg?.bets ?? null;
+  const uap = m?.uap != null ? Number(m.uap) : agg?.uap ?? null;
+  const margin_pct =
+    turnover != null && Number(turnover) !== 0 && ggr != null
+      ? (Number(ggr) / Number(turnover)) * 100
+      : null;
+  const bet_size =
+    bets != null && Number(bets) !== 0 && turnover != null ? Number(turnover) / Number(bets) : null;
+  return { turnover, ggr, bets, uap, margin_pct, bet_size };
+}
+
 type LinhaComparativoJogoTab = {
   dataIso: string;
   labelData: string;
   blackjack: CelulaJogoMetricas;
   roleta: CelulaJogoMetricas;
   baccarat: CelulaJogoMetricas;
+  totaisOficiais: TotaisOficiaisComparativo;
 };
 
 function linhaComparativoJogoAgregadaMes(
   ym: string,
   rowsMonth: PorTabelaRow[],
   operadorasListFmt: { slug: string; nome: string }[],
+  uapRows: UapPorJogoPlanRow[],
+  totaisOficiais: TotaisOficiaisComparativo,
 ): LinhaComparativoJogoTab {
   const bj: PorTabelaRow[] = [];
   const rl: PorTabelaRow[] = [];
@@ -471,40 +548,78 @@ function linhaComparativoJogoAgregadaMes(
   return {
     dataIso: `${ym}-01`,
     labelData: fmtMesAnoCurtoFromYm(ym),
-    blackjack: aggregateCellFromPorTabelaRows(bj),
-    roleta: aggregateCellFromPorTabelaRows(rl),
-    baccarat: aggregateCellFromPorTabelaRows(bc),
+    blackjack: {
+      ...aggregateCellFromPorTabelaRows(bj),
+      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Blackjack") ?? null,
+    },
+    roleta: {
+      ...aggregateCellFromPorTabelaRows(rl),
+      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Roleta") ?? null,
+    },
+    baccarat: {
+      ...aggregateCellFromPorTabelaRows(bc),
+      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Speed Baccarat") ?? null,
+    },
+    totaisOficiais,
   };
 }
 
-function MarginBadge({ value }: { value: number | null }) {
-  const { theme: tt } = useApp();
-  if (value == null) return <span style={{ color: tt.textMuted }}>—</span>;
-  const v = Number(value);
-  let bg: string = "rgba(124,58,237,0.12)", color: string = BRAND.roxoVivo;
-  if (v > 10) {
-    bg = "rgba(34,197,94,0.12)";
-    color = BRAND.verde;
-  } else if (v < 0) {
-    bg = "rgba(232,64,37,0.12)";
-    color = BRAND.vermelho;
+const COR_BLACKJACK = "#7c3aed";
+const COR_ROLETA = "#22c55e";
+const COR_BACCARAT = "#1e36f8";
+
+type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap";
+
+type KpiJogoDef = {
+  key: KpiJogoKey;
+  label: string;
+  somavel: boolean;
+  tipoGrafico: "barra" | "linha";
+};
+
+const KPIS_DISPONIVEIS: KpiJogoDef[] = [
+  { key: "ggr", label: "GGR", somavel: true, tipoGrafico: "barra" },
+  { key: "turnover", label: "Turnover", somavel: true, tipoGrafico: "barra" },
+  { key: "bets", label: "Apostas", somavel: true, tipoGrafico: "barra" },
+  { key: "margin_pct", label: "Margem", somavel: false, tipoGrafico: "linha" },
+  { key: "bet_size", label: "Aposta média", somavel: false, tipoGrafico: "linha" },
+  { key: "uap", label: "UAP", somavel: true, tipoGrafico: "linha" },
+];
+
+const JOGOS_COMPARATIVO = [
+  { key: "blackjack" as const, label: "Blackjack", cor: COR_BLACKJACK },
+  { key: "roleta" as const, label: "Roleta", cor: COR_ROLETA },
+  { key: "baccarat" as const, label: "Baccarat", cor: COR_BACCARAT },
+] as const;
+
+function calcularPctComparativoOficial(
+  valorJogo: number | null,
+  row: LinhaComparativoJogoTab,
+  kpi: KpiJogoDef,
+): number | null {
+  if (!kpi.somavel) return null;
+  const key = kpi.key;
+  if (key !== "ggr" && key !== "turnover" && key !== "bets" && key !== "uap") return null;
+  const total = row.totaisOficiais[key];
+  if (valorJogo == null || total == null || total === 0) return null;
+  return (valorJogo / total) * 100;
+}
+
+function renderValorKpiComparativo(kpi: KpiJogoDef, valor: number | null): ReactNode {
+  if (valor == null) return "—";
+  switch (kpi.key) {
+    case "ggr":
+    case "turnover":
+    case "bet_size":
+      return fmtBRL(valor);
+    case "bets":
+    case "uap":
+      return valor.toLocaleString("pt-BR");
+    case "margin_pct":
+      return fmtPct(valor);
+    default:
+      return String(valor);
   }
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 8px",
-        borderRadius: 999,
-        background: bg,
-        color,
-        fontSize: 11,
-        fontWeight: 600,
-        fontFamily: FONT.body,
-      }}
-    >
-      {fmtPct(v)}
-    </span>
-  );
 }
 
 function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
@@ -576,7 +691,7 @@ function mapMonthlyV2(r: { mes: string; uap: number | null; arpu: number | null 
 }
 
 export default function MesasSpin() {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("mesas_spin");
 
@@ -590,7 +705,6 @@ export default function MesasSpin() {
   const [historico, setHistorico] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uapPorJogoRows, setUapPorJogoRows] = useState<UapPorJogoPlanRow[]>([]);
-  const [uapPorJogoLoading, setUapPorJogoLoading] = useState(true);
 
   const [dailyData, setDailyData] = useState<DailyRow[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
@@ -608,10 +722,14 @@ export default function MesasSpin() {
   /** Só para comparação MoM no carrossel: totais do mês anterior a partir do daily. */
   const [dailyDataPrevMonth, setDailyDataPrevMonth] = useState<DailyRow[]>([]);
   const [operadorasOcr, setOperadorasOcr] = useState<{ slug: string; nome: string }[]>([]);
-  const [uploadMsg, setUploadMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
+  const [kpisSelecionados, setKpisSelecionados] = useState<Set<KpiJogoKey>>(
+    () => new Set<KpiJogoKey>(["ggr", "turnover", "bets", "margin_pct", "bet_size", "uap"]),
+  );
+  const [kpiGrafico, setKpiGrafico] = useState<KpiJogoKey>("ggr");
+  const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -629,46 +747,6 @@ export default function MesasSpin() {
       setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
     } else setHistorico(true);
   }
-
-  useEffect(() => {
-    let alive = true;
-    async function loadUapPorJogo() {
-      setUapPorJogoLoading(true);
-      try {
-        const raw = await fetchAllPages<{ data: string; jogo: string; uap: number }>(
-          async (from, to) => {
-            let q = supabase
-              .from("relatorio_uap_por_jogo")
-              .select("data, jogo, uap")
-              .order("data", { ascending: true })
-              .order("jogo", { ascending: true })
-              .range(from, to);
-            if (!historico && mesSelecionado) {
-              const { inicio, fim } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
-              q = q.gte("data", inicio).lte("data", fim);
-            }
-            return q;
-          },
-        );
-        if (!alive) return;
-        setUapPorJogoRows(
-          raw.map((r) => ({
-            data: String(r.data).slice(0, 10),
-            jogo: r.jogo,
-            uap: Number(r.uap),
-          })),
-        );
-      } catch {
-        if (alive) setUapPorJogoRows([]);
-      } finally {
-        if (alive) setUapPorJogoLoading(false);
-      }
-    }
-    void loadUapPorJogo();
-    return () => {
-      alive = false;
-    };
-  }, [historico, mesSelecionado]);
 
   useEffect(() => {
     let alive = true;
@@ -692,47 +770,92 @@ export default function MesasSpin() {
     setMonthlyUapArpuSel(null);
     setMonthlyUapArpuPrev(null);
     setDailyDataPrevMonth([]);
+    setUapPorJogoRows([]);
 
     try {
       if (historico) {
-        const monthlyRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_monthly_summary")
-            .select("mes, uap, arpu")
-            .order("mes", { ascending: true })
-            .range(from, to),
-        );
-        const dailyRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_daily_summary")
-            .select("data, turnover, ggr, apostas, uap")
-            .order("data", { ascending: true })
-            .range(from, to),
-        );
-        const porAllRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_por_tabela")
-            .select("dia, operadora, mesa, ggr, turnover, apostas")
-            .order("dia", { ascending: true })
-            .range(from, to),
-        );
+        const [monthlyRaw, dailyRaw, porAllRaw, uapRaw] = await Promise.all([
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_monthly_summary")
+              .select("mes, uap, arpu")
+              .order("mes", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_daily_summary")
+              .select("data, turnover, ggr, apostas, uap")
+              .order("data", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_por_tabela")
+              .select("dia, operadora, mesa, ggr, turnover, apostas")
+              .order("dia", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) => buildUapPorJogoQuery(true, undefined, from, to)),
+        ]);
         setMonthlyData((monthlyRaw as { mes: string; uap: number | null; arpu: number | null }[]).map(mapMonthlyV2));
         setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         setPorTabelaHistAll((porAllRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
+        setUapPorJogoRows(
+          (uapRaw as { data: string; jogo: string; uap: number }[]).map((r) => ({
+            data: String(r.data).slice(0, 10),
+            jogo: r.jogo,
+            uap: Number(r.uap),
+          })),
+        );
       } else if (mesSelecionado) {
         const { atual, anterior } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
         const { inicio, fim } = atual;
-        const dailyRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_daily_summary")
-            .select("data, turnover, ggr, apostas, uap")
-            .gte("data", inicio)
-            .lte("data", fim)
-            .order("data", { ascending: true })
-            .range(from, to),
-        );
+        const { inicio: pi, fim: pf } = anterior;
+
+        const [dailyRaw, dailyPrevRaw, mesasMesRaw, uapRaw] = await Promise.all([
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_daily_summary")
+              .select("data, turnover, ggr, apostas, uap")
+              .gte("data", inicio)
+              .lte("data", fim)
+              .order("data", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_daily_summary")
+              .select("data, turnover, ggr, apostas, uap")
+              .gte("data", pi)
+              .lte("data", pf)
+              .order("data", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("relatorio_por_tabela")
+              .select("dia, operadora, mesa, ggr, turnover, apostas")
+              .gte("dia", inicio)
+              .lte("dia", fim)
+              .order("dia", { ascending: true })
+              .order("mesa", { ascending: true })
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) => buildUapPorJogoQuery(false, mesSelecionado, from, to)),
+        ]);
+
         setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         setMonthlyData([]);
+        setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
+        setPorTabelaRows((mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
+        setUapPorJogoRows(
+          (uapRaw as { data: string; jogo: string; uap: number }[]).map((r) => ({
+            data: String(r.data).slice(0, 10),
+            jogo: r.jogo,
+            uap: Number(r.uap),
+          })),
+        );
 
         const { data: mSel } = await supabase
           .from("relatorio_monthly_summary")
@@ -748,17 +871,6 @@ export default function MesasSpin() {
             : null,
         );
 
-        const { inicio: pi, fim: pf } = anterior;
-        const dailyPrevRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_daily_summary")
-            .select("data, turnover, ggr, apostas, uap")
-            .gte("data", pi)
-            .lte("data", pf)
-            .order("data", { ascending: true })
-            .range(from, to),
-        );
-        setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         const { data: mPrev } = await supabase
           .from("relatorio_monthly_summary")
           .select("uap, arpu")
@@ -772,20 +884,9 @@ export default function MesasSpin() {
               }
             : null,
         );
-
-        const mesasMesRaw = await fetchAllPages(async (from, to) =>
-          supabase
-            .from("relatorio_por_tabela")
-            .select("dia, operadora, mesa, ggr, turnover, apostas")
-            .gte("dia", inicio)
-            .lte("dia", fim)
-            .order("dia", { ascending: true })
-            .order("mesa", { ascending: true })
-            .range(from, to),
-        );
-        const mesasMapped = (mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2);
-        setPorTabelaRows(mesasMapped);
       }
+    } catch {
+      setUapPorJogoRows([]);
     } finally {
       setLoading(false);
     }
@@ -910,91 +1011,6 @@ export default function MesasSpin() {
     };
   }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado]);
 
-  /**
-   * Mês corrente: série diária (relatorio_uap_por_jogo).
-   * Histórico: UAP mensal = mesmo que Comparativo Mensal / `relatorio_monthly_summary` (fallback: soma UAP diários);
-   * reparte esse total entre jogos proporcionalmente ao último snapshot diário do mês em relatorio_uap_por_jogo.
-   */
-  const uapJogoChartData = useMemo(() => {
-    if (historico) {
-      const dailyByYm = new Map<string, DailyRow[]>();
-      for (const r of dailyData) {
-        const ym = r.data.slice(0, 7);
-        if (!dailyByYm.has(ym)) dailyByYm.set(ym, []);
-        dailyByYm.get(ym)!.push(r);
-      }
-      const monthlyByYm = new Map(monthlyData.map((m) => [m.mes.slice(0, 7), m] as const));
-      const allYm = new Set<string>([...dailyByYm.keys(), ...monthlyByYm.keys()]);
-      const out: {
-        dataIso: string;
-        label: string;
-        Blackjack?: number;
-        Roleta?: number;
-        speedBaccarat?: number;
-      }[] = [];
-      for (const ym of [...allYm].sort()) {
-        const dias = dailyByYm.get(ym) ?? [];
-        const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
-        const m = monthlyByYm.get(ym);
-        const T = m?.uap != null ? Number(m.uap) : agg?.uap ?? null;
-
-        const wB = uapUltimoDiaDoMesPorJogo(uapPorJogoRows, ym, "Blackjack") ?? 0;
-        const wR = uapUltimoDiaDoMesPorJogo(uapPorJogoRows, ym, "Roleta") ?? 0;
-        const wS = uapUltimoDiaDoMesPorJogo(uapPorJogoRows, ym, "Speed Baccarat") ?? 0;
-        const W = wB + wR + wS;
-
-        let Blackjack: number | undefined;
-        let Roleta: number | undefined;
-        let speedBaccarat: number | undefined;
-
-        if (T != null && T > 0 && W > 0) {
-          const b = Math.round((T * wB) / W);
-          const r0 = Math.round((T * wR) / W);
-          const s = Math.max(0, T - b - r0);
-          Blackjack = wB > 0 ? b : undefined;
-          Roleta = wR > 0 ? r0 : undefined;
-          speedBaccarat = wS > 0 ? s : undefined;
-        } else if (W > 0) {
-          Blackjack = wB > 0 ? Math.round(wB) : undefined;
-          Roleta = wR > 0 ? Math.round(wR) : undefined;
-          speedBaccarat = wS > 0 ? Math.round(wS) : undefined;
-        } else {
-          continue;
-        }
-
-        if (Blackjack == null && Roleta == null && speedBaccarat == null) continue;
-        out.push({
-          dataIso: `${ym}-01`,
-          label: fmtMesAnoCurtoFromYm(ym),
-          Blackjack,
-          Roleta,
-          speedBaccarat,
-        });
-      }
-      return out;
-    }
-    const byDate = new Map<string, { Blackjack?: number; Roleta?: number; speedBaccarat?: number }>();
-    for (const r of uapPorJogoRows) {
-      if (!byDate.has(r.data)) byDate.set(r.data, {});
-      const o = byDate.get(r.data)!;
-      if (r.jogo === "Blackjack") o.Blackjack = r.uap;
-      else if (r.jogo === "Roleta") o.Roleta = r.uap;
-      else if (r.jogo === "Speed Baccarat") o.speedBaccarat = r.uap;
-    }
-    return [...byDate.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([dataIso, v]) => ({
-        dataIso,
-        label: new Date(dataIso + "T12:00:00").toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "2-digit",
-        }),
-        Blackjack: v.Blackjack,
-        Roleta: v.Roleta,
-        speedBaccarat: v.speedBaccarat,
-      }));
-  }, [uapPorJogoRows, historico, dailyData, monthlyData]);
-
   const operadorasListFmt = operadorasOcr;
 
   const porTabelaFiltradas = useMemo(
@@ -1065,6 +1081,14 @@ export default function MesasSpin() {
   /** Dia a dia (mês selecionado) ou mês a mês (histórico). */
   const linhasComparativoJogo = useMemo((): LinhaComparativoJogoTab[] => {
     if (historico) {
+      const dailyByYm = new Map<string, DailyRow[]>();
+      for (const r of dailyData) {
+        const ym = r.data.slice(0, 7);
+        if (!dailyByYm.has(ym)) dailyByYm.set(ym, []);
+        dailyByYm.get(ym)!.push(r);
+      }
+      const monthlyByYm = new Map(monthlyData.map((m) => [m.mes.slice(0, 7), m] as const));
+
       const byYm = new Map<string, PorTabelaRow[]>();
       for (const r of porTabelaFiltradasHist) {
         const ym = r.data_relatorio.slice(0, 7);
@@ -1073,7 +1097,15 @@ export default function MesasSpin() {
       }
       return [...byYm.keys()]
         .sort()
-        .map((ym) => linhaComparativoJogoAgregadaMes(ym, byYm.get(ym)!, operadorasListFmt));
+        .map((ym) =>
+          linhaComparativoJogoAgregadaMes(
+            ym,
+            byYm.get(ym)!,
+            operadorasListFmt,
+            uapPorJogoRows,
+            totaisOficiaisHistoricoMes(ym, dailyByYm, monthlyByYm),
+          ),
+        );
     }
     const byDate = new Map<
       string,
@@ -1088,18 +1120,73 @@ export default function MesasSpin() {
       else if (label === "Roleta") bucket.roleta.push(r);
       else if (label === "Speed Baccarat") bucket.baccarat.push(r);
     }
+
+    const uapByDateJogo = new Map<string, Partial<Record<"blackjack" | "roleta" | "baccarat", number>>>();
+    for (const r of uapPorJogoRows) {
+      if (!uapByDateJogo.has(r.data)) uapByDateJogo.set(r.data, {});
+      const jogoKey = UAP_JOGO_MAP[r.jogo];
+      if (jogoKey) uapByDateJogo.get(r.data)![jogoKey] = r.uap;
+    }
+
     return dailyData.map((dr) => {
       const dataIso = dr.data;
       const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [] };
+      const uapDia = uapByDateJogo.get(dataIso) ?? {};
+      const bjCell = aggregateCellFromPorTabelaRows(b.bj);
+      const rlCell = aggregateCellFromPorTabelaRows(b.roleta);
+      const bcCell = aggregateCellFromPorTabelaRows(b.baccarat);
       return {
         dataIso,
         labelData: fmtDiaMesPtBr(dataIso),
-        blackjack: aggregateCellFromPorTabelaRows(b.bj),
-        roleta: aggregateCellFromPorTabelaRows(b.roleta),
-        baccarat: aggregateCellFromPorTabelaRows(b.baccarat),
+        blackjack: { ...bjCell, uap: uapDia.blackjack ?? null },
+        roleta: { ...rlCell, uap: uapDia.roleta ?? null },
+        baccarat: { ...bcCell, uap: uapDia.baccarat ?? null },
+        totaisOficiais: totaisOficiaisFromDailyRow(dr),
       };
     });
-  }, [historico, dailyData, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
+  }, [
+    historico,
+    dailyData,
+    monthlyData,
+    porTabelaFiltradasHist,
+    porTabelaFiltradas,
+    operadorasListFmt,
+    uapPorJogoRows,
+  ]);
+
+  const kpisAtivosComparativo = useMemo(
+    () => KPIS_DISPONIVEIS.filter((k) => kpisSelecionados.has(k.key)),
+    [kpisSelecionados],
+  );
+
+  const kpiGraficoConfig = useMemo(
+    () => KPIS_DISPONIVEIS.find((k) => k.key === kpiGrafico) ?? KPIS_DISPONIVEIS[0]!,
+    [kpiGrafico],
+  );
+
+  const dadosGraficoComparativoJogo = useMemo(() => {
+    return linhasComparativoJogo.map((row) => {
+      const val = (jogoKey: "blackjack" | "roleta" | "baccarat") => {
+        const v = row[jogoKey][kpiGrafico as keyof CelulaJogoMetricas];
+        return v != null ? Number(v) : null;
+      };
+      const totalOficial =
+        row.totaisOficiais[kpiGrafico as keyof TotaisOficiaisComparativo] ?? null;
+      return {
+        label: row.labelData,
+        dataIso: row.dataIso,
+        Blackjack: val("blackjack"),
+        Roleta: val("roleta"),
+        Baccarat: val("baccarat"),
+        Total: totalOficial != null ? Number(totalOficial) : null,
+      };
+    });
+  }, [linhasComparativoJogo, kpiGrafico]);
+
+  const isBRLKpiGrafico = ["ggr", "turnover", "bet_size"].includes(kpiGrafico);
+
+  const minWidthTabelaComparativoJogo =
+    120 + kpisAtivosComparativo.length * (100 + 3 * 90);
 
   const linhasMesaA = useMemo(() => {
     if (!compMesaA) return [];
@@ -1157,31 +1244,9 @@ export default function MesasSpin() {
     boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
   };
 
-  const thStyle: React.CSSProperties = {
-    textAlign: "left",
-    verticalAlign: "middle",
-    fontSize: 10,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: t.textMuted,
-    fontWeight: 600,
-    padding: "10px 12px",
-    borderBottom: `1px solid ${t.cardBorder}`,
-    background: "rgba(74,32,130,0.08)",
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: "9px 12px",
-    fontSize: 13,
-    borderBottom: `1px solid rgba(255,255,255,0.04)`,
-    color: t.text,
-    fontFamily: FONT.body,
-    whiteSpace: "nowrap",
-  };
-
-  const tdNum: React.CSSProperties = { ...tdStyle, textAlign: "right", fontVariantNumeric: "tabular-nums" };
+  const thStyle = getThStyle(t, { verticalAlign: "middle", background: "rgba(74,32,130,0.08)" });
+  const tdStyle = getTdStyle(t, { padding: "9px 12px" });
+  const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -1241,7 +1306,7 @@ export default function MesasSpin() {
           {linhas.length === 0 ? (
             <tr>
               <td colSpan={6} style={{ ...tdStyle, color: t.textMuted, textAlign: "center" }}>
-                Nenhum dado para o período selecionado.
+                {MSG_SEM_DADOS_FILTRO}
               </td>
             </tr>
           ) : (
@@ -1274,41 +1339,7 @@ export default function MesasSpin() {
     </div>
   );
 
-  const renderJogoMetricCell = (cell: CelulaJogoMetricas, metric: JogoComparativoMetricKey) => {
-    switch (metric) {
-      case "ggr": {
-        const ggr = cell.ggr ?? 0;
-        return (
-          <td
-            style={{
-              ...tdNum,
-              color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
-              fontWeight: 600,
-            }}
-          >
-            {cell.ggr != null ? fmtBRL(cell.ggr) : "—"}
-          </td>
-        );
-      }
-      case "turnover":
-        return <td style={tdNum}>{cell.turnover != null ? fmtBRL(cell.turnover) : "—"}</td>;
-      case "bets":
-        return <td style={tdNum}>{cell.bets != null ? cell.bets.toLocaleString("pt-BR") : "—"}</td>;
-      case "bet_size":
-        return <td style={tdNum}>{cell.bet_size != null ? fmtBRL(cell.bet_size) : "—"}</td>;
-    }
-  };
-
-  const thJogoMetricHead: React.CSSProperties = {
-    ...thStyle,
-    textAlign: "right",
-  };
-  const thJogoMetricHeadSep: React.CSSProperties = {
-    ...thStyle,
-    textAlign: "right",
-    borderLeft: `1px solid ${t.cardBorder}`,
-  };
-  const thJogoSub: React.CSSProperties = {
+  const thJogoComparativoSub: React.CSSProperties = {
     ...thStyle,
     textAlign: "right",
     fontSize: 9,
@@ -1316,6 +1347,553 @@ export default function MesasSpin() {
     textTransform: "none",
     fontWeight: 600,
   };
+
+  const COR_TOTAL_COMP = isDark ? "#ffffff" : "#000000";
+  const COR_PCT_COMP = isDark ? "#ffffff" : "#000000";
+
+  const thStickyComparativo: React.CSSProperties = {
+    ...thStyle,
+    position: "sticky",
+    left: 0,
+    zIndex: 3,
+    background: brand.blockBg,
+    boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
+  };
+
+  const tdStickyComparativo = (i: number): React.CSSProperties => ({
+    ...tdStyle,
+    position: "sticky",
+    left: 0,
+    zIndex: 2,
+    fontWeight: 600,
+    background:
+      i % 2 === 1
+        ? `color-mix(in srgb, ${brand.blockBg} 95%, rgba(74,32,130,0.06))`
+        : brand.blockBg,
+    boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
+  });
+
+  function TooltipComparativoJogo({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: {
+      name?: string;
+      value?: unknown;
+      color?: string;
+      payload?: { Total?: number | null };
+    }[];
+    label?: string;
+  }) {
+    if (!active || !payload?.length) return null;
+    const somavel = kpiGraficoConfig.somavel;
+    const full = payload[0]?.payload;
+    const totalOficial = full?.Total;
+    const totalSomavelFallback = payload.reduce((s, p) => {
+      const n = Number(p.value);
+      return s + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    const totalSomavel =
+      totalOficial != null && Number.isFinite(Number(totalOficial))
+        ? Number(totalOficial)
+        : totalSomavelFallback;
+    const formatar = (v: number) =>
+      isBRLKpiGrafico
+        ? fmtBRL(v)
+        : kpiGrafico === "margin_pct"
+          ? `${v.toFixed(1)}%`
+          : v.toLocaleString("pt-BR");
+
+    const mostrarRodapeTotal =
+      somavel ||
+      kpiGrafico === "margin_pct" ||
+      kpiGrafico === "bet_size";
+
+    const valorRodape =
+      totalOficial != null && Number.isFinite(Number(totalOficial))
+        ? Number(totalOficial)
+        : null;
+
+    return (
+      <div
+        style={{
+          background: t.cardBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: 10,
+          padding: "10px 14px",
+          fontSize: 12,
+          color: t.text,
+          fontFamily: FONT.body,
+          minWidth: 160,
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
+        {payload.map((p) => (
+          <div
+            key={String(p.name)}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 4,
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: p.color,
+                  flexShrink: 0,
+                }}
+              />
+              {p.name}
+            </span>
+            <span style={{ fontWeight: 600 }}>
+              {p.value != null && p.value !== ""
+                ? formatar(Number(p.value))
+                : "—"}
+            </span>
+          </div>
+        ))}
+        {mostrarRodapeTotal && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginTop: 6,
+              paddingTop: 6,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+          >
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>Total</span>
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>
+              {somavel
+                ? formatar(totalSomavel)
+                : valorRodape != null
+                  ? formatar(valorRodape)
+                  : "—"}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const renderComparativoJogoInterativo = (colTempoLabel: "Data" | "Mês") => (
+    <>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <span
+              style={{
+                fontSize: 10,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase" as const,
+                marginRight: 2,
+              }}
+            >
+              KPIs visíveis:
+            </span>
+            {KPIS_DISPONIVEIS.map((kpi) => {
+              const ativo =
+                modoVisualizacao === "tabela"
+                  ? kpisSelecionados.has(kpi.key)
+                  : kpiGrafico === kpi.key;
+              return (
+                <button
+                  type="button"
+                  role="button"
+                  key={kpi.key}
+                  aria-pressed={ativo}
+                  aria-label={
+                    modoVisualizacao === "tabela"
+                      ? `${ativo ? "Desativar" : "Ativar"} KPI ${kpi.label}`
+                      : `KPI do gráfico: ${kpi.label}`
+                  }
+                  onClick={() => {
+                    if (modoVisualizacao === "tabela") {
+                      setKpisSelecionados((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(kpi.key) && next.size === 1) return prev;
+                        if (next.has(kpi.key)) next.delete(kpi.key);
+                        else next.add(kpi.key);
+                        return next;
+                      });
+                    } else {
+                      setKpiGrafico(kpi.key);
+                    }
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "4px 12px",
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                    fontSize: 11,
+                    fontWeight: ativo ? 700 : 400,
+                    border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
+                    background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
+                    color: ativo ? BRAND.roxoVivo : t.textMuted,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: ativo ? BRAND.roxoVivo : t.cardBorder,
+                      flexShrink: 0,
+                      transition: "background 0.15s",
+                    }}
+                  />
+                  {kpi.label}
+                </button>
+              );
+            })}
+          </div>
+          {modoVisualizacao === "grafico" && (
+            <span style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
+              Selecione um KPI para o gráfico
+            </span>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: 10,
+            overflow: "hidden",
+          }}
+        >
+          {(
+            [
+              { modo: "tabela" as const, icon: <Table2 size={14} aria-hidden />, label: "Tabela" },
+              { modo: "grafico" as const, icon: <ChartColumnBig size={14} aria-hidden />, label: "Gráfico" },
+            ] as const
+          ).map(({ modo, icon, label }) => (
+            <button
+              type="button"
+              key={modo}
+              aria-label={`Ver em ${label}`}
+              aria-pressed={modoVisualizacao === modo}
+              onClick={() => setModoVisualizacao(modo)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "6px 12px",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 11,
+                fontWeight: modoVisualizacao === modo ? 700 : 400,
+                background: modoVisualizacao === modo ? "rgba(124,58,237,0.12)" : "transparent",
+                color: modoVisualizacao === modo ? BRAND.roxoVivo : t.textMuted,
+                transition: "all 0.15s",
+                borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
+              }}
+            >
+              {icon} {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {modoVisualizacao === "tabela" ? (
+        <div className="app-table-wrap" style={{ borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                minWidth: minWidthTabelaComparativoJogo,
+              }}
+            >
+              <caption style={{ display: "none" }}>
+                Comparativo de jogo {colTempoLabel === "Mês" ? "histórico" : (mesSelecionado?.label ?? "")}
+              </caption>
+              <thead>
+                <tr>
+                  <th rowSpan={2} scope="col" style={thStickyComparativo}>
+                    {colTempoLabel}
+                  </th>
+                  {kpisAtivosComparativo.map((kpi) => (
+                    <th
+                      key={kpi.key}
+                      colSpan={4}
+                      scope="colgroup"
+                      style={{
+                        ...thStyle,
+                        textAlign: "center",
+                        borderLeft: `2px solid ${t.cardBorder}`,
+                        borderBottom: "none",
+                      }}
+                    >
+                      {kpi.label}
+                    </th>
+                  ))}
+                </tr>
+                <tr>
+                  {kpisAtivosComparativo.map((kpi) => (
+                    <Fragment key={`sub-${kpi.key}`}>
+                      <th
+                        scope="col"
+                        style={{
+                          ...thJogoComparativoSub,
+                          borderLeft: `2px solid ${t.cardBorder}`,
+                          fontSize: 9,
+                          color: t.text,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Total
+                      </th>
+                      {JOGOS_COMPARATIVO.map((jogo) => (
+                        <th
+                          key={jogo.key}
+                          scope="col"
+                          style={{
+                            ...thJogoComparativoSub,
+                            fontSize: 9,
+                            fontWeight: 600,
+                            color: jogo.cor,
+                            letterSpacing: "0.04em",
+                            textTransform: "none",
+                          }}
+                        >
+                          {jogo.label}
+                        </th>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {linhasComparativoJogo.map((row, i) => {
+                  const totaisOficiais = row.totaisOficiais;
+                  return (
+                    <tr
+                      key={row.dataIso}
+                      style={{
+                        background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
+                      }}
+                    >
+                      <th scope="row" style={tdStickyComparativo(i)}>
+                        {row.labelData}
+                      </th>
+                      {kpisAtivosComparativo.map((kpi) => (
+                        <Fragment key={`${row.dataIso}-${kpi.key}`}>
+                          <td
+                            style={{
+                              ...tdNum,
+                              textAlign: "right",
+                              fontVariantNumeric: "tabular-nums",
+                              borderLeft: `2px solid ${t.cardBorder}`,
+                              fontWeight: 700,
+                              color: COR_TOTAL_COMP,
+                            }}
+                          >
+                            {renderValorKpiComparativo(kpi, totaisOficiais[kpi.key])}
+                          </td>
+                          {JOGOS_COMPARATIVO.map((jogo) => {
+                            const cel = row[jogo.key];
+                            const valorJogo = cel[kpi.key] as number | null;
+                            const pct = calcularPctComparativoOficial(valorJogo, row, kpi);
+                            return (
+                              <td
+                                key={jogo.key}
+                                style={{
+                                  ...tdNum,
+                                  textAlign: "right",
+                                  fontVariantNumeric: "tabular-nums",
+                                  color: jogo.cor,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {valorJogo != null ? (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      alignItems: "flex-end",
+                                      gap: 1,
+                                    }}
+                                  >
+                                    <span>{renderValorKpiComparativo(kpi, valorJogo)}</span>
+                                    {kpi.somavel && pct != null && (
+                                      <span
+                                        style={{
+                                          fontSize: 10,
+                                          color: COR_PCT_COMP,
+                                          fontWeight: 700,
+                                          opacity: 0.75,
+                                        }}
+                                      >
+                                        {pct.toFixed(0)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  "—"
+                                )}
+                              </td>
+                            );
+                          })}
+                        </Fragment>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : linhasComparativoJogo.length === 0 ? (
+        <div
+          style={{
+            padding: "24px 0",
+            textAlign: "center",
+            color: t.textMuted,
+            fontSize: 12,
+            fontFamily: FONT.body,
+          }}
+        >
+          {MSG_SEM_DADOS_FILTRO}
+        </div>
+      ) : (
+        <>
+          <p
+            style={{
+              fontSize: 11,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              marginBottom: 8,
+              marginTop: 0,
+            }}
+          >
+            Exibindo <strong style={{ color: t.text }}>{kpiGraficoConfig.label}</strong> por jogo
+          </p>
+          <div style={{ width: "100%", height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              {kpiGraficoConfig.tipoGrafico === "barra" ? (
+                <BarChart
+                  data={dadosGraficoComparativoJogo}
+                  margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                  barCategoryGap="30%"
+                  barGap={3}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    interval="preserveStartEnd"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    width={isBRLKpiGrafico ? 72 : 44}
+                    tickFormatter={(v) =>
+                      isBRLKpiGrafico ? `R$${(v / 1000).toFixed(0)}K` : v.toLocaleString("pt-BR")
+                    }
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<TooltipComparativoJogo />} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                  <Bar
+                    dataKey="Blackjack"
+                    fill={COR_BLACKJACK}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={32}
+                  />
+                  <Bar dataKey="Roleta" fill={COR_ROLETA} radius={[4, 4, 0, 0]} maxBarSize={32} />
+                  <Bar dataKey="Baccarat" fill={COR_BACCARAT} radius={[4, 4, 0, 0]} maxBarSize={32} />
+                </BarChart>
+              ) : (
+                <LineChart
+                  data={dadosGraficoComparativoJogo}
+                  margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    interval="preserveStartEnd"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    width={isBRLKpiGrafico ? 72 : 44}
+                    tickFormatter={(v) =>
+                      isBRLKpiGrafico
+                        ? `R$${(v / 1000).toFixed(0)}K`
+                        : kpiGrafico === "margin_pct"
+                          ? `${v.toFixed(0)}%`
+                          : v.toLocaleString("pt-BR")
+                    }
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<TooltipComparativoJogo />} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                  <Line
+                    type="monotone"
+                    name="Blackjack"
+                    dataKey="Blackjack"
+                    stroke={COR_BLACKJACK}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    name="Roleta"
+                    dataKey="Roleta"
+                    stroke={COR_ROLETA}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    name="Baccarat"
+                    dataKey="Baccarat"
+                    stroke={COR_BACCARAT}
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    connectNulls
+                  />
+                </LineChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+    </>
+  );
 
   if (perm.canView === "nao") {
     return (
@@ -1349,6 +1927,8 @@ export default function MesasSpin() {
             }}
           >
             <button
+              type="button"
+              aria-label="Mês anterior"
               style={{
                 ...btnNav,
                 opacity: historico || isPrimeiro ? 0.35 : 1,
@@ -1357,7 +1937,7 @@ export default function MesasSpin() {
               onClick={irMesAnterior}
               disabled={historico || isPrimeiro}
             >
-              <ChevronLeft size={14} />
+              <ChevronLeft size={14} aria-hidden />
             </button>
             <span
               style={{
@@ -1372,6 +1952,8 @@ export default function MesasSpin() {
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button
+              type="button"
+              aria-label="Próximo mês"
               style={{
                 ...btnNav,
                 opacity: historico || isUltimo ? 0.35 : 1,
@@ -1380,10 +1962,13 @@ export default function MesasSpin() {
               onClick={irMesProximo}
               disabled={historico || isUltimo}
             >
-              <ChevronRight size={14} />
+              <ChevronRight size={14} aria-hidden />
             </button>
 
             <button
+              type="button"
+              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
+              aria-pressed={historico}
               onClick={toggleHistorico}
               style={{
                 display: "flex",
@@ -1405,39 +1990,26 @@ export default function MesasSpin() {
                 transition: "all 0.15s",
               }}
             >
-              <GiCalendar size={15} /> Histórico
+              <GiCalendar size={15} aria-hidden /> Histórico
             </button>
 
             {showFiltroOperadora && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 10,
-                    display: "flex",
-                    alignItems: "center",
-                    pointerEvents: "none",
-                    color: t.textMuted,
-                  }}
-                >
-                  <GiShield size={15} />
-                </span>
-                <select
-                  value={filtroOperadora}
-                  onChange={(e) => setFiltroOperadora(e.target.value)}
-                  style={selectStyle}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasOcr
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => (
-                      <option key={o.slug} value={o.slug}>
-                        {o.nome}
-                      </option>
-                    ))}
-                </select>
-              </div>
+              <SelectComIcone
+                icon={<GiShield size={15} aria-hidden />}
+                label="Filtrar por operadora"
+                value={filtroOperadora}
+                onChange={setFiltroOperadora}
+              >
+                <option value="todas">Todas as operadoras</option>
+                {operadorasOcr
+                  .filter((o) => podeVerOperadora(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => (
+                    <option key={o.slug} value={o.slug}>
+                      {o.nome}
+                    </option>
+                  ))}
+              </SelectComIcone>
             )}
 
             {loading && (
@@ -1458,50 +2030,31 @@ export default function MesasSpin() {
         </div>
       </div>
 
-      {uploadMsg && (
-        <div
-          style={{
-            marginBottom: 14,
-            padding: 12,
-            borderRadius: 12,
-            border: `1px solid ${uploadMsg.tipo === "ok" ? BRAND.verde : BRAND.vermelho}`,
-            background: uploadMsg.tipo === "ok" ? `${BRAND.verde}14` : `${BRAND.vermelho}14`,
-            color: uploadMsg.tipo === "ok" ? BRAND.verde : BRAND.vermelho,
-            fontFamily: FONT.body,
-            fontSize: 13,
-          }}
-        >
-          {uploadMsg.tipo === "ok" ? "✅ " : "⚠️ "}
-          {uploadMsg.texto}
-        </div>
-      )}
-
-      {!perm.loading && perm.canEditarOk && (
-        <div style={{ ...card, marginBottom: 14 }}>
-          <SectionHeader
-            icon={<FileImage size={15} />}
-            title="Importar relatório (print)"
-            sub="· mesmo fluxo OCR do Status Técnico"
-          />
-          <MesasSpinRelatorioUpload
-            t={t}
-            disabled={perm.loading}
-            embedded
-            onImported={() => {
-              void carregar();
-            }}
-            onUserMessage={setUploadMsg}
-          />
-        </div>
-      )}
-
-      {!loading && (
-        <div style={{ ...card, marginBottom: 14 }}>
+      <div style={{ ...card, marginBottom: 14 }}>
           <SectionHeader
             icon={<LayoutGrid size={15} />}
             title="KPIs Consolidados"
-            sub={historico ? undefined : "mês selecionado"}
+            sub={
+              historico
+                ? "acumulado"
+                : "comparativo MTD vs mesmo período do mês anterior"
+            }
           />
+          {loading ? (
+            <>
+              <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
+                {[0, 1, 2, 3].map((i) => (
+                  <SkeletonKpiCard key={i} />
+                ))}
+              </div>
+              <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+                {[0, 1, 2].map((i) => (
+                  <SkeletonKpiCard key={i} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
           <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
             <KpiCard
               label="GGR"
@@ -1580,8 +2133,9 @@ export default function MesasSpin() {
               isHistorico={isHistoricoKpi}
             />
           </div>
+            </>
+          )}
         </div>
-      )}
 
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionHeader
@@ -1597,7 +2151,7 @@ export default function MesasSpin() {
           </div>
         ) : tabelaRows.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-            Nenhum dado para o período selecionado.
+            {MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
@@ -1649,80 +2203,6 @@ export default function MesasSpin() {
         )}
       </div>
 
-      <div style={{ ...card, marginBottom: 14 }}>
-        <SectionHeader icon={<TrendingUp size={15} />} title="UAP por Jogo" />
-        {uapPorJogoLoading ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-            <Clock size={16} style={{ marginBottom: 8 }} />
-            <div>Carregando UAP por jogo…</div>
-          </div>
-        ) : uapJogoChartData.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-            Nenhum dado para o período selecionado.
-          </div>
-        ) : (
-          <div style={{ width: "100%", height: 320 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={uapJogoChartData} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.6} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: t.textMuted }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 10, fill: t.textMuted }} width={36} />
-                <Tooltip
-                  contentStyle={{
-                    background: t.cardBg,
-                    border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 10,
-                    fontSize: 12,
-                    color: t.text,
-                  }}
-                  labelFormatter={(_, payload) => {
-                    const p = payload?.[0]?.payload as { dataIso?: string } | undefined;
-                    if (!p?.dataIso) return "";
-                    if (historico) return fmtMesAnoCurtoFromYm(p.dataIso.slice(0, 7));
-                    return new Date(p.dataIso + "T12:00:00").toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    });
-                  }}
-                  formatter={(value: number | string) =>
-                    [typeof value === "number" ? value.toLocaleString("pt-BR") : "—", "UAP"]
-                  }
-                />
-                <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted }} />
-                <Line
-                  type="monotone"
-                  name="Blackjack"
-                  dataKey="Blackjack"
-                  stroke={BRAND.roxoVivo}
-                  strokeWidth={2}
-                  dot={{ r: 2 }}
-                  connectNulls
-                />
-                <Line
-                  type="monotone"
-                  name="Roleta"
-                  dataKey="Roleta"
-                  stroke={BRAND.verde}
-                  strokeWidth={2}
-                  dot={{ r: 2 }}
-                  connectNulls
-                />
-                <Line
-                  type="monotone"
-                  name="Speed Baccarat"
-                  dataKey="speedBaccarat"
-                  stroke={BRAND.ciano}
-                  strokeWidth={2}
-                  dot={{ r: 2 }}
-                  connectNulls
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
       {!historico && (
         <>
           {loading ? (
@@ -1770,7 +2250,7 @@ export default function MesasSpin() {
                   sub={mesSelecionado?.label}
                 />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
               <div style={{ ...card, marginBottom: 14 }}>
@@ -1780,13 +2260,13 @@ export default function MesasSpin() {
                   sub="Blackjack"
                 />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
               <div style={{ ...card, marginBottom: 14 }}>
                 <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
             </>
@@ -1800,68 +2280,10 @@ export default function MesasSpin() {
                 />
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    Nenhum dado para o período selecionado.
+                    {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-                      <thead>
-                        <tr>
-                          <th rowSpan={2} style={thStyle}>
-                            Data
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHead}>
-                            GGR
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Turnover
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Apostas
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Aposta média
-                          </th>
-                        </tr>
-                        <tr>
-                          {([0, 1, 2, 3] as const).flatMap((mi) =>
-                            (["Blackjack", "Roleta", "Baccarat"] as const).map((nome, gi) => (
-                              <th
-                                key={`sub-${mi}-${nome}`}
-                                style={{
-                                  ...thJogoSub,
-                                  ...(mi > 0 && gi === 0
-                                    ? { borderLeft: `1px solid ${t.cardBorder}` }
-                                    : {}),
-                                }}
-                              >
-                                {nome}
-                              </th>
-                            )),
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {linhasComparativoJogo.map((row, i) => (
-                          <tr
-                            key={row.dataIso}
-                            style={{
-                              background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
-                            }}
-                          >
-                            <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
-                            {(["ggr", "turnover", "bets", "bet_size"] as const).flatMap((metric) =>
-                              (["blackjack", "roleta", "baccarat"] as const).map((game) => (
-                                <Fragment key={`${row.dataIso}-${metric}-${game}`}>
-                                  {renderJogoMetricCell(row[game], metric)}
-                                </Fragment>
-                              )),
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  renderComparativoJogoInterativo("Data")
                 )}
               </div>
 
@@ -1885,7 +2307,7 @@ export default function MesasSpin() {
 
                 {mesasOpcoesBlackjack.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    Nenhum dado para o período selecionado.
+                    {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
                   <>
@@ -2068,7 +2490,7 @@ export default function MesasSpin() {
                 <SectionHeader
                   icon={<GiDiceSixFacesFour size={15} />}
                   title="Comparativo de Jogo"
-                  sub="todos os meses"
+                  sub="mês a mês"
                 />
                 <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                   <Clock size={16} style={{ marginBottom: 8 }} />
@@ -2104,10 +2526,10 @@ export default function MesasSpin() {
                 <SectionHeader
                   icon={<GiDiceSixFacesFour size={15} />}
                   title="Comparativo de Jogo"
-                  sub="todos os meses"
+                  sub="mês a mês"
                 />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
               <div style={{ ...card, marginBottom: 14 }}>
@@ -2117,13 +2539,13 @@ export default function MesasSpin() {
                   sub="Blackjack"
                 />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
               <div style={{ ...card, marginBottom: 14 }}>
                 <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum dado para o período selecionado.
+                  {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
             </>
@@ -2133,72 +2555,14 @@ export default function MesasSpin() {
                 <SectionHeader
                   icon={<GiDiceSixFacesFour size={15} />}
                   title="Comparativo de Jogo"
-                  sub="todos os meses"
+                  sub="mês a mês"
                 />
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    Nenhum dado para o período selecionado.
+                    {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-                      <thead>
-                        <tr>
-                          <th rowSpan={2} style={thStyle}>
-                            Mês
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHead}>
-                            GGR
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Turnover
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Apostas
-                          </th>
-                          <th colSpan={3} style={thJogoMetricHeadSep}>
-                            Aposta média
-                          </th>
-                        </tr>
-                        <tr>
-                          {([0, 1, 2, 3] as const).flatMap((mi) =>
-                            (["Blackjack", "Roleta", "Baccarat"] as const).map((nome, gi) => (
-                              <th
-                                key={`hist-sub-${mi}-${nome}`}
-                                style={{
-                                  ...thJogoSub,
-                                  ...(mi > 0 && gi === 0
-                                    ? { borderLeft: `1px solid ${t.cardBorder}` }
-                                    : {}),
-                                }}
-                              >
-                                {nome}
-                              </th>
-                            )),
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {linhasComparativoJogo.map((row, i) => (
-                          <tr
-                            key={row.dataIso}
-                            style={{
-                              background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
-                            }}
-                          >
-                            <td style={{ ...tdStyle, fontWeight: 600 }}>{row.labelData}</td>
-                            {(["ggr", "turnover", "bets", "bet_size"] as const).flatMap((metric) =>
-                              (["blackjack", "roleta", "baccarat"] as const).map((game) => (
-                                <Fragment key={`${row.dataIso}-${metric}-${game}`}>
-                                  {renderJogoMetricCell(row[game], metric)}
-                                </Fragment>
-                              )),
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  renderComparativoJogoInterativo("Mês")
                 )}
               </div>
 
@@ -2222,7 +2586,7 @@ export default function MesasSpin() {
 
                 {mesasOpcoesBlackjack.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    Nenhum dado para o período selecionado.
+                    {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
                   <>

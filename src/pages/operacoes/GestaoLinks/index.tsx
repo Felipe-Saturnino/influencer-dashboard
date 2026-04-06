@@ -3,12 +3,14 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
+import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
-import { X, Link2, EyeOff, RotateCcw, AlertCircle } from "lucide-react";
-import { GiLinkedRings } from "react-icons/gi";
+import { Link2, EyeOff, RotateCcw, AlertCircle } from "lucide-react";
+import { GiLinkedRings, GiShield } from "react-icons/gi";
+import { PageHeader } from "../../../components/PageHeader";
+import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -42,8 +44,10 @@ type Aba = "pendentes" | "mapeados" | "ignorados";
 type TipoMapeamento = "influencer" | "campanha";
 
 export default function GestaoLinks() {
-  const { theme, user, podeVerInfluencer } = useApp();
+  const { theme, user, podeVerInfluencer, isDark } = useApp();
   const brand = useDashboardBrand();
+  const narrowMobile = useMediaQuery("(max-width: 479px)");
+  const hideDepGgr = narrowMobile;
   const perm = usePermission("gestao_links");
   const { showFiltroOperadora } = useDashboardFiltros();
 
@@ -68,6 +72,25 @@ export default function GestaoLinks() {
   const [campanhas, setCampanhas] = useState<CampanhaOpcao[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erroModal, setErroModal] = useState<string | null>(null);
+  const [confirmFechar, setConfirmFechar] = useState(false);
+
+  const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
+  function fecharModalLimpo() {
+    setModalAberto(false);
+    setConfirmFechar(false);
+    setAliasSelecionado(null);
+    setInfluencerSelecionado("");
+    setCampanhaSelecionada("");
+    setErroModal(null);
+  }
+
+  function solicitarFecharModal() {
+    if (salvando) return;
+    const dirty = influencerSelecionado !== "" || campanhaSelecionada !== "";
+    if (dirty) setConfirmFechar(true);
+    else fecharModalLimpo();
+  }
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -117,6 +140,7 @@ export default function GestaoLinks() {
     setCampanhaSelecionada("");
     setTipoMapeamento("influencer");
     setErroModal(null);
+    setConfirmFechar(false);
     setModalAberto(true);
   }
 
@@ -165,7 +189,8 @@ export default function GestaoLinks() {
     }
 
     setSalvando(false);
-    setModalAberto(false); setAliasSelecionado(null); setInfluencerSelecionado(""); setCampanhaSelecionada(""); carregar();
+    fecharModalLimpo();
+    carregar();
   }
 
   async function ignorar(alias: UtmAlias) {
@@ -221,47 +246,62 @@ export default function GestaoLinks() {
   return (
     <div className="app-page-shell">
 
-      {/* ─── Header — primária ───────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 6 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: brand.primaryIconBg, border: brand.primaryIconBorder, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2, color: brand.primaryIconColor }}>
-          <GiLinkedRings size={14} />
-        </div>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>Gestão de Links</h1>
-            {totalPendentes > 0 && (
-              <span style={{ background: BRAND.vermelho, color: "#fff", borderRadius: 10, padding: "2px 9px", fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
-                {totalPendentes} pendente{totalPendentes !== 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-          <p style={{ fontSize: 13, color: theme.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>
-            Links de rastreio detectados nas operadoras que não estão associados a nenhum influencer.
-          </p>
-          <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 10, background: `${BRAND.ciano}15`, border: `1px solid ${BRAND.ciano}40`, fontSize: 12, color: theme.text, fontFamily: FONT.body }}>
-            <strong>Dados nos Dashboards:</strong> Ao mapear, o sync é disparado automaticamente e as linhas são criadas em <code>influencer_metricas</code>. Novos dias são incluídos pela automação diária (4h).
-          </div>
-        </div>
+      <PageHeader
+        icon={<GiLinkedRings size={14} aria-hidden />}
+        title="Gestão de Links"
+        subtitle="Links de rastreio detectados nas operadoras que não estão associados a nenhum influencer."
+        actions={
+          totalPendentes > 0 ? (
+            <span style={{ background: BRAND.vermelho, color: "#fff", borderRadius: 10, padding: "2px 9px", fontSize: 11, fontWeight: 700, fontFamily: FONT.body }}>
+              {totalPendentes} pendente{totalPendentes !== 1 ? "s" : ""}
+            </span>
+          ) : undefined
+        }
+      />
+
+      <div style={{ marginTop: 12, marginBottom: 18, padding: "10px 14px", borderRadius: 10, background: `${BRAND.ciano}15`, border: `1px solid ${BRAND.ciano}40`, fontSize: 12, color: theme.text, fontFamily: FONT.body }}>
+        Ao mapear um link, os dados históricos são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.
       </div>
 
-      {/* ─── Filtro Operadora ────────────────────────────────────────────────── */}
       {showFiltroOperadora && operadorasList.length > 0 && (
-        <div style={{ margin: "20px 0", display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.2px", fontFamily: FONT.body }}>Operadora</span>
-          <select value={operadoraFiltro} onChange={(e) => setOperadoraFiltro(e.target.value)}
-            style={{ padding: "8px 14px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 13, cursor: "pointer", minWidth: 180, fontFamily: FONT.body, outline: "none" }}>
-            <option value="todas">Todas</option>
-            {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (<option key={op.slug} value={op.slug}>{op.nome}</option>))}
-          </select>
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "10px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <GiShield size={13} style={{ position: "absolute", left: 10, color: theme.textMuted, pointerEvents: "none" }} />
+                <select
+                  value={operadoraFiltro}
+                  onChange={(e) => setOperadoraFiltro(e.target.value)}
+                  style={{
+                    padding: "6px 14px 6px 30px",
+                    borderRadius: 999,
+                    border: `1px solid ${operadoraFiltro !== "todas" ? brand.accent : theme.cardBorder}`,
+                    background: theme.inputBg ?? theme.cardBg,
+                    color: operadoraFiltro !== "todas" ? brand.accent : theme.textMuted,
+                    fontSize: 13,
+                    fontWeight: operadoraFiltro !== "todas" ? 700 : 400,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                    outline: "none",
+                    appearance: "none",
+                  }}
+                >
+                  <option value="todas">Todas as operadoras</option>
+                  {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
+                    <option key={op.slug} value={op.slug}>{op.nome}</option>
+                  ))}
+                </select>
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ─── Abas ────────────────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
+      <div role="tablist" aria-label="Status dos links" style={{ display: "flex", gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
         {(["pendentes", "mapeados", "ignorados"] as Aba[]).map((a) => {
           const ativa = aba === a;
           return (
-            <button key={a} onClick={() => setAba(a)}
+            <button key={a} type="button" role="tab" aria-selected={ativa} onClick={() => setAba(a)}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 20, cursor: "pointer", border: `1px solid ${ativa ? brand.accent : theme.cardBorder}`, background: ativa ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}22`) : (theme.inputBg ?? theme.cardBg), color: ativa ? brand.accent : theme.textMuted, fontSize: 13, fontWeight: ativa ? 700 : 400, fontFamily: FONT.body, transition: "all 0.15s" }}>
               {a.charAt(0).toUpperCase() + a.slice(1)}
               {a === "pendentes" && totalPendentes > 0 && (
@@ -283,13 +323,13 @@ export default function GestaoLinks() {
           borderRadius: 18, padding: 60,
           textAlign: "center", color: theme.textMuted,
           fontFamily: FONT.body, fontSize: 14,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+          boxShadow: cardShadow,
         }}>
           {emptyMessages[aba]}
         </div>
       ) : (
         // sem overflow:hidden no wrapper externo para não forçar scroll
-        <div style={{ background: brand.blockBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", overflow: "hidden" }}>
+        <div style={{ background: brand.blockBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 18, boxShadow: cardShadow, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
             <colgroup>
               {/* UTM Source: largura fixa razoável, vai quebrar internamente */}
@@ -298,31 +338,40 @@ export default function GestaoLinks() {
               <col style={{ width: "9%" }} />
               <col style={{ width: "9%" }} />
               <col style={{ width: "6%" }} />
-              <col style={{ width: "11%" }} />
-              <col style={{ width: "11%" }} />
+              {!hideDepGgr && <col style={{ width: "11%" }} />}
+              {!hideDepGgr && <col style={{ width: "11%" }} />}
               {aba === "mapeados" && <col style={{ width: "12%" }} />}
               {/* Ações: espaço restante */}
               <col />
             </colgroup>
             <thead>
               <tr>
-                <th style={th}>UTM Source</th>
-                {operadoraFiltro === "todas" && operadorasList.length > 1 && <th style={th}>Operadora</th>}
-                <th style={th}>1º visto</th>
-                <th style={th}>Último</th>
-                <th style={{ ...th, textAlign: "right" }}>FTDs</th>
-                <th style={{ ...th, textAlign: "right" }}>Depósitos</th>
-                <th style={{ ...th, textAlign: "right" }}>GGR</th>
-                {aba === "mapeados" && <th style={th}>Influencer / Campanha</th>}
-                <th style={th}>Ações</th>
+                <th scope="col" style={th}>UTM Source</th>
+                {operadoraFiltro === "todas" && operadorasList.length > 1 && <th scope="col" style={th}>Operadora</th>}
+                <th scope="col" style={th}>1º visto</th>
+                <th scope="col" style={th}>Último</th>
+                <th scope="col" style={{ ...th, textAlign: "right" }}>FTDs</th>
+                <th scope="col" style={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>Depósitos</th>
+                <th scope="col" style={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>GGR</th>
+                {aba === "mapeados" && <th scope="col" style={th}>Influencer / Campanha</th>}
+                <th scope="col" style={th}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {aliases.map((alias, idx) => {
                 const ggr = calcGgr(alias);
-                const zebraStyle: React.CSSProperties = idx % 2 === 1 ? { background: "rgba(74,32,130,0.06)" } : {};
+                const zebraBg = idx % 2 === 1 ? (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
                 return (
-                  <tr key={alias.id} style={zebraStyle}>
+                  <tr
+                    key={alias.id}
+                    style={{ background: zebraBg }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = zebraBg;
+                    }}
+                  >
                     {/* UTM Source: chip com quebra de linha e maxWidth */}
                     <td style={tdUtm}>
                       <span style={{
@@ -343,8 +392,8 @@ export default function GestaoLinks() {
                     <td style={tdMuted}>{fmtData(alias.primeiro_visto)}</td>
                     <td style={tdMuted}>{fmtData(alias.ultimo_visto)}</td>
                     <td style={{ ...td, textAlign: "right" }}>{alias.total_ftds}</td>
-                    <td style={{ ...td, textAlign: "right" }}>{fmt(alias.total_deposit)}</td>
-                    <td style={{ ...td, textAlign: "right" }}>
+                    <td style={{ ...td, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>{fmt(alias.total_deposit)}</td>
+                    <td style={{ ...td, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>
                       <span style={ggr >= 0 ? { color: BRAND.verde, fontWeight: 600 } : { color: BRAND.vermelho, fontWeight: 600 }}>{fmt(ggr)}</span>
                     </td>
                     {aba === "mapeados" && (
@@ -384,17 +433,8 @@ export default function GestaoLinks() {
 
       {/* ─── Modal ───────────────────────────────────────────────────────────── */}
       {modalAberto && aliasSelecionado && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
-          onClick={() => { if (!salvando) setModalAberto(false); }}>
-          <div style={{ background: theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 20, padding: "28px 32px", width: 440, maxWidth: "90vw" }}
-            onClick={(e) => e.stopPropagation()}>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: theme.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>Mapear link órfão</h2>
-              <button onClick={() => { if (!salvando) setModalAberto(false); }} style={{ background: "none", border: "none", cursor: salvando ? "not-allowed" : "pointer", color: theme.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-                <X size={18} />
-              </button>
-            </div>
+        <ModalBase onClose={solicitarFecharModal} maxWidth={440}>
+          <ModalHeader title="Mapear link órfão" onClose={solicitarFecharModal} />
             <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 22, fontFamily: FONT.body }}>
               Associe o UTM <strong style={{ color: BRAND.roxoVivo }}>{aliasSelecionado.utm_source}</strong> a um influencer ou campanha.
             </p>
@@ -415,6 +455,7 @@ export default function GestaoLinks() {
             <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
               <button
                 type="button"
+                aria-pressed={tipoMapeamento === "influencer"}
                 onClick={() => { setTipoMapeamento("influencer"); setCampanhaSelecionada(""); }}
                 style={{
                   flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "influencer" ? BRAND.roxoVivo : theme.cardBorder}`,
@@ -427,6 +468,7 @@ export default function GestaoLinks() {
               </button>
               <button
                 type="button"
+                aria-pressed={tipoMapeamento === "campanha"}
                 onClick={() => { setTipoMapeamento("campanha"); setInfluencerSelecionado(""); }}
                 style={{
                   flex: 1, padding: "8px 14px", borderRadius: 10, border: `1px solid ${tipoMapeamento === "campanha" ? BRAND.roxoVivo : theme.cardBorder}`,
@@ -472,18 +514,29 @@ export default function GestaoLinks() {
             )}
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button onClick={() => { if (!salvando) setModalAberto(false); }}
-                style={{ padding: "9px 20px", background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 13, fontFamily: FONT.body, cursor: "pointer" }}>
+              <button type="button" onClick={solicitarFecharModal}
+                style={{ padding: "9px 20px", background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 13, fontFamily: FONT.body, cursor: salvando ? "not-allowed" : "pointer" }}>
                 Cancelar
               </button>
-              <button onClick={confirmarMapeamento} disabled={(tipoMapeamento === "influencer" ? !influencerSelecionado : !campanhaSelecionada) || salvando}
+              <button type="button" onClick={() => void confirmarMapeamento()} disabled={(tipoMapeamento === "influencer" ? !influencerSelecionado : !campanhaSelecionada) || salvando}
+                aria-disabled={(tipoMapeamento === "influencer" ? !influencerSelecionado : !campanhaSelecionada) || salvando}
                 style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? "pointer" : "not-allowed", opacity: (tipoMapeamento === "influencer" ? influencerSelecionado : campanhaSelecionada) && !salvando ? 1 : 0.5 }}>
                 <Link2 size={13} />{salvando ? "Salvando..." : "Confirmar mapeamento"}
               </button>
             </div>
-          </div>
-        </div>
+        </ModalBase>
       )}
+      {confirmFechar ? (
+        <ModalConfirmDelete
+          zIndex={1100}
+          title="Fechar sem mapear?"
+          texto="Existe uma seleção pendente (influencer ou campanha). Deseja fechar sem concluir o mapeamento?"
+          confirmLabel="Fechar"
+          destructive={false}
+          onCancel={() => setConfirmFechar(false)}
+          onConfirm={fecharModalLimpo}
+        />
+      ) : null}
     </div>
   );
 }

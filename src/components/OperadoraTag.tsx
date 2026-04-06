@@ -1,34 +1,38 @@
 import { FONT } from "../constants/theme";
-import { BRAND } from "../lib/dashboardConstants";
-
-const FALLBACK_COLOR = BRAND.roxoVivo;
 
 /**
  * Retorna bg, color e border para uma tag baseada na cor primária da operadora.
+ * Sem cor salva: usa --brand-primary via color-mix (evita concatenar sufixo hex em var()).
  */
-function getOperadoraTagStyles(corPrimaria: string | null | undefined, _dark: boolean) {
-  const cor = corPrimaria?.trim() || FALLBACK_COLOR;
+function getOperadoraTagStyles(corPrimaria: string | null | undefined) {
+  const trimmed = corPrimaria?.trim();
+  if (!trimmed) {
+    return {
+      bg: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
+      color: "var(--brand-primary, #7c3aed)",
+      borderProperty: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 27%, transparent)",
+    };
+  }
   return {
-    bg: `${cor}18`,
-    color: cor,
-    border: `${cor}44`,
+    bg: `${trimmed}18`,
+    color: trimmed,
+    borderProperty: `1px solid ${trimmed}44`,
   };
 }
 
 export interface OperadoraTagProps {
   label: string;
   corPrimaria?: string | null;
-  dark?: boolean;
   icon?: React.ReactNode;
   style?: React.CSSProperties;
 }
 
 /**
  * Tag de operadora usando a cor primária da operadora.
- * Quando corPrimaria não está definida, usa roxo como fallback.
+ * Quando corPrimaria não está definida, usa --brand-primary como fallback.
  */
-export default function OperadoraTag({ label, corPrimaria, dark = false, icon, style }: OperadoraTagProps) {
-  const { bg, color, border } = getOperadoraTagStyles(corPrimaria, dark);
+export default function OperadoraTag({ label, corPrimaria, icon, style }: OperadoraTagProps) {
+  const { bg, color, borderProperty } = getOperadoraTagStyles(corPrimaria);
 
   return (
     <span
@@ -41,7 +45,7 @@ export default function OperadoraTag({ label, corPrimaria, dark = false, icon, s
         borderRadius: 20,
         background: bg,
         color,
-        border: `1px solid ${border}`,
+        border: borderProperty,
         fontWeight: 600,
         fontFamily: FONT.body,
         ...style,

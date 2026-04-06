@@ -1,4 +1,5 @@
 import { Suspense, lazy, useState, useEffect, type ComponentType, type LazyExoticComponent } from "react";
+import { Loader2 } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -43,8 +44,8 @@ const SocialMediaDashboard      = lazyWithRetry(() => import("./pages/dashboards
 const Agenda     = lazyWithRetry(() => import("./pages/lives/Agenda"));
 const Resultados = lazyWithRetry(() => import("./pages/lives/Resultados"));
 const Feedback   = lazyWithRetry(() => import("./pages/lives/Feedback"));
-const Influencers = lazyWithRetry(() => import("./pages/operacoes/Influencers"));
-const Scout = lazyWithRetry(() => import("./pages/operacoes/Scout"));
+const Influencers = lazyWithRetry(() => import("./pages/lives/Influencers"));
+const Scout = lazyWithRetry(() => import("./pages/lives/Scout"));
 const Financeiro  = lazyWithRetry(() => import("./pages/operacoes/Financeiro"));
 const BancaJogo   = lazyWithRetry(() => import("./pages/operacoes/BancaJogo"));
 const GestaoLinks = lazyWithRetry(() => import("./pages/operacoes/GestaoLinks"));
@@ -89,12 +90,27 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
 };
 
 const PageLoadingFallback = ({ background = "#0d0d12" }: { background?: string }) => (
-  <div style={{
-    flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-    background, minHeight: 200,
-    color: "#e5dce1", fontSize: 14, fontFamily: "Inter, sans-serif",
-  }}>
-    ⏳ Carregando...
+  <div
+    style={{
+      flex: 1,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background,
+      minHeight: 200,
+      fontFamily: "Inter, sans-serif",
+    }}
+  >
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <Loader2
+        size={20}
+        color="var(--brand-primary, #7c3aed)"
+        strokeWidth={2}
+        aria-hidden
+        style={{ animation: "spin 1s linear infinite", marginBottom: 8 }}
+      />
+      <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando...</span>
+    </div>
   </div>
 );
 
@@ -196,11 +212,19 @@ function Root() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#e5dce1",
           fontFamily: "Inter, sans-serif",
         }}
       >
-        ⏳ Carregando...
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <Loader2
+            size={20}
+            color="var(--brand-primary, #7c3aed)"
+            strokeWidth={2}
+            aria-hidden
+            style={{ animation: "spin 1s linear infinite", marginBottom: 8 }}
+          />
+          <span style={{ fontSize: 14, color: "#e5dce1" }}>Carregando...</span>
+        </div>
       </div>
     );
   }

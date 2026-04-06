@@ -7,13 +7,15 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora } from "../../../types";
-import { Eye, EyeOff, Pencil, X } from "lucide-react";
+import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2 } from "lucide-react";
 import {
   GiMicrophone, GiPodium, GiWarPick, GiTwoCoins,
   GiPokerHand, GiCheckMark, GiShield,
 } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
+import { fmtBRL } from "../../../lib/dashboardHelpers";
+import { PlatLogo } from "../../../components/PlatLogo";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -27,15 +29,7 @@ const BRAND = {
 } as const;
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
-import { PLATAFORMAS, PLAT_COLOR, PLAT_LOGO, PLAT_LOGO_DARK, type Plataforma } from "../../../constants/platforms";
-
-function PlatLogo({ plataforma, size = 14, isDark }: { plataforma: string; size?: number; isDark: boolean }) {
-  const [err, setErr] = useState(false);
-  const p = plataforma as Plataforma;
-  const src = isDark ? (PLAT_LOGO_DARK[p] ?? PLAT_LOGO[p]) : PLAT_LOGO[p];
-  if (err || !src) return <span style={{ fontSize: size * 0.65, color: PLAT_COLOR[p] ?? "#fff" }}>●</span>;
-  return <img src={src} alt={plataforma} width={size} height={size} onError={() => setErr(true)} style={{ display: "block", flexShrink: 0 }} />;
-}
+import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
 
 // ─── BLUR EM DADOS SENSÍVEIS ──────────────────────────────────────────────────
 function SensitiveField({
@@ -74,8 +68,9 @@ function SensitiveField({
           {display}
         </span>
         <button
+          type="button"
           onClick={() => visible ? setVisible(false) : reveal()}
-          title={visible ? "Ocultar" : "Revelar dado sensível"}
+          aria-label={visible ? `Ocultar ${label ?? "dado sensível"}` : `Revelar ${label ?? "dado sensível"}`}
           style={{
             background: "none", border: "none", cursor: "pointer",
             color: t.textMuted, padding: 2, flexShrink: 0,
@@ -123,6 +118,9 @@ interface Perfil {
   agencia?:         string;
   conta?:           string;
   chave_pix?:       string;
+  created_at?:      string;
+  updated_at?:      string;
+  status_alterado_em?: string;
 }
 
 interface Influencer {
@@ -139,11 +137,6 @@ const emptyPerfil = (id: string): Perfil => ({
   cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
 });
 
-// ─── Moeda BRL ────────────────────────────────────────────────────────────────
-function formatBRL(value: number): string {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 function parseBRL(raw: string): number {
   const digits = raw.replace(/\D/g, "");
   if (!digits) return 0;
@@ -153,7 +146,7 @@ function parseBRL(raw: string): number {
 function maskBRL(raw: string): string {
   const digits = raw.replace(/\D/g, "").replace(/^0+/, "") || "0";
   const num    = parseInt(digits, 10) / 100;
-  return formatBRL(num);
+  return fmtBRL(num);
 }
 
 // Input de moeda controlado
@@ -166,17 +159,17 @@ function CurrencyInput({
   placeholder?: string;
   disabled?: boolean;
 }) {
-  const [display, setDisplay] = useState(value > 0 ? formatBRL(value) : "");
+  const [display, setDisplay] = useState(value > 0 ? fmtBRL(value) : "");
 
   useEffect(() => {
-    setDisplay(value > 0 ? formatBRL(value) : "");
+    setDisplay(value > 0 ? fmtBRL(value) : "");
   }, [value]);
 
   if (disabled) {
     return (
       <input
         type="text"
-        value={value > 0 ? formatBRL(value) : ""}
+        value={value > 0 ? fmtBRL(value) : ""}
         readOnly
         disabled
         style={{ ...style, opacity: 0.8, cursor: "not-allowed" }}
@@ -196,7 +189,7 @@ function CurrencyInput({
         onChange(parseBRL(masked));
       }}
       onFocus={(e) => {
-        if (!display) setDisplay(formatBRL(0));
+        if (!display) setDisplay(fmtBRL(0));
         e.target.select();
       }}
       onBlur={() => {
@@ -221,7 +214,11 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <button
+        type="button"
         onClick={() => { if (!readonly) setOpen((o) => !o); }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Status: ${STATUS_LABEL[value]}`}
         style={{
           padding: "4px 12px", borderRadius: "20px",
           border: `1.5px solid ${color}`, background: `${color}18`, color,
@@ -231,17 +228,20 @@ function StatusBadge({ value, onChange, readonly }: StatusBadgeProps) {
         }}
       >
         {STATUS_LABEL[value]}
-        {!readonly && <span style={{ fontSize: "9px", opacity: 0.7 }}>▼</span>}
+        {!readonly && <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
       </button>
       {open && (
-        <div style={{
+        <div
+          role="menu"
+          style={{
           position: "absolute", top: "calc(100% + 4px)", left: 0,
           background: t.cardBg, border: `1px solid ${t.cardBorder}`,
           borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
           zIndex: 200, minWidth: 140, overflow: "hidden",
-        }}>
+        }}
+        >
           {STATUS_OPTS.map((s) => (
-            <button key={s} onClick={() => { onChange(s); setOpen(false); }}
+            <button key={s} type="button" role="menuitem" onClick={() => { onChange(s); setOpen(false); }}
               style={{
                 display: "block", width: "100%", padding: "9px 14px", border: "none",
                 background: s === value ? `${STATUS_COLOR[s]}18` : "transparent",
@@ -284,8 +284,9 @@ export default function Influencers() {
   const [filterStatus,  setFilterStatus]  = useState<string>("todos");
   const [filterPlat,    setFilterPlat]    = useState<string>("todas");
   const [filterOp,      setFilterOp]      = useState<string>("todas");
-  const [cacheMax,      setCacheMax]      = useState(0);
-  const [cacheLimit,    setCacheLimit]    = useState(0);
+  const [cacheMax,      setCacheMax]      = useState(5000);
+  const [cacheLimit,    setCacheLimit]    = useState(5000);
+  const [statusError,   setStatusError]   = useState("");
 
   async function loadData() {
     setLoading(true);
@@ -354,25 +355,42 @@ export default function Influencers() {
 
   useEffect(() => { loadData(); }, []);
 
-  // ── CORREÇÃO 1: upsert com await para garantir persistência do status ──
   async function handleStatusChange(infId: string, newStatus: StatusInfluencer) {
-    if (!podeAlterarStatus) return; // Só Admin/Gestor podem alterar status
-    // Atualiza estado local imediatamente (UX responsiva)
+    if (!podeAlterarStatus) return;
+    const previousStatus = list.find((i) => i.id === infId)?.perfil?.status;
+
+    const agoraIso = new Date().toISOString();
     setList((prev) =>
       prev.map((i) =>
         i.id === infId
-          ? { ...i, perfil: { ...(i.perfil ?? emptyPerfil(i.id)), status: newStatus } }
+          ? {
+              ...i,
+              perfil: {
+                ...(i.perfil ?? emptyPerfil(i.id)),
+                status: newStatus,
+                ...(previousStatus !== newStatus ? { status_alterado_em: agoraIso } : {}),
+              },
+            }
           : i
       )
     );
 
-    // Upsert garante que o registro seja criado caso ainda não exista
+    const upsertPatch: Record<string, unknown> = { id: infId, status: newStatus };
+    if (previousStatus !== newStatus) upsertPatch.status_alterado_em = agoraIso;
+
     const { error } = await supabase
       .from("influencer_perfil")
-      .upsert({ id: infId, status: newStatus }, { onConflict: "id" });
+      .upsert(upsertPatch, { onConflict: "id" });
 
     if (error) {
-      console.error("[Influencers] Erro ao salvar status:", error.message);
+      setList((prev) =>
+        prev.map((i) =>
+          i.id === infId
+            ? { ...i, perfil: { ...(i.perfil ?? emptyPerfil(i.id)), status: previousStatus ?? "ativo" } }
+            : i
+        )
+      );
+      setStatusError("Erro ao salvar status. Tente novamente.");
     }
   }
 
@@ -535,18 +553,19 @@ export default function Influencers() {
       {showManagementUI && (
         <div style={{ marginBottom: 20 }}>
           <div style={{
-            borderRadius: 14, border: `1px solid ${t.cardBorder}`,
-            background: brand.blockBg,
+            borderRadius: 14,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
             padding: "12px 20px",
           }}>
-            {/* Linha 1: Status / Plataforma / Operadora */}
+            {/* Linha 1: Status / Operadora */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
               {STATUS_OPTS.map((s) => {
                 const active = filterStatus === s;
                 const color = STATUS_COLOR[s];
                 return (
-                  <button key={s} onClick={() => setFilterStatus(active ? "todos" : s)}
+                  <button key={s} type="button" onClick={() => setFilterStatus(active ? "todos" : s)}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
                       padding: "5px 12px", borderRadius: 999, cursor: "pointer",
@@ -558,30 +577,7 @@ export default function Influencers() {
                   >
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
                     {STATUS_LABEL[s]}
-                    {active && <span style={{ fontSize: 9 }}>✕</span>}
-                  </button>
-                );
-              })}
-              <span style={{ width: 1, height: 16, background: t.cardBorder, margin: "0 4px", flexShrink: 0 }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
-              {PLATAFORMAS.map((plat) => {
-                const active = filterPlat === plat;
-                const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
-                return (
-                  <button key={plat} onClick={() => setFilterPlat(active ? "todas" : plat)}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
-                      border: `1px solid ${active ? color : color + "55"}`,
-                      background: active ? `${color}22` : `${color}11`,
-                      color: active ? color : color + "cc",
-                      fontSize: 12, fontWeight: active ? 700 : 500,
-                      fontFamily: FONT.body, transition: "all 0.15s",
-                    }}
-                  >
-                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                    {plat}
-                    {active && <span style={{ fontSize: 9 }}>✕</span>}
+                    {active && <X size={9} aria-hidden="true" />}
                   </button>
                 );
               })}
@@ -613,7 +609,33 @@ export default function Influencers() {
               )}
             </div>
 
-            {/* Linha 2: Filtro de Cachê */}
+            {/* Linha 2: Plataforma */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start", paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Plataforma</span>
+              {PLATAFORMAS.map((plat) => {
+                const active = filterPlat === plat;
+                const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
+                return (
+                  <button key={plat} type="button" onClick={() => setFilterPlat(active ? "todas" : plat)}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "5px 12px", borderRadius: 999, cursor: "pointer",
+                      border: `1px solid ${active ? color : color + "55"}`,
+                      background: active ? `${color}22` : `${color}11`,
+                      color: active ? color : color + "cc",
+                      fontSize: 12, fontWeight: active ? 700 : 500,
+                      fontFamily: FONT.body, transition: "all 0.15s",
+                    }}
+                  >
+                    <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
+                    {plat}
+                    {active && <X size={9} aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Linha 3: Filtro de Cachê */}
             {cacheMax > 0 && (
               <div style={{
                 paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`,
@@ -624,25 +646,36 @@ export default function Influencers() {
                     <GiTwoCoins size={13} style={{ color: brand.secondary }} /> Cachê por Hora — até
                   </span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>
-                    {cacheLimit >= cacheMax ? "Todos" : formatBRL(cacheLimit) + "/h"}
+                    {cacheLimit >= cacheMax ? "Todos" : fmtBRL(cacheLimit) + "/h"}
                   </span>
                 </div>
                 <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
                   <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
                   <div style={{ position: "absolute", left: 0, width: `${(cacheLimit / cacheMax) * 100}%`, height: 4, borderRadius: 2, background: brand.useBrand ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
-                  <input type="range" min={0} max={cacheMax} step={50} value={cacheLimit}
+                  <input
+                    type="range"
+                    min={0}
+                    max={cacheMax}
+                    step={50}
+                    value={cacheLimit}
                     onChange={(e) => setCacheLimit(Number(e.target.value))}
-                    style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }} />
+                    aria-label="Filtrar por cachê máximo por hora"
+                    aria-valuemin={0}
+                    aria-valuemax={cacheMax}
+                    aria-valuenow={cacheLimit}
+                    aria-valuetext={cacheLimit >= cacheMax ? "Todos" : `Até ${fmtBRL(cacheLimit)}/h`}
+                    style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }}
+                  />
                   <div style={{ position: "absolute", left: `calc(${(cacheLimit / cacheMax) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
                   <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
-                  <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{formatBRL(cacheMax)}/h</span>
+                  <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>{fmtBRL(cacheMax)}/h</span>
                 </div>
               </div>
             )}
 
-            {/* Linha 3: Barra de Pesquisa */}
+            {/* Linha 4: Barra de Pesquisa */}
             <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
               <input
                 value={search} onChange={(e) => setSearch(e.target.value)}
@@ -659,6 +692,7 @@ export default function Influencers() {
             {(filterStatus !== "todos" || filterPlat !== "todas" || filterOp !== "todas" || search || (cacheMax > 0 && cacheLimit < cacheMax)) && (
               <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
                 <button
+                  type="button"
                   onClick={() => { setFilterStatus("todos"); setFilterPlat("todas"); setFilterOp("todas"); setSearch(""); setCacheLimit(cacheMax); }}
                   style={{
                     padding: "5px 14px", borderRadius: 999,
@@ -666,9 +700,12 @@ export default function Influencers() {
                     background: `${BRAND.vermelho}11`,
                     color: BRAND.vermelho, fontSize: 12, fontWeight: 600,
                     fontFamily: FONT.body, cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}
                 >
-                  ✕ Limpar filtros
+                  <X size={12} aria-hidden="true" /> Limpar filtros
                 </button>
               </div>
             )}
@@ -683,9 +720,40 @@ export default function Influencers() {
         </div>
       )}
 
+      {statusError && (
+        <div
+          style={{
+            background: `${BRAND.vermelho}18`,
+            border: `1px solid ${BRAND.vermelho}44`,
+            color: BRAND.vermelho,
+            borderRadius: 10,
+            padding: "10px 14px",
+            fontSize: 13,
+            marginBottom: 14,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+          role="alert"
+          aria-live="polite"
+        >
+          {statusError}
+          <button
+            type="button"
+            onClick={() => setStatusError("")}
+            aria-label="Fechar erro"
+            style={{ background: "none", border: "none", cursor: "pointer", color: BRAND.vermelho, display: "flex" }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Lista */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body }}>
+        <div style={{ textAlign: "center", padding: "60px", color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" />
           Carregando...
         </div>
       ) : filtered.length === 0 ? (
@@ -728,7 +796,7 @@ export default function Influencers() {
                   </div>
                   {p?.cache_hora && p.cache_hora > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 5 }}>
-                      <GiTwoCoins size={12} style={{ color: brand.secondary }} /> {formatBRL(p.cache_hora)}/h
+                      <GiTwoCoins size={12} style={{ color: brand.secondary }} /> {fmtBRL(p.cache_hora)}/h
                     </div>
                   )}
                   {canais.length > 0 && (
@@ -756,7 +824,6 @@ export default function Influencers() {
                           key={o.operadora_slug}
                           label={o.operadora_nome ?? o.operadora_slug}
                           corPrimaria={opsColorMap[o.operadora_slug]}
-                          dark={isDark ?? false}
                           icon={<GiPokerHand size={11} />}
                         />
                       ))}
@@ -820,14 +887,24 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }:
   const { theme: t } = useApp();
   const b = brand ?? { blockBg: t.cardBg, accent: "#7c3aed", secondary: "#7c3aed", useBrand: false };
   const p = influencer.perfil;
-  const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
+  const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras" | "historico">("cadastral");
 
   const tabs = [
     { key: "cadastral"   as const, label: "Cadastral"  },
     { key: "canais"      as const, label: "Canais"     },
     { key: "financeiro"  as const, label: "Financeiro" },
     { key: "operadoras"  as const, label: "Operadoras" },
+    { key: "historico"   as const, label: "Histórico" },
   ];
+
+  function fmtTs(iso?: string | null) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+    } catch {
+      return "—";
+    }
+  }
 
   const labelStyle: React.CSSProperties = {
     display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px",
@@ -912,7 +989,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }:
 
         {tab === "financeiro" && (
           <>
-            <div style={row}><label style={labelStyle}>Cachê por Hora</label>{val(p?.cache_hora ? formatBRL(p.cache_hora) : "")}</div>
+            <div style={row}><label style={labelStyle}>Cachê por Hora</label>{val(p?.cache_hora ? fmtBRL(p.cache_hora) : "")}</div>
             <div style={row}>
               <SensitiveField value={p?.chave_pix} label="Chave PIX" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
             </div>
@@ -951,6 +1028,17 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark, brand }:
                 );
               })
             )}
+          </>
+        )}
+
+        {tab === "historico" && (
+          <>
+            <div style={row}><label style={labelStyle}>Data de criação (cadastro)</label>{val(fmtTs(p?.created_at))}</div>
+            <div style={row}><label style={labelStyle}>Data da última atualização</label>{val(fmtTs(p?.updated_at))}</div>
+            <div style={row}><label style={labelStyle}>Data da última alteração de status</label>{val(fmtTs(p?.status_alterado_em))}</div>
+            <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, margin: 0, lineHeight: 1.45 }}>
+              As datas vêm do cadastro do influencer. A alteração de status é registrada a partir desta versão do sistema.
+            </p>
           </>
         )}
       </div>
@@ -1019,7 +1107,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
       await supabase.from("profiles").update({ name: form.nome_artistico.trim() }).eq("id", influencer.id);
     }
 
-    const payload: Perfil & { nome_completo: string; updated_at: string } = {
+    const payload: Perfil & { nome_completo: string; updated_at: string; status_alterado_em?: string } = {
       ...form,
       nome_completo: editNomeCompleto.trim(),
       updated_at: new Date().toISOString(),
@@ -1030,6 +1118,9 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark, bra
       payload.cache_hora = existing.cache_hora ?? 0;
     } else if (existing && (payload.cache_hora == null || Number.isNaN(Number(payload.cache_hora)))) {
       payload.cache_hora = existing.cache_hora ?? 0;
+    }
+    if (existing && podeAlterarStatusCache && form.status !== existing.status) {
+      payload.status_alterado_em = new Date().toISOString();
     }
     const { error: err } = existing
       ? await supabase.from("influencer_perfil").update(payload).eq("id", influencer.id)
