@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { X, AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import type { Theme } from "../../../constants/theme";
-import { BRAND, FONT_TITLE, ROLES, roleBadgeColor, GESTOR_TIPOS } from "./constants";
+import { BRAND, ROLES, roleBadgeColor, GESTOR_TIPOS } from "./constants";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
 
 interface ModalUsuarioProps {
@@ -17,6 +19,7 @@ interface ModalUsuarioProps {
 }
 
 export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: ModalUsuarioProps) {
+  const brand = useDashboardBrand();
   const [nome, setNome] = useState(editando?.name ?? "");
   const [email, setEmail] = useState(editando?.email ?? "");
   const [role, setRole] = useState<Role>(editando?.role ?? "gestor");
@@ -175,27 +178,6 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     }
   };
 
-  const overlay: React.CSSProperties = {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.6)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 999,
-    padding: 24,
-  };
-  const modal: React.CSSProperties = {
-    background: t.cardBg,
-    borderRadius: 20,
-    padding: "28px 32px",
-    width: "100%",
-    maxWidth: 560,
-    border: `1px solid ${t.cardBorder}`,
-    maxHeight: "90vh",
-    overflowY: "auto",
-    position: "relative",
-  };
   const labelStyle: React.CSSProperties = {
     display: "block",
     fontFamily: FONT.body,
@@ -366,38 +348,16 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     </div>
   );
 
+  const tituloModal = editando ? "Editar Usuário" : "Novo Usuário";
+  const salvarBg = salvando
+    ? BRAND.cinza
+    : brand.useBrand
+      ? "var(--brand-primary)"
+      : BRAND.gradiente;
+
   return (
-    <div style={overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={modal}>
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: t.textMuted,
-            display: "flex",
-            padding: 4,
-          }}
-        >
-          <X size={18} />
-        </button>
-        <h2
-          style={{
-            fontFamily: FONT_TITLE,
-            fontSize: 18,
-            fontWeight: 800,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            color: t.text,
-            margin: "0 0 24px",
-          }}
-        >
-          {editando ? "Editar Usuário" : "Novo Usuário"}
-        </h2>
+    <ModalBase onClose={onClose} maxWidth={560} zIndex={999}>
+      <ModalHeader title={tituloModal} onClose={onClose} />
         <div style={field}>
           <label style={labelStyle}>Nome</label>
           <input
@@ -532,6 +492,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         )}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button
+            type="button"
             onClick={onClose}
             style={{
               background: "none",
@@ -547,10 +508,11 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             Cancelar
           </button>
           <button
+            type="button"
             onClick={salvar}
             disabled={salvando}
             style={{
-              background: salvando ? BRAND.cinza : BRAND.gradiente,
+              background: salvarBg,
               color: "#fff",
               border: "none",
               borderRadius: 8,
@@ -566,7 +528,6 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar usuário"}
           </button>
         </div>
-      </div>
-    </div>
+    </ModalBase>
   );
 }

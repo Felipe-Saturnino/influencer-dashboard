@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
@@ -15,6 +15,7 @@ export function AbaGestores({ t }: AbaGestoresProps) {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [salvoOk, setSalvoOk] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -52,25 +53,32 @@ export function AbaGestores({ t }: AbaGestoresProps) {
   const salvar = async () => {
     setSalvando(true);
     setSalvoOk(false);
-    for (const { slug } of GESTOR_TIPOS) {
-      const { error: delErr } = await supabase.from("gestor_tipo_pages").delete().eq("gestor_tipo_slug", slug);
-      if (delErr) {
+    setErroSalvar(null);
+
+    const slugsTipos = GESTOR_TIPOS.map((g) => g.slug);
+    const { error: delErr } = await supabase.from("gestor_tipo_pages").delete().in("gestor_tipo_slug", slugsTipos);
+    if (delErr) {
+      setSalvando(false);
+      setErroSalvar("Erro ao salvar. Tente novamente.");
+      return;
+    }
+
+    const toInsert = slugsTipos.flatMap((slug) =>
+      [...(gestorTipoPages[slug] ?? [])].map((pageKey) => ({
+        gestor_tipo_slug: slug,
+        page_key: pageKey,
+      })),
+    );
+
+    if (toInsert.length > 0) {
+      const { error: insErr } = await supabase.from("gestor_tipo_pages").insert(toInsert);
+      if (insErr) {
         setSalvando(false);
-        alert(`Erro ao salvar: ${delErr.message}`);
+        setErroSalvar("Erro ao salvar. Recarregue a página para verificar o estado atual.");
         return;
       }
-      const keys = gestorTipoPages[slug];
-      if (keys?.size) {
-        const { error: insErr } = await supabase
-          .from("gestor_tipo_pages")
-          .insert([...keys].map((pageKey) => ({ gestor_tipo_slug: slug, page_key: pageKey })));
-        if (insErr) {
-          setSalvando(false);
-          alert(`Erro ao salvar: ${insErr.message}`);
-          return;
-        }
-      }
     }
+
     setSalvando(false);
     setSalvoOk(true);
     setTimeout(() => setSalvoOk(false), 2500);
@@ -179,6 +187,7 @@ export function AbaGestores({ t }: AbaGestoresProps) {
                               <Checkbox
                                 checked={isPageChecked(gt.slug, p.key)}
                                 onChange={() => togglePage(gt.slug, p.key)}
+                                label={`${p.label} — ${gt.label}`}
                               />
                               {p.label}
                             </label>
@@ -193,47 +202,70 @@ export function AbaGestores({ t }: AbaGestoresProps) {
           </div>
         ))}
       </div>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "flex-end",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        {salvoOk && (
-          <span
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "stretch" }}>
+        {erroSalvar && (
+          <div
+            role="alert"
             style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              background: "rgba(232,64,37,0.12)",
+              border: "1px solid rgba(232,64,37,0.35)",
+              color: "#e84025",
+              fontSize: 13,
+              fontFamily: FONT.body,
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              color: BRAND.verde,
-              fontFamily: FONT.body,
-              fontSize: 13,
+              gap: 8,
             }}
           >
-            <ShieldCheck size={14} /> Páginas salvas com sucesso
-          </span>
+            <AlertCircle size={14} color="#e84025" aria-hidden />
+            {erroSalvar}
+          </div>
         )}
-        <button
-          onClick={salvar}
-          disabled={salvando}
+        <div
           style={{
-            background: salvando ? BRAND.cinza : BRAND.gradiente,
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            padding: "10px 22px",
-            cursor: salvando ? "not-allowed" : "pointer",
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 600,
-            opacity: salvando ? 0.7 : 1,
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: 12,
           }}
         >
-          {salvando ? "Salvando..." : "Salvar páginas"}
-        </button>
+          {salvoOk && (
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                color: BRAND.verde,
+                fontFamily: FONT.body,
+                fontSize: 13,
+              }}
+            >
+              <ShieldCheck size={14} /> Páginas salvas com sucesso
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={salvar}
+            disabled={salvando}
+            style={{
+              background: salvando ? BRAND.cinza : BRAND.gradiente,
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              padding: "10px 22px",
+              cursor: salvando ? "not-allowed" : "pointer",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 600,
+              opacity: salvando ? 0.7 : 1,
+            }}
+          >
+            {salvando ? "Salvando..." : "Salvar páginas"}
+          </button>
+        </div>
       </div>
     </div>
   );

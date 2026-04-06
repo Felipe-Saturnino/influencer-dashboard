@@ -2,35 +2,27 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
-import { FONT } from "../../../constants/theme";
-import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
+import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { GiRadarSweep, GiSiren, GiCircuitry, GiGearStick } from "react-icons/gi";
+import { CheckCircle2, AlertTriangle, XCircle, RefreshCw } from "lucide-react";
 
 /** Upload OCR PLS removido do produto — ocultar mesmo se a linha ainda existir em `integrations`. */
 const SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA = "upload_pls_daily_commercial";
 
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-} as const;
-
 // ─── SectionTitle (padrão da plataforma) ─────────────────────────────────────
 function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
       <span style={{
         width: 28, height: 28, borderRadius: 8,
-        background: "rgba(74,32,130,0.18)",
-        border: "1px solid rgba(74,32,130,0.30)",
+        background: brand.primaryIconBg,
+        border: brand.primaryIconBorder,
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: BRAND.ciano, flexShrink: 0,
+        color: brand.primaryIconColor, flexShrink: 0,
       }}>
         {icon}
       </span>
@@ -124,6 +116,7 @@ interface FluxoDia {
 
 export default function StatusTecnico() {
   const { theme: t } = useApp();
+  const dashBrand = useDashboardBrand();
   const perm = usePermission("status_tecnico");
   const [loading, setLoading] = useState(true);
   const [syncExecutando, setSyncExecutando] = useState(false);
@@ -145,6 +138,11 @@ export default function StatusTecnico() {
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
   const [logFiltro, setLogFiltro] = useState<"1h" | "24h" | "48h">("24h");
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | null>(null);
+  const [confirmarEmail, setConfirmarEmail] = useState<"diretoria" | "agenda" | null>(null);
+  const [fluxoLabelNarrow, setFluxoLabelNarrow] = useState(
+    typeof window !== "undefined" && window.innerWidth < 480,
+  );
   const card: React.CSSProperties = {
     background: t.cardBg,
     borderRadius: 16,
@@ -155,7 +153,7 @@ export default function StatusTecnico() {
     fontFamily: FONT.body, fontSize: 11, fontWeight: 700,
     color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px",
     padding: "10px 14px", textAlign: "left",
-    background: "rgba(74,32,130,0.10)",
+    background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
     borderBottom: `1px solid ${t.cardBorder}`,
   };
   const tdStyle: React.CSSProperties = {
@@ -278,6 +276,19 @@ export default function StatusTecnico() {
     const interval = setInterval(carregar, 60000); // refresh a cada 1 min
     return () => clearInterval(interval);
   }, [carregar]);
+
+  useEffect(() => {
+    if (confirmarSync == null && confirmarEmail == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setConfirmarSync(null);
+        setConfirmarEmail(null);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [confirmarSync, confirmarEmail]);
 
   const executarSync = async () => {
     if (syncExecutando || !perm.canEditarOk) return;
@@ -842,9 +853,14 @@ export default function StatusTecnico() {
 
   const btnAcao = (disabled: boolean): React.CSSProperties => ({
     padding: "6px 14px", borderRadius: 8, border: "none",
-    background: disabled ? "#6b7280" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+    background: disabled
+      ? BRAND.cinza
+      : dashBrand.useBrand
+        ? "var(--brand-primary)"
+        : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
     color: "#fff", fontSize: 12, fontWeight: 700,
     fontFamily: FONT.body, cursor: disabled ? "not-allowed" : "pointer",
+    display: "inline-flex", alignItems: "center", gap: 6,
   });
   const formatarHora = (iso: string) => {
     const d = new Date(iso);
@@ -869,15 +885,16 @@ export default function StatusTecnico() {
       {/* ── Header — padrão da plataforma ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+          width: 28, height: 28, borderRadius: 8,
+          background: dashBrand.primaryIconBg,
+          border: dashBrand.primaryIconBorder,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: BRAND.ciano, flexShrink: 0,
+          color: dashBrand.primaryIconColor, flexShrink: 0,
         }}>
-          <GiRadarSweep size={18} />
+          <GiRadarSweep size={14} />
         </span>
         <div>
-          <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: t.text, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: dashBrand.primary, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             Status Técnico
           </h1>
           <p style={{ color: t.textMuted, margin: "4px 0 0", fontFamily: FONT.body, fontSize: 13 }}>
@@ -935,10 +952,17 @@ export default function StatusTecnico() {
                     border: `1px solid ${msg.tipo === "ok" ? BRAND.verde : BRAND.vermelho}`,
                     color: msg.tipo === "ok" ? BRAND.verde : BRAND.vermelho,
                     fontFamily: FONT.body, fontSize: 12,
+                    display: "flex", alignItems: "flex-start", gap: 8,
                   }}>
-                    {msg.tipo === "ok" ? "✅ " : "⚠️ "}
-                    {prefix ? `${prefix}: ` : ""}
-                    {msg.texto}
+                    {msg.tipo === "ok" ? (
+                      <CheckCircle2 size={16} color={BRAND.verde} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
+                    ) : (
+                      <AlertTriangle size={16} color={BRAND.vermelho} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
+                    )}
+                    <span>
+                      {prefix ? `${prefix}: ` : ""}
+                      {msg.texto}
+                    </span>
                   </div>
                 );
               })}
@@ -970,12 +994,11 @@ export default function StatusTecnico() {
                     : isSocial
                       ? syncSocialExecutando
                       : false;
-                  const onSync = isCda ? executarSync : isSocial ? executarSyncSocial : () => {};
                   const ultimoSync = "ultimoSync" in row ? row.ultimoSync : null;
                   const registrosHojeR = "registrosHoje" in row ? row.registrosHoje : 0;
                   const erros = "erros" in row ? row.erros : 0;
                   const status = "status" in row ? row.status : null;
-                  const rowBg = idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent";
+                  const rowBg = idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
                   return (
                     <tr key={row.slug} style={{ background: rowBg }}>
                       <td style={tdStyle}>
@@ -993,25 +1016,42 @@ export default function StatusTecnico() {
                             borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700,
                             border: `1px solid ${status === "ok" ? `${BRAND.verde}44` : status === "warning" ? `${BRAND.amarelo}44` : `${BRAND.vermelho}44`}`,
                           }}>
-                            {status === "ok" && "🟢 OK"}
-                            {status === "warning" && "🟡 Warning"}
-                            {status === "falha" && "🔴 Falha"}
+                            {status === "ok" && <CheckCircle2 size={13} aria-hidden="true" />}
+                            {status === "warning" && <AlertTriangle size={13} aria-hidden="true" />}
+                            {status === "falha" && <XCircle size={13} aria-hidden="true" />}
+                            {status === "ok" ? "OK" : status === "warning" ? "Atenção" : "Falha"}
                           </span>
                         )}
                       </td>
                       <td style={tdStyle}>
                         {(isCda || isSocial) && (
-                          <button onClick={onSync} disabled={syncExecutandoRow || !perm.canEditarOk} style={btnAcao(syncExecutandoRow)}>
-                            {syncExecutandoRow ? "..." : "🔄 Sync"}
+                          <button
+                            type="button"
+                            onClick={() => setConfirmarSync(isCda ? "cda" : "social")}
+                            disabled={syncExecutandoRow || !perm.canEditarOk}
+                            style={btnAcao(syncExecutandoRow)}
+                          >
+                            <RefreshCw size={13} aria-hidden="true" />
+                            {syncExecutandoRow ? "Sincronizando..." : "Sync"}
                           </button>
                         )}
                         {isEmailDir && (
-                          <button onClick={enviarEmailDiretoria} disabled={emailEnviando || !perm.canEditarOk} style={btnAcao(emailEnviando)}>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmarEmail("diretoria")}
+                            disabled={emailEnviando || !perm.canEditarOk}
+                            style={btnAcao(emailEnviando)}
+                          >
                             {emailEnviando ? "Enviando..." : "Enviar"}
                           </button>
                         )}
                         {isEmailAgenda && (
-                          <button onClick={enviarEmailAgenda} disabled={emailAgendaEnviando || !perm.canEditarOk} style={btnAcao(emailAgendaEnviando)}>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmarEmail("agenda")}
+                            disabled={emailAgendaEnviando || !perm.canEditarOk}
+                            style={btnAcao(emailAgendaEnviando)}
+                          >
                             {emailAgendaEnviando ? "Enviando..." : "Enviar"}
                           </button>
                         )}
@@ -1060,7 +1100,7 @@ export default function StatusTecnico() {
                   onMouseEnter={() => setFluxoHover(f.data)}
                   onMouseLeave={() => setFluxoHover(null)}
                 >
-                  <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: 100, flexShrink: 0 }}>
+                  <span style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, width: fluxoLabelNarrow ? 80 : 100, flexShrink: 0 }}>
                     {new Date(f.data + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
                   </span>
                   <div style={{ flex: 1, height: 24, background: t.cardBorder, borderRadius: 6, overflow: "hidden", display: "flex" }}>
@@ -1091,11 +1131,22 @@ export default function StatusTecnico() {
                   {/* Tooltip on hover */}
                   {isHover && f.total > 0 && (
                     <div style={{
-                      position: "absolute", left: 116, top: "50%", transform: "translateY(-50%)",
-                      marginLeft: 4, padding: "8px 12px",
-                      background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-                      borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                      fontSize: 12, fontFamily: FONT.body, color: t.text, zIndex: 10, whiteSpace: "nowrap",
+                      position: "absolute",
+                      left: fluxoLabelNarrow ? 88 : 110,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      marginLeft: 4,
+                      padding: "8px 12px",
+                      background: t.cardBg,
+                      border: `1px solid ${t.cardBorder}`,
+                      borderRadius: 8,
+                      boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+                      fontSize: 12,
+                      fontFamily: FONT.body,
+                      color: t.text,
+                      zIndex: 10,
+                      maxWidth: "calc(100% - 120px)",
+                      overflow: "hidden",
                     }}>
                       {f.cda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("cda"), fontWeight: 600 }}>●</span> {fluxoLabel("cda")}: {f.cda.toLocaleString("pt-BR")}</div>}
                       {f.social > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("social"), fontWeight: 600 }}>●</span> {fluxoLabel("social")}: {f.social.toLocaleString("pt-BR")}</div>}
@@ -1115,7 +1166,10 @@ export default function StatusTecnico() {
       <div style={card}>
         <SectionTitle icon={<GiSiren size={14} />}>Alertas</SectionTitle>
         {alertas.length === 0 ? (
-          <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0 }}>✅ Nenhum alerta no momento.</p>
+          <p style={{ color: BRAND.verde, fontFamily: FONT.body, fontSize: 14, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <CheckCircle2 size={16} color={BRAND.verde} aria-hidden="true" />
+            Nenhum alerta no momento.
+          </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {alertas.map((a, i) => (
@@ -1148,9 +1202,10 @@ export default function StatusTecnico() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{
               width: 28, height: 28, borderRadius: 8,
-              background: "rgba(74,32,130,0.18)", border: "1px solid rgba(74,32,130,0.30)",
+              background: dashBrand.primaryIconBg,
+              border: dashBrand.primaryIconBorder,
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: BRAND.ciano, flexShrink: 0,
+              color: dashBrand.primaryIconColor, flexShrink: 0,
             }}>
               <GiCircuitry size={13} />
             </span>
@@ -1162,6 +1217,9 @@ export default function StatusTecnico() {
             {(["1h", "24h", "48h"] as const).map((f) => (
               <button
                 key={f}
+                type="button"
+                aria-pressed={logFiltro === f}
+                aria-label={f === "1h" ? "Filtrar logs da última hora" : f === "24h" ? "Filtrar logs das últimas 24 horas" : "Filtrar logs das últimas 48 horas"}
                 onClick={() => setLogFiltro(f)}
                 style={{
                   padding: "6px 12px", borderRadius: 8,
@@ -1208,7 +1266,7 @@ export default function StatusTecnico() {
                             resend: "E-mail (Resend)",
                           }[log.tipo] ?? log.tipo;
                     return (
-                      <tr key={log.id} style={{ background: idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
+                      <tr key={log.id} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
                         <td style={tdStyle}>{formatarHora(log.created_at)}</td>
                         <td style={tdStyle}>{integracaoLabel}</td>
                         <td style={tdStyle}>
@@ -1227,7 +1285,7 @@ export default function StatusTecnico() {
 
       {/* Configuração de Alertas */}
       <div style={card}>
-        <h2 style={{ fontFamily: FONT.title, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
+        <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, margin: "0 0 20px" }}>
           Configuração de Alertas
         </h2>
         <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, marginBottom: 16 }}>
@@ -1237,7 +1295,7 @@ export default function StatusTecnico() {
           <p style={{ color: t.textMuted }}>Carregando...</p>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
               <thead>
                 <tr>
                   <th style={thStyle}>Alerta</th>
@@ -1298,6 +1356,106 @@ export default function StatusTecnico() {
           </div>
         )}
       </div>
+
+      {(confirmarSync || confirmarEmail) && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="status-tecnico-confirm-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            padding: 20,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setConfirmarSync(null);
+              setConfirmarEmail(null);
+            }
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: 16,
+              padding: 24,
+              maxWidth: 420,
+              width: "100%",
+            }}
+          >
+            <h2 id="status-tecnico-confirm-title" style={{ marginTop: 0, fontFamily: FONT_TITLE, fontSize: 17, color: t.text }}>
+              {confirmarSync === "cda" && "Confirmar Sync CDA"}
+              {confirmarSync === "social" && "Confirmar Sync Social"}
+              {confirmarEmail === "diretoria" && "Confirmar envio — E-mail Diretoria"}
+              {confirmarEmail === "agenda" && "Confirmar envio — E-mail Agenda"}
+            </h2>
+            <p style={{ fontFamily: FONT.body, fontSize: 14, color: t.textMuted, marginBottom: 0 }}>
+              {confirmarSync
+                ? "Esta ação irá sincronizar dados conforme a configuração do período. Continuar?"
+                : "Esta ação irá disparar o envio do e-mail. Continuar?"}
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmarSync(null);
+                  setConfirmarEmail(null);
+                }}
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${t.cardBorder}`,
+                  borderRadius: 10,
+                  padding: "9px 16px",
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  color: t.text,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirmarSync === "cda") {
+                    setConfirmarSync(null);
+                    void executarSync();
+                  } else if (confirmarSync === "social") {
+                    setConfirmarSync(null);
+                    void executarSyncSocial();
+                  } else if (confirmarEmail === "diretoria") {
+                    setConfirmarEmail(null);
+                    void enviarEmailDiretoria();
+                  } else if (confirmarEmail === "agenda") {
+                    setConfirmarEmail(null);
+                    void enviarEmailAgenda();
+                  }
+                }}
+                style={{
+                  background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "9px 16px",
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

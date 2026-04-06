@@ -30,6 +30,8 @@ export const BRAND_SEMANTIC = {
   roxoBorder: "rgba(74,32,130,0.30)",
   cianoLight: "rgba(112,202,228,0.12)",
   cianoBorder: "rgba(112,202,228,0.30)",
+  roxoVivo: "#7c3aed",
+  cinza: "#6b7280",
 } as const;
 
 export const DARK_THEME = {

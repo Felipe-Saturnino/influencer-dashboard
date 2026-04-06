@@ -1,18 +1,11 @@
 import type { Role, PageKey, PermissaoValor, GestorTipoSlug } from "../../../types";
-import { FONT_TITLE } from "../../../constants/theme";
+import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
 
 export { FONT_TITLE };
 
 export const BRAND = {
-  roxo: "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul: "#1e36f8",
-  vermelho: "#e84025",
-  ciano: "#70cae4",
-  verde: "#22c55e",
-  amarelo: "#f59e0b",
-  cinza: "#6b7280",
-  gradiente: "linear-gradient(135deg, #4a2082, #1e36f8)",
+  ...BRAND_SEMANTIC,
+  gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
 /** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores) */

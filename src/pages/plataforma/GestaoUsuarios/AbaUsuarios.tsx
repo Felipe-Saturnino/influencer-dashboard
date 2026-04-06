@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Search, AlertCircle, KeyRound } from "lucide-react";
+import { Search, KeyRound } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
 import { FONT } from "../../../constants/theme";
@@ -8,6 +8,7 @@ import type { Role } from "../../../types";
 import type { Theme } from "../../../constants/theme";
 import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, ROLES } from "./constants";
 import { ModalUsuario } from "./ModalUsuario";
+import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 
 interface AbaUsuariosProps {
   t: Theme;
@@ -417,7 +418,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
                   flexDirection: "column",
                   gap: 12,
                   opacity: ativo ? 1 : 0.75,
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+                  boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
                   transition: "box-shadow 0.18s",
                 }}
               >
@@ -596,218 +597,34 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
       )}
 
       {modalDesativar && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
+        <ModalConfirmDelete
+          title="Desativar usuário"
+          texto={`O usuário ${modalDesativar.name} perderá acesso imediato à plataforma. Deseja continuar?`}
+          onCancel={() => {
+            if (!acaoEmAndamento) setModalDesativar(null);
           }}
-          onClick={() => !acaoEmAndamento && setModalDesativar(null)}
-        >
-          <div
-            style={{
-              background: t.cardBg,
-              border: `1px solid ${t.cardBorder}`,
-              borderRadius: 20,
-              padding: "28px 32px",
-              maxWidth: 400,
-              width: "90%",
-              position: "relative",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              disabled={!!acaoEmAndamento}
-              onClick={() => setModalDesativar(null)}
-              style={{
-                position: "absolute",
-                top: 14,
-                right: 14,
-                background: "none",
-                border: "none",
-                cursor: acaoEmAndamento ? "not-allowed" : "pointer",
-                color: t.textMuted,
-                display: "flex",
-                padding: 4,
-              }}
-            >
-              <X size={18} />
-            </button>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 10,
-                background: `${BRAND.vermelho}18`,
-                border: `1px solid ${BRAND.vermelho}44`,
-                borderRadius: 10,
-                padding: "12px 14px",
-                marginBottom: 20,
-              }}
-            >
-              <AlertCircle size={16} color={BRAND.vermelho} style={{ flexShrink: 0, marginTop: 1 }} />
-              <div>
-                <div style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>
-                  Desativar usuário
-                </div>
-                <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: 0 }}>
-                  O usuário <strong>{modalDesativar.name}</strong> perderá acesso imediato à plataforma. Deseja continuar?
-                </p>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                disabled={!!acaoEmAndamento}
-                onClick={() => setModalDesativar(null)}
-                style={{
-                  padding: "8px 18px",
-                  borderRadius: 8,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: "transparent",
-                  color: t.text,
-                  fontSize: 13,
-                  cursor: acaoEmAndamento ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body,
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={!!acaoEmAndamento}
-                onClick={() => modalDesativar && executarAcaoAdmin(modalDesativar, "desativar")}
-                style={{
-                  padding: "8px 18px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: BRAND.vermelho,
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: acaoEmAndamento ? "not-allowed" : "pointer",
-                  opacity: acaoEmAndamento ? 0.7 : 1,
-                  fontFamily: FONT.body,
-                }}
-              >
-                {modalDesativar && isEstaAcao(modalDesativar.id, "desativar") ? "…" : "Desativar"}
-              </button>
-            </div>
-          </div>
-        </div>
+          onConfirm={() => {
+            void executarAcaoAdmin(modalDesativar, "desativar");
+          }}
+          loading={isEstaAcao(modalDesativar.id, "desativar")}
+          confirmLabel="Desativar"
+        />
       )}
 
       {modalResetSenha && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
+        <ModalConfirmDelete
+          title="Redefinir senha"
+          texto={`A senha de ${modalResetSenha.name} voltará à senha padrão (mesma do cadastro de novos usuários). No próximo login será obrigatório definir uma nova senha.`}
+          onCancel={() => {
+            if (!acaoEmAndamento) setModalResetSenha(null);
           }}
-          onClick={() => !acaoEmAndamento && setModalResetSenha(null)}
-        >
-          <div
-            style={{
-              background: t.cardBg,
-              border: `1px solid ${t.cardBorder}`,
-              borderRadius: 20,
-              padding: "28px 32px",
-              maxWidth: 420,
-              width: "90%",
-              position: "relative",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              disabled={!!acaoEmAndamento}
-              onClick={() => setModalResetSenha(null)}
-              style={{
-                position: "absolute",
-                top: 14,
-                right: 14,
-                background: "none",
-                border: "none",
-                cursor: acaoEmAndamento ? "not-allowed" : "pointer",
-                color: t.textMuted,
-                display: "flex",
-                padding: 4,
-              }}
-            >
-              <X size={18} />
-            </button>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 10,
-                background: `${BRAND.amarelo}18`,
-                border: `1px solid ${BRAND.amarelo}48`,
-                borderRadius: 10,
-                padding: "12px 14px",
-                marginBottom: 20,
-              }}
-            >
-              <KeyRound size={16} color={BRAND.amarelo} style={{ flexShrink: 0, marginTop: 1 }} aria-hidden />
-              <div>
-                <div style={{ fontFamily: FONT.body, fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>
-                  Redefinir senha
-                </div>
-                <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: 0, lineHeight: 1.45 }}>
-                  A senha de <strong>{modalResetSenha.name}</strong> voltará à <strong>senha padrão</strong> (mesma do
-                  cadastro de novos usuários). No próximo login será obrigatório definir uma nova senha.
-                </p>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                disabled={!!acaoEmAndamento}
-                onClick={() => setModalResetSenha(null)}
-                style={{
-                  padding: "8px 18px",
-                  borderRadius: 8,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: "transparent",
-                  color: t.text,
-                  fontSize: 13,
-                  cursor: acaoEmAndamento ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body,
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={!!acaoEmAndamento}
-                onClick={() => modalResetSenha && executarAcaoAdmin(modalResetSenha, "reset_senha")}
-                style={{
-                  padding: "8px 18px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: BRAND.amarelo,
-                  color: "#1a1a1a",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: acaoEmAndamento ? "not-allowed" : "pointer",
-                  opacity: acaoEmAndamento ? 0.85 : 1,
-                  fontFamily: FONT.body,
-                }}
-              >
-                {modalResetSenha && isEstaAcao(modalResetSenha.id, "reset_senha") ? "…" : "Confirmar reset"}
-              </button>
-            </div>
-          </div>
-        </div>
+          onConfirm={() => {
+            void executarAcaoAdmin(modalResetSenha, "reset_senha");
+          }}
+          loading={isEstaAcao(modalResetSenha.id, "reset_senha")}
+          confirmLabel="Confirmar reset"
+          destructive={false}
+        />
       )}
 
       {modalOpen && (

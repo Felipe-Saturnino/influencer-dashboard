@@ -2,25 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
-import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { Operadora } from "../../../types";
-import { X, Pencil, AlertCircle, Upload } from "lucide-react";
+import { Pencil, AlertCircle, Upload, Check } from "lucide-react";
 import { GiShield } from "react-icons/gi";
-
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  verde:    "#22c55e",
-  cinza:    "#6b7280",
-} as const;
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
   const { theme: t } = useApp();
+  const dashBrand = useDashboardBrand();
   const perm = usePermission("gestao_operadoras");
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +36,7 @@ export default function GestaoOperadoras() {
     textAlign: "left", padding: "10px 16px", color: t.textMuted,
     fontWeight: 700, fontSize: 11, textTransform: "uppercase",
     letterSpacing: "0.08em", fontFamily: FONT.body,
-    background: "rgba(74,32,130,0.10)",
+    background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
     borderBottom: `1px solid ${t.cardBorder}`,
     whiteSpace: "nowrap",
   };
@@ -63,15 +55,18 @@ export default function GestaoOperadoras() {
 
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 24 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8, background: BRAND.roxo,
+        <span style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: dashBrand.primaryIconBg,
+          border: dashBrand.primaryIconBorder,
           display: "flex", alignItems: "center", justifyContent: "center",
+          color: dashBrand.primaryIconColor,
           flexShrink: 0, marginTop: 3,
         }}>
-          <GiShield size={14} color="#fff" />
-        </div>
+          <GiShield size={14} />
+        </span>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: dashBrand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>
             Gestão de Operadoras
           </h1>
           <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
@@ -91,7 +86,7 @@ export default function GestaoOperadoras() {
             background: t.cardBg, border: `1px solid ${t.cardBorder}`,
             borderLeft: `3px solid ${c.cor}`,
             borderRadius: 18, padding: "16px 20px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+            boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
           }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
               {c.label}
@@ -106,7 +101,8 @@ export default function GestaoOperadoras() {
       {/* ─── Tabela ──────────────────────────────────────────────────────────── */}
       <div style={{
         background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-        borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+        borderRadius: 18,
+        boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
         overflow: "hidden",
       }}>
         {/* Header da tabela */}
@@ -114,9 +110,10 @@ export default function GestaoOperadoras() {
           <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>{contadorLabel}</span>
           {perm.canCriarOk && (
             <button
+              type="button"
               onClick={() => { setEditando(null); setModalOpen(true); }}
               style={{
-                background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                 color: "#fff", border: "none", borderRadius: 10,
                 padding: "9px 18px", cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
@@ -132,7 +129,8 @@ export default function GestaoOperadoras() {
         ) : operadoras.length === 0 ? (
           <div style={{ padding: "48px 20px", color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>Nenhuma operadora cadastrada.</div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
             <thead>
               <tr>
                 <th style={th}>Slug</th>
@@ -144,7 +142,7 @@ export default function GestaoOperadoras() {
             </thead>
             <tbody>
               {operadoras.map((op, idx) => (
-                <tr key={op.slug} style={{ background: idx % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
+                <tr key={op.slug} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
                   <td style={td}>
                     <code style={{
                       background: `${BRAND.roxoVivo}18`, borderRadius: 6,
@@ -173,6 +171,7 @@ export default function GestaoOperadoras() {
                   {perm.canEditarOk && (
                     <td style={td}>
                       <button
+                        type="button"
                         onClick={() => { setEditando(op); setModalOpen(true); }}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
@@ -189,12 +188,14 @@ export default function GestaoOperadoras() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {modalOpen && (
         <ModalOperadora
           t={t}
+          dashBrand={dashBrand}
           editando={editando}
           onClose={() => setModalOpen(false)}
           onSalvo={carregar}
@@ -207,12 +208,13 @@ export default function GestaoOperadoras() {
 // ─── Modal ────────────────────────────────────────────────────────────────────
 interface ModalProps {
   t: ReturnType<typeof useApp>["theme"];
+  dashBrand: ReturnType<typeof useDashboardBrand>;
   editando: Operadora | null;
   onClose: () => void;
   onSalvo: () => void;
 }
 
-function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
+function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps) {
   const [nome, setNome] = useState(editando?.nome ?? "");
   const [slug, setSlug] = useState(editando?.slug ?? "");
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
@@ -316,7 +318,7 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
 
     setSalvando(true);
     try {
-      const brand = {
+      const brandPayload = {
         cor_primaria:     corPrimaria.trim() || null,
         cor_secundaria:   corSecundaria.trim() || null,
         cor_accent:       corAccent.trim() || null,
@@ -327,12 +329,12 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
         font_url:         fontUrl.trim() || null,
       };
       if (editando) {
-        const { error } = await supabase.from("operadoras").update({ nome, ativo, ...brand }).eq("slug", editando.slug);
+        const { error } = await supabase.from("operadoras").update({ nome, ativo, ...brandPayload }).eq("slug", editando.slug);
         if (error) throw error;
       } else {
         const { data: existe } = await supabase.from("operadoras").select("slug").eq("slug", slug).maybeSingle();
         if (existe) { setErro("Este slug já está em uso. Tente um nome diferente."); setSalvando(false); return; }
-        const { error } = await supabase.from("operadoras").insert({ slug, nome, ativo: true, ...brand });
+        const { error } = await supabase.from("operadoras").insert({ slug, nome, ativo: true, ...brandPayload });
         if (error) throw error;
       }
       onSalvo();
@@ -357,26 +359,14 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
     textTransform: "uppercase", letterSpacing: "1px",
   };
   const fieldStyle: React.CSSProperties = { marginBottom: 18 };
+  const tryClose = () => { if (!salvando) onClose(); };
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 24 }}
-      onClick={(e) => { if (e.target === e.currentTarget && !salvando) onClose(); }}
-    >
-      <div style={{ background: t.cardBg, borderRadius: 20, padding: "28px 32px", width: "100%", maxWidth: 460, border: `1px solid ${t.cardBorder}` }}>
-
-        {/* Header do modal */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-          <h2 style={{ fontFamily: FONT_TITLE, fontSize: 18, fontWeight: 800, color: t.text, margin: 0, letterSpacing: "0.03em" }}>
-            {editando ? "Editar Operadora" : "Nova Operadora"}
-          </h2>
-          <button
-            onClick={() => { if (!salvando) onClose(); }}
-            style={{ background: "none", border: "none", cursor: salvando ? "not-allowed" : "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+    <ModalBase maxWidth={460} onClose={tryClose}>
+        <ModalHeader
+          title={editando ? "Editar Operadora" : "Nova Operadora"}
+          onClose={tryClose}
+        />
 
         {/* Campo Nome */}
         <div style={fieldStyle}>
@@ -414,7 +404,7 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
 
         {/* Brandguide — cores exibidas para operadores desta operadora */}
         {editando && (
-          <div style={{ ...fieldStyle, padding: 16, background: "rgba(74,32,130,0.08)", borderRadius: 12, border: `1px solid ${t.cardBorder}`, maxHeight: 420, overflowY: "auto" }}>
+          <div style={{ ...fieldStyle, padding: 16, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", borderRadius: 12, border: `1px solid ${t.cardBorder}`, maxHeight: 420, overflowY: "auto" }}>
             <div style={{ ...labelStyle, marginBottom: 12 }}>Brandguide (operadores)</div>
             <div className="app-grid-2-tight">
               <div>
@@ -466,7 +456,7 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
                   <label style={{
                     display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
-                    background: "rgba(74,32,130,0.15)", border: `1px solid ${t.cardBorder}`,
+                    background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${t.cardBorder}`,
                     borderRadius: 8, cursor: uploadingLogo ? "not-allowed" : "pointer",
                     fontSize: 12, fontFamily: FONT.body, color: t.text,
                   }}>
@@ -486,7 +476,7 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
                   <label style={{
                     display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
-                    background: "rgba(74,32,130,0.15)", border: `1px solid ${t.cardBorder}`,
+                    background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${t.cardBorder}`,
                     borderRadius: 8, cursor: uploadingFont ? "not-allowed" : "pointer",
                     fontSize: 12, fontFamily: FONT.body, color: t.text,
                   }}>
@@ -508,6 +498,8 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
           <div style={{ ...fieldStyle, display: "flex", alignItems: "center", gap: 12 }}>
             <label style={{ ...labelStyle, margin: 0 }}>Status</label>
             <button
+              type="button"
+              aria-pressed={ativo}
               onClick={() => setAtivo((prev) => !prev)}
               style={{
                 border: `1px solid ${ativo ? "#05966966" : t.cardBorder}`,
@@ -515,9 +507,11 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
                 color: ativo ? "#059669" : t.textMuted,
                 borderRadius: 10, padding: "6px 16px", cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
+                display: "inline-flex", alignItems: "center", gap: 6,
               }}
             >
-              {ativo ? "✓ Ativa" : "Inativa"}
+              {ativo && <Check size={13} aria-hidden="true" />}
+              {ativo ? "Ativa" : "Inativa"}
             </button>
             {!ativo && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
@@ -537,16 +531,18 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
         {/* Botões */}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
           <button
-            onClick={() => { if (!salvando) onClose(); }}
+            type="button"
+            onClick={tryClose}
             style={{ background: "transparent", border: `1px solid ${t.cardBorder}`, borderRadius: 10, padding: "9px 18px", cursor: "pointer", fontFamily: FONT.body, fontSize: 13, color: t.text }}
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={salvar}
             disabled={salvando}
             style={{
-              background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff", border: "none", borderRadius: 10,
               padding: "9px 20px", cursor: salvando ? "not-allowed" : "pointer",
               fontFamily: FONT.body, fontSize: 13, fontWeight: 700, opacity: salvando ? 0.7 : 1,
@@ -555,7 +551,6 @@ function ModalOperadora({ t, editando, onClose, onSalvo }: ModalProps) {
             {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar operadora"}
           </button>
         </div>
-      </div>
-    </div>
+    </ModalBase>
   );
 }
