@@ -7,7 +7,7 @@ import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
-import { CicloPagamento, PagamentoStatus } from "../../../types";
+import { CicloPagamento, PagamentoStatus, type Role } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
@@ -127,6 +127,13 @@ function cicloAberto(ciclo: CicloPagamento): boolean {
   hoje.setHours(0, 0, 0, 0);
   const fim = new Date(ciclo.data_fim + "T00:00:00");
   return hoje <= fim;
+}
+
+/** Só perfis de operação interna veem `pagamentos_agentes` (influencer e agência: apenas pagamentos dos influencers da gestão). */
+const ROLES_VER_PAGAMENTO_AGENTE: readonly Role[] = ["admin", "gestor", "executivo", "operador"];
+
+function podeVerPagamentosAgenteFinanceiro(role: string | undefined): boolean {
+  return !!role && (ROLES_VER_PAGAMENTO_AGENTE as readonly string[]).includes(role);
 }
 
 /** Rótulo curto para select de ciclos (ex.: 18/03 – 24/03/26). */
@@ -691,7 +698,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
   const [horas, setHoras] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora]);
+  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, user?.role]);
 
   async function carregar() {
     setLoading(true);
@@ -712,10 +719,12 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     }
 
     // Total pago: usa mesma fonte que os Dashboards (RPC ou fallback) — garante alinhamento
+    const incluirAgentesKpi = podeVerPagamentosAgenteFinanceiro(user?.role);
     if (periodo) {
       const { total } = await buscarInvestimentoPago(periodo, {
         influencerIds: filterInfluencers.length > 0 ? filterInfluencers : undefined,
         operadora_slug: filtroOp?.length ? filtroOp[0] : (filterOperadora !== "todas" ? filterOperadora : undefined),
+        includeAgentes: incluirAgentesKpi,
       });
       setTotalPago(total);
     }
@@ -724,9 +733,11 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
       ? supabase.from("pagamentos").select("influencer_id, total, horas_realizadas, status, operadora_slug").in("ciclo_id", cicloIds)
       : supabase.from("pagamentos").select("influencer_id, total, horas_realizadas, status, operadora_slug");
 
-    const aQuery = periodo
-      ? supabase.from("pagamentos_agentes").select("total, status, operadora_slug").in("ciclo_id", cicloIds)
-      : supabase.from("pagamentos_agentes").select("total, status, operadora_slug");
+    const aQuery = incluirAgentesKpi
+      ? (periodo
+          ? supabase.from("pagamentos_agentes").select("total, status, operadora_slug").in("ciclo_id", cicloIds)
+          : supabase.from("pagamentos_agentes").select("total, status, operadora_slug"))
+      : Promise.resolve({ data: [] as { total: number; status: string; operadora_slug: string }[] });
 
     const [{ data: pags }, { data: agentes }] = await Promise.all([pQuery, aQuery]);
 
@@ -737,7 +748,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
     } else if (filterOperadora && filterOperadora !== "todas") {
       allPags = allPags.filter((p: any) => p.operadora_slug === filterOperadora);
     }
-    let allAgs = user?.role === "influencer" ? [] : (agentes ?? []);
+    let allAgs = incluirAgentesKpi ? (agentes ?? []) : [];
     if (filtroOp?.length) {
       allAgs = allAgs.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
     } else if (filterOperadora && filterOperadora !== "todas") {
@@ -993,15 +1004,18 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   }
 
   async function carregarPagamentos(c: CicloPagamento) {
+    const incluirLinhasAgente = podeVerPagamentosAgenteFinanceiro(user?.role);
     const [{ data: pags }, { data: agentes }, { data: livesCiclo }] = await Promise.all([
       supabase.from("pagamentos")
         .select("*")
         .eq("ciclo_id", c.id)
         .order("total", { ascending: false }),
-      supabase.from("pagamentos_agentes")
-        .select("*")
-        .eq("ciclo_id", c.id)
-        .order("criado_em", { ascending: true }),
+      incluirLinhasAgente
+        ? supabase.from("pagamentos_agentes")
+            .select("*")
+            .eq("ciclo_id", c.id)
+            .order("criado_em", { ascending: true })
+        : Promise.resolve({ data: [] as any[] }),
       supabase.from("lives")
         .select("id, influencer_id, operadora_slug")
         .eq("status", "realizada")
@@ -1104,7 +1118,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       };
     });
 
-    let agentesFiltrados = user?.role === "influencer" ? [] : (agentes ?? []);
+    let agentesFiltrados = incluirLinhasAgente ? (agentes ?? []) : [];
     if (filtroOp?.length) {
       agentesFiltrados = agentesFiltrados.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
     } else if (filterOperadora && filterOperadora !== "todas") {
@@ -1306,7 +1320,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                 {enviarPagamentoLoading ? "Enviando..." : "Enviar pagamento"}
               </BtnPrimary>
             )}
-            {ciclo && perm.canEditarOk && (
+            {ciclo && perm.canEditarOk && podeVerPagamentosAgenteFinanceiro(user?.role) && (
               <BtnPrimary onClick={() => setModalAgente(true)}>
                 Pagamento de agente
               </BtnPrimary>
@@ -1473,7 +1487,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       {modalPagar && (
         <ModalPagar row={modalPagar} onClose={() => setModalPagar(null)} onConfirm={handlePagar} onRetornar={handleRetornar} />
       )}
-      {modalAgente && ciclo && (
+      {modalAgente && ciclo && podeVerPagamentosAgenteFinanceiro(user?.role) && (
         <ModalAgente
           cicloId={ciclo.id}
           filterOperadora={filterOperadora}
@@ -1516,7 +1530,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const [historicoPagamentos, setHistoricoPagamentos] = useState<Record<string, any[]>>({});
   const [loadingHist, setLoadingHist] = useState<string | null>(null);
 
-  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp]);
+  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
 
   async function carregar() {
     setLoading(true);
@@ -1552,14 +1566,17 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
     let pagamentosData: any[] = [];
     let agentesData: any[] = [];
+    const incluirAgentesConsolidado = podeVerPagamentosAgenteFinanceiro(user?.role);
     if (!periodo || cicloIds.length > 0) {
       const [{ data: pags }, { data: agts }] = await Promise.all([
         periodo
           ? supabase.from("pagamentos").select("*").in("ciclo_id", cicloIds)
           : supabase.from("pagamentos").select("*"),
-        periodo
-          ? supabase.from("pagamentos_agentes").select("*").in("ciclo_id", cicloIds)
-          : supabase.from("pagamentos_agentes").select("*"),
+        incluirAgentesConsolidado
+          ? (periodo
+              ? supabase.from("pagamentos_agentes").select("*").in("ciclo_id", cicloIds)
+              : supabase.from("pagamentos_agentes").select("*"))
+          : Promise.resolve({ data: [] as any[] }),
       ]);
       pagamentosData = pags ?? [];
       agentesData = agts ?? [];
@@ -1602,9 +1619,9 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
       };
     }).filter(r => r.totalPago > 0 || r.totalHoras > 0 || r.pendente > 0);
 
-    // Linha especial de agentes (só aparece se tiver algum dado; influencer não vê)
+    // Linha especial de agentes (só operação interna; influencer e agência não veem)
     setAgentesRow(
-      user?.role !== "influencer" && (agtTotalPago > 0 || agtPendente > 0)
+      incluirAgentesConsolidado && (agtTotalPago > 0 || agtPendente > 0)
         ? { totalPago: agtTotalPago, pendente: agtPendente, ultimoPagamento: agtUltimoPag }
         : null
     );
@@ -1990,7 +2007,7 @@ export default function Financeiro() {
 
       const [pagsRes, agtsRes] = await Promise.all([
         fechadoIds.length > 0 ? supabase.from("pagamentos").select("ciclo_id, influencer_id, operadora_slug").in("ciclo_id", fechadoIds) : { data: [] as any[] },
-        fechadoIds.length > 0 && user?.role !== "influencer"
+        fechadoIds.length > 0 && podeVerPagamentosAgenteFinanceiro(user?.role)
           ? supabase.from("pagamentos_agentes").select("ciclo_id, operadora_slug").in("ciclo_id", fechadoIds)
           : { data: [] as any[] },
       ]);
