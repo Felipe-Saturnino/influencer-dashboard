@@ -18,6 +18,9 @@
 //
 // Nota: totais agregados (ggr / turnover) na linha do jogador são a soma dos dias retornados
 // no endpoint de days (se a API paginar ou limitar, o total pode não bater com o Excel completo).
+//
+// registrationDate da PLS → coluna primeiro_jogo_spin (primeira vez nas mesas Spin).
+// data_cadastro_bet é só manual no Supabase; este sync nunca a sobrescreve.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -33,6 +36,7 @@ interface SyncBody {
 
 interface PlsProfileJson {
   playerId?: string
+  /** Na PLS: usado como “primeira vez nas mesas Spin”, não cadastro na Bet */
   registrationDate?: number
   lastLoginDate?: number
   balance?: number
@@ -204,7 +208,7 @@ serve(async (req: Request) => {
         const { error: upErr } = await supabase
           .from('pls_jogador_dados')
           .update({
-            registration_date_utc: profile.registrationDate != null ? msToTimestamptz(profile.registrationDate) : null,
+            primeiro_jogo_spin: profile.registrationDate != null ? msToTimestamptz(profile.registrationDate) : null,
             last_login_date_utc: profile.lastLoginDate != null ? msToTimestamptz(profile.lastLoginDate) : null,
             balance: profile.balance ?? null,
             ggr: sumNet,

@@ -16,6 +16,7 @@ import {
   GiRadarSweep,
   GiCardRandom,
   GiDiceSixFacesFour,
+  GiPerson,
   GiPokerHand,
   GiShare,
   GiMegaphone,
@@ -40,6 +41,7 @@ export const MENU: MenuSection[] = [
     section: "Dashboards",
     items: [
       { key: "mesas_spin",               label: "Mesas Spin",          icon: GiDiceSixFacesFour   },
+      { key: "jogadores_spin",           label: "Jogadores Spin",      icon: GiPerson             },
       { key: "dash_overview",            label: "Overview",            icon: GiHistogram          },
       { key: "dash_conversao",           label: "Conversão",           icon: GiConvergenceTarget  },
       { key: "dash_financeiro",          label: "Financeiro",          icon: GiMoneyStack         },

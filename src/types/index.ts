@@ -19,6 +19,7 @@ export type PageKey =
   | "dash_conversao"
   | "dash_financeiro"
   | "mesas_spin"
+  | "jogadores_spin"
   | "dash_midias_sociais"
   | "agenda"
   | "resultados"
