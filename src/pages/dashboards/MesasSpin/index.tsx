@@ -118,11 +118,15 @@ const MESES_PT = [
 ];
 const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+/** Primeiro mês com operação Mesas Spin — o carrossel não lista meses anteriores (evita confusão). */
+const CARROSSEL_MESAS_MIN_ANO = 2025;
+const CARROSSEL_MESAS_MIN_MES = 11; // Dezembro (0-based)
+
 function getMesesDisponiveis() {
   const hoje = new Date();
   const lista: { ano: number; mes: number; label: string }[] = [];
-  let ano = 2024,
-    mes = 0;
+  let ano = CARROSSEL_MESAS_MIN_ANO,
+    mes = CARROSSEL_MESAS_MIN_MES;
   while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
     lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
     mes++;
