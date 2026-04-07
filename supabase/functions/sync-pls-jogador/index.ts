@@ -15,9 +15,13 @@
 //   PLS_REQUEST_DELAY_MS (opcional)    Pausa entre cada jogador (rate-limit ao PLS). Default: 0.
 //                                        ATENÇÃO: 250ms × 2000 jogadores ≈ 8–9 min só em sleep — estoura o timeout da Edge Function (~60–150s).
 //   PLS_HISTORICO_CHUNK  (opcional)    Máx. linhas por upsert em pls_jogador_historico_dia. Default: 400.
+//   PLS_SYNC_MAX_BATCH   (opcional)    Máx. cda_id em body { cda_ids: [...] }. Default: 200.
 //
 // Deploy: supabase functions deploy sync-pls-jogador
-// Teste:  POST .../functions/v1/sync-pls-jogador  body: {} ou { "cda_id": "2056197" }
+// Teste:  POST .../functions/v1/sync-pls-jogador
+//   body: {}  → todos os cda_id em pls_jogador_dados (cuidado com timeout)
+//   { "cda_id": "2056197" }
+//   { "cda_ids": ["2056197","123"] }  → um lote num único POST (limite: PLS_SYNC_MAX_BATCH)
 //
 // Nota: totais agregados (ggr / turnover) na linha do jogador são a soma dos dias retornados
 // no endpoint de days (se a API paginar ou limitar, o total pode não bater com o Excel completo).
@@ -35,6 +39,8 @@ const corsHeaders = {
 
 interface SyncBody {
   cda_id?: string
+  /** Vários jogadores num único POST (recomendado com lotes de SQL). */
+  cda_ids?: string[]
 }
 
 interface PlsProfileJson {
@@ -97,6 +103,27 @@ function requestDelayMs(): number {
 function historicoChunkSize(): number {
   const n = Number(Deno.env.get('PLS_HISTORICO_CHUNK') ?? '400')
   return Number.isFinite(n) && n >= 10 ? Math.min(n, 2000) : 400
+}
+
+function syncMaxBatch(): number {
+  const n = Number(Deno.env.get('PLS_SYNC_MAX_BATCH') ?? '200')
+  return Number.isFinite(n) && n >= 1 ? Math.min(Math.floor(n), 500) : 200
+}
+
+/**
+ * Lista explícita de cda_id: vem de cda_id único, cda_ids[] ou vazio (sync completo).
+ */
+function normalizeCdaIdsFromBody(body: SyncBody): string[] | null {
+  const raw: string[] = []
+  if (Array.isArray(body.cda_ids)) {
+    for (const x of body.cda_ids) {
+      if (x != null && String(x).trim() !== '') raw.push(String(x).trim())
+    }
+  } else if (body.cda_id != null && String(body.cda_id).trim() !== '') {
+    raw.push(String(body.cda_id).trim())
+  }
+  if (raw.length === 0) return null
+  return [...new Set(raw)]
 }
 
 async function upsertHistoricoChunked(
@@ -187,17 +214,35 @@ serve(async (req: Request) => {
       /* body vazio */
     }
 
+    const explicitIds = normalizeCdaIdsFromBody(body)
+    const maxBatch = syncMaxBatch()
+    if (explicitIds != null && explicitIds.length > maxBatch) {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          erro: `cda_ids tem ${explicitIds.length} itens; máximo por pedido é ${maxBatch} (secret PLS_SYNC_MAX_BATCH, até 500). Parta em vários POSTs.`,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     const supabase = createClient(supabaseUrl, serviceKey)
     let query = supabase.from('pls_jogador_dados').select('cda_id')
-    if (body.cda_id) query = query.eq('cda_id', String(body.cda_id).trim())
+    if (explicitIds != null) {
+      query = query.in('cda_id', explicitIds)
+    }
 
     const qRes = await query
     if (qRes == null) throw new Error('select pls_jogador_dados: resposta vazia')
     const { data: anchors, error: qErr } = qRes
     if (qErr) throw new Error(`Supabase: ${qErr.message}`)
     if (!anchors?.length) {
+      const mensagem =
+        explicitIds != null
+          ? 'Nenhum cda_id do pedido existe em pls_jogador_dados (verifique IDs ou FK).'
+          : 'Nenhuma linha em pls_jogador_dados (filtro ou tabela vazia).'
       return new Response(
-        JSON.stringify({ ok: true, mensagem: 'Nenhuma linha em pls_jogador_dados (filtro ou tabela vazia).', processados: [] }),
+        JSON.stringify({ ok: true, mensagem, processados: [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
