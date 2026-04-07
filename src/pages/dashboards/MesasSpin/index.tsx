@@ -465,7 +465,7 @@ function linhasMesaAgregadasPorMes(
     byYm.get(ym)!.push(r);
   }
   return [...byYm.keys()]
-    .sort()
+    .sort((a, b) => b.localeCompare(a))
     .map((ym) => {
       const bucket = byYm.get(ym)!;
       const agg = aggregateCellFromPorTabelaRows(bucket);
@@ -922,7 +922,7 @@ export default function MesasSpin() {
       const monthlyByYm = new Map(monthlyData.map((m) => [m.mes.slice(0, 7), m] as const));
       const allYm = new Set<string>([...dailyByYm.keys(), ...monthlyByYm.keys()]);
       return [...allYm]
-        .sort()
+        .sort((a, b) => b.localeCompare(a))
         .map((ym) => {
           const dias = dailyByYm.get(ym) ?? [];
           const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
@@ -940,18 +940,20 @@ export default function MesasSpin() {
           };
         });
     }
-    return dailyData.map((r) =>
-      enrich({
-        label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "2-digit",
+    return [...dailyData]
+      .sort((a, b) => b.data.localeCompare(a.data))
+      .map((r) =>
+        enrich({
+          label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+          }),
+          turnover: r.turnover,
+          ggr: r.ggr,
+          bets: r.bets,
+          uap: r.uap,
         }),
-        turnover: r.turnover,
-        ggr: r.ggr,
-        bets: r.bets,
-        uap: r.uap,
-      }),
-    );
+      );
   }, [historico, dailyData, monthlyData]);
 
   const kpiExibir = useMemo(() => {
@@ -1067,7 +1069,7 @@ export default function MesasSpin() {
     }
     return src
       .filter((r) => labelMesaCda(r, operadorasListFmt) === "Speed Baccarat")
-      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
@@ -1078,7 +1080,7 @@ export default function MesasSpin() {
     }
     return src
       .filter((r) => labelMesaCda(r, operadorasListFmt) === "Roleta")
-      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
@@ -1100,7 +1102,7 @@ export default function MesasSpin() {
         byYm.get(ym)!.push(r);
       }
       return [...byYm.keys()]
-        .sort()
+        .sort((a, b) => b.localeCompare(a))
         .map((ym) =>
           linhaComparativoJogoAgregadaMes(
             ym,
@@ -1132,22 +1134,24 @@ export default function MesasSpin() {
       if (jogoKey) uapByDateJogo.get(r.data)![jogoKey] = r.uap;
     }
 
-    return dailyData.map((dr) => {
-      const dataIso = dr.data;
-      const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [] };
-      const uapDia = uapByDateJogo.get(dataIso) ?? {};
-      const bjCell = aggregateCellFromPorTabelaRows(b.bj);
-      const rlCell = aggregateCellFromPorTabelaRows(b.roleta);
-      const bcCell = aggregateCellFromPorTabelaRows(b.baccarat);
-      return {
-        dataIso,
-        labelData: fmtDiaMesPtBr(dataIso),
-        blackjack: { ...bjCell, uap: uapDia.blackjack ?? null },
-        roleta: { ...rlCell, uap: uapDia.roleta ?? null },
-        baccarat: { ...bcCell, uap: uapDia.baccarat ?? null },
-        totaisOficiais: totaisOficiaisFromDailyRow(dr),
-      };
-    });
+    return [...dailyData]
+      .sort((a, b) => b.data.localeCompare(a.data))
+      .map((dr) => {
+        const dataIso = dr.data;
+        const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [] };
+        const uapDia = uapByDateJogo.get(dataIso) ?? {};
+        const bjCell = aggregateCellFromPorTabelaRows(b.bj);
+        const rlCell = aggregateCellFromPorTabelaRows(b.roleta);
+        const bcCell = aggregateCellFromPorTabelaRows(b.baccarat);
+        return {
+          dataIso,
+          labelData: fmtDiaMesPtBr(dataIso),
+          blackjack: { ...bjCell, uap: uapDia.blackjack ?? null },
+          roleta: { ...rlCell, uap: uapDia.roleta ?? null },
+          baccarat: { ...bcCell, uap: uapDia.baccarat ?? null },
+          totaisOficiais: totaisOficiaisFromDailyRow(dr),
+        };
+      });
   }, [
     historico,
     dailyData,
@@ -1169,7 +1173,8 @@ export default function MesasSpin() {
   );
 
   const dadosGraficoComparativoJogo = useMemo(() => {
-    return linhasComparativoJogo.map((row) => {
+    // Gráfico: ordem cronológica (antigo → novo); tabela usa `linhasComparativoJogo` mais recente primeiro.
+    return [...linhasComparativoJogo].reverse().map((row) => {
       const val = (jogoKey: "blackjack" | "roleta" | "baccarat") => {
         const v = row[jogoKey][kpiGrafico as keyof CelulaJogoMetricas];
         return v != null ? Number(v) : null;
@@ -1200,7 +1205,7 @@ export default function MesasSpin() {
     }
     return src
       .filter((r) => r.nome_tabela.trim() === compMesaA)
-      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, compMesaA]);
 
@@ -1212,7 +1217,7 @@ export default function MesasSpin() {
     }
     return src
       .filter((r) => r.nome_tabela.trim() === compMesaB)
-      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, compMesaB]);
 
