@@ -25,7 +25,8 @@
 //   Filtro por data (UTC) no SELECT de âncoras — pode combinar com cda_ids:
 //   { "created_at_year": 2025, "created_at_month": 12 }
 //   { "created_at_gte": "2025-12-01T00:00:00.000Z", "created_at_lt": "2026-01-01T00:00:00.000Z" }
-//   Campo alternativo (cadastro Bet manual): "date_field": "data_cadastro_bet"
+//   Dezembro inteiro só em data_cadastro_bet (cadastro Bet manual), ex.:
+//   { "created_at_year": 2025, "created_at_month": 12, "date_field": "data_cadastro_bet" }
 //
 // Nota: totais agregados (ggr / turnover) na linha do jogador são a soma dos dias retornados
 // no endpoint de days (se a API paginar ou limitar, o total pode não bater com o Excel completo).
@@ -123,6 +124,19 @@ function syncMaxBatch(): number {
   return Number.isFinite(n) && n >= 1 ? Math.min(Math.floor(n), 500) : 200
 }
 
+/** Evita destructuring em resposta undefined (Edge/Deno → "Cannot read properties of undefined (reading 'error')"). */
+function readPostgrestError(res: unknown, operacao: string): { message: string } | null {
+  if (res == null || typeof res !== 'object') {
+    throw new Error(`${operacao}: resposta nula ou inválida do cliente Supabase (rede/timeout?).`)
+  }
+  const err = (res as { error?: unknown }).error
+  if (err != null && typeof err === 'object' && 'message' in err) {
+    const m = (err as { message: unknown }).message
+    if (typeof m === 'string') return { message: m }
+  }
+  return null
+}
+
 /**
  * Lista explícita de cda_id: vem de cda_id único, cda_ids[] ou vazio (sync completo).
  */
@@ -198,8 +212,7 @@ async function upsertHistoricoChunked(
     const up = await supabase.from('pls_jogador_historico_dia').upsert(slice, {
       onConflict: 'cda_id,game_date',
     })
-    if (up == null) throw new Error('upsert pls_jogador_historico_dia: resposta vazia (cliente Supabase)')
-    const { error: hErr } = up
+    const hErr = readPostgrestError(up, 'upsert pls_jogador_historico_dia')
     if (hErr) throw new Error(hErr.message)
   }
 }
@@ -309,9 +322,12 @@ serve(async (req: Request) => {
     }
 
     const qRes = await query
-    if (qRes == null) throw new Error('select pls_jogador_dados: resposta vazia')
-    const { data: anchors, error: qErr } = qRes
+    const qErr = readPostgrestError(qRes, 'select pls_jogador_dados')
     if (qErr) throw new Error(`Supabase: ${qErr.message}`)
+    const rawData = (qRes as { data?: unknown }).data
+    const anchors = Array.isArray(rawData)
+      ? (rawData as Array<{ cda_id: string }>)
+      : null
     if (!anchors?.length) {
       let mensagem = 'Nenhuma linha em pls_jogador_dados (filtro ou tabela vazia).'
       if (explicitIds != null && dateRange != null) {
@@ -376,8 +392,7 @@ serve(async (req: Request) => {
           })
           .eq('cda_id', cdaId)
 
-        if (upRes == null) throw new Error('update pls_jogador_dados: resposta vazia')
-        const { error: upErr } = upRes
+        const upErr = readPostgrestError(upRes, 'update pls_jogador_dados')
         if (upErr) throw new Error(upErr.message)
 
         if (historicoRows.length > 0) {
