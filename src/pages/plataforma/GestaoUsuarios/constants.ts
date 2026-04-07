@@ -37,7 +37,6 @@ export const PAGES: {
   { key: "resultados", label: "Resultados", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "feedback", label: "Feedback", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: true },
   { key: "mesas_spin", label: "Mesas Spin", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "jogadores_spin", label: "Jogadores Spin", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview", label: "Overview", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_conversao", label: "Conversão", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },

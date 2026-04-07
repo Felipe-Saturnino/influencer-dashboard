@@ -33,7 +33,3 @@ verify_jwt = false
 [functions.email-agenda-diaria]
 verify_jwt = false
 # Agenda do dia (operacional); destinatários em EMAIL_AGENDA_DESTINATARIOS
-
-[functions.sync-pls-jogador]
-verify_jwt = false
-# Backoffice PLS (cookie de sessão): sync pls_jogador_dados + pls_jogador_historico_dia

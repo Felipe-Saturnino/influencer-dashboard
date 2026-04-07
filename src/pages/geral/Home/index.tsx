@@ -27,7 +27,6 @@ import {
   GiCash,
   GiSpyglass,
   GiDiceSixFacesFour,
-  GiPerson,
   GiShare,
 } from "react-icons/gi";
 import { ArrowRight, AlertTriangle } from "lucide-react";
@@ -151,7 +150,6 @@ const PAGE_ICONS: Record<string, React.ComponentType<{ size?: number; color?: st
   dash_conversao: GiConvergenceTarget,
   dash_financeiro: GiMoneyStack,
   mesas_spin: GiDiceSixFacesFour,
-  jogadores_spin: GiPerson,
   dash_midias_sociais: GiShare,
   agenda: GiCalendar,
   resultados: GiPodium,

@@ -40,7 +40,6 @@ const DashboardOverviewInfluencer = lazyWithRetry(() => import("./pages/dashboar
 const DashboardConversao         = lazyWithRetry(() => import("./pages/dashboards/DashboardConversao"));
 const DashboardFinanceiro        = lazyWithRetry(() => import("./pages/dashboards/DashboardFinanceiro"));
 const MesasSpin                 = lazyWithRetry(() => import("./pages/dashboards/MesasSpin"));
-const JogadoresSpin             = lazyWithRetry(() => import("./pages/dashboards/JogadoresSpin"));
 const SocialMediaDashboard      = lazyWithRetry(() => import("./pages/dashboards/SocialMediaDashboard"));
 const Agenda     = lazyWithRetry(() => import("./pages/lives/Agenda"));
 const Resultados = lazyWithRetry(() => import("./pages/lives/Resultados"));
@@ -68,7 +67,6 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   dash_conversao:            DashboardConversao,
   dash_financeiro:           DashboardFinanceiro,
   mesas_spin:               MesasSpin,
-  jogadores_spin:          JogadoresSpin,
   dash_midias_sociais:      SocialMediaDashboard,
   agenda:           Agenda,
   resultados:       Resultados,
