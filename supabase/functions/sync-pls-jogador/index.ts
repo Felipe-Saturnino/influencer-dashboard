@@ -21,7 +21,11 @@
 // Teste:  POST .../functions/v1/sync-pls-jogador
 //   body: {}  → todos os cda_id em pls_jogador_dados (cuidado com timeout)
 //   { "cda_id": "2056197" }
-//   { "cda_ids": ["2056197","123"] }  → um lote num único POST (limite: PLS_SYNC_MAX_BATCH)
+//   { "cda_ids": ["2056197","123"] }  → vários IDs num único POST (limite: PLS_SYNC_MAX_BATCH)
+//   Filtro por data (UTC) no SELECT de âncoras — pode combinar com cda_ids:
+//   { "created_at_year": 2025, "created_at_month": 12 }
+//   { "created_at_gte": "2025-12-01T00:00:00.000Z", "created_at_lt": "2026-01-01T00:00:00.000Z" }
+//   Campo alternativo (cadastro Bet manual): "date_field": "data_cadastro_bet"
 //
 // Nota: totais agregados (ggr / turnover) na linha do jogador são a soma dos dias retornados
 // no endpoint de days (se a API paginar ou limitar, o total pode não bater com o Excel completo).
@@ -39,8 +43,17 @@ const corsHeaders = {
 
 interface SyncBody {
   cda_id?: string
-  /** Vários jogadores num único POST (recomendado com lotes de SQL). */
+  /** Vários jogadores num único POST (teste manual ou automação). */
   cda_ids?: string[]
+  /** Início inclusivo do intervalo (UTC), ISO 8601. Usar com created_at_lt. */
+  created_at_gte?: string
+  /** Fim exclusivo do intervalo (UTC), ISO 8601. */
+  created_at_lt?: string
+  /** Atalho: mês civil em UTC com created_at_month (1–12). */
+  created_at_year?: number
+  created_at_month?: number
+  /** "created_at" (default) | "data_cadastro_bet" */
+  date_field?: string
 }
 
 interface PlsProfileJson {
@@ -124,6 +137,55 @@ function normalizeCdaIdsFromBody(body: SyncBody): string[] | null {
   }
   if (raw.length === 0) return null
   return [...new Set(raw)]
+}
+
+type DateColumn = 'created_at' | 'data_cadastro_bet'
+
+function resolveDateColumn(body: SyncBody): DateColumn {
+  const f = body.date_field?.trim().toLowerCase()
+  if (f === 'data_cadastro_bet') return 'data_cadastro_bet'
+  return 'created_at'
+}
+
+/**
+ * Intervalo [gte, lt) em UTC para filtrar a query de âncoras. null = sem filtro de data.
+ */
+function parseCreatedAtRange(body: SyncBody): { col: DateColumn; gte: string; lt: string } | null {
+  const col = resolveDateColumn(body)
+  const gteRaw = typeof body.created_at_gte === 'string' ? body.created_at_gte.trim() : ''
+  const ltRaw = typeof body.created_at_lt === 'string' ? body.created_at_lt.trim() : ''
+
+  if (gteRaw !== '' || ltRaw !== '') {
+    if (gteRaw === '' || ltRaw === '') {
+      throw new Error('Use created_at_gte e created_at_lt em conjunto (ISO 8601 UTC).')
+    }
+    const gte = new Date(gteRaw)
+    const lt = new Date(ltRaw)
+    if (Number.isNaN(gte.getTime()) || Number.isNaN(lt.getTime())) {
+      throw new Error('created_at_gte / created_at_lt inválidos (use ISO 8601, ex.: 2025-12-01T00:00:00.000Z).')
+    }
+    return { col, gte: gte.toISOString(), lt: lt.toISOString() }
+  }
+
+  const y = body.created_at_year
+  const m = body.created_at_month
+  if (y != null || m != null) {
+    const yr = Number(y)
+    const mo = Number(m)
+    if (!Number.isInteger(yr) || yr < 2000 || yr > 2100) {
+      throw new Error('created_at_year inválido (use inteiro 2000–2100 com created_at_month).')
+    }
+    if (!Number.isInteger(mo) || mo < 1 || mo > 12) {
+      throw new Error('created_at_month deve ser inteiro 1–12 (com created_at_year).')
+    }
+    const gte = new Date(Date.UTC(yr, mo - 1, 1))
+    const lt = mo === 12
+      ? new Date(Date.UTC(yr + 1, 0, 1))
+      : new Date(Date.UTC(yr, mo, 1))
+    return { col, gte: gte.toISOString(), lt: lt.toISOString() }
+  }
+
+  return null
 }
 
 async function upsertHistoricoChunked(
@@ -214,6 +276,17 @@ serve(async (req: Request) => {
       /* body vazio */
     }
 
+    let dateRange: { col: DateColumn; gte: string; lt: string } | null
+    try {
+      dateRange = parseCreatedAtRange(body)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      return new Response(JSON.stringify({ ok: false, erro: msg }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const explicitIds = normalizeCdaIdsFromBody(body)
     const maxBatch = syncMaxBatch()
     if (explicitIds != null && explicitIds.length > maxBatch) {
@@ -231,16 +304,25 @@ serve(async (req: Request) => {
     if (explicitIds != null) {
       query = query.in('cda_id', explicitIds)
     }
+    if (dateRange != null) {
+      query = query.gte(dateRange.col, dateRange.gte).lt(dateRange.col, dateRange.lt)
+    }
 
     const qRes = await query
     if (qRes == null) throw new Error('select pls_jogador_dados: resposta vazia')
     const { data: anchors, error: qErr } = qRes
     if (qErr) throw new Error(`Supabase: ${qErr.message}`)
     if (!anchors?.length) {
-      const mensagem =
-        explicitIds != null
-          ? 'Nenhum cda_id do pedido existe em pls_jogador_dados (verifique IDs ou FK).'
-          : 'Nenhuma linha em pls_jogador_dados (filtro ou tabela vazia).'
+      let mensagem = 'Nenhuma linha em pls_jogador_dados (filtro ou tabela vazia).'
+      if (explicitIds != null && dateRange != null) {
+        mensagem =
+          'Nenhuma linha com estes cda_id e o filtro de data em pls_jogador_dados (ou IDs inexistentes).'
+      } else if (explicitIds != null) {
+        mensagem = 'Nenhum cda_id do pedido existe em pls_jogador_dados (verifique IDs ou FK).'
+      } else if (dateRange != null) {
+        mensagem =
+          `Nenhuma linha em pls_jogador_dados com ${dateRange.col} no intervalo indicado (valores nulos não entram).`
+      }
       return new Response(
         JSON.stringify({ ok: true, mensagem, processados: [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
