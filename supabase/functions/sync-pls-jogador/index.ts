@@ -12,6 +12,9 @@
 //   PLS_PLAYER_PREFIX    (opcional)    Prefixo antes de CDA-<número>. Default: casadeapostas.if_dgc.L011_358_56
 //   PLS_BO_ORIGIN        (opcional)    Header Origin. Default: https://bo2.sg.onairent.live
 //   PLS_BO_REFERER       (opcional)    Header Referer. Default: https://bo2.sg.onairent.live/backoffice/static/bo
+//   PLS_REQUEST_DELAY_MS (opcional)    Pausa entre cada jogador (rate-limit ao PLS). Default: 0.
+//                                        ATENÇÃO: 250ms × 2000 jogadores ≈ 8–9 min só em sleep — estoura o timeout da Edge Function (~60–150s).
+//   PLS_HISTORICO_CHUNK  (opcional)    Máx. linhas por upsert em pls_jogador_historico_dia. Default: 400.
 //
 // Deploy: supabase functions deploy sync-pls-jogador
 // Teste:  POST .../functions/v1/sync-pls-jogador  body: {} ou { "cda_id": "2056197" }
@@ -84,6 +87,32 @@ function msToTimestamptz(ms: number): string {
 
 function msToDateUtc(ms: number): string {
   return new Date(ms).toISOString().split('T')[0]
+}
+
+function requestDelayMs(): number {
+  const n = Number(Deno.env.get('PLS_REQUEST_DELAY_MS') ?? '0')
+  return Number.isFinite(n) && n >= 0 ? Math.min(n, 60_000) : 0
+}
+
+function historicoChunkSize(): number {
+  const n = Number(Deno.env.get('PLS_HISTORICO_CHUNK') ?? '400')
+  return Number.isFinite(n) && n >= 10 ? Math.min(n, 2000) : 400
+}
+
+async function upsertHistoricoChunked(
+  supabase: ReturnType<typeof createClient>,
+  rows: Array<Record<string, unknown>>,
+): Promise<void> {
+  const chunk = historicoChunkSize()
+  for (let i = 0; i < rows.length; i += chunk) {
+    const slice = rows.slice(i, i + chunk)
+    const up = await supabase.from('pls_jogador_historico_dia').upsert(slice, {
+      onConflict: 'cda_id,game_date',
+    })
+    if (up == null) throw new Error('upsert pls_jogador_historico_dia: resposta vazia (cliente Supabase)')
+    const { error: hErr } = up
+    if (hErr) throw new Error(hErr.message)
+  }
 }
 
 function plsFetchHeaders(cookie: string): HeadersInit {
@@ -162,7 +191,9 @@ serve(async (req: Request) => {
     let query = supabase.from('pls_jogador_dados').select('cda_id')
     if (body.cda_id) query = query.eq('cda_id', String(body.cda_id).trim())
 
-    const { data: anchors, error: qErr } = await query
+    const qRes = await query
+    if (qRes == null) throw new Error('select pls_jogador_dados: resposta vazia')
+    const { data: anchors, error: qErr } = qRes
     if (qErr) throw new Error(`Supabase: ${qErr.message}`)
     if (!anchors?.length) {
       return new Response(
@@ -205,7 +236,7 @@ serve(async (req: Request) => {
         })
 
         const nowIso = new Date().toISOString()
-        const { error: upErr } = await supabase
+        const upRes = await supabase
           .from('pls_jogador_dados')
           .update({
             primeiro_jogo_spin: profile.registrationDate != null ? msToTimestamptz(profile.registrationDate) : null,
@@ -218,13 +249,12 @@ serve(async (req: Request) => {
           })
           .eq('cda_id', cdaId)
 
+        if (upRes == null) throw new Error('update pls_jogador_dados: resposta vazia')
+        const { error: upErr } = upRes
         if (upErr) throw new Error(upErr.message)
 
         if (historicoRows.length > 0) {
-          const { error: hErr } = await supabase.from('pls_jogador_historico_dia').upsert(historicoRows, {
-            onConflict: 'cda_id,game_date',
-          })
-          if (hErr) throw new Error(hErr.message)
+          await upsertHistoricoChunked(supabase, historicoRows)
         }
 
         resultados.push({ cda_id: cdaId, ok: true })
@@ -233,7 +263,8 @@ serve(async (req: Request) => {
         console.error(`[sync-pls-jogador] cda_id=${cdaId}: ${msg}`)
         resultados.push({ cda_id: cdaId, ok: false, erro: msg })
       }
-      await new Promise((r) => setTimeout(r, 250))
+      const d = requestDelayMs()
+      if (d > 0) await new Promise((r) => setTimeout(r, d))
     }
 
     const okCount = resultados.filter((r) => r.ok).length
