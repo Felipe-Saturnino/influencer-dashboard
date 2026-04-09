@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { User, PageKey, PermissaoValor, Role } from "../types";
 import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
@@ -410,12 +410,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const podeVerInfluencer = (id: string) =>
-    escoposVisiveis.semRestricaoEscopo === true ||
-    escoposVisiveis.vêTodosInfluencers === true ||
-    escoposVisiveis.influencersVisiveis.includes(id);
-  const podeVerOperadora = (slug: string) =>
-    escoposVisiveis.semRestricaoEscopo === true || escoposVisiveis.operadorasVisiveis.includes(slug);
+  const podeVerInfluencer = useCallback(
+    (id: string) =>
+      escoposVisiveis.semRestricaoEscopo === true ||
+      escoposVisiveis.vêTodosInfluencers === true ||
+      escoposVisiveis.influencersVisiveis.includes(id),
+    [escoposVisiveis],
+  );
+  const podeVerOperadora = useCallback(
+    (slug: string) =>
+      escoposVisiveis.semRestricaoEscopo === true || escoposVisiveis.operadorasVisiveis.includes(slug),
+    [escoposVisiveis],
+  );
 
   const setTheme = (v: boolean) => {
     if (user?.role === "operador") return; // Operador travado em Dark

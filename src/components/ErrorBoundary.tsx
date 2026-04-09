@@ -1,15 +1,17 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
+import { reloadAfterChunkError } from "../lib/chunkReloadGuard";
 
 function isChunkLoadError(error: Error | null): boolean {
-  if (!error?.message) return false;
+  if (!error) return false;
+  if (error.name === "ChunkLoadError") return true;
   const msg = error.message.toLowerCase();
   return (
     msg.includes("failed to fetch dynamically imported module") ||
-    msg.includes("loading chunk") ||
-    msg.includes("chunkloaderror") ||
-    msg.includes("loading css chunk") ||
-    msg.includes("importing a module script failed")
+    msg.includes("importing a module script failed") ||
+    msg.includes("chunk load error") ||
+    (msg.includes("loading css chunk") && msg.includes("failed")) ||
+    (msg.includes("loading chunk") && (msg.includes("failed") || msg.includes("error")))
   );
 }
 
@@ -44,8 +46,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary] Erro capturado:", error?.message ?? error, errorInfo);
     if (isChunkLoadError(error)) {
-      console.warn("[ErrorBoundary] ChunkLoadError detectado — recarregando para aplicar nova versão.");
-      window.location.reload();
+      reloadAfterChunkError("ErrorBoundary: ChunkLoadError");
     }
   }
 
