@@ -694,6 +694,46 @@ function mapMonthlyV2(r: { mes: string; uap: number | null; arpu: number | null 
   };
 }
 
+/** Perfil operador (escopo): `relatorio_daily_summary` é global — sintetiza um dia a partir das mesas permitidas. */
+function porTabelaRowsParaDailyRows(rows: PorTabelaRow[]): DailyRow[] {
+  const byDate = new Map<
+    string,
+    { t: number; g: number; b: number; tN: number; gN: number; bN: number }
+  >();
+  for (const r of rows) {
+    const d = r.data_relatorio;
+    let cell = byDate.get(d);
+    if (!cell) {
+      cell = { t: 0, g: 0, b: 0, tN: 0, gN: 0, bN: 0 };
+      byDate.set(d, cell);
+    }
+    if (r.turnover_d1 != null) {
+      cell.t += Number(r.turnover_d1);
+      cell.tN++;
+    }
+    if (r.ggr_d1 != null) {
+      cell.g += Number(r.ggr_d1);
+      cell.gN++;
+    }
+    if (r.bets_d1 != null) {
+      cell.b += Number(r.bets_d1);
+      cell.bN++;
+    }
+  }
+  return [...byDate.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([data, v]) => ({
+      data,
+      turnover: v.tN > 0 ? v.t : null,
+      ggr: v.gN > 0 ? v.g : null,
+      bets: v.bN > 0 ? v.b : null,
+      uap: null,
+      margin_pct: null,
+      bet_size: null,
+      arpu: null,
+    }));
+}
+
 export default function MesasSpin() {
   const { theme: t, isDark } = useApp();
   const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
@@ -713,6 +753,7 @@ export default function MesasSpin() {
   const [dailyData, setDailyData] = useState<DailyRow[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
   const [porTabelaRows, setPorTabelaRows] = useState<PorTabelaRow[]>([]);
+  const [porTabelaRowsPrevMonth, setPorTabelaRowsPrevMonth] = useState<PorTabelaRow[]>([]);
   const [porTabelaHistAll, setPorTabelaHistAll] = useState<PorTabelaRow[]>([]);
   /** UAP/ARPU mensais oficiais (tabela monthly); quando null, KPI mostra "—". */
   const [monthlyUapArpuSel, setMonthlyUapArpuSel] = useState<{
@@ -770,6 +811,7 @@ export default function MesasSpin() {
   const carregar = useCallback(async () => {
     setLoading(true);
     setPorTabelaRows([]);
+    setPorTabelaRowsPrevMonth([]);
     setPorTabelaHistAll([]);
     setMonthlyUapArpuSel(null);
     setMonthlyUapArpuPrev(null);
@@ -777,6 +819,7 @@ export default function MesasSpin() {
     setUapPorJogoRows([]);
 
     try {
+      const escopoOperadorMesas = Boolean(operadoraSlugsForcado?.length);
       if (historico) {
         const [monthlyRaw, dailyRaw, porAllRaw, uapRaw] = await Promise.all([
           fetchAllPages(async (from, to) =>
@@ -817,7 +860,32 @@ export default function MesasSpin() {
         const { inicio, fim } = atual;
         const { inicio: pi, fim: pf } = anterior;
 
-        const [dailyRaw, dailyPrevRaw, mesasMesRaw, uapRaw] = await Promise.all([
+        const dailyPrevPromise = escopoOperadorMesas
+          ? Promise.resolve([] as Parameters<typeof mapDailyV2>[0][])
+          : fetchAllPages(async (from, to) =>
+              supabase
+                .from("relatorio_daily_summary")
+                .select("data, turnover, ggr, apostas, uap")
+                .gte("data", pi)
+                .lte("data", pf)
+                .order("data", { ascending: true })
+                .range(from, to),
+            );
+
+        const porTabelaPrevPromise = escopoOperadorMesas
+          ? fetchAllPages(async (from, to) =>
+              supabase
+                .from("relatorio_por_tabela")
+                .select("dia, operadora, mesa, ggr, turnover, apostas")
+                .gte("dia", pi)
+                .lte("dia", pf)
+                .order("dia", { ascending: true })
+                .order("mesa", { ascending: true })
+                .range(from, to),
+            )
+          : Promise.resolve([] as Parameters<typeof mapPorTabelaV2>[0][]);
+
+        const [dailyRaw, dailyPrevRaw, mesasMesRaw, uapRaw, porPrevRaw] = await Promise.all([
           fetchAllPages(async (from, to) =>
             supabase
               .from("relatorio_daily_summary")
@@ -827,15 +895,7 @@ export default function MesasSpin() {
               .order("data", { ascending: true })
               .range(from, to),
           ),
-          fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, uap")
-              .gte("data", pi)
-              .lte("data", pf)
-              .order("data", { ascending: true })
-              .range(from, to),
-          ),
+          dailyPrevPromise,
           fetchAllPages(async (from, to) =>
             supabase
               .from("relatorio_por_tabela")
@@ -847,11 +907,13 @@ export default function MesasSpin() {
               .range(from, to),
           ),
           fetchAllPages(async (from, to) => buildUapPorJogoQuery(false, mesSelecionado, from, to)),
+          porTabelaPrevPromise,
         ]);
 
         setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
         setMonthlyData([]);
         setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
+        setPorTabelaRowsPrevMonth((porPrevRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
         setPorTabelaRows((mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
         setUapPorJogoRows(
           (uapRaw as { data: string; jogo: string; uap: number }[]).map((r) => ({
@@ -894,11 +956,72 @@ export default function MesasSpin() {
     } finally {
       setLoading(false);
     }
-  }, [historico, mesSelecionado]);
+  }, [historico, mesSelecionado, operadoraSlugsForcado]);
 
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  const operadorasListFmt = operadorasOcr;
+
+  const porTabelaFiltradas = useMemo(
+    () =>
+      filtrarPorEscopoOperadora(
+        porTabelaRows,
+        filtroOperadora,
+        operadoraSlugsForcado,
+        podeVerOperadora,
+      ),
+    [porTabelaRows, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
+  );
+
+  const porTabelaFiltradasHist = useMemo(
+    () =>
+      filtrarPorEscopoOperadora(
+        porTabelaHistAll,
+        filtroOperadora,
+        operadoraSlugsForcado,
+        podeVerOperadora,
+      ),
+    [porTabelaHistAll, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
+  );
+
+  const escopoOperadorMesasSomenteLeitura = Boolean(operadoraSlugsForcado?.length);
+
+  const dailyDataEfetivo = useMemo(() => {
+    if (!escopoOperadorMesasSomenteLeitura) return dailyData;
+    if (historico) return porTabelaRowsParaDailyRows(porTabelaFiltradasHist);
+    return porTabelaRowsParaDailyRows(porTabelaFiltradas);
+  }, [
+    escopoOperadorMesasSomenteLeitura,
+    historico,
+    dailyData,
+    porTabelaFiltradasHist,
+    porTabelaFiltradas,
+  ]);
+
+  const dailyDataPrevEfetivo = useMemo(() => {
+    if (!escopoOperadorMesasSomenteLeitura) return dailyDataPrevMonth;
+    return porTabelaRowsParaDailyRows(
+      filtrarPorEscopoOperadora(
+        porTabelaRowsPrevMonth,
+        "todas",
+        operadoraSlugsForcado,
+        podeVerOperadora,
+      ),
+    );
+  }, [
+    escopoOperadorMesasSomenteLeitura,
+    dailyDataPrevMonth,
+    porTabelaRowsPrevMonth,
+    operadoraSlugsForcado,
+    podeVerOperadora,
+  ]);
+
+  const uapPorJogoParaComparativo = useMemo(
+    () => (escopoOperadorMesasSomenteLeitura ? [] : uapPorJogoRows),
+    [escopoOperadorMesasSomenteLeitura, uapPorJogoRows],
+  );
 
   const tabelaRows = useMemo(() => {
     const enrich = (base: Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & { label: string }): LinhaDetalheTab => {
@@ -914,7 +1037,7 @@ export default function MesasSpin() {
     };
     if (historico) {
       const dailyByYm = new Map<string, DailyRow[]>();
-      for (const r of dailyData) {
+      for (const r of dailyDataEfetivo) {
         const ym = r.data.slice(0, 7);
         if (!dailyByYm.has(ym)) dailyByYm.set(ym, []);
         dailyByYm.get(ym)!.push(r);
@@ -927,20 +1050,25 @@ export default function MesasSpin() {
           const dias = dailyByYm.get(ym) ?? [];
           const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
           const m = monthlyByYm.get(ym);
+          const uapLinha = escopoOperadorMesasSomenteLeitura
+            ? agg?.uap ?? null
+            : m?.uap != null
+              ? Number(m.uap)
+              : agg?.uap ?? null;
           const base = enrich({
             label: fmtMesAnoCurtoFromYm(ym),
             turnover: agg?.turnover ?? null,
             ggr: agg?.ggr ?? null,
             bets: agg?.bets ?? null,
-            uap: m?.uap != null ? Number(m.uap) : agg?.uap ?? null,
+            uap: uapLinha,
           });
           return {
             ...base,
-            arpu: m?.arpu != null ? Number(m.arpu) : base.arpu,
+            arpu: escopoOperadorMesasSomenteLeitura ? base.arpu : m?.arpu != null ? Number(m.arpu) : base.arpu,
           };
         });
     }
-    return [...dailyData]
+    return [...dailyDataEfetivo]
       .sort((a, b) => b.data.localeCompare(a.data))
       .map((r) =>
         enrich({
@@ -954,7 +1082,7 @@ export default function MesasSpin() {
           uap: r.uap,
         }),
       );
-  }, [historico, dailyData, monthlyData]);
+  }, [historico, dailyDataEfetivo, monthlyData, escopoOperadorMesasSomenteLeitura]);
 
   const kpiExibir = useMemo(() => {
     if (historico) {
@@ -984,8 +1112,11 @@ export default function MesasSpin() {
         arpu,
       };
     }
-    const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
+    const base = dailyDataEfetivo.length === 0 ? null : aggDailyMesKpi(dailyDataEfetivo);
     if (!base) return null;
+    if (escopoOperadorMesasSomenteLeitura) {
+      return base;
+    }
     if (
       mesSelecionado &&
       isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
@@ -997,13 +1128,23 @@ export default function MesasSpin() {
       uap: monthlyUapArpuSel?.uap ?? null,
       arpu: monthlyUapArpuSel?.arpu ?? null,
     };
-  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, mesSelecionado]);
+  }, [
+    historico,
+    tabelaRows,
+    dailyDataEfetivo,
+    monthlyUapArpuSel,
+    mesSelecionado,
+    escopoOperadorMesasSomenteLeitura,
+  ]);
 
   const kpiAntExibir = useMemo(() => {
     const base =
-      historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
+      historico || dailyDataPrevEfetivo.length === 0 ? null : aggDailyMesKpi(dailyDataPrevEfetivo);
     if (!base) return null;
     if (historico) return base;
+    if (escopoOperadorMesasSomenteLeitura) {
+      return base;
+    }
     if (
       mesSelecionado &&
       isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
@@ -1015,31 +1156,13 @@ export default function MesasSpin() {
       uap: monthlyUapArpuPrev?.uap ?? base.uap,
       arpu: monthlyUapArpuPrev?.arpu ?? base.arpu,
     };
-  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado]);
-
-  const operadorasListFmt = operadorasOcr;
-
-  const porTabelaFiltradas = useMemo(
-    () =>
-      filtrarPorEscopoOperadora(
-        porTabelaRows,
-        filtroOperadora,
-        operadoraSlugsForcado,
-        podeVerOperadora,
-      ),
-    [porTabelaRows, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
-  );
-
-  const porTabelaFiltradasHist = useMemo(
-    () =>
-      filtrarPorEscopoOperadora(
-        porTabelaHistAll,
-        filtroOperadora,
-        operadoraSlugsForcado,
-        podeVerOperadora,
-      ),
-    [porTabelaHistAll, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
-  );
+  }, [
+    historico,
+    dailyDataPrevEfetivo,
+    monthlyUapArpuPrev,
+    mesSelecionado,
+    escopoOperadorMesasSomenteLeitura,
+  ]);
 
   /** Só Blackjack 1 / 2 / VIP — comparativo lateral. */
   const mesasOpcoesBlackjack = useMemo(() => {
@@ -1088,7 +1211,7 @@ export default function MesasSpin() {
   const linhasComparativoJogo = useMemo((): LinhaComparativoJogoTab[] => {
     if (historico) {
       const dailyByYm = new Map<string, DailyRow[]>();
-      for (const r of dailyData) {
+      for (const r of dailyDataEfetivo) {
         const ym = r.data.slice(0, 7);
         if (!dailyByYm.has(ym)) dailyByYm.set(ym, []);
         dailyByYm.get(ym)!.push(r);
@@ -1108,7 +1231,7 @@ export default function MesasSpin() {
             ym,
             byYm.get(ym)!,
             operadorasListFmt,
-            uapPorJogoRows,
+            uapPorJogoParaComparativo,
             totaisOficiaisHistoricoMes(ym, dailyByYm, monthlyByYm),
           ),
         );
@@ -1128,13 +1251,13 @@ export default function MesasSpin() {
     }
 
     const uapByDateJogo = new Map<string, Partial<Record<"blackjack" | "roleta" | "baccarat", number>>>();
-    for (const r of uapPorJogoRows) {
+    for (const r of uapPorJogoParaComparativo) {
       if (!uapByDateJogo.has(r.data)) uapByDateJogo.set(r.data, {});
       const jogoKey = UAP_JOGO_MAP[r.jogo];
       if (jogoKey) uapByDateJogo.get(r.data)![jogoKey] = r.uap;
     }
 
-    return [...dailyData]
+    return [...dailyDataEfetivo]
       .sort((a, b) => b.data.localeCompare(a.data))
       .map((dr) => {
         const dataIso = dr.data;
@@ -1154,12 +1277,12 @@ export default function MesasSpin() {
       });
   }, [
     historico,
-    dailyData,
+    dailyDataEfetivo,
     monthlyData,
     porTabelaFiltradasHist,
     porTabelaFiltradas,
     operadorasListFmt,
-    uapPorJogoRows,
+    uapPorJogoParaComparativo,
   ]);
 
   const kpisAtivosComparativo = useMemo(
@@ -1241,7 +1364,7 @@ export default function MesasSpin() {
     });
   }, [mesasOpcoesBlackjack, compMesaA]);
 
-  const isHistoricoKpi = historico || dailyDataPrevMonth.length === 0;
+  const isHistoricoKpi = historico || dailyDataPrevEfetivo.length === 0;
 
   const brand = useDashboardBrand();
 
