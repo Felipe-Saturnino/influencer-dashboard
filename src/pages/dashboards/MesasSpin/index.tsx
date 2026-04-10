@@ -12,6 +12,7 @@ import KpiCard from "../../../components/dashboard/KpiCard";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
 import { getThStyle, getTdStyle, getTdNumStyle } from "../../../lib/tableStyles";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -93,6 +94,8 @@ type LinhaDetalheTab = Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & {
   margin_pct: number | null;
   bet_size: number | null;
   arpu: number | null;
+  /** Chave estável para drilldown (YYYY-MM-DD ou YYYY-MM). */
+  drillId?: string;
 };
 
 type UapPorJogoPlanRow = { data: string; jogo: string; uap: number | null };
@@ -377,6 +380,143 @@ function mergeDailyRowsPorData(rows: DailyRawRow[]): DailyRow[] {
     });
 }
 
+/** Filtro "Todas as operadoras": soma financeira por dia + UAP médio entre operadoras; margem / aposta média / ARPU (GGR÷Apostas). */
+function mergeDailyRowsAgregadoTodasOperadoras(rows: DailyRawRow[]): DailyRow[] {
+  const by = new Map<string, DailyRawRow[]>();
+  for (const r of rows) {
+    const d = String(r.data).slice(0, 10);
+    if (!by.has(d)) by.set(d, []);
+    by.get(d)!.push(r);
+  }
+  return [...by.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([data, list]) => {
+      const turnover = list.reduce((s, x) => s + Number(x.turnover ?? 0), 0);
+      const ggr = list.reduce((s, x) => s + Number(x.ggr ?? 0), 0);
+      const bets = list.reduce((s, x) => s + Number(x.apostas ?? 0), 0);
+      const uaps = list
+        .map((x) => x.uap)
+        .filter((v): v is number => v != null && Number.isFinite(Number(v)))
+        .map(Number);
+      const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) / uaps.length : null;
+      const hasT = list.some((x) => x.turnover != null);
+      const hasG = list.some((x) => x.ggr != null);
+      const hasB = list.some((x) => x.apostas != null);
+      const margin_pct =
+        hasT && turnover !== 0 && hasG && ggr != null ? (ggr / turnover) * 100 : null;
+      const bet_size = hasB && bets !== 0 && hasT ? turnover / bets : null;
+      const arpu = hasB && bets !== 0 && hasG && ggr != null ? ggr / bets : null;
+      return {
+        data,
+        turnover: hasT ? turnover : null,
+        ggr: hasG ? ggr : null,
+        bets: hasB ? bets : null,
+        uap,
+        margin_pct,
+        bet_size,
+        arpu,
+      };
+    });
+}
+
+/** Drilldown mensal: agrega `relatorio_daily_summary` por operadora no mês (ym = YYYY-MM). UAP do resumo mensal por operadora. */
+function agregaDailyRawPorOperadoraNoMes(
+  rows: DailyRawRow[],
+  ym: string,
+  monthlyRows: MonthlyRawRow[],
+): {
+  operadora_slug: string;
+  turnover: number;
+  ggr: number;
+  bets: number;
+  uap: number | null;
+  margin_pct: number | null;
+  bet_size: number | null;
+  arpu: number | null;
+}[] {
+  const uapPorSlug = new Map<string, number | null>();
+  for (const r of monthlyRows) {
+    if (String(r.mes).slice(0, 7) !== ym) continue;
+    uapPorSlug.set(r.operadora_slug, r.uap != null ? Number(r.uap) : null);
+  }
+  const bySlug = new Map<string, DailyRawRow[]>();
+  for (const r of rows) {
+    if (String(r.data).slice(0, 7) !== ym) continue;
+    const s = r.operadora_slug;
+    if (!bySlug.has(s)) bySlug.set(s, []);
+    bySlug.get(s)!.push(r);
+  }
+  return [...bySlug.entries()]
+    .map(([operadora_slug, dias]) => {
+      const turnover = dias.reduce((acc, x) => acc + Number(x.turnover ?? 0), 0);
+      const ggr = dias.reduce((acc, x) => acc + Number(x.ggr ?? 0), 0);
+      const bets = dias.reduce((acc, x) => acc + Number(x.apostas ?? 0), 0);
+      const uapM = uapPorSlug.get(operadora_slug) ?? null;
+      const margin_pct = turnover !== 0 ? (ggr / turnover) * 100 : null;
+      const bet_size = bets !== 0 ? turnover / bets : null;
+      const arpu = bets !== 0 ? ggr / bets : null;
+      return {
+        operadora_slug,
+        turnover,
+        ggr,
+        bets,
+        uap: uapM,
+        margin_pct,
+        bet_size,
+        arpu,
+      };
+    })
+    .sort((a, b) => a.operadora_slug.localeCompare(b.operadora_slug, "pt-BR"));
+}
+
+/** Drilldown diário (carrossel): uma linha por operadora no dia. */
+function agregaDailyRawPorOperadoraNoDia(
+  rows: DailyRawRow[],
+  dia: string,
+): {
+  operadora_slug: string;
+  turnover: number | null;
+  ggr: number | null;
+  bets: number | null;
+  uap: number | null;
+  margin_pct: number | null;
+  bet_size: number | null;
+  arpu: number | null;
+}[] {
+  const bySlug = new Map<string, DailyRawRow[]>();
+  for (const r of rows) {
+    if (String(r.data).slice(0, 10) !== dia) continue;
+    const s = r.operadora_slug;
+    if (!bySlug.has(s)) bySlug.set(s, []);
+    bySlug.get(s)!.push(r);
+  }
+  return [...bySlug.entries()]
+    .map(([operadora_slug, list]) => {
+      const r = list[0]!;
+      const turnover = r.turnover != null ? Number(r.turnover) : null;
+      const ggr = r.ggr != null ? Number(r.ggr) : null;
+      const bets = r.apostas != null ? Number(r.apostas) : null;
+      const uap = r.uap != null ? Number(r.uap) : null;
+      const margin_pct =
+        turnover != null && turnover !== 0 && ggr != null ? (ggr / turnover) * 100 : null;
+      const bet_size =
+        bets != null && bets !== 0 && turnover != null ? turnover / bets : null;
+      const arpu =
+        bets != null && bets !== 0 && ggr != null ? ggr / bets : null;
+      return {
+        operadora_slug,
+        turnover,
+        ggr,
+        bets,
+        uap,
+        margin_pct,
+        bet_size,
+        arpu,
+      };
+    })
+    .sort((a, b) => a.operadora_slug.localeCompare(b.operadora_slug, "pt-BR"));
+}
+
 type MonthlyRawRow = {
   mes: string;
   uap: number | null;
@@ -399,12 +539,13 @@ function mergeUapPorJogoRows(rows: UapRawRow[]): UapPorJogoPlanRow[] {
   for (const [data, jm] of byD) {
     for (const [jogo, list] of jm) {
       const slugs = new Set(list.map((x) => x.operadora_slug));
-      if (slugs.size !== 1) {
-        out.push({ data, jogo, uap: null });
+      if (slugs.size === 1) {
+        const u = list[0]!.uap;
+        out.push({ data, jogo, uap: u != null ? Number(u) : null });
         continue;
       }
-      const u = list[0]!.uap;
-      out.push({ data, jogo, uap: u != null ? Number(u) : null });
+      const sumUap = list.reduce((s, x) => s + (x.uap != null ? Number(x.uap) : 0), 0);
+      out.push({ data, jogo, uap: sumUap > 0 ? sumUap : null });
     }
   }
   out.sort((a, b) => a.data.localeCompare(b.data) || a.jogo.localeCompare(b.jogo));
@@ -523,10 +664,12 @@ type CelulaJogoMetricas = {
   margin_pct: number | null;
   bet_size: number | null;
   uap: number | null;
+  /** GGR ÷ Apostas (modo todas as operadoras no comparativo). */
+  arpu: number | null;
 };
 
 function emptyCelulaJogo(): CelulaJogoMetricas {
-  return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null, uap: null };
+  return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null, uap: null, arpu: null };
 }
 
 /** Soma GGR, turnover e apostas d-1; margem e aposta média a partir dos totais (ex.: Blackjack = BJ1+BJ2+VIP). UAP é preenchido à parte. */
@@ -559,7 +702,9 @@ function aggregateCellFromPorTabelaRows(rows: PorTabelaRow[]): CelulaJogoMetrica
     turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
   const bet_size =
     betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
-  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size, uap: null };
+  const arpu =
+    betsOut != null && betsOut !== 0 && ggrOut != null ? ggrOut / betsOut : null;
+  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size, uap: null, arpu };
 }
 
 /** Agrega `relatorio_por_tabela` por mês (YYYY-MM) numa linha por período. */
@@ -599,6 +744,7 @@ type TotaisOficiaisComparativo = {
   margin_pct: number | null;
   bet_size: number | null;
   uap: number | null;
+  arpu: number | null;
 };
 
 function totaisOficiaisFromDailyRow(dr: DailyRow): TotaisOficiaisComparativo {
@@ -610,7 +756,13 @@ function totaisOficiaisFromDailyRow(dr: DailyRow): TotaisOficiaisComparativo {
     t != null && Number(t) !== 0 && g != null ? (Number(g) / Number(t)) * 100 : null;
   const bet_size =
     b != null && Number(b) !== 0 && t != null ? Number(t) / Number(b) : null;
-  return { turnover: t, ggr: g, bets: b, uap: u, margin_pct, bet_size };
+  const arpu =
+    dr.arpu != null
+      ? dr.arpu
+      : b != null && Number(b) !== 0 && g != null
+        ? Number(g) / Number(b)
+        : null;
+  return { turnover: t, ggr: g, bets: b, uap: u, margin_pct, bet_size, arpu };
 }
 
 function totaisOficiaisHistoricoMes(
@@ -631,7 +783,9 @@ function totaisOficiaisHistoricoMes(
       : null;
   const bet_size =
     bets != null && Number(bets) !== 0 && turnover != null ? Number(turnover) / Number(bets) : null;
-  return { turnover, ggr, bets, uap, margin_pct, bet_size };
+  const arpu =
+    bets != null && Number(bets) !== 0 && ggr != null ? Number(ggr) / Number(bets) : null;
+  return { turnover, ggr, bets, uap, margin_pct, bet_size, arpu };
 }
 
 type LinhaComparativoJogoTab = {
@@ -682,7 +836,7 @@ const COR_BLACKJACK = "#7c3aed";
 const COR_ROLETA = "#22c55e";
 const COR_BACCARAT = "#1e36f8";
 
-type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap";
+type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap" | "arpu";
 
 type KpiJogoDef = {
   key: KpiJogoKey;
@@ -698,6 +852,7 @@ const KPIS_DISPONIVEIS: KpiJogoDef[] = [
   { key: "margin_pct", label: "Margem", somavel: false, tipoGrafico: "linha" },
   { key: "bet_size", label: "Aposta média", somavel: false, tipoGrafico: "linha" },
   { key: "uap", label: "UAP", somavel: true, tipoGrafico: "linha" },
+  { key: "arpu", label: "ARPU", somavel: false, tipoGrafico: "linha" },
 ];
 
 const JOGOS_COMPARATIVO = [
@@ -725,6 +880,7 @@ function renderValorKpiComparativo(kpi: KpiJogoDef, valor: number | null): React
     case "ggr":
     case "turnover":
     case "bet_size":
+    case "arpu":
       return fmtBRL(valor);
     case "bets":
     case "uap":
@@ -823,6 +979,26 @@ function mergeMonthlyHistoricoRows(rows: MonthlyRawRow[]): MonthlyRow[] {
     });
 }
 
+/** Filtro "Todas as operadoras": um registro por mês com UAP = média entre operadoras (ARPU vem do daily agregado na UI). */
+function mergeMonthlyHistoricoAgregadoTodas(rows: MonthlyRawRow[]): MonthlyRow[] {
+  const by = new Map<string, MonthlyRawRow[]>();
+  for (const r of rows) {
+    const ym = String(r.mes).slice(0, 10);
+    if (!by.has(ym)) by.set(ym, []);
+    by.get(ym)!.push(r);
+  }
+  return [...by.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([, list]) => {
+      const uaps = list
+        .map((x) => x.uap)
+        .filter((v): v is number => v != null && Number.isFinite(Number(v)))
+        .map(Number);
+      const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) / uaps.length : null;
+      return mapMonthlyV2({ mes: list[0]!.mes, uap, arpu: null });
+    });
+}
+
 function mergeMonthlyUapArpuSingleMonth(
   rows: { uap: number | null; arpu: number | null; operadora_slug: string }[],
 ): { uap: number | null; arpu: number | null } | null {
@@ -835,6 +1011,18 @@ function mergeMonthlyUapArpuSingleMonth(
     uap: r.uap != null ? Number(r.uap) : null,
     arpu: r.arpu != null ? Number(r.arpu) : null,
   };
+}
+
+function mergeMonthlyUapArpuAgregadoTodas(
+  rows: { uap: number | null; arpu: number | null; operadora_slug: string }[],
+): { uap: number | null; arpu: number | null } | null {
+  if (rows.length === 0) return null;
+  const uaps = rows
+    .map((r) => r.uap)
+    .filter((v): v is number => v != null && Number.isFinite(Number(v)))
+    .map(Number);
+  const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) / uaps.length : null;
+  return { uap, arpu: null };
 }
 
 export default function MesasSpin() {
@@ -876,9 +1064,15 @@ export default function MesasSpin() {
     () => new Set<KpiJogoKey>(["ggr", "turnover", "bets", "margin_pct", "bet_size", "uap"]),
   );
   const [kpiGrafico, setKpiGrafico] = useState<KpiJogoKey>("ggr");
+  const [dailyRawUnmerged, setDailyRawUnmerged] = useState<DailyRawRow[]>([]);
+  const [monthlyRawUnmerged, setMonthlyRawUnmerged] = useState<MonthlyRawRow[]>([]);
+  const [expandedDetalhe, setExpandedDetalhe] = useState<Set<string>>(() => new Set());
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
+
+  const modoAgregadoTodasOperadoras =
+    filtroOperadora === "todas" && (operadoraSlugsForcado == null || operadoraSlugsForcado.length === 0);
 
   function irMesAnterior() {
     setHistorico(false);
@@ -918,6 +1112,8 @@ export default function MesasSpin() {
     setMonthlyUapArpuPrev(null);
     setDailyDataPrevMonth([]);
     setUapPorJogoRows([]);
+    setDailyRawUnmerged([]);
+    setMonthlyRawUnmerged([]);
 
     try {
       const slugList = buildSlugListForMesasQueries({
@@ -926,6 +1122,8 @@ export default function MesasSpin() {
         semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo === true,
         operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
       });
+      const agregadoTodas =
+        filtroOperadora === "todas" && (operadoraSlugsForcado == null || operadoraSlugsForcado.length === 0);
       if (historico) {
         const [monthlyRaw, dailyRaw, porAllRaw, uapRaw] = await Promise.all([
           fetchAllPages(async (from, to) =>
@@ -960,8 +1158,18 @@ export default function MesasSpin() {
           ),
           fetchAllPages(async (from, to) => buildUapPorJogoQuery(true, undefined, from, to, slugList)),
         ]);
-        setMonthlyData(mergeMonthlyHistoricoRows(monthlyRaw as MonthlyRawRow[]));
-        setDailyData(mergeDailyRowsPorData(dailyRaw as DailyRawRow[]));
+        setMonthlyRawUnmerged(monthlyRaw as MonthlyRawRow[]);
+        setDailyRawUnmerged(dailyRaw as DailyRawRow[]);
+        setMonthlyData(
+          agregadoTodas
+            ? mergeMonthlyHistoricoAgregadoTodas(monthlyRaw as MonthlyRawRow[])
+            : mergeMonthlyHistoricoRows(monthlyRaw as MonthlyRawRow[]),
+        );
+        setDailyData(
+          agregadoTodas
+            ? mergeDailyRowsAgregadoTodasOperadoras(dailyRaw as DailyRawRow[])
+            : mergeDailyRowsPorData(dailyRaw as DailyRawRow[]),
+        );
         setPorTabelaHistAll((porAllRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
         setUapPorJogoRows(mergeUapPorJogoRows(uapRaw as UapRawRow[]));
       } else if (mesSelecionado) {
@@ -1010,9 +1218,19 @@ export default function MesasSpin() {
           fetchAllPages(async (from, to) => buildUapPorJogoQuery(false, mesSelecionado, from, to, slugList)),
         ]);
 
-        setDailyData(mergeDailyRowsPorData(dailyRaw as DailyRawRow[]));
+        setDailyRawUnmerged(dailyRaw as DailyRawRow[]);
+        setMonthlyRawUnmerged([]);
+        setDailyData(
+          agregadoTodas
+            ? mergeDailyRowsAgregadoTodasOperadoras(dailyRaw as DailyRawRow[])
+            : mergeDailyRowsPorData(dailyRaw as DailyRawRow[]),
+        );
         setMonthlyData([]);
-        setDailyDataPrevMonth(mergeDailyRowsPorData(dailyPrevRaw as DailyRawRow[]));
+        setDailyDataPrevMonth(
+          agregadoTodas
+            ? mergeDailyRowsAgregadoTodasOperadoras(dailyPrevRaw as DailyRawRow[])
+            : mergeDailyRowsPorData(dailyPrevRaw as DailyRawRow[]),
+        );
         setPorTabelaRows((mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
         setUapPorJogoRows(mergeUapPorJogoRows(uapRaw as UapRawRow[]));
 
@@ -1020,13 +1238,21 @@ export default function MesasSpin() {
           supabase.from("relatorio_monthly_summary").select("uap, arpu, operadora_slug").eq("mes", inicio),
           slugList,
         );
-        setMonthlyUapArpuSel(mergeMonthlyUapArpuSingleMonth(mSelRows ?? []));
+        setMonthlyUapArpuSel(
+          agregadoTodas
+            ? mergeMonthlyUapArpuAgregadoTodas(mSelRows ?? [])
+            : mergeMonthlyUapArpuSingleMonth(mSelRows ?? []),
+        );
 
         const { data: mPrevRows } = await applyMesasOperadoraSlugFilter(
           supabase.from("relatorio_monthly_summary").select("uap, arpu, operadora_slug").eq("mes", pi),
           slugList,
         );
-        setMonthlyUapArpuPrev(mergeMonthlyUapArpuSingleMonth(mPrevRows ?? []));
+        setMonthlyUapArpuPrev(
+          agregadoTodas
+            ? mergeMonthlyUapArpuAgregadoTodas(mPrevRows ?? [])
+            : mergeMonthlyUapArpuSingleMonth(mPrevRows ?? []),
+        );
       }
     } catch {
       setUapPorJogoRows([]);
@@ -1046,7 +1272,26 @@ export default function MesasSpin() {
     void carregar();
   }, [carregar]);
 
+  useEffect(() => {
+    setExpandedDetalhe(new Set());
+  }, [historico, filtroOperadora, operadoraSlugsForcado, idxMes]);
+
+  useEffect(() => {
+    if (!modoAgregadoTodasOperadoras) return;
+    setKpisSelecionados((prev) => {
+      if (prev.has("arpu")) return prev;
+      const next = new Set(prev);
+      next.add("arpu");
+      return next;
+    });
+  }, [modoAgregadoTodasOperadoras]);
+
   const operadorasListFmt = operadorasOcr;
+
+  const slugToNome = useCallback(
+    (slug: string) => operadorasOcr.find((o) => o.slug === slug)?.nome ?? slug,
+    [operadorasOcr],
+  );
 
   const porTabelaFiltradas = useMemo(
     () =>
@@ -1097,6 +1342,29 @@ export default function MesasSpin() {
           const dias = dailyByYm.get(ym) ?? [];
           const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
           const m = monthlyByYm.get(ym);
+          if (modoAgregadoTodasOperadoras) {
+            const turnover = agg?.turnover ?? null;
+            const ggr = agg?.ggr ?? null;
+            const bets = agg?.bets ?? null;
+            const margin_pct =
+              turnover != null && turnover !== 0 && ggr != null ? (ggr / turnover) * 100 : null;
+            const bet_size =
+              bets != null && bets !== 0 && turnover != null ? turnover / bets : null;
+            const arpu =
+              bets != null && bets !== 0 && ggr != null ? ggr / bets : null;
+            const uap = m?.uap != null ? Number(m.uap) : null;
+            return {
+              label: fmtMesAnoCurtoFromYm(ym),
+              turnover,
+              ggr,
+              bets,
+              uap,
+              margin_pct,
+              bet_size,
+              arpu,
+              drillId: ym,
+            };
+          }
           const base = enrich({
             label: fmtMesAnoCurtoFromYm(ym),
             turnover: agg?.turnover ?? null,
@@ -1109,6 +1377,24 @@ export default function MesasSpin() {
             arpu: m?.arpu != null ? Number(m.arpu) : base.arpu,
           };
         });
+    }
+    if (modoAgregadoTodasOperadoras) {
+      return [...dailyData]
+        .sort((a, b) => b.data.localeCompare(a.data))
+        .map((r) => ({
+          label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+          }),
+          turnover: r.turnover,
+          ggr: r.ggr,
+          bets: r.bets,
+          uap: r.uap,
+          margin_pct: r.margin_pct,
+          bet_size: r.bet_size,
+          arpu: r.arpu,
+          drillId: r.data,
+        }));
     }
     return [...dailyData]
       .sort((a, b) => b.data.localeCompare(a.data))
@@ -1124,7 +1410,7 @@ export default function MesasSpin() {
           uap: r.uap,
         }),
       );
-  }, [historico, dailyData, monthlyData]);
+  }, [historico, dailyData, monthlyData, modoAgregadoTodasOperadoras]);
 
   const kpiExibir = useMemo(() => {
     if (historico) {
@@ -1141,6 +1427,17 @@ export default function MesasSpin() {
       }
       const margin_pct = turnover !== 0 ? (ggr / turnover) * 100 : null;
       const bet_size = bets !== 0 ? turnover / bets : null;
+      if (modoAgregadoTodasOperadoras) {
+        return {
+          turnover,
+          ggr,
+          margin_pct,
+          bets,
+          uap: null,
+          bet_size,
+          arpu: bets !== 0 ? ggr / bets : null,
+        };
+      }
       const somaUap = uapMeses.reduce((a, b) => a + b, 0);
       const mediaUap = uapMeses.length > 0 ? somaUap / uapMeses.length : null;
       const arpu = somaUap !== 0 ? ggr / somaUap : null;
@@ -1156,6 +1453,15 @@ export default function MesasSpin() {
     }
     const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
     if (!base) return null;
+    if (modoAgregadoTodasOperadoras) {
+      const b = base.bets;
+      const g = base.ggr;
+      return {
+        ...base,
+        uap: null,
+        arpu: b != null && g != null && Number(b) !== 0 ? g / Number(b) : null,
+      };
+    }
     if (
       mesSelecionado &&
       isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
@@ -1167,13 +1473,22 @@ export default function MesasSpin() {
       uap: monthlyUapArpuSel?.uap ?? null,
       arpu: monthlyUapArpuSel?.arpu ?? null,
     };
-  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, mesSelecionado]);
+  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, mesSelecionado, modoAgregadoTodasOperadoras]);
 
   const kpiAntExibir = useMemo(() => {
     const base =
       historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
     if (!base) return null;
     if (historico) return base;
+    if (modoAgregadoTodasOperadoras) {
+      const b = base.bets;
+      const g = base.ggr;
+      return {
+        ...base,
+        uap: null,
+        arpu: b != null && g != null && Number(b) !== 0 ? g / Number(b) : null,
+      };
+    }
     if (
       mesSelecionado &&
       isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
@@ -1185,7 +1500,7 @@ export default function MesasSpin() {
       uap: monthlyUapArpuPrev?.uap ?? base.uap,
       arpu: monthlyUapArpuPrev?.arpu ?? base.arpu,
     };
-  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado]);
+  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado, modoAgregadoTodasOperadoras]);
 
   /** Só Blackjack 1 / 2 / VIP — comparativo lateral. */
   const mesasOpcoesBlackjack = useMemo(() => {
@@ -1339,7 +1654,7 @@ export default function MesasSpin() {
     });
   }, [linhasComparativoJogo, kpiGrafico]);
 
-  const isBRLKpiGrafico = ["ggr", "turnover", "bet_size"].includes(kpiGrafico);
+  const isBRLKpiGrafico = ["ggr", "turnover", "bet_size", "arpu"].includes(kpiGrafico);
 
   const minWidthTabelaComparativoJogo =
     120 + kpisAtivosComparativo.length * (100 + 3 * 90);
@@ -1565,7 +1880,8 @@ export default function MesasSpin() {
     const mostrarRodapeTotal =
       somavel ||
       kpiGrafico === "margin_pct" ||
-      kpiGrafico === "bet_size";
+      kpiGrafico === "bet_size" ||
+      kpiGrafico === "arpu";
 
     const valorRodape =
       totalOficial != null && Number.isFinite(Number(totalOficial))
@@ -2197,98 +2513,184 @@ export default function MesasSpin() {
             }
           />
           {loading ? (
+            modoAgregadoTodasOperadoras ? (
+              <>
+                <div className="app-grid-kpi-3" style={{ gap: 12, marginBottom: 12 }}>
+                  {[0, 1, 2].map((i) => (
+                    <SkeletonKpiCard key={`a-${i}`} />
+                  ))}
+                </div>
+                <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+                  {[0, 1, 2].map((i) => (
+                    <SkeletonKpiCard key={`b-${i}`} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <SkeletonKpiCard key={i} />
+                  ))}
+                </div>
+                <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+                  {[0, 1, 2].map((i) => (
+                    <SkeletonKpiCard key={i} />
+                  ))}
+                </div>
+              </>
+            )
+          ) : modoAgregadoTodasOperadoras ? (
             <>
-              <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
-                {[0, 1, 2, 3].map((i) => (
-                  <SkeletonKpiCard key={i} />
-                ))}
+              <div className="app-grid-kpi-3" style={{ gap: 12, marginBottom: 12 }}>
+                <KpiCard
+                  label="GGR"
+                  value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
+                  icon={<TrendingUp size={16} />}
+                  accentVar="--brand-extra1"
+                  accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
+                  atual={nKpi(kpiExibir?.ggr)}
+                  anterior={nKpi(kpiAntExibir?.ggr)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Turnover"
+                  value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
+                  icon={<Wallet size={16} />}
+                  accentVar="--brand-extra3"
+                  accentColor={BRAND.roxoVivo}
+                  atual={nKpi(kpiExibir?.turnover)}
+                  anterior={nKpi(kpiAntExibir?.turnover)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Margem"
+                  value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
+                  icon={<Percent size={16} />}
+                  accentVar="--brand-extra4"
+                  accentColor={BRAND.amarelo}
+                  atual={nKpi(kpiExibir?.margin_pct)}
+                  anterior={nKpi(kpiAntExibir?.margin_pct)}
+                  isHistorico={isHistoricoKpi}
+                />
               </div>
               <div className="app-grid-kpi-3" style={{ gap: 12 }}>
-                {[0, 1, 2].map((i) => (
-                  <SkeletonKpiCard key={i} />
-                ))}
+                <KpiCard
+                  label="Apostas"
+                  value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
+                  icon={<ListOrdered size={16} />}
+                  accentVar="--brand-extra2"
+                  accentColor={BRAND.azul}
+                  atual={nKpi(kpiExibir?.bets)}
+                  anterior={nKpi(kpiAntExibir?.bets)}
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Aposta média"
+                  value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
+                  icon={<ChartColumnBig size={16} />}
+                  accentVar="--brand-extra4"
+                  accentColor={BRAND.ciano}
+                  atual={nKpi(kpiExibir?.bet_size)}
+                  anterior={nKpi(kpiAntExibir?.bet_size)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="ARPU"
+                  value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
+                  icon={<Coins size={16} />}
+                  accentVar="--brand-extra3"
+                  accentColor={BRAND.roxoVivo}
+                  atual={nKpi(kpiExibir?.arpu)}
+                  anterior={nKpi(kpiAntExibir?.arpu)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
               </div>
             </>
           ) : (
             <>
-          <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
-            <KpiCard
-              label="GGR"
-              value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
-              icon={<TrendingUp size={16} />}
-              accentVar="--brand-extra1"
-              accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
-              atual={nKpi(kpiExibir?.ggr)}
-              anterior={nKpi(kpiAntExibir?.ggr)}
-              isBRL
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label="Turnover"
-              value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
-              icon={<Wallet size={16} />}
-              accentVar="--brand-extra3"
-              accentColor={BRAND.roxoVivo}
-              atual={nKpi(kpiExibir?.turnover)}
-              anterior={nKpi(kpiAntExibir?.turnover)}
-              isBRL
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label="Apostas"
-              value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
-              icon={<ListOrdered size={16} />}
-              accentVar="--brand-extra2"
-              accentColor={BRAND.azul}
-              atual={nKpi(kpiExibir?.bets)}
-              anterior={nKpi(kpiAntExibir?.bets)}
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label="Margem"
-              value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
-              icon={<Percent size={16} />}
-              accentVar="--brand-extra4"
-              accentColor={BRAND.amarelo}
-              atual={nKpi(kpiExibir?.margin_pct)}
-              anterior={nKpi(kpiAntExibir?.margin_pct)}
-              isHistorico={isHistoricoKpi}
-            />
-          </div>
-          <div className="app-grid-kpi-3" style={{ gap: 12 }}>
-            <KpiCard
-              label="Aposta média"
-              value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
-              icon={<ChartColumnBig size={16} />}
-              accentVar="--brand-extra4"
-              accentColor={BRAND.ciano}
-              atual={nKpi(kpiExibir?.bet_size)}
-              anterior={nKpi(kpiAntExibir?.bet_size)}
-              isBRL
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label={historico ? "Média UAP" : "UAP"}
-              value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
-              icon={<Users size={16} />}
-              accentVar="--brand-extra2"
-              accentColor={BRAND.roxo}
-              atual={nKpi(kpiExibir?.uap)}
-              anterior={nKpi(kpiAntExibir?.uap)}
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label="ARPU"
-              value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
-              icon={<Coins size={16} />}
-              accentVar="--brand-extra3"
-              accentColor={BRAND.roxoVivo}
-              atual={nKpi(kpiExibir?.arpu)}
-              anterior={nKpi(kpiAntExibir?.arpu)}
-              isBRL
-              isHistorico={isHistoricoKpi}
-            />
-          </div>
+              <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
+                <KpiCard
+                  label="GGR"
+                  value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
+                  icon={<TrendingUp size={16} />}
+                  accentVar="--brand-extra1"
+                  accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
+                  atual={nKpi(kpiExibir?.ggr)}
+                  anterior={nKpi(kpiAntExibir?.ggr)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Turnover"
+                  value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
+                  icon={<Wallet size={16} />}
+                  accentVar="--brand-extra3"
+                  accentColor={BRAND.roxoVivo}
+                  atual={nKpi(kpiExibir?.turnover)}
+                  anterior={nKpi(kpiAntExibir?.turnover)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Apostas"
+                  value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
+                  icon={<ListOrdered size={16} />}
+                  accentVar="--brand-extra2"
+                  accentColor={BRAND.azul}
+                  atual={nKpi(kpiExibir?.bets)}
+                  anterior={nKpi(kpiAntExibir?.bets)}
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Margem"
+                  value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
+                  icon={<Percent size={16} />}
+                  accentVar="--brand-extra4"
+                  accentColor={BRAND.amarelo}
+                  atual={nKpi(kpiExibir?.margin_pct)}
+                  anterior={nKpi(kpiAntExibir?.margin_pct)}
+                  isHistorico={isHistoricoKpi}
+                />
+              </div>
+              <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+                <KpiCard
+                  label="Aposta média"
+                  value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
+                  icon={<ChartColumnBig size={16} />}
+                  accentVar="--brand-extra4"
+                  accentColor={BRAND.ciano}
+                  atual={nKpi(kpiExibir?.bet_size)}
+                  anterior={nKpi(kpiAntExibir?.bet_size)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label={historico ? "Média UAP" : "UAP"}
+                  value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
+                  icon={<Users size={16} />}
+                  accentVar="--brand-extra2"
+                  accentColor={BRAND.roxo}
+                  atual={nKpi(kpiExibir?.uap)}
+                  anterior={nKpi(kpiAntExibir?.uap)}
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="ARPU"
+                  value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
+                  icon={<Coins size={16} />}
+                  accentVar="--brand-extra3"
+                  accentColor={BRAND.roxoVivo}
+                  atual={nKpi(kpiExibir?.arpu)}
+                  anterior={nKpi(kpiAntExibir?.arpu)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+              </div>
             </>
           )}
         </div>
@@ -2312,6 +2714,9 @@ export default function MesasSpin() {
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <caption style={{ display: "none" }}>
+                {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
+              </caption>
               <thead>
                 <tr>
                   <th style={thStyle}>{historico ? "Mês" : "Data"}</th>
@@ -2327,30 +2732,181 @@ export default function MesasSpin() {
               <tbody>
                 {tabelaRows.map((r, i) => {
                   const ggr = r.ggr ?? 0;
+                  const drillId = r.drillId;
+                  const isDrillParent = modoAgregadoTodasOperadoras && drillId != null;
+                  const aberto = drillId != null && expandedDetalhe.has(drillId);
+                  const subLinhas =
+                    isDrillParent && aberto
+                      ? historico
+                        ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, drillId, monthlyRawUnmerged)
+                        : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, drillId)
+                      : [];
+                  const rowKey = drillId ?? `${r.label}-${i}`;
                   return (
-                    <tr
-                      key={i}
-                      style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent" }}
-                    >
-                      <td style={{ ...tdStyle, fontWeight: 600 }}>{r.label}</td>
-                      <td
+                    <Fragment key={rowKey}>
+                      <tr
                         style={{
-                          ...tdNum,
-                          color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
-                          fontWeight: 600,
+                          background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
                         }}
                       >
-                        {r.ggr != null ? fmtBRL(r.ggr) : "—"}
-                      </td>
-                      <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
-                      <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={{ ...tdNum }}>
-                        <MarginBadge value={r.margin_pct} />
-                      </td>
-                      <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
-                      <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
-                    </tr>
+                        <td style={{ ...tdStyle, fontWeight: 600 }}>
+                          {isDrillParent ? (
+                            <button
+                              type="button"
+                              aria-expanded={aberto}
+                              aria-label={
+                                aberto
+                                  ? `Recolher detalhe por operadora — ${r.label}`
+                                  : `Expandir detalhe por operadora — ${r.label}`
+                              }
+                              onClick={() => {
+                                setExpandedDetalhe((prev) => {
+                                  const n = new Set(prev);
+                                  if (n.has(drillId)) n.delete(drillId);
+                                  else n.add(drillId);
+                                  return n;
+                                });
+                              }}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: t.text,
+                                fontFamily: FONT.body,
+                                fontWeight: 600,
+                                padding: 0,
+                                textAlign: "left",
+                              }}
+                            >
+                              <ChevronDown
+                                size={16}
+                                aria-hidden
+                                style={{
+                                  transform: aberto ? "rotate(180deg)" : "rotate(0deg)",
+                                  transition: "transform 0.15s ease",
+                                  flexShrink: 0,
+                                }}
+                              />
+                              {r.label}
+                            </button>
+                          ) : (
+                            r.label
+                          )}
+                        </td>
+                        <td
+                          style={{
+                            ...tdNum,
+                            color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {r.ggr != null ? fmtBRL(r.ggr) : "—"}
+                        </td>
+                        <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
+                        <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
+                        <td style={{ ...tdNum }}>
+                          <MarginBadge value={r.margin_pct} />
+                        </td>
+                        <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
+                        <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
+                        <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
+                      </tr>
+                      {isDrillParent && aberto && (
+                        <tr
+                          style={{
+                            background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
+                          }}
+                        >
+                          <td colSpan={8} style={{ padding: 0, borderTop: `1px solid ${t.cardBorder}` }}>
+                            <div style={{ padding: "10px 12px 14px 36px" }}>
+                              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                <caption style={{ display: "none" }}>
+                                  Operadoras — {r.label}
+                                </caption>
+                                <thead>
+                                  <tr>
+                                    <th scope="col" style={thStyle}>
+                                      Operadora
+                                    </th>
+                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                                      GGR
+                                    </th>
+                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                                      Turnover
+                                    </th>
+                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                                      Apostas
+                                    </th>
+                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                                      Margem
+                                    </th>
+                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                                      Aposta média
+                                    </th>
+                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                                      UAP
+                                    </th>
+                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                                      ARPU
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {subLinhas.map((sl, j) => {
+                                    const gg = sl.ggr ?? 0;
+                                    return (
+                                      <tr
+                                        key={sl.operadora_slug}
+                                        style={{
+                                          background:
+                                            j % 2 === 1 ? "rgba(74,32,130,0.04)" : "transparent",
+                                        }}
+                                      >
+                                        <td style={{ ...tdStyle, fontSize: 12, fontWeight: 600 }}>
+                                          {slugToNome(sl.operadora_slug)}
+                                        </td>
+                                        <td
+                                          style={{
+                                            ...tdNum,
+                                            fontSize: 12,
+                                            color:
+                                              gg > 0 ? BRAND.verde : gg < 0 ? BRAND.vermelho : t.text,
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          {sl.ggr != null ? fmtBRL(sl.ggr) : "—"}
+                                        </td>
+                                        <td style={{ ...tdNum, fontSize: 12 }}>
+                                          {sl.turnover != null ? fmtBRL(sl.turnover) : "—"}
+                                        </td>
+                                        <td style={{ ...tdNum, fontSize: 12 }}>
+                                          {sl.bets != null ? sl.bets.toLocaleString("pt-BR") : "—"}
+                                        </td>
+                                        <td style={{ ...tdNum, fontSize: 12 }}>
+                                          <MarginBadge value={sl.margin_pct} />
+                                        </td>
+                                        <td style={{ ...tdNum, fontSize: 12 }}>
+                                          {sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}
+                                        </td>
+                                        <td style={{ ...tdNum, fontSize: 12 }}>
+                                          {sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}
+                                        </td>
+                                        <td style={{ ...tdNum, fontSize: 12 }}>
+                                          {sl.arpu != null ? fmtBRL(sl.arpu) : "—"}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -2374,28 +2930,32 @@ export default function MesasSpin() {
                   Carregando…
                 </div>
               </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
-                </div>
-              </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<Table2 size={15} />}
-                  title="Dados por mesa"
-                  sub="Baccarat e Roleta"
-                />
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
-                </div>
-              </div>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                      <Clock size={16} style={{ marginBottom: 8 }} />
+                      Carregando…
+                    </div>
+                  </div>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<Table2 size={15} />}
+                      title="Dados por mesa"
+                      sub="Baccarat e Roleta"
+                    />
+                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                      <Clock size={16} style={{ marginBottom: 8 }} />
+                      Carregando…
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           ) : porTabelaRows.length === 0 ? (
             <>
@@ -2409,22 +2969,30 @@ export default function MesasSpin() {
                   {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
-                </div>
-              </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
-                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
-                </div>
-              </div>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <div
+                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
+                    >
+                      {MSG_SEM_DADOS_FILTRO}
+                    </div>
+                  </div>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <div
+                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
+                    >
+                      {MSG_SEM_DADOS_FILTRO}
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -2443,25 +3011,27 @@ export default function MesasSpin() {
                 )}
               </div>
 
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <p
-                  style={{
-                    margin: "0 0 16px",
-                    fontSize: 12,
-                    color: t.textMuted,
-                    fontFamily: FONT.body,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  Escolha duas mesas para ver os resultados.
-                </p>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <p
+                      style={{
+                        margin: "0 0 16px",
+                        fontSize: 12,
+                        color: t.textMuted,
+                        fontFamily: FONT.body,
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      Escolha duas mesas para ver os resultados.
+                    </p>
 
-                {mesasOpcoesBlackjack.length === 0 ? (
+                    {mesasOpcoesBlackjack.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                     {MSG_SEM_DADOS_FILTRO}
                   </div>
@@ -2633,6 +3203,8 @@ export default function MesasSpin() {
                   </div>
                 </div>
               </div>
+                </>
+              )}
             </>
           )}
         </>
@@ -2653,28 +3225,32 @@ export default function MesasSpin() {
                   Carregando…
                 </div>
               </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
-                </div>
-              </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<Table2 size={15} />}
-                  title="Dados por mesa"
-                  sub="Baccarat e Roleta"
-                />
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
-                </div>
-              </div>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                      <Clock size={16} style={{ marginBottom: 8 }} />
+                      Carregando…
+                    </div>
+                  </div>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<Table2 size={15} />}
+                      title="Dados por mesa"
+                      sub="Baccarat e Roleta"
+                    />
+                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                      <Clock size={16} style={{ marginBottom: 8 }} />
+                      Carregando…
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           ) : porTabelaHistAll.length === 0 ? (
             <>
@@ -2688,22 +3264,30 @@ export default function MesasSpin() {
                   {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
-                </div>
-              </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
-                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
-                </div>
-              </div>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <div
+                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
+                    >
+                      {MSG_SEM_DADOS_FILTRO}
+                    </div>
+                  </div>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <div
+                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
+                    >
+                      {MSG_SEM_DADOS_FILTRO}
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -2722,196 +3306,202 @@ export default function MesasSpin() {
                 )}
               </div>
 
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <p
-                  style={{
-                    margin: "0 0 16px",
-                    fontSize: 12,
-                    color: t.textMuted,
-                    fontFamily: FONT.body,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  Escolha duas mesas para ver os resultados.
-                </p>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <p
+                      style={{
+                        margin: "0 0 16px",
+                        fontSize: 12,
+                        color: t.textMuted,
+                        fontFamily: FONT.body,
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      Escolha duas mesas para ver os resultados.
+                    </p>
 
-                {mesasOpcoesBlackjack.length === 0 ? (
-                  <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    {MSG_SEM_DADOS_FILTRO}
-                  </div>
-                ) : (
-                  <>
-                    <div className="app-conversao-vs-row">
-                      <select
-                        value={compMesaA}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setCompMesaA(v);
-                          if (v && v === compMesaB) {
-                            const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
-                            if (o) setCompMesaB(o.key);
-                          }
-                        }}
-                        style={{
-                          ...selectStyleSimple,
-                          borderColor: compMesaA ? COR_MESA_A.border : undefined,
-                          width: "100%",
-                        }}
-                      >
-                        {mesasOpcoesBlackjack
-                          .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaB)
-                          .map((m) => (
-                            <option key={m.key} value={m.key}>
-                              {m.label}
-                            </option>
-                          ))}
-                      </select>
+                    {mesasOpcoesBlackjack.length === 0 ? (
                       <div
-                        style={{
-                          padding: "5px 12px",
-                          borderRadius: 999,
-                          border: "1px solid rgba(74,32,130,0.35)",
-                          background: "rgba(74,32,130,0.10)",
-                          fontSize: 12,
-                          fontWeight: 800,
-                          color: t.textMuted,
-                          fontFamily: FONT.body,
-                          letterSpacing: "0.05em",
-                          textAlign: "center",
-                        }}
+                        style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                       >
-                        VS
+                        {MSG_SEM_DADOS_FILTRO}
                       </div>
-                      <select
-                        value={compMesaB}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setCompMesaB(v);
-                          if (v && v === compMesaA) {
-                            const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
-                            if (o) setCompMesaA(o.key);
-                          }
-                        }}
-                        style={{
-                          ...selectStyleSimple,
-                          borderColor: compMesaB ? COR_MESA_B.border : undefined,
-                          width: "100%",
-                        }}
-                      >
-                        {mesasOpcoesBlackjack
-                          .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaA)
-                          .map((m) => (
-                            <option key={m.key} value={m.key}>
-                              {m.label}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="app-conversao-vs-row">
+                          <select
+                            value={compMesaA}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setCompMesaA(v);
+                              if (v && v === compMesaB) {
+                                const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
+                                if (o) setCompMesaB(o.key);
+                              }
+                            }}
+                            style={{
+                              ...selectStyleSimple,
+                              borderColor: compMesaA ? COR_MESA_A.border : undefined,
+                              width: "100%",
+                            }}
+                          >
+                            {mesasOpcoesBlackjack
+                              .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaB)
+                              .map((m) => (
+                                <option key={m.key} value={m.key}>
+                                  {m.label}
+                                </option>
+                              ))}
+                          </select>
+                          <div
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: 999,
+                              border: "1px solid rgba(74,32,130,0.35)",
+                              background: "rgba(74,32,130,0.10)",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              color: t.textMuted,
+                              fontFamily: FONT.body,
+                              letterSpacing: "0.05em",
+                              textAlign: "center",
+                            }}
+                          >
+                            VS
+                          </div>
+                          <select
+                            value={compMesaB}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setCompMesaB(v);
+                              if (v && v === compMesaA) {
+                                const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
+                                if (o) setCompMesaA(o.key);
+                              }
+                            }}
+                            style={{
+                              ...selectStyleSimple,
+                              borderColor: compMesaB ? COR_MESA_B.border : undefined,
+                              width: "100%",
+                            }}
+                          >
+                            {mesasOpcoesBlackjack
+                              .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaA)
+                              .map((m) => (
+                                <option key={m.key} value={m.key}>
+                                  {m.label}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
 
-                    {(compMesaA || compMesaB) && (
-                      <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
-                        <div
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: 10,
-                            background: COR_MESA_A.bg,
-                            border: `1px solid ${COR_MESA_A.border}`,
-                            textAlign: "center",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: COR_MESA_A.accent,
-                            fontFamily: FONT.body,
-                          }}
-                        >
-                          {labelMesaComparativoA}
+                        {(compMesaA || compMesaB) && (
+                          <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
+                            <div
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 10,
+                                background: COR_MESA_A.bg,
+                                border: `1px solid ${COR_MESA_A.border}`,
+                                textAlign: "center",
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: COR_MESA_A.accent,
+                                fontFamily: FONT.body,
+                              }}
+                            >
+                              {labelMesaComparativoA}
+                            </div>
+                            <div
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 10,
+                                background: COR_MESA_B.bg,
+                                border: `1px solid ${COR_MESA_B.border}`,
+                                textAlign: "center",
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: COR_MESA_B.accent,
+                                fontFamily: FONT.body,
+                              }}
+                            >
+                              {labelMesaComparativoB}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="app-conversao-funil-duo">
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {renderMesaDiaTabela(linhasMesaA, "rgba(124,58,237,0.06)", "Mês")}
+                          </div>
+                          <div
+                            className="app-conversao-funil-divider"
+                            style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {renderMesaDiaTabela(linhasMesaB, "rgba(30,54,248,0.06)", "Mês")}
+                          </div>
                         </div>
-                        <div
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: 10,
-                            background: COR_MESA_B.bg,
-                            border: `1px solid ${COR_MESA_B.border}`,
-                            textAlign: "center",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: COR_MESA_B.accent,
-                            fontFamily: FONT.body,
-                          }}
-                        >
-                          {labelMesaComparativoB}
-                        </div>
-                      </div>
+                      </>
                     )}
+                  </div>
+
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaA, "rgba(124,58,237,0.06)", "Mês")}
+                        <div
+                          style={{
+                            marginBottom: 10,
+                            padding: "6px 10px",
+                            borderRadius: 10,
+                            background: "rgba(112,202,228,0.10)",
+                            border: "1px solid rgba(112,202,228,0.35)",
+                            textAlign: "center",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: BRAND.ciano,
+                            fontFamily: FONT.body,
+                          }}
+                        >
+                          Speed Baccarat
+                        </div>
+                        {renderMesaDiaTabela(linhasSpeedBaccarat, "rgba(74,32,130,0.06)", "Mês")}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaB, "rgba(30,54,248,0.06)", "Mês")}
+                        <div
+                          style={{
+                            marginBottom: 10,
+                            padding: "6px 10px",
+                            borderRadius: 10,
+                            background: "rgba(124,58,237,0.10)",
+                            border: "1px solid rgba(124,58,237,0.30)",
+                            textAlign: "center",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: BRAND.roxoVivo,
+                            fontFamily: FONT.body,
+                          }}
+                        >
+                          Roleta
+                        </div>
+                        {renderMesaDiaTabela(linhasRoleta, "rgba(74,32,130,0.06)", "Mês")}
                       </div>
                     </div>
-                  </>
-                )}
-              </div>
-
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
-
-                <div className="app-conversao-funil-duo">
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        marginBottom: 10,
-                        padding: "6px 10px",
-                        borderRadius: 10,
-                        background: "rgba(112,202,228,0.10)",
-                        border: "1px solid rgba(112,202,228,0.35)",
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: BRAND.ciano,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      Speed Baccarat
-                    </div>
-                    {renderMesaDiaTabela(linhasSpeedBaccarat, "rgba(74,32,130,0.06)", "Mês")}
                   </div>
-                  <div
-                    className="app-conversao-funil-divider"
-                    style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        marginBottom: 10,
-                        padding: "6px 10px",
-                        borderRadius: 10,
-                        background: "rgba(124,58,237,0.10)",
-                        border: "1px solid rgba(124,58,237,0.30)",
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: BRAND.roxoVivo,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      Roleta
-                    </div>
-                    {renderMesaDiaTabela(linhasRoleta, "rgba(74,32,130,0.06)", "Mês")}
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </>
           )}
         </>
