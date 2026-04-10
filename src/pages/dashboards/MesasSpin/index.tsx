@@ -39,7 +39,7 @@ import {
   Legend,
 } from "recharts";
 
-/** ─── Schema v2 (relatorio_* após migração 20260420100000): daily sem operadora; monthly só UAP+ARPU; por_tabela com dia + operadora/mesa texto. */
+/** ─── relatorio_* com operadora_slug (FK operadoras.slug) — migração 20260430140000. Texto `operadora` em por_tabela permanece como rótulo de origem. */
 
 const BRAND = {
   roxo: "#4a2082",
@@ -95,7 +95,7 @@ type LinhaDetalheTab = Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & {
   arpu: number | null;
 };
 
-type UapPorJogoPlanRow = { data: string; jogo: string; uap: number };
+type UapPorJogoPlanRow = { data: string; jogo: string; uap: number | null };
 
 interface PorTabelaRow {
   data_relatorio: string;
@@ -160,16 +160,21 @@ function syntheticNomeTabela(operadora: string, mesa: string): string {
 function mapPorTabelaV2(r: {
   dia: string;
   operadora: string;
+  operadora_slug?: string | null;
   mesa: string;
   ggr: number | null;
   turnover: number | null;
   apostas: number | null;
 }): PorTabelaRow {
   const nome = syntheticNomeTabela(r.operadora, r.mesa);
+  const slug =
+    r.operadora_slug != null && String(r.operadora_slug).trim().length > 0
+      ? String(r.operadora_slug).trim()
+      : slugFromRelatorioOperadora(r.operadora);
   return {
     data_relatorio: r.dia,
     nome_tabela: nome,
-    operadora: slugFromRelatorioOperadora(r.operadora),
+    operadora: slug,
     ggr_d1: r.ggr != null ? Number(r.ggr) : null,
     turnover_d1: r.turnover != null ? Number(r.turnover) : null,
     bets_d1: r.apostas != null ? Number(r.apostas) : null,
@@ -290,10 +295,10 @@ function uapUltimoDiaDoMesPorJogo(rows: UapPorJogoPlanRow[], ym: string, jogo: s
   let bestData: string | null = null;
   let uap: number | undefined;
   for (const r of rows) {
-    if (r.data.slice(0, 7) !== ym || r.jogo !== jogo) continue;
+    if (r.data.slice(0, 7) !== ym || r.jogo !== jogo || r.uap == null) continue;
     if (bestData == null || r.data > bestData) {
       bestData = r.data;
-      uap = r.uap;
+      uap = Number(r.uap);
     }
   }
   return uap;
@@ -305,18 +310,123 @@ const UAP_JOGO_MAP: Record<string, "blackjack" | "roleta" | "baccarat"> = {
   "Speed Baccarat": "baccarat",
 };
 
+/** Evita encadeamento genérico profundo do cliente Supabase. */
+function applyMesasOperadoraSlugFilter(q: any, slugList: string[] | null): any {
+  if (slugList != null && slugList.length > 0) {
+    return q.in("operadora_slug", slugList);
+  }
+  return q;
+}
+
+function buildSlugListForMesasQueries(opts: {
+  operadoraSlugsForcado: string[] | null | undefined;
+  filtroOperadora: string;
+  semRestricaoEscopo: boolean;
+  operadorasVisiveis: string[];
+}): string[] | null {
+  if (opts.operadoraSlugsForcado != null && opts.operadoraSlugsForcado.length > 0) {
+    return [...opts.operadoraSlugsForcado];
+  }
+  if (!opts.semRestricaoEscopo && opts.operadorasVisiveis.length > 0) {
+    return [...opts.operadorasVisiveis];
+  }
+  if (opts.filtroOperadora !== "todas") {
+    return [opts.filtroOperadora];
+  }
+  return null;
+}
+
+type DailyRawRow = {
+  data: string;
+  turnover: number | null;
+  ggr: number | null;
+  apostas: number | null;
+  uap: number | null;
+  operadora_slug: string;
+};
+
+function mergeDailyRowsPorData(rows: DailyRawRow[]): DailyRow[] {
+  const by = new Map<string, DailyRawRow[]>();
+  for (const r of rows) {
+    const d = String(r.data).slice(0, 10);
+    if (!by.has(d)) by.set(d, []);
+    by.get(d)!.push(r);
+  }
+  return [...by.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([data, list]) => {
+      const turnover = list.reduce((s, x) => s + Number(x.turnover ?? 0), 0);
+      const ggr = list.reduce((s, x) => s + Number(x.ggr ?? 0), 0);
+      const bets = list.reduce((s, x) => s + Number(x.apostas ?? 0), 0);
+      const slugs = new Set(list.map((x) => x.operadora_slug));
+      let uap: number | null = null;
+      if (slugs.size === 1) {
+        const withUap = list.find((x) => x.uap != null);
+        uap = withUap != null && withUap.uap != null ? Number(withUap.uap) : null;
+      }
+      return {
+        data,
+        turnover: list.some((x) => x.turnover != null) ? turnover : null,
+        ggr: list.some((x) => x.ggr != null) ? ggr : null,
+        bets: list.some((x) => x.apostas != null) ? bets : null,
+        uap,
+        margin_pct: null,
+        bet_size: null,
+        arpu: null,
+      };
+    });
+}
+
+type MonthlyRawRow = {
+  mes: string;
+  uap: number | null;
+  arpu: number | null;
+  operadora_slug: string;
+};
+
+type UapRawRow = { data: string; jogo: string; uap: number; operadora_slug: string };
+
+function mergeUapPorJogoRows(rows: UapRawRow[]): UapPorJogoPlanRow[] {
+  const byD = new Map<string, Map<string, UapRawRow[]>>();
+  for (const r of rows) {
+    const d = String(r.data).slice(0, 10);
+    if (!byD.has(d)) byD.set(d, new Map());
+    const jm = byD.get(d)!;
+    if (!jm.has(r.jogo)) jm.set(r.jogo, []);
+    jm.get(r.jogo)!.push(r);
+  }
+  const out: UapPorJogoPlanRow[] = [];
+  for (const [data, jm] of byD) {
+    for (const [jogo, list] of jm) {
+      const slugs = new Set(list.map((x) => x.operadora_slug));
+      if (slugs.size !== 1) {
+        out.push({ data, jogo, uap: null });
+        continue;
+      }
+      const u = list[0]!.uap;
+      out.push({ data, jogo, uap: u != null ? Number(u) : null });
+    }
+  }
+  out.sort((a, b) => a.data.localeCompare(b.data) || a.jogo.localeCompare(b.jogo));
+  return out;
+}
+
 function buildUapPorJogoQuery(
   historico: boolean,
   mesRef: { ano: number; mes: number } | undefined,
   from: number,
   to: number,
+  slugList: string[] | null,
 ) {
-  let q = supabase
-    .from("relatorio_uap_por_jogo")
-    .select("data, jogo, uap")
-    .order("data", { ascending: true })
-    .order("jogo", { ascending: true })
-    .range(from, to);
+  let q = applyMesasOperadoraSlugFilter(
+    supabase
+      .from("relatorio_uap_por_jogo")
+      .select("data, jogo, uap, operadora_slug")
+      .order("data", { ascending: true })
+      .order("jogo", { ascending: true })
+      .range(from, to),
+    slugList,
+  );
   if (!historico && mesRef) {
     const { inicio, fim } = getPeriodoComparativoMoM(mesRef.ano, mesRef.mes).atual;
     q = q.gte("data", inicio).lte("data", fim);
@@ -694,48 +804,41 @@ function mapMonthlyV2(r: { mes: string; uap: number | null; arpu: number | null 
   };
 }
 
-/** Perfil operador (escopo): `relatorio_daily_summary` é global — sintetiza um dia a partir das mesas permitidas. */
-function porTabelaRowsParaDailyRows(rows: PorTabelaRow[]): DailyRow[] {
-  const byDate = new Map<
-    string,
-    { t: number; g: number; b: number; tN: number; gN: number; bN: number }
-  >();
+function mergeMonthlyHistoricoRows(rows: MonthlyRawRow[]): MonthlyRow[] {
+  const by = new Map<string, MonthlyRawRow[]>();
   for (const r of rows) {
-    const d = r.data_relatorio;
-    let cell = byDate.get(d);
-    if (!cell) {
-      cell = { t: 0, g: 0, b: 0, tN: 0, gN: 0, bN: 0 };
-      byDate.set(d, cell);
-    }
-    if (r.turnover_d1 != null) {
-      cell.t += Number(r.turnover_d1);
-      cell.tN++;
-    }
-    if (r.ggr_d1 != null) {
-      cell.g += Number(r.ggr_d1);
-      cell.gN++;
-    }
-    if (r.bets_d1 != null) {
-      cell.b += Number(r.bets_d1);
-      cell.bN++;
-    }
+    const ym = String(r.mes).slice(0, 10);
+    if (!by.has(ym)) by.set(ym, []);
+    by.get(ym)!.push(r);
   }
-  return [...byDate.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([data, v]) => ({
-      data,
-      turnover: v.tN > 0 ? v.t : null,
-      ggr: v.gN > 0 ? v.g : null,
-      bets: v.bN > 0 ? v.b : null,
-      uap: null,
-      margin_pct: null,
-      bet_size: null,
-      arpu: null,
-    }));
+  return [...by.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([, list]) => {
+      const slugs = new Set(list.map((x) => x.operadora_slug));
+      if (slugs.size !== 1) {
+        return mapMonthlyV2({ mes: list[0]!.mes, uap: null, arpu: null });
+      }
+      const one = list[0]!;
+      return mapMonthlyV2({ mes: one.mes, uap: one.uap, arpu: one.arpu });
+    });
+}
+
+function mergeMonthlyUapArpuSingleMonth(
+  rows: { uap: number | null; arpu: number | null; operadora_slug: string }[],
+): { uap: number | null; arpu: number | null } | null {
+  if (rows.length === 0) return null;
+  if (new Set(rows.map((r) => r.operadora_slug)).size !== 1) {
+    return { uap: null, arpu: null };
+  }
+  const r = rows[0]!;
+  return {
+    uap: r.uap != null ? Number(r.uap) : null,
+    arpu: r.arpu != null ? Number(r.arpu) : null,
+  };
 }
 
 export default function MesasSpin() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t, isDark, escoposVisiveis } = useApp();
   const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("mesas_spin");
 
@@ -753,7 +856,6 @@ export default function MesasSpin() {
   const [dailyData, setDailyData] = useState<DailyRow[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
   const [porTabelaRows, setPorTabelaRows] = useState<PorTabelaRow[]>([]);
-  const [porTabelaRowsPrevMonth, setPorTabelaRowsPrevMonth] = useState<PorTabelaRow[]>([]);
   const [porTabelaHistAll, setPorTabelaHistAll] = useState<PorTabelaRow[]>([]);
   /** UAP/ARPU mensais oficiais (tabela monthly); quando null, KPI mostra "—". */
   const [monthlyUapArpuSel, setMonthlyUapArpuSel] = useState<{
@@ -811,7 +913,6 @@ export default function MesasSpin() {
   const carregar = useCallback(async () => {
     setLoading(true);
     setPorTabelaRows([]);
-    setPorTabelaRowsPrevMonth([]);
     setPorTabelaHistAll([]);
     setMonthlyUapArpuSel(null);
     setMonthlyUapArpuPrev(null);
@@ -819,144 +920,127 @@ export default function MesasSpin() {
     setUapPorJogoRows([]);
 
     try {
-      const escopoOperadorMesas = Boolean(operadoraSlugsForcado?.length);
+      const slugList = buildSlugListForMesasQueries({
+        operadoraSlugsForcado,
+        filtroOperadora,
+        semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo === true,
+        operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
+      });
       if (historico) {
         const [monthlyRaw, dailyRaw, porAllRaw, uapRaw] = await Promise.all([
           fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_monthly_summary")
-              .select("mes, uap, arpu")
-              .order("mes", { ascending: true })
-              .range(from, to),
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_monthly_summary")
+                .select("mes, uap, arpu, operadora_slug")
+                .order("mes", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
           ),
           fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, uap")
-              .order("data", { ascending: true })
-              .range(from, to),
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_daily_summary")
+                .select("data, turnover, ggr, apostas, uap, operadora_slug")
+                .order("data", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
           ),
           fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_por_tabela")
-              .select("dia, operadora, mesa, ggr, turnover, apostas")
-              .order("dia", { ascending: true })
-              .range(from, to),
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_por_tabela")
+                .select("dia, operadora, operadora_slug, mesa, ggr, turnover, apostas")
+                .order("dia", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
           ),
-          fetchAllPages(async (from, to) => buildUapPorJogoQuery(true, undefined, from, to)),
+          fetchAllPages(async (from, to) => buildUapPorJogoQuery(true, undefined, from, to, slugList)),
         ]);
-        setMonthlyData((monthlyRaw as { mes: string; uap: number | null; arpu: number | null }[]).map(mapMonthlyV2));
-        setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
+        setMonthlyData(mergeMonthlyHistoricoRows(monthlyRaw as MonthlyRawRow[]));
+        setDailyData(mergeDailyRowsPorData(dailyRaw as DailyRawRow[]));
         setPorTabelaHistAll((porAllRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
-        setUapPorJogoRows(
-          (uapRaw as { data: string; jogo: string; uap: number }[]).map((r) => ({
-            data: String(r.data).slice(0, 10),
-            jogo: r.jogo,
-            uap: Number(r.uap),
-          })),
-        );
+        setUapPorJogoRows(mergeUapPorJogoRows(uapRaw as UapRawRow[]));
       } else if (mesSelecionado) {
         const { atual, anterior } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
         const { inicio, fim } = atual;
         const { inicio: pi, fim: pf } = anterior;
 
-        const dailyPrevPromise = escopoOperadorMesas
-          ? Promise.resolve([] as Parameters<typeof mapDailyV2>[0][])
-          : fetchAllPages(async (from, to) =>
+        const [dailyRaw, dailyPrevRaw, mesasMesRaw, uapRaw] = await Promise.all([
+          fetchAllPages(async (from, to) =>
+            applyMesasOperadoraSlugFilter(
               supabase
                 .from("relatorio_daily_summary")
-                .select("data, turnover, ggr, apostas, uap")
+                .select("data, turnover, ggr, apostas, uap, operadora_slug")
+                .gte("data", inicio)
+                .lte("data", fim)
+                .order("data", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
+          ),
+          fetchAllPages(async (from, to) =>
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_daily_summary")
+                .select("data, turnover, ggr, apostas, uap, operadora_slug")
                 .gte("data", pi)
                 .lte("data", pf)
                 .order("data", { ascending: true })
                 .range(from, to),
-            );
-
-        const porTabelaPrevPromise = escopoOperadorMesas
-          ? fetchAllPages(async (from, to) =>
+              slugList,
+            ),
+          ),
+          fetchAllPages(async (from, to) =>
+            applyMesasOperadoraSlugFilter(
               supabase
                 .from("relatorio_por_tabela")
-                .select("dia, operadora, mesa, ggr, turnover, apostas")
-                .gte("dia", pi)
-                .lte("dia", pf)
+                .select("dia, operadora, operadora_slug, mesa, ggr, turnover, apostas")
+                .gte("dia", inicio)
+                .lte("dia", fim)
                 .order("dia", { ascending: true })
                 .order("mesa", { ascending: true })
                 .range(from, to),
-            )
-          : Promise.resolve([] as Parameters<typeof mapPorTabelaV2>[0][]);
-
-        const [dailyRaw, dailyPrevRaw, mesasMesRaw, uapRaw, porPrevRaw] = await Promise.all([
-          fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, uap")
-              .gte("data", inicio)
-              .lte("data", fim)
-              .order("data", { ascending: true })
-              .range(from, to),
+              slugList,
+            ),
           ),
-          dailyPrevPromise,
-          fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_por_tabela")
-              .select("dia, operadora, mesa, ggr, turnover, apostas")
-              .gte("dia", inicio)
-              .lte("dia", fim)
-              .order("dia", { ascending: true })
-              .order("mesa", { ascending: true })
-              .range(from, to),
-          ),
-          fetchAllPages(async (from, to) => buildUapPorJogoQuery(false, mesSelecionado, from, to)),
-          porTabelaPrevPromise,
+          fetchAllPages(async (from, to) => buildUapPorJogoQuery(false, mesSelecionado, from, to, slugList)),
         ]);
 
-        setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
+        setDailyData(mergeDailyRowsPorData(dailyRaw as DailyRawRow[]));
         setMonthlyData([]);
-        setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
-        setPorTabelaRowsPrevMonth((porPrevRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
+        setDailyDataPrevMonth(mergeDailyRowsPorData(dailyPrevRaw as DailyRawRow[]));
         setPorTabelaRows((mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
-        setUapPorJogoRows(
-          (uapRaw as { data: string; jogo: string; uap: number }[]).map((r) => ({
-            data: String(r.data).slice(0, 10),
-            jogo: r.jogo,
-            uap: Number(r.uap),
-          })),
-        );
+        setUapPorJogoRows(mergeUapPorJogoRows(uapRaw as UapRawRow[]));
 
-        const { data: mSel } = await supabase
-          .from("relatorio_monthly_summary")
-          .select("uap, arpu")
-          .eq("mes", inicio)
-          .maybeSingle();
-        setMonthlyUapArpuSel(
-          mSel
-            ? {
-                uap: mSel.uap != null ? Number(mSel.uap) : null,
-                arpu: mSel.arpu != null ? Number(mSel.arpu) : null,
-              }
-            : null,
+        const { data: mSelRows } = await applyMesasOperadoraSlugFilter(
+          supabase.from("relatorio_monthly_summary").select("uap, arpu, operadora_slug").eq("mes", inicio),
+          slugList,
         );
+        setMonthlyUapArpuSel(mergeMonthlyUapArpuSingleMonth(mSelRows ?? []));
 
-        const { data: mPrev } = await supabase
-          .from("relatorio_monthly_summary")
-          .select("uap, arpu")
-          .eq("mes", pi)
-          .maybeSingle();
-        setMonthlyUapArpuPrev(
-          mPrev
-            ? {
-                uap: mPrev.uap != null ? Number(mPrev.uap) : null,
-                arpu: mPrev.arpu != null ? Number(mPrev.arpu) : null,
-              }
-            : null,
+        const { data: mPrevRows } = await applyMesasOperadoraSlugFilter(
+          supabase.from("relatorio_monthly_summary").select("uap, arpu, operadora_slug").eq("mes", pi),
+          slugList,
         );
+        setMonthlyUapArpuPrev(mergeMonthlyUapArpuSingleMonth(mPrevRows ?? []));
       }
     } catch {
       setUapPorJogoRows([]);
     } finally {
       setLoading(false);
     }
-  }, [historico, mesSelecionado, operadoraSlugsForcado]);
+  }, [
+    historico,
+    mesSelecionado,
+    operadoraSlugsForcado,
+    filtroOperadora,
+    escoposVisiveis.semRestricaoEscopo,
+    escoposVisiveis.operadorasVisiveis.join(","),
+  ]);
 
   useEffect(() => {
     void carregar();
@@ -986,43 +1070,6 @@ export default function MesasSpin() {
     [porTabelaHistAll, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
   );
 
-  const escopoOperadorMesasSomenteLeitura = Boolean(operadoraSlugsForcado?.length);
-
-  const dailyDataEfetivo = useMemo(() => {
-    if (!escopoOperadorMesasSomenteLeitura) return dailyData;
-    if (historico) return porTabelaRowsParaDailyRows(porTabelaFiltradasHist);
-    return porTabelaRowsParaDailyRows(porTabelaFiltradas);
-  }, [
-    escopoOperadorMesasSomenteLeitura,
-    historico,
-    dailyData,
-    porTabelaFiltradasHist,
-    porTabelaFiltradas,
-  ]);
-
-  const dailyDataPrevEfetivo = useMemo(() => {
-    if (!escopoOperadorMesasSomenteLeitura) return dailyDataPrevMonth;
-    return porTabelaRowsParaDailyRows(
-      filtrarPorEscopoOperadora(
-        porTabelaRowsPrevMonth,
-        "todas",
-        operadoraSlugsForcado,
-        podeVerOperadora,
-      ),
-    );
-  }, [
-    escopoOperadorMesasSomenteLeitura,
-    dailyDataPrevMonth,
-    porTabelaRowsPrevMonth,
-    operadoraSlugsForcado,
-    podeVerOperadora,
-  ]);
-
-  const uapPorJogoParaComparativo = useMemo(
-    () => (escopoOperadorMesasSomenteLeitura ? [] : uapPorJogoRows),
-    [escopoOperadorMesasSomenteLeitura, uapPorJogoRows],
-  );
-
   const tabelaRows = useMemo(() => {
     const enrich = (base: Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & { label: string }): LinhaDetalheTab => {
       const t = base.turnover;
@@ -1037,7 +1084,7 @@ export default function MesasSpin() {
     };
     if (historico) {
       const dailyByYm = new Map<string, DailyRow[]>();
-      for (const r of dailyDataEfetivo) {
+      for (const r of dailyData) {
         const ym = r.data.slice(0, 7);
         if (!dailyByYm.has(ym)) dailyByYm.set(ym, []);
         dailyByYm.get(ym)!.push(r);
@@ -1050,25 +1097,20 @@ export default function MesasSpin() {
           const dias = dailyByYm.get(ym) ?? [];
           const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
           const m = monthlyByYm.get(ym);
-          const uapLinha = escopoOperadorMesasSomenteLeitura
-            ? agg?.uap ?? null
-            : m?.uap != null
-              ? Number(m.uap)
-              : agg?.uap ?? null;
           const base = enrich({
             label: fmtMesAnoCurtoFromYm(ym),
             turnover: agg?.turnover ?? null,
             ggr: agg?.ggr ?? null,
             bets: agg?.bets ?? null,
-            uap: uapLinha,
+            uap: m?.uap != null ? Number(m.uap) : agg?.uap ?? null,
           });
           return {
             ...base,
-            arpu: escopoOperadorMesasSomenteLeitura ? base.arpu : m?.arpu != null ? Number(m.arpu) : base.arpu,
+            arpu: m?.arpu != null ? Number(m.arpu) : base.arpu,
           };
         });
     }
-    return [...dailyDataEfetivo]
+    return [...dailyData]
       .sort((a, b) => b.data.localeCompare(a.data))
       .map((r) =>
         enrich({
@@ -1082,7 +1124,7 @@ export default function MesasSpin() {
           uap: r.uap,
         }),
       );
-  }, [historico, dailyDataEfetivo, monthlyData, escopoOperadorMesasSomenteLeitura]);
+  }, [historico, dailyData, monthlyData]);
 
   const kpiExibir = useMemo(() => {
     if (historico) {
@@ -1112,11 +1154,8 @@ export default function MesasSpin() {
         arpu,
       };
     }
-    const base = dailyDataEfetivo.length === 0 ? null : aggDailyMesKpi(dailyDataEfetivo);
+    const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
     if (!base) return null;
-    if (escopoOperadorMesasSomenteLeitura) {
-      return base;
-    }
     if (
       mesSelecionado &&
       isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
@@ -1128,23 +1167,13 @@ export default function MesasSpin() {
       uap: monthlyUapArpuSel?.uap ?? null,
       arpu: monthlyUapArpuSel?.arpu ?? null,
     };
-  }, [
-    historico,
-    tabelaRows,
-    dailyDataEfetivo,
-    monthlyUapArpuSel,
-    mesSelecionado,
-    escopoOperadorMesasSomenteLeitura,
-  ]);
+  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, mesSelecionado]);
 
   const kpiAntExibir = useMemo(() => {
     const base =
-      historico || dailyDataPrevEfetivo.length === 0 ? null : aggDailyMesKpi(dailyDataPrevEfetivo);
+      historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
     if (!base) return null;
     if (historico) return base;
-    if (escopoOperadorMesasSomenteLeitura) {
-      return base;
-    }
     if (
       mesSelecionado &&
       isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
@@ -1156,13 +1185,7 @@ export default function MesasSpin() {
       uap: monthlyUapArpuPrev?.uap ?? base.uap,
       arpu: monthlyUapArpuPrev?.arpu ?? base.arpu,
     };
-  }, [
-    historico,
-    dailyDataPrevEfetivo,
-    monthlyUapArpuPrev,
-    mesSelecionado,
-    escopoOperadorMesasSomenteLeitura,
-  ]);
+  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado]);
 
   /** Só Blackjack 1 / 2 / VIP — comparativo lateral. */
   const mesasOpcoesBlackjack = useMemo(() => {
@@ -1211,7 +1234,7 @@ export default function MesasSpin() {
   const linhasComparativoJogo = useMemo((): LinhaComparativoJogoTab[] => {
     if (historico) {
       const dailyByYm = new Map<string, DailyRow[]>();
-      for (const r of dailyDataEfetivo) {
+      for (const r of dailyData) {
         const ym = r.data.slice(0, 7);
         if (!dailyByYm.has(ym)) dailyByYm.set(ym, []);
         dailyByYm.get(ym)!.push(r);
@@ -1231,7 +1254,7 @@ export default function MesasSpin() {
             ym,
             byYm.get(ym)!,
             operadorasListFmt,
-            uapPorJogoParaComparativo,
+            uapPorJogoRows,
             totaisOficiaisHistoricoMes(ym, dailyByYm, monthlyByYm),
           ),
         );
@@ -1251,13 +1274,14 @@ export default function MesasSpin() {
     }
 
     const uapByDateJogo = new Map<string, Partial<Record<"blackjack" | "roleta" | "baccarat", number>>>();
-    for (const r of uapPorJogoParaComparativo) {
+    for (const r of uapPorJogoRows) {
+      if (r.uap == null) continue;
       if (!uapByDateJogo.has(r.data)) uapByDateJogo.set(r.data, {});
       const jogoKey = UAP_JOGO_MAP[r.jogo];
-      if (jogoKey) uapByDateJogo.get(r.data)![jogoKey] = r.uap;
+      if (jogoKey) uapByDateJogo.get(r.data)![jogoKey] = Number(r.uap);
     }
 
-    return [...dailyDataEfetivo]
+    return [...dailyData]
       .sort((a, b) => b.data.localeCompare(a.data))
       .map((dr) => {
         const dataIso = dr.data;
@@ -1277,12 +1301,12 @@ export default function MesasSpin() {
       });
   }, [
     historico,
-    dailyDataEfetivo,
+    dailyData,
     monthlyData,
     porTabelaFiltradasHist,
     porTabelaFiltradas,
     operadorasListFmt,
-    uapPorJogoParaComparativo,
+    uapPorJogoRows,
   ]);
 
   const kpisAtivosComparativo = useMemo(
@@ -1364,7 +1388,7 @@ export default function MesasSpin() {
     });
   }, [mesasOpcoesBlackjack, compMesaA]);
 
-  const isHistoricoKpi = historico || dailyDataPrevEfetivo.length === 0;
+  const isHistoricoKpi = historico || dailyDataPrevMonth.length === 0;
 
   const brand = useDashboardBrand();
 
