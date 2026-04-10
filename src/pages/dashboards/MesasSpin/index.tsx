@@ -656,6 +656,12 @@ function linhaMesaPorDiaFromRow(r: PorTabelaRow): LinhaMesaPorDia {
   };
 }
 
+/** ARPU no comparativo de jogo: GGR ÷ UAP (por jogo e no total oficial). */
+function arpuComparativoFromGgrUap(ggr: number | null, uap: number | null): number | null {
+  if (ggr == null || uap == null || Number(uap) === 0) return null;
+  return Number(ggr) / Number(uap);
+}
+
 /** Métricas por jogo no comparativo (UAP vem de `relatorio_uap_por_jogo`). */
 type CelulaJogoMetricas = {
   ggr: number | null;
@@ -664,7 +670,6 @@ type CelulaJogoMetricas = {
   margin_pct: number | null;
   bet_size: number | null;
   uap: number | null;
-  /** GGR ÷ Apostas (modo todas as operadoras no comparativo). */
   arpu: number | null;
 };
 
@@ -702,9 +707,7 @@ function aggregateCellFromPorTabelaRows(rows: PorTabelaRow[]): CelulaJogoMetrica
     turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
   const bet_size =
     betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
-  const arpu =
-    betsOut != null && betsOut !== 0 && ggrOut != null ? ggrOut / betsOut : null;
-  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size, uap: null, arpu };
+  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size, uap: null, arpu: null };
 }
 
 /** Agrega `relatorio_por_tabela` por mês (YYYY-MM) numa linha por período. */
@@ -756,12 +759,7 @@ function totaisOficiaisFromDailyRow(dr: DailyRow): TotaisOficiaisComparativo {
     t != null && Number(t) !== 0 && g != null ? (Number(g) / Number(t)) * 100 : null;
   const bet_size =
     b != null && Number(b) !== 0 && t != null ? Number(t) / Number(b) : null;
-  const arpu =
-    dr.arpu != null
-      ? dr.arpu
-      : b != null && Number(b) !== 0 && g != null
-        ? Number(g) / Number(b)
-        : null;
+  const arpu = arpuComparativoFromGgrUap(g != null ? Number(g) : null, u != null ? Number(u) : null);
   return { turnover: t, ggr: g, bets: b, uap: u, margin_pct, bet_size, arpu };
 }
 
@@ -783,8 +781,9 @@ function totaisOficiaisHistoricoMes(
       : null;
   const bet_size =
     bets != null && Number(bets) !== 0 && turnover != null ? Number(turnover) / Number(bets) : null;
-  const arpu =
-    bets != null && Number(bets) !== 0 && ggr != null ? Number(ggr) / Number(bets) : null;
+  const uapN = uap != null ? Number(uap) : null;
+  const ggrN = ggr != null ? Number(ggr) : null;
+  const arpu = arpuComparativoFromGgrUap(ggrN, uapN);
   return { turnover, ggr, bets, uap, margin_pct, bet_size, arpu };
 }
 
@@ -813,20 +812,29 @@ function linhaComparativoJogoAgregadaMes(
     else if (lbl === "Roleta") rl.push(r);
     else if (lbl === "Speed Baccarat") bc.push(r);
   }
+  const bjAgg = aggregateCellFromPorTabelaRows(bj);
+  const rlAgg = aggregateCellFromPorTabelaRows(rl);
+  const bcAgg = aggregateCellFromPorTabelaRows(bc);
+  const uapBj = uapUltimoDiaDoMesPorJogo(uapRows, ym, "Blackjack") ?? null;
+  const uapRl = uapUltimoDiaDoMesPorJogo(uapRows, ym, "Roleta") ?? null;
+  const uapBc = uapUltimoDiaDoMesPorJogo(uapRows, ym, "Speed Baccarat") ?? null;
   return {
     dataIso: `${ym}-01`,
     labelData: fmtMesAnoCurtoFromYm(ym),
     blackjack: {
-      ...aggregateCellFromPorTabelaRows(bj),
-      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Blackjack") ?? null,
+      ...bjAgg,
+      uap: uapBj,
+      arpu: arpuComparativoFromGgrUap(bjAgg.ggr, uapBj),
     },
     roleta: {
-      ...aggregateCellFromPorTabelaRows(rl),
-      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Roleta") ?? null,
+      ...rlAgg,
+      uap: uapRl,
+      arpu: arpuComparativoFromGgrUap(rlAgg.ggr, uapRl),
     },
     baccarat: {
-      ...aggregateCellFromPorTabelaRows(bc),
-      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Speed Baccarat") ?? null,
+      ...bcAgg,
+      uap: uapBc,
+      arpu: arpuComparativoFromGgrUap(bcAgg.ggr, uapBc),
     },
     totaisOficiais,
   };
@@ -1605,12 +1613,27 @@ export default function MesasSpin() {
         const bjCell = aggregateCellFromPorTabelaRows(b.bj);
         const rlCell = aggregateCellFromPorTabelaRows(b.roleta);
         const bcCell = aggregateCellFromPorTabelaRows(b.baccarat);
+        const uapBj = uapDia.blackjack ?? null;
+        const uapRl = uapDia.roleta ?? null;
+        const uapBc = uapDia.baccarat ?? null;
         return {
           dataIso,
           labelData: fmtDiaMesPtBr(dataIso),
-          blackjack: { ...bjCell, uap: uapDia.blackjack ?? null },
-          roleta: { ...rlCell, uap: uapDia.roleta ?? null },
-          baccarat: { ...bcCell, uap: uapDia.baccarat ?? null },
+          blackjack: {
+            ...bjCell,
+            uap: uapBj,
+            arpu: arpuComparativoFromGgrUap(bjCell.ggr, uapBj),
+          },
+          roleta: {
+            ...rlCell,
+            uap: uapRl,
+            arpu: arpuComparativoFromGgrUap(rlCell.ggr, uapRl),
+          },
+          baccarat: {
+            ...bcCell,
+            uap: uapBc,
+            arpu: arpuComparativoFromGgrUap(bcCell.ggr, uapBc),
+          },
           totaisOficiais: totaisOficiaisFromDailyRow(dr),
         };
       });
@@ -2824,36 +2847,9 @@ export default function MesasSpin() {
                             <div style={{ padding: "10px 12px 14px 36px" }}>
                               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                 <caption style={{ display: "none" }}>
-                                  Operadoras — {r.label}
+                                  Detalhe por operadora — {r.label}: operadora, GGR, turnover, apostas, margem,
+                                  aposta média, UAP e ARPU.
                                 </caption>
-                                <thead>
-                                  <tr>
-                                    <th scope="col" style={thStyle}>
-                                      Operadora
-                                    </th>
-                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
-                                      GGR
-                                    </th>
-                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
-                                      Turnover
-                                    </th>
-                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
-                                      Apostas
-                                    </th>
-                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
-                                      Margem
-                                    </th>
-                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
-                                      Aposta média
-                                    </th>
-                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
-                                      UAP
-                                    </th>
-                                    <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
-                                      ARPU
-                                    </th>
-                                  </tr>
-                                </thead>
                                 <tbody>
                                   {subLinhas.map((sl, j) => {
                                     const gg = sl.ggr ?? 0;
@@ -2865,9 +2861,9 @@ export default function MesasSpin() {
                                             j % 2 === 1 ? "rgba(74,32,130,0.04)" : "transparent",
                                         }}
                                       >
-                                        <td style={{ ...tdStyle, fontSize: 12, fontWeight: 600 }}>
+                                        <th scope="row" style={{ ...tdStyle, fontSize: 12, fontWeight: 600 }}>
                                           {slugToNome(sl.operadora_slug)}
-                                        </td>
+                                        </th>
                                         <td
                                           style={{
                                             ...tdNum,
