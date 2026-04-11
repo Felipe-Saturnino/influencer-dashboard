@@ -2837,71 +2837,53 @@ export default function MesasSpin() {
                         <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
                         <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
                       </tr>
-                      {isDrillParent && aberto && (
-                        <tr
-                          style={{
-                            background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
-                          }}
-                        >
-                          <td colSpan={8} style={{ padding: 0, borderTop: `1px solid ${t.cardBorder}` }}>
-                            <div style={{ padding: "10px 12px 14px 36px" }}>
-                              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                <caption style={{ display: "none" }}>
-                                  Detalhe por operadora — {r.label}: operadora, GGR, turnover, apostas, margem,
-                                  aposta média, UAP e ARPU.
-                                </caption>
-                                <tbody>
-                                  {subLinhas.map((sl, j) => {
-                                    const gg = sl.ggr ?? 0;
-                                    return (
-                                      <tr
-                                        key={sl.operadora_slug}
-                                        style={{
-                                          background:
-                                            j % 2 === 1 ? "rgba(74,32,130,0.04)" : "transparent",
-                                        }}
-                                      >
-                                        <th scope="row" style={{ ...tdStyle, fontSize: 12, fontWeight: 600 }}>
-                                          {slugToNome(sl.operadora_slug)}
-                                        </th>
-                                        <td
-                                          style={{
-                                            ...tdNum,
-                                            fontSize: 12,
-                                            color:
-                                              gg > 0 ? BRAND.verde : gg < 0 ? BRAND.vermelho : t.text,
-                                            fontWeight: 600,
-                                          }}
-                                        >
-                                          {sl.ggr != null ? fmtBRL(sl.ggr) : "—"}
-                                        </td>
-                                        <td style={{ ...tdNum, fontSize: 12 }}>
-                                          {sl.turnover != null ? fmtBRL(sl.turnover) : "—"}
-                                        </td>
-                                        <td style={{ ...tdNum, fontSize: 12 }}>
-                                          {sl.bets != null ? sl.bets.toLocaleString("pt-BR") : "—"}
-                                        </td>
-                                        <td style={{ ...tdNum, fontSize: 12 }}>
-                                          <MarginBadge value={sl.margin_pct} />
-                                        </td>
-                                        <td style={{ ...tdNum, fontSize: 12 }}>
-                                          {sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}
-                                        </td>
-                                        <td style={{ ...tdNum, fontSize: 12 }}>
-                                          {sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}
-                                        </td>
-                                        <td style={{ ...tdNum, fontSize: 12 }}>
-                                          {sl.arpu != null ? fmtBRL(sl.arpu) : "—"}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
+                      {isDrillParent &&
+                        aberto &&
+                        subLinhas.map((sl, j) => {
+                          const gg = sl.ggr ?? 0;
+                          return (
+                            <tr
+                              key={`${rowKey}-${sl.operadora_slug}`}
+                              style={{
+                                background:
+                                  j % 2 === 1 ? "rgba(74,32,130,0.04)" : "rgba(74,32,130,0.02)",
+                                borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
+                              }}
+                            >
+                              <th
+                                scope="row"
+                                style={{
+                                  ...tdStyle,
+                                  fontWeight: 600,
+                                  paddingLeft: 32,
+                                  boxShadow:
+                                    "inset 3px 0 0 color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
+                                }}
+                              >
+                                {slugToNome(sl.operadora_slug)}
+                              </th>
+                              <td
+                                style={{
+                                  ...tdNum,
+                                  color: gg > 0 ? BRAND.verde : gg < 0 ? BRAND.vermelho : t.text,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {sl.ggr != null ? fmtBRL(sl.ggr) : "—"}
+                              </td>
+                              <td style={tdNum}>{sl.turnover != null ? fmtBRL(sl.turnover) : "—"}</td>
+                              <td style={tdNum}>
+                                {sl.bets != null ? sl.bets.toLocaleString("pt-BR") : "—"}
+                              </td>
+                              <td style={{ ...tdNum }}>
+                                <MarginBadge value={sl.margin_pct} />
+                              </td>
+                              <td style={tdNum}>{sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}</td>
+                              <td style={tdNum}>{sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}</td>
+                              <td style={tdNum}>{sl.arpu != null ? fmtBRL(sl.arpu) : "—"}</td>
+                            </tr>
+                          );
+                        })}
                     </Fragment>
                   );
                 })}
