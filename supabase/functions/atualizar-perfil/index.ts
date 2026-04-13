@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { readJwtSecretFromEnv, verifySupabaseUserAccessToken } from '../_shared/verifyAccessToken.ts'
 
 // Edge Function: atualizar-perfil — usa service_role para garantir que o update persista
 // Apenas admins podem chamar (verificado via JWT)
@@ -115,7 +116,17 @@ serve(async (req) => {
 
   const token = authHeader.replace('Bearer ', '')
 
-  const whoami = await goTrueGetUserId(supabaseUrl, anonKey, token)
+  /** Preferir verificação HS256 local (não depende de auth.sessions). Fallback: GET /user. */
+  const whoami = await (async (): Promise<
+    { ok: true; userId: string } | { ok: false; error: string; status: number }
+  > => {
+    const secret = readJwtSecretFromEnv()
+    if (secret) {
+      const v = await verifySupabaseUserAccessToken(token, secret)
+      if (v.ok) return { ok: true, userId: v.userId }
+    }
+    return await goTrueGetUserId(supabaseUrl, anonKey, token)
+  })()
   if (!whoami.ok) {
     return new Response(JSON.stringify({ error: whoami.error }), {
       status: whoami.status >= 400 && whoami.status < 600 ? whoami.status : 401,
