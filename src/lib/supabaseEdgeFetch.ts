@@ -15,6 +15,23 @@ class TryDirectInstead extends Error {
   }
 }
 
+/** Direto falhou por rede/timeout — vale tentar o proxy /api (última tentativa). */
+function isRetriableNetworkError(e: unknown): boolean {
+  if (typeof DOMException !== "undefined" && e instanceof DOMException && e.name === "AbortError") {
+    return true;
+  }
+  if (e instanceof Error && e.name === "AbortError") {
+    return true;
+  }
+  if (e instanceof TypeError) {
+    return true;
+  }
+  if (e instanceof Error && /direct_read_body|Failed to fetch|Load failed|NetworkError/i.test(e.message)) {
+    return true;
+  }
+  return false;
+}
+
 function resolveEdgeFunctionUrl(functionName: string): string {
   const base = (supabaseUrl ?? "").trim();
   if (!base) {
@@ -67,19 +84,23 @@ function looksLikeHtmlBody(text: string): boolean {
   return s.startsWith("<!") || s.startsWith("<html") || s.startsWith("<HTML");
 }
 
+type ProxyOptions = { isLastResort?: boolean };
+
 /**
  * POST /api/{functionName} — Cloudflare Pages (ou Vite dev) repassa ao Supabase no servidor.
- * Evita navegador pendurado em POST direto para *.supabase.co (rede/proxy/IPv6).
+ * Quando isLastResort=true, não lança TryDirectInstead (já tentámos o browser → Supabase antes).
  */
 async function callViaSameOriginProxy<T>(
   functionName: string,
   body: object,
   accessToken: string,
-  timeoutMs: number
+  timeoutMs: number,
+  opts?: ProxyOptions
 ): Promise<T> {
   const path = `/api/${functionName}`;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  const last = opts?.isLastResort === true;
   try {
     let res: Response;
     try {
@@ -93,6 +114,9 @@ async function callViaSameOriginProxy<T>(
         signal: ctrl.signal,
       });
     } catch (err) {
+      if (last) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
       if (
         (typeof DOMException !== "undefined" && err instanceof DOMException && err.name === "AbortError") ||
         (err instanceof Error && err.name === "AbortError")
@@ -111,6 +135,11 @@ async function callViaSameOriginProxy<T>(
     const ct = res.headers.get("content-type") ?? "";
 
     if (res.ok && (!ct.includes("application/json") || looksLikeHtmlBody(text))) {
+      if (last) {
+        throw new Error(
+          "Resposta inválida do proxy /api (HTML ou não-JSON). O deploy das Pages Functions pode estar incorreto."
+        );
+      }
       throw new TryDirectInstead("proxy_html");
     }
 
@@ -124,17 +153,21 @@ async function callViaSameOriginProxy<T>(
     }
 
     if (!res.ok) {
-      if (res.status === 404 || res.status === 502 || res.status === 503 || res.status === 504 || res.status === 524) {
-        throw new TryDirectInstead(`proxy_http_${res.status}`);
-      }
       let msg = `Erro ${res.status}`;
       if (parsed && typeof parsed === "object" && parsed !== null) {
         const o = parsed as { error?: string; message?: string };
         if (typeof o.error === "string" && o.error.trim()) msg = o.error;
         else if (typeof o.message === "string" && o.message.trim()) msg = o.message;
       }
+      if (
+        !last &&
+        (res.status === 404 || res.status === 502 || res.status === 503 || res.status === 504 || res.status === 524)
+      ) {
+        throw new TryDirectInstead(`proxy_http_${res.status}`);
+      }
       /** Proxy CF sem env no Worker: build do app ainda pode ter VITE_* — tenta Supabase direto no browser. */
       if (
+        !last &&
         res.status === 500 &&
         /configura(ç|c)ão do servidor incompleta|VITE_SUPABASE_URL|SUPABASE_URL/i.test(msg)
       ) {
@@ -201,8 +234,8 @@ async function callDirectToSupabase<T>(
 }
 
 /**
- * Ordem: 1) /api/* (mesma origem) 2) Supabase direto.
- * Muitos ambientes completam o proxy mesmo quando o browser não recebe resposta do host *.supabase.co.
+ * Ordem: 1) Supabase direto no browser 2) /api/* (Cloudflare) só se a direta falhar por rede/timeout.
+ * O caminho Worker → Supabase costuma estourar tempo (504) em alguns projetos; o browser → Supabase costuma responder.
  */
 export async function callSupabaseEdgeFunction<T = unknown>(
   functionName: string,
@@ -229,36 +262,56 @@ export async function callSupabaseEdgeFunction<T = unknown>(
     throw new Error("Sessão expirada ou ausente. Faça login novamente.");
   }
 
-  const useProxyFirst = typeof window !== "undefined" && PROXY_FUNCTIONS.has(functionName);
+  const useProxyFallback = typeof window !== "undefined" && PROXY_FUNCTIONS.has(functionName);
 
-  if (useProxyFirst) {
+  async function callDirect(): Promise<T> {
+    return await callDirectToSupabase<T>(url, body, accessToken, timeoutMs);
+  }
+
+  function formatDirectFailure(e: unknown): Error {
+    const aborted =
+      (typeof DOMException !== "undefined" && e instanceof DOMException && e.name === "AbortError") ||
+      (e instanceof Error && e.name === "AbortError");
+    if (aborted) {
+      return new Error(
+        `Tempo esgotado (${Math.round(timeoutMs / 1000)}s) ao chamar "${functionName}" no Supabase.\n` +
+          `URL: ${url}\n\n` +
+          `1) No painel Supabase → Edge Functions: confira se "${functionName}" está listada.\n` +
+          `2) Deploy: supabase functions deploy ${functionName}\n` +
+          `3) Secrets (criar-usuario): SENHA_PADRAO (mín. 8 caracteres).\n` +
+          `4) Se só o proxy /api falhar, esta chamada direta deve funcionar após atualizar o front.\n` +
+          `5) Teste: curl -i -X OPTIONS "${url}"`
+      );
+    }
+    return e instanceof Error ? e : new Error(String(e));
+  }
+
+  if (useProxyFallback) {
     try {
-      return await callViaSameOriginProxy<T>(functionName, body, accessToken, timeoutMs);
+      return await callDirect();
     } catch (e) {
-      if (!(e instanceof TryDirectInstead)) {
+      if (!isRetriableNetworkError(e)) {
         throw e;
+      }
+      try {
+        return await callViaSameOriginProxy<T>(functionName, body, accessToken, timeoutMs, {
+          isLastResort: true,
+        });
+      } catch (eProxy) {
+        const directFail = formatDirectFailure(e);
+        const proxyMsg = eProxy instanceof Error ? eProxy.message : String(eProxy);
+        throw new Error(
+          `${directFail.message}\n\n` +
+            `Tentativa extra via proxy /api/${functionName} também falhou:\n${proxyMsg}`
+        );
       }
     }
   }
 
   try {
-    return await callDirectToSupabase<T>(url, body, accessToken, timeoutMs);
+    return await callDirect();
   } catch (e) {
-    const aborted =
-      (typeof DOMException !== "undefined" && e instanceof DOMException && e.name === "AbortError") ||
-      (e instanceof Error && e.name === "AbortError");
-    if (aborted) {
-      throw new Error(
-        `Tempo esgotado (${Math.round(timeoutMs / 1000)}s) ao chamar "${functionName}" no Supabase.\n` +
-          `URL: ${url}\n\n` +
-          `1) No painel Supabase → Edge Functions: confira se "criar-usuario" (e demais) está listada.\n` +
-          `2) No terminal (projeto linkado): supabase functions deploy ${functionName} --no-verify-jwt\n` +
-          `3) Secrets: SENHA_PADRAO (mín. 8 caracteres).\n` +
-          `4) Cloudflare Pages: em Settings → Functions, VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY para o proxy /api (Preview + Production).\n` +
-          `5) Teste fora do browser: curl -i -X OPTIONS "${url}" (deve responder rápido, não ficar pendurado).`
-      );
-    }
-    throw e;
+    throw formatDirectFailure(e);
   }
 }
 
