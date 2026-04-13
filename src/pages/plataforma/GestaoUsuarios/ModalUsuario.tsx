@@ -55,6 +55,14 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     })();
   }, []);
 
+  /** Sincroniza cabeçalho do formulário quando abre outro usuário (evita estado velho se o modal reutilizar instância). */
+  useEffect(() => {
+    setNome(editando?.name ?? "");
+    setEmail(editando?.email ?? "");
+    setRole((editando?.role ?? "gestor") as Role);
+    setErro("");
+  }, [editando?.id]);
+
   useEffect(() => {
     const scopes = editando?.scopes ?? [];
     setScopeInfluencers(scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref));
@@ -63,13 +71,14 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setScopeGestorTipos(scopes.filter((s) => s.scope_type === "gestor_tipo").map((s) => s.scope_ref));
   }, [editando]);
 
+  /** Só ao mudar o perfil no select: limpa escopos incompatíveis (não dispare junto com troca de `editando`). */
   useEffect(() => {
     if (editando && role === editando.role) return;
     setScopeInfluencers([]);
     setScopeOperadoras([]);
     setScopePares([]);
     setScopeGestorTipos([]);
-  }, [role, editando]);
+  }, [role]);
 
   useEffect(() => {
     if (role !== "agencia") return;

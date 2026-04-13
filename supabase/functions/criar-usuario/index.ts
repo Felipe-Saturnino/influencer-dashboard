@@ -97,6 +97,8 @@ async function goTrueAdminCreateUser(
   email: string,
   password: string,
   name: string,
+  /** Perfil em profiles.role — o trigger handle_new_user usa raw_user_meta_data->>'role' (senão cai em 'influencer'). */
+  perfilRole: string,
 ): Promise<{ uid: string } | { error: string }> {
   const base = supabaseUrl.replace(/\/$/, '')
   const url = `${base}/auth/v1/admin/users`
@@ -110,7 +112,7 @@ async function goTrueAdminCreateUser(
         email,
         password,
         email_confirm: true,
-        user_metadata: { name },
+        user_metadata: { name, role: perfilRole },
       }),
       signal: ctrl.signal,
     })
@@ -344,6 +346,7 @@ serve(async (req) => {
       email.trim().toLowerCase(),
       senhaPadrao,
       nome.trim(),
+      role.trim(),
     )
     if ('error' in created) {
       return new Response(JSON.stringify({ error: created.error }), {

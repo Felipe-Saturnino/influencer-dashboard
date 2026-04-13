@@ -629,6 +629,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
 
       {modalOpen && (
         <ModalUsuario
+          key={editando?.id ?? "novo"}
           t={t}
           editando={editando}
           operadoras={operadoras}
