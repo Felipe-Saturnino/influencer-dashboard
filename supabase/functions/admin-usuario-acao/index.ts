@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { readJwtSecretFromEnv, verifySupabaseUserAccessToken } from './verifyAccessToken.ts'
+import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
 
 // Edge Function: admin-usuario-acao — desativar/ativar perfil (sem excluir) e reset de senha padrão + must_change_password
 // Usa service_role; apenas admins (JWT) podem chamar.
@@ -12,6 +12,32 @@ const supabaseServiceOptions = {
 } as const
 
 const AUTH_USER_MS = 15_000
+
+function readJwtSecretFromEnv(): string {
+  return (Deno.env.get('JWT_SECRET') ?? Deno.env.get('SUPABASE_JWT_SECRET') ?? '').trim()
+}
+
+async function verifySupabaseUserAccessToken(
+  accessToken: string,
+  jwtSecret: string,
+): Promise<{ ok: true; userId: string } | { ok: false; error: string }> {
+  const tok = accessToken.trim()
+  const secret = jwtSecret.trim()
+  if (!tok || !secret) {
+    return { ok: false, error: 'Token ou JWT secret ausente' }
+  }
+  try {
+    const { payload } = await jwtVerify(tok, new TextEncoder().encode(secret), {
+      algorithms: ['HS256'],
+    })
+    const sub = typeof payload.sub === 'string' ? payload.sub : ''
+    if (!sub) return { ok: false, error: 'JWT sem sub (usuário)' }
+    return { ok: true, userId: sub }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'JWT inválido ou expirado'
+    return { ok: false, error: msg }
+  }
+}
 
 async function goTrueGetUserId(
   supabaseUrl: string,
