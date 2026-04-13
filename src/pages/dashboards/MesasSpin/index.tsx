@@ -284,6 +284,88 @@ function fmtDiaMesPtBr(isoYmd: string): string {
   });
 }
 
+/** `YYYY-MM-DD` a partir de string vinda do PostgREST (date ou timestamptz). */
+function normalizeMesasYmd(isoish: string): string {
+  const s = String(isoish ?? "").trim();
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+/** Soma/subtrai dias no calendário (UTC) sem depender do fuso local do browser. */
+function addCalendarDaysIso(ymd: string, deltaDays: number): string {
+  const ymdN = normalizeMesasYmd(ymd);
+  const [y, m, d] = ymdN.split("-").map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return ymdN;
+  const dt = new Date(Date.UTC(y, m - 1, d + deltaDays));
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+type PorTabelaGameBucket = { bj: PorTabelaRow[]; roleta: PorTabelaRow[]; baccarat: PorTabelaRow[] };
+
+/** Agrupa `relatorio_por_tabela` pela data operacional do resumo diário: `operacional = dia_na_linha + shiftDays`. */
+function buildPorTabelaGameBuckets(
+  rows: PorTabelaRow[],
+  operadorasListFmt: { slug: string; nome: string }[],
+  shiftDays: number,
+): Map<string, PorTabelaGameBucket> {
+  const byDate = new Map<string, PorTabelaGameBucket>();
+  for (const r of rows) {
+    const diaLinha = normalizeMesasYmd(r.data_relatorio);
+    const operational = addCalendarDaysIso(diaLinha, shiftDays);
+    const label = labelMesaCda(r, operadorasListFmt);
+    if (!byDate.has(operational)) byDate.set(operational, { bj: [], roleta: [], baccarat: [] });
+    const bucket = byDate.get(operational)!;
+    if (isMesaBlackjackComparativo(r, operadorasListFmt)) bucket.bj.push(r);
+    else if (label === "Roleta") bucket.roleta.push(r);
+    else if (label === "Speed Baccarat") bucket.baccarat.push(r);
+  }
+  return byDate;
+}
+
+function sumComparableGameBets(bucket: PorTabelaGameBucket): number {
+  const bj = aggregateCellFromPorTabelaRows(bucket.bj).bets;
+  const rl = aggregateCellFromPorTabelaRows(bucket.roleta).bets;
+  const bc = aggregateCellFromPorTabelaRows(bucket.baccarat).bets;
+  return (bj ?? 0) + (rl ?? 0) + (bc ?? 0);
+}
+
+/**
+ * Alguns lotes gravam `relatorio_por_tabela.dia` com calendário deslocado em ±1 dia em relação a
+ * `relatorio_daily_summary.data`. Escolhe o shift que melhor alinha soma(BJ+Roleta+Bacc) ao total de apostas.
+ */
+function pickPorTabelaOperDayShift(
+  dailyRows: DailyRow[],
+  porRows: PorTabelaRow[],
+  operadorasListFmt: { slug: string; nome: string }[],
+): number {
+  const SHIFTS = [0, 1, -1] as const;
+  let best: number = 0;
+  let bestScore = Infinity;
+  for (const s of SHIFTS) {
+    const byDate = buildPorTabelaGameBuckets(porRows, operadorasListFmt, s);
+    let penalty = 0;
+    let n = 0;
+    for (const dr of dailyRows) {
+      const key = normalizeMesasYmd(dr.data);
+      const b = byDate.get(key) ?? { bj: [], roleta: [], baccarat: [] };
+      const sumG = sumComparableGameBets(b);
+      const off = dr.bets != null ? Number(dr.bets) : null;
+      if (off == null || off <= 0 || sumG <= 0) continue;
+      n++;
+      if (sumG > off * 1.0005) penalty += 1e12;
+      penalty += (sumG - off) ** 2;
+    }
+    const sc = n === 0 ? 1e18 : penalty;
+    if (sc < bestScore) {
+      bestScore = sc;
+      best = s;
+    }
+  }
+  return best;
+}
+
 /** `YYYY-MM` → ex.: Jan/2026, Dez/2025 (coluna Mês na visão histórico). */
 function fmtMesAnoCurtoFromYm(ym: string): string {
   const [ys, ms] = ym.split("-");
@@ -738,7 +820,7 @@ function linhasMesaAgregadasPorMes(
     });
 }
 
-/** Mesmos totais do bloco Detalhamento Diário (`relatorio_daily_summary` / mensal). A coluna Total do comparativo usa isto; as células por jogo somam só mesas BJ/Roleta/Speed Baccarat em `por_tabela`. */
+/** Mesmos totais do bloco Detalhamento Diário (`relatorio_daily_summary` / mensal). A coluna Total do comparativo usa isto; as células por jogo somam só mesas BJ/Roleta/Speed Baccarat em `por_tabela` (alinhadas ao `data` do daily com deslocamento automático de ±1 dia quando necessário). */
 type TotaisOficiaisComparativo = {
   ggr: number | null;
   turnover: number | null;
@@ -1578,32 +1660,22 @@ export default function MesasSpin() {
           ),
         );
     }
-    const byDate = new Map<
-      string,
-      { bj: PorTabelaRow[]; roleta: PorTabelaRow[]; baccarat: PorTabelaRow[] }
-    >();
-    for (const r of porTabelaFiltradas) {
-      const d = r.data_relatorio;
-      const label = labelMesaCda(r, operadorasListFmt);
-      if (!byDate.has(d)) byDate.set(d, { bj: [], roleta: [], baccarat: [] });
-      const bucket = byDate.get(d)!;
-      if (isMesaBlackjackComparativo(r, operadorasListFmt)) bucket.bj.push(r);
-      else if (label === "Roleta") bucket.roleta.push(r);
-      else if (label === "Speed Baccarat") bucket.baccarat.push(r);
-    }
+    const shiftOper = pickPorTabelaOperDayShift(dailyData, porTabelaFiltradas, operadorasListFmt);
+    const byDate = buildPorTabelaGameBuckets(porTabelaFiltradas, operadorasListFmt, shiftOper);
 
     const uapByDateJogo = new Map<string, Partial<Record<"blackjack" | "roleta" | "baccarat", number>>>();
     for (const r of uapPorJogoRows) {
       if (r.uap == null) continue;
-      if (!uapByDateJogo.has(r.data)) uapByDateJogo.set(r.data, {});
+      const dk = normalizeMesasYmd(r.data);
+      if (!uapByDateJogo.has(dk)) uapByDateJogo.set(dk, {});
       const jogoKey = UAP_JOGO_MAP[r.jogo];
-      if (jogoKey) uapByDateJogo.get(r.data)![jogoKey] = Number(r.uap);
+      if (jogoKey) uapByDateJogo.get(dk)![jogoKey] = Number(r.uap);
     }
 
     return [...dailyData]
       .sort((a, b) => b.data.localeCompare(a.data))
       .map((dr) => {
-        const dataIso = dr.data;
+        const dataIso = normalizeMesasYmd(dr.data);
         const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [] };
         const uapDia = uapByDateJogo.get(dataIso) ?? {};
         const bjCell = aggregateCellFromPorTabelaRows(b.bj);
