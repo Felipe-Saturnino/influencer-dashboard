@@ -129,11 +129,14 @@ async function goTrueAdminCreateUser(
         `HTTP ${res.status}: ${text.slice(0, 240)}`
       return { error: msg }
     }
-    const user = parsed.user as { id?: string } | undefined
-    if (!user?.id) {
-      return { error: 'Resposta inválida do Auth (sem user.id)' }
+    // GoTrue devolve o user no root { id, email, ... }; alguns clientes usam { user: { id } }.
+    const nested = parsed.user as { id?: string } | undefined
+    const topId = typeof parsed.id === 'string' ? parsed.id : undefined
+    const uid = topId ?? nested?.id
+    if (!uid) {
+      return { error: 'Resposta inválida do Auth (sem id no JSON). Confira a versão do GoTrue / Supabase Auth.' }
     }
-    return { uid: user.id }
+    return { uid }
   } catch (e) {
     if (e instanceof Error && e.name === 'AbortError') {
       return { error: `Auth Admin excedeu ${AUTH_ADMIN_MS / 1000}s (timeout). Tente de novo ou confira o projeto Auth no Supabase.` }
