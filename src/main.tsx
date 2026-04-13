@@ -3,23 +3,24 @@ import "./styles/responsive.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { reloadAfterChunkError } from "./lib/chunkReloadGuard";
 
-// Detecta falha de carregamento de chunks (ex.: app atualizado, cache antigo) e recarrega
+/** Apenas erros típicos de import dinâmico / chunk (evita falso positivo em outras promises). */
 function isChunkLoadError(err: unknown): boolean {
+  if (err instanceof Error && err.name === "ChunkLoadError") return true;
   const msg = String(err instanceof Error ? err.message : err).toLowerCase();
   return (
     msg.includes("failed to fetch dynamically imported module") ||
-    msg.includes("loading chunk") ||
-    msg.includes("chunkloaderror") ||
-    msg.includes("importing a module script failed")
+    msg.includes("importing a module script failed") ||
+    msg.includes("chunk load error") ||
+    (msg.includes("loading css chunk") && msg.includes("failed")) ||
+    (msg.includes("loading chunk") && (msg.includes("failed") || msg.includes("error")))
   );
 }
 window.addEventListener("unhandledrejection", (ev) => {
-  if (isChunkLoadError(ev.reason)) {
-    ev.preventDefault();
-    console.warn("[App] ChunkLoadError — recarregando para aplicar nova versão.");
-    window.location.reload();
-  }
+  if (!isChunkLoadError(ev.reason)) return;
+  ev.preventDefault();
+  reloadAfterChunkError("unhandledrejection");
 });
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

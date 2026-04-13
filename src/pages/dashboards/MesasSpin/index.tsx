@@ -12,6 +12,7 @@ import KpiCard from "../../../components/dashboard/KpiCard";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
 import { getThStyle, getTdStyle, getTdNumStyle } from "../../../lib/tableStyles";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -39,7 +40,7 @@ import {
   Legend,
 } from "recharts";
 
-/** ─── Schema v2 (relatorio_* após migração 20260420100000): daily sem operadora; monthly só UAP+ARPU; por_tabela com dia + operadora/mesa texto. */
+/** ─── relatorio_* com operadora_slug (FK operadoras.slug) — migração 20260430140000. Texto `operadora` em por_tabela permanece como rótulo de origem. */
 
 const BRAND = {
   roxo: "#4a2082",
@@ -93,9 +94,11 @@ type LinhaDetalheTab = Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & {
   margin_pct: number | null;
   bet_size: number | null;
   arpu: number | null;
+  /** Chave estável para drilldown (YYYY-MM-DD ou YYYY-MM). */
+  drillId?: string;
 };
 
-type UapPorJogoPlanRow = { data: string; jogo: string; uap: number };
+type UapPorJogoPlanRow = { data: string; jogo: string; uap: number | null };
 
 interface PorTabelaRow {
   data_relatorio: string;
@@ -118,11 +121,15 @@ const MESES_PT = [
 ];
 const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+/** Primeiro mês com operação Mesas Spin — o carrossel não lista meses anteriores (evita confusão). */
+const CARROSSEL_MESAS_MIN_ANO = 2025;
+const CARROSSEL_MESAS_MIN_MES = 11; // Dezembro (0-based)
+
 function getMesesDisponiveis() {
   const hoje = new Date();
   const lista: { ano: number; mes: number; label: string }[] = [];
-  let ano = 2024,
-    mes = 0;
+  let ano = CARROSSEL_MESAS_MIN_ANO,
+    mes = CARROSSEL_MESAS_MIN_MES;
   while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
     lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
     mes++;
@@ -156,16 +163,21 @@ function syntheticNomeTabela(operadora: string, mesa: string): string {
 function mapPorTabelaV2(r: {
   dia: string;
   operadora: string;
+  operadora_slug?: string | null;
   mesa: string;
   ggr: number | null;
   turnover: number | null;
   apostas: number | null;
 }): PorTabelaRow {
   const nome = syntheticNomeTabela(r.operadora, r.mesa);
+  const slug =
+    r.operadora_slug != null && String(r.operadora_slug).trim().length > 0
+      ? String(r.operadora_slug).trim()
+      : slugFromRelatorioOperadora(r.operadora);
   return {
     data_relatorio: r.dia,
     nome_tabela: nome,
-    operadora: slugFromRelatorioOperadora(r.operadora),
+    operadora: slug,
     ggr_d1: r.ggr != null ? Number(r.ggr) : null,
     turnover_d1: r.turnover != null ? Number(r.turnover) : null,
     bets_d1: r.apostas != null ? Number(r.apostas) : null,
@@ -286,10 +298,10 @@ function uapUltimoDiaDoMesPorJogo(rows: UapPorJogoPlanRow[], ym: string, jogo: s
   let bestData: string | null = null;
   let uap: number | undefined;
   for (const r of rows) {
-    if (r.data.slice(0, 7) !== ym || r.jogo !== jogo) continue;
+    if (r.data.slice(0, 7) !== ym || r.jogo !== jogo || r.uap == null) continue;
     if (bestData == null || r.data > bestData) {
       bestData = r.data;
-      uap = r.uap;
+      uap = Number(r.uap);
     }
   }
   return uap;
@@ -301,18 +313,260 @@ const UAP_JOGO_MAP: Record<string, "blackjack" | "roleta" | "baccarat"> = {
   "Speed Baccarat": "baccarat",
 };
 
+/** Evita encadeamento genérico profundo do cliente Supabase. */
+function applyMesasOperadoraSlugFilter(q: any, slugList: string[] | null): any {
+  if (slugList != null && slugList.length > 0) {
+    return q.in("operadora_slug", slugList);
+  }
+  return q;
+}
+
+function buildSlugListForMesasQueries(opts: {
+  operadoraSlugsForcado: string[] | null | undefined;
+  filtroOperadora: string;
+  semRestricaoEscopo: boolean;
+  operadorasVisiveis: string[];
+}): string[] | null {
+  if (opts.operadoraSlugsForcado != null && opts.operadoraSlugsForcado.length > 0) {
+    return [...opts.operadoraSlugsForcado];
+  }
+  if (!opts.semRestricaoEscopo && opts.operadorasVisiveis.length > 0) {
+    return [...opts.operadorasVisiveis];
+  }
+  if (opts.filtroOperadora !== "todas") {
+    return [opts.filtroOperadora];
+  }
+  return null;
+}
+
+type DailyRawRow = {
+  data: string;
+  turnover: number | null;
+  ggr: number | null;
+  apostas: number | null;
+  uap: number | null;
+  operadora_slug: string;
+};
+
+function mergeDailyRowsPorData(rows: DailyRawRow[]): DailyRow[] {
+  const by = new Map<string, DailyRawRow[]>();
+  for (const r of rows) {
+    const d = String(r.data).slice(0, 10);
+    if (!by.has(d)) by.set(d, []);
+    by.get(d)!.push(r);
+  }
+  return [...by.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([data, list]) => {
+      const turnover = list.reduce((s, x) => s + Number(x.turnover ?? 0), 0);
+      const ggr = list.reduce((s, x) => s + Number(x.ggr ?? 0), 0);
+      const bets = list.reduce((s, x) => s + Number(x.apostas ?? 0), 0);
+      const slugs = new Set(list.map((x) => x.operadora_slug));
+      let uap: number | null = null;
+      if (slugs.size === 1) {
+        const withUap = list.find((x) => x.uap != null);
+        uap = withUap != null && withUap.uap != null ? Number(withUap.uap) : null;
+      }
+      return {
+        data,
+        turnover: list.some((x) => x.turnover != null) ? turnover : null,
+        ggr: list.some((x) => x.ggr != null) ? ggr : null,
+        bets: list.some((x) => x.apostas != null) ? bets : null,
+        uap,
+        margin_pct: null,
+        bet_size: null,
+        arpu: null,
+      };
+    });
+}
+
+/** Filtro "Todas as operadoras": soma financeira por dia + UAP médio entre operadoras; margem / aposta média; ARPU = GGR÷UAP (UAP médio do dia). */
+function mergeDailyRowsAgregadoTodasOperadoras(rows: DailyRawRow[]): DailyRow[] {
+  const by = new Map<string, DailyRawRow[]>();
+  for (const r of rows) {
+    const d = String(r.data).slice(0, 10);
+    if (!by.has(d)) by.set(d, []);
+    by.get(d)!.push(r);
+  }
+  return [...by.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([data, list]) => {
+      const turnover = list.reduce((s, x) => s + Number(x.turnover ?? 0), 0);
+      const ggr = list.reduce((s, x) => s + Number(x.ggr ?? 0), 0);
+      const bets = list.reduce((s, x) => s + Number(x.apostas ?? 0), 0);
+      const uaps = list
+        .map((x) => x.uap)
+        .filter((v): v is number => v != null && Number.isFinite(Number(v)))
+        .map(Number);
+      const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) / uaps.length : null;
+      const hasT = list.some((x) => x.turnover != null);
+      const hasG = list.some((x) => x.ggr != null);
+      const hasB = list.some((x) => x.apostas != null);
+      const margin_pct =
+        hasT && turnover !== 0 && hasG && ggr != null ? (ggr / turnover) * 100 : null;
+      const bet_size = hasB && bets !== 0 && hasT ? turnover / bets : null;
+      const arpu = arpuComparativoFromGgrUap(hasG ? ggr : null, uap);
+      return {
+        data,
+        turnover: hasT ? turnover : null,
+        ggr: hasG ? ggr : null,
+        bets: hasB ? bets : null,
+        uap,
+        margin_pct,
+        bet_size,
+        arpu,
+      };
+    });
+}
+
+/** Drilldown mensal: agrega `relatorio_daily_summary` por operadora no mês (ym = YYYY-MM). UAP do resumo mensal por operadora. */
+function agregaDailyRawPorOperadoraNoMes(
+  rows: DailyRawRow[],
+  ym: string,
+  monthlyRows: MonthlyRawRow[],
+): {
+  operadora_slug: string;
+  turnover: number;
+  ggr: number;
+  bets: number;
+  uap: number | null;
+  margin_pct: number | null;
+  bet_size: number | null;
+  arpu: number | null;
+}[] {
+  const uapPorSlug = new Map<string, number | null>();
+  for (const r of monthlyRows) {
+    if (String(r.mes).slice(0, 7) !== ym) continue;
+    uapPorSlug.set(r.operadora_slug, r.uap != null ? Number(r.uap) : null);
+  }
+  const bySlug = new Map<string, DailyRawRow[]>();
+  for (const r of rows) {
+    if (String(r.data).slice(0, 7) !== ym) continue;
+    const s = r.operadora_slug;
+    if (!bySlug.has(s)) bySlug.set(s, []);
+    bySlug.get(s)!.push(r);
+  }
+  return [...bySlug.entries()]
+    .map(([operadora_slug, dias]) => {
+      const turnover = dias.reduce((acc, x) => acc + Number(x.turnover ?? 0), 0);
+      const ggr = dias.reduce((acc, x) => acc + Number(x.ggr ?? 0), 0);
+      const bets = dias.reduce((acc, x) => acc + Number(x.apostas ?? 0), 0);
+      const uapM = uapPorSlug.get(operadora_slug) ?? null;
+      const margin_pct = turnover !== 0 ? (ggr / turnover) * 100 : null;
+      const bet_size = bets !== 0 ? turnover / bets : null;
+      const arpu = arpuComparativoFromGgrUap(ggr, uapM);
+      return {
+        operadora_slug,
+        turnover,
+        ggr,
+        bets,
+        uap: uapM,
+        margin_pct,
+        bet_size,
+        arpu,
+      };
+    })
+    .sort((a, b) => a.operadora_slug.localeCompare(b.operadora_slug, "pt-BR"));
+}
+
+/** Drilldown diário (carrossel): uma linha por operadora no dia. */
+function agregaDailyRawPorOperadoraNoDia(
+  rows: DailyRawRow[],
+  dia: string,
+): {
+  operadora_slug: string;
+  turnover: number | null;
+  ggr: number | null;
+  bets: number | null;
+  uap: number | null;
+  margin_pct: number | null;
+  bet_size: number | null;
+  arpu: number | null;
+}[] {
+  const bySlug = new Map<string, DailyRawRow[]>();
+  for (const r of rows) {
+    if (String(r.data).slice(0, 10) !== dia) continue;
+    const s = r.operadora_slug;
+    if (!bySlug.has(s)) bySlug.set(s, []);
+    bySlug.get(s)!.push(r);
+  }
+  return [...bySlug.entries()]
+    .map(([operadora_slug, list]) => {
+      const r = list[0]!;
+      const turnover = r.turnover != null ? Number(r.turnover) : null;
+      const ggr = r.ggr != null ? Number(r.ggr) : null;
+      const bets = r.apostas != null ? Number(r.apostas) : null;
+      const uap = r.uap != null ? Number(r.uap) : null;
+      const margin_pct =
+        turnover != null && turnover !== 0 && ggr != null ? (ggr / turnover) * 100 : null;
+      const bet_size =
+        bets != null && bets !== 0 && turnover != null ? turnover / bets : null;
+      const arpu = arpuComparativoFromGgrUap(ggr, uap);
+      return {
+        operadora_slug,
+        turnover,
+        ggr,
+        bets,
+        uap,
+        margin_pct,
+        bet_size,
+        arpu,
+      };
+    })
+    .sort((a, b) => a.operadora_slug.localeCompare(b.operadora_slug, "pt-BR"));
+}
+
+type MonthlyRawRow = {
+  mes: string;
+  uap: number | null;
+  arpu: number | null;
+  operadora_slug: string;
+};
+
+type UapRawRow = { data: string; jogo: string; uap: number; operadora_slug: string };
+
+function mergeUapPorJogoRows(rows: UapRawRow[]): UapPorJogoPlanRow[] {
+  const byD = new Map<string, Map<string, UapRawRow[]>>();
+  for (const r of rows) {
+    const d = String(r.data).slice(0, 10);
+    if (!byD.has(d)) byD.set(d, new Map());
+    const jm = byD.get(d)!;
+    if (!jm.has(r.jogo)) jm.set(r.jogo, []);
+    jm.get(r.jogo)!.push(r);
+  }
+  const out: UapPorJogoPlanRow[] = [];
+  for (const [data, jm] of byD) {
+    for (const [jogo, list] of jm) {
+      const slugs = new Set(list.map((x) => x.operadora_slug));
+      if (slugs.size === 1) {
+        const u = list[0]!.uap;
+        out.push({ data, jogo, uap: u != null ? Number(u) : null });
+        continue;
+      }
+      const sumUap = list.reduce((s, x) => s + (x.uap != null ? Number(x.uap) : 0), 0);
+      out.push({ data, jogo, uap: sumUap > 0 ? sumUap : null });
+    }
+  }
+  out.sort((a, b) => a.data.localeCompare(b.data) || a.jogo.localeCompare(b.jogo));
+  return out;
+}
+
 function buildUapPorJogoQuery(
   historico: boolean,
   mesRef: { ano: number; mes: number } | undefined,
   from: number,
   to: number,
+  slugList: string[] | null,
 ) {
-  let q = supabase
-    .from("relatorio_uap_por_jogo")
-    .select("data, jogo, uap")
-    .order("data", { ascending: true })
-    .order("jogo", { ascending: true })
-    .range(from, to);
+  let q = applyMesasOperadoraSlugFilter(
+    supabase
+      .from("relatorio_uap_por_jogo")
+      .select("data, jogo, uap, operadora_slug")
+      .order("data", { ascending: true })
+      .order("jogo", { ascending: true })
+      .range(from, to),
+    slugList,
+  );
   if (!historico && mesRef) {
     const { inicio, fim } = getPeriodoComparativoMoM(mesRef.ano, mesRef.mes).atual;
     q = q.gte("data", inicio).lte("data", fim);
@@ -401,6 +655,12 @@ function linhaMesaPorDiaFromRow(r: PorTabelaRow): LinhaMesaPorDia {
   };
 }
 
+/** ARPU no comparativo de jogo: GGR ÷ UAP (por jogo e no total oficial). */
+function arpuComparativoFromGgrUap(ggr: number | null, uap: number | null): number | null {
+  if (ggr == null || uap == null || Number(uap) === 0) return null;
+  return Number(ggr) / Number(uap);
+}
+
 /** Métricas por jogo no comparativo (UAP vem de `relatorio_uap_por_jogo`). */
 type CelulaJogoMetricas = {
   ggr: number | null;
@@ -409,10 +669,11 @@ type CelulaJogoMetricas = {
   margin_pct: number | null;
   bet_size: number | null;
   uap: number | null;
+  arpu: number | null;
 };
 
 function emptyCelulaJogo(): CelulaJogoMetricas {
-  return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null, uap: null };
+  return { ggr: null, turnover: null, bets: null, margin_pct: null, bet_size: null, uap: null, arpu: null };
 }
 
 /** Soma GGR, turnover e apostas d-1; margem e aposta média a partir dos totais (ex.: Blackjack = BJ1+BJ2+VIP). UAP é preenchido à parte. */
@@ -445,7 +706,7 @@ function aggregateCellFromPorTabelaRows(rows: PorTabelaRow[]): CelulaJogoMetrica
     turnoverOut != null && turnoverOut !== 0 && ggrOut != null ? (ggrOut / turnoverOut) * 100 : null;
   const bet_size =
     betsOut != null && betsOut !== 0 && turnoverOut != null ? turnoverOut / betsOut : null;
-  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size, uap: null };
+  return { ggr: ggrOut, turnover: turnoverOut, bets: betsOut, margin_pct, bet_size, uap: null, arpu: null };
 }
 
 /** Agrega `relatorio_por_tabela` por mês (YYYY-MM) numa linha por período. */
@@ -461,7 +722,7 @@ function linhasMesaAgregadasPorMes(
     byYm.get(ym)!.push(r);
   }
   return [...byYm.keys()]
-    .sort()
+    .sort((a, b) => b.localeCompare(a))
     .map((ym) => {
       const bucket = byYm.get(ym)!;
       const agg = aggregateCellFromPorTabelaRows(bucket);
@@ -485,6 +746,7 @@ type TotaisOficiaisComparativo = {
   margin_pct: number | null;
   bet_size: number | null;
   uap: number | null;
+  arpu: number | null;
 };
 
 function totaisOficiaisFromDailyRow(dr: DailyRow): TotaisOficiaisComparativo {
@@ -496,7 +758,8 @@ function totaisOficiaisFromDailyRow(dr: DailyRow): TotaisOficiaisComparativo {
     t != null && Number(t) !== 0 && g != null ? (Number(g) / Number(t)) * 100 : null;
   const bet_size =
     b != null && Number(b) !== 0 && t != null ? Number(t) / Number(b) : null;
-  return { turnover: t, ggr: g, bets: b, uap: u, margin_pct, bet_size };
+  const arpu = arpuComparativoFromGgrUap(g != null ? Number(g) : null, u != null ? Number(u) : null);
+  return { turnover: t, ggr: g, bets: b, uap: u, margin_pct, bet_size, arpu };
 }
 
 function totaisOficiaisHistoricoMes(
@@ -517,7 +780,10 @@ function totaisOficiaisHistoricoMes(
       : null;
   const bet_size =
     bets != null && Number(bets) !== 0 && turnover != null ? Number(turnover) / Number(bets) : null;
-  return { turnover, ggr, bets, uap, margin_pct, bet_size };
+  const uapN = uap != null ? Number(uap) : null;
+  const ggrN = ggr != null ? Number(ggr) : null;
+  const arpu = arpuComparativoFromGgrUap(ggrN, uapN);
+  return { turnover, ggr, bets, uap, margin_pct, bet_size, arpu };
 }
 
 type LinhaComparativoJogoTab = {
@@ -545,20 +811,29 @@ function linhaComparativoJogoAgregadaMes(
     else if (lbl === "Roleta") rl.push(r);
     else if (lbl === "Speed Baccarat") bc.push(r);
   }
+  const bjAgg = aggregateCellFromPorTabelaRows(bj);
+  const rlAgg = aggregateCellFromPorTabelaRows(rl);
+  const bcAgg = aggregateCellFromPorTabelaRows(bc);
+  const uapBj = uapUltimoDiaDoMesPorJogo(uapRows, ym, "Blackjack") ?? null;
+  const uapRl = uapUltimoDiaDoMesPorJogo(uapRows, ym, "Roleta") ?? null;
+  const uapBc = uapUltimoDiaDoMesPorJogo(uapRows, ym, "Speed Baccarat") ?? null;
   return {
     dataIso: `${ym}-01`,
     labelData: fmtMesAnoCurtoFromYm(ym),
     blackjack: {
-      ...aggregateCellFromPorTabelaRows(bj),
-      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Blackjack") ?? null,
+      ...bjAgg,
+      uap: uapBj,
+      arpu: arpuComparativoFromGgrUap(bjAgg.ggr, uapBj),
     },
     roleta: {
-      ...aggregateCellFromPorTabelaRows(rl),
-      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Roleta") ?? null,
+      ...rlAgg,
+      uap: uapRl,
+      arpu: arpuComparativoFromGgrUap(rlAgg.ggr, uapRl),
     },
     baccarat: {
-      ...aggregateCellFromPorTabelaRows(bc),
-      uap: uapUltimoDiaDoMesPorJogo(uapRows, ym, "Speed Baccarat") ?? null,
+      ...bcAgg,
+      uap: uapBc,
+      arpu: arpuComparativoFromGgrUap(bcAgg.ggr, uapBc),
     },
     totaisOficiais,
   };
@@ -568,7 +843,7 @@ const COR_BLACKJACK = "#7c3aed";
 const COR_ROLETA = "#22c55e";
 const COR_BACCARAT = "#1e36f8";
 
-type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap";
+type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap" | "arpu";
 
 type KpiJogoDef = {
   key: KpiJogoKey;
@@ -584,6 +859,7 @@ const KPIS_DISPONIVEIS: KpiJogoDef[] = [
   { key: "margin_pct", label: "Margem", somavel: false, tipoGrafico: "linha" },
   { key: "bet_size", label: "Aposta média", somavel: false, tipoGrafico: "linha" },
   { key: "uap", label: "UAP", somavel: true, tipoGrafico: "linha" },
+  { key: "arpu", label: "ARPU", somavel: false, tipoGrafico: "linha" },
 ];
 
 const JOGOS_COMPARATIVO = [
@@ -611,6 +887,7 @@ function renderValorKpiComparativo(kpi: KpiJogoDef, valor: number | null): React
     case "ggr":
     case "turnover":
     case "bet_size":
+    case "arpu":
       return fmtBRL(valor);
     case "bets":
     case "uap":
@@ -663,20 +940,6 @@ function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: str
   );
 }
 
-function mapDailyV2(r: { data: string; turnover: number | null; ggr: number | null; apostas: number | null; uap: number | null }): DailyRow {
-  const a = r.apostas != null ? Number(r.apostas) : null;
-  return {
-    data: r.data,
-    turnover: r.turnover != null ? Number(r.turnover) : null,
-    ggr: r.ggr != null ? Number(r.ggr) : null,
-    bets: a,
-    uap: r.uap != null ? Number(r.uap) : null,
-    margin_pct: null,
-    bet_size: null,
-    arpu: null,
-  };
-}
-
 function mapMonthlyV2(r: { mes: string; uap: number | null; arpu: number | null }): MonthlyRow {
   return {
     mes: r.mes,
@@ -690,8 +953,73 @@ function mapMonthlyV2(r: { mes: string; uap: number | null; arpu: number | null 
   };
 }
 
+function mergeMonthlyHistoricoRows(rows: MonthlyRawRow[]): MonthlyRow[] {
+  const by = new Map<string, MonthlyRawRow[]>();
+  for (const r of rows) {
+    const ym = String(r.mes).slice(0, 10);
+    if (!by.has(ym)) by.set(ym, []);
+    by.get(ym)!.push(r);
+  }
+  return [...by.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([, list]) => {
+      const slugs = new Set(list.map((x) => x.operadora_slug));
+      if (slugs.size !== 1) {
+        return mapMonthlyV2({ mes: list[0]!.mes, uap: null, arpu: null });
+      }
+      const one = list[0]!;
+      return mapMonthlyV2({ mes: one.mes, uap: one.uap, arpu: one.arpu });
+    });
+}
+
+/** Filtro "Todas as operadoras": um registro por mês com UAP = média entre operadoras (ARPU vem do daily agregado na UI). */
+function mergeMonthlyHistoricoAgregadoTodas(rows: MonthlyRawRow[]): MonthlyRow[] {
+  const by = new Map<string, MonthlyRawRow[]>();
+  for (const r of rows) {
+    const ym = String(r.mes).slice(0, 10);
+    if (!by.has(ym)) by.set(ym, []);
+    by.get(ym)!.push(r);
+  }
+  return [...by.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([, list]) => {
+      const uaps = list
+        .map((x) => x.uap)
+        .filter((v): v is number => v != null && Number.isFinite(Number(v)))
+        .map(Number);
+      const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) / uaps.length : null;
+      return mapMonthlyV2({ mes: list[0]!.mes, uap, arpu: null });
+    });
+}
+
+function mergeMonthlyUapArpuSingleMonth(
+  rows: { uap: number | null; arpu: number | null; operadora_slug: string }[],
+): { uap: number | null; arpu: number | null } | null {
+  if (rows.length === 0) return null;
+  if (new Set(rows.map((r) => r.operadora_slug)).size !== 1) {
+    return { uap: null, arpu: null };
+  }
+  const r = rows[0]!;
+  return {
+    uap: r.uap != null ? Number(r.uap) : null,
+    arpu: r.arpu != null ? Number(r.arpu) : null,
+  };
+}
+
+function mergeMonthlyUapArpuAgregadoTodas(
+  rows: { uap: number | null; arpu: number | null; operadora_slug: string }[],
+): { uap: number | null; arpu: number | null } | null {
+  if (rows.length === 0) return null;
+  const uaps = rows
+    .map((r) => r.uap)
+    .filter((v): v is number => v != null && Number.isFinite(Number(v)))
+    .map(Number);
+  const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) / uaps.length : null;
+  return { uap, arpu: null };
+}
+
 export default function MesasSpin() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t, isDark, escoposVisiveis } = useApp();
   const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("mesas_spin");
 
@@ -729,9 +1057,15 @@ export default function MesasSpin() {
     () => new Set<KpiJogoKey>(["ggr", "turnover", "bets", "margin_pct", "bet_size", "uap"]),
   );
   const [kpiGrafico, setKpiGrafico] = useState<KpiJogoKey>("ggr");
+  const [dailyRawUnmerged, setDailyRawUnmerged] = useState<DailyRawRow[]>([]);
+  const [monthlyRawUnmerged, setMonthlyRawUnmerged] = useState<MonthlyRawRow[]>([]);
+  const [expandedDetalhe, setExpandedDetalhe] = useState<Set<string>>(() => new Set());
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
+
+  const modoAgregadoTodasOperadoras =
+    filtroOperadora === "todas" && (operadoraSlugsForcado == null || operadoraSlugsForcado.length === 0);
 
   function irMesAnterior() {
     setHistorico(false);
@@ -771,43 +1105,66 @@ export default function MesasSpin() {
     setMonthlyUapArpuPrev(null);
     setDailyDataPrevMonth([]);
     setUapPorJogoRows([]);
+    setDailyRawUnmerged([]);
+    setMonthlyRawUnmerged([]);
 
     try {
+      const slugList = buildSlugListForMesasQueries({
+        operadoraSlugsForcado,
+        filtroOperadora,
+        semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo === true,
+        operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
+      });
+      const agregadoTodas =
+        filtroOperadora === "todas" && (operadoraSlugsForcado == null || operadoraSlugsForcado.length === 0);
       if (historico) {
         const [monthlyRaw, dailyRaw, porAllRaw, uapRaw] = await Promise.all([
           fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_monthly_summary")
-              .select("mes, uap, arpu")
-              .order("mes", { ascending: true })
-              .range(from, to),
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_monthly_summary")
+                .select("mes, uap, arpu, operadora_slug")
+                .order("mes", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
           ),
           fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, uap")
-              .order("data", { ascending: true })
-              .range(from, to),
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_daily_summary")
+                .select("data, turnover, ggr, apostas, uap, operadora_slug")
+                .order("data", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
           ),
           fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_por_tabela")
-              .select("dia, operadora, mesa, ggr, turnover, apostas")
-              .order("dia", { ascending: true })
-              .range(from, to),
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_por_tabela")
+                .select("dia, operadora, operadora_slug, mesa, ggr, turnover, apostas")
+                .order("dia", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
           ),
-          fetchAllPages(async (from, to) => buildUapPorJogoQuery(true, undefined, from, to)),
+          fetchAllPages(async (from, to) => buildUapPorJogoQuery(true, undefined, from, to, slugList)),
         ]);
-        setMonthlyData((monthlyRaw as { mes: string; uap: number | null; arpu: number | null }[]).map(mapMonthlyV2));
-        setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
-        setPorTabelaHistAll((porAllRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
-        setUapPorJogoRows(
-          (uapRaw as { data: string; jogo: string; uap: number }[]).map((r) => ({
-            data: String(r.data).slice(0, 10),
-            jogo: r.jogo,
-            uap: Number(r.uap),
-          })),
+        setMonthlyRawUnmerged(monthlyRaw as MonthlyRawRow[]);
+        setDailyRawUnmerged(dailyRaw as DailyRawRow[]);
+        setMonthlyData(
+          agregadoTodas
+            ? mergeMonthlyHistoricoAgregadoTodas(monthlyRaw as MonthlyRawRow[])
+            : mergeMonthlyHistoricoRows(monthlyRaw as MonthlyRawRow[]),
         );
+        setDailyData(
+          agregadoTodas
+            ? mergeDailyRowsAgregadoTodasOperadoras(dailyRaw as DailyRawRow[])
+            : mergeDailyRowsPorData(dailyRaw as DailyRawRow[]),
+        );
+        setPorTabelaHistAll((porAllRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
+        setUapPorJogoRows(mergeUapPorJogoRows(uapRaw as UapRawRow[]));
       } else if (mesSelecionado) {
         const { atual, anterior } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
         const { inicio, fim } = atual;
@@ -815,74 +1172,79 @@ export default function MesasSpin() {
 
         const [dailyRaw, dailyPrevRaw, mesasMesRaw, uapRaw] = await Promise.all([
           fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, uap")
-              .gte("data", inicio)
-              .lte("data", fim)
-              .order("data", { ascending: true })
-              .range(from, to),
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_daily_summary")
+                .select("data, turnover, ggr, apostas, uap, operadora_slug")
+                .gte("data", inicio)
+                .lte("data", fim)
+                .order("data", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
           ),
           fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_daily_summary")
-              .select("data, turnover, ggr, apostas, uap")
-              .gte("data", pi)
-              .lte("data", pf)
-              .order("data", { ascending: true })
-              .range(from, to),
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_daily_summary")
+                .select("data, turnover, ggr, apostas, uap, operadora_slug")
+                .gte("data", pi)
+                .lte("data", pf)
+                .order("data", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
           ),
           fetchAllPages(async (from, to) =>
-            supabase
-              .from("relatorio_por_tabela")
-              .select("dia, operadora, mesa, ggr, turnover, apostas")
-              .gte("dia", inicio)
-              .lte("dia", fim)
-              .order("dia", { ascending: true })
-              .order("mesa", { ascending: true })
-              .range(from, to),
+            applyMesasOperadoraSlugFilter(
+              supabase
+                .from("relatorio_por_tabela")
+                .select("dia, operadora, operadora_slug, mesa, ggr, turnover, apostas")
+                .gte("dia", inicio)
+                .lte("dia", fim)
+                .order("dia", { ascending: true })
+                .order("mesa", { ascending: true })
+                .range(from, to),
+              slugList,
+            ),
           ),
-          fetchAllPages(async (from, to) => buildUapPorJogoQuery(false, mesSelecionado, from, to)),
+          fetchAllPages(async (from, to) => buildUapPorJogoQuery(false, mesSelecionado, from, to, slugList)),
         ]);
 
-        setDailyData((dailyRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
+        setDailyRawUnmerged(dailyRaw as DailyRawRow[]);
+        setMonthlyRawUnmerged([]);
+        setDailyData(
+          agregadoTodas
+            ? mergeDailyRowsAgregadoTodasOperadoras(dailyRaw as DailyRawRow[])
+            : mergeDailyRowsPorData(dailyRaw as DailyRawRow[]),
+        );
         setMonthlyData([]);
-        setDailyDataPrevMonth((dailyPrevRaw as Parameters<typeof mapDailyV2>[0][]).map(mapDailyV2));
+        setDailyDataPrevMonth(
+          agregadoTodas
+            ? mergeDailyRowsAgregadoTodasOperadoras(dailyPrevRaw as DailyRawRow[])
+            : mergeDailyRowsPorData(dailyPrevRaw as DailyRawRow[]),
+        );
         setPorTabelaRows((mesasMesRaw as Parameters<typeof mapPorTabelaV2>[0][]).map(mapPorTabelaV2));
-        setUapPorJogoRows(
-          (uapRaw as { data: string; jogo: string; uap: number }[]).map((r) => ({
-            data: String(r.data).slice(0, 10),
-            jogo: r.jogo,
-            uap: Number(r.uap),
-          })),
-        );
+        setUapPorJogoRows(mergeUapPorJogoRows(uapRaw as UapRawRow[]));
 
-        const { data: mSel } = await supabase
-          .from("relatorio_monthly_summary")
-          .select("uap, arpu")
-          .eq("mes", inicio)
-          .maybeSingle();
+        const { data: mSelRows } = await applyMesasOperadoraSlugFilter(
+          supabase.from("relatorio_monthly_summary").select("uap, arpu, operadora_slug").eq("mes", inicio),
+          slugList,
+        );
         setMonthlyUapArpuSel(
-          mSel
-            ? {
-                uap: mSel.uap != null ? Number(mSel.uap) : null,
-                arpu: mSel.arpu != null ? Number(mSel.arpu) : null,
-              }
-            : null,
+          agregadoTodas
+            ? mergeMonthlyUapArpuAgregadoTodas(mSelRows ?? [])
+            : mergeMonthlyUapArpuSingleMonth(mSelRows ?? []),
         );
 
-        const { data: mPrev } = await supabase
-          .from("relatorio_monthly_summary")
-          .select("uap, arpu")
-          .eq("mes", pi)
-          .maybeSingle();
+        const { data: mPrevRows } = await applyMesasOperadoraSlugFilter(
+          supabase.from("relatorio_monthly_summary").select("uap, arpu, operadora_slug").eq("mes", pi),
+          slugList,
+        );
         setMonthlyUapArpuPrev(
-          mPrev
-            ? {
-                uap: mPrev.uap != null ? Number(mPrev.uap) : null,
-                arpu: mPrev.arpu != null ? Number(mPrev.arpu) : null,
-              }
-            : null,
+          agregadoTodas
+            ? mergeMonthlyUapArpuAgregadoTodas(mPrevRows ?? [])
+            : mergeMonthlyUapArpuSingleMonth(mPrevRows ?? []),
         );
       }
     } catch {
@@ -890,11 +1252,61 @@ export default function MesasSpin() {
     } finally {
       setLoading(false);
     }
-  }, [historico, mesSelecionado]);
+  }, [
+    historico,
+    mesSelecionado,
+    operadoraSlugsForcado,
+    filtroOperadora,
+    escoposVisiveis.semRestricaoEscopo,
+    escoposVisiveis.operadorasVisiveis.join(","),
+  ]);
 
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    setExpandedDetalhe(new Set());
+  }, [historico, filtroOperadora, operadoraSlugsForcado, idxMes]);
+
+  useEffect(() => {
+    if (!modoAgregadoTodasOperadoras) return;
+    setKpisSelecionados((prev) => {
+      if (prev.has("arpu")) return prev;
+      const next = new Set(prev);
+      next.add("arpu");
+      return next;
+    });
+  }, [modoAgregadoTodasOperadoras]);
+
+  const operadorasListFmt = operadorasOcr;
+
+  const slugToNome = useCallback(
+    (slug: string) => operadorasOcr.find((o) => o.slug === slug)?.nome ?? slug,
+    [operadorasOcr],
+  );
+
+  const porTabelaFiltradas = useMemo(
+    () =>
+      filtrarPorEscopoOperadora(
+        porTabelaRows,
+        filtroOperadora,
+        operadoraSlugsForcado,
+        podeVerOperadora,
+      ),
+    [porTabelaRows, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
+  );
+
+  const porTabelaFiltradasHist = useMemo(
+    () =>
+      filtrarPorEscopoOperadora(
+        porTabelaHistAll,
+        filtroOperadora,
+        operadoraSlugsForcado,
+        podeVerOperadora,
+      ),
+    [porTabelaHistAll, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
+  );
 
   const tabelaRows = useMemo(() => {
     const enrich = (base: Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & { label: string }): LinhaDetalheTab => {
@@ -918,37 +1330,75 @@ export default function MesasSpin() {
       const monthlyByYm = new Map(monthlyData.map((m) => [m.mes.slice(0, 7), m] as const));
       const allYm = new Set<string>([...dailyByYm.keys(), ...monthlyByYm.keys()]);
       return [...allYm]
-        .sort()
+        .sort((a, b) => b.localeCompare(a))
         .map((ym) => {
           const dias = dailyByYm.get(ym) ?? [];
           const agg = dias.length > 0 ? aggDailyMesKpi(dias) : null;
           const m = monthlyByYm.get(ym);
-          const base = enrich({
+          if (modoAgregadoTodasOperadoras) {
+            const turnover = agg?.turnover ?? null;
+            const ggr = agg?.ggr ?? null;
+            const bets = agg?.bets ?? null;
+            const margin_pct =
+              turnover != null && turnover !== 0 && ggr != null ? (ggr / turnover) * 100 : null;
+            const bet_size =
+              bets != null && bets !== 0 && turnover != null ? turnover / bets : null;
+            const uap = m?.uap != null ? Number(m.uap) : null;
+            const arpu = arpuComparativoFromGgrUap(ggr, uap);
+            return {
+              label: fmtMesAnoCurtoFromYm(ym),
+              turnover,
+              ggr,
+              bets,
+              uap,
+              margin_pct,
+              bet_size,
+              arpu,
+              drillId: ym,
+            };
+          }
+          return enrich({
             label: fmtMesAnoCurtoFromYm(ym),
             turnover: agg?.turnover ?? null,
             ggr: agg?.ggr ?? null,
             bets: agg?.bets ?? null,
             uap: m?.uap != null ? Number(m.uap) : agg?.uap ?? null,
           });
-          return {
-            ...base,
-            arpu: m?.arpu != null ? Number(m.arpu) : base.arpu,
-          };
         });
     }
-    return dailyData.map((r) =>
-      enrich({
-        label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "2-digit",
+    if (modoAgregadoTodasOperadoras) {
+      return [...dailyData]
+        .sort((a, b) => b.data.localeCompare(a.data))
+        .map((r) => ({
+          label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+          }),
+          turnover: r.turnover,
+          ggr: r.ggr,
+          bets: r.bets,
+          uap: r.uap,
+          margin_pct: r.margin_pct,
+          bet_size: r.bet_size,
+          arpu: arpuComparativoFromGgrUap(r.ggr, r.uap),
+          drillId: r.data,
+        }));
+    }
+    return [...dailyData]
+      .sort((a, b) => b.data.localeCompare(a.data))
+      .map((r) =>
+        enrich({
+          label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+          }),
+          turnover: r.turnover,
+          ggr: r.ggr,
+          bets: r.bets,
+          uap: r.uap,
         }),
-        turnover: r.turnover,
-        ggr: r.ggr,
-        bets: r.bets,
-        uap: r.uap,
-      }),
-    );
-  }, [historico, dailyData, monthlyData]);
+      );
+  }, [historico, dailyData, monthlyData, modoAgregadoTodasOperadoras]);
 
   const kpiExibir = useMemo(() => {
     if (historico) {
@@ -965,6 +1415,17 @@ export default function MesasSpin() {
       }
       const margin_pct = turnover !== 0 ? (ggr / turnover) * 100 : null;
       const bet_size = bets !== 0 ? turnover / bets : null;
+      if (modoAgregadoTodasOperadoras) {
+        return {
+          turnover,
+          ggr,
+          margin_pct,
+          bets,
+          uap: null,
+          bet_size,
+          arpu: bets !== 0 ? ggr / bets : null,
+        };
+      }
       const somaUap = uapMeses.reduce((a, b) => a + b, 0);
       const mediaUap = uapMeses.length > 0 ? somaUap / uapMeses.length : null;
       const arpu = somaUap !== 0 ? ggr / somaUap : null;
@@ -980,6 +1441,15 @@ export default function MesasSpin() {
     }
     const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
     if (!base) return null;
+    if (modoAgregadoTodasOperadoras) {
+      const b = base.bets;
+      const g = base.ggr;
+      return {
+        ...base,
+        uap: null,
+        arpu: b != null && g != null && Number(b) !== 0 ? g / Number(b) : null,
+      };
+    }
     if (
       mesSelecionado &&
       isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
@@ -991,13 +1461,22 @@ export default function MesasSpin() {
       uap: monthlyUapArpuSel?.uap ?? null,
       arpu: monthlyUapArpuSel?.arpu ?? null,
     };
-  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, mesSelecionado]);
+  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, mesSelecionado, modoAgregadoTodasOperadoras]);
 
   const kpiAntExibir = useMemo(() => {
     const base =
       historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
     if (!base) return null;
     if (historico) return base;
+    if (modoAgregadoTodasOperadoras) {
+      const b = base.bets;
+      const g = base.ggr;
+      return {
+        ...base,
+        uap: null,
+        arpu: b != null && g != null && Number(b) !== 0 ? g / Number(b) : null,
+      };
+    }
     if (
       mesSelecionado &&
       isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
@@ -1009,31 +1488,7 @@ export default function MesasSpin() {
       uap: monthlyUapArpuPrev?.uap ?? base.uap,
       arpu: monthlyUapArpuPrev?.arpu ?? base.arpu,
     };
-  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado]);
-
-  const operadorasListFmt = operadorasOcr;
-
-  const porTabelaFiltradas = useMemo(
-    () =>
-      filtrarPorEscopoOperadora(
-        porTabelaRows,
-        filtroOperadora,
-        operadoraSlugsForcado,
-        podeVerOperadora,
-      ),
-    [porTabelaRows, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
-  );
-
-  const porTabelaFiltradasHist = useMemo(
-    () =>
-      filtrarPorEscopoOperadora(
-        porTabelaHistAll,
-        filtroOperadora,
-        operadoraSlugsForcado,
-        podeVerOperadora,
-      ),
-    [porTabelaHistAll, filtroOperadora, operadoraSlugsForcado, podeVerOperadora],
-  );
+  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado, modoAgregadoTodasOperadoras]);
 
   /** Só Blackjack 1 / 2 / VIP — comparativo lateral. */
   const mesasOpcoesBlackjack = useMemo(() => {
@@ -1063,7 +1518,7 @@ export default function MesasSpin() {
     }
     return src
       .filter((r) => labelMesaCda(r, operadorasListFmt) === "Speed Baccarat")
-      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
@@ -1074,7 +1529,7 @@ export default function MesasSpin() {
     }
     return src
       .filter((r) => labelMesaCda(r, operadorasListFmt) === "Roleta")
-      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
@@ -1096,7 +1551,7 @@ export default function MesasSpin() {
         byYm.get(ym)!.push(r);
       }
       return [...byYm.keys()]
-        .sort()
+        .sort((a, b) => b.localeCompare(a))
         .map((ym) =>
           linhaComparativoJogoAgregadaMes(
             ym,
@@ -1123,27 +1578,45 @@ export default function MesasSpin() {
 
     const uapByDateJogo = new Map<string, Partial<Record<"blackjack" | "roleta" | "baccarat", number>>>();
     for (const r of uapPorJogoRows) {
+      if (r.uap == null) continue;
       if (!uapByDateJogo.has(r.data)) uapByDateJogo.set(r.data, {});
       const jogoKey = UAP_JOGO_MAP[r.jogo];
-      if (jogoKey) uapByDateJogo.get(r.data)![jogoKey] = r.uap;
+      if (jogoKey) uapByDateJogo.get(r.data)![jogoKey] = Number(r.uap);
     }
 
-    return dailyData.map((dr) => {
-      const dataIso = dr.data;
-      const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [] };
-      const uapDia = uapByDateJogo.get(dataIso) ?? {};
-      const bjCell = aggregateCellFromPorTabelaRows(b.bj);
-      const rlCell = aggregateCellFromPorTabelaRows(b.roleta);
-      const bcCell = aggregateCellFromPorTabelaRows(b.baccarat);
-      return {
-        dataIso,
-        labelData: fmtDiaMesPtBr(dataIso),
-        blackjack: { ...bjCell, uap: uapDia.blackjack ?? null },
-        roleta: { ...rlCell, uap: uapDia.roleta ?? null },
-        baccarat: { ...bcCell, uap: uapDia.baccarat ?? null },
-        totaisOficiais: totaisOficiaisFromDailyRow(dr),
-      };
-    });
+    return [...dailyData]
+      .sort((a, b) => b.data.localeCompare(a.data))
+      .map((dr) => {
+        const dataIso = dr.data;
+        const b = byDate.get(dataIso) ?? { bj: [], roleta: [], baccarat: [] };
+        const uapDia = uapByDateJogo.get(dataIso) ?? {};
+        const bjCell = aggregateCellFromPorTabelaRows(b.bj);
+        const rlCell = aggregateCellFromPorTabelaRows(b.roleta);
+        const bcCell = aggregateCellFromPorTabelaRows(b.baccarat);
+        const uapBj = uapDia.blackjack ?? null;
+        const uapRl = uapDia.roleta ?? null;
+        const uapBc = uapDia.baccarat ?? null;
+        return {
+          dataIso,
+          labelData: fmtDiaMesPtBr(dataIso),
+          blackjack: {
+            ...bjCell,
+            uap: uapBj,
+            arpu: arpuComparativoFromGgrUap(bjCell.ggr, uapBj),
+          },
+          roleta: {
+            ...rlCell,
+            uap: uapRl,
+            arpu: arpuComparativoFromGgrUap(rlCell.ggr, uapRl),
+          },
+          baccarat: {
+            ...bcCell,
+            uap: uapBc,
+            arpu: arpuComparativoFromGgrUap(bcCell.ggr, uapBc),
+          },
+          totaisOficiais: totaisOficiaisFromDailyRow(dr),
+        };
+      });
   }, [
     historico,
     dailyData,
@@ -1165,7 +1638,8 @@ export default function MesasSpin() {
   );
 
   const dadosGraficoComparativoJogo = useMemo(() => {
-    return linhasComparativoJogo.map((row) => {
+    // Gráfico: ordem cronológica (antigo → novo); tabela usa `linhasComparativoJogo` mais recente primeiro.
+    return [...linhasComparativoJogo].reverse().map((row) => {
       const val = (jogoKey: "blackjack" | "roleta" | "baccarat") => {
         const v = row[jogoKey][kpiGrafico as keyof CelulaJogoMetricas];
         return v != null ? Number(v) : null;
@@ -1183,7 +1657,7 @@ export default function MesasSpin() {
     });
   }, [linhasComparativoJogo, kpiGrafico]);
 
-  const isBRLKpiGrafico = ["ggr", "turnover", "bet_size"].includes(kpiGrafico);
+  const isBRLKpiGrafico = ["ggr", "turnover", "bet_size", "arpu"].includes(kpiGrafico);
 
   const minWidthTabelaComparativoJogo =
     120 + kpisAtivosComparativo.length * (100 + 3 * 90);
@@ -1196,7 +1670,7 @@ export default function MesasSpin() {
     }
     return src
       .filter((r) => r.nome_tabela.trim() === compMesaA)
-      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, compMesaA]);
 
@@ -1208,7 +1682,7 @@ export default function MesasSpin() {
     }
     return src
       .filter((r) => r.nome_tabela.trim() === compMesaB)
-      .sort((a, b) => a.data_relatorio.localeCompare(b.data_relatorio))
+      .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
       .map(linhaMesaPorDiaFromRow);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, compMesaB]);
 
@@ -1409,7 +1883,8 @@ export default function MesasSpin() {
     const mostrarRodapeTotal =
       somavel ||
       kpiGrafico === "margin_pct" ||
-      kpiGrafico === "bet_size";
+      kpiGrafico === "bet_size" ||
+      kpiGrafico === "arpu";
 
     const valorRodape =
       totalOficial != null && Number.isFinite(Number(totalOficial))
@@ -2041,98 +2516,184 @@ export default function MesasSpin() {
             }
           />
           {loading ? (
+            modoAgregadoTodasOperadoras ? (
+              <>
+                <div className="app-grid-kpi-3" style={{ gap: 12, marginBottom: 12 }}>
+                  {[0, 1, 2].map((i) => (
+                    <SkeletonKpiCard key={`a-${i}`} />
+                  ))}
+                </div>
+                <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+                  {[0, 1, 2].map((i) => (
+                    <SkeletonKpiCard key={`b-${i}`} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <SkeletonKpiCard key={i} />
+                  ))}
+                </div>
+                <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+                  {[0, 1, 2].map((i) => (
+                    <SkeletonKpiCard key={i} />
+                  ))}
+                </div>
+              </>
+            )
+          ) : modoAgregadoTodasOperadoras ? (
             <>
-              <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
-                {[0, 1, 2, 3].map((i) => (
-                  <SkeletonKpiCard key={i} />
-                ))}
+              <div className="app-grid-kpi-3" style={{ gap: 12, marginBottom: 12 }}>
+                <KpiCard
+                  label="GGR"
+                  value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
+                  icon={<TrendingUp size={16} />}
+                  accentVar="--brand-extra1"
+                  accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
+                  atual={nKpi(kpiExibir?.ggr)}
+                  anterior={nKpi(kpiAntExibir?.ggr)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Turnover"
+                  value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
+                  icon={<Wallet size={16} />}
+                  accentVar="--brand-extra3"
+                  accentColor={BRAND.roxoVivo}
+                  atual={nKpi(kpiExibir?.turnover)}
+                  anterior={nKpi(kpiAntExibir?.turnover)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Margem"
+                  value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
+                  icon={<Percent size={16} />}
+                  accentVar="--brand-extra4"
+                  accentColor={BRAND.amarelo}
+                  atual={nKpi(kpiExibir?.margin_pct)}
+                  anterior={nKpi(kpiAntExibir?.margin_pct)}
+                  isHistorico={isHistoricoKpi}
+                />
               </div>
               <div className="app-grid-kpi-3" style={{ gap: 12 }}>
-                {[0, 1, 2].map((i) => (
-                  <SkeletonKpiCard key={i} />
-                ))}
+                <KpiCard
+                  label="Apostas"
+                  value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
+                  icon={<ListOrdered size={16} />}
+                  accentVar="--brand-extra2"
+                  accentColor={BRAND.azul}
+                  atual={nKpi(kpiExibir?.bets)}
+                  anterior={nKpi(kpiAntExibir?.bets)}
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Aposta média"
+                  value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
+                  icon={<ChartColumnBig size={16} />}
+                  accentVar="--brand-extra4"
+                  accentColor={BRAND.ciano}
+                  atual={nKpi(kpiExibir?.bet_size)}
+                  anterior={nKpi(kpiAntExibir?.bet_size)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="ARPU"
+                  value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
+                  icon={<Coins size={16} />}
+                  accentVar="--brand-extra3"
+                  accentColor={BRAND.roxoVivo}
+                  atual={nKpi(kpiExibir?.arpu)}
+                  anterior={nKpi(kpiAntExibir?.arpu)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
               </div>
             </>
           ) : (
             <>
-          <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
-            <KpiCard
-              label="GGR"
-              value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
-              icon={<TrendingUp size={16} />}
-              accentVar="--brand-extra1"
-              accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
-              atual={nKpi(kpiExibir?.ggr)}
-              anterior={nKpi(kpiAntExibir?.ggr)}
-              isBRL
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label="Turnover"
-              value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
-              icon={<Wallet size={16} />}
-              accentVar="--brand-extra3"
-              accentColor={BRAND.roxoVivo}
-              atual={nKpi(kpiExibir?.turnover)}
-              anterior={nKpi(kpiAntExibir?.turnover)}
-              isBRL
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label="Apostas"
-              value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
-              icon={<ListOrdered size={16} />}
-              accentVar="--brand-extra2"
-              accentColor={BRAND.azul}
-              atual={nKpi(kpiExibir?.bets)}
-              anterior={nKpi(kpiAntExibir?.bets)}
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label="Margem"
-              value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
-              icon={<Percent size={16} />}
-              accentVar="--brand-extra4"
-              accentColor={BRAND.amarelo}
-              atual={nKpi(kpiExibir?.margin_pct)}
-              anterior={nKpi(kpiAntExibir?.margin_pct)}
-              isHistorico={isHistoricoKpi}
-            />
-          </div>
-          <div className="app-grid-kpi-3" style={{ gap: 12 }}>
-            <KpiCard
-              label="Aposta média"
-              value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
-              icon={<ChartColumnBig size={16} />}
-              accentVar="--brand-extra4"
-              accentColor={BRAND.ciano}
-              atual={nKpi(kpiExibir?.bet_size)}
-              anterior={nKpi(kpiAntExibir?.bet_size)}
-              isBRL
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label={historico ? "Média UAP" : "UAP"}
-              value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
-              icon={<Users size={16} />}
-              accentVar="--brand-extra2"
-              accentColor={BRAND.roxo}
-              atual={nKpi(kpiExibir?.uap)}
-              anterior={nKpi(kpiAntExibir?.uap)}
-              isHistorico={isHistoricoKpi}
-            />
-            <KpiCard
-              label="ARPU"
-              value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
-              icon={<Coins size={16} />}
-              accentVar="--brand-extra3"
-              accentColor={BRAND.roxoVivo}
-              atual={nKpi(kpiExibir?.arpu)}
-              anterior={nKpi(kpiAntExibir?.arpu)}
-              isBRL
-              isHistorico={isHistoricoKpi}
-            />
-          </div>
+              <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 12 }}>
+                <KpiCard
+                  label="GGR"
+                  value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
+                  icon={<TrendingUp size={16} />}
+                  accentVar="--brand-extra1"
+                  accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
+                  atual={nKpi(kpiExibir?.ggr)}
+                  anterior={nKpi(kpiAntExibir?.ggr)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Turnover"
+                  value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
+                  icon={<Wallet size={16} />}
+                  accentVar="--brand-extra3"
+                  accentColor={BRAND.roxoVivo}
+                  atual={nKpi(kpiExibir?.turnover)}
+                  anterior={nKpi(kpiAntExibir?.turnover)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Apostas"
+                  value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
+                  icon={<ListOrdered size={16} />}
+                  accentVar="--brand-extra2"
+                  accentColor={BRAND.azul}
+                  atual={nKpi(kpiExibir?.bets)}
+                  anterior={nKpi(kpiAntExibir?.bets)}
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="Margem"
+                  value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
+                  icon={<Percent size={16} />}
+                  accentVar="--brand-extra4"
+                  accentColor={BRAND.amarelo}
+                  atual={nKpi(kpiExibir?.margin_pct)}
+                  anterior={nKpi(kpiAntExibir?.margin_pct)}
+                  isHistorico={isHistoricoKpi}
+                />
+              </div>
+              <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+                <KpiCard
+                  label="Aposta média"
+                  value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
+                  icon={<ChartColumnBig size={16} />}
+                  accentVar="--brand-extra4"
+                  accentColor={BRAND.ciano}
+                  atual={nKpi(kpiExibir?.bet_size)}
+                  anterior={nKpi(kpiAntExibir?.bet_size)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label={historico ? "Média UAP" : "UAP"}
+                  value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
+                  icon={<Users size={16} />}
+                  accentVar="--brand-extra2"
+                  accentColor={BRAND.roxo}
+                  atual={nKpi(kpiExibir?.uap)}
+                  anterior={nKpi(kpiAntExibir?.uap)}
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label="ARPU"
+                  value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
+                  icon={<Coins size={16} />}
+                  accentVar="--brand-extra3"
+                  accentColor={BRAND.roxoVivo}
+                  atual={nKpi(kpiExibir?.arpu)}
+                  anterior={nKpi(kpiAntExibir?.arpu)}
+                  isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+              </div>
             </>
           )}
         </div>
@@ -2156,6 +2717,9 @@ export default function MesasSpin() {
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <caption style={{ display: "none" }}>
+                {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
+              </caption>
               <thead>
                 <tr>
                   <th style={thStyle}>{historico ? "Mês" : "Data"}</th>
@@ -2171,30 +2735,136 @@ export default function MesasSpin() {
               <tbody>
                 {tabelaRows.map((r, i) => {
                   const ggr = r.ggr ?? 0;
+                  const drillId = r.drillId;
+                  const isDrillParent = modoAgregadoTodasOperadoras && drillId != null;
+                  const aberto = drillId != null && expandedDetalhe.has(drillId);
+                  const subLinhas =
+                    isDrillParent && aberto
+                      ? historico
+                        ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, drillId, monthlyRawUnmerged)
+                        : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, drillId)
+                      : [];
+                  const rowKey = drillId ?? `${r.label}-${i}`;
                   return (
-                    <tr
-                      key={i}
-                      style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent" }}
-                    >
-                      <td style={{ ...tdStyle, fontWeight: 600 }}>{r.label}</td>
-                      <td
+                    <Fragment key={rowKey}>
+                      <tr
                         style={{
-                          ...tdNum,
-                          color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
-                          fontWeight: 600,
+                          background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
                         }}
                       >
-                        {r.ggr != null ? fmtBRL(r.ggr) : "—"}
-                      </td>
-                      <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
-                      <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={{ ...tdNum }}>
-                        <MarginBadge value={r.margin_pct} />
-                      </td>
-                      <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
-                      <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
-                      <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
-                    </tr>
+                        <td style={{ ...tdStyle, fontWeight: 600 }}>
+                          {isDrillParent ? (
+                            <button
+                              type="button"
+                              aria-expanded={aberto}
+                              aria-label={
+                                aberto
+                                  ? `Recolher detalhe por operadora — ${r.label}`
+                                  : `Expandir detalhe por operadora — ${r.label}`
+                              }
+                              onClick={() => {
+                                setExpandedDetalhe((prev) => {
+                                  const n = new Set(prev);
+                                  if (n.has(drillId)) n.delete(drillId);
+                                  else n.add(drillId);
+                                  return n;
+                                });
+                              }}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: t.text,
+                                fontFamily: FONT.body,
+                                fontWeight: 600,
+                                padding: 0,
+                                textAlign: "left",
+                              }}
+                            >
+                              <ChevronDown
+                                size={16}
+                                aria-hidden
+                                style={{
+                                  transform: aberto ? "rotate(180deg)" : "rotate(0deg)",
+                                  transition: "transform 0.15s ease",
+                                  flexShrink: 0,
+                                }}
+                              />
+                              {r.label}
+                            </button>
+                          ) : (
+                            r.label
+                          )}
+                        </td>
+                        <td
+                          style={{
+                            ...tdNum,
+                            color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {r.ggr != null ? fmtBRL(r.ggr) : "—"}
+                        </td>
+                        <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
+                        <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
+                        <td style={{ ...tdNum }}>
+                          <MarginBadge value={r.margin_pct} />
+                        </td>
+                        <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
+                        <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
+                        <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
+                      </tr>
+                      {isDrillParent &&
+                        aberto &&
+                        subLinhas.map((sl, j) => {
+                          const gg = sl.ggr ?? 0;
+                          return (
+                            <tr
+                              key={`${rowKey}-${sl.operadora_slug}`}
+                              style={{
+                                background:
+                                  j % 2 === 1 ? "rgba(74,32,130,0.04)" : "rgba(74,32,130,0.02)",
+                                borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
+                              }}
+                            >
+                              <th
+                                scope="row"
+                                style={{
+                                  ...tdStyle,
+                                  fontWeight: 600,
+                                  paddingLeft: 32,
+                                  boxShadow:
+                                    "inset 3px 0 0 color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
+                                }}
+                              >
+                                {slugToNome(sl.operadora_slug)}
+                              </th>
+                              <td
+                                style={{
+                                  ...tdNum,
+                                  color: gg > 0 ? BRAND.verde : gg < 0 ? BRAND.vermelho : t.text,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {sl.ggr != null ? fmtBRL(sl.ggr) : "—"}
+                              </td>
+                              <td style={tdNum}>{sl.turnover != null ? fmtBRL(sl.turnover) : "—"}</td>
+                              <td style={tdNum}>
+                                {sl.bets != null ? sl.bets.toLocaleString("pt-BR") : "—"}
+                              </td>
+                              <td style={{ ...tdNum }}>
+                                <MarginBadge value={sl.margin_pct} />
+                              </td>
+                              <td style={tdNum}>{sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}</td>
+                              <td style={tdNum}>{sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}</td>
+                              <td style={tdNum}>{sl.arpu != null ? fmtBRL(sl.arpu) : "—"}</td>
+                            </tr>
+                          );
+                        })}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -2218,28 +2888,32 @@ export default function MesasSpin() {
                   Carregando…
                 </div>
               </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
-                </div>
-              </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<Table2 size={15} />}
-                  title="Dados por mesa"
-                  sub="Baccarat e Roleta"
-                />
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
-                </div>
-              </div>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                      <Clock size={16} style={{ marginBottom: 8 }} />
+                      Carregando…
+                    </div>
+                  </div>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<Table2 size={15} />}
+                      title="Dados por mesa"
+                      sub="Baccarat e Roleta"
+                    />
+                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                      <Clock size={16} style={{ marginBottom: 8 }} />
+                      Carregando…
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           ) : porTabelaRows.length === 0 ? (
             <>
@@ -2253,22 +2927,30 @@ export default function MesasSpin() {
                   {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
-                </div>
-              </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
-                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
-                </div>
-              </div>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <div
+                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
+                    >
+                      {MSG_SEM_DADOS_FILTRO}
+                    </div>
+                  </div>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <div
+                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
+                    >
+                      {MSG_SEM_DADOS_FILTRO}
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -2287,25 +2969,27 @@ export default function MesasSpin() {
                 )}
               </div>
 
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <p
-                  style={{
-                    margin: "0 0 16px",
-                    fontSize: 12,
-                    color: t.textMuted,
-                    fontFamily: FONT.body,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  Escolha duas mesas para ver os resultados.
-                </p>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <p
+                      style={{
+                        margin: "0 0 16px",
+                        fontSize: 12,
+                        color: t.textMuted,
+                        fontFamily: FONT.body,
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      Escolha duas mesas para ver os resultados.
+                    </p>
 
-                {mesasOpcoesBlackjack.length === 0 ? (
+                    {mesasOpcoesBlackjack.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                     {MSG_SEM_DADOS_FILTRO}
                   </div>
@@ -2477,6 +3161,8 @@ export default function MesasSpin() {
                   </div>
                 </div>
               </div>
+                </>
+              )}
             </>
           )}
         </>
@@ -2497,28 +3183,32 @@ export default function MesasSpin() {
                   Carregando…
                 </div>
               </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
-                </div>
-              </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<Table2 size={15} />}
-                  title="Dados por mesa"
-                  sub="Baccarat e Roleta"
-                />
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
-                </div>
-              </div>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                      <Clock size={16} style={{ marginBottom: 8 }} />
+                      Carregando…
+                    </div>
+                  </div>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<Table2 size={15} />}
+                      title="Dados por mesa"
+                      sub="Baccarat e Roleta"
+                    />
+                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
+                      <Clock size={16} style={{ marginBottom: 8 }} />
+                      Carregando…
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           ) : porTabelaHistAll.length === 0 ? (
             <>
@@ -2532,22 +3222,30 @@ export default function MesasSpin() {
                   {MSG_SEM_DADOS_FILTRO}
                 </div>
               </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
-                </div>
-              </div>
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
-                <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
-                </div>
-              </div>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <div
+                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
+                    >
+                      {MSG_SEM_DADOS_FILTRO}
+                    </div>
+                  </div>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <div
+                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
+                    >
+                      {MSG_SEM_DADOS_FILTRO}
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -2566,196 +3264,202 @@ export default function MesasSpin() {
                 )}
               </div>
 
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiConvergenceTarget size={15} />}
-                  title="Comparativo de mesa"
-                  sub="Blackjack"
-                />
-                <p
-                  style={{
-                    margin: "0 0 16px",
-                    fontSize: 12,
-                    color: t.textMuted,
-                    fontFamily: FONT.body,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  Escolha duas mesas para ver os resultados.
-                </p>
+              {!modoAgregadoTodasOperadoras && (
+                <>
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader
+                      icon={<GiConvergenceTarget size={15} />}
+                      title="Comparativo de mesa"
+                      sub="Blackjack"
+                    />
+                    <p
+                      style={{
+                        margin: "0 0 16px",
+                        fontSize: 12,
+                        color: t.textMuted,
+                        fontFamily: FONT.body,
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      Escolha duas mesas para ver os resultados.
+                    </p>
 
-                {mesasOpcoesBlackjack.length === 0 ? (
-                  <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    {MSG_SEM_DADOS_FILTRO}
-                  </div>
-                ) : (
-                  <>
-                    <div className="app-conversao-vs-row">
-                      <select
-                        value={compMesaA}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setCompMesaA(v);
-                          if (v && v === compMesaB) {
-                            const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
-                            if (o) setCompMesaB(o.key);
-                          }
-                        }}
-                        style={{
-                          ...selectStyleSimple,
-                          borderColor: compMesaA ? COR_MESA_A.border : undefined,
-                          width: "100%",
-                        }}
-                      >
-                        {mesasOpcoesBlackjack
-                          .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaB)
-                          .map((m) => (
-                            <option key={m.key} value={m.key}>
-                              {m.label}
-                            </option>
-                          ))}
-                      </select>
+                    {mesasOpcoesBlackjack.length === 0 ? (
                       <div
-                        style={{
-                          padding: "5px 12px",
-                          borderRadius: 999,
-                          border: "1px solid rgba(74,32,130,0.35)",
-                          background: "rgba(74,32,130,0.10)",
-                          fontSize: 12,
-                          fontWeight: 800,
-                          color: t.textMuted,
-                          fontFamily: FONT.body,
-                          letterSpacing: "0.05em",
-                          textAlign: "center",
-                        }}
+                        style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                       >
-                        VS
+                        {MSG_SEM_DADOS_FILTRO}
                       </div>
-                      <select
-                        value={compMesaB}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setCompMesaB(v);
-                          if (v && v === compMesaA) {
-                            const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
-                            if (o) setCompMesaA(o.key);
-                          }
-                        }}
-                        style={{
-                          ...selectStyleSimple,
-                          borderColor: compMesaB ? COR_MESA_B.border : undefined,
-                          width: "100%",
-                        }}
-                      >
-                        {mesasOpcoesBlackjack
-                          .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaA)
-                          .map((m) => (
-                            <option key={m.key} value={m.key}>
-                              {m.label}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="app-conversao-vs-row">
+                          <select
+                            value={compMesaA}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setCompMesaA(v);
+                              if (v && v === compMesaB) {
+                                const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
+                                if (o) setCompMesaB(o.key);
+                              }
+                            }}
+                            style={{
+                              ...selectStyleSimple,
+                              borderColor: compMesaA ? COR_MESA_A.border : undefined,
+                              width: "100%",
+                            }}
+                          >
+                            {mesasOpcoesBlackjack
+                              .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaB)
+                              .map((m) => (
+                                <option key={m.key} value={m.key}>
+                                  {m.label}
+                                </option>
+                              ))}
+                          </select>
+                          <div
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: 999,
+                              border: "1px solid rgba(74,32,130,0.35)",
+                              background: "rgba(74,32,130,0.10)",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              color: t.textMuted,
+                              fontFamily: FONT.body,
+                              letterSpacing: "0.05em",
+                              textAlign: "center",
+                            }}
+                          >
+                            VS
+                          </div>
+                          <select
+                            value={compMesaB}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setCompMesaB(v);
+                              if (v && v === compMesaA) {
+                                const o = mesasOpcoesBlackjack.find((m) => m.key !== v);
+                                if (o) setCompMesaA(o.key);
+                              }
+                            }}
+                            style={{
+                              ...selectStyleSimple,
+                              borderColor: compMesaB ? COR_MESA_B.border : undefined,
+                              width: "100%",
+                            }}
+                          >
+                            {mesasOpcoesBlackjack
+                              .filter((m) => mesasOpcoesBlackjack.length < 2 || m.key !== compMesaA)
+                              .map((m) => (
+                                <option key={m.key} value={m.key}>
+                                  {m.label}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
 
-                    {(compMesaA || compMesaB) && (
-                      <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
-                        <div
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: 10,
-                            background: COR_MESA_A.bg,
-                            border: `1px solid ${COR_MESA_A.border}`,
-                            textAlign: "center",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: COR_MESA_A.accent,
-                            fontFamily: FONT.body,
-                          }}
-                        >
-                          {labelMesaComparativoA}
+                        {(compMesaA || compMesaB) && (
+                          <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
+                            <div
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 10,
+                                background: COR_MESA_A.bg,
+                                border: `1px solid ${COR_MESA_A.border}`,
+                                textAlign: "center",
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: COR_MESA_A.accent,
+                                fontFamily: FONT.body,
+                              }}
+                            >
+                              {labelMesaComparativoA}
+                            </div>
+                            <div
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: 10,
+                                background: COR_MESA_B.bg,
+                                border: `1px solid ${COR_MESA_B.border}`,
+                                textAlign: "center",
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: COR_MESA_B.accent,
+                                fontFamily: FONT.body,
+                              }}
+                            >
+                              {labelMesaComparativoB}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="app-conversao-funil-duo">
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {renderMesaDiaTabela(linhasMesaA, "rgba(124,58,237,0.06)", "Mês")}
+                          </div>
+                          <div
+                            className="app-conversao-funil-divider"
+                            style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {renderMesaDiaTabela(linhasMesaB, "rgba(30,54,248,0.06)", "Mês")}
+                          </div>
                         </div>
-                        <div
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: 10,
-                            background: COR_MESA_B.bg,
-                            border: `1px solid ${COR_MESA_B.border}`,
-                            textAlign: "center",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: COR_MESA_B.accent,
-                            fontFamily: FONT.body,
-                          }}
-                        >
-                          {labelMesaComparativoB}
-                        </div>
-                      </div>
+                      </>
                     )}
+                  </div>
+
+                  <div style={{ ...card, marginBottom: 14 }}>
+                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaA, "rgba(124,58,237,0.06)", "Mês")}
+                        <div
+                          style={{
+                            marginBottom: 10,
+                            padding: "6px 10px",
+                            borderRadius: 10,
+                            background: "rgba(112,202,228,0.10)",
+                            border: "1px solid rgba(112,202,228,0.35)",
+                            textAlign: "center",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: BRAND.ciano,
+                            fontFamily: FONT.body,
+                          }}
+                        >
+                          Speed Baccarat
+                        </div>
+                        {renderMesaDiaTabela(linhasSpeedBaccarat, "rgba(74,32,130,0.06)", "Mês")}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaB, "rgba(30,54,248,0.06)", "Mês")}
+                        <div
+                          style={{
+                            marginBottom: 10,
+                            padding: "6px 10px",
+                            borderRadius: 10,
+                            background: "rgba(124,58,237,0.10)",
+                            border: "1px solid rgba(124,58,237,0.30)",
+                            textAlign: "center",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: BRAND.roxoVivo,
+                            fontFamily: FONT.body,
+                          }}
+                        >
+                          Roleta
+                        </div>
+                        {renderMesaDiaTabela(linhasRoleta, "rgba(74,32,130,0.06)", "Mês")}
                       </div>
                     </div>
-                  </>
-                )}
-              </div>
-
-              <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
-
-                <div className="app-conversao-funil-duo">
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        marginBottom: 10,
-                        padding: "6px 10px",
-                        borderRadius: 10,
-                        background: "rgba(112,202,228,0.10)",
-                        border: "1px solid rgba(112,202,228,0.35)",
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: BRAND.ciano,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      Speed Baccarat
-                    </div>
-                    {renderMesaDiaTabela(linhasSpeedBaccarat, "rgba(74,32,130,0.06)", "Mês")}
                   </div>
-                  <div
-                    className="app-conversao-funil-divider"
-                    style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        marginBottom: 10,
-                        padding: "6px 10px",
-                        borderRadius: 10,
-                        background: "rgba(124,58,237,0.10)",
-                        border: "1px solid rgba(124,58,237,0.30)",
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: BRAND.roxoVivo,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      Roleta
-                    </div>
-                    {renderMesaDiaTabela(linhasRoleta, "rgba(74,32,130,0.06)", "Mês")}
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </>
           )}
         </>

@@ -475,9 +475,10 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         )}
         {erro && (
           <div
+            role="alert"
             style={{
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               gap: 8,
               background: `${BRAND.vermelho}18`,
               border: `1px solid ${BRAND.vermelho}44`,
@@ -486,8 +487,19 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
               marginBottom: 16,
             }}
           >
-            <AlertCircle size={14} color={BRAND.vermelho} style={{ flexShrink: 0 }} />
-            <span style={{ color: BRAND.vermelho, fontFamily: FONT.body, fontSize: 13 }}>{erro}</span>
+            <AlertCircle size={14} color={BRAND.vermelho} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
+            <span
+              style={{
+                color: BRAND.vermelho,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                lineHeight: 1.45,
+                whiteSpace: "pre-line",
+                wordBreak: "break-word",
+              }}
+            >
+              {erro}
+            </span>
           </div>
         )}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>

@@ -382,7 +382,7 @@ export default function DashboardOverviewInfluencer() {
             byYm[ym].media_views = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
           }
         });
-        setDiasData(Object.values(byYm).sort((a, b) => a.data.localeCompare(b.data)));
+        setDiasData(Object.values(byYm).sort((a, b) => b.data.localeCompare(a.data)));
       } else if (mesSelecionado) {
         const dias: Record<string, DiaData> = {};
         for (let d = new Date(mesSelecionado.ano, mesSelecionado.mes, 1); d <= new Date(mesSelecionado.ano, mesSelecionado.mes + 1, 0); d.setDate(d.getDate() + 1)) {
@@ -428,7 +428,7 @@ export default function DashboardOverviewInfluencer() {
             dias[ds].media_views = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
           }
         });
-        setDiasData(Object.values(dias).sort((a, b) => a.data.localeCompare(b.data)));
+        setDiasData(Object.values(dias).sort((a, b) => b.data.localeCompare(a.data)));
       } else {
         setDiasData([]);
       }

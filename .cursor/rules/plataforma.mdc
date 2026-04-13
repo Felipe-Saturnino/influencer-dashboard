@@ -1,0 +1,263 @@
+---
+description: Regras específicas para todas as páginas da seção Plataforma. Complementa global.mdc, brand-css-variables.mdc, operacoes.mdc e conteudo.mdc.
+globs:
+  - src/pages/plataforma/**/*.tsx
+  - src/pages/plataforma/**/*.ts
+alwaysApply: false
+---
+
+# Seção Plataforma — Regras Específicas
+
+**Escopo (Cursor):** `src/pages/plataforma/` — **GestaoOperadoras**, **StatusTecnico**, **GestaoUsuarios** (rotas, abas e componentes associados).
+
+**Perfil de uso:** administração e infraestrutura. **GestaoUsuarios** é essencialmente **admin**; **GestaoOperadoras** e **StatusTecnico** devem respeitar **whitelabel** quando o utilizador/contexto for operador (via `useDashboardBrand`).
+
+**Evitar em toda a secção:** `window.confirm()`, `window.alert()`, emojis como ícone de estado, objeto `const BRAND = { ... }` **solto** fora do barrel acordado, saves N:M em loop sequencial sem batch, `backdropFilter: blur()` em modais, **`maxHeight: "90vh"`** (usar **`90dvh`**).
+
+---
+
+## `useDashboardBrand()` — Onde é obrigatório
+
+- **GestaoOperadoras** e **StatusTecnico:** **obrigatório** para header, ícone 28×28, `h1`, CTAs e ramos `brand.useBrand` / `dashBrand`.
+- **GestaoUsuarios:** o layout principal também chama o hook para **consistência do cabeçalho**; não assumir preview whitelabel completo só por isso (fluxos são admin-centric).
+
+**Whitelabel (alinhado a `operacoes.mdc` / `global.mdc`):**
+
+```tsx
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+const brand = useDashboardBrand();
+
+// Badge do header:
+<span style={{
+  width: 28, height: 28, borderRadius: 8,
+  background: brand.primaryIconBg,
+  border: brand.primaryIconBorder,
+  color: brand.primaryIconColor,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  flexShrink: 0,
+}}>
+
+// h1: color: brand.primary
+
+// CTA primário:
+background: brand.useBrand
+  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+  : `linear-gradient(135deg, #4a2082, #1e36f8)`
+color: "#fff"
+```
+
+- **Spinners (`Loader2`):** fundo neutro → `color="var(--brand-primary, #7c3aed)"` / `app-lucide-spin`. **Dentro de CTA com gradiente** → **`#fff`** — ver `brand-css-variables.mdc`.
+
+---
+
+## Imports e constantes de cor / tipografia
+
+```tsx
+import { FONT, FONT_TITLE } from "../../../constants/theme";
+
+// GestaoUsuarios: barrel local reexporta FONT_TITLE e BRAND derivado de BRAND_SEMANTIC
+import { BRAND, FONT_TITLE } from "./constants";
+
+// Mensagem vazia com filtro (ex. StatusTecnico)
+import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+```
+
+- **Não** duplicar paleta com `const BRAND = { ... }` em ficheiros avulsos — em **GestaoUsuarios** usar **`GestaoUsuarios/constants.ts`** (compõe `BRAND_SEMANTIC` de `theme.ts`).
+- **`MSG_SEM_DADOS_FILTRO`** está em **`lib/dashboardConstants.ts`**, não em `theme.ts`.
+- Importar **`FONT_TITLE`** de `constants/theme` ou do barrel `./constants` / reexport em `dashboardConstants` — evitar definir string de fonte inline.
+
+---
+
+## Ícones de status — nunca emojis
+
+Substituir 🟢🟡🔴✅⚠️🔄 por **Lucide** com cor semântica (ex.: `CheckCircle2`, `AlertTriangle`, `XCircle`, `RefreshCw`). Ícones decorativos: `aria-hidden="true"`.
+
+---
+
+## Alertas — nunca `alert()`
+
+```tsx
+const [erroSalvar, setErroSalvar] = useState<string | null>(null);
+
+{erroSalvar && (
+  <div
+    role="alert"
+    style={{
+      padding: "10px 14px", borderRadius: 10, marginBottom: 12,
+      background: "rgba(232,64,37,0.12)", border: "1px solid rgba(232,64,37,0.35)",
+      color: "#e84025", fontSize: 13, fontFamily: FONT.body,
+      display: "flex", alignItems: "center", gap: 8,
+    }}
+  >
+    <AlertCircle size={14} color="#e84025" aria-hidden="true" />
+    {erroSalvar}
+  </div>
+)}
+```
+
+---
+
+## Gravação em batch — nunca loop sequencial solto (N:M)
+
+Para associações (`operadora_pages`, `gestor_tipo_pages`, `role_permissions`, etc.):
+
+```tsx
+const { error: delErr } = await supabase
+  .from("operadora_pages")
+  .delete()
+  .in("operadora_slug", slugsAfetados);
+
+if (delErr) {
+  setErroSalvar("Erro ao salvar. Tente novamente.");
+  return;
+}
+
+const toInsert = slugsAfetados.flatMap((slug) =>
+  [...(mapaPages[slug] ?? [])].map((pageKey) => ({
+    operadora_slug: slug,
+    page_key: pageKey,
+  }))
+);
+
+if (toInsert.length > 0) {
+  const { error: insErr } = await supabase.from("operadora_pages").insert(toInsert);
+  if (insErr) {
+    setErroSalvar("Erro ao salvar. Recarregue a página para verificar o estado.");
+    return;
+  }
+}
+```
+
+---
+
+## Checkbox (`GestaoUsuarios/Checkbox.tsx`)
+
+- `<button type="button" role="checkbox">`, nunca `<div onClick>`.
+- `aria-checked`, `aria-label`, foco por teclado (Enter/Space).
+- Cor de acento: preferir `var(--brand-primary, #7c3aed)` — ver implementação atual.
+
+---
+
+## Abas (Tab Panels) — ARIA
+
+**GestaoUsuarios** (quatro abas) e **AbaPermissoes** (tabs por role):
+
+```tsx
+<div role="tablist" aria-label="…" style={{ display: "flex", gap: 8 }}>
+  {ABAS.map((a) => {
+    const ativa = aba === a.key;
+    return (
+      <button
+        key={a.key}
+        type="button"
+        role="tab"
+        id={`tab-${a.key}`}
+        aria-selected={ativa}
+        aria-controls={`panel-${a.key}`}
+        onClick={() => setAba(a.key)}
+      >
+        {a.label}
+      </button>
+    );
+  })}
+</div>
+
+<div role="tabpanel" id={`panel-${aba}`} aria-labelledby={`tab-${aba}`}>
+  {/* conteúdo */}
+</div>
+```
+
+---
+
+## Modais — acessibilidade
+
+**GestaoOperadoras** (ex. modal operadora), **GestaoUsuarios** (`ModalUsuario`, desativar, reset senha):
+
+- Overlay **sem** `backdropFilter: blur()`.
+- `role="dialog"`, `aria-modal="true"`, `aria-labelledby` no título.
+- Listener **Escape** e foco no primeiro campo/botão ativo (ex. `setTimeout` ~50ms).
+- `maxHeight: "90dvh"`, `overflowY: "auto"`.
+
+---
+
+## Zebra em tabelas — tema
+
+```tsx
+background: idx % 2 === 1
+  ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)")
+  : "transparent"
+```
+
+**Não** usar `rgba(74,32,130,0.06)` fixo como zebra (quebra coerência claro/escuro / confusão com marca).
+
+---
+
+## Sombras de cards — por tema
+
+```tsx
+boxShadow: t.isDark
+  ? "0 4px 20px rgba(0,0,0,0.25)"
+  : "0 2px 8px rgba(0,0,0,0.07)"
+```
+
+---
+
+## Filtros com estado — `aria-pressed`
+
+Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
+
+---
+
+## Regras por página
+
+### GestaoOperadoras
+
+- `useDashboardBrand()` no header, `h1`, CTA.
+- Tabela: `borderCollapse: "separate"`, `borderSpacing: 0`, wrapper com `overflowX: "auto"`.
+- Toggle de estado: `<button type="button">` com `aria-pressed`.
+- Modal: ARIA + Escape + foco; campos de brandguide (upload) claros no fluxo de criação/edição.
+- `FONT_TITLE`: de `constants/theme` (ou barrel consistente), não reinventar.
+
+### StatusTecnico
+
+- `useDashboardBrand()` / `dashBrand` em header e ações brand-aware.
+- **`SectionTitle`:** importar de `src/components/SectionTitle.tsx`, não copiar local.
+- Status de integração: Lucide + cores semânticas, **sem emoji**.
+- Tabela “Configuração de Alertas”: `overflowX: "auto"`, `borderCollapse: "separate"`.
+- Filtros de log: `aria-pressed` em chips de período.
+- Ações com efeito externo (sync/email): confirmação em modal antes de executar.
+- **`MSG_SEM_DADOS_FILTRO`:** import de `lib/dashboardConstants` (como no código atual).
+
+### GestaoUsuarios
+
+- **index.tsx:** abas com `tablist` / `tab` / `aria-controls`; `useDashboardBrand()` no header.
+- **AbaUsuarios:** filtros com `aria-pressed`; feedback com `role="alert"`; sombras por tema nos cards.
+- **AbaPermissoes:** abas por role com ARIA; erros com estado inline, não `alert()`; zebra tema-aware.
+- **AbaOperadora / AbaGestores:** batch atômico; erros inline; `Checkbox` acessível.
+- **ModalUsuario:** `90dvh`, `dialog` + ARIA + Escape + foco.
+- **ParesAgenciaUI:** `aria-label` descritivo nos selects (par influencer/operadora).
+
+---
+
+## Referência cruzada
+
+- Padrões de confirmação de exclusão (dois cliques): `lives.mdc` / `operacoes.mdc`.
+- Tabelas alinhadas a dashboards: `dashboards.mdc`, `lib/tableStyles`.
+
+---
+
+## O que nunca fazer nesta secção
+
+- `alert()` / `window.confirm()` — UI inline ou modal dedicado.
+- Emojis como estado (🟢🟡🔴✅⚠️🔄) — Lucide + texto.
+- `const BRAND = { ... }` fora de **`GestaoUsuarios/constants.ts`** (ou sem usar `BRAND_SEMANTIC` / `theme`).
+- Afirmar que **`MSG_SEM_DADOS_FILTRO`** vem de `theme.ts` — vem de **`lib/dashboardConstants.ts`**.
+- Save N:M em loop sequencial sem estratégia de batch/rollback clara.
+- `<div onClick>` como checkbox — `<button role="checkbox">`.
+- Abas sem `role="tablist"` / `role="tab"` / `aria-selected` / ligação ao `tabpanel`.
+- Modais sem `dialog` + Escape + foco inicial.
+- `backdropFilter: blur()` em overlay.
+- `maxHeight: "90vh"` em modais — usar **`90dvh`**.
+- Zebra `rgba(74,32,130,0.06)` fixo ou sombra idêntica em light/dark.
+- Omitir `useDashboardBrand` em **GestaoOperadoras** e **StatusTecnico** para superfícies de marca.
+- Usar `FONT.title` como família tipográfica — **`FONT.title`** em `theme` é **string CSS** do Barlow; para títulos NHD usar **`FONT_TITLE`**.
