@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, Megaphone, MessageSquare, Inbox, Trash2 } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, Megaphone, Inbox } from "lucide-react";
 import { GiCalendar, GiDiceSixFacesFour, GiRingingBell, GiShield } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -11,30 +11,11 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fmt, getMesesDisponiveis, getDatasDoMes, fmtDia } from "../../../lib/dashboardHelpers";
 import type { RoteiroCampanha } from "../../conteudo/RoteiroMesa";
-import type { DealerGenero, DealerJogo, DealerTurno, Operadora } from "../../../types";
+import type { Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
-import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { ModalThreadSolicitacao, type ThreadSolicitacaoOrigem } from "../solicitacoes/ModalThreadSolicitacao";
 import { corStatusSolicitacao, labelTipoSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
-
-const GENERO_LABEL: Record<DealerGenero, string> = {
-  feminino: "Feminino",
-  masculino: "Masculino",
-};
-
-const TURNO_LABEL: Record<DealerTurno, string> = {
-  manha: "Manhã",
-  tarde: "Tarde",
-  noite: "Noite",
-};
-
-const JOGO_DEALER_LABEL: Record<DealerJogo, string> = {
-  blackjack: "Blackjack",
-  roleta: "Roleta",
-  baccarat: "Baccarat",
-  mesa_vip: "Mesa VIP",
-};
 
 const JOGO_ROTEIRO_LABEL: Record<string, string> = {
   todos: "Todos os Jogos",
@@ -48,33 +29,11 @@ function labelJogosRoteiro(jogos: string[] | undefined): string {
   return list.length ? list.join(", ") : "—";
 }
 
-function labelJogosDealer(jogos: string[] | null | undefined): string {
-  const list = (jogos ?? []).map((k) => JOGO_DEALER_LABEL[k as DealerJogo] ?? k);
-  return list.length ? list.join(", ") : "—";
-}
-
 function periodoTimestamps(periodo: { inicio: string; fim: string }): { ini: string; fim: string } {
   return {
     ini: `${periodo.inicio}T00:00:00.000Z`,
     fim: `${periodo.fim}T23:59:59.999Z`,
   };
-}
-
-interface DealerObsEmbed {
-  nickname: string;
-  nome_real: string | null;
-  genero: DealerGenero;
-  turno: DealerTurno;
-  jogos: DealerJogo[] | null;
-  operadora_slug: string | null;
-}
-
-interface ObsComDealer {
-  id: string;
-  dealer_id: string;
-  texto: string;
-  created_at: string;
-  dealers: DealerObsEmbed | null;
 }
 
 type CampanhaComPerfil = RoteiroCampanha & {
@@ -89,66 +48,7 @@ function nomeCadastroCampanha(c: CampanhaComPerfil): string {
   return n || "Usuário não identificado";
 }
 
-function normalizaObsRow(raw: {
-  id: string;
-  dealer_id: string;
-  texto: string;
-  created_at: string;
-  dealers: DealerObsEmbed | DealerObsEmbed[] | null;
-}): ObsComDealer {
-  const d = raw.dealers;
-  const embed = Array.isArray(d) ? d[0] ?? null : d;
-  return { id: raw.id, dealer_id: raw.dealer_id, texto: raw.texto, created_at: raw.created_at, dealers: embed };
-}
-
-function ObservacaoTextoClamp({ texto }: { texto: string }) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  const [expandido, setExpandido] = useState(false);
-  const longo = texto.length > 300;
-  return (
-    <div>
-      <div
-        style={{
-          padding: 12,
-          borderRadius: 10,
-          background: "rgba(74,32,130,0.08)",
-          border: `1px solid ${t.cardBorder}`,
-          fontSize: 13,
-          color: t.text,
-          lineHeight: 1.45,
-          whiteSpace: "pre-wrap",
-          overflow: expandido ? "visible" : "hidden",
-          display: expandido ? "block" : "-webkit-box",
-          WebkitLineClamp: expandido ? undefined : 4,
-          WebkitBoxOrient: "vertical",
-        }}
-      >
-        {texto}
-      </div>
-      {longo ? (
-        <button
-          type="button"
-          onClick={() => setExpandido((e) => !e)}
-          style={{
-            marginTop: 6,
-            fontSize: 11,
-            color: brand.accent,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: FONT.body,
-            padding: 0,
-          }}
-        >
-          {expandido ? "Ver menos" : "Ver mais"}
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-type AbaStaff = "troca" | "feedback" | "campanha_roteiro" | "campanhas7" | "observacoes";
+type AbaStaff = "troca" | "feedback" | "campanha_roteiro";
 
 interface DealerSolRow {
   id: string;
@@ -191,8 +91,7 @@ export default function CentralNotificacoes() {
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
   const [campanhas, setCampanhas] = useState<CampanhaComPerfil[]>([]);
-  const [campanhas7, setCampanhas7] = useState<CampanhaComPerfil[]>([]);
-  const [observacoes, setObservacoes] = useState<ObsComDealer[]>([]);
+  const [solicCampRoteiroPorCampanhaId, setSolicCampRoteiroPorCampanhaId] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [abaStaff, setAbaStaff] = useState<AbaStaff>("troca");
   const [solicTroca, setSolicTroca] = useState<DealerSolRow[]>([]);
@@ -202,8 +101,6 @@ export default function CentralNotificacoes() {
   const [solicCampRoteiroGestor, setSolicCampRoteiroGestor] = useState<CampanhaRoteiroSolRow[]>([]);
   const [threadCtx, setThreadCtx] = useState<{ id: string; origem: ThreadSolicitacaoOrigem } | null>(null);
   const [inboxVersion, setInboxVersion] = useState(0);
-  const [obsParaExcluir, setObsParaExcluir] = useState<ObsComDealer | null>(null);
-  const [obsExcluindo, setObsExcluindo] = useState(false);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -252,12 +149,6 @@ export default function CentralNotificacoes() {
     return getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
   }, [historico, mesSelecionado]);
 
-  const iniCampanhas7 = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString();
-  }, []);
-
   useEffect(() => {
     if (perm.canView === "nao" || perm.loading) return;
 
@@ -265,62 +156,43 @@ export default function CentralNotificacoes() {
       setLoading(true);
       const { ini, fim } = periodoTimestamps(periodo);
 
-      let qCamp = supabase
-        .from("roteiro_mesa_campanhas")
-        .select("*, profiles!created_by(name)")
-        .gte("created_at", ini)
-        .lte("created_at", fim)
-        .order("created_at", { ascending: false });
+      if (verInboxEstudio) {
+        setCampanhas([]);
+        setSolicCampRoteiroPorCampanhaId({});
+      } else {
+        let qCamp = supabase
+          .from("roteiro_mesa_campanhas")
+          .select("*, profiles!created_by(name)")
+          .gte("created_at", ini)
+          .lte("created_at", fim)
+          .order("created_at", { ascending: false });
 
-      if (operadoraSlugsForcado?.length) {
-        qCamp = qCamp.in("operadora_slug", operadoraSlugsForcado);
-      } else if (filtroOperadora !== "todas") {
-        qCamp = qCamp.eq("operadora_slug", filtroOperadora);
+        if (operadoraSlugsForcado?.length) {
+          qCamp = qCamp.in("operadora_slug", operadoraSlugsForcado);
+        } else if (filtroOperadora !== "todas") {
+          qCamp = qCamp.eq("operadora_slug", filtroOperadora);
+        }
+
+        const { data: dataCamp, error: errCamp } = await qCamp;
+        if (errCamp) console.error("[CentralNotificacoes] campanhas:", errCamp);
+
+        const listaCamp = (dataCamp ?? []) as CampanhaComPerfil[];
+        const mapSol: Record<string, string> = {};
+        if (listaCamp.length > 0) {
+          const idsCamp = listaCamp.map((c) => c.id);
+          const { data: solRows, error: errSolMap } = await supabase
+            .from("roteiro_campanha_solicitacoes")
+            .select("id, campanha_id")
+            .in("campanha_id", idsCamp);
+          if (errSolMap) console.error("[CentralNotificacoes] solicitações campanha roteiro:", errSolMap.message);
+          for (const r of solRows ?? []) {
+            const row = r as { id: string; campanha_id: string };
+            mapSol[row.campanha_id] = row.id;
+          }
+        }
+        setCampanhas(listaCamp);
+        setSolicCampRoteiroPorCampanhaId(mapSol);
       }
-
-      let qCamp7 = supabase
-        .from("roteiro_mesa_campanhas")
-        .select("*, profiles!created_by(name)")
-        .gte("created_at", iniCampanhas7)
-        .order("created_at", { ascending: false });
-      if (operadoraSlugsForcado?.length) {
-        qCamp7 = qCamp7.in("operadora_slug", operadoraSlugsForcado);
-      } else if (filtroOperadora !== "todas") {
-        qCamp7 = qCamp7.eq("operadora_slug", filtroOperadora);
-      }
-
-      const qObs = supabase
-        .from("dealer_observacoes")
-        .select("id, dealer_id, texto, created_at, dealers(nickname, nome_real, genero, turno, jogos, operadora_slug)")
-        .gte("created_at", ini)
-        .lte("created_at", fim)
-        .order("created_at", { ascending: false });
-
-      const [{ data: dataCamp, error: errCamp }, { data: dataCamp7, error: errCamp7 }, { data: dataObs, error: errObs }] = await Promise.all([
-        qCamp,
-        qCamp7,
-        qObs,
-      ]);
-
-      if (errCamp) console.error("[CentralNotificacoes] campanhas:", errCamp);
-      if (errCamp7) console.error("[CentralNotificacoes] campanhas7:", errCamp7);
-      if (errObs) console.error("[CentralNotificacoes] observações:", errObs);
-
-      const listaCamp = (dataCamp ?? []) as CampanhaComPerfil[];
-      let listaObs = (dataObs ?? []).map((row) => normalizaObsRow(row as Parameters<typeof normalizaObsRow>[0]));
-
-      if (operadoraSlugsForcado?.length) {
-        listaObs = listaObs.filter((o) => {
-          const slug = o.dealers?.operadora_slug;
-          return slug && operadoraSlugsForcado.includes(slug);
-        });
-      } else if (filtroOperadora !== "todas") {
-        listaObs = listaObs.filter((o) => o.dealers?.operadora_slug === filtroOperadora);
-      }
-
-      setCampanhas(listaCamp);
-      setCampanhas7((dataCamp7 ?? []) as CampanhaComPerfil[]);
-      setObservacoes(listaObs);
 
       const normSol = (rows: DealerSolRow[] | null | undefined) =>
         (rows ?? []).map((r) => {
@@ -420,7 +292,7 @@ export default function CentralNotificacoes() {
     }
 
     void carregar();
-  }, [perm.canView, perm.loading, periodo, filtroOperadora, operadoraSlugsForcado, verInboxEstudio, user?.role, iniCampanhas7, inboxVersion]);
+  }, [perm.canView, perm.loading, periodo, filtroOperadora, operadoraSlugsForcado, verInboxEstudio, user?.role, inboxVersion]);
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -466,7 +338,6 @@ export default function CentralNotificacoes() {
     padding: "16px 20px",
   };
 
-  const badgeCampanhas7 = campanhas7.length;
   const badgeTroca = solicTroca.length;
   const badgeFb = solicFeedback.length;
   const badgeCampRoteiro = solicCampRoteiroGestor.length;
@@ -695,7 +566,7 @@ export default function CentralNotificacoes() {
         subtitle={
           verInboxEstudio && pendentesGestor > 0
             ? `${pendentesGestor} solicitaç${pendentesGestor === 1 ? "ão" : "ões"} aguardando sua resposta.`
-            : "Campanhas de roteiro, observações de dealers e solicitações ao estúdio."
+            : "Campanhas de roteiro e solicitações ao estúdio."
         }
       />
 
@@ -874,43 +745,6 @@ export default function CentralNotificacoes() {
                 </span>
               ) : null}
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={abaStaff === "campanhas7"}
-              id="tab-central-campanhas7"
-              aria-controls="panel-central-campanhas7"
-              onClick={() => setAbaStaff("campanhas7")}
-              style={chipTab(abaStaff === "campanhas7")}
-            >
-              Campanhas novas (7d)
-              {badgeCampanhas7 > 0 ? (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    background: "#6b7fff",
-                    color: "#fff",
-                    borderRadius: 10,
-                    padding: "0 6px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
-                  {badgeCampanhas7}
-                </span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={abaStaff === "observacoes"}
-              id="tab-central-obs"
-              aria-controls="panel-central-obs"
-              onClick={() => setAbaStaff("observacoes")}
-              style={chipTab(abaStaff === "observacoes")}
-            >
-              Observações
-            </button>
           </div>
 
           {abaStaff === "troca" ? (
@@ -926,188 +760,6 @@ export default function CentralNotificacoes() {
           {abaStaff === "campanha_roteiro" ? (
             <div role="tabpanel" id="panel-central-campanha-roteiro" aria-labelledby="tab-central-campanha-roteiro">
               {renderListaCampanhaRoteiroSolic(solicCampRoteiroGestor)}
-            </div>
-          ) : null}
-          {abaStaff === "campanhas7" ? (
-            <div role="tabpanel" id="panel-central-campanhas7" aria-labelledby="tab-central-campanhas7">
-              <section style={blocoCampanhasEnvelope}>
-                {campanhas7.length === 0 && !loading ? (
-                  <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>Nenhuma campanha cadastrada nos últimos 7 dias.</div>
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
-                    {campanhas7.map((c) => {
-                      const op = operadoraBySlug[c.operadora_slug];
-                      const dataCadastro =
-                        c.created_at != null
-                          ? new Date(c.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
-                          : null;
-                      const hoje = new Date().toISOString().split("T")[0];
-                      const vigente = !!(c.data_inicio && c.data_fim && hoje >= c.data_inicio && hoje <= c.data_fim);
-                      return (
-                        <article key={c.id} style={cardShell} aria-label={`Campanha: ${c.titulo}`}>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                            <OperadoraTag label={op?.nome ?? c.operadora_slug} corPrimaria={op?.cor_primaria} />
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 4,
-                                fontSize: 11,
-                                padding: "3px 9px",
-                                borderRadius: 20,
-                                background: "rgba(112,202,228,0.12)",
-                                color: "#70cae4",
-                                border: "1px solid rgba(112,202,228,0.28)",
-                                fontWeight: 600,
-                              }}
-                            >
-                              <GiDiceSixFacesFour size={12} aria-hidden />
-                              {labelJogosRoteiro(c.jogos as string[] | undefined)}
-                            </span>
-                          </div>
-                          <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: t.text }}>{c.titulo}</h3>
-                          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
-                            <span
-                              style={{
-                                fontSize: 12,
-                                fontWeight: 700,
-                                color: vigente ? "#22c55e" : t.textMuted,
-                                fontFamily: FONT.body,
-                              }}
-                            >
-                              {fmtDia(c.data_inicio ?? "")} → {fmtDia(c.data_fim ?? "")}
-                            </span>
-                            {vigente ? (
-                              <span
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  padding: "2px 8px",
-                                  borderRadius: 20,
-                                  background: "#22c55e22",
-                                  color: "#22c55e",
-                                  border: "1px solid #22c55e44",
-                                }}
-                              >
-                                VIGENTE
-                              </span>
-                            ) : null}
-                          </div>
-                          <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{c.texto}</p>
-                          {dataCadastro ? (
-                            <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted }}>
-                              Cadastrado por {nomeCadastroCampanha(c)} em {dataCadastro}
-                            </p>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            </div>
-          ) : null}
-          {abaStaff === "observacoes" ? (
-            <div role="tabpanel" id="panel-central-obs" aria-labelledby="tab-central-obs">
-              <section>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <MessageSquare size={20} color={brand.accent} aria-hidden />
-                  <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Observações de dealers</h2>
-                </div>
-                {observacoes.length === 0 && !loading ? (
-                  <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>Nenhuma observação registrada neste período.</div>
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
-                    {observacoes.map((o) => {
-                      const d = o.dealers;
-                      const op = d?.operadora_slug ? operadoraBySlug[d.operadora_slug] : undefined;
-                      return (
-                        <article
-                          key={o.id}
-                          style={cardShell}
-                          aria-label={`Observação de dealer: ${d?.nickname ?? "Dealer inativo"}`}
-                        >
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-                            {d?.operadora_slug ? (
-                              <OperadoraTag label={op?.nome ?? d.operadora_slug} corPrimaria={op?.cor_primaria} />
-                            ) : (
-                              <OperadoraTag label="Sem operadora" corPrimaria={null} />
-                            )}
-                          </div>
-                          {!d ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                              <span
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  padding: "2px 8px",
-                                  borderRadius: 20,
-                                  background: `${t.textMuted}22`,
-                                  color: t.textMuted,
-                                  border: `1px solid ${t.textMuted}44`,
-                                }}
-                              >
-                                DEALER INATIVO
-                              </span>
-                              ID: {o.dealer_id}
-                            </div>
-                          ) : (
-                            <>
-                              <div style={{ fontSize: 13, color: t.text, marginBottom: 6 }}>
-                                <strong>{d.nome_real ?? "—"}</strong>
-                                {d.nickname ? <span style={{ color: t.textMuted }}> · {d.nickname}</span> : null}
-                              </div>
-                              <dl style={{ margin: "0 0 10px", fontSize: 12, color: t.textMuted, display: "grid", gap: 4 }}>
-                                <div>
-                                  <dt style={{ display: "inline", fontWeight: 600, color: t.text }}>Gênero: </dt>
-                                  <dd style={{ display: "inline", margin: 0 }}>{GENERO_LABEL[d.genero] ?? d.genero}</dd>
-                                </div>
-                                <div>
-                                  <dt style={{ display: "inline", fontWeight: 600, color: t.text }}>Turno: </dt>
-                                  <dd style={{ display: "inline", margin: 0 }}>{TURNO_LABEL[d.turno] ?? d.turno}</dd>
-                                </div>
-                                <div>
-                                  <dt style={{ display: "inline", fontWeight: 600, color: t.text }}>Jogos: </dt>
-                                  <dd style={{ display: "inline", margin: 0 }}>{labelJogosDealer(d.jogos)}</dd>
-                                </div>
-                              </dl>
-                              <ObservacaoTextoClamp texto={o.texto} />
-                            </>
-                          )}
-                          <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted }}>
-                            {new Date(o.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                          </p>
-                          {perm.canExcluirOk ? (
-                            <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-                              <button
-                                type="button"
-                                onClick={() => setObsParaExcluir(o)}
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 6,
-                                  padding: "6px 12px",
-                                  borderRadius: 8,
-                                  border: "1px solid #ef444444",
-                                  background: "#ef444415",
-                                  color: "#ef4444",
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  fontFamily: FONT.body,
-                                  cursor: "pointer",
-                                }}
-                              >
-                                <Trash2 size={13} aria-hidden />
-                                Excluir observação
-                              </button>
-                            </div>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
             </div>
           ) : null}
         </>
@@ -1126,7 +778,9 @@ export default function CentralNotificacoes() {
           <section style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <Megaphone size={20} color={brand.accent} aria-hidden />
-              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Campanhas</h2>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>
+                {user?.role === "operador" ? "Minhas Campanhas" : "Campanhas"}
+              </h2>
             </div>
             <div style={blocoCampanhasEnvelope}>
               {campanhas.length === 0 && !loading ? (
@@ -1135,6 +789,7 @@ export default function CentralNotificacoes() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
                   {campanhas.map((c) => {
                     const op = operadoraBySlug[c.operadora_slug];
+                    const sidCampSol = solicCampRoteiroPorCampanhaId[c.id];
                     const dataCadastro =
                       c.created_at != null
                         ? new Date(c.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
@@ -1197,112 +852,34 @@ export default function CentralNotificacoes() {
                             Cadastrado por {nomeCadastroCampanha(c)} em {dataCadastro}
                           </p>
                         ) : null}
+                        {sidCampSol ? (
+                          <button
+                            type="button"
+                            onClick={() => setThreadCtx({ id: sidCampSol, origem: "campanha_roteiro" })}
+                            style={{
+                              marginTop: 12,
+                              padding: "8px 14px",
+                              borderRadius: 10,
+                              border: "none",
+                              background: brand.useBrand
+                                ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                                : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                              color: "#fff",
+                              fontWeight: 700,
+                              fontSize: 12,
+                              fontFamily: FONT.body,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {perm.canEditarOk ? "Ver conversa" : "Ver conversa (somente leitura)"}
+                          </button>
+                        ) : null}
                       </article>
                     );
                   })}
                 </div>
               )}
             </div>
-          </section>
-
-          <section>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <MessageSquare size={20} color={brand.accent} aria-hidden />
-              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Observações de dealers</h2>
-            </div>
-            {observacoes.length === 0 && !loading ? (
-              <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>Nenhuma observação registrada neste período.</div>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
-                {observacoes.map((o) => {
-                  const d = o.dealers;
-                  const op = d?.operadora_slug ? operadoraBySlug[d.operadora_slug] : undefined;
-                  return (
-                    <article
-                      key={o.id}
-                      style={cardShell}
-                      aria-label={`Observação de dealer: ${d?.nickname ?? "Dealer inativo"}`}
-                    >
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-                        {d?.operadora_slug ? (
-                          <OperadoraTag label={op?.nome ?? d.operadora_slug} corPrimaria={op?.cor_primaria} />
-                        ) : (
-                          <OperadoraTag label="Sem operadora" corPrimaria={null} />
-                        )}
-                      </div>
-                      {!d ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              padding: "2px 8px",
-                              borderRadius: 20,
-                              background: `${t.textMuted}22`,
-                              color: t.textMuted,
-                              border: `1px solid ${t.textMuted}44`,
-                            }}
-                          >
-                            DEALER INATIVO
-                          </span>
-                          ID: {o.dealer_id}
-                        </div>
-                      ) : (
-                        <>
-                          <div style={{ fontSize: 13, color: t.text, marginBottom: 6 }}>
-                            <strong>{d.nome_real ?? "—"}</strong>
-                            {d.nickname ? <span style={{ color: t.textMuted }}> · {d.nickname}</span> : null}
-                          </div>
-                          <dl style={{ margin: "0 0 10px", fontSize: 12, color: t.textMuted, display: "grid", gap: 4 }}>
-                            <div>
-                              <dt style={{ display: "inline", fontWeight: 600, color: t.text }}>Gênero: </dt>
-                              <dd style={{ display: "inline", margin: 0 }}>{GENERO_LABEL[d.genero] ?? d.genero}</dd>
-                            </div>
-                            <div>
-                              <dt style={{ display: "inline", fontWeight: 600, color: t.text }}>Turno: </dt>
-                              <dd style={{ display: "inline", margin: 0 }}>{TURNO_LABEL[d.turno] ?? d.turno}</dd>
-                            </div>
-                            <div>
-                              <dt style={{ display: "inline", fontWeight: 600, color: t.text }}>Jogos: </dt>
-                              <dd style={{ display: "inline", margin: 0 }}>{labelJogosDealer(d.jogos)}</dd>
-                            </div>
-                          </dl>
-                          <ObservacaoTextoClamp texto={o.texto} />
-                        </>
-                      )}
-                      <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted }}>
-                        {new Date(o.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                      </p>
-                      {perm.canExcluirOk ? (
-                        <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-                          <button
-                            type="button"
-                            onClick={() => setObsParaExcluir(o)}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              padding: "6px 12px",
-                              borderRadius: 8,
-                              border: "1px solid #ef444444",
-                              background: "#ef444415",
-                              color: "#ef4444",
-                              fontSize: 11,
-                              fontWeight: 700,
-                              fontFamily: FONT.body,
-                              cursor: "pointer",
-                            }}
-                          >
-                            <Trash2 size={13} aria-hidden />
-                            Excluir observação
-                          </button>
-                        </div>
-                      ) : null}
-                    </article>
-                  );
-                })}
-              </div>
-            )}
           </section>
         </>
       )}
@@ -1315,7 +892,7 @@ export default function CentralNotificacoes() {
           </h2>
         </div>
         <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 640 }}>
-          Listagem das solicitações marcadas como resolvidas no período selecionado (filtro de mês ou histórico).
+          Listagem das solicitações marcadas como resolvidas no período selecionado.
         </p>
         {renderListaSolicitacoes(solicConcluidas, "concluidas")}
       </section>
@@ -1331,28 +908,6 @@ export default function CentralNotificacoes() {
             setInboxVersion((v) => v + 1);
             setThreadCtx(null);
           }}
-        />
-      ) : null}
-
-      {obsParaExcluir ? (
-        <ModalConfirmDelete
-          zIndex={1200}
-          texto={`Excluir esta observação${obsParaExcluir.dealers?.nickname ? ` sobre ${obsParaExcluir.dealers.nickname}` : ""}? Esta ação é irreversível.`}
-          onCancel={() => setObsParaExcluir(null)}
-          onConfirm={async () => {
-            if (!obsParaExcluir) return;
-            setObsExcluindo(true);
-            const { error } = await supabase.from("dealer_observacoes").delete().eq("id", obsParaExcluir.id);
-            setObsExcluindo(false);
-            if (error) {
-              console.error("[CentralNotificacoes] excluir observação:", error);
-              setObsParaExcluir(null);
-              return;
-            }
-            setObsParaExcluir(null);
-            setInboxVersion((v) => v + 1);
-          }}
-          loading={obsExcluindo}
         />
       ) : null}
     </div>
