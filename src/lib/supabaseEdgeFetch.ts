@@ -257,10 +257,11 @@ export async function callSupabaseEdgeFunction<T = unknown>(
     "Tempo esgotado ao obter a sessão. Recarregue a página e faça login novamente."
   );
 
-  const accessToken = session?.access_token?.trim();
-  if (!accessToken) {
+  const tokenRaw = session?.access_token?.trim();
+  if (!tokenRaw) {
     throw new Error("Sessão expirada ou ausente. Faça login novamente.");
   }
+  const accessToken: string = tokenRaw;
 
   const useProxyFallback = typeof window !== "undefined" && PROXY_FUNCTIONS.has(functionName);
 
