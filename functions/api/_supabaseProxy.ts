@@ -5,10 +5,22 @@
 
 const UPSTREAM_MS = 55_000;
 
+/** Cloudflare Pages: às vezes só variáveis sem prefixo VITE_ estão ligadas ao runtime das Functions. */
 export type SupabaseProxyContext = {
-  env: { VITE_SUPABASE_URL?: string; VITE_SUPABASE_ANON_KEY?: string };
+  env: {
+    VITE_SUPABASE_URL?: string;
+    VITE_SUPABASE_ANON_KEY?: string;
+    SUPABASE_URL?: string;
+    SUPABASE_ANON_KEY?: string;
+  };
   request: Request;
 };
+
+function resolveProxySupabaseEnv(context: SupabaseProxyContext): { url: string; anonKey: string } {
+  const url = (context.env.VITE_SUPABASE_URL || context.env.SUPABASE_URL || "").trim();
+  const anonKey = (context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY || "").trim();
+  return { url, anonKey };
+}
 
 function jsonCorsHeaders(): HeadersInit {
   return {
@@ -28,15 +40,32 @@ export async function proxyPostToSupabaseEdge(
   context: SupabaseProxyContext,
   functionName: string
 ): Promise<Response> {
-  const url = context.env.VITE_SUPABASE_URL;
-  const anonKey = context.env.VITE_SUPABASE_ANON_KEY;
+  const { url, anonKey } = resolveProxySupabaseEnv(context);
 
   if (!url || !anonKey) {
     return new Response(
       JSON.stringify({
         error:
-          "Configuração do servidor incompleta (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY). No Cloudflare Pages, defina essas variáveis também para o runtime das Functions (Preview e Production), não só no build do Vite.",
+          "Configuração do servidor incompleta (sem URL/chave Supabase no Worker). No Cloudflare Pages → Settings → Environment variables: defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY (ou SUPABASE_URL e SUPABASE_ANON_KEY) para Production e para Preview, marcando-as disponíveis para Functions — não basta só o build do Vite.",
       }),
+      { status: 500, headers: jsonCorsHeaders() }
+    );
+  }
+
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.endsWith(".pages.dev") || host.endsWith(".cloudflareapp.com")) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "SUPABASE_URL no proxy aponta para o domínio do Cloudflare Pages. Use a Project URL do Supabase (Settings → API).",
+        }),
+        { status: 500, headers: jsonCorsHeaders() }
+      );
+    }
+  } catch {
+    return new Response(
+      JSON.stringify({ error: "SUPABASE_URL inválida no proxy (URL malformada)." }),
       { status: 500, headers: jsonCorsHeaders() }
     );
   }

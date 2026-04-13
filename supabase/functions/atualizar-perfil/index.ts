@@ -146,10 +146,11 @@ serve(async (req) => {
   }
 
   try {
-    const { error: profileErr } = await supabase
+    const { data: updatedProfile, error: profileErr } = await supabase
       .from('profiles')
       .update({ name: name.trim(), role })
       .eq('id', userId)
+      .select('id')
 
     if (profileErr) {
       return new Response(JSON.stringify({ error: `Erro ao atualizar perfil: ${profileErr.message}` }), {
@@ -157,8 +158,20 @@ serve(async (req) => {
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
+    if (!updatedProfile?.length) {
+      return new Response(
+        JSON.stringify({ error: 'Nenhum perfil encontrado para este userId (nada foi atualizado).' }),
+        { status: 404, headers: { ...cors, 'Content-Type': 'application/json' } },
+      )
+    }
 
-    await supabase.from('user_scopes').delete().eq('user_id', userId)
+    const { error: delScopesErr } = await supabase.from('user_scopes').delete().eq('user_id', userId)
+    if (delScopesErr) {
+      return new Response(
+        JSON.stringify({ error: `Erro ao limpar escopos: ${delScopesErr.message}` }),
+        { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
+      )
+    }
 
     if (role === 'gestor') {
       const novasTipos = scopeGestorTiposArr.map((scope_ref) => ({
@@ -184,11 +197,17 @@ serve(async (req) => {
         scopeOperadorasArr.forEach((ref) => novasLinhas.push({ user_id: userId, scope_type: 'operadora', scope_ref: ref }))
       }
       if (novasLinhas.length > 0) {
-        await supabase.from('user_scopes').insert(novasLinhas)
+        const { error: insScopeErr } = await supabase.from('user_scopes').insert(novasLinhas)
+        if (insScopeErr) {
+          return new Response(
+            JSON.stringify({ error: `Erro ao salvar escopos: ${insScopeErr.message}` }),
+            { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
+          )
+        }
       }
 
       if (role === 'influencer') {
-        await supabase.from('influencer_perfil').upsert(
+        const { error: perfilErr } = await supabase.from('influencer_perfil').upsert(
           {
             id: userId,
             nome_artistico: name.trim(),
@@ -196,15 +215,34 @@ serve(async (req) => {
             status: 'ativo',
             cache_hora: 0,
           },
-          { onConflict: 'id', ignoreDuplicates: false }
+          { onConflict: 'id', ignoreDuplicates: false },
         )
-        await supabase.from('influencer_operadoras').delete().eq('influencer_id', userId)
-        for (const slug of scopeOperadorasArr) {
-          await supabase.from('influencer_operadoras').insert({
+        if (perfilErr) {
+          return new Response(
+            JSON.stringify({ error: `Erro ao atualizar influencer_perfil: ${perfilErr.message}` }),
+            { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
+          )
+        }
+        const { error: delIoErr } = await supabase.from('influencer_operadoras').delete().eq('influencer_id', userId)
+        if (delIoErr) {
+          return new Response(
+            JSON.stringify({ error: `Erro ao limpar influencer_operadoras: ${delIoErr.message}` }),
+            { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
+          )
+        }
+        if (scopeOperadorasArr.length > 0) {
+          const linhasIo = scopeOperadorasArr.map((slug) => ({
             influencer_id: userId,
             operadora_slug: slug,
             ativo: true,
-          })
+          }))
+          const { error: insIoErr } = await supabase.from('influencer_operadoras').insert(linhasIo)
+          if (insIoErr) {
+            return new Response(
+              JSON.stringify({ error: `Erro ao salvar influencer_operadoras: ${insIoErr.message}` }),
+              { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
+            )
+          }
         }
       }
     }

@@ -133,6 +133,13 @@ async function callViaSameOriginProxy<T>(
         if (typeof o.error === "string" && o.error.trim()) msg = o.error;
         else if (typeof o.message === "string" && o.message.trim()) msg = o.message;
       }
+      /** Proxy CF sem env no Worker: build do app ainda pode ter VITE_* — tenta Supabase direto no browser. */
+      if (
+        res.status === 500 &&
+        /configura(ç|c)ão do servidor incompleta|VITE_SUPABASE_URL|SUPABASE_URL/i.test(msg)
+      ) {
+        throw new TryDirectInstead("proxy_config_incomplete");
+      }
       throw new Error(msg);
     }
 
