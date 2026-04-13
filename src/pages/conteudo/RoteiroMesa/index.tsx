@@ -10,6 +10,7 @@ import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check
 import { GiNotebook, GiShield } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { BannerPendencias } from "../../operacoes/solicitacoes/BannerPendencias";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";
@@ -758,7 +759,7 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function RoteiroMesa() {
-  const { theme: t, podeVerOperadora, isDark } = useApp();
+  const { theme: t, podeVerOperadora, isDark, user } = useApp();
   const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("roteiro_mesa");
@@ -842,6 +843,10 @@ export default function RoteiroMesa() {
 
   return (
     <div className="app-page-shell">
+
+      {user?.role === "operador" && operadoraSlugsForcado?.length ? (
+        <BannerPendencias operadoraSlugs={operadoraSlugsForcado} operadoras={operadorasList} />
+      ) : null}
 
       {/* ── HEADER — idêntico ao padrão Agenda de Lives ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>

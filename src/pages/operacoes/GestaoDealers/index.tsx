@@ -7,11 +7,15 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
-import { Eye, Pencil, MessageSquare, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
+import { Eye, Pencil, Send, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
 import { GiCardRandom, GiShield, GiFemale, GiMale, GiCardPick, GiCardAceSpades, GiCrown } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
+import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
+import { BannerPendencias } from "../solicitacoes/BannerPendencias";
+import { corStatusSolicitacao, type SolicitacaoStatus, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -45,16 +49,6 @@ const JOGOS_OPTS: { value: DealerJogo; label: string }[] = [
   { value: "mesa_vip", label: "Mesa VIP" },
 ];
 
-// ─── Tipos auxiliares ─────────────────────────────────────────────────────────
-interface DealerObservacao {
-  id: string;
-  dealer_id: string;
-  usuario_id: string | null;
-  texto: string;
-  created_at: string;
-  usuario_nome?: string;
-}
-
 function passaFiltroOperadora(d: Dealer, filtroOperadora: string): boolean {
   if (filtroOperadora === "nenhuma") return !d.operadora_slug;
   if (filtroOperadora !== "todas" && d.operadora_slug !== filtroOperadora) return false;
@@ -78,7 +72,6 @@ const ICONE_JOGO: Record<DealerJogo, ReactNode> = {
 };
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
-const OBS_PAGE = 20;
 
 export default function GestaoDealers() {
   const { theme: t, user, podeVerOperadora, escoposVisiveis, isDark } = useApp();
@@ -91,7 +84,8 @@ export default function GestaoDealers() {
   const [modalCriar, setModalCriar] = useState(false);
   const [modalVer, setModalVer] = useState<Dealer | null>(null);
   const [modalEditar, setModalEditar] = useState<Dealer | null>(null);
-  const [modalObs, setModalObs] = useState<Dealer | null>(null);
+  const [modalSolicitacao, setModalSolicitacao] = useState<Dealer | null>(null);
+  const [solicitacaoThreadId, setSolicitacaoThreadId] = useState<string | null>(null);
 
   const [filtroGenero, setFiltroGenero] = useState<string>("todos");
   const [filtroTurno, setFiltroTurno] = useState<string>("todos");
@@ -231,6 +225,14 @@ export default function GestaoDealers() {
     return operadoras.filter((o) => podeVerOperadora(o.slug));
   }, [user?.role, operadoraSlugsForcado, operadoras, podeVerOperadora]);
 
+  /** Slug da operadora para solicitações (operador com escopo). */
+  const operadoraSlugAtiva = useMemo(() => {
+    if (user?.role !== "operador" || !operadoraSlugsForcado?.length) return null;
+    if (operadoraSlugsForcado.length === 1) return operadoraSlugsForcado[0];
+    if (filtroOperadora !== "todas" && filtroOperadora !== "nenhuma") return filtroOperadora;
+    return operadoraSlugsForcado[0] ?? null;
+  }, [user?.role, operadoraSlugsForcado, filtroOperadora]);
+
   const selectOperadoraStyle: CSSProperties = {
     padding: "6px 14px 6px 30px",
     borderRadius: 999,
@@ -293,6 +295,10 @@ export default function GestaoDealers() {
           ) : undefined
         }
       />
+
+      {user?.role === "operador" && operadoraSlugsForcado?.length ? (
+        <BannerPendencias operadoraSlugs={operadoraSlugsForcado} operadoras={operadoras} />
+      ) : null}
 
       {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
       <div style={{ marginBottom: 14 }}>
@@ -539,7 +545,7 @@ export default function GestaoDealers() {
               brand={brand}
               onVer={() => setModalVer(d)}
               onEditar={() => setModalEditar(d)}
-              onObservacoes={() => setModalObs(d)}
+              onSolicitar={operadoraSlugAtiva ? () => setModalSolicitacao(d) : undefined}
               podeEditar={podeEditarDealer(d)}
             />
           ))}
@@ -565,8 +571,38 @@ export default function GestaoDealers() {
           onSalvo={() => { setModalEditar(null); carregar(); }}
         />
       )}
-      {modalVer && <ModalVer dealer={modalVer} operadoras={operadoras} onClose={() => setModalVer(null)} />}
-      {modalObs && <ModalObservacoes dealer={modalObs} onClose={() => setModalObs(null)} />}
+      {modalVer && (
+        <ModalVer
+          dealer={modalVer}
+          operadoras={operadoras}
+          slugSolicitacaoFiltro={user?.role === "operador" ? operadoraSlugAtiva : null}
+          onClose={() => setModalVer(null)}
+          onAbrirThread={(id) => {
+            setModalVer(null);
+            setSolicitacaoThreadId(id);
+          }}
+        />
+      )}
+      {modalSolicitacao && operadoraSlugAtiva ? (
+        <ModalSolicitacao
+          dealer={modalSolicitacao}
+          operadoraSlug={operadoraSlugAtiva}
+          onClose={() => setModalSolicitacao(null)}
+          onEnviado={() => {
+            void carregar();
+          }}
+        />
+      ) : null}
+      {solicitacaoThreadId ? (
+        <ModalThreadSolicitacao
+          solicitacaoId={solicitacaoThreadId}
+          operadoras={operadoras}
+          onClose={() => setSolicitacaoThreadId(null)}
+          onResolvido={() => {
+            void carregar();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -578,7 +614,7 @@ function DealerCard({
   brand,
   onVer,
   onEditar,
-  onObservacoes,
+  onSolicitar,
   podeEditar,
 }: {
   dealer: Dealer;
@@ -586,7 +622,8 @@ function DealerCard({
   brand: ReturnType<typeof useDashboardBrand>;
   onVer: () => void;
   onEditar: () => void;
-  onObservacoes: () => void;
+  /** Só operador com escopo de operadora definido. */
+  onSolicitar?: () => void;
   podeEditar: boolean;
 }) {
   const { theme: t, isDark } = useApp();
@@ -711,9 +748,15 @@ function DealerCard({
               <Pencil size={13} /> Editar
             </button>
           )}
-          <button onClick={onObservacoes} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-            <MessageSquare size={13} /> Observações
-          </button>
+          {onSolicitar ? (
+            <button
+              type="button"
+              onClick={onSolicitar}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
+            >
+              <Send size={13} aria-hidden /> Solicitar
+            </button>
+          ) : null}
         </div>
       </div>
     </article>
@@ -721,10 +764,56 @@ function DealerCard({
 }
 
 // ─── Modal Ver ────────────────────────────────────────────────────────────────
-function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras: Operadora[]; onClose: () => void }) {
+interface SolicResumo {
+  id: string;
+  tipo: SolicitacaoTipo;
+  status: SolicitacaoStatus;
+  titulo: string | null;
+  created_at: string;
+  aguarda_resposta_de: string | null;
+}
+
+function ModalVer({
+  dealer,
+  operadoras,
+  slugSolicitacaoFiltro,
+  onClose,
+  onAbrirThread,
+}: {
+  dealer: Dealer;
+  operadoras: Operadora[];
+  /** Operador: restringe à operadora; gestor/admin: null = todas as solicitações do dealer. */
+  slugSolicitacaoFiltro: string | null;
+  onClose: () => void;
+  onAbrirThread: (solicitacaoId: string) => void;
+}) {
   const { theme: t } = useApp();
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
   const fotoUrl = (dealer.fotos ?? [])[0];
+  const [solicitacoes, setSolicitacoes] = useState<SolicResumo[]>([]);
+  const [solLoading, setSolLoading] = useState(true);
+
+  useEffect(() => {
+    let cancel = false;
+    setSolLoading(true);
+    void (async () => {
+      let q = supabase
+        .from("dealer_solicitacoes")
+        .select("id, tipo, status, titulo, created_at, aguarda_resposta_de")
+        .eq("dealer_id", dealer.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (slugSolicitacaoFiltro) q = q.eq("operadora_slug", slugSolicitacaoFiltro);
+      const { data } = await q;
+      if (!cancel) {
+        setSolicitacoes((data ?? []) as SolicResumo[]);
+        setSolLoading(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [dealer.id, slugSolicitacaoFiltro]);
 
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
@@ -744,119 +833,67 @@ function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras:
             <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Dealer</span><br /><span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span></div>
           )}
         </div>
+
+        <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${t.cardBorder}` }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10, fontFamily: FONT.body }}>
+            Histórico de solicitações
+          </div>
+          {solLoading ? (
+            <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando...</span>
+          ) : solicitacoes.length === 0 ? (
+            <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma solicitação registrada.</span>
+          ) : (
+            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+              {solicitacoes.map((s) => {
+                const cor = corStatusSolicitacao(s.status);
+                return (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => onAbrirThread(s.id)}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg ?? t.cardBg,
+                        cursor: "pointer",
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{s.titulo ?? s.id}</div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: 20,
+                            background: `${cor}22`,
+                            color: cor,
+                            border: `1px solid ${cor}44`,
+                          }}
+                        >
+                          {s.status}
+                        </span>
+                        <span style={{ fontSize: 11, color: t.textMuted }}>
+                          {new Date(s.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                        </span>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
         <div style={{ marginTop: 20 }}>
           <button type="button" onClick={onClose} style={{ width: "100%", padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
             Fechar
           </button>
         </div>
-    </ModalBase>
-  );
-}
-
-// ─── Modal Observações ─────────────────────────────────────────────────────────
-async function enrichObsComNomes(lista: DealerObservacao[]): Promise<DealerObservacao[]> {
-  const ids = [...new Set(lista.map((a) => a.usuario_id).filter(Boolean))] as string[];
-  if (ids.length === 0) return lista;
-  const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
-  const map: Record<string, string> = {};
-  (profs ?? []).forEach((p: { id: string; name: string }) => { map[p.id] = p.name ?? p.id; });
-  return lista.map((a) => ({ ...a, usuario_nome: a.usuario_id ? map[a.usuario_id] ?? "—" : "—" }));
-}
-
-function ModalObservacoes({ dealer, onClose }: { dealer: Dealer; onClose: () => void }) {
-  const { theme: t, user } = useApp();
-  const [obs, setObs] = useState<DealerObservacao[]>([]);
-  const [novoTexto, setNovoTexto] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [temMais, setTemMais] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setObs([]);
-    (async () => {
-      const { data } = await supabase
-        .from("dealer_observacoes")
-        .select("id, dealer_id, usuario_id, texto, created_at")
-        .eq("dealer_id", dealer.id)
-        .order("created_at", { ascending: false })
-        .range(0, OBS_PAGE - 1);
-      if (cancelled) return;
-      const lista = (data ?? []) as DealerObservacao[];
-      const enriched = await enrichObsComNomes(lista);
-      if (cancelled) return;
-      setObs(enriched);
-      setTemMais(lista.length >= OBS_PAGE);
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [dealer.id]);
-
-  async function carregarMais() {
-    if (loadingMore || !temMais) return;
-    setLoadingMore(true);
-    const from = obs.length;
-    const { data } = await supabase
-      .from("dealer_observacoes")
-      .select("id, dealer_id, usuario_id, texto, created_at")
-      .eq("dealer_id", dealer.id)
-      .order("created_at", { ascending: false })
-      .range(from, from + OBS_PAGE - 1);
-    const lista = (data ?? []) as DealerObservacao[];
-    const enriched = await enrichObsComNomes(lista);
-    setObs((prev) => [...prev, ...enriched]);
-    setTemMais(lista.length >= OBS_PAGE);
-    setLoadingMore(false);
-  }
-
-  const adicionar = async () => {
-    if (!novoTexto.trim()) return;
-    const { data, error } = await supabase.from("dealer_observacoes").insert({ dealer_id: dealer.id, usuario_id: user?.id ?? null, texto: novoTexto.trim() }).select("id, dealer_id, usuario_id, texto, created_at").single();
-    if (!error && data) {
-      setObs((prev) => [{ ...data, usuario_nome: user?.name }, ...prev]);
-      setNovoTexto("");
-    }
-  };
-
-  return (
-    <ModalBase onClose={onClose} maxWidth={460}>
-      <ModalHeader title={`Observações — ${dealer.nickname}`} onClose={onClose} />
-        <div style={{ marginBottom: 16 }}>
-          <textarea value={novoTexto} onChange={(e) => setNovoTexto(e.target.value)} placeholder="Nova observação..." style={{ width: "100%", minHeight: 80, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13, fontFamily: FONT.body, outline: "none", boxSizing: "border-box" }} />
-          <button type="button" onClick={() => void adicionar()} style={{ marginTop: 8, padding: "8px 16px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-            Adicionar
-          </button>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {loading ? <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando...</span> : obs.length === 0 ? <span style={{ color: t.textMuted, fontSize: 13 }}>Nenhuma observação.</span> : obs.map((o) => (
-            <div key={o.id} style={{ padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, fontSize: 13, fontFamily: FONT.body }}>
-              <div style={{ color: t.text }}>{o.texto}</div>
-              <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6 }}>{o.usuario_nome ?? "—"} • {new Date(o.created_at).toLocaleString("pt-BR")}</div>
-            </div>
-          ))}
-        </div>
-        {temMais && !loading ? (
-          <button
-            type="button"
-            onClick={() => void carregarMais()}
-            disabled={loadingMore}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: "transparent",
-              color: t.textMuted,
-              fontSize: 12,
-              fontFamily: FONT.body,
-              cursor: loadingMore ? "not-allowed" : "pointer",
-              width: "100%",
-              marginTop: 8,
-            }}
-          >
-            {loadingMore ? "Carregando..." : "Carregar mais observações"}
-          </button>
-        ) : null}
     </ModalBase>
   );
 }
