@@ -380,7 +380,7 @@ function mergeDailyRowsPorData(rows: DailyRawRow[]): DailyRow[] {
     });
 }
 
-/** Filtro "Todas as operadoras": soma financeira por dia + UAP médio entre operadoras; margem / aposta média / ARPU (GGR÷Apostas). */
+/** Filtro "Todas as operadoras": soma financeira por dia + UAP médio entre operadoras; margem / aposta média; ARPU = GGR÷UAP (UAP médio do dia). */
 function mergeDailyRowsAgregadoTodasOperadoras(rows: DailyRawRow[]): DailyRow[] {
   const by = new Map<string, DailyRawRow[]>();
   for (const r of rows) {
@@ -405,7 +405,7 @@ function mergeDailyRowsAgregadoTodasOperadoras(rows: DailyRawRow[]): DailyRow[] 
       const margin_pct =
         hasT && turnover !== 0 && hasG && ggr != null ? (ggr / turnover) * 100 : null;
       const bet_size = hasB && bets !== 0 && hasT ? turnover / bets : null;
-      const arpu = hasB && bets !== 0 && hasG && ggr != null ? ggr / bets : null;
+      const arpu = arpuComparativoFromGgrUap(hasG ? ggr : null, uap);
       return {
         data,
         turnover: hasT ? turnover : null,
@@ -454,7 +454,7 @@ function agregaDailyRawPorOperadoraNoMes(
       const uapM = uapPorSlug.get(operadora_slug) ?? null;
       const margin_pct = turnover !== 0 ? (ggr / turnover) * 100 : null;
       const bet_size = bets !== 0 ? turnover / bets : null;
-      const arpu = bets !== 0 ? ggr / bets : null;
+      const arpu = arpuComparativoFromGgrUap(ggr, uapM);
       return {
         operadora_slug,
         turnover,
@@ -501,8 +501,7 @@ function agregaDailyRawPorOperadoraNoDia(
         turnover != null && turnover !== 0 && ggr != null ? (ggr / turnover) * 100 : null;
       const bet_size =
         bets != null && bets !== 0 && turnover != null ? turnover / bets : null;
-      const arpu =
-        bets != null && bets !== 0 && ggr != null ? ggr / bets : null;
+      const arpu = arpuComparativoFromGgrUap(ggr, uap);
       return {
         operadora_slug,
         turnover,
@@ -941,20 +940,6 @@ function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: str
   );
 }
 
-function mapDailyV2(r: { data: string; turnover: number | null; ggr: number | null; apostas: number | null; uap: number | null }): DailyRow {
-  const a = r.apostas != null ? Number(r.apostas) : null;
-  return {
-    data: r.data,
-    turnover: r.turnover != null ? Number(r.turnover) : null,
-    ggr: r.ggr != null ? Number(r.ggr) : null,
-    bets: a,
-    uap: r.uap != null ? Number(r.uap) : null,
-    margin_pct: null,
-    bet_size: null,
-    arpu: null,
-  };
-}
-
 function mapMonthlyV2(r: { mes: string; uap: number | null; arpu: number | null }): MonthlyRow {
   return {
     mes: r.mes,
@@ -1358,9 +1343,8 @@ export default function MesasSpin() {
               turnover != null && turnover !== 0 && ggr != null ? (ggr / turnover) * 100 : null;
             const bet_size =
               bets != null && bets !== 0 && turnover != null ? turnover / bets : null;
-            const arpu =
-              bets != null && bets !== 0 && ggr != null ? ggr / bets : null;
             const uap = m?.uap != null ? Number(m.uap) : null;
+            const arpu = arpuComparativoFromGgrUap(ggr, uap);
             return {
               label: fmtMesAnoCurtoFromYm(ym),
               turnover,
@@ -1373,17 +1357,13 @@ export default function MesasSpin() {
               drillId: ym,
             };
           }
-          const base = enrich({
+          return enrich({
             label: fmtMesAnoCurtoFromYm(ym),
             turnover: agg?.turnover ?? null,
             ggr: agg?.ggr ?? null,
             bets: agg?.bets ?? null,
             uap: m?.uap != null ? Number(m.uap) : agg?.uap ?? null,
           });
-          return {
-            ...base,
-            arpu: m?.arpu != null ? Number(m.arpu) : base.arpu,
-          };
         });
     }
     if (modoAgregadoTodasOperadoras) {
@@ -1400,7 +1380,7 @@ export default function MesasSpin() {
           uap: r.uap,
           margin_pct: r.margin_pct,
           bet_size: r.bet_size,
-          arpu: r.arpu,
+          arpu: arpuComparativoFromGgrUap(r.ggr, r.uap),
           drillId: r.data,
         }));
     }
