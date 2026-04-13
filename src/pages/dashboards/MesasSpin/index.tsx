@@ -380,7 +380,7 @@ function mergeDailyRowsPorData(rows: DailyRawRow[]): DailyRow[] {
     });
 }
 
-/** Filtro "Todas as operadoras": soma financeira por dia + UAP médio entre operadoras; margem / aposta média; ARPU = GGR÷UAP (UAP médio do dia). */
+/** Filtro "Todas as operadoras": soma financeira por dia + soma de UAP entre operadoras; margem / aposta média; ARPU = GGR÷UAP. */
 function mergeDailyRowsAgregadoTodasOperadoras(rows: DailyRawRow[]): DailyRow[] {
   const by = new Map<string, DailyRawRow[]>();
   for (const r of rows) {
@@ -398,7 +398,7 @@ function mergeDailyRowsAgregadoTodasOperadoras(rows: DailyRawRow[]): DailyRow[] 
         .map((x) => x.uap)
         .filter((v): v is number => v != null && Number.isFinite(Number(v)))
         .map(Number);
-      const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) / uaps.length : null;
+      const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) : null;
       const hasT = list.some((x) => x.turnover != null);
       const hasG = list.some((x) => x.ggr != null);
       const hasB = list.some((x) => x.apostas != null);
@@ -972,7 +972,7 @@ function mergeMonthlyHistoricoRows(rows: MonthlyRawRow[]): MonthlyRow[] {
     });
 }
 
-/** Filtro "Todas as operadoras": um registro por mês com UAP = média entre operadoras (ARPU vem do daily agregado na UI). */
+/** Filtro "Todas as operadoras": um registro por mês com UAP = soma entre operadoras (ARPU vem do daily agregado na UI). */
 function mergeMonthlyHistoricoAgregadoTodas(rows: MonthlyRawRow[]): MonthlyRow[] {
   const by = new Map<string, MonthlyRawRow[]>();
   for (const r of rows) {
@@ -987,7 +987,7 @@ function mergeMonthlyHistoricoAgregadoTodas(rows: MonthlyRawRow[]): MonthlyRow[]
         .map((x) => x.uap)
         .filter((v): v is number => v != null && Number.isFinite(Number(v)))
         .map(Number);
-      const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) / uaps.length : null;
+      const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) : null;
       return mapMonthlyV2({ mes: list[0]!.mes, uap, arpu: null });
     });
 }
@@ -1014,7 +1014,7 @@ function mergeMonthlyUapArpuAgregadoTodas(
     .map((r) => r.uap)
     .filter((v): v is number => v != null && Number.isFinite(Number(v)))
     .map(Number);
-  const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) / uaps.length : null;
+  const uap = uaps.length > 0 ? uaps.reduce((a, b) => a + b, 0) : null;
   return { uap, arpu: null };
 }
 
@@ -1416,14 +1416,16 @@ export default function MesasSpin() {
       const margin_pct = turnover !== 0 ? (ggr / turnover) * 100 : null;
       const bet_size = bets !== 0 ? turnover / bets : null;
       if (modoAgregadoTodasOperadoras) {
+        const somaUapHist = uapMeses.reduce((a, b) => a + b, 0);
+        const uapVal = uapMeses.length > 0 ? somaUapHist : null;
         return {
           turnover,
           ggr,
           margin_pct,
           bets,
-          uap: null,
+          uap: uapVal,
           bet_size,
-          arpu: bets !== 0 ? ggr / bets : null,
+          arpu: uapVal != null && uapVal !== 0 ? ggr / uapVal : null,
         };
       }
       const somaUap = uapMeses.reduce((a, b) => a + b, 0);
@@ -1442,12 +1444,19 @@ export default function MesasSpin() {
     const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
     if (!base) return null;
     if (modoAgregadoTodasOperadoras) {
-      const b = base.bets;
-      const g = base.ggr;
+      if (
+        mesSelecionado &&
+        isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
+      ) {
+        return base;
+      }
+      const u = monthlyUapArpuSel?.uap ?? null;
       return {
         ...base,
-        uap: null,
-        arpu: b != null && g != null && Number(b) !== 0 ? g / Number(b) : null,
+        uap: u,
+        arpu:
+          monthlyUapArpuSel?.arpu ??
+          arpuComparativoFromGgrUap(base.ggr, u),
       };
     }
     if (
@@ -1469,12 +1478,19 @@ export default function MesasSpin() {
     if (!base) return null;
     if (historico) return base;
     if (modoAgregadoTodasOperadoras) {
-      const b = base.bets;
-      const g = base.ggr;
+      if (
+        mesSelecionado &&
+        isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
+      ) {
+        return base;
+      }
+      const u = monthlyUapArpuPrev?.uap ?? null;
       return {
         ...base,
-        uap: null,
-        arpu: b != null && g != null && Number(b) !== 0 ? g / Number(b) : null,
+        uap: u,
+        arpu:
+          monthlyUapArpuPrev?.arpu ??
+          arpuComparativoFromGgrUap(base.ggr, u),
       };
     }
     if (
