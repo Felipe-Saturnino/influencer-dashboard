@@ -763,6 +763,8 @@ export default function RoteiroMesa() {
   const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("roteiro_mesa");
+  /** Responder solicitações a partir do banner (mesma matriz da Central). */
+  const permCentral = usePermission("central_notificacoes");
   const dark = isDark ?? false;
 
   const [operadorasList,  setOperadorasList]  = useState<{ slug: string; nome: string; cor_primaria?: string | null }[]>([]);
@@ -845,7 +847,11 @@ export default function RoteiroMesa() {
     <div className="app-page-shell">
 
       {user?.role === "operador" && operadoraSlugsForcado?.length ? (
-        <BannerPendencias operadoraSlugs={operadoraSlugsForcado} operadoras={operadorasList} />
+        <BannerPendencias
+          operadoraSlugs={operadoraSlugsForcado}
+          operadoras={operadorasList}
+          podeInteragir={permCentral.canEditarOk}
+        />
       ) : null}
 
       {/* ── HEADER — idêntico ao padrão Agenda de Lives ── */}

@@ -78,6 +78,7 @@ export default function GestaoDealers() {
   const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
+  const permCentral = usePermission("central_notificacoes");
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -297,7 +298,7 @@ export default function GestaoDealers() {
       />
 
       {user?.role === "operador" && operadoraSlugsForcado?.length ? (
-        <BannerPendencias operadoraSlugs={operadoraSlugsForcado} operadoras={operadoras} />
+        <BannerPendencias operadoraSlugs={operadoraSlugsForcado} operadoras={operadoras} podeInteragir={permCentral.canEditarOk} />
       ) : null}
 
       {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
@@ -545,7 +546,7 @@ export default function GestaoDealers() {
               brand={brand}
               onVer={() => setModalVer(d)}
               onEditar={() => setModalEditar(d)}
-              onSolicitar={operadoraSlugAtiva ? () => setModalSolicitacao(d) : undefined}
+              onSolicitar={operadoraSlugAtiva && permCentral.canEditarOk ? () => setModalSolicitacao(d) : undefined}
               podeEditar={podeEditarDealer(d)}
             />
           ))}
@@ -597,6 +598,7 @@ export default function GestaoDealers() {
         <ModalThreadSolicitacao
           solicitacaoId={solicitacaoThreadId}
           operadoras={operadoras}
+          podeInteragir={permCentral.canEditarOk}
           onClose={() => setSolicitacaoThreadId(null)}
           onResolvido={() => {
             void carregar();

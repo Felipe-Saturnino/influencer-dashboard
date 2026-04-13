@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Clock, Megaphone, MessageSquare, Inbox } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Megaphone, MessageSquare, Inbox, Trash2 } from "lucide-react";
 import { GiCalendar, GiDiceSixFacesFour, GiRingingBell, GiShield } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -14,6 +14,7 @@ import type { RoteiroCampanha } from "../../conteudo/RoteiroMesa";
 import type { DealerGenero, DealerJogo, DealerTurno, Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
+import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 import { corStatusSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
 
@@ -57,10 +58,6 @@ function periodoTimestamps(periodo: { inicio: string; fim: string }): { ini: str
     ini: `${periodo.inicio}T00:00:00.000Z`,
     fim: `${periodo.fim}T23:59:59.999Z`,
   };
-}
-
-function isStaffCentral(role: string | undefined): boolean {
-  return role === "admin" || role === "gestor" || role === "executivo";
 }
 
 interface DealerObsEmbed {
@@ -170,7 +167,8 @@ export default function CentralNotificacoes() {
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("central_notificacoes");
   const pendentesGestor = usePendenciasCount("gestor");
-  const staff = isStaffCentral(user?.role);
+  /** Inbox do estúdio (troca/feedback): não-operador com acesso à Central; permissões em role_permissions. */
+  const verInboxEstudio = user?.role !== "operador" && (perm.loading || perm.canView !== "nao");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
   const idxInicial = mesesDisponiveis.findIndex((m) => {
@@ -191,6 +189,8 @@ export default function CentralNotificacoes() {
   const [solMinhas, setSolMinhas] = useState<DealerSolRow[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [inboxVersion, setInboxVersion] = useState(0);
+  const [obsParaExcluir, setObsParaExcluir] = useState<ObsComDealer | null>(null);
+  const [obsExcluindo, setObsExcluindo] = useState(false);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -316,7 +316,7 @@ export default function CentralNotificacoes() {
           return { ...r, dealers: emb };
         });
 
-      if (staff) {
+      if (verInboxEstudio) {
         let qTroca = supabase
           .from("dealer_solicitacoes")
           .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)")
@@ -362,7 +362,7 @@ export default function CentralNotificacoes() {
     }
 
     void carregar();
-  }, [perm.canView, perm.loading, periodo, filtroOperadora, operadoraSlugsForcado, staff, user?.role, iniCampanhas7, inboxVersion]);
+  }, [perm.canView, perm.loading, periodo, filtroOperadora, operadoraSlugsForcado, verInboxEstudio, user?.role, iniCampanhas7, inboxVersion]);
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -510,7 +510,7 @@ export default function CentralNotificacoes() {
                       cursor: "pointer",
                     }}
                   >
-                    Ver conversa
+                    {perm.canEditarOk ? "Ver conversa" : "Ver conversa (somente leitura)"}
                   </button>
                 </div>
               </div>
@@ -535,7 +535,7 @@ export default function CentralNotificacoes() {
         icon={<GiRingingBell size={14} aria-hidden />}
         title="Central de Notificações"
         subtitle={
-          staff && pendentesGestor > 0
+          verInboxEstudio && pendentesGestor > 0
             ? `${pendentesGestor} solicitaç${pendentesGestor === 1 ? "ão" : "ões"} aguardando sua resposta.`
             : "Campanhas de roteiro, observações de dealers e solicitações ao estúdio."
         }
@@ -633,7 +633,7 @@ export default function CentralNotificacoes() {
         </div>
       </div>
 
-      {staff ? (
+      {verInboxEstudio ? (
         <>
           <div role="tablist" aria-label="Inbox da Central" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
             <button
@@ -887,6 +887,31 @@ export default function CentralNotificacoes() {
                           <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted }}>
                             {new Date(o.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                           </p>
+                          {perm.canExcluirOk ? (
+                            <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+                              <button
+                                type="button"
+                                onClick={() => setObsParaExcluir(o)}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  padding: "6px 12px",
+                                  borderRadius: 8,
+                                  border: "1px solid #ef444444",
+                                  background: "#ef444415",
+                                  color: "#ef4444",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  fontFamily: FONT.body,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <Trash2 size={13} aria-hidden />
+                                Excluir observação
+                              </button>
+                            </div>
+                          ) : null}
                         </article>
                       );
                     })}
@@ -1058,6 +1083,31 @@ export default function CentralNotificacoes() {
                       <p style={{ margin: "10px 0 0", fontSize: 11, color: t.textMuted }}>
                         {new Date(o.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                       </p>
+                      {perm.canExcluirOk ? (
+                        <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+                          <button
+                            type="button"
+                            onClick={() => setObsParaExcluir(o)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "1px solid #ef444444",
+                              background: "#ef444415",
+                              color: "#ef4444",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              fontFamily: FONT.body,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Trash2 size={13} aria-hidden />
+                            Excluir observação
+                          </button>
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}
@@ -1071,11 +1121,34 @@ export default function CentralNotificacoes() {
         <ModalThreadSolicitacao
           solicitacaoId={threadId}
           operadoras={operadorasList}
+          podeInteragir={perm.canEditarOk}
           onClose={() => setThreadId(null)}
           onResolvido={() => {
             setInboxVersion((v) => v + 1);
             setThreadId(null);
           }}
+        />
+      ) : null}
+
+      {obsParaExcluir ? (
+        <ModalConfirmDelete
+          zIndex={1200}
+          texto={`Excluir esta observação${obsParaExcluir.dealers?.nickname ? ` sobre ${obsParaExcluir.dealers.nickname}` : ""}? Esta ação é irreversível.`}
+          onCancel={() => setObsParaExcluir(null)}
+          onConfirm={async () => {
+            if (!obsParaExcluir) return;
+            setObsExcluindo(true);
+            const { error } = await supabase.from("dealer_observacoes").delete().eq("id", obsParaExcluir.id);
+            setObsExcluindo(false);
+            if (error) {
+              console.error("[CentralNotificacoes] excluir observação:", error);
+              setObsParaExcluir(null);
+              return;
+            }
+            setObsParaExcluir(null);
+            setInboxVersion((v) => v + 1);
+          }}
+          loading={obsExcluindo}
         />
       ) : null}
     </div>

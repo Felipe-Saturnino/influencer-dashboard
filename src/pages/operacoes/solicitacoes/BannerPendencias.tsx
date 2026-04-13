@@ -13,9 +13,11 @@ export interface OperadoraTagDados {
 interface BannerPendenciasProps {
   operadoraSlugs: string[];
   operadoras: OperadoraTagDados[];
+  /** role_permissions.can_editar para a página Central de Notificações (Gestão de Usuários). */
+  podeInteragir?: boolean;
 }
 
-export function BannerPendencias({ operadoraSlugs, operadoras }: BannerPendenciasProps) {
+export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = true }: BannerPendenciasProps) {
   const { theme: t, user } = useApp();
   const [pendentes, setPendentes] = useState<{ id: string; titulo: string | null }[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -97,6 +99,7 @@ export function BannerPendencias({ operadoraSlugs, operadoras }: BannerPendencia
         <ModalThreadSolicitacao
           solicitacaoId={threadId}
           operadoras={operadoras}
+          podeInteragir={podeInteragir}
           onClose={() => setThreadId(null)}
           onResolvido={() => setThreadId(null)}
         />

@@ -14,6 +14,8 @@ export interface ModalThreadSolicitacaoProps {
   operadoras: OperadoraTagDados[];
   onClose: () => void;
   onResolvido?: () => void;
+  /** Quando false: só leitura (sem enviar mensagem / resolver). Controlado por role_permissions.can_editar da página. */
+  podeInteragir?: boolean;
 }
 
 interface MensagemRow {
@@ -46,7 +48,13 @@ function isStaff(role: string | undefined): boolean {
   return role === "admin" || role === "gestor" || role === "executivo";
 }
 
-export function ModalThreadSolicitacao({ solicitacaoId, operadoras, onClose, onResolvido }: ModalThreadSolicitacaoProps) {
+export function ModalThreadSolicitacao({
+  solicitacaoId,
+  operadoras,
+  onClose,
+  onResolvido,
+  podeInteragir = true,
+}: ModalThreadSolicitacaoProps) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const [cab, setCab] = useState<SolicitacaoCabecalho | null>(null);
@@ -148,6 +156,7 @@ export function ModalThreadSolicitacao({ solicitacaoId, operadoras, onClose, onR
   }, [mensagens.length]);
 
   async function enviarMensagem() {
+    if (!podeInteragir) return;
     setErr("");
     const tx = texto.trim();
     if (!tx || !user?.id) return;
@@ -180,7 +189,7 @@ export function ModalThreadSolicitacao({ solicitacaoId, operadoras, onClose, onR
   }
 
   async function resolver() {
-    if (!staff) return;
+    if (!podeInteragir || !staff) return;
     setResolvendo(true);
     setErr("");
     try {
@@ -325,7 +334,7 @@ export function ModalThreadSolicitacao({ solicitacaoId, operadoras, onClose, onR
             })}
           </div>
 
-          {cab.status !== "resolvido" && cab.status !== "cancelado" ? (
+          {cab.status !== "resolvido" && cab.status !== "cancelado" && podeInteragir ? (
             <>
               <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <textarea
@@ -399,6 +408,10 @@ export function ModalThreadSolicitacao({ solicitacaoId, operadoras, onClose, onR
                 </button>
               ) : null}
             </>
+          ) : cab.status !== "resolvido" && cab.status !== "cancelado" && !podeInteragir ? (
+            <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: 0, fontStyle: "italic" }}>
+              Sem permissão para responder nesta página. Apenas visualização.
+            </p>
           ) : (
             <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>Esta solicitação está encerrada.</p>
           )}
