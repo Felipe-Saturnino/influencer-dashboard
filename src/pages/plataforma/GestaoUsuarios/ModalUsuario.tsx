@@ -80,6 +80,34 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setScopeGestorTipos([]);
   }, [role]);
 
+  /** Novo usuário influencer: pré-preenche operadora a partir do Scout (parceria), alinhado ao criar-usuario na Edge. */
+  useEffect(() => {
+    if (editando?.id) return;
+    if (role !== "influencer") return;
+    const em = email.trim().toLowerCase();
+    if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return;
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const { data: row } = await supabase
+          .from("scout_influencer")
+          .select("operadora_slug")
+          .ilike("email", em)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const slug = String(row?.operadora_slug ?? "").trim();
+        if (!slug) return;
+        const { data: op } = await supabase.from("operadoras").select("slug").eq("slug", slug).maybeSingle();
+        if (!op?.slug) return;
+        setScopeOperadoras((prev) => (prev.includes(slug) ? prev : [...prev, slug]));
+      })();
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [email, role, editando?.id]);
+
   useEffect(() => {
     if (role !== "agencia") return;
     const scopes = editando?.scopes ?? [];
