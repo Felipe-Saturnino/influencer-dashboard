@@ -80,6 +80,90 @@ function corsHeaders(req: Request) {
   }
 }
 
+/** GoTrue Admin via fetch + timeout — evita isolate pendurado com supabase.auth.admin no Edge. */
+const AUTH_ADMIN_MS = 45_000
+
+function authAdminHeaders(serviceRoleKey: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${serviceRoleKey}`,
+    apikey: serviceRoleKey,
+  }
+}
+
+async function goTrueAdminCreateUser(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  email: string,
+  password: string,
+  name: string,
+): Promise<{ uid: string } | { error: string }> {
+  const base = supabaseUrl.replace(/\/$/, '')
+  const url = `${base}/auth/v1/admin/users`
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), AUTH_ADMIN_MS)
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: authAdminHeaders(serviceRoleKey),
+      body: JSON.stringify({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { name },
+      }),
+      signal: ctrl.signal,
+    })
+    const text = await res.text()
+    let parsed: Record<string, unknown> = {}
+    try {
+      parsed = text ? (JSON.parse(text) as Record<string, unknown>) : {}
+    } catch {
+      /* corpo não-JSON */
+    }
+    if (!res.ok) {
+      const msg =
+        (typeof parsed.msg === 'string' && parsed.msg) ||
+        (typeof parsed.message === 'string' && parsed.message) ||
+        (typeof parsed.error_description === 'string' && parsed.error_description) ||
+        `HTTP ${res.status}: ${text.slice(0, 240)}`
+      return { error: msg }
+    }
+    const user = parsed.user as { id?: string } | undefined
+    if (!user?.id) {
+      return { error: 'Resposta inválida do Auth (sem user.id)' }
+    }
+    return { uid: user.id }
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      return { error: `Auth Admin excedeu ${AUTH_ADMIN_MS / 1000}s (timeout). Tente de novo ou confira o projeto Auth no Supabase.` }
+    }
+    return { error: e instanceof Error ? e.message : 'Falha ao contactar Auth Admin' }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+async function goTrueAdminDeleteUser(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  userId: string,
+): Promise<void> {
+  const base = supabaseUrl.replace(/\/$/, '')
+  const url = `${base}/auth/v1/admin/users/${encodeURIComponent(userId)}`
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), AUTH_ADMIN_MS)
+  try {
+    await fetch(url, {
+      method: 'DELETE',
+      headers: authAdminHeaders(serviceRoleKey),
+      signal: ctrl.signal,
+    })
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 // ── Enviar e-mail de boas-vindas via Resend ───────────────────────────────
 
 async function enviarEmailBoasVindas(
@@ -248,22 +332,24 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Criar usuário no Auth com senha padrão
-    const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-      email: email.trim().toLowerCase(),
-      password: senhaPadrao,
-      email_confirm: true,
-      user_metadata: { name: nome.trim() },
-    })
+    console.log('[criar-usuario] início', { role, email: email.trim().toLowerCase() })
 
-    if (authErr || !authData?.user) {
-      return new Response(JSON.stringify({ error: authErr?.message ?? 'Erro ao criar usuário' }), {
+    // 1. Criar usuário no Auth (GoTrue Admin HTTP — mais estável que supabase.auth.admin no Edge)
+    const created = await goTrueAdminCreateUser(
+      supabaseUrl,
+      serviceRoleKey,
+      email.trim().toLowerCase(),
+      senhaPadrao,
+      nome.trim(),
+    )
+    if ('error' in created) {
+      return new Response(JSON.stringify({ error: created.error }), {
         status: 400,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
-
-    const uid = authData.user.id
+    const uid = created.uid
+    console.log('[criar-usuario] auth user criado', uid)
 
     // 2. Upsert profile (trigger já pode ter inserido; atualiza role e must_change_password)
     const { error: profileErr } = await supabase.from('profiles').upsert(
@@ -279,7 +365,7 @@ serve(async (req) => {
 
     if (profileErr) {
       // Rollback: excluir usuário do Auth se profile falhou
-      await supabase.auth.admin.deleteUser(uid)
+      await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
       return new Response(JSON.stringify({ error: profileErr.message }), {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },
@@ -295,7 +381,7 @@ serve(async (req) => {
       }))
       const { error: scopeErr } = await supabase.from('user_scopes').insert(novasTipos)
       if (scopeErr) {
-        await supabase.auth.admin.deleteUser(uid)
+        await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
         return new Response(
           JSON.stringify({
             error: `Erro ao salvar tipos de gestor: ${scopeErr.message}. Verifique a migration user_scopes (scope_type gestor_tipo).`,
@@ -322,7 +408,7 @@ serve(async (req) => {
       if (novasLinhas.length > 0) {
         const { error: scopeInsertErr } = await supabase.from('user_scopes').insert(novasLinhas)
         if (scopeInsertErr) {
-          await supabase.auth.admin.deleteUser(uid)
+          await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
           return new Response(
             JSON.stringify({ error: `Erro ao salvar escopos: ${scopeInsertErr.message}` }),
             { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
