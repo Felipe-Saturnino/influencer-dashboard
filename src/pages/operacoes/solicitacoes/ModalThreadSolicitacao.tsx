@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Megaphone, Send } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -9,6 +9,8 @@ import type { OperadoraTagDados } from "./BannerPendencias";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { corStatusSolicitacao, labelTipoSolicitacao, tempoRelativo, type SolicitacaoStatus, type SolicitacaoTipo } from "./solicitacoesUtils";
 
+export type ThreadSolicitacaoOrigem = "dealer" | "campanha_roteiro";
+
 export interface ModalThreadSolicitacaoProps {
   solicitacaoId: string;
   operadoras: OperadoraTagDados[];
@@ -16,6 +18,8 @@ export interface ModalThreadSolicitacaoProps {
   onResolvido?: () => void;
   /** Quando false: só leitura (sem enviar mensagem / resolver). Controlado por role_permissions.can_editar da página. */
   podeInteragir?: boolean;
+  /** Default: solicitação de dealer; `campanha_roteiro` usa tabelas de thread de campanha de roteiro. */
+  origem?: ThreadSolicitacaoOrigem;
 }
 
 interface MensagemRow {
@@ -28,7 +32,12 @@ interface MensagemRow {
   created_at: string;
 }
 
-interface SolicitacaoCabecalho {
+interface MensagemComNome extends MensagemRow {
+  nomeRemetente: string;
+}
+
+interface SolicitacaoCabecalhoDealer {
+  origem: "dealer";
   id: string;
   dealer_id: string;
   operadora_slug: string;
@@ -38,6 +47,33 @@ interface SolicitacaoCabecalho {
   titulo: string | null;
   created_at: string;
   dealers: { nickname: string; nome_real: string; fotos: string[] | null; turno: string } | null;
+}
+
+interface SolicitacaoCabecalhoCampanha {
+  origem: "campanha_roteiro";
+  id: string;
+  campanha_id: string;
+  operadora_slug: string;
+  status: SolicitacaoStatus;
+  aguarda_resposta_de: "operadora" | "gestor" | null;
+  titulo: string | null;
+  created_at: string;
+  campanha: { titulo: string; texto: string; jogos: string[] | null } | null;
+}
+
+type CabecalhoThread = SolicitacaoCabecalhoDealer | SolicitacaoCabecalhoCampanha;
+
+function tabelas(origem: ThreadSolicitacaoOrigem) {
+  if (origem === "campanha_roteiro") {
+    return {
+      solicitacoes: "roteiro_campanha_solicitacoes" as const,
+      mensagens: "roteiro_campanha_solicitacao_mensagens" as const,
+    };
+  }
+  return {
+    solicitacoes: "dealer_solicitacoes" as const,
+    mensagens: "solicitacao_mensagens" as const,
+  };
 }
 
 function papelMensagemFromUser(role: string | undefined): "operadora" | "gestor" {
@@ -54,11 +90,13 @@ export function ModalThreadSolicitacao({
   onClose,
   onResolvido,
   podeInteragir = true,
+  origem = "dealer",
 }: ModalThreadSolicitacaoProps) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
-  const [cab, setCab] = useState<SolicitacaoCabecalho | null>(null);
-  const [mensagens, setMensagens] = useState<MensagemRow[]>([]);
+  const { solicitacoes: tabSol, mensagens: tabMsg } = tabelas(origem);
+  const [cab, setCab] = useState<CabecalhoThread | null>(null);
+  const [mensagens, setMensagens] = useState<MensagemComNome[]>([]);
   const [texto, setTexto] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
@@ -69,53 +107,119 @@ export function ModalThreadSolicitacao({
   const staff = isStaff(user?.role);
   const meuPapel = papelMensagemFromUser(user?.role);
 
-  const carregar = useCallback(async () => {
-    const papelMsg = papelMensagemFromUser(user?.role);
-    const { data: s, error: e1 } = await supabase
-      .from("dealer_solicitacoes")
-      .select("id, dealer_id, operadora_slug, tipo, status, aguarda_resposta_de, titulo, created_at, dealers(nickname, nome_real, fotos, turno)")
-      .eq("id", solicitacaoId)
-      .maybeSingle();
-
-    if (e1 || !s) {
-      setCab(null);
-      setLoading(false);
+  const aplicarMensagensComNomes = useCallback(async (rows: MensagemRow[] | null | undefined) => {
+    if (!rows?.length) {
+      setMensagens([]);
       return;
     }
+    const ids = [...new Set(rows.map((m) => m.usuario_id).filter(Boolean))] as string[];
+    const nomeById: Record<string, string> = {};
+    if (ids.length > 0) {
+      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+      for (const p of profs ?? []) {
+        const row = p as { id: string; name: string | null };
+        const n = row.name?.trim();
+        nomeById[row.id] = n || "Usuário";
+      }
+    }
+    setMensagens(
+      rows.map((m) => {
+        let nomeRemetente: string;
+        if (m.usuario_id) {
+          nomeRemetente = nomeById[m.usuario_id] ?? "Usuário";
+        } else {
+          nomeRemetente = m.autor === "operadora" ? "Operadora" : "Estúdio";
+        }
+        return { ...m, nomeRemetente };
+      }),
+    );
+  }, []);
 
-    const d = s.dealers as SolicitacaoCabecalho["dealers"] | SolicitacaoCabecalho["dealers"][] | null;
-    const dealerEmb = Array.isArray(d) ? d[0] ?? null : d;
+  const carregar = useCallback(async () => {
+    const papelMsg = papelMensagemFromUser(user?.role);
 
-    setCab({
-      id: s.id,
-      dealer_id: s.dealer_id,
-      operadora_slug: s.operadora_slug,
-      tipo: s.tipo as SolicitacaoTipo,
-      status: s.status as SolicitacaoStatus,
-      aguarda_resposta_de: s.aguarda_resposta_de as SolicitacaoCabecalho["aguarda_resposta_de"],
-      titulo: s.titulo,
-      created_at: s.created_at,
-      dealers: dealerEmb,
-    });
+    if (origem === "campanha_roteiro") {
+      const { data: s, error: e1 } = await supabase
+        .from(tabSol)
+        .select(
+          "id, campanha_id, operadora_slug, status, aguarda_resposta_de, titulo, created_at, roteiro_mesa_campanhas(titulo, texto, jogos)",
+        )
+        .eq("id", solicitacaoId)
+        .maybeSingle();
+
+      if (e1 || !s) {
+        setCab(null);
+        setLoading(false);
+        return;
+      }
+
+      const rawCamp = (s as { roteiro_mesa_campanhas?: unknown }).roteiro_mesa_campanhas;
+      const campRow = Array.isArray(rawCamp) ? rawCamp[0] : rawCamp;
+      const campanha =
+        campRow && typeof campRow === "object"
+          ? {
+              titulo: String((campRow as { titulo?: string }).titulo ?? ""),
+              texto: String((campRow as { texto?: string }).texto ?? ""),
+              jogos: ((campRow as { jogos?: string[] | null }).jogos ?? null) as string[] | null,
+            }
+          : null;
+
+      setCab({
+        origem: "campanha_roteiro",
+        id: s.id as string,
+        campanha_id: s.campanha_id as string,
+        operadora_slug: s.operadora_slug as string,
+        status: s.status as SolicitacaoStatus,
+        aguarda_resposta_de: s.aguarda_resposta_de as SolicitacaoCabecalhoCampanha["aguarda_resposta_de"],
+        titulo: s.titulo as string | null,
+        created_at: s.created_at as string,
+        campanha,
+      });
+    } else {
+      const { data: s, error: e1 } = await supabase
+        .from(tabSol)
+        .select("id, dealer_id, operadora_slug, tipo, status, aguarda_resposta_de, titulo, created_at, dealers(nickname, nome_real, fotos, turno)")
+        .eq("id", solicitacaoId)
+        .maybeSingle();
+
+      if (e1 || !s) {
+        setCab(null);
+        setLoading(false);
+        return;
+      }
+
+      const d = s.dealers as SolicitacaoCabecalhoDealer["dealers"] | SolicitacaoCabecalhoDealer["dealers"][] | null;
+      const dealerEmb = Array.isArray(d) ? d[0] ?? null : d;
+
+      setCab({
+        origem: "dealer",
+        id: s.id as string,
+        dealer_id: s.dealer_id as string,
+        operadora_slug: s.operadora_slug as string,
+        tipo: s.tipo as SolicitacaoTipo,
+        status: s.status as SolicitacaoStatus,
+        aguarda_resposta_de: s.aguarda_resposta_de as SolicitacaoCabecalhoDealer["aguarda_resposta_de"],
+        titulo: s.titulo as string | null,
+        created_at: s.created_at as string,
+        dealers: dealerEmb,
+      });
+    }
 
     const { data: msgs, error: e2 } = await supabase
-      .from("solicitacao_mensagens")
+      .from(tabMsg)
       .select("id, solicitacao_id, autor, usuario_id, texto, visto, created_at")
       .eq("solicitacao_id", solicitacaoId)
       .order("created_at", { ascending: true })
       .limit(50);
 
-    if (!e2 && msgs) setMensagens(msgs as MensagemRow[]);
+    if (e2) setMensagens([]);
+    else await aplicarMensagensComNomes(msgs as MensagemRow[] | null);
 
     const outro = papelMsg === "gestor" ? "operadora" : "gestor";
-    await supabase
-      .from("solicitacao_mensagens")
-      .update({ visto: true })
-      .eq("solicitacao_id", solicitacaoId)
-      .eq("autor", outro);
+    await supabase.from(tabMsg).update({ visto: true }).eq("solicitacao_id", solicitacaoId).eq("autor", outro);
 
     setLoading(false);
-  }, [solicitacaoId, user?.role]);
+  }, [solicitacaoId, user?.role, aplicarMensagensComNomes, origem, tabSol, tabMsg]);
 
   useEffect(() => {
     void carregar();
@@ -123,24 +227,24 @@ export function ModalThreadSolicitacao({
 
   useEffect(() => {
     const ch = supabase
-      .channel(`thread_${solicitacaoId}`)
+      .channel(`thread_${origem}_${solicitacaoId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "solicitacao_mensagens",
+          table: tabMsg,
           filter: `solicitacao_id=eq.${solicitacaoId}`,
         },
         () => {
           void (async () => {
             const { data: msgs } = await supabase
-              .from("solicitacao_mensagens")
+              .from(tabMsg)
               .select("id, solicitacao_id, autor, usuario_id, texto, visto, created_at")
               .eq("solicitacao_id", solicitacaoId)
               .order("created_at", { ascending: true })
               .limit(50);
-            if (msgs) setMensagens(msgs as MensagemRow[]);
+            await aplicarMensagensComNomes(msgs as MensagemRow[] | null);
           })();
         },
       )
@@ -148,7 +252,7 @@ export function ModalThreadSolicitacao({
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [solicitacaoId]);
+  }, [solicitacaoId, aplicarMensagensComNomes, tabMsg, origem]);
 
   useEffect(() => {
     const el = listRef.current;
@@ -163,7 +267,7 @@ export function ModalThreadSolicitacao({
     setSending(true);
     try {
       const proximoAguarda = meuPapel === "gestor" ? "operadora" : "gestor";
-      const { error: e1 } = await supabase.from("solicitacao_mensagens").insert({
+      const { error: e1 } = await supabase.from(tabMsg).insert({
         solicitacao_id: solicitacaoId,
         autor: meuPapel,
         usuario_id: user.id,
@@ -174,7 +278,7 @@ export function ModalThreadSolicitacao({
         return;
       }
       const { error: e2 } = await supabase
-        .from("dealer_solicitacoes")
+        .from(tabSol)
         .update({
           status: "em_andamento",
           aguarda_resposta_de: proximoAguarda,
@@ -194,7 +298,7 @@ export function ModalThreadSolicitacao({
     setErr("");
     try {
       const { error } = await supabase
-        .from("dealer_solicitacoes")
+        .from(tabSol)
         .update({
           status: "resolvido",
           aguarda_resposta_de: null,
@@ -213,13 +317,20 @@ export function ModalThreadSolicitacao({
   }
 
   const op = operadoras.find((o) => o.slug === cab?.operadora_slug);
-  const foto = (cab?.dealers?.fotos ?? [])[0] as string | undefined;
-  const nick = cab?.dealers?.nickname ?? "Dealer";
+  const isCampanha = cab?.origem === "campanha_roteiro";
+  const foto = !isCampanha ? ((cab as SolicitacaoCabecalhoDealer | null)?.dealers?.fotos ?? [])[0] as string | undefined : undefined;
+  const nick = isCampanha
+    ? (cab as SolicitacaoCabecalhoCampanha).campanha?.titulo?.trim() || (cab as SolicitacaoCabecalhoCampanha).titulo?.trim() || "Campanha"
+    : (cab as SolicitacaoCabecalhoDealer)?.dealers?.nickname ?? "Dealer";
   const statusCor = cab ? corStatusSolicitacao(cab.status) : "#6b7280";
+  const tituloModal =
+    cab?.origem === "campanha_roteiro"
+      ? (cab.titulo ?? cab.campanha?.titulo ?? "Campanha — roteiro")
+      : cab?.titulo ?? "Solicitação";
 
   return (
     <ModalBase onClose={() => { if (!sending && !resolvendo) onClose(); }} maxWidth={560} zIndex={1100}>
-      <ModalHeader title={cab?.titulo ?? "Solicitação"} onClose={() => { if (!sending && !resolvendo) onClose(); }} />
+      <ModalHeader title={tituloModal} onClose={() => { if (!sending && !resolvendo) onClose(); }} />
       {loading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: 32 }}>
           <Loader2 size={28} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -246,11 +357,17 @@ export function ModalThreadSolicitacao({
                 fontSize: 18,
               }}
             >
-              {foto ? <img src={foto} alt="" width={48} height={48} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : nick[0]?.toUpperCase()}
+              {isCampanha ? (
+                <Megaphone size={22} aria-hidden style={{ opacity: 0.95 }} />
+              ) : foto ? (
+                <img src={foto} alt="" width={48} height={48} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                nick[0]?.toUpperCase()
+              )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>
-                {nick} · {labelTipoSolicitacao(cab.tipo)}
+                {isCampanha ? `${nick} · Roteiro de mesa` : `${nick} · ${labelTipoSolicitacao((cab as SolicitacaoCabecalhoDealer).tipo)}`}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 6 }}>
                 <OperadoraTag label={op?.nome ?? cab.operadora_slug} corPrimaria={op?.cor_primaria} />
@@ -326,8 +443,18 @@ export function ModalThreadSolicitacao({
                   >
                     {m.texto}
                   </div>
-                  <div style={{ fontSize: 10, color: t.textMuted, marginTop: 4, textAlign: daOperadora ? "right" : "left", fontFamily: FONT.body }}>
-                    {new Date(m.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: t.textMuted,
+                      marginTop: 4,
+                      textAlign: daOperadora ? "right" : "left",
+                      fontFamily: FONT.body,
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    <div>{new Date(m.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</div>
+                    <div style={{ marginTop: 2, fontWeight: 600, color: t.textMuted }}>{m.nomeRemetente}</div>
                   </div>
                 </div>
               );

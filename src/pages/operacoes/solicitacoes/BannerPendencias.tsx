@@ -4,10 +4,18 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { ModalThreadSolicitacao } from "./ModalThreadSolicitacao";
+import type { ThreadSolicitacaoOrigem } from "./ModalThreadSolicitacao";
+
 export interface OperadoraTagDados {
   slug: string;
   nome: string;
   cor_primaria?: string | null;
+}
+
+interface PendenciaItem {
+  id: string;
+  titulo: string | null;
+  origem: ThreadSolicitacaoOrigem;
 }
 
 interface BannerPendenciasProps {
@@ -19,8 +27,8 @@ interface BannerPendenciasProps {
 
 export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = true }: BannerPendenciasProps) {
   const { theme: t, user } = useApp();
-  const [pendentes, setPendentes] = useState<{ id: string; titulo: string | null }[]>([]);
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [pendentes, setPendentes] = useState<PendenciaItem[]>([]);
+  const [threadCtx, setThreadCtx] = useState<{ id: string; origem: ThreadSolicitacaoOrigem } | null>(null);
 
   useEffect(() => {
     if (user?.role !== "operador" || !operadoraSlugs.length) {
@@ -29,22 +37,39 @@ export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = t
     }
 
     async function buscar() {
-      let q = supabase
+      let qDealer = supabase
         .from("dealer_solicitacoes")
         .select("id, titulo")
         .eq("aguarda_resposta_de", "operadora")
         .in("status", ["pendente", "em_andamento"])
         .order("created_at", { ascending: false })
         .limit(20);
-      q = operadoraSlugs.length === 1 ? q.eq("operadora_slug", operadoraSlugs[0]) : q.in("operadora_slug", operadoraSlugs);
-      const { data } = await q;
-      setPendentes((data ?? []) as { id: string; titulo: string | null }[]);
+      qDealer = operadoraSlugs.length === 1 ? qDealer.eq("operadora_slug", operadoraSlugs[0]) : qDealer.in("operadora_slug", operadoraSlugs);
+
+      let qCamp = supabase
+        .from("roteiro_campanha_solicitacoes")
+        .select("id, titulo")
+        .eq("aguarda_resposta_de", "operadora")
+        .in("status", ["pendente", "em_andamento"])
+        .order("created_at", { ascending: false })
+        .limit(20);
+      qCamp = operadoraSlugs.length === 1 ? qCamp.eq("operadora_slug", operadoraSlugs[0]) : qCamp.in("operadora_slug", operadoraSlugs);
+
+      const [{ data: dDealer }, { data: dCamp }] = await Promise.all([qDealer, qCamp]);
+      const lista: PendenciaItem[] = [
+        ...(dDealer ?? []).map((r) => ({ id: r.id as string, titulo: r.titulo as string | null, origem: "dealer" as const })),
+        ...(dCamp ?? []).map((r) => ({ id: r.id as string, titulo: r.titulo as string | null, origem: "campanha_roteiro" as const })),
+      ];
+      setPendentes(lista);
     }
 
     void buscar();
     const ch = supabase
-      .channel("banner_pendencias_op")
+      .channel("banner_pendencias_op_merged")
       .on("postgres_changes", { event: "*", schema: "public", table: "dealer_solicitacoes" }, () => {
+        void buscar();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "roteiro_campanha_solicitacoes" }, () => {
         void buscar();
       })
       .subscribe();
@@ -54,6 +79,8 @@ export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = t
   }, [user?.role, operadoraSlugs.join(",")]);
 
   if (user?.role !== "operador" || pendentes.length === 0) return null;
+
+  const primeiro = pendentes[0];
 
   return (
     <>
@@ -79,7 +106,7 @@ export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = t
         </span>
         <button
           type="button"
-          onClick={() => setThreadId(pendentes[0]?.id ?? null)}
+          onClick={() => primeiro && setThreadCtx({ id: primeiro.id, origem: primeiro.origem })}
           style={{
             padding: "8px 14px",
             borderRadius: 10,
@@ -95,13 +122,14 @@ export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = t
           Ver
         </button>
       </div>
-      {threadId ? (
+      {threadCtx ? (
         <ModalThreadSolicitacao
-          solicitacaoId={threadId}
+          solicitacaoId={threadCtx.id}
           operadoras={operadoras}
+          origem={threadCtx.origem}
           podeInteragir={podeInteragir}
-          onClose={() => setThreadId(null)}
-          onResolvido={() => setThreadId(null)}
+          onClose={() => setThreadCtx(null)}
+          onResolvido={() => setThreadCtx(null)}
         />
       ) : null}
     </>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Clock, Megaphone, MessageSquare, Inbox, Trash2 } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, Megaphone, MessageSquare, Inbox, Trash2 } from "lucide-react";
 import { GiCalendar, GiDiceSixFacesFour, GiRingingBell, GiShield } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -15,8 +15,8 @@ import type { DealerGenero, DealerJogo, DealerTurno, Operadora } from "../../../
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
-import { corStatusSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
+import { ModalThreadSolicitacao, type ThreadSolicitacaoOrigem } from "../solicitacoes/ModalThreadSolicitacao";
+import { corStatusSolicitacao, labelTipoSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
 
 const GENERO_LABEL: Record<DealerGenero, string> = {
   feminino: "Feminino",
@@ -148,7 +148,7 @@ function ObservacaoTextoClamp({ texto }: { texto: string }) {
   );
 }
 
-type AbaStaff = "troca" | "feedback" | "campanhas7" | "observacoes";
+type AbaStaff = "troca" | "feedback" | "campanha_roteiro" | "campanhas7" | "observacoes";
 
 interface DealerSolRow {
   id: string;
@@ -156,9 +156,20 @@ interface DealerSolRow {
   status: string;
   titulo: string | null;
   created_at: string;
+  resolvido_em?: string | null;
   aguarda_resposta_de: string | null;
   operadora_slug: string;
   dealers: { nickname: string; nome_real: string; fotos: string[] | null; turno: string } | null;
+}
+
+interface CampanhaRoteiroSolRow {
+  id: string;
+  status: string;
+  titulo: string | null;
+  created_at: string;
+  aguarda_resposta_de: string | null;
+  operadora_slug: string;
+  roteiro_mesa_campanhas: { titulo: string } | null;
 }
 
 export default function CentralNotificacoes() {
@@ -187,7 +198,9 @@ export default function CentralNotificacoes() {
   const [solicTroca, setSolicTroca] = useState<DealerSolRow[]>([]);
   const [solicFeedback, setSolicFeedback] = useState<DealerSolRow[]>([]);
   const [solMinhas, setSolMinhas] = useState<DealerSolRow[]>([]);
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [solicConcluidas, setSolicConcluidas] = useState<DealerSolRow[]>([]);
+  const [solicCampRoteiroGestor, setSolicCampRoteiroGestor] = useState<CampanhaRoteiroSolRow[]>([]);
+  const [threadCtx, setThreadCtx] = useState<{ id: string; origem: ThreadSolicitacaoOrigem } | null>(null);
   const [inboxVersion, setInboxVersion] = useState(0);
   const [obsParaExcluir, setObsParaExcluir] = useState<ObsComDealer | null>(null);
   const [obsExcluindo, setObsExcluindo] = useState(false);
@@ -316,6 +329,15 @@ export default function CentralNotificacoes() {
           return { ...r, dealers: emb };
         });
 
+      const normCampSol = (rows: CampanhaRoteiroSolRow[] | null | undefined) =>
+        (rows ?? []).map((r) => {
+          const c = r.roteiro_mesa_campanhas as CampanhaRoteiroSolRow["roteiro_mesa_campanhas"] | { titulo?: string }[] | null;
+          const emb = Array.isArray(c) ? c[0] ?? null : c;
+          const tituloCamp =
+            emb && typeof emb === "object" && "titulo" in emb ? String((emb as { titulo: string }).titulo ?? "") : null;
+          return { ...r, roteiro_mesa_campanhas: tituloCamp ? { titulo: tituloCamp } : null };
+        });
+
       if (verInboxEstudio) {
         let qTroca = supabase
           .from("dealer_solicitacoes")
@@ -333,13 +355,22 @@ export default function CentralNotificacoes() {
           .eq("aguarda_resposta_de", "gestor")
           .order("created_at", { ascending: false })
           .limit(80);
+        let qCampRt = supabase
+          .from("roteiro_campanha_solicitacoes")
+          .select("id, status, titulo, created_at, aguarda_resposta_de, operadora_slug, roteiro_mesa_campanhas(titulo)")
+          .in("status", ["pendente", "em_andamento"])
+          .eq("aguarda_resposta_de", "gestor")
+          .order("created_at", { ascending: false })
+          .limit(80);
         if (!operadoraSlugsForcado?.length && filtroOperadora !== "todas") {
           qTroca = qTroca.eq("operadora_slug", filtroOperadora);
           qFb = qFb.eq("operadora_slug", filtroOperadora);
+          qCampRt = qCampRt.eq("operadora_slug", filtroOperadora);
         }
-        const [{ data: dt }, { data: df }] = await Promise.all([qTroca, qFb]);
+        const [{ data: dt }, { data: df }, { data: dcr }] = await Promise.all([qTroca, qFb, qCampRt]);
         setSolicTroca(normSol(dt as DealerSolRow[] | null));
         setSolicFeedback(normSol(df as DealerSolRow[] | null));
+        setSolicCampRoteiroGestor(normCampSol(dcr as CampanhaRoteiroSolRow[] | null));
         setSolMinhas([]);
       } else if (user?.role === "operador" && operadoraSlugsForcado?.length) {
         const { data: dMin } = await supabase
@@ -352,10 +383,37 @@ export default function CentralNotificacoes() {
         setSolMinhas(normSol(dMin as DealerSolRow[] | null));
         setSolicTroca([]);
         setSolicFeedback([]);
+        setSolicCampRoteiroGestor([]);
       } else {
         setSolicTroca([]);
         setSolicFeedback([]);
         setSolMinhas([]);
+        setSolicCampRoteiroGestor([]);
+      }
+
+      if (user?.role === "operador" && !operadoraSlugsForcado?.length) {
+        setSolicConcluidas([]);
+      } else {
+        let qConc = supabase
+          .from("dealer_solicitacoes")
+          .select(
+            "id, tipo, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)",
+          )
+          .eq("status", "resolvido")
+          .gte("resolvido_em", ini)
+          .lte("resolvido_em", fim)
+          .order("resolvido_em", { ascending: false })
+          .limit(120);
+
+        if (user?.role === "operador" && operadoraSlugsForcado?.length) {
+          qConc = qConc.in("operadora_slug", operadoraSlugsForcado);
+        } else if (verInboxEstudio && !operadoraSlugsForcado?.length && filtroOperadora !== "todas") {
+          qConc = qConc.eq("operadora_slug", filtroOperadora);
+        }
+
+        const { data: dConc, error: errConc } = await qConc;
+        if (errConc) console.error("[CentralNotificacoes] solicitações concluídas:", errConc);
+        setSolicConcluidas(normSol(dConc as DealerSolRow[] | null));
       }
 
       setLoading(false);
@@ -411,6 +469,7 @@ export default function CentralNotificacoes() {
   const badgeCampanhas7 = campanhas7.length;
   const badgeTroca = solicTroca.length;
   const badgeFb = solicFeedback.length;
+  const badgeCampRoteiro = solicCampRoteiroGestor.length;
 
   const chipTab = (ativo: boolean) => ({
     padding: "8px 14px",
@@ -428,11 +487,96 @@ export default function CentralNotificacoes() {
     cursor: "pointer",
   });
 
-  function renderListaSolicitacoes(lista: DealerSolRow[]) {
+  function renderListaCampanhaRoteiroSolic(lista: CampanhaRoteiroSolRow[]) {
     if (lista.length === 0 && !loading) {
       return (
         <div style={{ ...cardShell, color: t.textMuted, fontSize: 14, fontFamily: FONT.body }}>
-          Nenhuma solicitação em aberto neste filtro.
+          Nenhuma conversa de campanha de roteiro em aberto neste filtro.
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+        {lista.map((row) => {
+          const op = operadoraBySlug[row.operadora_slug];
+          const st = row.status as "pendente" | "em_andamento" | "resolvido" | "cancelado";
+          const cor = corStatusSolicitacao(st);
+          const titCamp = row.roteiro_mesa_campanhas?.titulo ?? "—";
+          return (
+            <article key={row.id} style={cardShell} aria-label={`Solicitação de campanha: ${row.titulo ?? row.id}`}>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 10,
+                    flexShrink: 0,
+                    background: "rgba(112,202,228,0.12)",
+                    border: "1px solid rgba(112,202,228,0.35)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#70cae4",
+                  }}
+                >
+                  <Megaphone size={20} aria-hidden />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{row.titulo ?? row.id}</div>
+                  <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
+                    Campanha: {titCamp} · {tempoRelativo(row.created_at)}
+                  </div>
+                  <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                    <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.cor_primaria} />
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        background: `${cor}22`,
+                        color: cor,
+                        border: `1px solid ${cor}44`,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      {row.status}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setThreadCtx({ id: row.id, origem: "campanha_roteiro" })}
+                    style={{
+                      marginTop: 12,
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: brand.useBrand
+                        ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                        : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {perm.canEditarOk ? "Ver conversa" : "Ver conversa (somente leitura)"}
+                  </button>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderListaSolicitacoes(lista: DealerSolRow[], modo: "abertas" | "concluidas" = "abertas") {
+    if (lista.length === 0 && !loading) {
+      return (
+        <div style={{ ...cardShell, color: t.textMuted, fontSize: 14, fontFamily: FONT.body }}>
+          {modo === "concluidas" ? "Sem dados para o período selecionado." : "Nenhuma solicitação em aberto neste filtro."}
         </div>
       );
     }
@@ -472,9 +616,23 @@ export default function CentralNotificacoes() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{row.titulo ?? row.id}</div>
-                  <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
-                    {d?.nickname ?? "—"} · {tempoRelativo(row.created_at)}
-                  </div>
+                  {modo === "concluidas" ? (
+                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
+                      {labelTipoSolicitacao(row.tipo)} · {d?.nickname ?? "—"}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
+                      {d?.nickname ?? "—"} · {tempoRelativo(row.created_at)}
+                    </div>
+                  )}
+                  {modo === "concluidas" ? (
+                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+                      Concluída em{" "}
+                      {row.resolvido_em
+                        ? new Date(row.resolvido_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+                        : "—"}
+                    </div>
+                  ) : null}
                   <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                     <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.cor_primaria} />
                     <span
@@ -494,7 +652,7 @@ export default function CentralNotificacoes() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setThreadId(row.id)}
+                    onClick={() => setThreadCtx({ id: row.id, origem: "dealer" })}
                     style={{
                       marginTop: 12,
                       padding: "8px 14px",
@@ -692,6 +850,33 @@ export default function CentralNotificacoes() {
             <button
               type="button"
               role="tab"
+              aria-selected={abaStaff === "campanha_roteiro"}
+              id="tab-central-campanha-roteiro"
+              aria-controls="panel-central-campanha-roteiro"
+              onClick={() => setAbaStaff("campanha_roteiro")}
+              style={chipTab(abaStaff === "campanha_roteiro")}
+            >
+              <Megaphone size={14} style={{ marginRight: 6, verticalAlign: "middle" }} aria-hidden />
+              Campanhas (roteiro)
+              {badgeCampRoteiro > 0 ? (
+                <span
+                  style={{
+                    marginLeft: 8,
+                    background: "#e84025",
+                    color: "#fff",
+                    borderRadius: 10,
+                    padding: "0 6px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  {badgeCampRoteiro}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              role="tab"
               aria-selected={abaStaff === "campanhas7"}
               id="tab-central-campanhas7"
               aria-controls="panel-central-campanhas7"
@@ -736,6 +921,11 @@ export default function CentralNotificacoes() {
           {abaStaff === "feedback" ? (
             <div role="tabpanel" id="panel-central-feedback" aria-labelledby="tab-central-feedback">
               {renderListaSolicitacoes(solicFeedback)}
+            </div>
+          ) : null}
+          {abaStaff === "campanha_roteiro" ? (
+            <div role="tabpanel" id="panel-central-campanha-roteiro" aria-labelledby="tab-central-campanha-roteiro">
+              {renderListaCampanhaRoteiroSolic(solicCampRoteiroGestor)}
             </div>
           ) : null}
           {abaStaff === "campanhas7" ? (
@@ -1117,15 +1307,29 @@ export default function CentralNotificacoes() {
         </>
       )}
 
-      {threadId ? (
+      <section style={{ marginTop: 36 }} aria-labelledby="heading-solic-concluidas">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <CheckCircle size={20} color="#22c55e" aria-hidden />
+          <h2 id="heading-solic-concluidas" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>
+            Solicitações concluídas
+          </h2>
+        </div>
+        <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 640 }}>
+          Listagem das solicitações marcadas como resolvidas no período selecionado (filtro de mês ou histórico).
+        </p>
+        {renderListaSolicitacoes(solicConcluidas, "concluidas")}
+      </section>
+
+      {threadCtx ? (
         <ModalThreadSolicitacao
-          solicitacaoId={threadId}
+          solicitacaoId={threadCtx.id}
           operadoras={operadorasList}
+          origem={threadCtx.origem}
           podeInteragir={perm.canEditarOk}
-          onClose={() => setThreadId(null)}
+          onClose={() => setThreadCtx(null)}
           onResolvido={() => {
             setInboxVersion((v) => v + 1);
-            setThreadId(null);
+            setThreadCtx(null);
           }}
         />
       ) : null}

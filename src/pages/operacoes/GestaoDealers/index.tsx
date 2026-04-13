@@ -7,7 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
-import { Eye, Pencil, Send, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
+import { Eye, History, Pencil, Send, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
 import { GiCardRandom, GiShield, GiFemale, GiMale, GiCardPick, GiCardAceSpades, GiCrown } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
@@ -84,6 +84,7 @@ export default function GestaoDealers() {
   const [loading, setLoading] = useState(true);
   const [modalCriar, setModalCriar] = useState(false);
   const [modalVer, setModalVer] = useState<Dealer | null>(null);
+  const [modalHistoricoDealer, setModalHistoricoDealer] = useState<Dealer | null>(null);
   const [modalEditar, setModalEditar] = useState<Dealer | null>(null);
   const [modalSolicitacao, setModalSolicitacao] = useState<Dealer | null>(null);
   const [solicitacaoThreadId, setSolicitacaoThreadId] = useState<string | null>(null);
@@ -547,6 +548,13 @@ export default function GestaoDealers() {
               onVer={() => setModalVer(d)}
               onEditar={() => setModalEditar(d)}
               onSolicitar={operadoraSlugAtiva && permCentral.canEditarOk ? () => setModalSolicitacao(d) : undefined}
+              onHistoricoSolicitacoes={
+                !permCentral.loading &&
+                (permCentral.canView === "sim" || permCentral.canView === "proprios") &&
+                (user?.role !== "operador" || !!operadoraSlugAtiva)
+                  ? () => setModalHistoricoDealer(d)
+                  : undefined
+              }
               podeEditar={podeEditarDealer(d)}
             />
           ))}
@@ -573,13 +581,16 @@ export default function GestaoDealers() {
         />
       )}
       {modalVer && (
-        <ModalVer
-          dealer={modalVer}
+        <ModalVer dealer={modalVer} operadoras={operadoras} onClose={() => setModalVer(null)} />
+      )}
+      {modalHistoricoDealer && (
+        <ModalHistoricoSolicitacoesDealer
+          dealer={modalHistoricoDealer}
           operadoras={operadoras}
           slugSolicitacaoFiltro={user?.role === "operador" ? operadoraSlugAtiva : null}
-          onClose={() => setModalVer(null)}
+          onClose={() => setModalHistoricoDealer(null)}
           onAbrirThread={(id) => {
-            setModalVer(null);
+            setModalHistoricoDealer(null);
             setSolicitacaoThreadId(id);
           }}
         />
@@ -617,6 +628,7 @@ function DealerCard({
   onVer,
   onEditar,
   onSolicitar,
+  onHistoricoSolicitacoes,
   podeEditar,
 }: {
   dealer: Dealer;
@@ -626,6 +638,8 @@ function DealerCard({
   onEditar: () => void;
   /** Só operador com escopo de operadora definido. */
   onSolicitar?: () => void;
+  /** Lista de solicitações do dealer (Central); ver permissão na página pai. */
+  onHistoricoSolicitacoes?: () => void;
   podeEditar: boolean;
 }) {
   const { theme: t, isDark } = useApp();
@@ -759,13 +773,23 @@ function DealerCard({
               <Send size={13} aria-hidden /> Solicitar
             </button>
           ) : null}
+          {onHistoricoSolicitacoes ? (
+            <button
+              type="button"
+              onClick={onHistoricoSolicitacoes}
+              aria-label={`Histórico de solicitações de ${dealer.nickname}`}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
+            >
+              <History size={13} aria-hidden /> Histórico
+            </button>
+          ) : null}
         </div>
       </div>
     </article>
   );
 }
 
-// ─── Modal Ver ────────────────────────────────────────────────────────────────
+// ─── Modal Histórico de solicitações (por dealer) ─────────────────────────────
 interface SolicResumo {
   id: string;
   tipo: SolicitacaoTipo;
@@ -773,9 +797,10 @@ interface SolicResumo {
   titulo: string | null;
   created_at: string;
   aguarda_resposta_de: string | null;
+  operadora_slug: string;
 }
 
-function ModalVer({
+function ModalHistoricoSolicitacoesDealer({
   dealer,
   operadoras,
   slugSolicitacaoFiltro,
@@ -790,8 +815,6 @@ function ModalVer({
   onAbrirThread: (solicitacaoId: string) => void;
 }) {
   const { theme: t } = useApp();
-  const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
-  const fotoUrl = (dealer.fotos ?? [])[0];
   const [solicitacoes, setSolicitacoes] = useState<SolicResumo[]>([]);
   const [solLoading, setSolLoading] = useState(true);
 
@@ -801,10 +824,10 @@ function ModalVer({
     void (async () => {
       let q = supabase
         .from("dealer_solicitacoes")
-        .select("id, tipo, status, titulo, created_at, aguarda_resposta_de")
+        .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug")
         .eq("dealer_id", dealer.id)
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(150);
       if (slugSolicitacaoFiltro) q = q.eq("operadora_slug", slugSolicitacaoFiltro);
       const { data } = await q;
       if (!cancel) {
@@ -818,84 +841,178 @@ function ModalVer({
   }, [dealer.id, slugSolicitacaoFiltro]);
 
   return (
-    <ModalBase onClose={onClose} maxWidth={480}>
-      <ModalHeader title={dealer.nickname} onClose={onClose} />
-        {fotoUrl && (
-          <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: "16/10" }}>
-            <img src={fotoUrl} alt={dealer.nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          </div>
-        )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, fontFamily: FONT.body }}>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Nome Real</span><br /><span style={{ fontSize: 14, color: t.text }}>{dealer.nome_real}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Gênero</span><br /><span style={{ fontSize: 14, color: t.text }}>{GENERO_OPTS.find((o) => o.value === dealer.genero)?.label}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Turno</span><br /><span style={{ fontSize: 14, color: t.text }}>{TURNO_OPTS.find((o) => o.value === dealer.turno)?.label}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Jogos</span><br /><span style={{ fontSize: 14, color: t.text }}>{(dealer.jogos ?? []).map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label).join(", ") || "—"}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br />{op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}</div>
-          {dealer.perfil_influencer && (
-            <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Dealer</span><br /><span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span></div>
-          )}
-        </div>
-
-        <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${t.cardBorder}` }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10, fontFamily: FONT.body }}>
-            Histórico de solicitações
-          </div>
-          {solLoading ? (
-            <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando...</span>
-          ) : solicitacoes.length === 0 ? (
-            <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma solicitação registrada.</span>
-          ) : (
-            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-              {solicitacoes.map((s) => {
-                const cor = corStatusSolicitacao(s.status);
-                return (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      onClick={() => onAbrirThread(s.id)}
+    <ModalBase onClose={onClose} maxWidth={520} zIndex={1050}>
+      <ModalHeader title={`Solicitações · ${dealer.nickname}`} onClose={onClose} />
+      <p style={{ margin: "0 0 14px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+        Todas as solicitações ligadas a este dealer{slugSolicitacaoFiltro ? " na sua operadora" : ""}.
+      </p>
+      {solLoading ? (
+        <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando...</span>
+      ) : solicitacoes.length === 0 ? (
+        <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma solicitação registrada.</span>
+      ) : (
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            maxHeight: "min(60vh, 420px)",
+            overflowY: "auto",
+          }}
+        >
+          {solicitacoes.map((s) => {
+            const cor = corStatusSolicitacao(s.status);
+            const opRow = operadoras.find((o) => o.slug === s.operadora_slug);
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => onAbrirThread(s.id)}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg ?? t.cardBg,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{s.titulo ?? s.id}</div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                    <span
                       style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "10px 12px",
-                        borderRadius: 10,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg ?? t.cardBg,
-                        cursor: "pointer",
-                        fontFamily: FONT.body,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        background: `${cor}22`,
+                        color: cor,
+                        border: `1px solid ${cor}44`,
                       }}
                     >
-                      <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{s.titulo ?? s.id}</div>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            padding: "2px 8px",
-                            borderRadius: 20,
-                            background: `${cor}22`,
-                            color: cor,
-                            border: `1px solid ${cor}44`,
-                          }}
-                        >
-                          {s.status}
-                        </span>
-                        <span style={{ fontSize: 11, color: t.textMuted }}>
-                          {new Date(s.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                        </span>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+                      {s.status}
+                    </span>
+                    <span style={{ fontSize: 11, color: t.textMuted }}>
+                      {new Date(s.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                    </span>
+                    {!slugSolicitacaoFiltro ? (
+                      <span style={{ fontSize: 11, color: t.textMuted }}>
+                        <OperadoraTag label={opRow?.nome ?? s.operadora_slug} corPrimaria={opRow?.cor_primaria} />
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <div style={{ marginTop: 18 }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            width: "100%",
+            padding: "10px 18px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: "transparent",
+            color: t.text,
+            fontSize: 13,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          Fechar
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
 
-        <div style={{ marginTop: 20 }}>
-          <button type="button" onClick={onClose} style={{ width: "100%", padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-            Fechar
-          </button>
+// ─── Modal Ver ────────────────────────────────────────────────────────────────
+function ModalVer({
+  dealer,
+  operadoras,
+  onClose,
+}: {
+  dealer: Dealer;
+  operadoras: Operadora[];
+  onClose: () => void;
+}) {
+  const { theme: t } = useApp();
+  const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
+  const fotoUrl = (dealer.fotos ?? [])[0];
+
+  return (
+    <ModalBase onClose={onClose} maxWidth={480}>
+      <ModalHeader title={dealer.nickname} onClose={onClose} />
+      {fotoUrl && (
+        <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: "16/10" }}>
+          <img src={fotoUrl} alt={dealer.nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, fontFamily: FONT.body }}>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Nome Real</span>
+          <br />
+          <span style={{ fontSize: 14, color: t.text }}>{dealer.nome_real}</span>
+        </div>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Gênero</span>
+          <br />
+          <span style={{ fontSize: 14, color: t.text }}>{GENERO_OPTS.find((o) => o.value === dealer.genero)?.label}</span>
+        </div>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Turno</span>
+          <br />
+          <span style={{ fontSize: 14, color: t.text }}>{TURNO_OPTS.find((o) => o.value === dealer.turno)?.label}</span>
+        </div>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Jogos</span>
+          <br />
+          <span style={{ fontSize: 14, color: t.text }}>{(dealer.jogos ?? []).map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label).join(", ") || "—"}</span>
+        </div>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span>
+          <br />
+          {op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}
+        </div>
+        {dealer.perfil_influencer && (
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Dealer</span>
+            <br />
+            <span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            width: "100%",
+            padding: "10px 18px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: "transparent",
+            color: t.text,
+            fontSize: 13,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          Fechar
+        </button>
+      </div>
     </ModalBase>
   );
 }

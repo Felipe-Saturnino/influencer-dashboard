@@ -6,11 +6,12 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check } from "lucide-react";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, MessageSquare } from "lucide-react";
 import { GiNotebook, GiShield } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { BannerPendencias } from "../../operacoes/solicitacoes/BannerPendencias";
+import { ModalThreadSolicitacao } from "../../operacoes/solicitacoes/ModalThreadSolicitacao";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";
@@ -289,7 +290,8 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   operadoraSlug: string;
   operadorasList: { slug: string; nome: string }[];
   onClose: () => void;
-  onSalvo: () => void;
+  /** Inclui `solicitacaoId` quando a thread da campanha é criada com sucesso. */
+  onSalvo: (opts?: { solicitacaoId: string }) => void;
   podeVerOperadora: (slug: string) => boolean;
 }) {
   const { theme: t, user, isDark } = useApp();
@@ -303,6 +305,7 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   const [texto, setTexto] = useState("");
   const [operadoraSlugModal, setOperadoraSlugModal] = useState(operadoraSlug === "todas" ? "" : operadoraSlug);
   const [saving, setSaving] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   const operadorasFiltradas = operadorasList.filter((o) => podeVerOperadora(o.slug));
   const operadoraFinal = mostraCampoOperadora ? operadoraSlugModal : operadoraSlug;
@@ -319,16 +322,81 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   const handleSalvar = async () => {
     if (!titulo.trim() || !texto.trim() || !dataInicio || !dataFim || !operadoraFinal || operadoraFinal === "todas") return;
     setSaving(true);
+    setErroSalvar(null);
     const payload = { titulo: titulo.trim(), texto: texto.trim(), jogos, data_inicio: dataInicio, data_fim: dataFim, ativo: true, updated_at: new Date().toISOString() };
-    const { error } = await supabase.from("roteiro_mesa_campanhas").insert({
-      operadora_slug: operadoraFinal,
-      ordem: 0,
-      created_by: user?.id ?? null,
-      ...payload,
+    const { data: campRow, error } = await supabase
+      .from("roteiro_mesa_campanhas")
+      .insert({
+        operadora_slug: operadoraFinal,
+        ordem: 0,
+        created_by: user?.id ?? null,
+        ...payload,
+      })
+      .select("id")
+      .single();
+    if (error || !campRow?.id) {
+      console.error("[RoteiroMesa] insert campanha:", error?.message);
+      setErroSalvar(error?.message ?? "Não foi possível salvar a campanha.");
+      setSaving(false);
+      return;
+    }
+
+    const isOperador = user?.role === "operador";
+    const aguarda = isOperador ? "gestor" : "operadora";
+    const autorMsg = isOperador ? "operadora" : "gestor";
+    const tituloSol = `Nova campanha: ${titulo.trim()}`;
+    const jogosLabel = jogos.map((j) => JOGOS.find((x) => x.key === j)?.label ?? j).join(", ");
+    const corpoMsg = [
+      "Campanha cadastrada no roteiro de mesa.",
+      "",
+      `Título: ${titulo.trim()}`,
+      `Período: ${dataInicio} → ${dataFim}`,
+      `Jogos: ${jogosLabel}`,
+      "",
+      "Texto sugerido:",
+      texto.trim(),
+    ].join("\n");
+
+    const { data: solRow, error: errSol } = await supabase
+      .from("roteiro_campanha_solicitacoes")
+      .insert({
+        campanha_id: campRow.id,
+        operadora_slug: operadoraFinal,
+        status: "em_andamento",
+        aguarda_resposta_de: aguarda,
+        titulo: tituloSol,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (errSol || !solRow?.id) {
+      console.error("[RoteiroMesa] insert solicitação campanha:", errSol?.message);
+      await supabase.from("roteiro_mesa_campanhas").delete().eq("id", campRow.id);
+      setErroSalvar(errSol?.message ?? "Campanha não foi salva: falha ao abrir a conversa com o estúdio.");
+      setSaving(false);
+      return;
+    }
+
+    const { error: errMsg } = await supabase.from("roteiro_campanha_solicitacao_mensagens").insert({
+      solicitacao_id: solRow.id,
+      autor: autorMsg,
+      usuario_id: user?.id ?? null,
+      texto: corpoMsg,
     });
-    if (error) console.error("[RoteiroMesa] insert campanha:", error.message);
+
+    if (errMsg) {
+      console.error("[RoteiroMesa] insert mensagem campanha:", errMsg.message);
+      await supabase.from("roteiro_campanha_solicitacoes").delete().eq("id", solRow.id);
+      await supabase.from("roteiro_mesa_campanhas").delete().eq("id", campRow.id);
+      setErroSalvar(errMsg.message ?? "Campanha não foi salva: falha ao registrar a primeira mensagem.");
+      setSaving(false);
+      return;
+    }
+
     setSaving(false);
-    if (!error) { onSalvo(); onClose(); }
+    onSalvo({ solicitacaoId: solRow.id });
+    onClose();
   };
 
   const podeSalvar = titulo.trim().length > 0 && texto.trim().length > 0 && dataInicio && dataFim && operadoraFinal && operadoraFinal !== "todas";
@@ -377,6 +445,12 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
 
         <label style={lbl}>Texto *</label>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='O que o dealer deve falar...' rows={4} style={{ ...inp, resize: "vertical", marginBottom: 18 }} />
+
+        {erroSalvar ? (
+          <p role="alert" style={{ margin: "0 0 14px", fontSize: 12, color: BRAND.vermelho, fontFamily: FONT.body }}>
+            {erroSalvar}
+          </p>
+        ) : null}
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
@@ -538,10 +612,13 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
 }
 
 // ─── ITEM DE CAMPANHA ─────────────────────────────────────────────────────────
-function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, operadoraCor }: {
+function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, operadoraCor, solicitacaoId, onAbrirConversa, podeAbrirConversa }: {
   campanha: RoteiroCampanha; podeExcluir: boolean;
   onExcluir: (c: RoteiroCampanha) => void;
   dark: boolean; operadoraNome?: string; operadoraCor?: string | null;
+  solicitacaoId?: string | null;
+  onAbrirConversa?: (solicitacaoId: string) => void;
+  podeAbrirConversa?: boolean;
 }) {
   const [hover,    setHover]    = useState(false);
   const [excluirConfirmando, setExcluirConfirmando] = useState(false);
@@ -590,47 +667,76 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
           )}
         </div>
       </div>
-      {podeExcluir && (
-        <button
-          type="button"
-          onClick={() => {
-            if (!excluirConfirmando) {
-              setExcluirConfirmando(true);
-              return;
-            }
-            onExcluir(campanha);
-            setExcluirConfirmando(false);
-          }}
-          onBlur={() => setExcluirConfirmando(false)}
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
-          title={`Excluir campanha: ${campanha.titulo}`}
-          aria-label={`${excluirConfirmando ? "Confirmar exclusão da campanha:" : "Excluir campanha:"} ${campanha.titulo}`}
-          style={{
-            width: "auto",
-            minWidth: 34,
-            height: 34,
-            padding: excluirConfirmando ? "0 8px" : 0,
-            borderRadius: 8,
-            flexShrink: 0,
-            border: `1px solid ${excluirConfirmando || hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`,
-            background: excluirConfirmando ? BRAND.vermelho : hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
-            color: excluirConfirmando ? "#fff" : hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"),
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-            transition: "all 0.15s",
-            fontSize: 10,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-          }}
-        >
-          <Trash2 size={13} aria-hidden />
-          {excluirConfirmando ? <span>Confirmar?</span> : null}
-        </button>
-      )}
+      <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
+        {podeAbrirConversa && solicitacaoId && onAbrirConversa ? (
+          <button
+            type="button"
+            onClick={() => onAbrirConversa(solicitacaoId)}
+            title="Abrir conversa com o estúdio / operadora"
+            aria-label={`Conversa da campanha: ${campanha.titulo}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              minHeight: 34,
+              padding: "0 10px",
+              borderRadius: 8,
+              border: `1px solid ${dark ? "rgba(112,202,228,0.35)" : "rgba(15,106,138,0.35)"}`,
+              background: dark ? "rgba(112,202,228,0.1)" : "rgba(112,202,228,0.08)",
+              color: cianoText,
+              cursor: "pointer",
+              fontSize: 10,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+            }}
+          >
+            <MessageSquare size={14} aria-hidden />
+            <span>Conversa</span>
+          </button>
+        ) : null}
+        {podeExcluir && (
+          <button
+            type="button"
+            onClick={() => {
+              if (!excluirConfirmando) {
+                setExcluirConfirmando(true);
+                return;
+              }
+              onExcluir(campanha);
+              setExcluirConfirmando(false);
+            }}
+            onBlur={() => setExcluirConfirmando(false)}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            title={`Excluir campanha: ${campanha.titulo}`}
+            aria-label={`${excluirConfirmando ? "Confirmar exclusão da campanha:" : "Excluir campanha:"} ${campanha.titulo}`}
+            style={{
+              width: "auto",
+              minWidth: 34,
+              height: 34,
+              padding: excluirConfirmando ? "0 8px" : 0,
+              borderRadius: 8,
+              flexShrink: 0,
+              border: `1px solid ${excluirConfirmando || hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`,
+              background: excluirConfirmando ? BRAND.vermelho : hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
+              color: excluirConfirmando ? "#fff" : hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"),
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+              transition: "all 0.15s",
+              fontSize: 10,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+            }}
+          >
+            <Trash2 size={13} aria-hidden />
+            {excluirConfirmando ? <span>Confirmar?</span> : null}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -695,11 +801,15 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
 }
 
 // ─── BLOCO DE CAMPANHAS ───────────────────────────────────────────────────────
-function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora }: {
+function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora, solicCampanhaPorCampanhaId, onAbrirThreadCampanha, podeAbrirConversaCampanha, onThreadCampanhaCriada }: {
   operadoraSlug: string | null; campanhas: RoteiroCampanha[];
   podeExcluir: boolean; podeCriar: boolean;
   onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; cor_primaria?: string | null }[];
   podeVerOperadora: (slug: string) => boolean;
+  solicCampanhaPorCampanhaId: Record<string, string>;
+  onAbrirThreadCampanha: (solicitacaoId: string) => void;
+  podeAbrirConversaCampanha: boolean;
+  onThreadCampanhaCriada?: (solicitacaoId: string) => void;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -745,14 +855,37 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
         ) : (
           campanhas.map((c) => {
             const op = operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === c.operadora_slug) : undefined;
+            const sid = solicCampanhaPorCampanhaId[c.id] ?? null;
             return (
-              <CampanhaItem key={c.id} campanha={c} podeExcluir={podeExcluir} onExcluir={handleExcluir} dark={dark} operadoraNome={op?.nome} operadoraCor={op?.cor_primaria} />
+              <CampanhaItem
+                key={c.id}
+                campanha={c}
+                podeExcluir={podeExcluir}
+                onExcluir={handleExcluir}
+                dark={dark}
+                operadoraNome={op?.nome}
+                operadoraCor={op?.cor_primaria}
+                solicitacaoId={sid}
+                onAbrirConversa={onAbrirThreadCampanha}
+                podeAbrirConversa={podeAbrirConversaCampanha}
+              />
             );
           })
         )}
       </div>
     </div>
-    {modalAberto && <ModalCampanha operadoraSlug={operadoraSlug} operadorasList={operadorasList} onClose={() => setModalAberto(false)} onSalvo={() => { setModalAberto(false); onCarregar(); }} podeVerOperadora={podeVerOperadora} />}
+    {modalAberto && (
+      <ModalCampanha
+        operadoraSlug={operadoraSlug}
+        operadorasList={operadorasList}
+        onClose={() => setModalAberto(false)}
+        onSalvo={(opts) => {
+          void onCarregar();
+          if (opts?.solicitacaoId) onThreadCampanhaCriada?.(opts.solicitacaoId);
+        }}
+        podeVerOperadora={podeVerOperadora}
+      />
+    )}
     </>
   );
 }
@@ -773,6 +906,8 @@ export default function RoteiroMesa() {
   const [filtroTipo,      setFiltroTipo]      = useState<TipoSugestao | "todos">("todos");
   const [sugestoes,       setSugestoes]       = useState<RoteiroSugestao[]>([]);
   const [campanhas,       setCampanhas]       = useState<RoteiroCampanha[]>([]);
+  const [solicCampanhaPorCampanhaId, setSolicCampanhaPorCampanhaId] = useState<Record<string, string>>({});
+  const [threadCampSolId, setThreadCampSolId] = useState<string | null>(null);
   const [loading,         setLoading]         = useState(true);
 
   const mostrarFiltroOp = showFiltroOperadora;
@@ -798,7 +933,22 @@ export default function RoteiroMesa() {
     let qCamp = supabase.from("roteiro_mesa_campanhas").select("*").order("ordem");
     if (operadoraSlugSelecionada !== "todas") qCamp = qCamp.eq("operadora_slug", operadoraSlugSelecionada);
     const { data: dataCamp } = await qCamp;
-    setCampanhas((dataCamp ?? []) as RoteiroCampanha[]);
+    const listaCamp = (dataCamp ?? []) as RoteiroCampanha[];
+    const idsCamp = listaCamp.map((c) => c.id);
+    const mapSol: Record<string, string> = {};
+    if (idsCamp.length > 0) {
+      const { data: solRows, error: errSolMap } = await supabase
+        .from("roteiro_campanha_solicitacoes")
+        .select("id, campanha_id")
+        .in("campanha_id", idsCamp);
+      if (errSolMap) console.error("[RoteiroMesa] map solicitações campanha:", errSolMap.message);
+      for (const r of solRows ?? []) {
+        const row = r as { id: string; campanha_id: string };
+        mapSol[row.campanha_id] = row.id;
+      }
+    }
+    setCampanhas(listaCamp);
+    setSolicCampanhaPorCampanhaId(mapSol);
 
     setLoading(false);
   }, [operadoraSlugSelecionada]);
@@ -839,6 +989,10 @@ export default function RoteiroMesa() {
       const jogosList = c.jogos ?? ["todos"];
       return filtroJogo === "todos" || jogosList.includes(filtroJogo) || jogosList.includes("todos");
     });
+
+  /** Quem vê o roteiro pode abrir a thread; `podeInteragir` no modal segue a Central (edição). */
+  const podeAbrirConversaCampanha =
+    !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
 
   const sugestoesPorBloco = (bloco: BlocoRoteiro) =>
     filtrarSugestoes(sugestoes.filter((s) => s.bloco === bloco));
@@ -960,6 +1114,10 @@ export default function RoteiroMesa() {
               dark={dark}
               operadorasList={operadorasList}
               podeVerOperadora={podeVerOperadora}
+              solicCampanhaPorCampanhaId={solicCampanhaPorCampanhaId}
+              onAbrirThreadCampanha={(id) => setThreadCampSolId(id)}
+              podeAbrirConversaCampanha={podeAbrirConversaCampanha}
+              onThreadCampanhaCriada={(id) => setThreadCampSolId(id)}
             />
             {BLOCOS.map(({ key }) => (
               <BlocoSugestoes
@@ -977,6 +1135,20 @@ export default function RoteiroMesa() {
           </div>
         )
       )}
+
+      {threadCampSolId ? (
+        <ModalThreadSolicitacao
+          solicitacaoId={threadCampSolId}
+          operadoras={operadorasList}
+          origem="campanha_roteiro"
+          podeInteragir={permCentral.canEditarOk}
+          onClose={() => setThreadCampSolId(null)}
+          onResolvido={() => {
+            void carregarDados();
+            setThreadCampSolId(null);
+          }}
+        />
+      ) : null}
 
     </div>
   );
