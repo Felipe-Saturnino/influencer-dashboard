@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { readJwtSecretFromEnv, verifySupabaseUserAccessToken } from '../_shared/verifyAccessToken.ts'
+import { readJwtSecretFromEnv, verifySupabaseUserAccessToken } from './verifyAccessToken.ts'
 
 // Edge Function: admin-usuario-acao — desativar/ativar perfil (sem excluir) e reset de senha padrão + must_change_password
 // Usa service_role; apenas admins (JWT) podem chamar.

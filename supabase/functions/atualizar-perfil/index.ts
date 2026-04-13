@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { readJwtSecretFromEnv, verifySupabaseUserAccessToken } from '../_shared/verifyAccessToken.ts'
+import { readJwtSecretFromEnv, verifySupabaseUserAccessToken } from './verifyAccessToken.ts'
 
 // Edge Function: atualizar-perfil — usa service_role para garantir que o update persista
 // Apenas admins podem chamar (verificado via JWT)

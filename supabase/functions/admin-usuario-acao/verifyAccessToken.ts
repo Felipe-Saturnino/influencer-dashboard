@@ -4,7 +4,9 @@
  * sumiu mas o JWT ainda é válido (ex.: cliente com storage desatualizado).
  *
  * Secret: mesmo valor de Settings → API → JWT Secret.
- * No painel Edge Functions use o nome JWT_SECRET (prefixo SUPABASE_ é reservado e não pode ser secret custom).
+ * Edge secret: JWT_SECRET (prefixo SUPABASE_ é reservado no painel).
+ *
+ * Cópia local: o deploy do Supabase só inclui ficheiros desta pasta da função.
  */
 import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
 
@@ -34,7 +36,6 @@ export async function verifySupabaseUserAccessToken(
   }
 }
 
-/** Lê o segredo JWT (preferir JWT_SECRET; SUPABASE_JWT_SECRET só em ambientes que permitam o prefixo). */
 export function readJwtSecretFromEnv(): string {
   return (Deno.env.get('JWT_SECRET') ?? Deno.env.get('SUPABASE_JWT_SECRET') ?? '').trim()
 }
