@@ -538,7 +538,14 @@ export default function GestaoDealers() {
       ) : filtered.length === 0 ? (
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum dealer encontrado.</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))",
+            gap: 20,
+            alignItems: "stretch",
+          }}
+        >
           {filtered.map((d) => (
             <DealerCard
               key={d.id}
@@ -655,6 +662,10 @@ function DealerCard({
       borderRadius: 18,
       overflow: "hidden",
       boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+      display: "flex",
+      flexDirection: "column",
+      height: "100%",
+      minHeight: 0,
     }}
     >
       {/* Área da foto */}
@@ -691,15 +702,23 @@ function DealerCard({
           </span>
         </div>
       </div>
-      {/* Info */}
-      <div style={{ padding: "16px 18px" }}>
+      {/* Corpo do card: flex para empurrar género + ações para o fundo (alinhamento na grelha) */}
+      <div
+        style={{
+          padding: "16px 18px",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+        }}
+      >
         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.5px" }}>
           {dealer.nickname}
         </h3>
         <p style={{ margin: "4px 0 10px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
           {dealer.nome_real}
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12, alignItems: "center" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12, alignItems: "center", alignContent: "flex-start" }}>
           {(dealer.jogos ?? []).map((j) => {
             const isMesaVip = j === "mesa_vip";
             return (
@@ -742,11 +761,25 @@ function DealerCard({
             );
           })}
         </div>
-        {dealer.perfil_influencer && (
-          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.4, marginBottom: 12, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+        {dealer.perfil_influencer ? (
+          <p
+            style={{
+              fontSize: 12,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              lineHeight: 1.4,
+              margin: "0 0 12px",
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
             {dealer.perfil_influencer}
           </p>
-        )}
+        ) : null}
+        {/* Ocupa o espaço vertical restante para alinhar género e botões entre cards da mesma linha */}
+        <div style={{ flex: 1, minHeight: 0 }} aria-hidden />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
           <span style={{ background: `${BRAND.roxoVivo}22`, color: BRAND.roxoVivo, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, fontFamily: FONT.body }}>
             {GENERO_OPTS.find((o) => o.value === dealer.genero)?.label ?? dealer.genero}
