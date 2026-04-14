@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useStreamersFiltrosOptional } from "../Streamers/StreamersFiltrosContext";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -170,21 +171,38 @@ export default function DashboardOverview() {
   const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
+  const sf = useStreamersFiltrosOptional();
+  const embed = sf !== null;
 
-  const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
+  const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
   const hoje = new Date();
-  const idxInicial = mesesDisponiveis.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
+  const idxInicialLocal =
+    mesesDisponiveisLocal.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
+  const idxStartLocal = idxInicialLocal >= 0 ? idxInicialLocal : mesesDisponiveisLocal.length - 1;
 
-  const [idxMes, setIdxMes]       = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
-  const [historico, setHistorico] = useState(false);
-  const [loading, setLoading]     = useState(true);
+  const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
+  const [historicoLocal, setHistoricoLocal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
-  const [filtroOperadora, setFiltroOperadora]   = useState<string>("todas");
+  const [filtroInfluencerLocal, setFiltroInfluencerLocal] = useState<string>("todos");
+  const [filtroOperadoraLocal, setFiltroOperadoraLocal] = useState<string>("todas");
+  const [operadorasListLocal, setOperadorasListLocal] = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMapLocal, setOperadoraInfMapLocal] = useState<Record<string, string[]>>({});
+
+  const mesesDisponiveis = embed ? sf.mesesDisponiveis : mesesDisponiveisLocal;
+  const idxMes = embed ? sf.idxMes : idxMesLocal;
+  const setIdxMes = embed ? sf.setIdxMes : setIdxMesLocal;
+  const historico = embed ? sf.historico : historicoLocal;
+  const setHistorico = embed ? sf.setHistorico : setHistoricoLocal;
+  const filtroInfluencer = embed ? sf.filtroInfluencer : filtroInfluencerLocal;
+  const setFiltroInfluencer = embed ? sf.setFiltroInfluencer : setFiltroInfluencerLocal;
+  const filtroOperadora = embed ? sf.filtroOperadora : filtroOperadoraLocal;
+  const setFiltroOperadora = embed ? sf.setFiltroOperadora : setFiltroOperadoraLocal;
+  const operadorasList = embed ? sf.operadorasList : operadorasListLocal;
+  const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfMapLocal;
+  const idxInicial = embed ? sf.idxInicial : idxStartLocal;
 
   const operadoraSlugParaApi = operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined);
-  const [operadorasList, setOperadorasList]     = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap, setOperadoraInfMap]   = useState<Record<string, string[]>>({});
   const [statusFiltro, setStatusFiltro]         = useState<StatusLabel | null>(null);
   const [sortRanking, setSortRanking]           = useState<{ col: RankingSortCol; dir: "asc" | "desc" }>({ col: "ggr", dir: "desc" });
 
@@ -199,8 +217,10 @@ export default function DashboardOverview() {
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
   function irMesProximo()  { setHistorico(false); setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1)); }
   function toggleHistorico() {
-    if (historico) { setHistorico(false); setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1); }
-    else setHistorico(true);
+    if (historico) {
+      setHistorico(false);
+      setIdxMes(idxInicial);
+    } else setHistorico(true);
   }
 
   // ── BUSCA DE DADOS (idêntica ao original) ────────────────────────────────────
@@ -208,20 +228,31 @@ export default function DashboardOverview() {
     async function carregar() {
       setLoading(true);
 
-      const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
-        supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
-        supabase.from("operadoras").select("slug, nome").order("nome"),
-        supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
-      ]);
-      const perfisLista: InfluencerPerfil[] = perfisData || [];
-      setPerfis(perfisLista);
-      setOperadorasList(opsData || []);
-      const map: Record<string, string[]> = {};
-      (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
-        if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
-        map[o.operadora_slug].push(o.influencer_id);
-      });
-      setOperadoraInfMap(map);
+      let perfisLista: InfluencerPerfil[] = [];
+
+      if (!embed) {
+        const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
+          supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
+          supabase.from("operadoras").select("slug, nome").order("nome"),
+          supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
+        ]);
+        perfisLista = perfisData || [];
+        setPerfis(perfisLista);
+        setOperadorasListLocal(opsData || []);
+        const map: Record<string, string[]> = {};
+        (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
+          if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
+          map[o.operadora_slug].push(o.influencer_id);
+        });
+        setOperadoraInfMapLocal(map);
+      } else {
+        const { data: perfisData } = await supabase
+          .from("influencer_perfil")
+          .select("id, nome_artistico, cache_hora")
+          .order("nome_artistico");
+        perfisLista = perfisData || [];
+        setPerfis(perfisLista);
+      }
 
       async function buscaMetricas(ini: string, fim: string, incluirAliases = false): Promise<Metrica[]> {
         let q = supabase.from("influencer_metricas")
@@ -355,7 +386,7 @@ export default function DashboardOverview() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, mesSelecionado, podeVerInfluencer, filtroOperadora, operadoraSlugsForcado, operadoraSlugParaApi]);
+  }, [embed, historico, idxMes, mesSelecionado, podeVerInfluencer, filtroOperadora, operadoraSlugsForcado, operadoraSlugParaApi]);
 
   const idsOperadoraEfetiva = useMemo(() => {
     if (operadoraSlugsForcado?.length) {
@@ -433,9 +464,6 @@ export default function DashboardOverview() {
   const thStyle = getThStyle(t);
   const tdStyle = getTdStyle(t);
 
-  const isPrimeiro = idxMes === 0;
-  const isUltimo   = idxMes === mesesDisponiveis.length - 1;
-
   function ThRankingSort({ col, label }: { col: RankingSortCol; label: string }) {
     const ativo = sortRanking.col === col;
     return (
@@ -487,7 +515,7 @@ export default function DashboardOverview() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ══ BLOCO 1: FILTROS — primária transparente ═══════════════════════════════════ */}
+      {!embed && (
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
@@ -496,13 +524,12 @@ export default function DashboardOverview() {
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-            {/* Navegação de mês */}
             <button
               type="button"
               aria-label="Mês anterior"
-              style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
+              style={{ ...btnNavStyle, opacity: historico || idxMes === 0 ? 0.35 : 1, cursor: historico || idxMes === 0 ? "not-allowed" : "pointer" }}
               onClick={irMesAnterior}
-              disabled={historico || isPrimeiro}
+              disabled={historico || idxMes === 0}
             >
               <ChevronLeft size={14} aria-hidden />
             </button>
@@ -519,14 +546,13 @@ export default function DashboardOverview() {
             <button
               type="button"
               aria-label="Próximo mês"
-              style={{ ...btnNavStyle, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
+              style={{ ...btnNavStyle, opacity: historico || idxMes === mesesDisponiveis.length - 1 ? 0.35 : 1, cursor: historico || idxMes === mesesDisponiveis.length - 1 ? "not-allowed" : "pointer" }}
               onClick={irMesProximo}
-              disabled={historico || isUltimo}
+              disabled={historico || idxMes === mesesDisponiveis.length - 1}
             >
               <ChevronRight size={14} aria-hidden />
             </button>
 
-            {/* Botão Histórico */}
             <button
               type="button"
               aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
@@ -551,7 +577,6 @@ export default function DashboardOverview() {
               Histórico
             </button>
 
-            {/* Filtro Influencer */}
             {showFiltroInfluencer && (
               <SelectComIcone
                 icon={<GiStarMedal size={15} aria-hidden />}
@@ -591,6 +616,7 @@ export default function DashboardOverview() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>

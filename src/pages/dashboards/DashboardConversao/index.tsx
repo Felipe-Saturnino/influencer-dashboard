@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useStreamersFiltrosOptional } from "../Streamers/StreamersFiltrosContext";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -409,51 +410,77 @@ export default function DashboardConversao() {
   const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
+  const sf = useStreamersFiltrosOptional();
+  const embed = sf !== null;
 
-  const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
+  const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
   const hoje = new Date();
-  const idxInicial = mesesDisponiveis.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
+  const idxInicialLocal = mesesDisponiveisLocal.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
+  const idxStartLocal = idxInicialLocal >= 0 ? idxInicialLocal : mesesDisponiveisLocal.length - 1;
 
-  const [idxMes, setIdxMes]         = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
-  const [historico, setHistorico]   = useState(false);
-  const [loading, setLoading]       = useState(true);
-  const [rows, setRows]             = useState<ConversaoRow[]>([]);
-  const [compA, setCompA]           = useState<string>("");
-  const [compB, setCompB]           = useState<string>("");
+  const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
+  const [historicoLocal, setHistoricoLocal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<ConversaoRow[]>([]);
+  const [compA, setCompA] = useState<string>("");
+  const [compB, setCompB] = useState<string>("");
   const [acaoFiltro, setAcaoFiltro] = useState<string | null>(null);
-  const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
-  const [filtroOperadora, setFiltroOperadora]   = useState<string>("todas");
-  const [operadorasList, setOperadorasList]     = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap, setOperadoraInfMap]   = useState<Record<string, string[]>>({});
+  const [filtroInfluencerLocal, setFiltroInfluencerLocal] = useState<string>("todos");
+  const [filtroOperadoraLocal, setFiltroOperadoraLocal] = useState<string>("todas");
+  const [operadorasListLocal, setOperadorasListLocal] = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMapLocal, setOperadoraInfMapLocal] = useState<Record<string, string[]>>({});
+
+  const mesesDisponiveis = embed ? sf.mesesDisponiveis : mesesDisponiveisLocal;
+  const idxMes = embed ? sf.idxMes : idxMesLocal;
+  const setIdxMes = embed ? sf.setIdxMes : setIdxMesLocal;
+  const historico = embed ? sf.historico : historicoLocal;
+  const setHistorico = embed ? sf.setHistorico : setHistoricoLocal;
+  const filtroInfluencer = embed ? sf.filtroInfluencer : filtroInfluencerLocal;
+  const setFiltroInfluencer = embed ? sf.setFiltroInfluencer : setFiltroInfluencerLocal;
+  const filtroOperadora = embed ? sf.filtroOperadora : filtroOperadoraLocal;
+  const setFiltroOperadora = embed ? sf.setFiltroOperadora : setFiltroOperadoraLocal;
+  const operadorasList = embed ? sf.operadorasList : operadorasListLocal;
+  const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfMapLocal;
+  const idxInicial = embed ? sf.idxInicial : idxStartLocal;
 
   const mesSelecionado = mesesDisponiveis[idxMes];
-  const isPrimeiro = idxMes === 0;
-  const isUltimo   = idxMes === mesesDisponiveis.length - 1;
 
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
   function irMesProximo()  { setHistorico(false); setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1)); }
   function toggleHistorico() {
-    if (historico) { setHistorico(false); setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1); }
-    else setHistorico(true);
+    if (historico) {
+      setHistorico(false);
+      setIdxMes(idxInicial);
+    } else setHistorico(true);
   }
 
   useEffect(() => {
     async function carregar() {
       setLoading(true);
 
-      const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
-        supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
-        supabase.from("operadoras").select("slug, nome").order("nome"),
-        supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
-      ]);
-      const perfisLista: InfluencerPerfil[] = perfisData || [];
-      setOperadorasList(opsData || []);
-      const map: Record<string, string[]> = {};
-      (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
-        if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
-        map[o.operadora_slug].push(o.influencer_id);
-      });
-      setOperadoraInfMap(map);
+      let perfisLista: InfluencerPerfil[] = [];
+
+      if (!embed) {
+        const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
+          supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
+          supabase.from("operadoras").select("slug, nome").order("nome"),
+          supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
+        ]);
+        perfisLista = perfisData || [];
+        setOperadorasListLocal(opsData || []);
+        const map: Record<string, string[]> = {};
+        (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
+          if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
+          map[o.operadora_slug].push(o.influencer_id);
+        });
+        setOperadoraInfMapLocal(map);
+      } else {
+        const { data: perfisData } = await supabase
+          .from("influencer_perfil")
+          .select("id, nome_artistico, cache_hora")
+          .order("nome_artistico");
+        perfisLista = perfisData || [];
+      }
 
       const { inicio, fim } = historico || !mesSelecionado
         ? { inicio: "2020-01-01", fim: new Date().toISOString().split("T")[0] }
@@ -549,7 +576,7 @@ export default function DashboardConversao() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado]);
+  }, [embed, historico, idxMes, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado, filtroOperadora]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
   const rowsFiltradosEscopo = useMemo(() => {
@@ -628,7 +655,7 @@ export default function DashboardConversao() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ══ BLOCO 1: FILTROS — primária transparente ═══════════════════════════════ */}
+      {!embed && (
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
@@ -638,8 +665,8 @@ export default function DashboardConversao() {
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
 
-            <button type="button" aria-label="Mês anterior" style={{ ...btnNavStyle, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }}
-              onClick={irMesAnterior} disabled={historico || isPrimeiro}>
+            <button type="button" aria-label="Mês anterior" style={{ ...btnNavStyle, opacity: historico || idxMes === 0 ? 0.35 : 1, cursor: historico || idxMes === 0 ? "not-allowed" : "pointer" }}
+              onClick={irMesAnterior} disabled={historico || idxMes === 0}>
               <ChevronLeft size={14} aria-hidden />
             </button>
 
@@ -647,8 +674,8 @@ export default function DashboardConversao() {
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
 
-            <button type="button" aria-label="Próximo mês" style={{ ...btnNavStyle, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }}
-              onClick={irMesProximo} disabled={historico || isUltimo}>
+            <button type="button" aria-label="Próximo mês" style={{ ...btnNavStyle, opacity: historico || idxMes === mesesDisponiveis.length - 1 ? 0.35 : 1, cursor: historico || idxMes === mesesDisponiveis.length - 1 ? "not-allowed" : "pointer" }}
+              onClick={irMesProximo} disabled={historico || idxMes === mesesDisponiveis.length - 1}>
               <ChevronRight size={14} aria-hidden />
             </button>
 
@@ -703,6 +730,7 @@ export default function DashboardConversao() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>

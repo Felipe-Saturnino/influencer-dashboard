@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useStreamersFiltrosOptional } from "../Streamers/StreamersFiltrosContext";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -272,33 +273,49 @@ export default function DashboardFinanceiro() {
   const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
+  const sf = useStreamersFiltrosOptional();
+  const embed = sf !== null;
 
-  const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
+  const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
   const hoje = new Date();
-  const idxInicial = mesesDisponiveis.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
+  const idxInicialLocal = mesesDisponiveisLocal.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
+  const idxStartLocal = idxInicialLocal >= 0 ? idxInicialLocal : mesesDisponiveisLocal.length - 1;
 
-  const [idxMes, setIdxMes]         = useState(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1);
-  const [historico, setHistorico]   = useState(false);
-  const [loading, setLoading]       = useState(true);
-  const [filtroInfluencer, setFiltroInfluencer] = useState("todos");
-  const [operadoraFiltro, setOperadoraFiltro]   = useState("todas");
+  const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
+  const [historicoLocal, setHistoricoLocal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [filtroInfluencerLocal, setFiltroInfluencerLocal] = useState("todos");
+  const [operadoraFiltroLocal, setOperadoraFiltroLocal] = useState("todas");
+
+  const mesesDisponiveis = embed ? sf.mesesDisponiveis : mesesDisponiveisLocal;
+  const idxMes = embed ? sf.idxMes : idxMesLocal;
+  const setIdxMes = embed ? sf.setIdxMes : setIdxMesLocal;
+  const historico = embed ? sf.historico : historicoLocal;
+  const setHistorico = embed ? sf.setHistorico : setHistoricoLocal;
+  const filtroInfluencer = embed ? sf.filtroInfluencer : filtroInfluencerLocal;
+  const setFiltroInfluencer = embed ? sf.setFiltroInfluencer : setFiltroInfluencerLocal;
+  const operadoraFiltro = embed ? sf.filtroOperadora : operadoraFiltroLocal;
+  const setOperadoraFiltro = embed ? sf.setFiltroOperadora : setOperadoraFiltroLocal;
   const operadoraForApi = operadoraSlugsForcado?.[0] ?? (operadoraFiltro !== "todas" ? operadoraFiltro : null);
   const [rows, setRows]             = useState<FinanceiroRow[]>([]);
   const [totais, setTotais]         = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
   const [totaisAnt, setTotaisAnt]   = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
   const [investimentoAgentes, setInvestimentoAgentes] = useState(0);
-  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
+  const [operadorasListLocal, setOperadorasListLocal] = useState<{ slug: string; nome: string }[]>([]);
+  const [operadoraInfMapLocal, setOperadoraInfMapLocal] = useState<Record<string, string[]>>({});
+  const operadorasList = embed ? sf.operadorasList : operadorasListLocal;
+  const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfMapLocal;
+  const idxInicial = embed ? sf.idxInicial : idxStartLocal;
 
   const mesSelecionado = mesesDisponiveis[idxMes];
-  const isPrimeiro = idxMes === 0;
-  const isUltimo   = idxMes === mesesDisponiveis.length - 1;
 
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
   function irMesProximo()  { setHistorico(false); setIdxMes((i) => Math.min(mesesDisponiveis.length - 1, i + 1)); }
   function toggleHistorico() {
-    if (historico) { setHistorico(false); setIdxMes(idxInicial >= 0 ? idxInicial : mesesDisponiveis.length - 1); }
-    else setHistorico(true);
+    if (historico) {
+      setHistorico(false);
+      setIdxMes(idxInicial);
+    } else setHistorico(true);
   }
 
   // ── BUSCA DE DADOS (lógica 100% idêntica ao original) ────────────────────────
@@ -306,19 +323,29 @@ export default function DashboardFinanceiro() {
     async function carregar() {
       setLoading(true);
 
-      const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
-        supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
-        supabase.from("operadoras").select("slug, nome").order("nome"),
-        supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
-      ]);
-      const perfisLista: InfluencerPerfil[] = perfisData || [];
-      setOperadorasList(opsData || []);
-      const map: Record<string, string[]> = {};
-      (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
-        if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
-        map[o.operadora_slug].push(o.influencer_id);
-      });
-      setOperadoraInfMap(map);
+      let perfisLista: InfluencerPerfil[] = [];
+
+      if (!embed) {
+        const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
+          supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
+          supabase.from("operadoras").select("slug, nome").order("nome"),
+          supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
+        ]);
+        perfisLista = perfisData || [];
+        setOperadorasListLocal(opsData || []);
+        const map: Record<string, string[]> = {};
+        (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
+          if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
+          map[o.operadora_slug].push(o.influencer_id);
+        });
+        setOperadoraInfMapLocal(map);
+      } else {
+        const { data: perfisData } = await supabase
+          .from("influencer_perfil")
+          .select("id, nome_artistico, cache_hora")
+          .order("nome_artistico");
+        perfisLista = perfisData || [];
+      }
 
       const hojeNow = new Date();
       const isMesAtual = !historico && mesSelecionado && mesSelecionado.ano === hojeNow.getFullYear() && mesSelecionado.mes === hojeNow.getMonth();
@@ -542,7 +569,7 @@ export default function DashboardFinanceiro() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado, operadoraForApi]);
+  }, [embed, historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado, operadoraForApi]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
   const rowsParaExibir = useMemo(() => {
@@ -622,7 +649,7 @@ export default function DashboardFinanceiro() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ══ BLOCO 1: FILTROS — primária transparente ═══════════════════════════════ */}
+      {!embed && (
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
@@ -631,15 +658,15 @@ export default function DashboardFinanceiro() {
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-            <button type="button" aria-label="Mês anterior" style={{ ...btnNavStyle, opacity: historico||isPrimeiro?0.35:1, cursor: historico||isPrimeiro?"not-allowed":"pointer" }}
-              onClick={irMesAnterior} disabled={historico||isPrimeiro}>
+            <button type="button" aria-label="Mês anterior" style={{ ...btnNavStyle, opacity: historico||idxMes===0?0.35:1, cursor: historico||idxMes===0?"not-allowed":"pointer" }}
+              onClick={irMesAnterior} disabled={historico||idxMes===0}>
               <ChevronLeft size={14} aria-hidden />
             </button>
             <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
-            <button type="button" aria-label="Próximo mês" style={{ ...btnNavStyle, opacity: historico||isUltimo?0.35:1, cursor: historico||isUltimo?"not-allowed":"pointer" }}
-              onClick={irMesProximo} disabled={historico||isUltimo}>
+            <button type="button" aria-label="Próximo mês" style={{ ...btnNavStyle, opacity: historico||idxMes===mesesDisponiveis.length-1?0.35:1, cursor: historico||idxMes===mesesDisponiveis.length-1?"not-allowed":"pointer" }}
+              onClick={irMesProximo} disabled={historico||idxMes===mesesDisponiveis.length-1}>
               <ChevronRight size={14} aria-hidden />
             </button>
             <button type="button" aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"} aria-pressed={historico} onClick={toggleHistorico} style={{
@@ -690,6 +717,7 @@ export default function DashboardFinanceiro() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ══ BLOCO 2: KPIs FINANCEIROS ═══════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
