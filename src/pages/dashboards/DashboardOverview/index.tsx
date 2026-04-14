@@ -7,7 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
-import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
+import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../lib/investimentoPago";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import {
   fmt,
@@ -169,7 +169,7 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverview() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
   const embed = sf !== null;
@@ -357,9 +357,17 @@ export default function DashboardOverview() {
         resultados = await buscaResultados(lives);
       }
 
-      const investimentoPago = await buscarInvestimentoPago(periodo, {
-        operadora_slug: operadoraSlugParaApi,
-      });
+      const investimentoPago = await buscarInvestimentoPago(
+        periodo,
+        filtrosInvestimentoPorEscopo(
+          {
+            semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+            vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+            influencersVisiveis: escoposVisiveis.influencersVisiveis,
+          },
+          { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
+        )
+      );
       const rows = montaRanking(metricas, lives, resultados, investimentoPago.porInfluencer);
       const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
       setRanking(rowsVisiveis);
@@ -368,9 +376,17 @@ export default function DashboardOverview() {
       if (mom) {
         const periodoAnt = mom.anterior;
         const [investAnt, mA, lA] = await Promise.all([
-          buscarInvestimentoPago(periodoAnt, {
-            operadora_slug: operadoraSlugParaApi,
-          }),
+          buscarInvestimentoPago(
+            periodoAnt,
+            filtrosInvestimentoPorEscopo(
+              {
+                semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+                vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+                influencersVisiveis: escoposVisiveis.influencersVisiveis,
+              },
+              { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
+            )
+          ),
           buscaMetricas(periodoAnt.inicio, periodoAnt.fim, false),
           buscaLives(periodoAnt.inicio, periodoAnt.fim),
         ]);
@@ -386,7 +402,7 @@ export default function DashboardOverview() {
       setLoading(false);
     }
     carregar();
-  }, [embed, historico, idxMes, mesSelecionado, podeVerInfluencer, filtroOperadora, operadoraSlugsForcado, operadoraSlugParaApi]);
+  }, [embed, escoposVisiveis, filtroInfluencer, historico, idxMes, mesSelecionado, podeVerInfluencer, filtroOperadora, operadoraSlugsForcado, operadoraSlugParaApi]);
 
   const idsOperadoraEfetiva = useMemo(() => {
     if (operadoraSlugsForcado?.length) {

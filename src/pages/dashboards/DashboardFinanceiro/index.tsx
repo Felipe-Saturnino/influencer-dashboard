@@ -10,7 +10,7 @@ import { SelectComIcone } from "../../../components/dashboard";
 import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
-import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
+import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../lib/investimentoPago";
 import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
@@ -271,7 +271,7 @@ function PieTooltip({ active, payload, total }: {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardFinanceiro() {
   const { theme: t } = useApp();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
   const embed = sf !== null;
@@ -464,11 +464,14 @@ export default function DashboardFinanceiro() {
 
       const { total: investimentoTotal, porInfluencer: investimentoPorInf, agentes: investimentoAgentes } = await buscarInvestimentoPago(
         { inicio: periodoInicio, fim: periodoFim },
-        {
-          influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
-          operadora_slug: operadoraForApi ?? undefined,
-          includeAgentes: filtroInfluencer === "todos",
-        }
+        filtrosInvestimentoPorEscopo(
+          {
+            semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+            vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+            influencersVisiveis: escoposVisiveis.influencersVisiveis,
+          },
+          { operadora_slug: operadoraForApi, filtroInfluencer }
+        )
       );
 
       const mapa = new Map<string, Record<string, unknown>>();
@@ -520,11 +523,14 @@ export default function DashboardFinanceiro() {
         const [investAnt, mA] = await Promise.all([
           buscarInvestimentoPago(
             { inicio: periodoAnt.inicio, fim: periodoAnt.fim },
-            {
-              influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
-              operadora_slug: operadoraForApi ?? undefined,
-              includeAgentes: filtroInfluencer === "todos",
-            }
+            filtrosInvestimentoPorEscopo(
+              {
+                semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+                vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+                influencersVisiveis: escoposVisiveis.influencersVisiveis,
+              },
+              { operadora_slug: operadoraForApi, filtroInfluencer }
+            )
           ),
           (async () =>
             fetchAllPages(async (from, to) => {
@@ -569,7 +575,7 @@ export default function DashboardFinanceiro() {
       setLoading(false);
     }
     carregar();
-  }, [embed, historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado, operadoraForApi]);
+  }, [embed, escoposVisiveis, historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado, operadoraForApi]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
   const rowsParaExibir = useMemo(() => {
@@ -594,7 +600,7 @@ export default function DashboardFinanceiro() {
     const ggrPJ = tFTDs>0?tGGR/tFTDs:0;
     const wdPct = tDep>0?(tSaq/tDep)*100:0;
     const saqCount = rowsParaExibir.reduce((s,r) => s+(r.saque_ticket_medio>0?Math.round(r.saques/r.saque_ticket_medio):0), 0);
-    // investimento vem de totais (inclui Agentes via buscarInvestimentoPago); não usar soma das rows
+    // investimento vem de totais (visão global inclui Agentes; escopo agência/influencer não)
     return { ...totais, ftd_total: tFtdTotal, ftds: tFTDs, ftd_ticket_medio: tFTDs>0?tFtdTotal/tFTDs:0, depositos: tDep, deposit_count: tDepCount, deposito_ticket_medio: depTM, saques: tSaq, saque_ticket_medio: saqCount>0?tSaq/saqCount:0, ggr: tGGR, ggr_por_jogador: ggrPJ, wd_ratio: wdPct, pvi: calculaPVI(depTM,ggrPJ,wdPct) };
   }, [rowsParaExibir, totais]);
 
