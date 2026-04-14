@@ -38,8 +38,6 @@ export default function Sidebar({ activePage, onNavigate, isDrawer = false, draw
       : user?.role === "gestor" || user?.role === "admin" || user?.role === "executivo"
         ? pendGestor
         : 0;
-  /** Mesmo consolidado da Central: operador vê pendências também ao aceder à Gestão de Dealers (banner na página). */
-  const badgeGestaoDealers = user?.role === "operador" ? pendOperadora : 0;
   const logoUrl = operadoraBrand?.logo_url || LOGO_DEFAULT;
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(DEFAULT_OPEN);
 
