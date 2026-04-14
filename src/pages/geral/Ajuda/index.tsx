@@ -280,24 +280,39 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
           "Cadastro central dos parceiros da operação. Reúne todos os dados necessários para ativar, acompanhar e pagar cada influencer — e serve de base para os módulos de Agenda, Resultados, Feedback e Financeiro.",
       },
       {
+        subtitulo: "Visibilidade por Perfil",
+        texto:
+          "O que você vê nesta página depende do seu perfil:\n\n— Influencer: vê e edita apenas o próprio perfil. Não há lista nem filtros.\n— Agência: vê e gerencia os influencers sob sua estrutura.\n— Operador: vitrine dos influencers vinculados à sua operadora. Pode visualizar, mas não alterar status ou cachê.\n— Gestor / Executivo / Admin: acesso completo a todos os influencers e operações de gestão.",
+      },
+      {
         subtitulo: "Cards de Resumo",
         texto:
-          "Dois cards no topo oferecem uma leitura rápida da base:\n\n— Total de Influencers: quantidade total cadastrada, com breakdown por status (Ativo, Inativo, Cancelado) e por plataforma ativa.\n— Perfil Incompleto: influencers ativos com dados obrigatórios pendentes. A lista é clicável — acesse diretamente os perfis que precisam de atualização, especialmente antes de fechamentos financeiros.",
+          "Dois cards no topo oferecem leitura rápida da base (visíveis para gestores, executivos e operadores):\n\n— Total de Influencers: quantidade total cadastrada, com breakdown por status (Ativo, Inativo, Cancelado) e por plataforma ativa.\n— Perfil Incompleto: influencers ativos com dados obrigatórios pendentes. Os nomes são clicáveis — clique para abrir diretamente o formulário de edição daquele influencer.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Combine os filtros para localizar rapidamente qualquer parceiro na base:\n\n— Busca: por nome artístico ou e-mail\n— Status: Ativo, Inativo ou Cancelado\n— Plataforma: Twitch, YouTube, Instagram, TikTok, Kick, Discord, WhatsApp ou Telegram\n— Operadora: filtra por relacionamento comercial\n— Cachê por hora: slider para encontrar parceiros dentro de uma faixa de orçamento",
+          "Combine os filtros para localizar rapidamente qualquer parceiro na base:\n\n— Status: Ativo, Inativo ou Cancelado\n— Operadora: filtra por relacionamento comercial ativo\n— Plataforma: Twitch, YouTube, Instagram, TikTok, Kick, Discord, WhatsApp ou Telegram\n— Cachê por hora: slider para encontrar parceiros dentro de uma faixa de orçamento\n— Busca: por nome artístico ou e-mail",
       },
       {
         subtitulo: "Lista de Influencers",
         texto:
-          "Cada influencer aparece em um card com: avatar, nome artístico, status, cachê por hora, canais ativos e operadoras vinculadas.\n\nO status pode ser alterado diretamente no card, sem precisar abrir o perfil completo.",
+          "Cada card exibe: avatar com inicial, nome artístico, status (editável diretamente no card para gestores e admins), cachê por hora, canais ativos com links e operadoras vinculadas.\n\nO badge 'Perfil incompleto' aparece em influencers ativos com dados obrigatórios faltando. Use os botões Ver e Editar no lado direito do card para consultar ou atualizar o perfil.",
       },
       {
-        subtitulo: "Visualizando e Editando um Perfil",
+        subtitulo: "Visualizando um Perfil (Ver)",
         texto:
-          "Clique em Ver para consultar o perfil em modo leitura, ou em Editar para atualizar os dados. As informações são organizadas em quatro abas:\n\n— Cadastral: dados de identificação do influencer\n— Canais: plataformas em que o influencer atua e seus links\n— Financeiro: dados para cálculo e pagamento\n— Operadoras: operadoras vinculadas e identificadores associados\n\nO próprio influencer ou sua agência pode editar o próprio perfil diretamente na plataforma.",
+          "O modo de visualização exibe os dados do influencer organizados em cinco abas:\n\n— Cadastral: nome completo, artístico, e-mail, telefone e CPF (protegido com desfoque por padrão)\n— Canais: plataformas ativas com link direto para o canal\n— Financeiro: cachê por hora, Chave PIX e dados bancários (todos protegidos com desfoque)\n— Operadoras: quais operadoras o influencer está vinculado e o ID em cada uma\n— Histórico: datas de criação, última atualização e última alteração de status\n\nDados sensíveis (CPF, PIX, banco) ficam ocultos com desfoque e exigem clique para revelar. Eles se ocultam automaticamente após 10 segundos.",
+      },
+      {
+        subtitulo: "Editando um Perfil (Editar)",
+        texto:
+          "O formulário de edição tem quatro abas — Cadastral, Canais, Financeiro e Operadoras. Salvar confirma todas as alterações de todas as abas de uma vez.\n\nAlterações de status (Ativo/Inativo/Cancelado) e de cachê por hora só podem ser feitas por Gestor ou Admin. Para outros perfis, esses campos aparecem desabilitados.\n\nNa aba Canais, cada plataforma selecionada exige que o link correspondente seja preenchido. Na aba Operadoras, cada operadora ativa exige o ID do influencer naquela operadora.",
+      },
+      {
+        subtitulo: "Dados Sensíveis",
+        texto:
+          "Os campos de CPF, Chave PIX, Banco, Agência e Conta são protegidos em ambos os modos (visualização e edição). No modo de visualização, ficam com desfoque e exigem clique explícito para revelar — ocultando-se automaticamente após 10 segundos. No modo de edição, os campos ficam visíveis para facilitar o preenchimento.",
       },
     ],
   },
@@ -602,24 +617,39 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     titulo: "Influencers",
     blocos: [
       {
-        subtitulo: "Um influencer aparece no card de Perfil Incompleto. O que falta?",
+        subtitulo: "Nenhum influencer aparece na lista?",
         texto:
-          "Os campos mais comuns que causam esse alerta são os dados da aba Financeiro — chave PIX, dados bancários ou cachê por hora. Abra o perfil e verifique os campos obrigatórios sinalizados.",
+          "Verifique se os filtros de status, plataforma, operadora ou cachê estão limitando a lista. Clique em 'Limpar filtros' para remover todos e ver a lista completa. Se a lista continuar vazia, pode ser que nenhum influencer tenha sido cadastrado ou que o escopo do seu perfil não inclua influencers ativos.",
       },
       {
-        subtitulo: "O influencer não aparece na lista?",
+        subtitulo: "Não consigo alterar o status ou o cachê de um influencer?",
         texto:
-          "Verifique se o filtro de status está configurado para exibir o status correto. Influencers inativos ou cancelados só aparecem quando o filtro correspondente está selecionado.",
+          "Alterações de status e cachê por hora são restritas a Admin e Gestor. Operadores, agências e influencers podem editar os demais dados do perfil, mas não esses campos. Se você é Gestor e ainda não consegue alterar, verifique com o administrador se sua permissão de edição está configurada corretamente.",
       },
       {
-        subtitulo: "Não consigo editar o perfil de um influencer?",
+        subtitulo: "Um influencer aparece como 'Perfil Incompleto'?",
         texto:
-          "A edição está disponível para o próprio influencer, sua agência e perfis com permissão de gestão. Se o botão Editar não aparecer, seu perfil pode não ter essa permissão.",
+          "O badge 'Perfil incompleto' aparece para influencers ativos com dados obrigatórios faltando — geralmente nome artístico, canais, links de plataforma ou dados bancários. Clique no nome do influencer no card de resumo no topo da página, ou use o botão Editar no card da lista para preencher os dados faltantes.",
       },
       {
-        subtitulo: "Os canais do influencer não aparecem na Agenda ou no Feedback?",
+        subtitulo: "Não consigo salvar o perfil?",
         texto:
-          "Verifique se os canais estão cadastrados na aba Canais do perfil e se as operadoras estão vinculadas na aba Operadoras. Dados ausentes nessas abas afetam outros módulos da plataforma.",
+          "Verifique:\n\n— Na aba Canais: cada plataforma selecionada exige que o link correspondente esteja preenchido.\n— Na aba Operadoras: cada operadora marcada como ativa exige o ID do influencer naquela operadora.\n\nUm dos campos obrigatórios pode estar incompleto em uma aba diferente da que está visualizando no momento do erro.",
+      },
+      {
+        subtitulo: "O link do canal não abre ou está incorreto?",
+        texto:
+          "Os links de canal no modo de visualização são os mesmos registrados no perfil do influencer. Se um link não funciona, abra o modal de edição na aba Canais e corrija o endereço. O link deve incluir o domínio completo (ex.: https://twitch.tv/seunome).",
+      },
+      {
+        subtitulo: "Os dados sensíveis sumem sozinhos?",
+        texto:
+          "Esse comportamento é intencional. No modo de visualização, CPF, Chave PIX e dados bancários se ocultam automaticamente após 10 segundos de serem revelados. Para ver novamente, clique no ícone de olho ao lado do campo. No modo de edição, os dados ficam visíveis durante toda a sessão.",
+      },
+      {
+        subtitulo: "Não vejo o filtro de operadora ou o filtro de influencer?",
+        texto:
+          "O filtro de operadora só aparece para perfis com acesso a múltiplas operadoras. Operadores com escopo restrito a uma única operadora não veem esse filtro. A lista já é filtrada automaticamente pelo escopo do perfil.",
       },
     ],
   },
