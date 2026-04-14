@@ -51,27 +51,32 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Área unificada com três abas — Overview executivo, Conversão e Dashboard financeiro — para análise de performance das lives e dos jogadores captados. O acesso é controlado por uma única permissão na Gestão de Usuários (página Streamers). Influencers e agências continuam usando o Overview Influencer, separado.",
+          "Central de análise do canal de influencers. Reúne três visões complementares em abas — Overview, Conversão e Financeiro — com filtros de período, influencer e operadora compartilhados: mudanças nos filtros aplicam-se à aba atual e permanecem ao navegar entre elas.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "Use as setas para navegar entre meses ou ative Histórico para ver todo o período disponível de uma vez. No modo Histórico, o comparativo MoM é desabilitado em todos os blocos e nas três abas.\n\nO filtro de influencer aparece para perfis com acesso a múltiplos parceiros. Influencers visualizam os próprios dados sem esse filtro disponível.\n\nO filtro de operadora aparece quando o perfil tem acesso a mais de uma operadora, permitindo isolar os dados de uma parceira específica em todas as abas.",
       },
       {
         subtitulo: "Aba Overview",
         texto:
-          "Painel executivo: KPIs financeiros, operacionais e de aquisição, funil de conversão agregado e ranking de influencers com classificação de performance (Rentável, Atenção, Não Rentável, Bônus).",
+          "Visão executiva consolidada, organizada em três grupos de KPIs:\n\n— Financeiro: GGR Total, Investimento e ROI Geral — o resultado financeiro do canal.\n— Operação: Lives, Horas Realizadas, Influencers Ativos e Depósitos — a dimensão operacional das ativações.\n— Conversão: Registros, Custo por Registro, FTDs e Custo por FTD — eficiência do funil de aquisição.\n\nO Funil de Conversão abaixo dos KPIs exibe os quatro estágios (Views → Acessos → Registros → FTDs) com as taxas de passagem entre cada etapa.\n\nO Ranking de Influencers lista todos os parceiros com seus indicadores principais e o status de performance (Rentável, Atenção, Não Rentável, Bônus ou Sem dados). Use os badges de status no topo da tabela para filtrar por categoria, e clique nos cabeçalhos de coluna para ordenar por qualquer indicador.",
       },
       {
         subtitulo: "Aba Conversão",
         texto:
-          "Funil detalhado por influencer, comparativo lado a lado entre dois parceiros, ranking FTD/hora e tabela de taxas com ações recomendadas.",
+          "Análise detalhada do funil individual de cada influencer, com três blocos:\n\n— Comparativo de Funil: selecione dois influencers para comparar o funil lado a lado — volumes em cada etapa e as taxas-chave (View→FTD, Acesso→FTD, FTD por hora de live).\n\n— Ranking FTD/Hora: classifica os influencers pela eficiência de conversão por hora transmitida. Os três primeiros aparecem em pódio visual; os demais em lista paginada. Influencers sem horas de live registradas são omitidos automaticamente.\n\n— Comparativo de Taxas: tabela com as taxas de cada etapa do funil por influencer. A coluna Ação destaca o próximo passo recomendado com base na taxa mais crítica de cada parceiro — Divulgar o link, Converter visita, Ativar cadastro ou Em dia. Use os filtros de ação no topo para focar em influencers com o mesmo gargalo.",
       },
       {
         subtitulo: "Aba Financeiro",
         texto:
-          "KPIs do comportamento financeiro dos jogadores (depósitos, saques, WD Ratio, GGR por jogador, PVI), distribuição de investimento e ranking financeiro por influencer.",
+          "Análise do comportamento financeiro dos jogadores captados por cada influencer, com três blocos:\n\n— KPIs Financeiros: R$ FTD, Depósitos, Saques, WD Ratio, GGR por Jogador e PVI — todos com comparativo MoM quando disponível.\n\n— Investimento por Influencer: gráfico de distribuição do investimento total entre os parceiros no período. A fatia 'Outros' agrupa influencers fora do top 9 e, quando aplicável, pagamentos de agentes.\n\n— Ranking Financeiro: tabela com métricas de qualidade de jogadores por influencer — ticket médio de depósito e saque, GGR, WD Ratio, PVI e o Perfil de Jogador calculado (Whales, Core, Recreativos ou Caçadores de Bônus).",
       },
       {
-        subtitulo: "Filtros",
+        subtitulo: "Perfis e Visibilidade",
         texto:
-          "Em cada aba, o bloco de filtros segue o mesmo padrão dos dashboards anteriores: mês, Histórico, influencer e operadora conforme seu perfil e escopo.",
+          "O escopo dos dados exibidos depende do perfil do usuário:\n\n— Gestor / Executivo Spin: vê todos os influencers e todas as operadoras. Filtros de influencer e operadora disponíveis.\n— Influencer: vê apenas os próprios resultados em todas as abas. O filtro de operadora aparece se tiver atuado em mais de uma.\n— Agência: vê os influencers sob sua estrutura. Filtros disponíveis dentro desse escopo.\n— Operador: vê todos os influencers que atuaram nas mesas da sua operadora. Filtro de influencer disponível dentro desse escopo.",
       },
     ],
   },
@@ -262,29 +267,44 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     titulo: "Streamers",
     blocos: [
       {
-        subtitulo: "Os dados não estão aparecendo (aba Overview)?",
+        subtitulo: "Os dados não aparecem em nenhuma aba?",
         texto:
-          "Verifique se há lives validadas no período selecionado. Sem lives com status \"Realizada\" registradas em Resultados, os KPIs não são calculados.",
+          "Verifique se há lives com status 'Realizada' validadas em Feedback para o período selecionado — sem lives validadas, os KPIs não são calculados. Se os filtros de influencer ou operadora estiverem ativos, tente resetá-los para confirmar se os dados existem em outro escopo.\n\nPerfis com acesso restrito (influencer, agência, operador) só visualizam dados do próprio escopo — isso é esperado.",
       },
       {
-        subtitulo: "Os filtros estão retornando dados parciais?",
+        subtitulo: "O ROI ou o GGR aparecem como '—'?",
         texto:
-          "Se você tem um perfil com escopo restrito, só visualiza dados dos influencers e operadoras vinculados ao seu acesso. Isso é esperado.",
+          "ROI '—' indica investimento zero — o influencer não teve pagamento registrado no período. Verifique se o ciclo financeiro do período está fechado e aprovado no módulo Financeiro.\n\nGGR '—' indica ausência de jogadores com depósitos e saques registrados no canal desse influencer no período. Confirme se o link de afiliado está ativo e se há métricas de conversão registradas.",
       },
       {
-        subtitulo: "O ROI ou o GGR por jogador aparecem como \"—\"?",
+        subtitulo: "Um influencer aparece com status 'Sem dados' no Ranking?",
         texto:
-          "ROI \"—\" costuma indicar investimento zero (cachê/validação em Resultados). GGR por jogador \"—\" indica ausência de jogadores ativos com GGR no período.",
+          "O status 'Sem dados' é atribuído quando não há métricas de conversão — acessos, registros ou FTDs — para o influencer no período, mesmo que ele tenha lives realizadas. Verifique se o link de afiliado está corretamente configurado na operadora.",
       },
       {
-        subtitulo: "O funil na aba Conversão está vazio?",
+        subtitulo: "O Comparativo de Funil não lista um influencer no seletor?",
         texto:
-          "Verifique lives validadas para o influencer no período. Sem duração em Resultados, o ranking FTD/hora pode omitir o parceiro.",
+          "O comparativo exibe apenas influencers com dados no período selecionado. Se o influencer não aparece na lista, confirme que ele tem lives realizadas e métricas registradas. Verifique também se o filtro de operadora não está excluindo esse parceiro.",
       },
       {
-        subtitulo: "WD Ratio ou ranking financeiro estranhos?",
+        subtitulo: "O Ranking FTD/Hora está vazio ou omite influencers?",
         texto:
-          "Confirme filtros de operadora e influencer. WD alto pode indicar audiência que saca mais do que deposita; ranking lista só quem teve jogadores ativos no período.",
+          "O ranking FTD/Hora exclui automaticamente influencers sem horas de live registradas — mesmo que tenham FTDs. Para aparecer, é preciso ter ao menos uma live com duração preenchida em Feedback. Verifique se as lives do influencer têm duração registrada.",
+      },
+      {
+        subtitulo: "PVI, WD Ratio ou GGR por Jogador aparecem como '—'?",
+        texto:
+          "Essas métricas exigem FTDs no período como base de cálculo.\n\n— PVI '—': o influencer não gerou FTDs suficientes para calcular o índice de qualidade.\n— WD Ratio '—': não há depósitos registrados para os jogadores captados pelo influencer.\n— GGR por Jogador '—': ausência de FTDs — sem jogadores, não há como calcular a receita por jogador.",
+      },
+      {
+        subtitulo: "Os dados diferem entre as abas Overview e Financeiro?",
+        texto:
+          "As abas compartilham o mesmo período e filtros, mas exibem camadas diferentes dos mesmos dados. Overview mostra volume e resultado agregado (GGR, ROI, FTDs); Financeiro detalha o comportamento dos jogadores (depósitos, saques, ticket médio, WD Ratio). Uma diferença nos valores de GGR entre abas indica inconsistência — mas diferenças de perspectiva analítica são esperadas por design.",
+      },
+      {
+        subtitulo: "O gráfico de pizza no Financeiro parece incompleto?",
+        texto:
+          "O gráfico exibe apenas influencers com investimento registrado e aprovado no período. Influencers sem ciclo financeiro fechado não aparecem. A fatia 'Outros' agrupa influencers fora do top 9 e, quando há, pagamentos de agentes — o total sempre corresponde ao investimento consolidado do período.",
       },
     ],
   },

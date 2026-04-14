@@ -121,10 +121,19 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "FTD/Hora",
         definicao:
-          "FTDs gerados por hora de live transmitida. Indica a eficiência horária do influencer independentemente do tempo total transmitido.",
+          "FTDs gerados por hora de live transmitida. Indica a eficiência horária do influencer independentemente do tempo total transmitido — dois influencers com o mesmo número de FTDs mas durações diferentes de live têm eficiências distintas.",
         formula: "FTDs ÷ Horas Realizadas",
-        nota: "Influencers sem horas registradas são excluídos deste ranking.",
-        referencia: "Conversão",
+        nota:
+          "Influencers sem horas registradas são excluídos do Ranking FTD/Hora na aba Conversão. O ranking exibe os três primeiros em pódio e os demais em lista paginada.",
+        referencia: "Streamers → Conversão",
+      },
+      {
+        termo: "Ação de Conversão",
+        definicao:
+          "Classificação automática da etapa crítica do funil de cada influencer no período. Indica onde está o maior gargalo e qual ação priorizar.",
+        nota:
+          "Divulgar o link: taxa View→Acesso abaixo de 10% — o influencer precisa mencionar o link com mais frequência durante as lives.\n\nConverter visita: taxa Acesso→Registro abaixo de 10% — os usuários chegam ao link mas não completam o cadastro.\n\nAtivar cadastro: taxa Registro→FTD abaixo de 60% — os cadastros existem mas os jogadores não estão realizando o primeiro depósito.\n\nEm dia: todas as taxas dentro dos limites — nenhuma ação prioritária identificada.",
+        referencia: "Streamers → Conversão",
       },
     ],
   },
@@ -252,8 +261,8 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Classificação de performance financeira do influencer no período.",
         nota:
-          "Rentável: ROI positivo · Atenção: ROI levemente negativo (−20% a 0%) · Não Rentável: ROI abaixo de −20% · Bônus: sem pagamento registrado mas com GGR gerado · Sem dados: sem lives ou métricas no período",
-        referencia: "Overview",
+          "Rentável: ROI positivo — o GGR supera o investimento.\nAtenção: ROI levemente negativo (−20% a 0%) — resultado próximo do equilíbrio.\nNão Rentável: ROI abaixo de −20% — investimento significativamente superior ao retorno.\nBônus: sem pagamento registrado mas com GGR gerado — influencer que trouxe resultado sem custo no período.\nSem dados: sem lives ou métricas de conversão no período selecionado.\n\nO status é exibido no Ranking de Influencers da aba Overview. Use os badges de filtro de status para segmentar a tabela por categoria.",
+        referencia: "Streamers → Overview",
       },
     ],
   },

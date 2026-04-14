@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy, type CSSProperties } from "react";
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -10,9 +10,9 @@ import { SelectComIcone } from "../../../components/dashboard";
 import { GiTv, GiCalendar, GiStarMedal, GiShield } from "react-icons/gi";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
-const DashboardOverview = lazy(() => import("../DashboardOverview"));
-const DashboardConversao = lazy(() => import("../DashboardConversao"));
-const DashboardFinanceiro = lazy(() => import("../DashboardFinanceiro"));
+const DashboardOverview = lazy(() => import("./DashboardOverview"));
+const DashboardConversao = lazy(() => import("./DashboardConversao"));
+const DashboardFinanceiro = lazy(() => import("./DashboardFinanceiro"));
 
 type StreamersTab = "overview" | "conversao" | "financeiro";
 
@@ -35,8 +35,10 @@ function StreamersFiltrosEUAbas({
   const sf = useStreamersFiltros();
 
   const btnNavStyle: CSSProperties = {
-    width: 30,
-    height: 30,
+    minWidth: 44,
+    minHeight: 44,
+    width: 44,
+    height: 44,
     borderRadius: "50%",
     border: `1px solid ${t.cardBorder}`,
     background: "transparent",
@@ -69,46 +71,48 @@ function StreamersFiltrosEUAbas({
             marginBottom: 12,
           }}
         >
-          <button
-            type="button"
-            aria-label="Mês anterior"
-            style={{
-              ...btnNavStyle,
-              opacity: sf.historico || sf.isPrimeiro ? 0.35 : 1,
-              cursor: sf.historico || sf.isPrimeiro ? "not-allowed" : "pointer",
-            }}
-            onClick={sf.irMesAnterior}
-            disabled={sf.historico || sf.isPrimeiro}
-          >
-            <ChevronLeft size={14} aria-hidden />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              style={{
+                ...btnNavStyle,
+                opacity: sf.historico || sf.isPrimeiro ? 0.35 : 1,
+                cursor: sf.historico || sf.isPrimeiro ? "not-allowed" : "pointer",
+              }}
+              onClick={sf.irMesAnterior}
+              disabled={sf.historico || sf.isPrimeiro}
+            >
+              <ChevronLeft size={14} aria-hidden />
+            </button>
 
-          <span
-            style={{
-              fontSize: 18,
-              fontWeight: 800,
-              color: t.text,
-              fontFamily: FONT.body,
-              minWidth: 180,
-              textAlign: "center",
-            }}
-          >
-            {sf.historico ? "Todo o período" : sf.mesSelecionado?.label}
-          </span>
+            <span
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: t.text,
+                fontFamily: FONT.body,
+                minWidth: "clamp(120px, 40vw, 180px)",
+                textAlign: "center",
+              }}
+            >
+              {sf.historico ? "Todo o período" : sf.mesSelecionado?.label}
+            </span>
 
-          <button
-            type="button"
-            aria-label="Próximo mês"
-            style={{
-              ...btnNavStyle,
-              opacity: sf.historico || sf.isUltimo ? 0.35 : 1,
-              cursor: sf.historico || sf.isUltimo ? "not-allowed" : "pointer",
-            }}
-            onClick={sf.irMesProximo}
-            disabled={sf.historico || sf.isUltimo}
-          >
-            <ChevronRight size={14} aria-hidden />
-          </button>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              style={{
+                ...btnNavStyle,
+                opacity: sf.historico || sf.isUltimo ? 0.35 : 1,
+                cursor: sf.historico || sf.isUltimo ? "not-allowed" : "pointer",
+              }}
+              onClick={sf.irMesProximo}
+              disabled={sf.historico || sf.isUltimo}
+            >
+              <ChevronRight size={14} aria-hidden />
+            </button>
+          </div>
 
           <button
             type="button"
@@ -122,6 +126,7 @@ function StreamersFiltrosEUAbas({
               alignItems: "center",
               gap: 6,
               padding: "6px 14px",
+              minHeight: 44,
               borderRadius: 999,
               cursor: "pointer",
               fontFamily: FONT.body,
@@ -175,6 +180,22 @@ function StreamersFiltrosEUAbas({
                 ))}
             </SelectComIcone>
           )}
+          {sf.isLoading && (
+            <span
+              style={{
+                fontSize: 12,
+                color: t.textMuted,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexShrink: 0,
+              }}
+              aria-live="polite"
+            >
+              <Clock size={14} aria-hidden />
+              Carregando…
+            </span>
+          )}
         </div>
 
         <div
@@ -190,11 +211,33 @@ function StreamersFiltrosEUAbas({
                 type="button"
                 role="tab"
                 id={`tab-streamers-${key}`}
+                tabIndex={ativo ? 0 : -1}
                 aria-selected={ativo}
                 aria-controls={`panel-streamers-${key}`}
                 onClick={() => setAba(key)}
+                onKeyDown={(e) => {
+                  const tabs: StreamersTab[] = ["overview", "conversao", "financeiro"];
+                  const current = tabs.indexOf(key);
+                  if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    const next = tabs[(current + 1) % tabs.length];
+                    setAba(next);
+                    requestAnimationFrame(() => {
+                      document.getElementById(`tab-streamers-${next}`)?.focus();
+                    });
+                  }
+                  if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    const next = tabs[(current - 1 + tabs.length) % tabs.length];
+                    setAba(next);
+                    requestAnimationFrame(() => {
+                      document.getElementById(`tab-streamers-${next}`)?.focus();
+                    });
+                  }
+                }}
                 style={{
-                  padding: "8px 18px",
+                  padding: "10px 18px",
+                  minHeight: 44,
                   borderRadius: 10,
                   border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
                   background: ativo
@@ -261,7 +304,7 @@ function StreamersAutorizado() {
                   Streamers
                 </h1>
                 <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
-                  Três visões do desempenho de streamers nas mesas da Spin
+                  Performance do canal de influencers — financeiro, conversão e operação.
                 </p>
               </div>
             </div>

@@ -1,15 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
-import { useStreamersFiltrosOptional } from "../Streamers/StreamersFiltrosContext";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { usePermission } from "../../../hooks/usePermission";
-import { FONT } from "../../../constants/theme";
-import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
-import { SelectComIcone } from "../../../components/dashboard";
-import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
-import { supabase } from "../../../lib/supabase";
-import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
+import { useStreamersFiltrosOptional } from "../StreamersFiltrosContext";
+import { useApp } from "../../../../context/AppContext";
+import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { usePermission } from "../../../../hooks/usePermission";
+import { FONT } from "../../../../constants/theme";
+import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
+import { SelectComIcone, SectionTitle } from "../../../../components/dashboard";
+import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
+import { supabase } from "../../../../lib/supabase";
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import {
   GiCalendar, GiStarMedal, GiShield,
@@ -19,34 +19,24 @@ import {
   GiPodium, GiSpeedometer,
 } from "react-icons/gi";
 
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
+const COR_A = {
+  accent: "var(--brand-primary, #7c3aed)",
+  bg: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
+  border: "color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
+  step: "color-mix(in srgb, var(--brand-primary, #7c3aed) 7%, transparent)",
+  taxa: "color-mix(in srgb, var(--brand-primary, #7c3aed) 13%, transparent)",
+  taxaBorder: "color-mix(in srgb, var(--brand-primary, #7c3aed) 40%, transparent)",
+} as const;
+const COR_B = {
+  accent: "var(--brand-accent, #1e36f8)",
+  bg: "color-mix(in srgb, var(--brand-accent, #1e36f8) 10%, transparent)",
+  border: "color-mix(in srgb, var(--brand-accent, #1e36f8) 35%, transparent)",
+  step: "color-mix(in srgb, var(--brand-accent, #1e36f8) 7%, transparent)",
+  taxa: "color-mix(in srgb, var(--brand-accent, #1e36f8) 13%, transparent)",
+  taxaBorder: "color-mix(in srgb, var(--brand-accent, #1e36f8) 40%, transparent)",
 } as const;
 
-// Paleta A (roxo) e B (azul) — alinhadas à paleta oficial
-const COR_A = {
-  accent:     "#7c3aed",
-  bg:         "rgba(124,58,237,0.10)",
-  border:     "rgba(124,58,237,0.35)",
-  step:       "rgba(124,58,237,0.07)",
-  taxa:       "rgba(124,58,237,0.13)",
-  taxaBorder: "rgba(124,58,237,0.40)",
-};
-const COR_B = {
-  accent:     "#1e36f8",
-  bg:         "rgba(30,54,248,0.10)",
-  border:     "rgba(30,54,248,0.35)",
-  step:       "rgba(30,54,248,0.07)",
-  taxa:       "rgba(30,54,248,0.13)",
-  taxaBorder: "rgba(30,54,248,0.40)",
-};
+type CorFunilComparativo = typeof COR_A | typeof COR_B;
 
 // Cores do pódio — alinhadas à paleta oficial
 const PODIO_CORES = [
@@ -105,39 +95,6 @@ function getAcao(row: ConversaoRow): AcaoInfo {
   return { label: "Em dia",            icon: <GiCheckMark size={11} />,       cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  };
 }
 
-// ─── SECTION TITLE (mesmo padrão do Overview) ─────────────────────────────────
-function SectionTitle({ icon, children, sub }: {
-  icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-      <span style={{
-        width: 28, height: 28, borderRadius: 8,
-        background: brand.primaryIconBg,
-        border: brand.primaryIconBorder,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: brand.primaryIconColor, flexShrink: 0,
-      }}>
-        {icon}
-      </span>
-      <span style={{
-        fontSize: 14, fontWeight: 800, color: brand.primary,
-        fontFamily: FONT_TITLE,
-        letterSpacing: "0.05em", textTransform: "uppercase" as const,
-      }}>
-        {children}
-      </span>
-      {sub && (
-        <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
-          {sub}
-        </span>
-      )}
-    </div>
-  );
-}
-
 // ─── FUNIL SVG (mesmo padrão do Overview, adaptado para 1 influencer) ─────────
 const FUNIL_STEPS_CONFIG = [
   { key: "views",     label: "Views"     },
@@ -146,10 +103,14 @@ const FUNIL_STEPS_CONFIG = [
   { key: "ftds",      label: "FTDs"      },
 ] as const;
 
-// Degradê por nível: roxo → azul → ciano → verde
-const FUNIL_CORES = [BRAND.roxoVivo, BRAND.azul, BRAND.ciano, BRAND.verde] as const;
+const FUNIL_CORES = [
+  "var(--brand-primary, #7c3aed)",
+  "var(--brand-accent, #1e36f8)",
+  "var(--brand-icon, #70cae4)",
+  "#22c55e",
+] as const;
 
-function FunilSVG({ row, cor, idPrefix }: { row: ConversaoRow; cor: typeof COR_A; idPrefix: string }) {
+function FunilSVG({ row, cor, idPrefix }: { row: ConversaoRow; cor: CorFunilComparativo; idPrefix: string }) {
   const { theme: t } = useApp();
   const W = 220, H = 230;
   const levels = 4;
@@ -246,7 +207,7 @@ function FunilSVG({ row, cor, idPrefix }: { row: ConversaoRow; cor: typeof COR_A
 
 // ─── PAINEL FUNIL (wrapper) ────────────────────────────────────────────────────
 function PainelFunil({ row, isEmpty, cor }: {
-  row: ConversaoRow | null; isEmpty: boolean; cor: typeof COR_A;
+  row: ConversaoRow | null; isEmpty: boolean; cor: CorFunilComparativo;
 }) {
   const { theme: t } = useApp();
   if (isEmpty || !row) {
@@ -266,9 +227,9 @@ function PainelFunil({ row, isEmpty, cor }: {
 // ─── PÓDIO FTD/HORA ───────────────────────────────────────────────────────────
 const PODIO_H    = [130, 90, 70];
 const PODIO_ICONS = [
-  <GiTrophy key="1" size={28} />,
-  <GiMedal key="2" size={24} />,
-  <GiLaurelsTrophy key="3" size={22} />,
+  <GiTrophy key="1" size={28} aria-hidden />,
+  <GiMedal key="2" size={24} aria-hidden />,
+  <GiLaurelsTrophy key="3" size={22} aria-hidden />,
 ];
 
 function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
@@ -287,6 +248,13 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
   const top3  = ranking.slice(0, 3);
   const resto = ranking.slice(3);
+
+  const ariaPodio =
+    top3.length >= 1
+      ? `Pódio FTD por hora: 1º ${top3[0]?.nome ?? "—"} (${top3[0]?.ftdPorHora.toFixed(2)})` +
+        (top3[1] ? `, 2º ${top3[1].nome} (${top3[1].ftdPorHora.toFixed(2)})` : "") +
+        (top3[2] ? `, 3º ${top3[2].nome} (${top3[2].ftdPorHora.toFixed(2)})` : "")
+      : "Pódio FTD por hora";
 
   // ordem visual clássica: 2º | 1º | 3º
   const podioOrdem = top3.length >= 2 ? [top3[1], top3[0], top3[2]].filter(Boolean) : top3;
@@ -308,8 +276,16 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
         <div style={{ fontSize: 12, fontWeight: 600, color: t.text, fontFamily: FONT.body, width: 80, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
           {row.nome.split(" ")[0]}
         </div>
-        <div style={{ flex: 1, height: 5, background: t.cardBorder, borderRadius: 999, overflow: "hidden" }}>
-          <div style={{ width: `${barPct}%`, height: "100%", background: `${BRAND.roxo}`, opacity: 0.65, borderRadius: 999 }} />
+          <div style={{ flex: 1, height: 5, background: t.cardBorder, borderRadius: 999, overflow: "hidden" }}>
+          <div
+            style={{
+              width: `${barPct}%`,
+              height: "100%",
+              background: "var(--brand-secondary, #4a2082)",
+              opacity: 0.65,
+              borderRadius: 999,
+            }}
+          />
         </div>
         <div style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontFamily: FONT.body, flexShrink: 0, width: 36, textAlign: "right" as const }}>
           {row.ftdPorHora.toFixed(2)}
@@ -320,8 +296,8 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
 
   return (
     <div>
-      {/* Pódio */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 12, marginBottom: 28 }}>
+      <div role="img" aria-label={ariaPodio} style={{ overflowX: "auto", marginBottom: 28 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 12, minWidth: 420 }}>
         {podioOrdem.map((row, i) => {
           const rankIdx = podioIdx[i];
           const cor     = PODIO_CORES[rankIdx];
@@ -349,6 +325,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
             </div>
           );
         })}
+      </div>
       </div>
 
       {/* Resto */}
@@ -388,9 +365,9 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
               {Array.from({ length: totalPags }).map((_, i) => (
                 <button type="button" key={i} aria-label={`Página ${i + 1} da lista FTD por hora`} onClick={() => setPagResto(i)} style={{
                   width: 28, height: 28, borderRadius: "50%",
-                  border: `1px solid ${pagResto === i ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: pagResto === i ? "rgba(124,58,237,0.15)" : "transparent",
-                  color: pagResto === i ? "#a78bfa" : t.textMuted,
+                  border: `1px solid ${pagResto === i ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
+                  background: pagResto === i ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)" : "transparent",
+                  color: pagResto === i ? "var(--brand-primary, #7c3aed)" : t.textMuted,
                   fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body,
                 }}>
                   {i + 1}
@@ -442,6 +419,11 @@ export default function DashboardConversao() {
   const operadorasList = embed ? sf.operadorasList : operadorasListLocal;
   const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfMapLocal;
   const idxInicial = embed ? sf.idxInicial : idxStartLocal;
+
+  useEffect(() => {
+    if (!embed || !sf) return;
+    sf.setIsLoading(loading);
+  }, [embed, sf, loading]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -500,7 +482,7 @@ export default function DashboardConversao() {
       );
       let metricas = metricasData;
       if (historico) {
-        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
+        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
           operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
           dataInicio: inicio,
@@ -734,7 +716,10 @@ export default function DashboardConversao() {
 
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiConvergenceTarget size={14} />} sub={historico ? "acumulado" : undefined}>
+        <SectionTitle
+          icon={<GiConvergenceTarget size={14} />}
+          sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
+        >
           Comparativo de Funil
         </SectionTitle>
 
@@ -752,14 +737,20 @@ export default function DashboardConversao() {
           </select>
 
           {/* Badge "vs" com peso visual */}
-          <div style={{
-            padding: "5px 12px", borderRadius: 999,
-            border: `1px solid rgba(74,32,130,0.35)`,
-            background: "rgba(74,32,130,0.10)",
-            fontSize: 12, fontWeight: 800, color: t.textMuted,
-            fontFamily: FONT.body, letterSpacing: "0.05em",
-            textAlign: "center",
-          }}>
+          <div
+            style={{
+              padding: "5px 12px",
+              borderRadius: 999,
+              border: "1px solid color-mix(in srgb, var(--brand-secondary, #4a2082) 35%, transparent)",
+              background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, transparent)",
+              fontSize: 12,
+              fontWeight: 800,
+              color: "var(--brand-secondary, #4a2082)",
+              fontFamily: FONT.body,
+              letterSpacing: "0.05em",
+              textAlign: "center",
+            }}
+          >
             VS
           </div>
 
@@ -871,7 +862,8 @@ export default function DashboardConversao() {
         ) : rowsFiltrados.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="app-table-wrap">
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
               <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
                 Comparativo de taxas de conversão — {historico ? "Todo o período" : (mesSelecionado?.label ?? "")}
@@ -890,7 +882,7 @@ export default function DashboardConversao() {
                   const hl2 = !hl1 && r.pctAcessoReg !== null && r.pctAcessoReg < 10;
                   const hl3 = !hl1 && !hl2 && r.pctRegFTD !== null && r.pctRegFTD < 60;
                   return (
-                    <tr key={r.influencer_id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)" }}>
+                    <tr key={r.influencer_id} style={{ background: zebraStripe(i) }}>
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
                       <td style={tdStyle}>{r.views > 0 ? r.views.toLocaleString("pt-BR") : "—"}</td>
                       <td style={{
@@ -939,6 +931,7 @@ export default function DashboardConversao() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

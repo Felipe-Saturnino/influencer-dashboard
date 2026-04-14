@@ -7,13 +7,16 @@ interface Props {
   label: string;
   value: string;
   icon: React.ReactNode;
-  accentVar: string;
+  /** Token de marca (referência de design); o render usa `accentColor` quando não é operador whitelabel. */
+  accentVar?: string;
   accentColor: string;
   atual: number;
   anterior: number;
   isBRL?: boolean;
   isHistorico?: boolean;
   subValue?: { label: string; value: string };
+  /** Quando true, queda no valor é considerada “positiva” (ex.: saques, WD ratio). */
+  isInverso?: boolean;
 }
 
 export default function KpiCard({
@@ -27,6 +30,7 @@ export default function KpiCard({
   isBRL,
   isHistorico,
   subValue,
+  isInverso,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -35,7 +39,8 @@ export default function KpiCard({
   const up = diff >= 0;
   const isCusto =
     label.toLowerCase().includes("custo") || label.toLowerCase().includes("invest");
-  const positivo = isCusto ? !up : up;
+  const positivo =
+    isInverso === true ? !up : isCusto ? !up : up;
   const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
 
   // Secundária: faixa e ícones dos KPIs
