@@ -7,11 +7,15 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
-import { Eye, Pencil, MessageSquare, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
+import { Eye, History, Pencil, Send, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
 import { GiCardRandom, GiShield, GiFemale, GiMale, GiCardPick, GiCardAceSpades, GiCrown } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
+import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
+import { BannerPendencias } from "../solicitacoes/BannerPendencias";
+import { corStatusSolicitacao, type SolicitacaoStatus, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -45,16 +49,6 @@ const JOGOS_OPTS: { value: DealerJogo; label: string }[] = [
   { value: "mesa_vip", label: "Mesa VIP" },
 ];
 
-// ─── Tipos auxiliares ─────────────────────────────────────────────────────────
-interface DealerObservacao {
-  id: string;
-  dealer_id: string;
-  usuario_id: string | null;
-  texto: string;
-  created_at: string;
-  usuario_nome?: string;
-}
-
 function passaFiltroOperadora(d: Dealer, filtroOperadora: string): boolean {
   if (filtroOperadora === "nenhuma") return !d.operadora_slug;
   if (filtroOperadora !== "todas" && d.operadora_slug !== filtroOperadora) return false;
@@ -78,20 +72,22 @@ const ICONE_JOGO: Record<DealerJogo, ReactNode> = {
 };
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
-const OBS_PAGE = 20;
 
 export default function GestaoDealers() {
   const { theme: t, user, podeVerOperadora, escoposVisiveis, isDark } = useApp();
   const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
+  const permCentral = usePermission("central_notificacoes");
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalCriar, setModalCriar] = useState(false);
   const [modalVer, setModalVer] = useState<Dealer | null>(null);
+  const [modalHistoricoDealer, setModalHistoricoDealer] = useState<Dealer | null>(null);
   const [modalEditar, setModalEditar] = useState<Dealer | null>(null);
-  const [modalObs, setModalObs] = useState<Dealer | null>(null);
+  const [modalSolicitacao, setModalSolicitacao] = useState<Dealer | null>(null);
+  const [solicitacaoThreadId, setSolicitacaoThreadId] = useState<string | null>(null);
 
   const [filtroGenero, setFiltroGenero] = useState<string>("todos");
   const [filtroTurno, setFiltroTurno] = useState<string>("todos");
@@ -231,6 +227,14 @@ export default function GestaoDealers() {
     return operadoras.filter((o) => podeVerOperadora(o.slug));
   }, [user?.role, operadoraSlugsForcado, operadoras, podeVerOperadora]);
 
+  /** Slug da operadora para solicitações (operador com escopo). */
+  const operadoraSlugAtiva = useMemo(() => {
+    if (user?.role !== "operador" || !operadoraSlugsForcado?.length) return null;
+    if (operadoraSlugsForcado.length === 1) return operadoraSlugsForcado[0];
+    if (filtroOperadora !== "todas" && filtroOperadora !== "nenhuma") return filtroOperadora;
+    return operadoraSlugsForcado[0] ?? null;
+  }, [user?.role, operadoraSlugsForcado, filtroOperadora]);
+
   const selectOperadoraStyle: CSSProperties = {
     padding: "6px 14px 6px 30px",
     borderRadius: 999,
@@ -293,6 +297,10 @@ export default function GestaoDealers() {
           ) : undefined
         }
       />
+
+      {user?.role === "operador" && operadoraSlugsForcado?.length ? (
+        <BannerPendencias operadoraSlugs={operadoraSlugsForcado} operadoras={operadoras} podeInteragir={permCentral.canEditarOk} />
+      ) : null}
 
       {/* ─── Bloco filtros: carrossel turnos (Overview) + operadora ───────────── */}
       <div style={{ marginBottom: 14 }}>
@@ -530,7 +538,14 @@ export default function GestaoDealers() {
       ) : filtered.length === 0 ? (
         <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum dealer encontrado.</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 20 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))",
+            gap: 20,
+            alignItems: "stretch",
+          }}
+        >
           {filtered.map((d) => (
             <DealerCard
               key={d.id}
@@ -539,7 +554,14 @@ export default function GestaoDealers() {
               brand={brand}
               onVer={() => setModalVer(d)}
               onEditar={() => setModalEditar(d)}
-              onObservacoes={() => setModalObs(d)}
+              onSolicitar={operadoraSlugAtiva && permCentral.canEditarOk ? () => setModalSolicitacao(d) : undefined}
+              onHistoricoSolicitacoes={
+                !permCentral.loading &&
+                (permCentral.canView === "sim" || permCentral.canView === "proprios") &&
+                (user?.role !== "operador" || !!operadoraSlugAtiva)
+                  ? () => setModalHistoricoDealer(d)
+                  : undefined
+              }
               podeEditar={podeEditarDealer(d)}
             />
           ))}
@@ -565,8 +587,134 @@ export default function GestaoDealers() {
           onSalvo={() => { setModalEditar(null); carregar(); }}
         />
       )}
-      {modalVer && <ModalVer dealer={modalVer} operadoras={operadoras} onClose={() => setModalVer(null)} />}
-      {modalObs && <ModalObservacoes dealer={modalObs} onClose={() => setModalObs(null)} />}
+      {modalVer && (
+        <ModalVer dealer={modalVer} operadoras={operadoras} onClose={() => setModalVer(null)} />
+      )}
+      {modalHistoricoDealer && (
+        <ModalHistoricoSolicitacoesDealer
+          dealer={modalHistoricoDealer}
+          operadoras={operadoras}
+          slugSolicitacaoFiltro={user?.role === "operador" ? operadoraSlugAtiva : null}
+          onClose={() => setModalHistoricoDealer(null)}
+          onAbrirThread={(id) => {
+            setModalHistoricoDealer(null);
+            setSolicitacaoThreadId(id);
+          }}
+        />
+      )}
+      {modalSolicitacao && operadoraSlugAtiva ? (
+        <ModalSolicitacao
+          dealer={modalSolicitacao}
+          operadoraSlug={operadoraSlugAtiva}
+          onClose={() => setModalSolicitacao(null)}
+          onEnviado={() => {
+            void carregar();
+          }}
+        />
+      ) : null}
+      {solicitacaoThreadId ? (
+        <ModalThreadSolicitacao
+          solicitacaoId={solicitacaoThreadId}
+          operadoras={operadoras}
+          podeInteragir={permCentral.canEditarOk}
+          onClose={() => setSolicitacaoThreadId(null)}
+          onResolvido={() => {
+            void carregar();
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** Carrossel de fotos (cards e modal ver): setas só quando há mais de uma URL. */
+function DealerFotoCarrossel({
+  urls,
+  alt,
+  resetKey,
+}: {
+  urls: string[];
+  alt: string;
+  resetKey: string;
+}) {
+  const n = urls.length;
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    setIdx(0);
+  }, [resetKey, urls.join("|")]);
+
+  if (n === 0) return null;
+
+  const cur = ((idx % n) + n) % n;
+
+  const navBtn: CSSProperties = {
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    zIndex: 4,
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    border: "none",
+    background: "rgba(0,0,0,0.45)",
+    color: "#fff",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 0,
+  };
+
+  return (
+    <div style={{ position: "absolute", inset: 0 }}>
+      <img src={urls[cur]} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      {n > 1 ? (
+        <>
+          <button
+            type="button"
+            aria-label="Foto anterior"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIdx((i) => (i - 1 + n) % n);
+            }}
+            style={{ ...navBtn, left: 6 }}
+          >
+            <ChevronLeft size={18} strokeWidth={2.2} aria-hidden />
+          </button>
+          <button
+            type="button"
+            aria-label="Próxima foto"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIdx((i) => (i + 1) % n);
+            }}
+            style={{ ...navBtn, right: 6 }}
+          >
+            <ChevronRight size={18} strokeWidth={2.2} aria-hidden />
+          </button>
+          <div
+            style={{
+              position: "absolute",
+              bottom: 10,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 3,
+              background: "rgba(0,0,0,0.55)",
+              color: "#fff",
+              padding: "2px 10px",
+              borderRadius: 20,
+              fontSize: 10,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              pointerEvents: "none",
+            }}
+            aria-live="polite"
+          >
+            {cur + 1} / {n}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -578,7 +726,8 @@ function DealerCard({
   brand,
   onVer,
   onEditar,
-  onObservacoes,
+  onSolicitar,
+  onHistoricoSolicitacoes,
   podeEditar,
 }: {
   dealer: Dealer;
@@ -586,11 +735,14 @@ function DealerCard({
   brand: ReturnType<typeof useDashboardBrand>;
   onVer: () => void;
   onEditar: () => void;
-  onObservacoes: () => void;
+  /** Só operador com escopo de operadora definido. */
+  onSolicitar?: () => void;
+  /** Lista de solicitações do dealer (Central); ver permissão na página pai. */
+  onHistoricoSolicitacoes?: () => void;
   podeEditar: boolean;
 }) {
   const { theme: t, isDark } = useApp();
-  const fotoUrl = (dealer.fotos ?? [])[0];
+  const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
 
   return (
@@ -602,6 +754,10 @@ function DealerCard({
       borderRadius: 18,
       overflow: "hidden",
       boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
+      display: "flex",
+      flexDirection: "column",
+      height: "100%",
+      minHeight: 0,
     }}
     >
       {/* Área da foto */}
@@ -612,9 +768,10 @@ function DealerCard({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        overflow: "hidden",
       }}>
-        {fotoUrl ? (
-          <img src={fotoUrl} alt={dealer.nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {fotosUrls.length > 0 ? (
+          <DealerFotoCarrossel urls={fotosUrls} alt={dealer.nickname} resetKey={dealer.id} />
         ) : (
           <div style={{ fontSize: 48, color: "rgba(255,255,255,0.2)", fontWeight: 800, fontFamily: FONT.body }}>
             {(dealer.nickname || "?")[0]?.toUpperCase()}
@@ -638,15 +795,23 @@ function DealerCard({
           </span>
         </div>
       </div>
-      {/* Info */}
-      <div style={{ padding: "16px 18px" }}>
+      {/* Corpo do card: flex para empurrar género + ações para o fundo (alinhamento na grelha) */}
+      <div
+        style={{
+          padding: "16px 18px",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+        }}
+      >
         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, textTransform: "uppercase", letterSpacing: "0.5px" }}>
           {dealer.nickname}
         </h3>
         <p style={{ margin: "4px 0 10px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
           {dealer.nome_real}
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12, alignItems: "center" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12, alignItems: "center", alignContent: "flex-start" }}>
           {(dealer.jogos ?? []).map((j) => {
             const isMesaVip = j === "mesa_vip";
             return (
@@ -689,11 +854,25 @@ function DealerCard({
             );
           })}
         </div>
-        {dealer.perfil_influencer && (
-          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.4, marginBottom: 12, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+        {dealer.perfil_influencer ? (
+          <p
+            style={{
+              fontSize: 12,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              lineHeight: 1.4,
+              margin: "0 0 12px",
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
             {dealer.perfil_influencer}
           </p>
-        )}
+        ) : null}
+        {/* Ocupa o espaço vertical restante para alinhar género e botões entre cards da mesma linha */}
+        <div style={{ flex: 1, minHeight: 0 }} aria-hidden />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
           <span style={{ background: `${BRAND.roxoVivo}22`, color: BRAND.roxoVivo, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, fontFamily: FONT.body }}>
             {GENERO_OPTS.find((o) => o.value === dealer.genero)?.label ?? dealer.genero}
@@ -711,152 +890,255 @@ function DealerCard({
               <Pencil size={13} /> Editar
             </button>
           )}
-          <button onClick={onObservacoes} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-            <MessageSquare size={13} /> Observações
-          </button>
+          {onSolicitar ? (
+            <button
+              type="button"
+              onClick={onSolicitar}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
+            >
+              <Send size={13} aria-hidden /> Solicitar
+            </button>
+          ) : null}
+          {onHistoricoSolicitacoes ? (
+            <button
+              type="button"
+              onClick={onHistoricoSolicitacoes}
+              aria-label={`Histórico de solicitações de ${dealer.nickname}`}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
+            >
+              <History size={13} aria-hidden /> Histórico
+            </button>
+          ) : null}
         </div>
       </div>
     </article>
   );
 }
 
-// ─── Modal Ver ────────────────────────────────────────────────────────────────
-function ModalVer({ dealer, operadoras, onClose }: { dealer: Dealer; operadoras: Operadora[]; onClose: () => void }) {
+// ─── Modal Histórico de solicitações (por dealer) ─────────────────────────────
+interface SolicResumo {
+  id: string;
+  tipo: SolicitacaoTipo;
+  status: SolicitacaoStatus;
+  titulo: string | null;
+  created_at: string;
+  aguarda_resposta_de: string | null;
+  operadora_slug: string;
+}
+
+function ModalHistoricoSolicitacoesDealer({
+  dealer,
+  operadoras,
+  slugSolicitacaoFiltro,
+  onClose,
+  onAbrirThread,
+}: {
+  dealer: Dealer;
+  operadoras: Operadora[];
+  /** Operador: restringe à operadora; gestor/admin: null = todas as solicitações do dealer. */
+  slugSolicitacaoFiltro: string | null;
+  onClose: () => void;
+  onAbrirThread: (solicitacaoId: string) => void;
+}) {
   const { theme: t } = useApp();
-  const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
-  const fotoUrl = (dealer.fotos ?? [])[0];
+  const [solicitacoes, setSolicitacoes] = useState<SolicResumo[]>([]);
+  const [solLoading, setSolLoading] = useState(true);
+
+  useEffect(() => {
+    let cancel = false;
+    setSolLoading(true);
+    void (async () => {
+      let q = supabase
+        .from("dealer_solicitacoes")
+        .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug")
+        .eq("dealer_id", dealer.id)
+        .order("created_at", { ascending: false })
+        .limit(150);
+      if (slugSolicitacaoFiltro) q = q.eq("operadora_slug", slugSolicitacaoFiltro);
+      const { data } = await q;
+      if (!cancel) {
+        setSolicitacoes((data ?? []) as SolicResumo[]);
+        setSolLoading(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [dealer.id, slugSolicitacaoFiltro]);
 
   return (
-    <ModalBase onClose={onClose} maxWidth={480}>
-      <ModalHeader title={dealer.nickname} onClose={onClose} />
-        {fotoUrl && (
-          <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: "16/10" }}>
-            <img src={fotoUrl} alt={dealer.nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          </div>
-        )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, fontFamily: FONT.body }}>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Nome Real</span><br /><span style={{ fontSize: 14, color: t.text }}>{dealer.nome_real}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Gênero</span><br /><span style={{ fontSize: 14, color: t.text }}>{GENERO_OPTS.find((o) => o.value === dealer.genero)?.label}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Turno</span><br /><span style={{ fontSize: 14, color: t.text }}>{TURNO_OPTS.find((o) => o.value === dealer.turno)?.label}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Jogos</span><br /><span style={{ fontSize: 14, color: t.text }}>{(dealer.jogos ?? []).map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label).join(", ") || "—"}</span></div>
-          <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span><br />{op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}</div>
-          {dealer.perfil_influencer && (
-            <div><span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Dealer</span><br /><span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span></div>
-          )}
-        </div>
-        <div style={{ marginTop: 20 }}>
-          <button type="button" onClick={onClose} style={{ width: "100%", padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-            Fechar
-          </button>
-        </div>
+    <ModalBase onClose={onClose} maxWidth={520} zIndex={1050}>
+      <ModalHeader title={`Solicitações · ${dealer.nickname}`} onClose={onClose} />
+      <p style={{ margin: "0 0 14px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+        Todas as solicitações ligadas a este dealer{slugSolicitacaoFiltro ? " na sua operadora" : ""}.
+      </p>
+      {solLoading ? (
+        <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando...</span>
+      ) : solicitacoes.length === 0 ? (
+        <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma solicitação registrada.</span>
+      ) : (
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            maxHeight: "min(60vh, 420px)",
+            overflowY: "auto",
+          }}
+        >
+          {solicitacoes.map((s) => {
+            const cor = corStatusSolicitacao(s.status);
+            const opRow = operadoras.find((o) => o.slug === s.operadora_slug);
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => onAbrirThread(s.id)}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg ?? t.cardBg,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{s.titulo ?? s.id}</div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        background: `${cor}22`,
+                        color: cor,
+                        border: `1px solid ${cor}44`,
+                      }}
+                    >
+                      {s.status}
+                    </span>
+                    <span style={{ fontSize: 11, color: t.textMuted }}>
+                      {new Date(s.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                    </span>
+                    {!slugSolicitacaoFiltro ? (
+                      <span style={{ fontSize: 11, color: t.textMuted }}>
+                        <OperadoraTag label={opRow?.nome ?? s.operadora_slug} corPrimaria={opRow?.cor_primaria} />
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <div style={{ marginTop: 18 }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            width: "100%",
+            padding: "10px 18px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: "transparent",
+            color: t.text,
+            fontSize: 13,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          Fechar
+        </button>
+      </div>
     </ModalBase>
   );
 }
 
-// ─── Modal Observações ─────────────────────────────────────────────────────────
-async function enrichObsComNomes(lista: DealerObservacao[]): Promise<DealerObservacao[]> {
-  const ids = [...new Set(lista.map((a) => a.usuario_id).filter(Boolean))] as string[];
-  if (ids.length === 0) return lista;
-  const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
-  const map: Record<string, string> = {};
-  (profs ?? []).forEach((p: { id: string; name: string }) => { map[p.id] = p.name ?? p.id; });
-  return lista.map((a) => ({ ...a, usuario_nome: a.usuario_id ? map[a.usuario_id] ?? "—" : "—" }));
-}
-
-function ModalObservacoes({ dealer, onClose }: { dealer: Dealer; onClose: () => void }) {
-  const { theme: t, user } = useApp();
-  const [obs, setObs] = useState<DealerObservacao[]>([]);
-  const [novoTexto, setNovoTexto] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [temMais, setTemMais] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setObs([]);
-    (async () => {
-      const { data } = await supabase
-        .from("dealer_observacoes")
-        .select("id, dealer_id, usuario_id, texto, created_at")
-        .eq("dealer_id", dealer.id)
-        .order("created_at", { ascending: false })
-        .range(0, OBS_PAGE - 1);
-      if (cancelled) return;
-      const lista = (data ?? []) as DealerObservacao[];
-      const enriched = await enrichObsComNomes(lista);
-      if (cancelled) return;
-      setObs(enriched);
-      setTemMais(lista.length >= OBS_PAGE);
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [dealer.id]);
-
-  async function carregarMais() {
-    if (loadingMore || !temMais) return;
-    setLoadingMore(true);
-    const from = obs.length;
-    const { data } = await supabase
-      .from("dealer_observacoes")
-      .select("id, dealer_id, usuario_id, texto, created_at")
-      .eq("dealer_id", dealer.id)
-      .order("created_at", { ascending: false })
-      .range(from, from + OBS_PAGE - 1);
-    const lista = (data ?? []) as DealerObservacao[];
-    const enriched = await enrichObsComNomes(lista);
-    setObs((prev) => [...prev, ...enriched]);
-    setTemMais(lista.length >= OBS_PAGE);
-    setLoadingMore(false);
-  }
-
-  const adicionar = async () => {
-    if (!novoTexto.trim()) return;
-    const { data, error } = await supabase.from("dealer_observacoes").insert({ dealer_id: dealer.id, usuario_id: user?.id ?? null, texto: novoTexto.trim() }).select("id, dealer_id, usuario_id, texto, created_at").single();
-    if (!error && data) {
-      setObs((prev) => [{ ...data, usuario_nome: user?.name }, ...prev]);
-      setNovoTexto("");
-    }
-  };
+// ─── Modal Ver ────────────────────────────────────────────────────────────────
+function ModalVer({
+  dealer,
+  operadoras,
+  onClose,
+}: {
+  dealer: Dealer;
+  operadoras: Operadora[];
+  onClose: () => void;
+}) {
+  const { theme: t } = useApp();
+  const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
+  const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
 
   return (
-    <ModalBase onClose={onClose} maxWidth={460}>
-      <ModalHeader title={`Observações — ${dealer.nickname}`} onClose={onClose} />
-        <div style={{ marginBottom: 16 }}>
-          <textarea value={novoTexto} onChange={(e) => setNovoTexto(e.target.value)} placeholder="Nova observação..." style={{ width: "100%", minHeight: 80, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13, fontFamily: FONT.body, outline: "none", boxSizing: "border-box" }} />
-          <button type="button" onClick={() => void adicionar()} style={{ marginTop: 8, padding: "8px 16px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-            Adicionar
-          </button>
+    <ModalBase onClose={onClose} maxWidth={480}>
+      <ModalHeader title={dealer.nickname} onClose={onClose} />
+      {fotosUrls.length > 0 ? (
+        <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: "16/10" }}>
+          <DealerFotoCarrossel urls={fotosUrls} alt={dealer.nickname} resetKey={dealer.id} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {loading ? <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando...</span> : obs.length === 0 ? <span style={{ color: t.textMuted, fontSize: 13 }}>Nenhuma observação.</span> : obs.map((o) => (
-            <div key={o.id} style={{ padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, fontSize: 13, fontFamily: FONT.body }}>
-              <div style={{ color: t.text }}>{o.texto}</div>
-              <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6 }}>{o.usuario_nome ?? "—"} • {new Date(o.created_at).toLocaleString("pt-BR")}</div>
-            </div>
-          ))}
+      ) : null}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, fontFamily: FONT.body }}>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Nome Real</span>
+          <br />
+          <span style={{ fontSize: 14, color: t.text }}>{dealer.nome_real}</span>
         </div>
-        {temMais && !loading ? (
-          <button
-            type="button"
-            onClick={() => void carregarMais()}
-            disabled={loadingMore}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: "transparent",
-              color: t.textMuted,
-              fontSize: 12,
-              fontFamily: FONT.body,
-              cursor: loadingMore ? "not-allowed" : "pointer",
-              width: "100%",
-              marginTop: 8,
-            }}
-          >
-            {loadingMore ? "Carregando..." : "Carregar mais observações"}
-          </button>
-        ) : null}
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Gênero</span>
+          <br />
+          <span style={{ fontSize: 14, color: t.text }}>{GENERO_OPTS.find((o) => o.value === dealer.genero)?.label}</span>
+        </div>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Turno</span>
+          <br />
+          <span style={{ fontSize: 14, color: t.text }}>{TURNO_OPTS.find((o) => o.value === dealer.turno)?.label}</span>
+        </div>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Jogos</span>
+          <br />
+          <span style={{ fontSize: 14, color: t.text }}>{(dealer.jogos ?? []).map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label).join(", ") || "—"}</span>
+        </div>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span>
+          <br />
+          {op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}
+        </div>
+        {dealer.perfil_influencer && (
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Dealer</span>
+            <br />
+            <span style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{dealer.perfil_influencer}</span>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            width: "100%",
+            padding: "10px 18px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: "transparent",
+            color: t.text,
+            fontSize: 13,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          Fechar
+        </button>
+      </div>
     </ModalBase>
   );
 }
@@ -908,10 +1190,9 @@ function ModalDealer({
     setErro("");
     try {
       const novas: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (const file of Array.from(files)) {
         const ext = file.name.split(".").pop() ?? "jpg";
-        const path = `${editando?.id ?? "new"}-${Date.now()}-${i}.${ext}`;
+        const path = `${editando?.id ?? crypto.randomUUID()}-${crypto.randomUUID()}.${ext}`;
         const { data, error } = await supabase.storage.from("dealer-photos").upload(path, file, { upsert: true });
         if (error) throw error;
         const { data: urlData } = supabase.storage.from("dealer-photos").getPublicUrl(data.path);
@@ -987,6 +1268,9 @@ function ModalDealer({
 
         <div style={fieldStyle}>
           <label style={labelStyle}>Fotos</label>
+          <p style={{ margin: "0 0 10px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+            Você pode enviar várias imagens de uma vez; nos cards da listagem, use as setas para navegar entre elas.
+          </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
             {fotos.map((url, idx) => (
               <div key={idx} style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>

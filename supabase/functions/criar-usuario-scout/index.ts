@@ -3,6 +3,96 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 type SupabaseAdmin = ReturnType<typeof createClient>
 
+const supabaseServiceOptions = {
+  auth: { autoRefreshToken: false, persistSession: false },
+} as const
+
+/** GoTrue Admin via fetch — evita supabase.auth.admin pendurado no Edge. */
+const AUTH_ADMIN_MS = 45_000
+
+function authAdminHeaders(serviceRoleKey: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${serviceRoleKey}`,
+    apikey: serviceRoleKey,
+  }
+}
+
+async function goTrueAdminCreateUser(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  email: string,
+  password: string,
+  name: string,
+): Promise<{ uid: string } | { error: string }> {
+  const base = supabaseUrl.replace(/\/$/, '')
+  const url = `${base}/auth/v1/admin/users`
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), AUTH_ADMIN_MS)
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: authAdminHeaders(serviceRoleKey),
+      body: JSON.stringify({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { name, role: 'influencer' },
+      }),
+      signal: ctrl.signal,
+    })
+    const text = await res.text()
+    let parsed: Record<string, unknown> = {}
+    try {
+      parsed = text ? (JSON.parse(text) as Record<string, unknown>) : {}
+    } catch {
+      /* corpo não-JSON */
+    }
+    if (!res.ok) {
+      const msg =
+        (typeof parsed.msg === 'string' && parsed.msg) ||
+        (typeof parsed.message === 'string' && parsed.message) ||
+        (typeof parsed.error_description === 'string' && parsed.error_description) ||
+        `HTTP ${res.status}: ${text.slice(0, 240)}`
+      return { error: msg }
+    }
+    const nested = parsed.user as { id?: string } | undefined
+    const topId = typeof parsed.id === 'string' ? parsed.id : undefined
+    const uid = topId ?? nested?.id
+    if (!uid) {
+      return { error: 'Resposta inválida do Auth (sem id no JSON).' }
+    }
+    return { uid }
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      return { error: `Auth Admin excedeu ${AUTH_ADMIN_MS / 1000}s (timeout).` }
+    }
+    return { error: e instanceof Error ? e.message : 'Falha ao contactar Auth Admin' }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+async function goTrueAdminDeleteUser(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  userId: string,
+): Promise<void> {
+  const base = supabaseUrl.replace(/\/$/, '')
+  const url = `${base}/auth/v1/admin/users/${encodeURIComponent(userId)}`
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), AUTH_ADMIN_MS)
+  try {
+    await fetch(url, {
+      method: 'DELETE',
+      headers: authAdminHeaders(serviceRoleKey),
+      signal: ctrl.signal,
+    })
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 // Edge Function: criar-usuario-scout — cria influencer a partir do Scout (usa Service Role)
 // Também: vincular_operadora — grava influencer_operadoras + user_scopes (prospecto já com user_id).
 
@@ -89,7 +179,7 @@ serve(async (req) => {
     })
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey)
+  const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
 
   let raw: Record<string, unknown>
   try {
@@ -110,7 +200,8 @@ serve(async (req) => {
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
-    const verr = await vincularOperadoraInfluencer(supabase, vinc.user_id.trim(), slugIn)
+    const userIdTrim = vinc.user_id.trim()
+    const verr = await vincularOperadoraInfluencer(supabase, userIdTrim, slugIn)
     if (verr.error) {
       return new Response(JSON.stringify({ error: verr.error }), {
         status: 400,
@@ -118,6 +209,27 @@ serve(async (req) => {
       })
     }
     const scoutId = typeof raw.scout_id === 'string' ? raw.scout_id.trim() : ''
+    let cacheHoraVinc = parseCacheNumeric(raw.cache_negociado)
+    if (cacheHoraVinc <= 0 && scoutId) {
+      const { data: scoutRow } = await supabase
+        .from('scout_influencer')
+        .select('cache_negociado')
+        .eq('id', scoutId)
+        .maybeSingle()
+      cacheHoraVinc = parseCacheNumeric(scoutRow?.cache_negociado)
+    }
+    if (cacheHoraVinc > 0) {
+      const { error: cacheErr } = await supabase
+        .from('influencer_perfil')
+        .update({ cache_hora: cacheHoraVinc })
+        .eq('id', userIdTrim)
+      if (cacheErr) {
+        return new Response(JSON.stringify({ error: cacheErr.message }), {
+          status: 500,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+    }
     if (scoutId) {
       await supabase.from('scout_influencer').update({ operadora_slug: slugIn }).eq('id', scoutId)
     }
@@ -187,21 +299,14 @@ serve(async (req) => {
   }
 
   try {
-    const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-      email,
-      password: senhaPadrao,
-      email_confirm: true,
-      user_metadata: { name: nome },
-    })
-
-    if (authErr || !authData?.user) {
-      return new Response(JSON.stringify({ error: authErr?.message ?? 'Erro ao criar usuário' }), {
+    const created = await goTrueAdminCreateUser(supabaseUrl, serviceRoleKey, email, senhaPadrao, nome)
+    if ('error' in created) {
+      return new Response(JSON.stringify({ error: created.error }), {
         status: 400,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
-
-    const uid = authData.user.id
+    const uid = created.uid
 
     let { error: profileErr } = await supabase.from('profiles').upsert(
       {
@@ -225,7 +330,7 @@ serve(async (req) => {
     }
 
     if (profileErr) {
-      await supabase.auth.admin.deleteUser(uid)
+      await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
       return new Response(JSON.stringify({ error: profileErr.message }), {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },
@@ -254,7 +359,7 @@ serve(async (req) => {
     )
 
     if (perfilErr) {
-      await supabase.auth.admin.deleteUser(uid)
+      await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
       return new Response(JSON.stringify({ error: perfilErr.message }), {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },
@@ -263,7 +368,7 @@ serve(async (req) => {
 
     const vErr = await vincularOperadoraInfluencer(supabase, uid, operadoraSlug)
     if (vErr.error) {
-      await supabase.auth.admin.deleteUser(uid)
+      await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
       return new Response(JSON.stringify({ error: vErr.error }), {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },

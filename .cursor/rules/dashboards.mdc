@@ -10,7 +10,7 @@ alwaysApply: false
 
 **Escopo (Cursor):** não é preciso listar cada página à mão — o frontmatter usa **globs**. Qualquer arquivo novo em `src/pages/dashboards/` (incluindo subpastas) entra no escopo ao você editar esse caminho; vale para **todas** as páginas atuais e futuras da seção Dashboards.
 
-Páginas: Overview, Conversão, Financeiro, Mídias Sociais, Mesas Spin, Overview Influencer
+Páginas: Streamers (abas Overview / Conversão / Financeiro executivos), Mídias Sociais, Overview Spin (`mesas_spin`), Overview Influencer
 
 **Marca:** estrutura e FilterBar já usam `useDashboardBrand()`. Onde a regra abaixo indica `var(--brand-*, fallback)`, as cores acompanham o perfil da operadora (variáveis injetadas no `:root`). Badges e faixas de **semântica analítica** (Rentável, WD Ratio, etc.) permanecem nos hex fixos indicados — não misturar com cor institucional.
 
@@ -18,11 +18,11 @@ Páginas: Overview, Conversão, Financeiro, Mídias Sociais, Mesas Spin, Overvie
 
 | Página | Persona | Primeiro bloco após filtros |
 |---|---|---|
-| DashboardOverview | Gestor Executivo | KPIs Financeiros (GGR, Investimento, ROI) |
-| DashboardConversao | Gestor de Influencers | Comparativo de Funil |
-| DashboardFinanceiro | CFO / Financeiro | KPIs Financeiros |
+| Streamers → Overview | Gestor Executivo | KPIs Financeiros (GGR, Investimento, ROI) |
+| Streamers → Conversão | Gestor de Influencers | Comparativo de Funil |
+| Streamers → Financeiro | CFO / Financeiro | KPIs Financeiros |
 | SocialMediaDashboard | Gestor de Marketing | KPIs de Mídias Sociais |
-| MesasSpin | Gerente de Operações | KPIs Consolidados das Mesas |
+| Overview Spin (`mesas_spin`) | Gerente de Operações | KPIs Consolidados das Mesas |
 | DashboardOverviewInfluencer | Influencer / Agente | KPIs Executivos (GGR, ROI) |
 
 ## Estrutura Obrigatória de Toda Página de Dashboard
@@ -352,7 +352,7 @@ Sempre responsivo:
 GGR = Total de Depósitos − Total de Saques em TODAS as páginas.
 A diferença entre páginas é o canal de origem dos dados:
 
-- Overview / Conversão / Financeiro / Overview Influencer → canal: influencers
+- Streamers (abas executivas) / Overview Influencer → canal: influencers
 - Mídias Sociais → canal: campanhas de social media (UTM)
 - Mesas Spin → todos os canais de aquisição
 

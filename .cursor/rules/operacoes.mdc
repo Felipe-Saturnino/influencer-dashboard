@@ -3,15 +3,19 @@ description: Regras específicas para todas as páginas da seção de Operaçõe
 globs:
   - src/pages/operacoes/**/*.tsx
   - src/pages/operacoes/**/*.ts
+  - src/pages/marketing/**/*.tsx
+  - src/pages/marketing/**/*.ts
+  - src/pages/financeiro/**/*.tsx
+  - src/pages/financeiro/**/*.ts
 alwaysApply: false
 ---
 # Seção Operações — Regras Específicas
 
-**Escopo (Cursor):** globs cobrem tudo em `src/pages/operacoes/`. Páginas atuais: BancaJogo · Campanhas · CentralNotificacoes · Financeiro · GestaoDealers · GestaoLinks.
+**Escopo (Cursor):** `operacoes/` (Dealers, Central de Notificações, solicitações), `marketing/` (Campanhas, Gestão de Links), `financeiro/` (Financeiro, Banca de Jogo). Mesmas regras de UI e fluxo operacional nas três pastas.
 
 **Perfil de uso:** nível operacional multíperfil (gestor, operador, influencer, agência). Mais denso em dados que os Dashboards, menos executivo. O usuário realiza ações — não só lê métricas. Cada página tem fluxos de criação, aprovação, mapeamento ou validação.
 
-**Marca / operadora (whitelabel):** em todas as páginas desta pasta, chamar `useDashboardBrand()` e usar `blockBg`, `primary`, `secondary`, `accent`, `primaryTransparentBg`, `primaryTransparentBorder`, `primaryIconBg` / `primaryIconBorder` / `primaryIconColor`. Com `brand.useBrand === true` (perfil **operador** com `operadoraBrand`), o hook já resolve para `var(--brand-*)` injetadas por `aplicarBrandguide()` — alinhado a `global.mdc` e `brand-css-variables.mdc`.
+**Marca / operadora (whitelabel):** em todas as páginas deste escopo, chamar `useDashboardBrand()` e usar `blockBg`, `primary`, `secondary`, `accent`, `primaryTransparentBg`, `primaryTransparentBorder`, `primaryIconBg` / `primaryIconBorder` / `primaryIconColor`. Com `brand.useBrand === true` (perfil **operador** com `operadoraBrand`), o hook já resolve para `var(--brand-*)` injetadas por `aplicarBrandguide()` — alinhado a `global.mdc` e `brand-css-variables.mdc`.
 
 - **Gradientes de CTA** (“+ Criar”, “Salvar” primário): `brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : fallback Spin` — texto do botão **branco** `#fff`.
 - **`color-mix` / estado ativo** (Histórico, chip de filtro, aba): `color-mix(in srgb, var(--brand-accent) 15%, transparent)` quando `useBrand`; senão o equivalente em roxo Spin documentado no snippet.
@@ -521,7 +525,7 @@ const cardShadow = t.isDark
 
 ---
 
-### BancaJogo (`src/pages/operacoes/BancaJogo/index.tsx`)
+### BancaJogo (`src/pages/financeiro/BancaJogo/index.tsx`)
 
 **Workflow de 3 etapas:** Solicitado (amarelo) → Aprovado (azul) → Liberado (verde). A progressão é sempre unidirecional. Nunca permitir pular etapas na UI.
 
@@ -571,7 +575,7 @@ texto={`Excluir a solicitação de ${nome} no valor de ${fmtMoeda(valor)}? Esta 
 
 ---
 
-### Campanhas (`src/pages/operacoes/Campanhas/index.tsx`)
+### Campanhas (`src/pages/marketing/Campanhas/index.tsx`)
 
 **Toggle de status — dois botões pill com `aria-pressed`, nunca botão único que alterna:**
 ```tsx
@@ -656,7 +660,7 @@ const longo = texto.length > 280;
 
 ---
 
-### Financeiro (`src/pages/operacoes/Financeiro/index.tsx`)
+### Financeiro (`src/pages/financeiro/Financeiro/index.tsx`)
 
 **Datas de ciclo — formato legível, nunca ISO:**
 ```tsx
@@ -791,7 +795,7 @@ const { data } = await supabase
 
 ---
 
-### GestaoLinks (`src/pages/operacoes/GestaoLinks/index.tsx`)
+### GestaoLinks (`src/pages/marketing/GestaoLinks/index.tsx`)
 
 **Filtro de operadora — sempre dentro do bloco padrão, nunca isolado:**
 ```tsx

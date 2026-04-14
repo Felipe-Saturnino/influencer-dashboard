@@ -1,5 +1,43 @@
 import { supabase } from "./supabase";
 
+/** Subconjunto de escopo usado para montar filtros da RPC (evita dependência circular com AppContext). */
+export type EscopoInvestimentoInput = {
+  semRestricaoEscopo?: boolean;
+  vêTodosInfluencers?: boolean;
+  influencersVisiveis: string[];
+};
+
+/**
+ * Monta `influencerIds` + `includeAgentes` para agregados de investimento.
+ * Agência / influencer (escopo fechado): só influencers do escopo, sem pagamentos de Agentes.
+ * Admin / gestor / executivo / operador: visão global com Agentes quando o filtro de influencer é "todos".
+ */
+export function filtrosInvestimentoPorEscopo(
+  escopo: EscopoInvestimentoInput,
+  opts: {
+    operadora_slug?: string | null;
+    /** "todos" ou id do influencer selecionado no filtro da página */
+    filtroInfluencer?: string;
+  }
+): { operadora_slug?: string; influencerIds?: string[]; includeAgentes: boolean } {
+  const slug =
+    opts.operadora_slug && opts.operadora_slug !== "todas" ? opts.operadora_slug : undefined;
+  const filtroInf = opts.filtroInfluencer ?? "todos";
+
+  const visaoGlobalInfluencers =
+    escopo.semRestricaoEscopo === true || escopo.vêTodosInfluencers === true;
+
+  if (filtroInf !== "todos") {
+    return { operadora_slug: slug, influencerIds: [filtroInf], includeAgentes: false };
+  }
+
+  if (!visaoGlobalInfluencers && escopo.influencersVisiveis.length > 0) {
+    return { operadora_slug: slug, influencerIds: escopo.influencersVisiveis, includeAgentes: false };
+  }
+
+  return { operadora_slug: slug, includeAgentes: true };
+}
+
 /**
  * Busca o investimento apenas de pagamentos com status "pago",
  * alinhado ao que é exibido no Financeiro (valores revisados e efetivamente pagos).

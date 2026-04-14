@@ -68,7 +68,7 @@ Configure no `.env` conforme `docs/SETUP.md`.
 | `user_scopes` | Escopos do usuário (influencers/operadoras visíveis) | Segregação de dados |
 
 **scope_type:** `influencer`, `operadora`, `agencia_par`  
-**page_key:** `dash_overview`, `agenda`, `influencers`, `financeiro`, etc.
+**page_key:** `streamers`, `agenda`, `influencers`, `financeiro`, etc.
 
 ---
 

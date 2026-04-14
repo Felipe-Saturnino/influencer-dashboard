@@ -9,10 +9,8 @@ import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { PLAYBOOK_ITENS_OBRIGATORIOS } from "../../../constants/playbookGuia";
 import { PLAT_LOGO, PLAT_LOGO_DARK } from "../../../constants/platforms";
 import {
-  GiHistogram,
   GiMicrophone,
-  GiConvergenceTarget,
-  GiMoneyStack,
+  GiTv,
   GiCalendar,
   GiPodium,
   GiConversation,
@@ -145,10 +143,8 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
 
 /** Mapa page_key -> ícone para os atalhos */
 const PAGE_ICONS: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  dash_overview: GiHistogram,
+  streamers: GiTv,
   dash_overview_influencer: GiMicrophone,
-  dash_conversao: GiConvergenceTarget,
-  dash_financeiro: GiMoneyStack,
   mesas_spin: GiDiceSixFacesFour,
   dash_midias_sociais: GiShare,
   agenda: GiCalendar,
@@ -291,7 +287,7 @@ export default function Home() {
     }
   }
   if (role === "operador") {
-    const preferidos = ["dash_overview", "dash_overview_influencer", "agenda", "influencers"];
+    const preferidos = ["streamers", "dash_overview_influencer", "agenda", "influencers"];
     atalhosOrdenados.sort((a, b) => {
       const ia = preferidos.indexOf(a.key);
       const ib = preferidos.indexOf(b.key);

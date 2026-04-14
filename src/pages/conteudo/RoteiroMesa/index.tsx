@@ -10,6 +10,8 @@ import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check
 import { GiNotebook, GiShield } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { BannerPendencias } from "../../operacoes/solicitacoes/BannerPendencias";
+import { ModalThreadSolicitacao } from "../../operacoes/solicitacoes/ModalThreadSolicitacao";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";
@@ -186,6 +188,7 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
   const [texto, setTexto] = useState("");
   const [operadoraSlugModal, setOperadoraSlugModal] = useState(operadoraSlug === "todas" ? "" : operadoraSlug);
   const [saving, setSaving] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   const operadorasFiltradas = operadorasList.filter((o) => podeVerOperadora(o.slug));
   const operadoraFinal = mostraCampoOperadora ? operadoraSlugModal : operadoraSlug;
@@ -202,11 +205,79 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
   const handleSalvar = async () => {
     if (!texto.trim() || !operadoraFinal || operadoraFinal === "todas") return;
     setSaving(true);
+    setErroSalvar(null);
     const payload = { texto: texto.trim(), tipo, jogos, updated_at: new Date().toISOString() };
-    const { error } = await supabase.from("roteiro_mesa_sugestoes").insert({ operadora_slug: operadoraFinal, bloco, ordem: 0, ...payload });
-    if (error) console.error("[RoteiroMesa] insert roteiro:", error.message);
+    const { data: sugRow, error } = await supabase
+      .from("roteiro_mesa_sugestoes")
+      .insert({ operadora_slug: operadoraFinal, bloco, ordem: 0, ...payload })
+      .select("id")
+      .single();
+    if (error || !sugRow?.id) {
+      console.error("[RoteiroMesa] insert roteiro:", error?.message);
+      setErroSalvar(error?.message ?? "Não foi possível salvar o roteiro.");
+      setSaving(false);
+      return;
+    }
+
+    const isOperador = user?.role === "operador";
+    if (isOperador) {
+      const blocoLabel = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
+      const tipoLabel = TIPO_CONFIG[tipo].label;
+      const aguarda = "gestor";
+      const tituloSol = `Novo roteiro (${tipoLabel}) — ${blocoLabel}`;
+      const jogosLabel = jogos.map((j) => JOGOS.find((x) => x.key === j)?.label ?? j).join(", ");
+      const corpoMsg = [
+        "Nova sugestão de roteiro cadastrada no roteiro de mesa.",
+        "",
+        `Bloco: ${blocoLabel}`,
+        `Tipo: ${tipoLabel}`,
+        `Jogos: ${jogosLabel}`,
+        "",
+        "Texto:",
+        texto.trim(),
+      ].join("\n");
+
+      const { data: solRow, error: errSol } = await supabase
+        .from("roteiro_mesa_solicitacoes")
+        .insert({
+          sugestao_id: sugRow.id,
+          operadora_slug: operadoraFinal,
+          status: "em_andamento",
+          aguarda_resposta_de: aguarda,
+          titulo: tituloSol,
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
+
+      if (errSol || !solRow?.id) {
+        console.error("[RoteiroMesa] insert solicitação roteiro mesa:", errSol?.message);
+        await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", sugRow.id);
+        setErroSalvar(errSol?.message ?? "Roteiro não foi salvo: falha ao abrir a conversa com o estúdio.");
+        setSaving(false);
+        return;
+      }
+
+      const { error: errMsg } = await supabase.from("roteiro_mesa_solicitacao_mensagens").insert({
+        solicitacao_id: solRow.id,
+        autor: "operadora",
+        usuario_id: user?.id ?? null,
+        texto: corpoMsg,
+      });
+
+      if (errMsg) {
+        console.error("[RoteiroMesa] insert mensagem roteiro mesa:", errMsg.message);
+        await supabase.from("roteiro_mesa_solicitacoes").delete().eq("id", solRow.id);
+        await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", sugRow.id);
+        setErroSalvar(errMsg.message ?? "Roteiro não foi salvo: falha ao registrar a primeira mensagem.");
+        setSaving(false);
+        return;
+      }
+    }
+
     setSaving(false);
-    if (!error) { onSalvo(); onClose(); }
+    onSalvo();
+    onClose();
   };
 
   const podeSalvar = texto.trim().length > 0 && operadoraFinal && operadoraFinal !== "todas";
@@ -257,6 +328,12 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
         <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Texto *</p>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "script" ? "Olá Jogadores, meu nome é [Nome]..." : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o dealer..."} rows={4} style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", outline: "none", marginBottom: 18 }} />
 
+        {erroSalvar ? (
+          <div role="alert" style={{ color: "#ef4444", fontSize: 12, marginBottom: 12, fontFamily: FONT.body }}>
+            {erroSalvar}
+          </div>
+        ) : null}
+
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
           <button
@@ -288,7 +365,8 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   operadoraSlug: string;
   operadorasList: { slug: string; nome: string }[];
   onClose: () => void;
-  onSalvo: () => void;
+  /** Inclui `solicitacaoId` quando a thread da campanha é criada com sucesso. */
+  onSalvo: (opts?: { solicitacaoId: string }) => void;
   podeVerOperadora: (slug: string) => boolean;
 }) {
   const { theme: t, user, isDark } = useApp();
@@ -302,6 +380,7 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   const [texto, setTexto] = useState("");
   const [operadoraSlugModal, setOperadoraSlugModal] = useState(operadoraSlug === "todas" ? "" : operadoraSlug);
   const [saving, setSaving] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   const operadorasFiltradas = operadorasList.filter((o) => podeVerOperadora(o.slug));
   const operadoraFinal = mostraCampoOperadora ? operadoraSlugModal : operadoraSlug;
@@ -318,16 +397,81 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   const handleSalvar = async () => {
     if (!titulo.trim() || !texto.trim() || !dataInicio || !dataFim || !operadoraFinal || operadoraFinal === "todas") return;
     setSaving(true);
+    setErroSalvar(null);
     const payload = { titulo: titulo.trim(), texto: texto.trim(), jogos, data_inicio: dataInicio, data_fim: dataFim, ativo: true, updated_at: new Date().toISOString() };
-    const { error } = await supabase.from("roteiro_mesa_campanhas").insert({
-      operadora_slug: operadoraFinal,
-      ordem: 0,
-      created_by: user?.id ?? null,
-      ...payload,
+    const { data: campRow, error } = await supabase
+      .from("roteiro_mesa_campanhas")
+      .insert({
+        operadora_slug: operadoraFinal,
+        ordem: 0,
+        created_by: user?.id ?? null,
+        ...payload,
+      })
+      .select("id")
+      .single();
+    if (error || !campRow?.id) {
+      console.error("[RoteiroMesa] insert campanha:", error?.message);
+      setErroSalvar(error?.message ?? "Não foi possível salvar a campanha.");
+      setSaving(false);
+      return;
+    }
+
+    const isOperador = user?.role === "operador";
+    const aguarda = isOperador ? "gestor" : "operadora";
+    const autorMsg = isOperador ? "operadora" : "gestor";
+    const tituloSol = `Nova campanha: ${titulo.trim()}`;
+    const jogosLabel = jogos.map((j) => JOGOS.find((x) => x.key === j)?.label ?? j).join(", ");
+    const corpoMsg = [
+      "Campanha cadastrada no roteiro de mesa.",
+      "",
+      `Título: ${titulo.trim()}`,
+      `Período: ${dataInicio} → ${dataFim}`,
+      `Jogos: ${jogosLabel}`,
+      "",
+      "Texto sugerido:",
+      texto.trim(),
+    ].join("\n");
+
+    const { data: solRow, error: errSol } = await supabase
+      .from("roteiro_campanha_solicitacoes")
+      .insert({
+        campanha_id: campRow.id,
+        operadora_slug: operadoraFinal,
+        status: "em_andamento",
+        aguarda_resposta_de: aguarda,
+        titulo: tituloSol,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (errSol || !solRow?.id) {
+      console.error("[RoteiroMesa] insert solicitação campanha:", errSol?.message);
+      await supabase.from("roteiro_mesa_campanhas").delete().eq("id", campRow.id);
+      setErroSalvar(errSol?.message ?? "Campanha não foi salva: falha ao abrir a conversa com o estúdio.");
+      setSaving(false);
+      return;
+    }
+
+    const { error: errMsg } = await supabase.from("roteiro_campanha_solicitacao_mensagens").insert({
+      solicitacao_id: solRow.id,
+      autor: autorMsg,
+      usuario_id: user?.id ?? null,
+      texto: corpoMsg,
     });
-    if (error) console.error("[RoteiroMesa] insert campanha:", error.message);
+
+    if (errMsg) {
+      console.error("[RoteiroMesa] insert mensagem campanha:", errMsg.message);
+      await supabase.from("roteiro_campanha_solicitacoes").delete().eq("id", solRow.id);
+      await supabase.from("roteiro_mesa_campanhas").delete().eq("id", campRow.id);
+      setErroSalvar(errMsg.message ?? "Campanha não foi salva: falha ao registrar a primeira mensagem.");
+      setSaving(false);
+      return;
+    }
+
     setSaving(false);
-    if (!error) { onSalvo(); onClose(); }
+    onSalvo({ solicitacaoId: solRow.id });
+    onClose();
   };
 
   const podeSalvar = titulo.trim().length > 0 && texto.trim().length > 0 && dataInicio && dataFim && operadoraFinal && operadoraFinal !== "todas";
@@ -376,6 +520,12 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
 
         <label style={lbl}>Texto *</label>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='O que o dealer deve falar...' rows={4} style={{ ...inp, resize: "vertical", marginBottom: 18 }} />
+
+        {erroSalvar ? (
+          <p role="alert" style={{ margin: "0 0 14px", fontSize: 12, color: BRAND.vermelho, fontFamily: FONT.body }}>
+            {erroSalvar}
+          </p>
+        ) : null}
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
@@ -589,47 +739,49 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
           )}
         </div>
       </div>
-      {podeExcluir && (
-        <button
-          type="button"
-          onClick={() => {
-            if (!excluirConfirmando) {
-              setExcluirConfirmando(true);
-              return;
-            }
-            onExcluir(campanha);
-            setExcluirConfirmando(false);
-          }}
-          onBlur={() => setExcluirConfirmando(false)}
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
-          title={`Excluir campanha: ${campanha.titulo}`}
-          aria-label={`${excluirConfirmando ? "Confirmar exclusão da campanha:" : "Excluir campanha:"} ${campanha.titulo}`}
-          style={{
-            width: "auto",
-            minWidth: 34,
-            height: 34,
-            padding: excluirConfirmando ? "0 8px" : 0,
-            borderRadius: 8,
-            flexShrink: 0,
-            border: `1px solid ${excluirConfirmando || hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`,
-            background: excluirConfirmando ? BRAND.vermelho : hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
-            color: excluirConfirmando ? "#fff" : hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"),
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-            transition: "all 0.15s",
-            fontSize: 10,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-          }}
-        >
-          <Trash2 size={13} aria-hidden />
-          {excluirConfirmando ? <span>Confirmar?</span> : null}
-        </button>
-      )}
+      <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
+        {podeExcluir && (
+          <button
+            type="button"
+            onClick={() => {
+              if (!excluirConfirmando) {
+                setExcluirConfirmando(true);
+                return;
+              }
+              onExcluir(campanha);
+              setExcluirConfirmando(false);
+            }}
+            onBlur={() => setExcluirConfirmando(false)}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            title={`Excluir campanha: ${campanha.titulo}`}
+            aria-label={`${excluirConfirmando ? "Confirmar exclusão da campanha:" : "Excluir campanha:"} ${campanha.titulo}`}
+            style={{
+              width: "auto",
+              minWidth: 34,
+              height: 34,
+              padding: excluirConfirmando ? "0 8px" : 0,
+              borderRadius: 8,
+              flexShrink: 0,
+              border: `1px solid ${excluirConfirmando || hover ? "rgba(232,64,37,0.4)" : (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)")}`,
+              background: excluirConfirmando ? BRAND.vermelho : hover ? "rgba(232,64,37,0.12)" : (dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"),
+              color: excluirConfirmando ? "#fff" : hover ? BRAND.vermelho : (dark ? "#8888aa" : "#888"),
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+              transition: "all 0.15s",
+              fontSize: 10,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+            }}
+          >
+            <Trash2 size={13} aria-hidden />
+            {excluirConfirmando ? <span>Confirmar?</span> : null}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -694,11 +846,12 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
 }
 
 // ─── BLOCO DE CAMPANHAS ───────────────────────────────────────────────────────
-function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora }: {
+function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora, onThreadCampanhaCriada }: {
   operadoraSlug: string | null; campanhas: RoteiroCampanha[];
   podeExcluir: boolean; podeCriar: boolean;
   onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; cor_primaria?: string | null }[];
   podeVerOperadora: (slug: string) => boolean;
+  onThreadCampanhaCriada?: (solicitacaoId: string) => void;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -745,23 +898,44 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
           campanhas.map((c) => {
             const op = operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === c.operadora_slug) : undefined;
             return (
-              <CampanhaItem key={c.id} campanha={c} podeExcluir={podeExcluir} onExcluir={handleExcluir} dark={dark} operadoraNome={op?.nome} operadoraCor={op?.cor_primaria} />
+              <CampanhaItem
+                key={c.id}
+                campanha={c}
+                podeExcluir={podeExcluir}
+                onExcluir={handleExcluir}
+                dark={dark}
+                operadoraNome={op?.nome}
+                operadoraCor={op?.cor_primaria}
+              />
             );
           })
         )}
       </div>
     </div>
-    {modalAberto && <ModalCampanha operadoraSlug={operadoraSlug} operadorasList={operadorasList} onClose={() => setModalAberto(false)} onSalvo={() => { setModalAberto(false); onCarregar(); }} podeVerOperadora={podeVerOperadora} />}
+    {modalAberto && (
+      <ModalCampanha
+        operadoraSlug={operadoraSlug}
+        operadorasList={operadorasList}
+        onClose={() => setModalAberto(false)}
+        onSalvo={(opts) => {
+          void onCarregar();
+          if (opts?.solicitacaoId) onThreadCampanhaCriada?.(opts.solicitacaoId);
+        }}
+        podeVerOperadora={podeVerOperadora}
+      />
+    )}
     </>
   );
 }
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function RoteiroMesa() {
-  const { theme: t, podeVerOperadora, isDark } = useApp();
+  const { theme: t, podeVerOperadora, isDark, user } = useApp();
   const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("roteiro_mesa");
+  /** Responder solicitações a partir do banner (mesma matriz da Central). */
+  const permCentral = usePermission("central_notificacoes");
   const dark = isDark ?? false;
 
   const [operadorasList,  setOperadorasList]  = useState<{ slug: string; nome: string; cor_primaria?: string | null }[]>([]);
@@ -770,6 +944,7 @@ export default function RoteiroMesa() {
   const [filtroTipo,      setFiltroTipo]      = useState<TipoSugestao | "todos">("todos");
   const [sugestoes,       setSugestoes]       = useState<RoteiroSugestao[]>([]);
   const [campanhas,       setCampanhas]       = useState<RoteiroCampanha[]>([]);
+  const [threadCampSolId, setThreadCampSolId] = useState<string | null>(null);
   const [loading,         setLoading]         = useState(true);
 
   const mostrarFiltroOp = showFiltroOperadora;
@@ -795,7 +970,8 @@ export default function RoteiroMesa() {
     let qCamp = supabase.from("roteiro_mesa_campanhas").select("*").order("ordem");
     if (operadoraSlugSelecionada !== "todas") qCamp = qCamp.eq("operadora_slug", operadoraSlugSelecionada);
     const { data: dataCamp } = await qCamp;
-    setCampanhas((dataCamp ?? []) as RoteiroCampanha[]);
+    const listaCamp = (dataCamp ?? []) as RoteiroCampanha[];
+    setCampanhas(listaCamp);
 
     setLoading(false);
   }, [operadoraSlugSelecionada]);
@@ -842,6 +1018,14 @@ export default function RoteiroMesa() {
 
   return (
     <div className="app-page-shell">
+
+      {user?.role === "operador" && operadoraSlugsForcado?.length ? (
+        <BannerPendencias
+          operadoraSlugs={operadoraSlugsForcado}
+          operadoras={operadorasList}
+          podeInteragir={permCentral.canEditarOk}
+        />
+      ) : null}
 
       {/* ── HEADER — idêntico ao padrão Agenda de Lives ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
@@ -949,6 +1133,7 @@ export default function RoteiroMesa() {
               dark={dark}
               operadorasList={operadorasList}
               podeVerOperadora={podeVerOperadora}
+              onThreadCampanhaCriada={(id) => setThreadCampSolId(id)}
             />
             {BLOCOS.map(({ key }) => (
               <BlocoSugestoes
@@ -966,6 +1151,20 @@ export default function RoteiroMesa() {
           </div>
         )
       )}
+
+      {threadCampSolId ? (
+        <ModalThreadSolicitacao
+          solicitacaoId={threadCampSolId}
+          operadoras={operadorasList}
+          origem="campanha_roteiro"
+          podeInteragir={permCentral.canEditarOk}
+          onClose={() => setThreadCampSolId(null)}
+          onResolvido={() => {
+            void carregarDados();
+            setThreadCampSolId(null);
+          }}
+        />
+      ) : null}
 
     </div>
   );

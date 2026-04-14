@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronRight } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { MENU } from "../constants/menu";
+import { usePendenciasCount } from "../hooks/usePendenciasCount";
 
 interface Props {
   activePage: string;
@@ -29,6 +30,14 @@ function storageKey(userId: string) {
 
 export default function Sidebar({ activePage, onNavigate, isDrawer = false, drawerOpen = false }: Props) {
   const { theme: t, permissions, operadoraBrand, user } = useApp();
+  const pendGestor = usePendenciasCount("gestor");
+  const pendOperadora = usePendenciasCount("operadora");
+  const badgeCentral =
+    user?.role === "operador"
+      ? pendOperadora
+      : user?.role === "gestor" || user?.role === "admin" || user?.role === "executivo"
+        ? pendGestor
+        : 0;
   const logoUrl = operadoraBrand?.logo_url || LOGO_DEFAULT;
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(DEFAULT_OPEN);
 
@@ -231,7 +240,30 @@ export default function Sidebar({ activePage, onNavigate, isDrawer = false, draw
                       }}
                     >
                       <Icon size={15} color={iconColor} />
-                      {item.label}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                        {item.label}
+                        {item.key === "central_notificacoes" && badgeCentral > 0 ? (
+                          <span
+                            aria-label={`${badgeCentral} notificações pendentes`}
+                            style={{
+                              minWidth: 18,
+                              height: 18,
+                              padding: "0 5px",
+                              borderRadius: 9,
+                              background: "#e84025",
+                              color: "#fff",
+                              fontSize: 10,
+                              fontWeight: 800,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {badgeCentral > 99 ? "99+" : badgeCentral}
+                          </span>
+                        ) : null}
+                      </span>
                     </button>
                   );
                 })}

@@ -55,6 +55,14 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     })();
   }, []);
 
+  /** Sincroniza cabeçalho do formulário quando abre outro usuário (evita estado velho se o modal reutilizar instância). */
+  useEffect(() => {
+    setNome(editando?.name ?? "");
+    setEmail(editando?.email ?? "");
+    setRole((editando?.role ?? "gestor") as Role);
+    setErro("");
+  }, [editando?.id]);
+
   useEffect(() => {
     const scopes = editando?.scopes ?? [];
     setScopeInfluencers(scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref));
@@ -63,13 +71,42 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setScopeGestorTipos(scopes.filter((s) => s.scope_type === "gestor_tipo").map((s) => s.scope_ref));
   }, [editando]);
 
+  /** Só ao mudar o perfil no select: limpa escopos incompatíveis (não dispare junto com troca de `editando`). */
   useEffect(() => {
     if (editando && role === editando.role) return;
     setScopeInfluencers([]);
     setScopeOperadoras([]);
     setScopePares([]);
     setScopeGestorTipos([]);
-  }, [role, editando]);
+  }, [role]);
+
+  /** Novo usuário influencer: pré-preenche operadora a partir do Scout (parceria), alinhado ao criar-usuario na Edge. */
+  useEffect(() => {
+    if (editando?.id) return;
+    if (role !== "influencer") return;
+    const em = email.trim().toLowerCase();
+    if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return;
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const { data: row } = await supabase
+          .from("scout_influencer")
+          .select("operadora_slug")
+          .ilike("email", em)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const slug = String(row?.operadora_slug ?? "").trim();
+        if (!slug) return;
+        const { data: op } = await supabase.from("operadoras").select("slug").eq("slug", slug).maybeSingle();
+        if (!op?.slug) return;
+        setScopeOperadoras((prev) => (prev.includes(slug) ? prev : [...prev, slug]));
+      })();
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [email, role, editando?.id]);
 
   useEffect(() => {
     if (role !== "agencia") return;

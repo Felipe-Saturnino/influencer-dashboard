@@ -20,7 +20,7 @@ O `AppContext` chama `aplicarBrandguide()` e injeta no `document.documentElement
 - **Marca / whitelabel** (identidade, destaques que devem seguir a operadora): usar `var(--brand-primary, #7c3aed)`, `var(--brand-secondary, #4a2082)`, `var(--brand-accent, #1e36f8)`, `var(--brand-icon, #70cae4)`, etc., em vez de hex fixo só da Spin. Detalhes de foco, CTA e spinners: ver a regra `brand-css-variables.mdc`.
 - **Semântica de dado** (bom/ruim/atenção com significado analítico fixo — ex. Rentável / Não rentável, faixas de WD Ratio, paleta de badges de ROI): manter os hex acordados na seção **Paleta semântica** abaixo; **não** substituir por `--brand-primary` só para “ficar roxo da operadora”, senão o usuário perde o significado compartilhado dos indicadores.
 - **Dashboards com operador:** usar `useDashboardBrand()` para `blockBg`, `primary`, `accent`, `primaryTransparentBg`, `primaryTransparentBorder`, etc.; o hook já aponta para `var(--brand-*)` quando `brand.useBrand` é true.
-- Demais páginas (`lives/`, `operacoes/`, `plataforma/`, `conteudo/`, `geral/`): tokens de UI (`t.*` via `useApp`) para fundo, texto e bordas neutras; onde o elemento é **destaque de marca** (badge de seção, ícone institucional, barra de destaque), preferir `--brand-*` com fallback.
+- Demais páginas (`lives/`, `operacoes/`, `marketing/`, `financeiro/`, `plataforma/`, `conteudo/`, `geral/`): tokens de UI (`t.*` via `useApp`) para fundo, texto e bordas neutras; onde o elemento é **destaque de marca** (badge de seção, ícone institucional, barra de destaque), preferir `--brand-*` com fallback.
 
 ## Estrutura de Arquivos
 
@@ -33,11 +33,13 @@ src/
 ├── hooks/              # useDashboardBrand, useDashboardFiltros, usePermission, useMediaQuery
 ├── lib/                # dashboardConstants, dashboardHelpers, tableStyles, supabase, investimentoPago
 ├── pages/              # Páginas por seção
-│   ├── dashboards/
+│   ├── dashboards/     # Streamers (abas), MesasSpin, Mídias, Overview Influencer
 │   ├── conteudo/
 │   ├── geral/
 │   ├── lives/          # Agenda, Resultados, Feedback, Influencers, Scout
-│   ├── operacoes/      # Demais itens do menu Operações
+│   ├── operacoes/      # Dealers, central de notificações, solicitações
+│   ├── marketing/      # Campanhas, Gestão de Links
+│   ├── financeiro/     # Financeiro (ciclos), Banca de Jogo
 │   └── plataforma/
 ├── styles/
 │   ├── global.css      # Reset, temas dark/light, breakpoints, animações, --brand-*

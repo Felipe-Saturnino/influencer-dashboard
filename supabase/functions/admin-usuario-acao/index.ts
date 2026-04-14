@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
 
 // Edge Function: admin-usuario-acao — desativar/ativar perfil (sem excluir) e reset de senha padrão + must_change_password
 // Usa service_role; apenas admins (JWT) podem chamar.
@@ -9,6 +10,75 @@ type Acao = 'desativar' | 'ativar' | 'reset_senha'
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
 } as const
+
+const AUTH_USER_MS = 15_000
+
+function readJwtSecretFromEnv(): string {
+  return (Deno.env.get('JWT_SECRET') ?? Deno.env.get('SUPABASE_JWT_SECRET') ?? '').trim()
+}
+
+async function verifySupabaseUserAccessToken(
+  accessToken: string,
+  jwtSecret: string,
+): Promise<{ ok: true; userId: string } | { ok: false; error: string }> {
+  const tok = accessToken.trim()
+  const secret = jwtSecret.trim()
+  if (!tok || !secret) {
+    return { ok: false, error: 'Token ou JWT secret ausente' }
+  }
+  try {
+    const { payload } = await jwtVerify(tok, new TextEncoder().encode(secret), {
+      algorithms: ['HS256'],
+    })
+    const sub = typeof payload.sub === 'string' ? payload.sub : ''
+    if (!sub) return { ok: false, error: 'JWT sem sub (usuário)' }
+    return { ok: true, userId: sub }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'JWT inválido ou expirado'
+    return { ok: false, error: msg }
+  }
+}
+
+async function goTrueGetUserId(
+  supabaseUrl: string,
+  anonKey: string,
+  jwt: string,
+): Promise<{ ok: true; userId: string } | { ok: false; error: string; status: number }> {
+  const base = supabaseUrl.replace(/\/$/, '')
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), AUTH_USER_MS)
+  try {
+    const res = await fetch(`${base}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${jwt}`, apikey: anonKey },
+      signal: ctrl.signal,
+    })
+    const text = await res.text()
+    let parsed: Record<string, unknown> = {}
+    try {
+      parsed = text ? (JSON.parse(text) as Record<string, unknown>) : {}
+    } catch {
+      /* ignore */
+    }
+    if (!res.ok) {
+      const msg =
+        (typeof parsed.msg === 'string' && parsed.msg) ||
+        (typeof parsed.error_description === 'string' && parsed.error_description) ||
+        `HTTP ${res.status}`
+      const st = res.status === 401 || res.status === 403 ? res.status : 401
+      return { ok: false, error: msg, status: st }
+    }
+    const id = typeof parsed.id === 'string' ? parsed.id : ''
+    if (!id) return { ok: false, error: 'Resposta Auth sem id', status: 401 }
+    return { ok: true, userId: id }
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      return { ok: false, error: `Validação de sessão excedeu ${AUTH_USER_MS / 1000}s`, status: 504 }
+    }
+    return { ok: false, error: e instanceof Error ? e.message : 'Erro ao validar sessão', status: 500 }
+  } finally {
+    clearTimeout(t)
+  }
+}
 
 interface Body {
   userId?: string
@@ -59,22 +129,30 @@ serve(async (req) => {
   }
 
   const token = authHeader.replace('Bearer ', '')
-  const supabaseAnon = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  })
 
-  const { data: { user: caller } } = await supabaseAnon.auth.getUser(token)
-  if (!caller) {
-    return new Response(JSON.stringify({ error: 'Sessão inválida ou expirada' }), {
-      status: 401,
+  const whoami = await (async (): Promise<
+    { ok: true; userId: string } | { ok: false; error: string; status: number }
+  > => {
+    const secret = readJwtSecretFromEnv()
+    if (secret) {
+      const v = await verifySupabaseUserAccessToken(token, secret)
+      if (v.ok) return { ok: true, userId: v.userId }
+    }
+    return await goTrueGetUserId(supabaseUrl, anonKey, token)
+  })()
+  if (!whoami.ok) {
+    return new Response(JSON.stringify({ error: whoami.error }), {
+      status: whoami.status >= 400 && whoami.status < 600 ? whoami.status : 401,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
+  const callerId = whoami.userId
 
-  const { data: callerProfile } = await supabaseAnon
+  const supabasePre = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
+  const { data: callerProfile } = await supabasePre
     .from('profiles')
     .select('role')
-    .eq('id', caller.id)
+    .eq('id', callerId)
     .single()
 
   if (callerProfile?.role !== 'admin') {
@@ -105,7 +183,7 @@ serve(async (req) => {
     )
   }
 
-  if (action === 'desativar' && userId === caller.id) {
+  if (action === 'desativar' && userId === callerId) {
     return new Response(JSON.stringify({ error: 'Não é possível desativar sua própria conta.' }), {
       status: 403,
       headers: { ...cors, 'Content-Type': 'application/json' },
@@ -122,7 +200,7 @@ serve(async (req) => {
     )
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
+  const supabase = supabasePre
 
   try {
     if (action === 'desativar') {

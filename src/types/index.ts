@@ -14,10 +14,8 @@ export interface User {
 // ─── PAGE KEYS ───────────────────────────────────────────────────────────────
 export type PageKey =
   | "home"
-  | "dash_overview"
+  | "streamers"
   | "dash_overview_influencer"
-  | "dash_conversao"
-  | "dash_financeiro"
   | "mesas_spin"
   | "dash_midias_sociais"
   | "agenda"
