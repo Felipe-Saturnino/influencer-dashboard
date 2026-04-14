@@ -49,7 +49,7 @@ Para que todos os roles tenham acesso correto, execute a migration:
 docs/migration-role-permissions-seed.sql
 ```
 
-**Problema comum:** Gestor não via dashboards porque `role_permissions` não tinha linhas para `gestor` + `dash_overview` / `dash_conversao` / `dash_financeiro`.
+**Problema comum:** Gestor não via dashboards porque `role_permissions` não tinha linha para `gestor` + `streamers` (página unificada Overview / Conversão / Financeiro executivos).
 
 ---
 

@@ -7,9 +7,7 @@ import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
 import { HelpCircle } from "lucide-react";
 import {
-  GiRadarSweep,
-  GiFunnel,
-  GiMoneyStack,
+  GiTv,
   GiCalendar,
   GiConversation,
   GiPerson,
@@ -24,9 +22,7 @@ const MENU_AJUDA = [
   {
     section: "Dashboards",
     items: [
-      { key: "dash_overview" as PageKey, label: "Overview", Icon: GiRadarSweep },
-      { key: "dash_conversao" as PageKey, label: "Conversão", Icon: GiFunnel },
-      { key: "dash_financeiro" as PageKey, label: "Financeiro", Icon: GiMoneyStack },
+      { key: "streamers" as PageKey, label: "Streamers", Icon: GiTv },
     ],
   },
   {
@@ -48,90 +44,32 @@ const MENU_AJUDA = [
 
 // ─── Conteúdo: Conheça a Plataforma ──────────────────────────────────────────
 const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: string; texto: string }[] }> = {
-  dash_overview: {
-    titulo: "Overview",
+  streamers: {
+    titulo: "Streamers",
     blocos: [
       {
         texto:
-          "O painel executivo da operação. Reúne os principais indicadores de performance das campanhas com influenciadores — financeiros, operacionais e de aquisição — em uma única tela.",
+          "Área unificada com três abas — Overview executivo, Conversão e Dashboard financeiro — para análise de performance das lives e dos jogadores captados. O acesso é controlado por uma única permissão na Gestão de Usuários (página Streamers). Influencers e agências continuam usando o Overview Influencer, separado.",
       },
       {
-        subtitulo: "Filtros de Período",
+        subtitulo: "Aba Overview",
         texto:
-          "No topo da página você controla o recorte temporal da análise. Use as setas para navegar entre meses ou clique em Histórico para comparar períodos anteriores.\n\nTodos os indicadores exibem um comparativo MTD (mês até hoje) em relação ao mesmo período do mês anterior.\n\nOs filtros de influencer e operadora permitem segmentar os dados para uma visão específica da operação.",
+          "Painel executivo: KPIs financeiros, operacionais e de aquisição, funil de conversão agregado e ranking de influencers com classificação de performance (Rentável, Atenção, Não Rentável, Bônus).",
       },
       {
-        subtitulo: "KPIs Executivos",
+        subtitulo: "Aba Conversão",
         texto:
-          "Indicadores consolidados da operação no período selecionado, organizados em três grupos:\n\n— Financeiros: GGR Total (receita bruta gerada), Investimento (total pago aos influencers) e ROI Geral (retorno sobre o investimento).\n\n— Operacionais: Lives realizadas, Horas Realizadas e Influencers Ativos (com ao menos uma live validada).\n\n— Aquisição: Depósitos (quantidade e volume), Registros, Custo por Registro, FTDs e Custo por FTD.",
+          "Funil detalhado por influencer, comparativo lado a lado entre dois parceiros, ranking FTD/hora e tabela de taxas com ações recomendadas.",
       },
       {
-        subtitulo: "Funil de Conversão",
+        subtitulo: "Aba Financeiro",
         texto:
-          "Representa a jornada da audiência desde a live até a conversão em jogador ativo.\n\nViews → Acessos → Registros → FTDs\n\nO volume de Views é calculado como a média das médias de views das lives do período. As taxas entre cada etapa mostram onde a audiência está sendo perdida ao longo do funil.",
+          "KPIs do comportamento financeiro dos jogadores (depósitos, saques, WD Ratio, GGR por jogador, PVI), distribuição de investimento e ranking financeiro por influencer.",
       },
       {
-        subtitulo: "Ranking de Influencers",
+        subtitulo: "Filtros",
         texto:
-          "Tabela com o desempenho individual de cada influencer no período: lives, horas, views, acessos, registros, FTDs, GGR, investimento e ROI.\n\nCada influencer recebe uma classificação de performance — Rentável, Atenção, Não Rentável ou Bônus — com base nos resultados do período.",
-      },
-    ],
-  },
-  dash_conversao: {
-    titulo: "Conversão",
-    blocos: [
-      {
-        texto:
-          "Análise detalhada do funil de aquisição gerado pelas lives. Mostra onde a audiência converte — e onde é perdida — para cada influencer no período.",
-      },
-      {
-        subtitulo: "Filtros de Período",
-        texto:
-          "Mesmos filtros do Overview: navegação por mês, modo Histórico, filtro de influencer e filtro de operadora. Todos os blocos da página respondem aos filtros aplicados.",
-      },
-      {
-        subtitulo: "Comparativo de Funil",
-        texto:
-          "Permite comparar o funil de conversão de dois influencers lado a lado. Selecione um influencer em cada painel para visualizar:\n\nViews → Acessos → Registros → FTDs\n\nCada etapa exibe o volume absoluto e a taxa de conversão em relação à etapa anterior. As Taxas Chave condensam os indicadores mais relevantes: View→FTD, Acesso→FTD e FTD/Hora.",
-      },
-      {
-        subtitulo: "Ranking FTD/Hora — Eficiência por Influencer",
-        texto:
-          "Classifica os top 10 influencers pela quantidade de FTDs gerados por hora de live. É o indicador mais direto de eficiência de transmissão — mostra quem converte mais com menos tempo na tela.\n\nInfluencers sem horas registradas são omitidos do ranking.",
-      },
-      {
-        subtitulo: "Comparativo de Taxas e Ações Recomendadas",
-        texto:
-          "Tabela com as métricas de conversão de todos os influencers do período: views, acessos, registros, FTDs e as taxas entre cada etapa do funil.\n\nA coluna Ação exibe uma recomendação calculada automaticamente pela plataforma com base na etapa do funil que apresenta maior oportunidade de melhoria para cada influencer.",
-      },
-    ],
-  },
-  dash_financeiro: {
-    titulo: "Dashboard Financeiro",
-    blocos: [
-      {
-        texto:
-          "Visão financeira consolidada da operação por influencer. Mostra o comportamento dos jogadores captados — depósitos, saques, GGR e perfil — permitindo avaliar a qualidade e a rentabilidade de cada parceria.",
-      },
-      {
-        subtitulo: "Filtros de Período",
-        texto:
-          "Mesmos filtros dos demais dashboards: navegação por mês, modo Histórico, filtro de influencer e filtro de operadora.",
-      },
-      {
-        subtitulo: "KPIs Financeiros",
-        texto:
-          "Indicadores consolidados do comportamento financeiro dos jogadores captados no período, com comparativo MTD em relação ao mês anterior:\n\n— FTD: volume total dos primeiros depósitos realizados, com ticket médio por jogador.\n— Depósitos: volume total depositado no período, com ticket médio.\n— Saques: volume total sacado, com ticket médio.\n— WD Ratio: proporção entre saques e depósitos (saques ÷ depósitos) — quanto menor, mais saudável para a operação.\n— GGR por Jogador: receita bruta média gerada por cada jogador ativo no período.\n— PVI: indicador de qualidade da base de jogadores captados.",
-      },
-      {
-        subtitulo: "Investimento por Influencer",
-        texto:
-          "Gráfico de distribuição que mostra como o investimento total do período está dividido entre os influencers ativos. Útil para identificar concentração de budget e equilibrar a alocação entre parceiros.",
-      },
-      {
-        subtitulo: "Ranking Financeiro",
-        texto:
-          "Tabela com a performance financeira detalhada de cada influencer. As colunas incluem: R$ FTD, ticket médio FTD, R$ depósitos, ticket médio depósito, R$ saques, ticket médio saques, R$ GGR, GGR/jogador, WD Ratio, PVI e perfil do jogador.\n\nUse os filtros de perfil para segmentar a análise por tipo de jogador: Whales, Core, Recreativos ou Caçadores de Bônus.",
+          "Em cada aba, o bloco de filtros segue o mesmo padrão dos dashboards anteriores: mês, Histórico, influencer e operadora conforme seu perfil e escopo.",
       },
     ],
   },
@@ -279,11 +217,11 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
 
 // ─── Conteúdo: Troubleshooting ────────────────────────────────────────────────
 const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: string; texto: string }[] }> = {
-  dash_overview: {
-    titulo: "Overview",
+  streamers: {
+    titulo: "Streamers",
     blocos: [
       {
-        subtitulo: "Os dados não estão aparecendo?",
+        subtitulo: "Os dados não estão aparecendo (aba Overview)?",
         texto:
           "Verifique se há lives validadas no período selecionado. Sem lives com status \"Realizada\" registradas em Resultados, os KPIs não são calculados.",
       },
@@ -293,79 +231,19 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
           "Se você tem um perfil com escopo restrito, só visualiza dados dos influencers e operadoras vinculados ao seu acesso. Isso é esperado.",
       },
       {
-        subtitulo: "Os valores de comparativo MTD estão zerados?",
+        subtitulo: "O ROI ou o GGR por jogador aparecem como \"—\"?",
         texto:
-          "O comparativo só é gerado quando existem dados no mesmo período do mês anterior. Se for o primeiro mês de operação, essa coluna ficará vazia.",
+          "ROI \"—\" costuma indicar investimento zero (cachê/validação em Resultados). GGR por jogador \"—\" indica ausência de jogadores ativos com GGR no período.",
       },
       {
-        subtitulo: "O ROI aparece como \"—\"?",
+        subtitulo: "O funil na aba Conversão está vazio?",
         texto:
-          "Isso indica que o investimento registrado é zero. Verifique se o cachê por hora está preenchido no cadastro do influencer e se as lives foram validadas em Resultados.",
+          "Verifique lives validadas para o influencer no período. Sem duração em Resultados, o ranking FTD/hora pode omitir o parceiro.",
       },
       {
-        subtitulo: "O GGR está divergente do esperado?",
+        subtitulo: "WD Ratio ou ranking financeiro estranhos?",
         texto:
-          "Confira se o filtro de operadora está incluindo todas as operadoras relevantes. GGR é consolidado por operadora — um filtro ativo pode estar excluindo parte dos dados.",
-      },
-    ],
-  },
-  dash_conversao: {
-    titulo: "Conversão",
-    blocos: [
-      {
-        subtitulo: "O funil de um influencer está vazio ou com dados zerados?",
-        texto:
-          "Verifique se há lives validadas para esse influencer no período selecionado. Sem lives com status \"Realizada\" em Resultados, o funil não é calculado.",
-      },
-      {
-        subtitulo: "A taxa View→Acesso está acima de 100%?",
-        texto:
-          "Isso é esperado e indica que o número de acessos via link superou a média de views das lives. Ocorre quando o link continua circulando após o encerramento da transmissão.",
-      },
-      {
-        subtitulo: "O influencer não aparece no Ranking FTD/Hora?",
-        texto:
-          "O ranking exige que horas de live estejam registradas. Verifique se a duração foi preenchida na validação em Resultados.",
-      },
-      {
-        subtitulo: "A coluna Ação está vazia para algum influencer?",
-        texto:
-          "A recomendação só é gerada quando há dados suficientes no funil. Influencers com poucas etapas preenchidas podem não receber uma ação sugerida.",
-      },
-      {
-        subtitulo: "Os filtros de operadora estão afetando o funil?",
-        texto:
-          "Sim. Ao filtrar por operadora, apenas os acessos e conversões originados por links daquela operadora são considerados.",
-      },
-    ],
-  },
-  dash_financeiro: {
-    titulo: "Dashboard Financeiro",
-    blocos: [
-      {
-        subtitulo: "Os KPIs estão zerados ou sem dados?",
-        texto:
-          "Verifique se há lives validadas no período e se os filtros de influencer e operadora não estão excluindo toda a base. Dados financeiros dependem de jogadores ativos originados pelas ativações.",
-      },
-      {
-        subtitulo: "O WD Ratio está em 0% ou muito baixo?",
-        texto:
-          "Indica que não houve saques no período — pode ser esperado em meses iniciais de operação ou quando os jogadores ainda estão na fase de depósito.",
-      },
-      {
-        subtitulo: "O WD Ratio está muito alto (próximo ou acima de 100%)?",
-        texto:
-          "Sinal de atenção: os jogadores estão sacando mais do que depositando. Vale verificar o perfil da audiência captada por cada influencer no Ranking Financeiro.",
-      },
-      {
-        subtitulo: "O GGR por Jogador aparece como \"—\"?",
-        texto:
-          "Indica que não há jogadores ativos com GGR registrado no período selecionado. Confirme se as operadoras estão com os dados integrados corretamente.",
-      },
-      {
-        subtitulo: "O Ranking Financeiro não exibe todos os influencers esperados?",
-        texto:
-          "Influencers sem jogadores ativos no período não aparecem na tabela. Use o filtro de operadora para verificar se a segmentação está excluindo algum parceiro.",
+          "Confirme filtros de operadora e influencer. WD alto pode indicar audiência que saca mais do que deposita; ranking lista só quem teve jogadores ativos no período.",
       },
     ],
   },
@@ -515,7 +393,7 @@ export default function Ajuda() {
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
   const [aba, setAba] = useState<Aba>("conheca");
-  const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("dash_overview");
+  const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
   const pillActiveBg = brand.useBrand

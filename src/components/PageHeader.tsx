@@ -11,7 +11,7 @@ export interface PageHeaderProps {
 }
 
 /**
- * Cabeçalho padrão da seção Operações (28×28 + h1 22px), alinhado a Campanhas / Gestão de Dealers.
+ * Cabeçalho padrão de páginas operacionais (28×28 + h1 22px), alinhado a Campanhas / Gestão de Dealers.
  */
 export function PageHeader({ icon, title, subtitle, actions }: PageHeaderProps) {
   const { theme: t } = useApp();

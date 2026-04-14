@@ -35,10 +35,8 @@ function lazyWithRetry<T extends ComponentType>(
 const Home                   = lazyWithRetry(() => import("./pages/geral/Home"));
 const Configuracoes          = lazyWithRetry(() => import("./pages/geral/Configuracoes"));
 const Ajuda                  = lazyWithRetry(() => import("./pages/geral/Ajuda"));
-const DashboardOverview          = lazyWithRetry(() => import("./pages/dashboards/DashboardOverview"));
+const Streamers                  = lazyWithRetry(() => import("./pages/dashboards/Streamers"));
 const DashboardOverviewInfluencer = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
-const DashboardConversao         = lazyWithRetry(() => import("./pages/dashboards/DashboardConversao"));
-const DashboardFinanceiro        = lazyWithRetry(() => import("./pages/dashboards/DashboardFinanceiro"));
 const MesasSpin                 = lazyWithRetry(() => import("./pages/dashboards/MesasSpin"));
 const SocialMediaDashboard      = lazyWithRetry(() => import("./pages/dashboards/SocialMediaDashboard"));
 const Agenda     = lazyWithRetry(() => import("./pages/lives/Agenda"));
@@ -46,10 +44,10 @@ const Resultados = lazyWithRetry(() => import("./pages/lives/Resultados"));
 const Feedback   = lazyWithRetry(() => import("./pages/lives/Feedback"));
 const Influencers = lazyWithRetry(() => import("./pages/lives/Influencers"));
 const Scout = lazyWithRetry(() => import("./pages/lives/Scout"));
-const Financeiro  = lazyWithRetry(() => import("./pages/operacoes/Financeiro"));
-const BancaJogo   = lazyWithRetry(() => import("./pages/operacoes/BancaJogo"));
-const GestaoLinks = lazyWithRetry(() => import("./pages/operacoes/GestaoLinks"));
-const Campanhas = lazyWithRetry(() => import("./pages/operacoes/Campanhas"));
+const Financeiro  = lazyWithRetry(() => import("./pages/financeiro/Financeiro"));
+const BancaJogo   = lazyWithRetry(() => import("./pages/financeiro/BancaJogo"));
+const GestaoLinks = lazyWithRetry(() => import("./pages/marketing/GestaoLinks"));
+const Campanhas = lazyWithRetry(() => import("./pages/marketing/Campanhas"));
 const GestaoDealers = lazyWithRetry(() => import("./pages/operacoes/GestaoDealers"));
 const CentralNotificacoes = lazyWithRetry(() => import("./pages/operacoes/CentralNotificacoes"));
 const RoteiroMesa = lazyWithRetry(() => import("./pages/conteudo/RoteiroMesa"));
@@ -62,10 +60,8 @@ const StatusTecnico = lazyWithRetry(() => import("./pages/plataforma/StatusTecni
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   home:                     Home,
-  dash_overview:             DashboardOverview,
+  streamers:                 Streamers,
   dash_overview_influencer:  DashboardOverviewInfluencer,
-  dash_conversao:            DashboardConversao,
-  dash_financeiro:           DashboardFinanceiro,
   mesas_spin:               MesasSpin,
   dash_midias_sociais:      SocialMediaDashboard,
   agenda:           Agenda,

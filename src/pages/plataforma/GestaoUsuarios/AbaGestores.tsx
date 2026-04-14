@@ -88,7 +88,7 @@ export function AbaGestores({ t }: AbaGestoresProps) {
     return <div style={{ padding: 24, color: t.textMuted, fontFamily: FONT.body }}>Carregando...</div>;
   }
 
-  const ordemSecoes = ["Dashboards", "Lives", "Operações", "Conteúdo", "Plataforma", "Geral"];
+  const ordemSecoes = ["Dashboards", "Lives", "Operações", "Marketing", "Financeiro", "Conteúdo", "Plataforma", "Geral"];
   const pagesDaTipo = PAGES.filter((p) => p.key !== "gestao_usuarios");
   const secoes = [...new Set(pagesDaTipo.map((p) => p.secao))].sort(
     (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR")

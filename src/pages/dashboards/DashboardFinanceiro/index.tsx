@@ -271,7 +271,7 @@ function PieTooltip({ active, payload, total }: {
 export default function DashboardFinanceiro() {
   const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
-  const perm = usePermission("dash_financeiro");
+  const perm = usePermission("streamers");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
   const hoje = new Date();

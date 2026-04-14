@@ -169,7 +169,7 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
 export default function DashboardOverview() {
   const { theme: t } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
-  const perm = usePermission("dash_overview");
+  const perm = usePermission("streamers");
 
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
   const hoje = new Date();

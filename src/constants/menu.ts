@@ -1,9 +1,7 @@
 import { PageKey } from "../types";
 import {
-  GiHistogram,
   GiMicrophone,
-  GiConvergenceTarget,
-  GiMoneyStack,
+  GiTv,
   GiCalendar,
   GiPodium,
   GiConversation,
@@ -39,10 +37,8 @@ export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
     items: [
-      { key: "mesas_spin",               label: "Mesas Spin",          icon: GiDiceSixFacesFour   },
-      { key: "dash_overview",            label: "Overview",            icon: GiHistogram          },
-      { key: "dash_conversao",           label: "Conversão",           icon: GiConvergenceTarget  },
-      { key: "dash_financeiro",          label: "Financeiro",          icon: GiMoneyStack         },
+      { key: "mesas_spin",               label: "Overview Spin",      icon: GiDiceSixFacesFour   },
+      { key: "streamers",                label: "Streamers",           icon: GiTv                 },
       { key: "dash_midias_sociais",      label: "Mídias Sociais",      icon: GiShare              },
       { key: "dash_overview_influencer", label: "Overview Influencer", icon: GiMicrophone         },
     ],
@@ -62,10 +58,20 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "gestao_dealers", label: "Gestão de Dealers", icon: GiCardRandom  },
       { key: "central_notificacoes", label: "Central de Notificações", icon: GiRingingBell },
-      { key: "financeiro",    label: "Financeiro",        icon: GiCash        },
-      { key: "banca_jogo",    label: "Banca de Jogo",     icon: GiPokerHand   },
-      { key: "campanhas",     label: "Campanhas",          icon: GiMegaphone   },
-      { key: "gestao_links",  label: "Gestão de Links",    icon: GiLinkedRings },
+    ],
+  },
+  {
+    section: "Marketing",
+    items: [
+      { key: "campanhas",    label: "Campanhas",        icon: GiMegaphone   },
+      { key: "gestao_links", label: "Gestão de Links", icon: GiLinkedRings },
+    ],
+  },
+  {
+    section: "Financeiro",
+    items: [
+      { key: "financeiro", label: "Financeiro",    icon: GiCash      },
+      { key: "banca_jogo", label: "Banca de Jogo", icon: GiPokerHand },
     ],
   },
   {
