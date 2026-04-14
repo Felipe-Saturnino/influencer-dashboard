@@ -238,22 +238,37 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Histórico completo das lives validadas na operação. Permite acompanhar o resultado final de cada ativação — duração, audiência e status — com visão consolidada por período.",
+          "Histórico completo das lives validadas na operação — realizadas e não realizadas. Permite acompanhar o resultado final de cada ativação por semana ou em todo o período, com visão consolidada dos indicadores de operação.",
+      },
+      {
+        subtitulo: "Navegação e Período",
+        texto:
+          "Use as setas para navegar entre semanas ou ative Histórico para ver todo o período disponível de uma vez. No modo Histórico, o comparativo por semana é desabilitado e todos os dados acumulados são exibidos.",
       },
       {
         subtitulo: "KPIs do Período",
         texto:
-          "No topo da página são exibidos os indicadores consolidados do período selecionado:\n\n— Total de Lives: quantidade total de lives no período, com breakdown entre realizadas e não realizadas.\n— Horas Realizadas: soma das durações de todas as lives realizadas.\n— Média de Views: média das médias de views por live no período.",
+          "Três indicadores consolidados no topo da página, calculados sobre as lives do período e filtros selecionados:\n\n— Total de Lives: quantidade de lives no período, com breakdown entre realizadas e não realizadas.\n— Horas Realizadas: soma das durações de todas as lives realizadas com resultado registrado.\n— Média de Views: média das médias de views por live realizada no período. Lives sem dado de views são excluídas deste cálculo.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Selecione o período de análise — Semana, Mês ou Tudo — e combine com os filtros de status (Realizada, Não Realizada), operadora e influencer para refinar a visualização.",
+          "Use os filtros de Status (Realizada, Não Realizada, Todos) para isolar o tipo de live que deseja visualizar. Para perfis com acesso a múltiplos influencers ou operadoras, os filtros correspondentes aparecem na segunda linha.\n\nO filtro de influencer permite selecionar um ou mais parceiros específicos. O filtro de operadora isola as lives vinculadas a uma operadora específica.",
       },
       {
         subtitulo: "Lista de Lives",
         texto:
-          "Cada live exibe data, horário, influencer, plataforma e os três indicadores de audiência: Duração, Média de Views e Pico de Views. Lives realizadas aparecem com destaque verde; não realizadas, com vermelho.\n\nInfluencers visualizam apenas as próprias lives. Gestores e admins visualizam todas.",
+          "Cada live exibe a plataforma, data, horário e nome do influencer. Lives realizadas mostram os dados de resultado — Duração, Média Views e Pico Views — em destaque colorido.\n\nLives com observação registrada exibem o campo abaixo dos dados principais. A borda lateral colorida indica o status: verde para realizada, vermelho para não realizada.",
+      },
+      {
+        subtitulo: "Editando uma Live",
+        texto:
+          "O botão Editar aparece para perfis com permissão de edição. O formulário permite ajustar o status, a operadora, a observação e os dados de resultado (duração, média e pico de views). A operadora é obrigatória para lives realizadas, pois é o dado usado pelo módulo Financeiro para calcular os pagamentos do ciclo correspondente.",
+      },
+      {
+        subtitulo: "Visibilidade por Perfil",
+        texto:
+          "Cada persona visualiza apenas as lives dentro do seu escopo: influencers veem as próprias lives, operadores veem as lives vinculadas à sua operadora, e gestores têm visão completa. O botão Editar e Excluir aparecem somente para quem tem as permissões correspondentes.",
       },
     ],
   },
@@ -554,22 +569,32 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       {
         subtitulo: "Nenhuma live aparece na lista?",
         texto:
-          "Verifique o filtro de período selecionado — o padrão pode estar limitando a visualização. Tente selecionar Tudo para ver o histórico completo. Lives só aparecem após serem validadas em Resultados.",
+          "Verifique o filtro de período selecionado — o padrão exibe a semana atual. Tente ativar Histórico para ver o acumulado completo. Lives só aparecem no Feedback após serem validadas em Resultados — lives com status Agendada não são exibidas aqui.",
       },
       {
         subtitulo: "Os KPIs do topo estão zerados?",
         texto:
-          "Indica que não há lives validadas no período selecionado. Ajuste o filtro de período ou verifique se as lives foram validadas em Resultados.",
+          "Indica que não há lives validadas no período ou filtros selecionados. Tente mudar o filtro de Status para 'Todos' ou ativar o Histórico para verificar se existem lives em outros períodos.",
       },
       {
         subtitulo: "Uma live específica não aparece?",
         texto:
-          "Confirme se o filtro de influencer ou operadora não está excluindo essa live. Se você tem perfil de influencer, só visualiza as próprias lives — lives de outros influencers não serão exibidas.",
+          "Confirme se o filtro de status, influencer ou operadora não está excluindo essa live. Se você tem perfil de influencer ou agência, só as lives do seu escopo são exibidas — lives de outros influencers não aparecem.\n\nVerifique também se a live foi validada em Resultados. Se ela ainda está como Agendada, não aparecerá no Feedback.",
       },
       {
         subtitulo: "A Média de Views está diferente do esperado?",
         texto:
-          "A métrica exibida é a média das médias por live, não a soma total de views. Cada live contribui com sua própria média de audiência para o cálculo.",
+          "A métrica exibida no topo é a média das médias por live — não a soma total de views. Cada live contribui com a própria média de audiência, e o KPI é a média dessas médias. Lives sem dado de views registrado são excluídas deste cálculo.",
+      },
+      {
+        subtitulo: "Não consigo editar uma live?",
+        texto:
+          "O botão Editar só aparece para perfis com permissão de edição. Se o botão não aparecer ou estiver desabilitado, seu perfil pode não ter essa permissão. Entre em contato com o administrador da conta.",
+      },
+      {
+        subtitulo: "A operadora não aparece na lista de opções ao editar?",
+        texto:
+          "O seletor de operadora exibe apenas as operadoras dentro do seu escopo de acesso. Se a operadora esperada não aparece, pode não estar atribuída ao seu perfil. Verifique com o administrador da conta.",
       },
     ],
   },
