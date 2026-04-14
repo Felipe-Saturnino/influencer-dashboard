@@ -8,7 +8,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
 import { Eye, History, Pencil, Send, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
-import { GiCardRandom, GiShield, GiFemale, GiMale, GiCardPick, GiCardAceSpades, GiCrown } from "react-icons/gi";
+import { GiCardRandom, GiShield, GiFemale, GiMale, GiCardPick, GiCardAceSpades } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -16,6 +16,9 @@ import { ModalSolicitacao } from "../solicitacoes/ModalSolicitacao";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
 import { corStatusSolicitacao, type SolicitacaoStatus, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
+
+/** Jogos no cadastro e filtros. `mesa_vip` pode existir no banco por legado; usar flag `vip` no cadastro. */
+type DealerJogoCadastro = Exclude<DealerJogo, "mesa_vip">;
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -26,8 +29,6 @@ const BRAND = {
   verde:    "#22c55e",
   amarelo:  "#f59e0b",
   cinza:    "#6b7280",
-  ouroEscuro: "#7c5e10",
-  ouroBorda: "#d4af37",
 } as const;
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -42,11 +43,10 @@ const TURNO_OPTS: { value: DealerTurno; label: string }[] = [
   { value: "noite", label: "Noite" },
 ];
 
-const JOGOS_OPTS: { value: DealerJogo; label: string }[] = [
+const JOGOS_OPTS: { value: DealerJogoCadastro; label: string }[] = [
   { value: "blackjack", label: "Blackjack" },
   { value: "roleta", label: "Roleta" },
   { value: "baccarat", label: "Baccarat" },
-  { value: "mesa_vip", label: "Mesa VIP" },
 ];
 
 function passaFiltroOperadora(d: Dealer, filtroOperadora: string): boolean {
@@ -64,11 +64,10 @@ const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
   masculino: <GiMale size={13} aria-hidden />,
 };
 
-const ICONE_JOGO: Record<DealerJogo, ReactNode> = {
+const ICONE_JOGO: Record<DealerJogoCadastro, ReactNode> = {
   blackjack: <GiCardPick size={13} aria-hidden />,
   roleta: <CircleDot size={13} aria-hidden strokeWidth={2.2} />,
   baccarat: <GiCardAceSpades size={13} aria-hidden />,
-  mesa_vip: <GiCrown size={13} aria-hidden />,
 };
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
@@ -133,7 +132,7 @@ export default function GestaoDealers() {
     return dealersPorOperadora.filter((d) => {
       if (filtroGenero !== "todos" && d.genero !== filtroGenero) return false;
       if (filtroTurno !== "todos" && d.turno !== filtroTurno) return false;
-      if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogo)) return false;
+      if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogoCadastro)) return false;
       if (q) {
         const nick = normalizarBuscaTexto(d.nickname ?? "");
         const nome = normalizarBuscaTexto(d.nome_real ?? "");
@@ -149,7 +148,7 @@ export default function GestaoDealers() {
       dealersPorOperadora.filter((d) => {
         if (filtroTurno !== "todos" && d.turno !== filtroTurno) return false;
         if (filtroGenero !== "todos" && d.genero !== filtroGenero) return false;
-        if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogo)) return false;
+        if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogoCadastro)) return false;
         return true;
       }).length,
     [dealersPorOperadora, filtroTurno, filtroGenero, filtroJogos]
@@ -160,7 +159,7 @@ export default function GestaoDealers() {
     const acc: Record<string, number> = { feminino: 0, masculino: 0 };
     dealersPorOperadora.forEach((d) => {
       if (filtroTurno !== "todos" && d.turno !== filtroTurno) return;
-      if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogo)) return;
+      if (filtroJogos !== "todos" && !(d.jogos ?? []).includes(filtroJogos as DealerJogoCadastro)) return;
       acc[d.genero] = (acc[d.genero] ?? 0) + 1;
     });
     return acc;
@@ -168,7 +167,7 @@ export default function GestaoDealers() {
 
   /** Contagens por jogo com turno + gênero + operadora (sem o filtro de jogo). */
   const porJogo = useMemo(() => {
-    const acc: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0, mesa_vip: 0 };
+    const acc: Record<string, number> = { blackjack: 0, roleta: 0, baccarat: 0 };
     dealersPorOperadora.forEach((d) => {
       if (filtroTurno !== "todos" && d.turno !== filtroTurno) return;
       if (filtroGenero !== "todos" && d.genero !== filtroGenero) return;
@@ -812,47 +811,25 @@ function DealerCard({
           {dealer.nome_real}
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12, alignItems: "center", alignContent: "flex-start" }}>
-          {(dealer.jogos ?? []).map((j) => {
-            const isMesaVip = j === "mesa_vip";
-            return (
-              <span
-                key={j}
-                style={
-                  isMesaVip
-                    ? {
-                        background: isDark
-                          ? "linear-gradient(135deg, rgba(251,191,36,0.22), rgba(180,83,9,0.18))"
-                          : "linear-gradient(135deg, rgba(253,230,138,0.55), rgba(251,191,36,0.28))",
-                        border: `1px solid ${isDark ? "#eab308" : BRAND.ouroBorda}`,
-                        boxShadow: isDark ? "0 0 0 1px rgba(251,191,36,0.12) inset" : "0 1px 2px rgba(180,83,9,0.12)",
-                        color: isDark ? "#fde68a" : BRAND.ouroEscuro,
-                        padding: "3px 10px",
-                        borderRadius: 20,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        fontFamily: FONT.body,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.03em",
-                        flexShrink: 0,
-                      }
-                    : {
-                        background: `${BRAND.vermelho}22`,
-                        border: `1px solid ${BRAND.vermelho}66`,
-                        color: BRAND.vermelho,
-                        padding: "3px 10px",
-                        borderRadius: 20,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        fontFamily: FONT.body,
-                        textTransform: "uppercase",
-                        flexShrink: 0,
-                      }
-                }
-              >
-                {JOGOS_OPTS.find((o) => o.value === j)?.label ?? j}
-              </span>
-            );
-          })}
+          {(dealer.jogos ?? []).filter((j): j is DealerJogoCadastro => j !== "mesa_vip").map((j) => (
+            <span
+              key={j}
+              style={{
+                background: `${BRAND.vermelho}22`,
+                border: `1px solid ${BRAND.vermelho}66`,
+                color: BRAND.vermelho,
+                padding: "3px 10px",
+                borderRadius: 20,
+                fontSize: 11,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                textTransform: "uppercase",
+                flexShrink: 0,
+              }}
+            >
+              {JOGOS_OPTS.find((o) => o.value === j)?.label ?? j}
+            </span>
+          ))}
         </div>
         {dealer.perfil_influencer ? (
           <p
@@ -1103,7 +1080,13 @@ function ModalVer({
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Jogos</span>
           <br />
-          <span style={{ fontSize: 14, color: t.text }}>{(dealer.jogos ?? []).map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label).join(", ") || "—"}</span>
+          <span style={{ fontSize: 14, color: t.text }}>
+            {(dealer.jogos ?? [])
+              .filter((j): j is DealerJogoCadastro => j !== "mesa_vip")
+              .map((j) => JOGOS_OPTS.find((o) => o.value === j)?.label)
+              .filter(Boolean)
+              .join(", ") || "—"}
+          </span>
         </div>
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span>
@@ -1164,7 +1147,9 @@ function ModalDealer({
   const [fotos, setFotos] = useState<string[]>(editando?.fotos ?? []);
   const [genero, setGenero] = useState<DealerGenero>(editando?.genero ?? "feminino");
   const [turno, setTurno] = useState<DealerTurno>(editando?.turno ?? "noite");
-  const [jogos, setJogos] = useState<DealerJogo[]>(editando?.jogos ?? []);
+  const [jogos, setJogos] = useState<DealerJogoCadastro[]>(() =>
+    (editando?.jogos ?? []).filter((j): j is DealerJogoCadastro => j !== "mesa_vip")
+  );
   const [operadoraSlug, setOperadoraSlug] = useState<string>(
     editando?.operadora_slug ?? operadoraTravada ?? ""
   );
@@ -1179,7 +1164,7 @@ function ModalDealer({
     if (operadoraTravada) setOperadoraSlug(operadoraTravada);
   }, [operadoraTravada]);
 
-  const toggleJogo = (j: DealerJogo) => {
+  const toggleJogo = (j: DealerJogoCadastro) => {
     setJogos((prev) => (prev.includes(j) ? prev.filter((x) => x !== j) : [...prev, j]));
   };
 
@@ -1351,12 +1336,15 @@ function ModalDealer({
             <label style={{ ...labelStyle, margin: 0 }}>Status</label>
             <button type="button" onClick={() => setStatus("aprovado")} style={{ padding: "6px 14px", borderRadius: 10, border: `1px solid ${status === "aprovado" ? BRAND.verde : t.cardBorder}`, background: status === "aprovado" ? `${BRAND.verde}22` : "transparent", color: status === "aprovado" ? BRAND.verde : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Aprovado</button>
             <button type="button" onClick={() => setStatus("pendente")} style={{ padding: "6px 14px", borderRadius: 10, border: `1px solid ${status === "pendente" ? BRAND.amarelo : t.cardBorder}`, background: status === "pendente" ? `${BRAND.amarelo}22` : "transparent", color: status === "pendente" ? BRAND.amarelo : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Pendente</button>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 12, fontFamily: FONT.body, fontSize: 13, color: t.text, cursor: "pointer" }}>
-              <input type="checkbox" checked={vip} onChange={(e) => setVip(e.target.checked)} />
-              VIP
-            </label>
           </div>
         )}
+
+        <div style={fieldStyle}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT.body, fontSize: 13, color: t.text, cursor: "pointer" }}>
+            <input type="checkbox" checked={vip} onChange={(e) => setVip(e.target.checked)} />
+            VIP
+          </label>
+        </div>
 
         {erro && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: BRAND.vermelho, marginBottom: 16, fontFamily: FONT.body }}>
