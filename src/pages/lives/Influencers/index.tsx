@@ -15,6 +15,7 @@ import OperadoraTag from "../../../components/OperadoraTag";
 import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { PlatLogo } from "../../../components/PlatLogo";
+import { CurrencyInput } from "../../../components/CurrencyInput";
 import { SelectComIcone } from "../../../components/dashboard";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
@@ -125,69 +126,6 @@ const emptyPerfil = (id: string): Perfil => ({
   canais: [], link_twitch: "", link_youtube: "", link_kick: "", link_instagram: "", link_tiktok: "", link_discord: "", link_whatsapp: "", link_telegram: "",
   cache_hora: 0, banco: "", agencia: "", conta: "", chave_pix: "",
 });
-
-function parseBRL(raw: string): number {
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return 0;
-  return parseInt(digits, 10) / 100;
-}
-
-function maskBRL(raw: string): string {
-  const digits = raw.replace(/\D/g, "").replace(/^0+/, "") || "0";
-  const num    = parseInt(digits, 10) / 100;
-  return fmtBRL(num);
-}
-
-// Input de moeda controlado
-function CurrencyInput({
-  value, onChange, style, placeholder, disabled,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  style?: CSSProperties;
-  placeholder?: string;
-  disabled?: boolean;
-}) {
-  const [display, setDisplay] = useState(value > 0 ? fmtBRL(value) : "");
-
-  useEffect(() => {
-    setDisplay(value > 0 ? fmtBRL(value) : "");
-  }, [value]);
-
-  if (disabled) {
-    return (
-      <input
-        type="text"
-        value={value > 0 ? fmtBRL(value) : ""}
-        readOnly
-        disabled
-        style={{ ...style, opacity: 0.8, cursor: "not-allowed" }}
-      />
-    );
-  }
-
-  return (
-    <input
-      type="text"
-      inputMode="numeric"
-      value={display}
-      placeholder={placeholder ?? "R$ 0,00"}
-      onChange={(e) => {
-        const masked = maskBRL(e.target.value);
-        setDisplay(masked);
-        onChange(parseBRL(masked));
-      }}
-      onFocus={(e) => {
-        if (!display) setDisplay(fmtBRL(0));
-        e.target.select();
-      }}
-      onBlur={() => {
-        if (value === 0) setDisplay("");
-      }}
-      style={style}
-    />
-  );
-}
 
 // ─── StatusBadge ─────────────────────────────────────────────────────────────
 interface StatusBadgeProps {

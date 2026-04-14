@@ -1,26 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { X, Eye, Pencil, Trash2, ChevronDown, Loader2 } from "lucide-react";
-import { GiSpyglass, GiEyeball, GiTwoCoins, GiPokerHand } from "react-icons/gi";
-
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-} as const;
+import { CurrencyInput } from "../../../components/CurrencyInput";
+import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2 } from "lucide-react";
 
 export type OperadoraScoutOpt = { slug: string; nome: string };
 
@@ -50,6 +39,10 @@ const STATUS_SCOUT_COLOR: Record<StatusScout, string> = {
 };
 
 const CATEGORIAS = ["Vida Real", "Jogos Populares", "Variedades", "Esportes", "Cassino"] as const;
+
+const CTA_GRADIENT_FALLBACK = "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
+const SLIDER_TRACK_FALLBACK = "linear-gradient(90deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
+const SLIDER_THUMB_FALLBACK = "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
 
 // Métrica exibida por plataforma (apenas front — não altera DB)
 const PLAT_METRICA: Record<string, string> = {
@@ -192,8 +185,7 @@ function StatusScoutBadge({ value, onChange, readonly }: { value: StatusScout; o
       <button
         type="button"
         onClick={() => { if (!readonly) setOpen((o) => !o); }}
-        aria-haspopup="menu"
-        aria-expanded={open}
+        {...(!readonly ? { "aria-haspopup": "menu" as const, "aria-expanded": open } : {})}
         aria-label={`Status: ${STATUS_SCOUT_LABEL[value]}`}
         style={{ padding: "4px 12px", borderRadius: 20, border: `1.5px solid ${color}`, background: `${color}18`, color, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: readonly ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5 }}
       >
@@ -259,7 +251,12 @@ export default function Scout() {
   const filtered = list.filter((s) => {
     const q = search.toLowerCase();
     if (search && !(s.nome_artistico ?? "").toLowerCase().includes(q) && !(s.email ?? "").toLowerCase().includes(q)) return false;
-    if (filterStatus !== "todos" && s.status !== filterStatus) return false;
+    // Vista padrão ("todos"): não listar fechados — só aparecem ao filtrar explicitamente por Fechado.
+    if (filterStatus === "todos") {
+      if (s.status === "fechado") return false;
+    } else if (s.status !== filterStatus) {
+      return false;
+    }
     if (filterPlat !== "todas" && !(s.plataformas ?? []).includes(filterPlat)) return false;
     if (cacheMax > 0 && toCacheNumber(s.cache_negociado) > cacheLimit) return false;
     if (viewsMax > 0 && getViewsTotal(s) > viewsLimit) return false;
@@ -345,7 +342,7 @@ export default function Scout() {
   }
 
   if (perm.canView === "nao") {
-    return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar a página Scout.</div>;
+    return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar este dashboard.</div>;
   }
 
   // Ordem canônica das plataformas para os chips
@@ -356,7 +353,7 @@ export default function Scout() {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: brand.primaryIconBg, border: brand.primaryIconBorder, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: brand.primaryIconColor }}>
-            <GiSpyglass size={14} />
+            <Search size={14} aria-hidden="true" />
           </div>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>Scout</h1>
@@ -365,10 +362,11 @@ export default function Scout() {
         </div>
         {perm.canCriarOk && (
           <button
+            type="button"
             onClick={() => setModalNovo(true)}
             style={{
               padding: "10px 18px", borderRadius: 10, border: "none", cursor: "pointer",
-              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : CTA_GRADIENT_FALLBACK,
               color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
             }}
           >
@@ -483,13 +481,13 @@ export default function Scout() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body }}>
-                  <GiTwoCoins size={13} style={{ color: brand.secondary }} /> Cachê por Hora — até
+                  <Coins size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Cachê por Hora — até
                 </span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>{(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : fmtBRL(cacheLimit) + "/h"}</span>
               </div>
               <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
                 <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
-                <div style={{ position: "absolute", left: 0, width: `${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}%`, height: 4, borderRadius: 2, background: brand.useBrand ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+                <div style={{ position: "absolute", left: 0, width: `${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}%`, height: 4, borderRadius: 2, background: brand.useBrand ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))" : SLIDER_TRACK_FALLBACK }} />
                 <input
                   type="range"
                   min={0}
@@ -504,7 +502,7 @@ export default function Scout() {
                   aria-valuetext={(cacheMax <= 0 || cacheLimit >= cacheMax) ? "Todos" : `Até ${fmtBRL(cacheLimit)}/h`}
                   style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }}
                 />
-                <div style={{ position: "absolute", left: `calc(${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+                <div style={{ position: "absolute", left: `calc(${(cacheMax > 0 ? cacheLimit / cacheMax : 1) * 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : SLIDER_THUMB_FALLBACK, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
                 <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>R$ 0</span>
@@ -514,13 +512,13 @@ export default function Scout() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: brand.secondary, fontFamily: FONT.body }}>
-                  <GiEyeball size={13} style={{ color: brand.secondary }} /> Views — até
+                  <Eye size={13} aria-hidden="true" style={{ color: brand.secondary }} /> Views — até
                 </span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: brand.accent, fontFamily: FONT.body }}>{viewsMax <= 0 || viewsLimit >= viewsMax ? "Todos" : viewsLimit.toLocaleString("pt-BR")}</span>
               </div>
               <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center" }}>
                 <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: t.cardBorder }} />
-                <div style={{ position: "absolute", left: 0, width: `${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}%`, height: 4, borderRadius: 2, background: brand.useBrand ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(90deg, ${BRAND.roxo}, ${BRAND.azul})` }} />
+                <div style={{ position: "absolute", left: 0, width: `${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}%`, height: 4, borderRadius: 2, background: brand.useBrand ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))" : SLIDER_TRACK_FALLBACK }} />
                 <input
                   type="range"
                   min={0}
@@ -535,7 +533,7 @@ export default function Scout() {
                   aria-valuetext={(viewsMax <= 0 || viewsLimit >= viewsMax) ? "Todos" : `Até ${viewsLimit.toLocaleString("pt-BR")} views`}
                   style={{ position: "absolute", width: "100%", opacity: 0, cursor: "pointer", height: 20, zIndex: 2 }}
                 />
-                <div style={{ position: "absolute", left: `calc(${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
+                <div style={{ position: "absolute", left: `calc(${viewsMax > 0 ? (viewsLimit / viewsMax) * 100 : 100}% - 8px)`, width: 16, height: 16, borderRadius: "50%", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : SLIDER_THUMB_FALLBACK, border: "2px solid white", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", pointerEvents: "none", zIndex: 3 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
                 <span style={{ fontSize: "11px", color: t.textMuted, fontFamily: FONT.body }}>0</span>
@@ -549,7 +547,7 @@ export default function Scout() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="🔍 Buscar por nome ou e-mail..."
+              placeholder="Buscar por nome ou e-mail..."
               style={{
                 width: "100%", boxSizing: "border-box", padding: "10px 16px",
                 borderRadius: 12, border: `1px solid ${t.cardBorder}`,
@@ -609,7 +607,7 @@ export default function Scout() {
             aria-label="Fechar erro"
             style={{ background: "none", border: "none", cursor: "pointer", color: BRAND.vermelho, display: "flex" }}
           >
-            <X size={14} />
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -626,7 +624,7 @@ export default function Scout() {
           return (
             <div key={s.id} style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: "18px 20px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", boxShadow: "0 4px 20px rgba(0,0,0,0.18)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : CTA_GRADIENT_FALLBACK, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, fontFamily: FONT.body }}>
                   {(s.nome_artistico || "?")[0]?.toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -654,7 +652,14 @@ export default function Scout() {
                           </span>
                         );
                         return link?.trim() ? (
-                          <a key={p} href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                          <a
+                            key={p}
+                            href={link.startsWith("http") ? link : `https://${link}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Ver canal ${p} (abre em nova aba)`}
+                            style={{ textDecoration: "none" }}
+                          >
                             {conteudo}
                           </a>
                         ) : (
@@ -665,17 +670,17 @@ export default function Scout() {
                   )}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {s.operadora_slug && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: `${BRAND.azul}18`, border: `1px solid ${BRAND.azul}44`, fontSize: 11, fontWeight: 600, color: BRAND.azul, fontFamily: FONT.body }}>
-                        <GiPokerHand size={11} /> {operadorasOpt.find((o) => o.slug === s.operadora_slug)?.nome ?? s.operadora_slug}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: "color-mix(in srgb, var(--brand-accent, #1e36f8) 15%, transparent)", border: "1px solid color-mix(in srgb, var(--brand-accent, #1e36f8) 35%, transparent)", fontSize: 11, fontWeight: 600, color: "var(--brand-accent, #1e36f8)", fontFamily: FONT.body }}>
+                        <Building2 size={11} aria-hidden="true" /> {operadorasOpt.find((o) => o.slug === s.operadora_slug)?.nome ?? s.operadora_slug}
                       </span>
                     )}
                     {toCacheNumber(s.cache_negociado) > 0 && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: `${BRAND.roxo}18`, border: `1px solid ${BRAND.roxo}44`, fontSize: 11, fontWeight: 600, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)", border: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)", fontSize: 11, fontWeight: 600, color: "var(--brand-primary, #7c3aed)", fontFamily: FONT.body }}>
                         {fmtBRL(toCacheNumber(s.cache_negociado))}
                       </span>
                     )}
                     {s.live_cassino === "sim" && (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: `${BRAND.azul}18`, border: `1px solid ${BRAND.azul}44`, fontSize: 11, fontWeight: 600, color: BRAND.azul, fontFamily: FONT.body }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: "color-mix(in srgb, var(--brand-accent, #1e36f8) 15%, transparent)", border: "1px solid color-mix(in srgb, var(--brand-accent, #1e36f8) 35%, transparent)", fontSize: 11, fontWeight: 600, color: "var(--brand-accent, #1e36f8)", fontFamily: FONT.body }}>
                         Live Cassino
                       </span>
                     )}
@@ -683,12 +688,22 @@ export default function Scout() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button onClick={() => setModal({ mode: "visualizar", scout: s })} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                  <Eye size={13} /> Ver
+                <button
+                  type="button"
+                  onClick={() => setModal({ mode: "visualizar", scout: s })}
+                  aria-label={`Ver prospecto ${s.nome_artistico}`}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
+                >
+                  <Eye size={13} aria-hidden="true" /> Ver
                 </button>
                 {podeEditarScout(s) && (
-                  <button onClick={() => setModal({ mode: "editar", scout: s })} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
-                    <Pencil size={13} /> Editar
+                  <button
+                    type="button"
+                    onClick={() => setModal({ mode: "editar", scout: s })}
+                    aria-label={`Editar prospecto ${s.nome_artistico}`}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : CTA_GRADIENT_FALLBACK, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}
+                  >
+                    <Pencil size={13} aria-hidden="true" /> Editar
                   </button>
                 )}
               </div>
@@ -713,11 +728,18 @@ export default function Scout() {
 // ─── Modal Visualizar ─────────────────────────────────────────────────────────
 function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: ScoutInfluencer; operadorasList: OperadoraScoutOpt[]; onClose: () => void; isDark?: boolean }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
   const [anotacoes, setAnotacoes] = useState<ScoutAnotacao[]>([]);
-  const labelStyle: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
-  const row: React.CSSProperties = { marginBottom: 14 };
+  const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
+  const row: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | number | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v ?? "—"}</span>;
+  const tabActiveBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-primary) 15%, transparent)"
+    : `${BRAND.roxoVivo}22`;
+
+  useEffect(() => { containerRef.current?.focus(); }, []);
 
   useEffect(() => {
     if (scout?.id) {
@@ -739,24 +761,36 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}>
+      <div
+        ref={containerRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-scout-viz-title"
+        style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "92vh", overflowY: "auto" }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>{scout.nome_artistico}</h2>
+            <h2 id="modal-scout-viz-title" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>{scout.nome_artistico}</h2>
             <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, background: `${STATUS_SCOUT_COLOR[scout.status]}22`, color: STATUS_SCOUT_COLOR[scout.status], fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>{STATUS_SCOUT_LABEL[scout.status]}</span>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-            <X size={18} />
+          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: `${BRAND.azul}0d`, border: `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
-          <Eye size={13} color={BRAND.azul} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.azul}0d`, border: brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-accent) 20%, transparent)" : `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
+          <Eye size={13} aria-hidden="true" style={{ color: brand.accent, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura.</span>
         </div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
           {(["contato", "canais", "anotacoes"] as const).map((tb) => (
-            <button key={tb} onClick={() => setTab(tb)}
-              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+            <button
+              key={tb}
+              type="button"
+              aria-pressed={tab === tb}
+              onClick={() => setTab(tb)}
+              style={{ padding: "7px 14px", borderRadius: 20, flexShrink: 0, border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`, background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
+            >
               {tb === "contato" ? "Contato" : tb === "canais" ? "Canais" : "Anotações"}
             </button>
           ))}
@@ -787,7 +821,7 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
                       <PlatLogo plataforma={p} size={14} isDark={isDark ?? false} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {link ? (
-                          <a href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: PLAT_COLOR[plat], fontFamily: FONT.body, fontWeight: 600, textDecoration: "none", wordBreak: "break-all" }}>{link}</a>
+                          <a href={link.startsWith("http") ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" aria-label={`Ver canal ${p} (abre em nova aba)`} style={{ fontSize: 13, color: PLAT_COLOR[plat], fontFamily: FONT.body, fontWeight: 600, textDecoration: "none", wordBreak: "break-all" }}>{link}</a>
                         ) : (
                           <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Sem link</span>
                         )}
@@ -824,6 +858,11 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
 // ─── Modal Editar ─────────────────────────────────────────────────────────────
 function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: { scout: ScoutInfluencer | null; operadorasList: OperadoraScoutOpt[]; perm: Permissoes; onClose: () => void; onSaved: () => void; isDark?: boolean }) {
   const { theme: t, user } = useApp();
+  const brand = useDashboardBrand();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tabActiveBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-primary) 15%, transparent)"
+    : `${BRAND.roxoVivo}22`;
   const [tab, setTab] = useState<"contato" | "canais" | "anotacoes">("contato");
   const [nomeArtistico, setNomeArtistico] = useState(scout?.nome_artistico ?? "");
   const [status, setStatus] = useState<StatusScout>(scout?.status ?? "visualizado");
@@ -907,6 +946,8 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
         });
     } else setAnotacoes([]);
   }, [scout?.id]);
+
+  useEffect(() => { containerRef.current?.focus(); }, []);
 
   const togglePlataforma = (p: string) => {
     setPlataformas((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -1125,25 +1166,32 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
     }
   }
 
-  const inputStyle: React.CSSProperties = {
+  const inputStyle: CSSProperties = {
     width: "100%", boxSizing: "border-box", padding: "10px 14px",
     borderRadius: 10, border: `1px solid ${t.cardBorder}`,
     background: t.inputBg ?? t.cardBg, color: t.text,
     fontSize: 13, fontFamily: FONT.body, outline: "none",
   };
-  const labelStyle: React.CSSProperties = {
+  const labelStyle: CSSProperties = {
     display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "1.1px",
     textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
-  const row: React.CSSProperties = { marginBottom: 14 };
+  const row: CSSProperties = { marginBottom: 14 };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 540, maxHeight: "92vh", overflowY: "auto" }}>
+      <div
+        ref={containerRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-scout-edit-title"
+        style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 540, maxHeight: "92vh", overflowY: "auto" }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>{scout ? "Editar" : "Novo"} Prospecto</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-            <X size={18} />
+          <h2 id="modal-scout-edit-title" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>{scout ? "Editar" : "Novo"} Prospecto</h2>
+          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -1160,18 +1208,43 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
           </select>
         </div>
 
-        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "nowrap", overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
           {(["contato", "canais", "anotacoes"] as const).map((tb) => (
-            <button key={tb} onClick={() => setTab(tb)}
-              style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${tab === tb ? BRAND.roxoVivo : t.cardBorder}`, background: tab === tb ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: tab === tb ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}>
+            <button
+              key={tb}
+              type="button"
+              aria-pressed={tab === tb}
+              onClick={() => setTab(tb)}
+              style={{ padding: "7px 14px", borderRadius: 20, flexShrink: 0, border: `1px solid ${tab === tb ? brand.primary : t.cardBorder}`, background: tab === tb ? tabActiveBg : (t.inputBg ?? t.cardBg), color: tab === tb ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
+            >
               {tb === "contato" ? "Contato" : tb === "canais" ? "Canais" : "Anotações"}
             </button>
           ))}
         </div>
 
         {error && (
-          <div style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
-            {error}
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              background: `${BRAND.vermelho}18`,
+              border: `1px solid ${BRAND.vermelho}44`,
+              color: BRAND.vermelho,
+              borderRadius: 10,
+              padding: "10px 14px",
+              fontSize: 13,
+              marginBottom: 14,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+            }}
+          >
+            <span>{error}</span>
+            <button type="button" onClick={() => setError("")} aria-label="Fechar erro" style={{ background: "none", border: "none", cursor: "pointer", color: BRAND.vermelho, display: "flex", flexShrink: 0 }}>
+              <X size={14} aria-hidden="true" />
+            </button>
           </div>
         )}
 
@@ -1200,7 +1273,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
             )}
             <div style={row}>
               <label style={labelStyle}>Cachê Negociado (R$)</label>
-              <input type="number" value={cacheNegociado || ""} onChange={(e) => setCacheNegociado(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} placeholder="0" min={0} />
+              <CurrencyInput value={cacheNegociado} onChange={(v) => setCacheNegociado(Math.max(0, v))} style={inputStyle} ariaLabel="Cachê negociado por hora" />
             </div>
             <div style={row}>
               <label style={labelStyle}>Live Cassino</label>
@@ -1243,7 +1316,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                 {PLATAFORMAS.map((p) => {
                   const ativo = plataformas.includes(p);
                   return (
-                    <button key={p} onClick={() => togglePlataforma(p)}
+                    <button key={p} type="button" onClick={() => togglePlataforma(p)}
                       style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 20, cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : (t.inputBg ?? t.cardBg), color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
                       <PlatLogo plataforma={p} size={13} isDark={isDark ?? false} /> {p}
                     </button>
@@ -1272,8 +1345,8 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                 {CATEGORIAS.map((c) => {
                   const sel = categorias.includes(c);
                   return (
-                    <button key={c} onClick={() => toggleCategoria(c)}
-                      style={{ padding: "6px 12px", borderRadius: 16, cursor: "pointer", border: `1px solid ${sel ? BRAND.roxoVivo : t.cardBorder}`, background: sel ? `${BRAND.roxoVivo}22` : (t.inputBg ?? t.cardBg), color: sel ? BRAND.roxoVivo : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
+                    <button key={c} type="button" onClick={() => toggleCategoria(c)}
+                      style={{ padding: "6px 12px", borderRadius: 16, cursor: "pointer", border: `1px solid ${sel ? brand.primary : t.cardBorder}`, background: sel ? tabActiveBg : (t.inputBg ?? t.cardBg), color: sel ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
                       {c}
                     </button>
                   );
@@ -1288,7 +1361,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
             <div style={row}>
               <label style={labelStyle}>Nova Anotação</label>
               <textarea value={novoTextoAnotacao} onChange={(e) => setNovoTextoAnotacao(e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} placeholder="Digite sua anotação..." />
-              <button onClick={handleAddAnotacao} disabled={!novoTextoAnotacao.trim()} style={{ marginTop: 8, padding: "8px 16px", borderRadius: 10, border: "none", cursor: novoTextoAnotacao.trim() ? "pointer" : "not-allowed", background: BRAND.azul, color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
+              <button type="button" onClick={() => void handleAddAnotacao()} disabled={!novoTextoAnotacao.trim()} style={{ marginTop: 8, padding: "8px 16px", borderRadius: 10, border: "none", cursor: novoTextoAnotacao.trim() ? "pointer" : "not-allowed", background: "var(--brand-accent, #1e36f8)", color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: FONT.body }}>
                 Adicionar Anotação
               </button>
             </div>
@@ -1332,9 +1405,9 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
             </button>
           )}
           <div style={{ flex: 1, minWidth: 0 }} />
-          <button onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
+          <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
           <button type="button" onClick={() => void handleSave()} disabled={saving}
-            style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
+            style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : CTA_GRADIENT_FALLBACK, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
             {saving && criandoUsuario ? (
               <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" /> Criando usuário...</>
             ) : saving ? (

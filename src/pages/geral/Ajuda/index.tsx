@@ -321,32 +321,37 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Pipeline de prospecção de novos influencers. Registre candidatos, acompanhe o andamento das negociações e mantenha o histórico de contatos em um só lugar.",
+          "Funil de prospecção para registrar e acompanhar candidatos a parcerias. Centraliza todas as informações de contato, negociação e plataformas de cada prospecto — e quando a parceria é fechada, cria automaticamente o usuário do influencer na plataforma.",
       },
       {
         subtitulo: "Funil de Prospecção",
         texto:
-          "Os cards no topo mostram quantos prospectos estão em cada etapa do funil:\n\n— Visualizado: perfil identificado, ainda sem contato iniciado\n— Contato: abordagem realizada, aguardando resposta\n— Negociação: condições sendo discutidas\n— Fechado: parceria confirmada",
+          "Os quatro cards no topo mostram a distribuição dos prospectos por etapa do funil:\n\n— Visualizado: primeiro contato identificado, informações básicas coletadas\n— Contato: negociação em andamento, dados de contato registrados\n— Negociação: proposta enviada, cachê em discussão\n— Fechado: parceria confirmada — o prospecto vira influencer ativo na plataforma",
       },
       {
-        subtitulo: "Cobertura de Plataformas",
+        subtitulo: "Grade de Plataformas",
         texto:
-          "Exibe quantos prospectos estão cadastrados por plataforma — Twitch, YouTube, Instagram, TikTok, Kick, Discord, WhatsApp e Telegram. Útil para identificar gaps de cobertura na estratégia de prospecção.",
+          "Abaixo do funil, a grade de Cobertura de Plataformas exibe quantos prospectos estão cadastrados em cada plataforma. Clique em uma plataforma para filtrar a lista — clique de novo para remover o filtro.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Localize prospectos rapidamente combinando os filtros disponíveis:\n\n— Busca: por nome ou e-mail\n— Status: etapa do funil\n— Plataforma: canal de atuação\n— Cachê por hora: faixa de orçamento negociado\n— Views: faixa de audiência média",
+          "Combine os filtros para localizar prospectos:\n\n— Status: filtrar por etapa do funil\n— Cachê por hora: slider para encontrar prospectos dentro de uma faixa de cachê negociado\n— Views: slider para filtrar por volume de audiência\n— Busca: por nome artístico ou e-mail",
       },
       {
-        subtitulo: "Lista de Prospectos",
+        subtitulo: "Cadastrando e Editando um Prospecto",
         texto:
-          "Cada prospecto exibe nome, status atual, plataformas com média de views, cachê negociado e categoria. O status pode ser atualizado diretamente no card, sem abrir o perfil completo.",
+          "Clique em + Adicionar para registrar um novo prospecto. O formulário tem três abas:\n\n— Contato: dados de negociação — tipo de contato (agente, plataforma ou direto), nome do agente, telefone, cachê negociado, Live Cassino, e-mail e operadora da parceria\n— Canais: plataformas ativas com link e métrica de audiência (views ou seguidores), além das categorias de conteúdo\n— Anotações: histórico de observações sobre o prospecto, com registro de data e usuário\n\nO status pode ser alterado diretamente no formulário ou no badge do card na lista.",
       },
       {
-        subtitulo: "Adicionando e Editando um Prospecto",
+        subtitulo: "Fechando uma Parceria",
         texto:
-          "Clique em + Adicionar para registrar um novo candidato. O modal é organizado em três abas:\n\n— Contato: nome artístico, status no funil, tipo de contato, cachê negociado, categoria e e-mail\n— Canais: plataformas em que o prospecto atua e métricas de audiência\n— Anotações: campo livre para registrar observações sobre a negociação\n\nApenas admins e gestores podem adicionar e editar prospectos.",
+          "Ao marcar um prospecto como Fechado, a plataforma cria automaticamente o usuário do influencer com o e-mail cadastrado, vincula a operadora selecionada ao perfil e configura o escopo de acesso. Esse processo requer que os seguintes campos estejam preenchidos:\n\n— Nome artístico e e-mail\n— Cachê negociado (deve ser maior que zero)\n— Operadora da parceria\n— Pelo menos uma plataforma com link e views preenchidos\n\nDurante o fechamento, o botão Salvar exibe 'Criando usuário...' enquanto o processo é concluído. Não feche o modal até que a confirmação apareça.",
+      },
+      {
+        subtitulo: "Anotações",
+        texto:
+          "A aba Anotações no modal de edição permite registrar observações sobre cada prospecto ao longo do processo de prospecção. Cada anotação fica vinculada ao usuário que a criou e exibe data e hora do registro. As anotações são visíveis tanto no modal de edição quanto no modal de visualização.",
       },
     ],
   },
@@ -657,24 +662,34 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
     titulo: "Scout",
     blocos: [
       {
-        subtitulo: "Um prospecto não aparece na lista?",
+        subtitulo: "Nenhum prospecto aparece na lista?",
         texto:
-          "Verifique se o filtro de status não está ocultando a etapa onde ele se encontra. Se o filtro de plataforma ou cachê estiver ativo, também pode estar excluindo o prospecto da visualização.",
+          "Verifique se os filtros de status, plataforma, cachê ou views estão limitando a lista. Clique em 'Limpar filtros' para remover todos. Se o chip de uma plataforma estiver selecionado na grade de Cobertura, ele também está filtrando a lista.",
       },
       {
-        subtitulo: "O funil não está refletindo a quantidade correta de prospectos?",
+        subtitulo: "Não consigo fechar a parceria — aparece uma mensagem de erro?",
         texto:
-          "Os cards do funil respondem aos filtros aplicados. Com filtros ativos, os totais exibidos representam apenas os prospectos que atendem aos critérios selecionados — não o total geral.",
+          "Para marcar como Fechado, todos estes campos são obrigatórios:\n\n— Nome artístico e e-mail\n— Cachê negociado maior que zero\n— Operadora da parceria (aba Contato)\n— Pelo menos uma plataforma com link e views preenchidos (aba Canais)\n\nA mensagem de erro indica qual campo está faltando. Acesse a aba correspondente, preencha o campo e tente novamente.",
       },
       {
-        subtitulo: "Não consigo adicionar ou editar um prospecto?",
+        subtitulo: "O botão ficou em 'Criando usuário...' por muito tempo?",
         texto:
-          "O Scout é restrito a admins e gestores. Se você não tem esse perfil, o botão de adição e edição não estará disponível.",
+          "O fechamento de uma parceria envolve a criação do usuário na plataforma, o vínculo com a operadora e a configuração do escopo de acesso. Esse processo pode levar alguns segundos em conexões lentas. Se o processo falhar, uma mensagem de erro aparecerá no formulário — anote o erro e entre em contato com a equipe técnica.",
       },
       {
-        subtitulo: "Quero converter um prospecto em influencer ativo. Como faço?",
+        subtitulo: "Não vejo o botão Editar em um prospecto?",
         texto:
-          "Após fechar a parceria, o prospecto precisa ser cadastrado manualmente na página Influencers. O Scout não realiza essa conversão automaticamente.",
+          "O botão Editar aparece apenas para quem criou o prospecto ou para perfis com permissão de edição ampla. Se você não criou o prospecto e não vê o botão, entre em contato com o administrador para verificar suas permissões.",
+      },
+      {
+        subtitulo: "Um prospecto fechado aparece aqui mas não na página de Influencers?",
+        texto:
+          "Isso pode indicar que o processo de criação de usuário não foi concluído — o e-mail pode já estar em uso ou ter ocorrido um erro durante o fechamento. Verifique se o influencer foi criado na Gestão de Usuários. Se não foi, edite o prospecto, corrija os dados necessários e tente marcar como Fechado novamente.",
+      },
+      {
+        subtitulo: "Posso editar um prospecto já Fechado?",
+        texto:
+          "Sim — é possível editar os dados de contato, canais e anotações mesmo após o fechamento. Alterar o status de Fechado para outro status não desfaz a criação do usuário — o influencer continua ativo na plataforma.",
       },
     ],
   },
