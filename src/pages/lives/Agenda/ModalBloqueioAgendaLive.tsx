@@ -1,14 +1,9 @@
+import { useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { X } from "lucide-react";
-import { GiFilmProjector } from "react-icons/gi";
-
-const BRAND = {
-  roxo: "#4a2082",
-  azul: "#1e36f8",
-  vermelho: "#e84025",
-} as const;
+import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
+import { X, AlertCircle } from "lucide-react";
 
 export type ModalBloqueioAgendaContexto = "agenda" | "emitir_link";
 
@@ -52,6 +47,16 @@ export default function ModalBloqueioAgendaLive({
   onIrPlaybook,
 }: Props) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const id = window.requestAnimationFrame(() => {
+      panelRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [open]);
 
   if (!open) return null;
 
@@ -72,14 +77,20 @@ export default function ModalBloqueioAgendaLive({
       }}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-bloqueio-agenda-title"
         style={{
           background: t.cardBg,
           border: `1px solid ${t.cardBorder}`,
           borderRadius: 20,
-          padding: 28,
+          padding: "clamp(16px, 4vw, 28px)",
           width: "100%",
           maxWidth: 440,
           boxShadow: "0 16px 48px rgba(0,0,0,0.35)",
+          outline: "none",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
@@ -89,18 +100,18 @@ export default function ModalBloqueioAgendaLive({
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                background: `${BRAND.vermelho}18`,
-                border: `1px solid ${BRAND.vermelho}40`,
+                background: brand.primaryIconBg,
+                border: brand.primaryIconBorder,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: BRAND.vermelho,
                 flexShrink: 0,
               }}
             >
-              <GiFilmProjector size={18} />
+              <AlertCircle size={18} color={BRAND.vermelho} aria-hidden="true" />
             </span>
             <h2
+              id="modal-bloqueio-agenda-title"
               style={{
                 margin: 0,
                 fontSize: 15,
@@ -163,7 +174,7 @@ export default function ModalBloqueioAgendaLive({
                 borderRadius: 10,
                 border: "none",
                 cursor: "pointer",
-                background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                background: brand.useBrand ? "var(--brand-accent)" : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))",
                 color: "#fff",
                 fontSize: 13,
                 fontWeight: 700,
@@ -180,10 +191,10 @@ export default function ModalBloqueioAgendaLive({
               style={{
                 padding: "12px 16px",
                 borderRadius: 10,
-                border: `1px solid ${BRAND.azul}`,
+                border: `1px solid var(--brand-accent, ${BRAND.azul})`,
                 cursor: "pointer",
-                background: `${BRAND.azul}14`,
-                color: BRAND.azul,
+                background: `color-mix(in srgb, var(--brand-accent, ${BRAND.azul}) 14%, transparent)`,
+                color: "var(--brand-accent, #1e36f8)",
                 fontSize: 13,
                 fontWeight: 700,
                 fontFamily: FONT.body,

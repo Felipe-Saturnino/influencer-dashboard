@@ -164,27 +164,37 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Calendário completo das lives da operação. Permite visualizar, criar e acompanhar todas as ativações agendadas por influencer, plataforma e operadora.",
+          "Calendário central de todas as lives da operação. Permite visualizar, agendar e acompanhar ativações — passadas, presentes e futuras — de todos os influencers, plataformas e operadoras. O acesso e as ações disponíveis variam conforme o perfil do usuário.",
       },
       {
-        subtitulo: "Visualização do Calendário",
+        subtitulo: "Modos de Visualização",
         texto:
-          "A agenda pode ser exibida em três modos: Mensal, Semanal ou Diário. Use as setas para navegar entre períodos ou clique em Hoje para voltar à data atual.\n\nCada live é exibida no dia correspondente com seu status identificado por cor: Agendada (roxo), Realizada (verde) e Não Realizada (vermelho).",
+          "A agenda oferece três modos de visualização, selecionáveis no menu 'Mês / Semana / Dia':\n\n— Mês: visão completa do calendário com todas as lives do período. Clique em qualquer dia para abrir a visualização diária.\n— Semana: exibe os sete dias da semana atual em colunas, com todas as lives de cada dia.\n— Dia: lista detalhada de todas as lives de um dia específico, com plataforma, horário, status e link.",
       },
       {
-        subtitulo: "Filtros",
+        subtitulo: "Navegação e Filtros",
         texto:
-          "Use os filtros no topo para segmentar a visualização por influencer, operadora e plataforma (Twitch, YouTube, Instagram, TikTok, Kick, Discord, WhatsApp ou Telegram). Os filtros de status permitem ocultar ou destacar lives por situação.",
+          "Use as setas para avançar ou recuar no período, ou clique em Hoje para voltar à data atual.\n\nOs filtros de Status (Agendada, Realizada, Não Realizada) e Plataforma permitem isolar tipos específicos de lives. Para perfis com acesso a múltiplos influencers ou operadoras, os filtros correspondentes aparecem na barra de controles.\n\nClique em qualquer filtro ativo para desativá-lo, ou use o botão Limpar filtros para remover todos de uma vez.",
       },
       {
         subtitulo: "Criando uma Nova Live",
         texto:
-          "Clique em + Nova Live para abrir o modal de criação. Preencha:\n\n— Influencer: selecione o parceiro responsável pela live\n— Data e Horário: quando a live está programada\n— Plataforma: Twitch, YouTube, Instagram, TikTok, Kick, Discord, WhatsApp ou Telegram\n— Link: o campo de link é exibido automaticamente para a plataforma selecionada e é obrigatório para salvar a live",
+          "Clique em + Nova Live para abrir o formulário de criação. Preencha:\n\n— Influencer: selecione o parceiro responsável (disponível para gestores e operadores)\n— Data e Horário: quando a live está programada\n— Plataforma: o canal de transmissão (Twitch, YouTube, Instagram, TikTok, Kick, Discord, WhatsApp ou Telegram)\n— Link: o campo de link é obrigatório para salvar — é pré-preenchido automaticamente com o link do perfil do influencer quando disponível\n\nInfluencers e operadores só podem agendar lives a partir do dia seguinte — não é permitido agendar para o mesmo dia. Apenas Admin e Gestor podem criar ou editar lives em datas passadas.",
       },
       {
-        subtitulo: "Permissões",
+        subtitulo: "Editando ou Excluindo uma Live",
         texto:
-          "Todos os perfis podem criar lives. Influencers visualizam apenas as próprias lives na agenda — gestores e admins visualizam todas.",
+          "Clique em qualquer live no calendário para abrir o modal com os detalhes. Se você tiver permissão de edição, os campos estarão disponíveis para alteração.\n\nLives com status Realizada ou Não Realizada só podem ser editadas ou excluídas por Admin e Gestor — para os demais perfis, o modal abre em modo leitura.",
+      },
+      {
+        subtitulo: "Identificação Visual das Lives",
+        texto:
+          "Cada live no calendário exibe:\n\n— Cor do ponto de status: azul (Agendada), verde (Realizada) ou vermelho (Não Realizada)\n— Logo da plataforma\n— Horário e nome do influencer\n\nAs células do calendário mensal também variam de cor conforme o dia: azul claro para hoje, tom esverdeado para dias futuros e tom avermelhado para dias passados.",
+      },
+      {
+        subtitulo: "Visibilidade por Perfil",
+        texto:
+          "— Influencer / Agência: visualiza e agenda apenas as próprias lives ou as dos influencers sob sua gestão.\n— Operador: visualiza todas as lives dos influencers que atuam na sua operadora.\n— Gestor / Executivo: visão completa de todas as lives de todos os influencers e operadoras.",
       },
     ],
   },
@@ -434,22 +444,37 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       {
         subtitulo: "Uma live não aparece no calendário?",
         texto:
-          "Verifique se os filtros de influencer, operadora ou plataforma não estão ocultando a live. Influencers só visualizam as próprias lives — se você tem esse perfil e não vê uma live, ela pode ter sido cadastrada com outro influencer.",
+          "Verifique se os filtros de status, plataforma, influencer ou operadora não estão ocultando a live. Com filtros ativos, apenas as lives que atendem a todos os critérios são exibidas. Clique em Limpar filtros para remover todos e ver a agenda completa.\n\nInfluencers e agências só visualizam as próprias lives — se você tem esse perfil e não encontra uma live, ela pode ter sido cadastrada com outro influencer.",
       },
       {
         subtitulo: "Não consigo salvar uma nova live?",
         texto:
-          "O campo de link é obrigatório. Verifique se o link da plataforma selecionada foi preenchido corretamente antes de confirmar.",
+          "O campo de link é obrigatório — verifique se o link da plataforma selecionada está preenchido. O link é pré-preenchido automaticamente com o link do perfil do influencer quando disponível, mas pode estar em branco se o perfil ainda não tiver o link cadastrado.\n\nSe você vê uma mensagem de 'Agendamento indisponível', veja a pergunta específica abaixo.",
       },
       {
-        subtitulo: "A live está no dia errado no calendário?",
+        subtitulo: "Apareceu uma mensagem de 'Agendamento indisponível'?",
         texto:
-          "Confirme o fuso horário configurado no perfil. A data e horário exibidos seguem o fuso da plataforma.",
+          "Esse bloqueio ocorre quando o influencer não atendeu aos pré-requisitos para agendar lives:\n\n— Perfil incompleto: dados obrigatórios do cadastro em Influencers não foram preenchidos. O botão 'Ir para Influencers' leva diretamente à página para completar o perfil.\n— Playbook pendente: o influencer ainda não registrou ciência nos termos obrigatórios do Playbook Influencers. Use o botão 'Ir para Playbook Influencers' para acessar os termos.",
+      },
+      {
+        subtitulo: "Não consigo editar ou excluir uma live?",
+        texto:
+          "Lives com status Realizada ou Não Realizada são bloqueadas para edição e exclusão por influencers, agências e operadores. Apenas Admin e Gestor podem alterar lives já validadas. Se você precisa corrigir uma live validada, solicite ao responsável com perfil Admin ou Gestor.",
+      },
+      {
+        subtitulo: "Não consigo agendar para hoje?",
+        texto:
+          "Influencers e operadores só podem agendar lives a partir do dia seguinte — o agendamento para o mesmo dia não é permitido. Essa restrição não se aplica a Admin e Gestor, que podem criar e editar lives em qualquer data.",
       },
       {
         subtitulo: "O botão + Nova Live não aparece?",
         texto:
-          "Verifique se você está logado com um perfil com permissão de criação. Se o botão não aparecer mesmo assim, entre em contato com o administrador da conta.",
+          "O botão só aparece para perfis com permissão de criação. Se você não vê o botão mesmo estando logado, seu perfil pode não ter essa permissão configurada. Entre em contato com o administrador da conta.",
+      },
+      {
+        subtitulo: "A live está no dia errado no calendário?",
+        texto:
+          "A data exibida no calendário é a data registrada no momento do agendamento, com base no fuso horário da plataforma. Se a live aparecer num dia diferente do esperado, verifique a data preenchida no formulário de edição.",
       },
     ],
   },

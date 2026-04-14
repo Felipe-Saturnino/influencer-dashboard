@@ -38,6 +38,22 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Overview",
       },
       {
+        termo: "Link da Live",
+        definicao:
+          "URL do canal ou sala do influencer na plataforma onde a live será transmitida. Obrigatório para criar ou editar uma live na Agenda.",
+        nota:
+          "O link é pré-preenchido automaticamente com o link cadastrado no perfil do influencer para a plataforma selecionada. Se o perfil não tiver o link cadastrado, o campo fica em branco e deve ser preenchido manualmente antes de salvar.\n\nO link aparece na visualização de Dia no calendário e pode ser acessado diretamente da live.",
+        referencia: "Agenda",
+      },
+      {
+        termo: "Playbook Influencers",
+        definicao:
+          "Conjunto de termos, diretrizes e boas práticas que o influencer deve ler e confirmar antes de iniciar as ativações. O registro de ciência no Playbook é um pré-requisito obrigatório para agendar lives e emitir links de rastreamento.",
+        nota:
+          "Enquanto o influencer não confirmar ciência no Playbook, o agendamento de novas lives é bloqueado. A mensagem de bloqueio aparece na Agenda ao tentar criar uma nova live.",
+        referencia: "Agenda · Links e Materiais",
+      },
+      {
         termo: "Média de Views",
         definicao:
           "Média de visualizações simultâneas por live no período. Lives sem dado de views são excluídas do cálculo.",
