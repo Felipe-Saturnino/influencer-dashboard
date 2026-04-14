@@ -4,20 +4,25 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
 import KpiCard from "../../../components/dashboard/KpiCard";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
-import { getThStyle, getTdStyle, getTdNumStyle } from "../../../lib/tableStyles";
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
+  Calendar,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Dice6,
   LayoutGrid,
+  Shield,
   Table2,
+  Target,
   Wallet,
   TrendingUp,
   ListOrdered,
@@ -26,7 +31,6 @@ import {
   Users,
   Coins,
 } from "lucide-react";
-import { GiCalendar, GiConvergenceTarget, GiDiceSixFacesFour, GiShield } from "react-icons/gi";
 import {
   ResponsiveContainer,
   LineChart,
@@ -64,6 +68,11 @@ const COR_MESA_B = {
   bg: "rgba(30,54,248,0.10)",
   border: "rgba(30,54,248,0.35)",
 } as const;
+
+/** Zebras por coluna nas tabelas de mesa (A/B e Baccarat/Roleta) — alinhado a tokens de marca. */
+const ZEBRA_MESA_STRIPE_PRIMARY = "color-mix(in srgb, var(--brand-primary, #7c3aed) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_ACCENT = "color-mix(in srgb, var(--brand-accent, #1e36f8) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_SECONDARY = "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)";
 
 interface DailyRow {
   data: string;
@@ -123,7 +132,7 @@ const MESES_PT = [
 ];
 const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-/** Primeiro mês com operação Mesas Spin — o carrossel não lista meses anteriores (evita confusão). */
+/** Primeiro mês com operação Overview Spin — o carrossel não lista meses anteriores (evita confusão). */
 const CARROSSEL_MESAS_MIN_ANO = 2025;
 const CARROSSEL_MESAS_MIN_MES = 11; // Dezembro (0-based)
 
@@ -923,9 +932,9 @@ function linhaComparativoJogoAgregadaMes(
   };
 }
 
-const COR_BLACKJACK = "#7c3aed";
-const COR_ROLETA = "#22c55e";
-const COR_BACCARAT = "#1e36f8";
+const COR_BLACKJACK = "var(--brand-primary, #7c3aed)";
+const COR_ROLETA = "var(--brand-success, #22c55e)";
+const COR_BACCARAT = "var(--brand-accent, #1e36f8)";
 
 type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap" | "arpu";
 
@@ -1011,47 +1020,6 @@ function renderValorKpiComparativo(kpi: KpiJogoDef, valor: number | null): React
   }
 }
 
-function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
-  const { theme: tt } = useApp();
-  const brand = useDashboardBrand();
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-      <span
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: 8,
-          background: brand.primaryIconBg,
-          border: brand.primaryIconBorder,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: brand.primaryIconColor,
-        }}
-      >
-        {icon}
-      </span>
-      <span
-        style={{
-          fontSize: 14,
-          fontWeight: 800,
-          color: brand.primary,
-          fontFamily: FONT_TITLE,
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-        }}
-      >
-        {title}
-      </span>
-      {sub && (
-        <span style={{ fontSize: 11, color: tt.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
-          {sub}
-        </span>
-      )}
-    </div>
-  );
-}
-
 function mapMonthlyV2(r: { mes: string; uap: number | null; arpu: number | null }): MonthlyRow {
   return {
     mes: r.mes,
@@ -1130,7 +1098,7 @@ function mergeMonthlyUapArpuAgregadoTodas(
   return { uap, arpu: null };
 }
 
-export default function MesasSpin() {
+export default function OverviewSpin() {
   const { theme: t, isDark, escoposVisiveis } = useApp();
   const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("mesas_spin");
@@ -1902,15 +1870,55 @@ export default function MesasSpin() {
 
   const brand = useDashboardBrand();
 
+  const corCompMesaA = useMemo(
+    () =>
+      brand.useBrand
+        ? {
+            accent: "var(--brand-primary)",
+            bg: "color-mix(in srgb, var(--brand-primary) 10%, transparent)",
+            border: "color-mix(in srgb, var(--brand-primary) 35%, transparent)",
+          }
+        : COR_MESA_A,
+    [brand.useBrand],
+  );
+  const corCompMesaB = useMemo(
+    () =>
+      brand.useBrand
+        ? {
+            accent: "var(--brand-accent)",
+            bg: "color-mix(in srgb, var(--brand-accent) 10%, transparent)",
+            border: "color-mix(in srgb, var(--brand-accent) 35%, transparent)",
+          }
+        : COR_MESA_B,
+    [brand.useBrand],
+  );
+
+  const vsBadgeStyle: React.CSSProperties = {
+    padding: "5px 12px",
+    borderRadius: 999,
+    border: brand.useBrand
+      ? "1px solid color-mix(in srgb, var(--brand-secondary) 30%, transparent)"
+      : "1px solid rgba(74,32,130,0.35)",
+    background: brand.useBrand
+      ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)"
+      : "rgba(74,32,130,0.10)",
+    fontSize: 12,
+    fontWeight: 800,
+    color: t.textMuted,
+    fontFamily: FONT.body,
+    letterSpacing: "0.05em",
+    textAlign: "center",
+  };
+
   const card: React.CSSProperties = {
     background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+    boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.35)" : "0 4px 20px rgba(0,0,0,0.08)",
   };
 
-  const thStyle = getThStyle(t, { verticalAlign: "middle", background: "rgba(74,32,130,0.08)" });
+  const thStyle = getThStyle(t, { verticalAlign: "middle" });
   const tdStyle = getTdStyle(t, { padding: "9px 12px" });
   const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
 
@@ -1956,8 +1964,8 @@ export default function MesasSpin() {
     rowStripe: string,
     colTempo: "Data" | "Mês" = "Data",
   ) => (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <div className="app-table-wrap">
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
         <thead>
           <tr>
             <th style={thStyle}>{colTempo}</th>
@@ -2015,7 +2023,6 @@ export default function MesasSpin() {
   };
 
   const COR_TOTAL_COMP = isDark ? "#ffffff" : "#000000";
-  const COR_PCT_COMP = isDark ? "#ffffff" : "#000000";
 
   const thStickyComparativo: React.CSSProperties = {
     ...thStyle,
@@ -2034,7 +2041,7 @@ export default function MesasSpin() {
     fontWeight: 600,
     background:
       i % 2 === 1
-        ? `color-mix(in srgb, ${brand.blockBg} 95%, rgba(74,32,130,0.06))`
+        ? `color-mix(in srgb, ${brand.blockBg} 92%, var(--brand-secondary, #4a2082) 8%)`
         : brand.blockBg,
     boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
   });
@@ -2298,9 +2305,9 @@ export default function MesasSpin() {
                         fontFamily: FONT.body,
                         fontSize: 11,
                         fontWeight: ativo ? 700 : 400,
-                        border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
-                        background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
-                        color: ativo ? BRAND.roxoVivo : t.textMuted,
+                        border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                        background: ativo ? `color-mix(in srgb, ${brand.accent} 12%, transparent)` : "transparent",
+                        color: ativo ? brand.accent : t.textMuted,
                         transition: "all 0.15s",
                       }}
                     >
@@ -2309,7 +2316,7 @@ export default function MesasSpin() {
                           width: 6,
                           height: 6,
                           borderRadius: "50%",
-                          background: ativo ? BRAND.roxoVivo : t.cardBorder,
+                          background: ativo ? brand.accent : t.cardBorder,
                           flexShrink: 0,
                           transition: "background 0.15s",
                         }}
@@ -2357,8 +2364,11 @@ export default function MesasSpin() {
                 fontFamily: FONT.body,
                 fontSize: 11,
                 fontWeight: modoVisualizacaoDetalhe === modo ? 700 : 400,
-                background: modoVisualizacaoDetalhe === modo ? "rgba(124,58,237,0.12)" : "transparent",
-                color: modoVisualizacaoDetalhe === modo ? BRAND.roxoVivo : t.textMuted,
+                background:
+                  modoVisualizacaoDetalhe === modo
+                    ? `color-mix(in srgb, ${brand.accent} 12%, transparent)`
+                    : "transparent",
+                color: modoVisualizacaoDetalhe === modo ? brand.accent : t.textMuted,
                 transition: "all 0.15s",
                 borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
               }}
@@ -2370,8 +2380,8 @@ export default function MesasSpin() {
       </div>
 
       {modoVisualizacaoDetalhe === "tabela" ? (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="app-table-wrap">
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
             <caption style={{ display: "none" }}>
               {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
             </caption>
@@ -2406,7 +2416,7 @@ export default function MesasSpin() {
                   <Fragment key={rowKey}>
                     <tr
                       style={{
-                        background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
+                        background: zebraStripe(i),
                       }}
                     >
                       <td style={{ ...tdStyle, fontWeight: 600 }}>
@@ -2483,7 +2493,9 @@ export default function MesasSpin() {
                             key={`${rowKey}-${sl.operadora_slug}`}
                             style={{
                               background:
-                                j % 2 === 1 ? "rgba(74,32,130,0.04)" : "rgba(74,32,130,0.02)",
+                                j % 2 === 1
+                                  ? "color-mix(in srgb, var(--brand-secondary, #4a2082) 4%, transparent)"
+                                  : "color-mix(in srgb, var(--brand-secondary, #4a2082) 2%, transparent)",
                               borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
                             }}
                           >
@@ -2584,7 +2596,7 @@ export default function MesasSpin() {
                       key={slug}
                       dataKey={slug}
                       name={slugToNome(slug)}
-                      fill={coresOperadorasDetalhe.get(slug) ?? BRAND.roxoVivo}
+                      fill={coresOperadorasDetalhe.get(slug) ?? "var(--brand-primary, #7c3aed)"}
                       radius={[4, 4, 0, 0]}
                       maxBarSize={28}
                     />
@@ -2623,7 +2635,7 @@ export default function MesasSpin() {
                       type="monotone"
                       name={slugToNome(slug)}
                       dataKey={slug}
-                      stroke={coresOperadorasDetalhe.get(slug) ?? BRAND.roxoVivo}
+                      stroke={coresOperadorasDetalhe.get(slug) ?? "var(--brand-primary, #7c3aed)"}
                       strokeWidth={2}
                       dot={{ r: 2 }}
                       connectNulls
@@ -2704,9 +2716,9 @@ export default function MesasSpin() {
                     fontFamily: FONT.body,
                     fontSize: 11,
                     fontWeight: ativo ? 700 : 400,
-                    border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
-                    background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
-                    color: ativo ? BRAND.roxoVivo : t.textMuted,
+                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                    background: ativo ? `color-mix(in srgb, ${brand.accent} 12%, transparent)` : "transparent",
+                    color: ativo ? brand.accent : t.textMuted,
                     transition: "all 0.15s",
                   }}
                 >
@@ -2715,7 +2727,7 @@ export default function MesasSpin() {
                       width: 6,
                       height: 6,
                       borderRadius: "50%",
-                      background: ativo ? BRAND.roxoVivo : t.cardBorder,
+                      background: ativo ? brand.accent : t.cardBorder,
                       flexShrink: 0,
                       transition: "background 0.15s",
                     }}
@@ -2762,8 +2774,9 @@ export default function MesasSpin() {
                 fontFamily: FONT.body,
                 fontSize: 11,
                 fontWeight: modoVisualizacao === modo ? 700 : 400,
-                background: modoVisualizacao === modo ? "rgba(124,58,237,0.12)" : "transparent",
-                color: modoVisualizacao === modo ? BRAND.roxoVivo : t.textMuted,
+                background:
+                  modoVisualizacao === modo ? `color-mix(in srgb, ${brand.accent} 12%, transparent)` : "transparent",
+                color: modoVisualizacao === modo ? brand.accent : t.textMuted,
                 transition: "all 0.15s",
                 borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
               }}
@@ -2850,7 +2863,7 @@ export default function MesasSpin() {
                     <tr
                       key={row.dataIso}
                       style={{
-                        background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
+                        background: zebraStripe(i),
                       }}
                     >
                       <th scope="row" style={tdStickyComparativo(i)}>
@@ -2899,7 +2912,7 @@ export default function MesasSpin() {
                                       <span
                                         style={{
                                           fontSize: 10,
-                                          color: COR_PCT_COMP,
+                                          color: t.textMuted,
                                           fontWeight: 700,
                                           opacity: 0.75,
                                         }}
@@ -3050,7 +3063,7 @@ export default function MesasSpin() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar o Overview Spin.
+        Você não tem permissão para visualizar este dashboard.
       </div>
     );
   }
@@ -3097,7 +3110,7 @@ export default function MesasSpin() {
                 fontWeight: 800,
                 color: t.text,
                 fontFamily: FONT.body,
-                minWidth: 180,
+                minWidth: "min(100%, 180px)",
                 textAlign: "center",
               }}
             >
@@ -3135,19 +3148,19 @@ export default function MesasSpin() {
                 background: historico
                   ? brand.useBrand
                     ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                    : `${BRAND.roxoVivo}18`
+                    : `color-mix(in srgb, ${brand.accent} 12%, transparent)`
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
             >
-              <GiCalendar size={15} aria-hidden /> Histórico
+              <Calendar size={15} aria-hidden /> Histórico
             </button>
 
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<GiShield size={15} aria-hidden />}
+                icon={<Shield size={15} aria-hidden />}
                 label="Filtrar por operadora"
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
@@ -3183,15 +3196,16 @@ export default function MesasSpin() {
       </div>
 
       <div style={{ ...card, marginBottom: 14 }}>
-          <SectionHeader
+          <SectionTitle
             icon={<LayoutGrid size={15} />}
-            title="KPIs Consolidados"
             sub={
               historico
                 ? "acumulado"
                 : "comparativo MTD vs mesmo período do mês anterior"
             }
-          />
+          >
+            KPIs Consolidados
+          </SectionTitle>
           {loading ? (
             modoAgregadoTodasOperadoras ? (
               <>
@@ -3376,11 +3390,9 @@ export default function MesasSpin() {
         </div>
 
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionHeader
-          icon={<GiCalendar size={15} />}
-          title={historico ? "Comparativo Mensal" : "Detalhamento Diário"}
-          sub={historico ? "mês a mês" : "dia a dia"}
-        />
+        <SectionTitle icon={<Calendar size={15} />} sub={historico ? "mês a mês" : "dia a dia"}>
+          {historico ? "Comparativo Mensal" : "Detalhamento Diário"}
+        </SectionTitle>
 
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
@@ -3401,11 +3413,9 @@ export default function MesasSpin() {
           {loading ? (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub={mesSelecionado?.label}
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
+                  Comparativo de Jogo
+                </SectionTitle>
                 <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                   <Clock size={16} style={{ marginBottom: 8 }} />
                   Carregando…
@@ -3414,22 +3424,18 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                       <Clock size={16} style={{ marginBottom: 8 }} />
                       Carregando…
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<Table2 size={15} />}
-                      title="Dados por mesa"
-                      sub="Baccarat e Roleta"
-                    />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
                     <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                       <Clock size={16} style={{ marginBottom: 8 }} />
                       Carregando…
@@ -3441,11 +3447,9 @@ export default function MesasSpin() {
           ) : porTabelaRows.length === 0 ? (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub={mesSelecionado?.label}
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
+                  Comparativo de Jogo
+                </SectionTitle>
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                   {MSG_SEM_DADOS_FILTRO}
                 </div>
@@ -3453,11 +3457,9 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
@@ -3465,7 +3467,9 @@ export default function MesasSpin() {
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
@@ -3478,11 +3482,9 @@ export default function MesasSpin() {
           ) : (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub={mesSelecionado?.label}
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
+                  Comparativo de Jogo
+                </SectionTitle>
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                     {MSG_SEM_DADOS_FILTRO}
@@ -3495,11 +3497,9 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <p
                       style={{
                         margin: "0 0 16px",
@@ -3531,7 +3531,7 @@ export default function MesasSpin() {
                         }}
                         style={{
                           ...selectStyleSimple,
-                          borderColor: compMesaA ? COR_MESA_A.border : undefined,
+                          borderColor: compMesaA ? corCompMesaA.border : undefined,
                           width: "100%",
                         }}
                       >
@@ -3543,22 +3543,7 @@ export default function MesasSpin() {
                             </option>
                           ))}
                       </select>
-                      <div
-                        style={{
-                          padding: "5px 12px",
-                          borderRadius: 999,
-                          border: "1px solid rgba(74,32,130,0.35)",
-                          background: "rgba(74,32,130,0.10)",
-                          fontSize: 12,
-                          fontWeight: 800,
-                          color: t.textMuted,
-                          fontFamily: FONT.body,
-                          letterSpacing: "0.05em",
-                          textAlign: "center",
-                        }}
-                      >
-                        VS
-                      </div>
+                      <div style={vsBadgeStyle}>VS</div>
                       <select
                         value={compMesaB}
                         onChange={(e) => {
@@ -3571,7 +3556,7 @@ export default function MesasSpin() {
                         }}
                         style={{
                           ...selectStyleSimple,
-                          borderColor: compMesaB ? COR_MESA_B.border : undefined,
+                          borderColor: compMesaB ? corCompMesaB.border : undefined,
                           width: "100%",
                         }}
                       >
@@ -3591,12 +3576,12 @@ export default function MesasSpin() {
                           style={{
                             padding: "6px 12px",
                             borderRadius: 10,
-                            background: COR_MESA_A.bg,
-                            border: `1px solid ${COR_MESA_A.border}`,
+                            background: corCompMesaA.bg,
+                            border: `1px solid ${corCompMesaA.border}`,
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: COR_MESA_A.accent,
+                            color: corCompMesaA.accent,
                             fontFamily: FONT.body,
                           }}
                         >
@@ -3606,12 +3591,12 @@ export default function MesasSpin() {
                           style={{
                             padding: "6px 12px",
                             borderRadius: 10,
-                            background: COR_MESA_B.bg,
-                            border: `1px solid ${COR_MESA_B.border}`,
+                            background: corCompMesaB.bg,
+                            border: `1px solid ${corCompMesaB.border}`,
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: COR_MESA_B.accent,
+                            color: corCompMesaB.accent,
                             fontFamily: FONT.body,
                           }}
                         >
@@ -3622,14 +3607,14 @@ export default function MesasSpin() {
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaA, "rgba(124,58,237,0.06)")}
+                        {renderMesaDiaTabela(linhasMesaA, ZEBRA_MESA_STRIPE_PRIMARY)}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaB, "rgba(30,54,248,0.06)")}
+                        {renderMesaDiaTabela(linhasMesaB, ZEBRA_MESA_STRIPE_ACCENT)}
                       </div>
                     </div>
                   </>
@@ -3637,7 +3622,9 @@ export default function MesasSpin() {
               </div>
 
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                  Dados por mesa
+                </SectionTitle>
 
                 <div className="app-conversao-funil-duo">
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -3646,18 +3633,18 @@ export default function MesasSpin() {
                         marginBottom: 10,
                         padding: "6px 10px",
                         borderRadius: 10,
-                        background: "rgba(112,202,228,0.10)",
-                        border: "1px solid rgba(112,202,228,0.35)",
+                        background: "color-mix(in srgb, var(--brand-icon, #70cae4) 10%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--brand-icon, #70cae4) 35%, transparent)",
                         textAlign: "center",
                         fontSize: 13,
                         fontWeight: 700,
-                        color: BRAND.ciano,
+                        color: "var(--brand-icon, #70cae4)",
                         fontFamily: FONT.body,
                       }}
                     >
                       Speed Baccarat
                     </div>
-                    {renderMesaDiaTabela(linhasSpeedBaccarat, "rgba(74,32,130,0.06)")}
+                    {renderMesaDiaTabela(linhasSpeedBaccarat, ZEBRA_MESA_STRIPE_SECONDARY)}
                   </div>
                   <div
                     className="app-conversao-funil-divider"
@@ -3669,18 +3656,18 @@ export default function MesasSpin() {
                         marginBottom: 10,
                         padding: "6px 10px",
                         borderRadius: 10,
-                        background: "rgba(124,58,237,0.10)",
-                        border: "1px solid rgba(124,58,237,0.30)",
+                        background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 30%, transparent)",
                         textAlign: "center",
                         fontSize: 13,
                         fontWeight: 700,
-                        color: BRAND.roxoVivo,
+                        color: "var(--brand-primary, #7c3aed)",
                         fontFamily: FONT.body,
                       }}
                     >
                       Roleta
                     </div>
-                    {renderMesaDiaTabela(linhasRoleta, "rgba(74,32,130,0.06)")}
+                    {renderMesaDiaTabela(linhasRoleta, ZEBRA_MESA_STRIPE_SECONDARY)}
                   </div>
                 </div>
               </div>
@@ -3696,11 +3683,9 @@ export default function MesasSpin() {
           {loading ? (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub="mês a mês"
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
+                  Comparativo de Jogo
+                </SectionTitle>
                 <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                   <Clock size={16} style={{ marginBottom: 8 }} />
                   Carregando…
@@ -3709,22 +3694,18 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                       <Clock size={16} style={{ marginBottom: 8 }} />
                       Carregando…
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<Table2 size={15} />}
-                      title="Dados por mesa"
-                      sub="Baccarat e Roleta"
-                    />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
                     <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                       <Clock size={16} style={{ marginBottom: 8 }} />
                       Carregando…
@@ -3736,11 +3717,9 @@ export default function MesasSpin() {
           ) : porTabelaHistAll.length === 0 ? (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub="mês a mês"
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
+                  Comparativo de Jogo
+                </SectionTitle>
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                   {MSG_SEM_DADOS_FILTRO}
                 </div>
@@ -3748,11 +3727,9 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
@@ -3760,7 +3737,9 @@ export default function MesasSpin() {
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
@@ -3773,11 +3752,9 @@ export default function MesasSpin() {
           ) : (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub="mês a mês"
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
+                  Comparativo de Jogo
+                </SectionTitle>
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                     {MSG_SEM_DADOS_FILTRO}
@@ -3790,11 +3767,9 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <p
                       style={{
                         margin: "0 0 16px",
@@ -3828,7 +3803,7 @@ export default function MesasSpin() {
                             }}
                             style={{
                               ...selectStyleSimple,
-                              borderColor: compMesaA ? COR_MESA_A.border : undefined,
+                              borderColor: compMesaA ? corCompMesaA.border : undefined,
                               width: "100%",
                             }}
                           >
@@ -3840,22 +3815,7 @@ export default function MesasSpin() {
                                 </option>
                               ))}
                           </select>
-                          <div
-                            style={{
-                              padding: "5px 12px",
-                              borderRadius: 999,
-                              border: "1px solid rgba(74,32,130,0.35)",
-                              background: "rgba(74,32,130,0.10)",
-                              fontSize: 12,
-                              fontWeight: 800,
-                              color: t.textMuted,
-                              fontFamily: FONT.body,
-                              letterSpacing: "0.05em",
-                              textAlign: "center",
-                            }}
-                          >
-                            VS
-                          </div>
+                          <div style={vsBadgeStyle}>VS</div>
                           <select
                             value={compMesaB}
                             onChange={(e) => {
@@ -3868,7 +3828,7 @@ export default function MesasSpin() {
                             }}
                             style={{
                               ...selectStyleSimple,
-                              borderColor: compMesaB ? COR_MESA_B.border : undefined,
+                              borderColor: compMesaB ? corCompMesaB.border : undefined,
                               width: "100%",
                             }}
                           >
@@ -3888,12 +3848,12 @@ export default function MesasSpin() {
                               style={{
                                 padding: "6px 12px",
                                 borderRadius: 10,
-                                background: COR_MESA_A.bg,
-                                border: `1px solid ${COR_MESA_A.border}`,
+                                background: corCompMesaA.bg,
+                                border: `1px solid ${corCompMesaA.border}`,
                                 textAlign: "center",
                                 fontSize: 13,
                                 fontWeight: 700,
-                                color: COR_MESA_A.accent,
+                                color: corCompMesaA.accent,
                                 fontFamily: FONT.body,
                               }}
                             >
@@ -3903,12 +3863,12 @@ export default function MesasSpin() {
                               style={{
                                 padding: "6px 12px",
                                 borderRadius: 10,
-                                background: COR_MESA_B.bg,
-                                border: `1px solid ${COR_MESA_B.border}`,
+                                background: corCompMesaB.bg,
+                                border: `1px solid ${corCompMesaB.border}`,
                                 textAlign: "center",
                                 fontSize: 13,
                                 fontWeight: 700,
-                                color: COR_MESA_B.accent,
+                                color: corCompMesaB.accent,
                                 fontFamily: FONT.body,
                               }}
                             >
@@ -3919,14 +3879,14 @@ export default function MesasSpin() {
 
                         <div className="app-conversao-funil-duo">
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaA, "rgba(124,58,237,0.06)", "Mês")}
+                            {renderMesaDiaTabela(linhasMesaA, ZEBRA_MESA_STRIPE_PRIMARY, "Mês")}
                           </div>
                           <div
                             className="app-conversao-funil-divider"
                             style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaB, "rgba(30,54,248,0.06)", "Mês")}
+                            {renderMesaDiaTabela(linhasMesaB, ZEBRA_MESA_STRIPE_ACCENT, "Mês")}
                           </div>
                         </div>
                       </>
@@ -3934,7 +3894,9 @@ export default function MesasSpin() {
                   </div>
 
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -3943,18 +3905,18 @@ export default function MesasSpin() {
                             marginBottom: 10,
                             padding: "6px 10px",
                             borderRadius: 10,
-                            background: "rgba(112,202,228,0.10)",
-                            border: "1px solid rgba(112,202,228,0.35)",
+                            background: "color-mix(in srgb, var(--brand-icon, #70cae4) 10%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--brand-icon, #70cae4) 35%, transparent)",
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: BRAND.ciano,
+                            color: "var(--brand-icon, #70cae4)",
                             fontFamily: FONT.body,
                           }}
                         >
                           Speed Baccarat
                         </div>
-                        {renderMesaDiaTabela(linhasSpeedBaccarat, "rgba(74,32,130,0.06)", "Mês")}
+                        {renderMesaDiaTabela(linhasSpeedBaccarat, ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
@@ -3966,18 +3928,18 @@ export default function MesasSpin() {
                             marginBottom: 10,
                             padding: "6px 10px",
                             borderRadius: 10,
-                            background: "rgba(124,58,237,0.10)",
-                            border: "1px solid rgba(124,58,237,0.30)",
+                            background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 30%, transparent)",
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: BRAND.roxoVivo,
+                            color: "var(--brand-primary, #7c3aed)",
                             fontFamily: FONT.body,
                           }}
                         >
                           Roleta
                         </div>
-                        {renderMesaDiaTabela(linhasRoleta, "rgba(74,32,130,0.06)", "Mês")}
+                        {renderMesaDiaTabela(linhasRoleta, ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
                       </div>
                     </div>
                   </div>

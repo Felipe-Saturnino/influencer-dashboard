@@ -139,7 +139,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Receita bruta do jogo. Representa o quanto a plataforma reteve do volume depositado pelos jogadores captados.",
         formula: "Total de Depósitos − Total de Saques",
         nota:
-          "O GGR é sempre calculado pelo canal de aquisição. Nas páginas de influencers, considera apenas jogadores captados via influencers. Em Mesas Spin, considera todos os canais.",
+          "O GGR é sempre calculado pelo canal de aquisição. Nas páginas de influencers, considera apenas jogadores captados via influencers. Em Overview Spin, considera todos os canais.",
         referencia: "Overview · Financeiro",
       },
       {
@@ -259,47 +259,72 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
   },
   {
     key: "mesas",
-    label: "Métricas de Mesas Spin",
+    label: "Métricas de Overview Spin",
     accentColor: "#70cae4",
     termos: [
       {
+        termo: "GGR nas Mesas (Gross Gaming Revenue)",
+        definicao:
+          "Receita bruta gerada pelas mesas de jogo Spin Gaming. Diferente do GGR de influencers — que considera apenas jogadores captados via afiliados —, o GGR nas Mesas considera todos os canais de aquisição que jogaram nas mesas no período.",
+        formula: "Total de Depósitos − Total de Saques",
+        nota:
+          "O número do GGR na Overview Spin pode diferir do GGR na página de Streamers porque cada página filtra pelo seu canal de aquisição. Não é inconsistência — é design.",
+        referencia: "Overview Spin",
+      },
+      {
         termo: "Turnover",
         definicao:
-          "Volume financeiro total apostado pelos jogadores nas mesas Spin Gaming no período. Soma bruta de todas as apostas realizadas, independente do resultado.",
-        referencia: "Mesas Spin",
+          "Volume financeiro total apostado pelos jogadores nas mesas Spin Gaming no período. Soma bruta de todas as apostas realizadas, independentemente do resultado.",
+        nota:
+          "Turnover alto com GGR baixo indica que os jogadores apostam muito mas a casa reteve pouco — margem baixa. A relação entre os dois é a Margem.",
+        referencia: "Overview Spin",
       },
       {
         termo: "Apostas (Quantidade)",
-        definicao: "Número total de apostas realizadas nas mesas no período.",
-        referencia: "Mesas Spin",
+        definicao:
+          "Número total de apostas realizadas nas mesas no período. Combinado com o Turnover, gera a Aposta Média.",
+        referencia: "Overview Spin",
       },
       {
         termo: "Margem",
         definicao:
-          'Percentual de retenção da casa sobre o volume apostado. Representa o "edge" da casa. Valores entre 3% e 10% são típicos para jogos de mesa ao vivo.',
+          "Percentual de retenção da casa sobre o volume apostado. Representa o 'edge' natural do jogo — quanto, em média, a casa retém de cada real apostado.",
         formula: "GGR ÷ Turnover × 100",
         nota:
-          "Acima de 10%: período excepcionalmente favorável · Abaixo de 0%: período negativo",
-        referencia: "Mesas Spin",
+          "Para jogos de mesa ao vivo, valores entre 3% e 10% são típicos. Acima de 10%: período excepcionalmente favorável para a casa. Abaixo de 0%: período negativo — saques superaram depósitos.\n\nA Margem varia por tipo de jogo. O Comparativo de Jogo na Overview Spin permite visualizar a margem individual de Blackjack, Roleta e Speed Baccarat.",
+        referencia: "Overview Spin",
       },
       {
         termo: "Aposta Média (Bet Size)",
         definicao:
-          "Valor médio por aposta. Indica o perfil de aposta dos jogadores ativos.",
+          "Valor médio por aposta. Indica o perfil de aposta dos jogadores ativos nas mesas — quanto cada apostador coloca, em média, por rodada.",
         formula: "Turnover ÷ Quantidade de Apostas",
-        referencia: "Mesas Spin",
+        referencia: "Overview Spin",
       },
       {
         termo: "UAP (Unique Active Players)",
         definicao:
-          "Jogadores únicos que apostaram nas mesas Spin Gaming no período. Métrica de audiência ativa das mesas.",
-        referencia: "Mesas Spin",
+          "Jogadores únicos que apostaram nas mesas Spin Gaming no período. Métrica de audiência ativa — quantas pessoas distintas jogaram, independentemente de quantas apostas cada uma fez.",
+        nota:
+          "No mês corrente (MTD), o UAP pode aparecer como '—' porque o valor oficial é gerado pelo resumo mensal, publicado ao final do mês. Durante o mês em andamento, o dado ainda não está disponível.",
+        referencia: "Overview Spin",
       },
       {
         termo: "ARPU (Average Revenue Per User)",
-        definicao: "Receita média por jogador ativo.",
+        definicao:
+          "Receita média gerada por cada jogador ativo nas mesas. Indica o valor individual médio de cada UAP no período.",
         formula: "GGR ÷ UAP",
-        referencia: "Mesas Spin",
+        nota:
+          "O ARPU depende do UAP mensal oficial (snapshot do final do mês). No mês corrente, ambos podem aparecer como '—' até o fechamento do período.",
+        referencia: "Overview Spin",
+      },
+      {
+        termo: "Jogos Spin",
+        definicao:
+          "Os três tipos de mesa ao vivo operados pela Spin Gaming nas plataformas parceiras:\n\n— Blackjack: disponível em múltiplas mesas (Blackjack 1, Blackjack 2, Blackjack VIP), cada uma com limites e perfis de aposta distintos.\n— Roleta: mesa única por operadora.\n— Speed Baccarat: versão acelerada do Baccarat, com rodadas mais rápidas.",
+        nota:
+          "O Comparativo de Jogo na Overview Spin exibe os dados de Blackjack (soma de todas as mesas), Roleta e Speed Baccarat lado a lado. O Comparativo de Mesa permite analisar as mesas de Blackjack individualmente.",
+        referencia: "Overview Spin",
       },
     ],
   },

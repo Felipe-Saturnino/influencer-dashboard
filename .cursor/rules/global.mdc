@@ -33,7 +33,7 @@ src/
 ├── hooks/              # useDashboardBrand, useDashboardFiltros, usePermission, useMediaQuery
 ├── lib/                # dashboardConstants, dashboardHelpers, tableStyles, supabase, investimentoPago
 ├── pages/              # Páginas por seção
-│   ├── dashboards/     # Streamers (abas), MesasSpin, Mídias, Overview Influencer
+│   ├── dashboards/     # Streamers (abas), OverviewSpin, Mídias, Overview Influencer
 │   ├── conteudo/
 │   ├── geral/
 │   ├── lives/          # Agenda, Resultados, Feedback, Influencers, Scout

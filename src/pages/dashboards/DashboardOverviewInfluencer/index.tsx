@@ -51,7 +51,7 @@ const fmtHoras = fmtHorasTotal;
 
 const MESES_CURTOS_TAB = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-/** `YYYY-MM` → Jan/2026 (igual Mesas Spin / Detalhamento mensal). */
+/** `YYYY-MM` → Jan/2026 (igual Overview Spin / Detalhamento mensal). */
 function fmtMesAnoCurtoInfluencer(ym: string): string {
   const [ys, ms] = ym.split("-");
   const mo = Number(ms);

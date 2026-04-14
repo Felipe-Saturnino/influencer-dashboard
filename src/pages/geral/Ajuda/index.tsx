@@ -13,6 +13,7 @@ import {
   GiPerson,
   GiBinoculars,
   GiCash,
+  GiPokerHand,
 } from "react-icons/gi";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
@@ -23,6 +24,7 @@ const MENU_AJUDA = [
     section: "Dashboards",
     items: [
       { key: "streamers" as PageKey, label: "Streamers", Icon: GiTv },
+      { key: "mesas_spin" as PageKey, label: "Overview Spin", Icon: GiPokerHand },
     ],
   },
   {
@@ -70,6 +72,45 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Filtros",
         texto:
           "Em cada aba, o bloco de filtros segue o mesmo padrão dos dashboards anteriores: mês, Histórico, influencer e operadora conforme seu perfil e escopo.",
+      },
+    ],
+  },
+  mesas_spin: {
+    titulo: "Overview Spin",
+    blocos: [
+      {
+        texto:
+          "Painel central de performance das mesas de jogo Spin Gaming nas operadoras parceiras. Reúne KPIs consolidados, detalhamento temporal, comparativo entre tipos de jogo e análise mesa a mesa — tudo em uma única página com navegação por mês ou visão histórica acumulada.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "Use as setas para navegar entre meses ou ative Histórico para ver todo o período disponível de uma vez. No modo Histórico, o comparativo MoM é desabilitado e a tabela de detalhamento exibe uma linha por mês em vez de uma por dia.\n\nSe você tem acesso a múltiplas operadoras, o filtro de operadora aparece na barra de filtros e isola os dados daquela parceira em todos os blocos da página.",
+      },
+      {
+        subtitulo: "KPIs Consolidados",
+        texto:
+          "Bloco de indicadores que resume a performance geral das mesas no período:\n\n— GGR: receita bruta das mesas (depósitos − saques de todos os canais)\n— Turnover: volume financeiro total apostado\n— Apostas: quantidade de apostas realizadas\n— Margem: percentual de retenção da casa sobre o turnover\n— Aposta Média: valor médio por aposta\n— UAP: jogadores únicos ativos no período\n— ARPU: receita média por jogador ativo\n\nNo mês corrente (MTD), todos os indicadores exibem a variação em relação ao mesmo intervalo do mês anterior. No modo Histórico, o comparativo é desabilitado.",
+      },
+      {
+        subtitulo: "Detalhamento Diário / Comparativo Mensal",
+        texto:
+          "Tabela com a evolução dos KPIs ao longo do tempo. No mês selecionado, exibe uma linha por dia. No modo Histórico, exibe uma linha por mês.\n\nQuando o filtro está em 'Todas as operadoras', cada linha pode ser expandida — clique na seta ao lado da data para ver o detalhamento por operadora naquele dia ou mês.\n\nUse o toggle Tabela / Gráfico para alternar entre a visualização em tabela e a evolução em gráfico.",
+      },
+      {
+        subtitulo: "Comparativo de Jogo",
+        texto:
+          "Exibe os dados de Blackjack, Roleta e Speed Baccarat lado a lado para cada dia do mês selecionado. Só está disponível quando um mês específico está selecionado — não aparece no modo Histórico.\n\nCada coluna de KPI é dividida em Total (dado oficial consolidado do dia) e os três jogos individualmente, com o percentual de participação de cada jogo sobre o total. Use os botões de KPI no topo para escolher quais métricas exibir, e o toggle Tabela / Gráfico para comparar as séries temporais dos três jogos.",
+      },
+      {
+        subtitulo: "Comparativo de Mesa e Dados por Mesa",
+        texto:
+          "Dois blocos disponíveis somente quando uma operadora específica está selecionada — não aparecem no modo 'Todas as operadoras'.\n\n— Comparativo de Mesa: selecione duas mesas de Blackjack (Blackjack 1, Blackjack 2 ou Blackjack VIP) para comparar os resultados dia a dia lado a lado.\n— Dados por Mesa: exibe os dados do Speed Baccarat e da Roleta em colunas separadas, com GGR, Turnover, Apostas, Margem e Aposta Média.",
+      },
+      {
+        subtitulo: "Perfil Operador",
+        texto:
+          "Operadores visualizam os mesmos blocos e KPIs, com escopo restrito às mesas da sua operadora. O filtro de operadora não é exibido — os dados já correspondem ao acesso autorizado. O Comparativo de Mesa e os Dados por Mesa ficam disponíveis automaticamente, sem necessidade de selecionar uma operadora.",
       },
     ],
   },
@@ -244,6 +285,46 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "WD Ratio ou ranking financeiro estranhos?",
         texto:
           "Confirme filtros de operadora e influencer. WD alto pode indicar audiência que saca mais do que deposita; ranking lista só quem teve jogadores ativos no período.",
+      },
+    ],
+  },
+  mesas_spin: {
+    titulo: "Overview Spin",
+    blocos: [
+      {
+        subtitulo: "Os dados não estão aparecendo?",
+        texto:
+          "Verifique se há dados registrados para o período e a operadora selecionados. Se o filtro de operadora estiver ativo, tente mudar para 'Todas as operadoras' para confirmar se os dados existem em outro escopo. Perfis com acesso restrito visualizam apenas as mesas da sua operadora — isso é esperado.",
+      },
+      {
+        subtitulo: "O Comparativo de Jogo, o Comparativo de Mesa e os Dados por Mesa não aparecem?",
+        texto:
+          "Esses blocos só são exibidos quando um mês específico está selecionado. No modo Histórico, apenas os KPIs Consolidados e o Comparativo Mensal ficam disponíveis — os demais blocos são ocultados automaticamente.",
+      },
+      {
+        subtitulo: "O Comparativo de Mesa não lista opções de mesa?",
+        texto:
+          "O Comparativo de Mesa exibe apenas mesas classificadas como Blackjack 1, Blackjack 2 e Blackjack VIP. Se nenhuma dessas tiver dados no período selecionado, o seletor ficará vazio.\n\nLembre-se: esse bloco só aparece quando uma operadora específica está selecionada, não no modo 'Todas as operadoras'.",
+      },
+      {
+        subtitulo: "UAP ou ARPU aparecem como '—'?",
+        texto:
+          "No mês corrente (MTD), UAP e ARPU usam o resumo mensal oficial, que só é gerado ao final do mês. Enquanto o mês ainda está em andamento, esses valores podem aparecer como '—' — é comportamento esperado e os números se estabilizam com o fechamento do período.",
+      },
+      {
+        subtitulo: "A Margem está negativa?",
+        texto:
+          "Margem negativa indica que, no período, os saques superaram os depósitos — o GGR ficou negativo. É um resultado possível em qualquer intervalo curto (um dia ou uma semana) e não indica erro nos dados.",
+      },
+      {
+        subtitulo: "Os valores do Comparativo de Jogo diferem do Detalhamento Diário?",
+        texto:
+          "A coluna 'Total' no Comparativo de Jogo usa os mesmos dados do Detalhamento Diário e deve bater exatamente. As colunas por jogo (Blackjack, Roleta, Baccarat) vêm de uma tabela separada e podem apresentar uma diferença de ±1 dia no alinhamento em alguns lotes de dados. Isso não afeta os totais oficiais — apenas a distribuição por jogo naquela linha.",
+      },
+      {
+        subtitulo: "O drilldown por operadora não aparece na tabela?",
+        texto:
+          "A expansão por operadora (ícone de seta ao lado da data ou mês) só está disponível quando o filtro está em 'Todas as operadoras'. Se uma operadora específica estiver selecionada, os dados já estão filtrados e não há sublinhas para expandir.",
       },
     ],
   },
