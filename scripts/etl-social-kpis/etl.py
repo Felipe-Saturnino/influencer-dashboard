@@ -8,13 +8,18 @@ v2:
 - Instagram/Facebook: engagement_rate limitado a 99.9999 (overflow no banco)
 - Facebook: page_impressions + page_post_engagements (page_engaged_users inválido na API); post_impressions nos posts
 - YouTube: subscriberCount (Channels API); Analytics day report sem métrica impressions; followers no kpi_daily
+
+v3 (Meta):
+- Facebook: não solicitar thumbnail_url em /posts (campo inválido no Post → 400); usar picture; fan_count na Page
+- IG/FB: fallback de listagem sem since/until + filtro UTC; FB tenta published_posts; IG tenta fields mínimos
+- Janelas since/until via _utc_day_unix_bounds; versão da API em META_GRAPH_VERSION (padrão v21.0)
 """
 
 import os
 import re
 import time
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 from supabase import create_client, Client
@@ -31,6 +36,14 @@ SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", os.environ.get("SUPABASE_S
 META_TOKEN = os.environ.get("META_ACCESS_TOKEN", "")
 META_PAGE_ID = os.environ.get("META_PAGE_ID", "")
 META_IG_ACCOUNT_ID = os.environ.get("META_IG_ACCOUNT_ID", "")
+# Ex.: v21.0, v22.0 — manter alinhado ao app em developers.facebook.com
+_META_VER = (os.environ.get("META_GRAPH_VERSION") or "v21.0").strip()
+if _META_VER and not _META_VER.startswith("v"):
+    _META_VER = "v" + _META_VER
+
+
+def graph_base() -> str:
+    return f"https://graph.facebook.com/{_META_VER}"
 
 YOUTUBE_CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID", "")
 YOUTUBE_CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET", "")
@@ -91,6 +104,30 @@ def _parse_api_datetime(val: object) -> str | None:
         from datetime import datetime
 
         return datetime.fromisoformat(s).isoformat()
+    except ValueError:
+        return None
+
+
+def _utc_day_unix_bounds(d: date) -> tuple[int, int]:
+    """Início inclusivo e fim exclusivo do dia calendário em UTC (since/until da Graph API)."""
+    start = datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+    end = start + timedelta(days=1)
+    return int(start.timestamp()), int(end.timestamp())
+
+
+def _meta_datetime_to_unix(s: str | None) -> float | None:
+    """Parse de created_time (Facebook) ou timestamp (Instagram) em segundos UTC."""
+    if not s or not isinstance(s, str):
+        return None
+    t = s.strip()
+    if t.endswith("+0000"):
+        t = t[:-5] + "+00:00"
+    t = t.replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(t)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
     except ValueError:
         return None
 
@@ -167,7 +204,7 @@ def meta_preflight() -> tuple[bool, str]:
         return True, ""
     if not META_PAGE_ID and not META_IG_ACCOUNT_ID:
         return True, ""
-    base = "https://graph.facebook.com/v21.0"
+    base = graph_base()
     try:
         if META_PAGE_ID:
             r = requests.get(
@@ -201,6 +238,198 @@ def _cap_engagement_rate(x: float) -> float:
     return min(round(x, 4), _MAX_ENGAGEMENT_RATE)
 
 
+def _collect_ig_media_for_day(ig_id: str, token: str, day_start: int, day_end: int) -> list[dict]:
+    """
+    Lista mídias publicadas no dia [day_start, day_end) em UTC.
+    Se since/until retornar erro, pagina sem filtro e filtra no cliente (feed mais recente primeiro).
+    """
+    base = graph_base()
+    fields = (
+        "id,timestamp,media_type,caption,permalink,thumbnail_url,media_url,"
+        "like_count,comments_count"
+    )
+
+    def in_window(p: dict) -> bool:
+        ts = _meta_datetime_to_unix(p.get("timestamp"))
+        return ts is not None and day_start <= ts < day_end
+
+    def add_batch(batch: list[dict], collected: list[dict], seen: set[str]) -> None:
+        for p in batch:
+            pid = str(p.get("id") or "")
+            if not pid:
+                continue
+            if not in_window(p):
+                continue
+            if pid not in seen:
+                seen.add(pid)
+                collected.append(p)
+
+    def walk_media(params: dict, open_paging: bool) -> tuple[list[dict], requests.Response | None]:
+        """Percorre páginas; em open_paging para quando o item mais recente do lote for anterior ao dia."""
+        collected: list[dict] = []
+        seen: set[str] = set()
+        next_url = None
+        first = True
+        while True:
+            r = requests.get(
+                next_url or f"{base}/{ig_id}/media",
+                params=None if next_url else params,
+                timeout=60,
+            )
+            if r.status_code != 200:
+                if first:
+                    return collected, r
+                r.raise_for_status()
+            data = r.json()
+            batch = data.get("data", [])
+            add_batch(batch, collected, seen)
+            if not batch:
+                break
+            if open_paging:
+                first_ts = _meta_datetime_to_unix(batch[0].get("timestamp"))
+                if first_ts is not None and first_ts < day_start:
+                    break
+            next_url = data.get("paging", {}).get("next")
+            if not next_url:
+                break
+            first = False
+            time.sleep(0.3)
+        return collected, None
+
+    posts, err = walk_media(
+        {
+            "fields": fields,
+            "since": day_start,
+            "until": day_end,
+            "limit": 100,
+            "access_token": token,
+        },
+        open_paging=False,
+    )
+    if err is None:
+        return posts
+
+    _log_api_error(err, "Instagram media (since/until)")
+    log.warning("Instagram — fallback: listagem sem since/until + filtro UTC no servidor.")
+    posts2, err2 = walk_media(
+        {"fields": fields, "limit": 100, "access_token": token},
+        open_paging=True,
+    )
+    if err2 is None:
+        return posts2
+
+    _log_api_error(err2, "Instagram media (sem filtro)")
+    fields_min = (
+        "id,timestamp,media_type,caption,permalink,thumbnail_url,media_url"
+    )
+    log.warning(
+        "Instagram — último fallback: fields sem like_count/comments_count no nó."
+    )
+    posts3, err3 = walk_media(
+        {"fields": fields_min, "limit": 100, "access_token": token},
+        open_paging=True,
+    )
+    if err3 is not None:
+        _log_api_error(err3, "Instagram media (fields mínimos)")
+        err3.raise_for_status()
+    return posts3
+
+
+def _collect_fb_posts_for_day(page_id: str, token: str, day_start: int, day_end: int) -> list[dict]:
+    """
+    Posts da página no dia [day_start, day_end) em UTC.
+    Não usar thumbnail_url em fields (não existe no objeto Post → 400).
+    """
+    base = graph_base()
+    fields = "id,created_time,message,permalink_url,full_picture,status_type,picture"
+
+    def in_window(p: dict) -> bool:
+        ts = _meta_datetime_to_unix(p.get("created_time"))
+        return ts is not None and day_start <= ts < day_end
+
+    def add_batch(
+        batch: list[dict], collected: list[dict], seen: set[str]
+    ) -> None:
+        for p in batch:
+            pid = str(p.get("id") or "")
+            if not pid:
+                continue
+            if not in_window(p):
+                continue
+            if pid not in seen:
+                seen.add(pid)
+                collected.append(p)
+
+    def walk_posts(
+        edge: str, params: dict, open_paging: bool
+    ) -> tuple[list[dict], requests.Response | None]:
+        collected: list[dict] = []
+        seen: set[str] = set()
+        next_url = None
+        first = True
+        while True:
+            r = requests.get(
+                next_url or f"{base}/{page_id}/{edge}",
+                params=None if next_url else params,
+                timeout=60,
+            )
+            if r.status_code != 200:
+                if first:
+                    return collected, r
+                r.raise_for_status()
+            data = r.json()
+            batch = data.get("data", [])
+            add_batch(batch, collected, seen)
+            if not batch:
+                break
+            if open_paging:
+                first_ts = _meta_datetime_to_unix(batch[0].get("created_time"))
+                if first_ts is not None and first_ts < day_start:
+                    break
+            next_url = data.get("paging", {}).get("next")
+            if not next_url:
+                break
+            first = False
+            time.sleep(0.3)
+        return collected, None
+
+    posts, err = walk_posts(
+        "posts",
+        {
+            "fields": fields,
+            "since": day_start,
+            "until": day_end,
+            "limit": 100,
+            "access_token": token,
+        },
+        open_paging=False,
+    )
+    if err is None:
+        return posts
+
+    _log_api_error(err, "Facebook posts (since/until)")
+    log.warning("Facebook — fallback: /posts sem since/until + filtro UTC no servidor.")
+    posts2, err2 = walk_posts(
+        "posts",
+        {"fields": fields, "limit": 100, "access_token": token},
+        open_paging=True,
+    )
+    if err2 is None:
+        return posts2
+
+    _log_api_error(err2, "Facebook posts (sem filtro)")
+    log.warning("Facebook — fallback: aresta published_posts.")
+    posts3, err3 = walk_posts(
+        "published_posts",
+        {"fields": fields, "limit": 100, "access_token": token},
+        open_paging=True,
+    )
+    if err3 is not None:
+        _log_api_error(err3, "Facebook published_posts")
+        err3.raise_for_status()
+    return posts3
+
+
 # ------------------------------------------------------------
 # Instagram
 # ------------------------------------------------------------
@@ -214,12 +443,9 @@ def fetch_instagram():
 
     t0 = time.monotonic()
     log.info("Instagram — iniciando coleta para %s", TARGET_DATE)
-    base = "https://graph.facebook.com/v21.0"
-
-    ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
-    ins_until = ins_since + 86400
-    since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
-    until = since + 86400
+    base = graph_base()
+    day_start, day_end = _utc_day_unix_bounds(TARGET_DATE)
+    ins_start, ins_end = _utc_day_unix_bounds(INSIGHTS_DATE)
 
     ig_id = META_IG_ACCOUNT_ID
     if not ig_id:
@@ -263,8 +489,8 @@ def fetch_instagram():
         params={
             "metric": "reach",
             "period": "day",
-            "since": ins_since,
-            "until": ins_until,
+            "since": ins_start,
+            "until": ins_end,
             "access_token": META_TOKEN,
         },
     )
@@ -279,28 +505,7 @@ def fetch_instagram():
         else:
             _log_api_error(insights_resp, "Instagram insights")
 
-    posts_raw = []
-    next_url = None
-    params = {
-        "fields": "id,timestamp,media_type,caption,permalink,thumbnail_url,media_url,like_count,comments_count",
-        "since": since,
-        "until": until,
-        "limit": 100,
-        "access_token": META_TOKEN,
-    }
-    while True:
-        if next_url:
-            media_resp = requests.get(next_url)
-        else:
-            media_resp = requests.get(f"{base}/{ig_id}/media", params=params)
-        media_resp.raise_for_status()
-        data = media_resp.json()
-        batch = data.get("data", [])
-        posts_raw.extend(batch)
-        next_url = data.get("paging", {}).get("next")
-        if not next_url or not batch:
-            break
-        time.sleep(0.3)
+    posts_raw = _collect_ig_media_for_day(ig_id, META_TOKEN, day_start, day_end)
 
     post_rows = []
     total_engagements = 0
@@ -373,19 +578,16 @@ def fetch_facebook():
 
     t0 = time.monotonic()
     log.info("Facebook — iniciando coleta para %s", TARGET_DATE)
-    base = "https://graph.facebook.com/v21.0"
-
-    ins_since = int((INSIGHTS_DATE - date(1970, 1, 1)).total_seconds())
-    ins_until = ins_since + 86400
-    since = int((TARGET_DATE - date(1970, 1, 1)).total_seconds())
-    until = since + 86400
+    base = graph_base()
+    day_start, day_end = _utc_day_unix_bounds(TARGET_DATE)
+    ins_start, ins_end = _utc_day_unix_bounds(INSIGHTS_DATE)
 
     page_resp = requests.get(
         f"{base}/{META_PAGE_ID}",
-        params={"fields": "followers_count", "access_token": META_TOKEN},
+        params={"fields": "fan_count", "access_token": META_TOKEN},
     )
     page_data = page_resp.json() if page_resp.status_code == 200 else {}
-    followers_count = page_data.get("followers_count")
+    followers_count = page_data.get("fan_count")
 
     metrics = {}
     # page_engaged_users não é métrica válida no endpoint atual → (#100) valid insights metric
@@ -394,8 +596,8 @@ def fetch_facebook():
         params={
             "metric": "page_impressions,page_post_engagements",
             "period": "day",
-            "since": ins_since,
-            "until": ins_until,
+            "since": ins_start,
+            "until": ins_end,
             "access_token": META_TOKEN,
         },
     )
@@ -407,28 +609,7 @@ def fetch_facebook():
         _log_api_error(ins_resp, "Facebook insights")
         log.warning("Facebook — insights indisponíveis, continuando sem métricas de página.")
 
-    posts_raw = []
-    next_url = None
-    params = {
-        "fields": "id,created_time,message,permalink_url,full_picture,thumbnail_url,status_type",
-        "since": since,
-        "until": until,
-        "limit": 100,
-        "access_token": META_TOKEN,
-    }
-    while True:
-        if next_url:
-            posts_resp = requests.get(next_url)
-        else:
-            posts_resp = requests.get(f"{base}/{META_PAGE_ID}/posts", params=params)
-        posts_resp.raise_for_status()
-        data = posts_resp.json()
-        batch = data.get("data", [])
-        posts_raw.extend(batch)
-        next_url = data.get("paging", {}).get("next")
-        if not next_url or not batch:
-            break
-        time.sleep(0.3)
+    posts_raw = _collect_fb_posts_for_day(META_PAGE_ID, META_TOKEN, day_start, day_end)
 
     _STATUS_MAP = {
         "added_photos": "photo",
@@ -441,14 +622,23 @@ def fetch_facebook():
     post_rows = []
     total_eng = 0
     for p in posts_raw:
-        ins = requests.get(
+        ins_resp_p = requests.get(
             f"{base}/{p['id']}/insights",
             params={
                 "metric": "post_impressions,post_reach,post_reactions_by_type_total,post_clicks,post_shares",
                 "access_token": META_TOKEN,
             },
-        ).json().get("data", [])
-        ins_map = {i["name"]: i["values"][0]["value"] for i in ins}
+            timeout=60,
+        )
+        if ins_resp_p.status_code != 200:
+            _log_api_error(ins_resp_p, f"Facebook post {p.get('id')} insights")
+            ins_map = {}
+        else:
+            ins_map = {
+                i["name"]: i["values"][0]["value"]
+                for i in ins_resp_p.json().get("data", [])
+                if i.get("values")
+            }
 
         val = ins_map.get("post_reactions_by_type_total")
         if isinstance(val, dict):
@@ -463,7 +653,7 @@ def fetch_facebook():
         total_eng += eng
 
         fb_type = _STATUS_MAP.get(p.get("status_type", ""), "status")
-        thumb = p.get("full_picture") or p.get("thumbnail_url")
+        thumb = p.get("full_picture") or p.get("picture")
 
         post_rows.append(
             {
