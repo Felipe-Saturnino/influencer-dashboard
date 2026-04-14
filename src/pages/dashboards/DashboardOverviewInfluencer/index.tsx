@@ -235,57 +235,6 @@ function diaAgregadoParaGrafico(
   return d;
 }
 
-function diaPorInfluencerMap(
-  dateStr: string,
-  metricas: Metrica[],
-  lives: LiveData[],
-  resultados: LiveResultado[],
-  podeVer: (id: string) => boolean,
-): Map<string, DiaData> {
-  const map = new Map<string, DiaData>();
-  for (const m of metricas) {
-    if (m.data !== dateStr || !podeVer(m.influencer_id)) continue;
-    if (!map.has(m.influencer_id)) map.set(m.influencer_id, emptyDiaData(dateStr));
-    const d = map.get(m.influencer_id)!;
-    d.acessos += m.visit_count || 0;
-    d.registros += m.registration_count || 0;
-    d.ftd_count += m.ftd_count || 0;
-    d.ftd_total += m.ftd_total || 0;
-    d.deposit_count += m.deposit_count || 0;
-    d.deposit_total += m.deposit_total || 0;
-    d.withdrawal_count += m.withdrawal_count || 0;
-    d.withdrawal_total += m.withdrawal_total || 0;
-    d.ggr += m.ggr || 0;
-  }
-  const viewsPorInf = new Map<string, number[]>();
-  for (const live of lives) {
-    if (live.data !== dateStr || !podeVer(live.influencer_id)) continue;
-    const res = resultados.find((r) => r.live_id === live.id);
-    if (!res) continue;
-    if (!map.has(live.influencer_id)) map.set(live.influencer_id, emptyDiaData(dateStr));
-    const d = map.get(live.influencer_id)!;
-    const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
-    d.duracao += h;
-    const media = Number(res.media_views) || 0;
-    const pico =
-      res.max_views != null && Number(res.max_views) > 0
-        ? Number(res.max_views)
-        : media > 0
-          ? media
-          : 0;
-    if (media > 0) {
-      if (!viewsPorInf.has(live.influencer_id)) viewsPorInf.set(live.influencer_id, []);
-      viewsPorInf.get(live.influencer_id)!.push(media);
-    }
-    if (pico > 0) d.max_views = Math.max(d.max_views, pico);
-  }
-  for (const [infId, arr] of viewsPorInf) {
-    const cell = map.get(infId);
-    if (cell && arr.length > 0) cell.media_views = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
-  }
-  return map;
-}
-
 /** Agrega um mês (YYYY-MM) por influencer (histórico). */
 function mesPorInfluencerMap(
   ym: string,
@@ -766,11 +715,12 @@ export default function DashboardOverviewInfluencer() {
       const tot = pickKpiDiaData(d, k);
       const base: Record<string, unknown> = { label, dataIso: d.data, Total: tot };
 
-      if (filtroInfluencer !== "todos") {
-        if (!podeVerInfluencer(filtroInfluencer)) {
-          chartRows.push(base);
-          continue;
-        }
+      if (filtroInfluencer === "todos") {
+        base.tot = tot;
+      } else if (!podeVerInfluencer(filtroInfluencer)) {
+        chartRows.push(base);
+        continue;
+      } else {
         const cell = historico
           ? mesPorInfluencerMap(
               periodKey,
@@ -789,38 +739,23 @@ export default function DashboardOverviewInfluencer() {
             );
         base[filtroInfluencer] = pickKpiDiaData(cell, k);
         idSet.add(filtroInfluencer);
-      } else {
-        const mp = historico
-          ? mesPorInfluencerMap(
-              periodKey,
-              metricasComparativo,
-              livesComparativo,
-              liveResultadosComparativo,
-              podeVerInfluencer,
-            )
-          : diaPorInfluencerMap(
-              d.data,
-              metricasComparativo,
-              livesComparativo,
-              liveResultadosComparativo,
-              podeVerInfluencer,
-            );
-        for (const [infId, cell] of mp) {
-          base[infId] = pickKpiDiaData(cell, k);
-          idSet.add(infId);
-        }
       }
       chartRows.push(base);
     }
 
-    let idsSeriesComparativo = [...idSet].sort((a, b) =>
-      nomeInfluencer(a).localeCompare(nomeInfluencer(b), "pt-BR"),
-    );
-    if (idsSeriesComparativo.length === 0 && chartRows.length > 0) {
-      for (const row of chartRows) {
-        row.tot = row.Total ?? null;
-      }
+    let idsSeriesComparativo: string[];
+    if (filtroInfluencer === "todos") {
       idsSeriesComparativo = ["tot"];
+    } else {
+      idsSeriesComparativo = [...idSet].sort((a, b) =>
+        nomeInfluencer(a).localeCompare(nomeInfluencer(b), "pt-BR"),
+      );
+      if (idsSeriesComparativo.length === 0 && chartRows.length > 0) {
+        for (const row of chartRows) {
+          row.tot = row.Total ?? null;
+        }
+        idsSeriesComparativo = ["tot"];
+      }
     }
 
     return { dadosGraficoComparativo: chartRows, idsSeriesComparativo };
@@ -1427,9 +1362,7 @@ export default function DashboardOverviewInfluencer() {
                 }}
               >
                 Exibindo <strong style={{ color: t.text }}>{kpiGraficoCompConfig.label}</strong>
-                {filtroInfluencer === "todos" && idsSeriesComparativo[0] !== "tot"
-                  ? " por influencer"
-                  : ""}
+                {filtroInfluencer === "todos" ? " — consolidado" : ""}
               </p>
               <div style={{ width: "100%", height: 320 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -1466,7 +1399,7 @@ export default function DashboardOverviewInfluencer() {
                         <Bar
                           key={id}
                           dataKey={id}
-                          name={id === "tot" ? "Total" : nomeInfluencer(id)}
+                          name={id === "tot" ? "Consolidado" : nomeInfluencer(id)}
                           fill={coresSeriesComparativo.get(id) ?? BRAND.roxoVivo}
                           radius={[4, 4, 0, 0]}
                           maxBarSize={28}
@@ -1504,7 +1437,7 @@ export default function DashboardOverviewInfluencer() {
                         <Line
                           key={id}
                           type="monotone"
-                          name={id === "tot" ? "Total" : nomeInfluencer(id)}
+                          name={id === "tot" ? "Consolidado" : nomeInfluencer(id)}
                           dataKey={id}
                           stroke={coresSeriesComparativo.get(id) ?? BRAND.roxoVivo}
                           strokeWidth={2}
