@@ -24,9 +24,31 @@ import {
   FunilVisual,
   SelectComIcone,
   RateCard,
+  SkeletonKpiCard,
 } from "../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
-import { ChevronLeft, ChevronRight, Clock, Table2, ChartColumnBig } from "lucide-react";
+import {
+  AlertTriangle,
+  Award,
+  Banknote,
+  Building2,
+  CalendarDays,
+  ChartColumnBig,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  DollarSign,
+  Eye,
+  Filter,
+  Gauge,
+  Table2,
+  TrendingUp,
+  Trophy,
+  User,
+  UserPlus,
+  Video,
+} from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -39,15 +61,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import {
-  GiPodiumWinner, GiFunnel, GiSpeedometer, GiCalendar,
-  GiMoneyStack, GiTakeMyMoney, GiStarMedal, GiClapperboard,
-  GiSandsOfTime, GiEyeball, GiPerson, GiTrophy,
-  GiCash, GiShield, GiCardPlay,
-} from "react-icons/gi";
-
-const GiStarMedalFilter = GiStarMedal;
-const fmtHoras = fmtHorasTotal;
+import { GiCalendar } from "react-icons/gi";
 
 const MESES_CURTOS_TAB = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -326,7 +340,7 @@ function cel(v: number, isBRL = false) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverviewInfluencer() {
-  const { theme: t, isDark, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
+  const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("dash_overview_influencer");
 
@@ -784,8 +798,6 @@ export default function DashboardOverviewInfluencer() {
     return m;
   }, [idsSeriesComparativo]);
 
-  const COR_TOTAL_COMP = isDark ? "#ffffff" : "#000000";
-
   function TooltipComparativoInflChart({
     active,
     payload,
@@ -813,7 +825,7 @@ export default function DashboardOverviewInfluencer() {
       totalOficial != null && Number.isFinite(Number(totalOficial)) ? totalOficial : totalSomavelFallback;
     const formatar = (v: number) => {
       if (isBrlKpiComp) return fmtBRL(v);
-      if (kpiGraficoComparativo === "duracao") return fmtHoras(v);
+      if (kpiGraficoComparativo === "duracao") return fmtHorasTotal(v);
       return v.toLocaleString("pt-BR");
     };
     const mostrarRodapeTotal =
@@ -877,8 +889,8 @@ export default function DashboardOverviewInfluencer() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>Total</span>
-            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>
+            <span style={{ fontWeight: 700, color: t.text }}>Total</span>
+            <span style={{ fontWeight: 700, color: t.text }}>
               {somavel
                 ? formatar(totalSomavel)
                 : valorRodape != null
@@ -908,6 +920,11 @@ export default function DashboardOverviewInfluencer() {
   const ggrPorJogador = totais.ftds > 0 ? fmtBRL(totais.ggr / totais.ftds) : "—";
 
   const brand = useDashboardBrand();
+  const kpiChartPillActiveBorder = brand.useBrand ? brand.primary : "var(--brand-primary, #7c3aed)";
+  const kpiChartPillActiveBg = brand.useBrand
+    ? brand.primaryTransparentBg
+    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)";
+  const kpiChartPillActiveColor = brand.useBrand ? brand.primary : "var(--brand-primary, #7c3aed)";
   const card: React.CSSProperties = { background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   const thStyle = getThStyle(t, {
@@ -941,7 +958,7 @@ export default function DashboardOverviewInfluencer() {
             <button type="button" aria-label="Mês anterior" style={{ ...btnNav, opacity: historico || isPrimeiro ? 0.35 : 1, cursor: historico || isPrimeiro ? "not-allowed" : "pointer" }} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
               <ChevronLeft size={14} aria-hidden />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "clamp(120px, 40vw, 180px)", textAlign: "center" }}>
               {historico ? "Todo o período" : mesSelecionado?.label}
             </span>
             <button type="button" aria-label="Próximo mês" style={{ ...btnNav, opacity: historico || isUltimo ? 0.35 : 1, cursor: historico || isUltimo ? "not-allowed" : "pointer" }} onClick={irMesProximo} disabled={historico || isUltimo}>
@@ -958,20 +975,24 @@ export default function DashboardOverviewInfluencer() {
                 padding: "6px 14px", borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
                 border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
+                background: historico
+                  ? brand.useBrand
+                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)"
+                  : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
               onClick={toggleHistorico}
             >
-              <GiCalendar size={15} /> Histórico
+              <GiCalendar size={15} aria-hidden="true" /> Histórico
             </button>
 
             {/* Filtro Influencer — ícone dentro do campo (mesmo padrão do Histórico) */}
             {showFiltroInfluencer && (
               <SelectComIcone
-                icon={<GiStarMedalFilter size={15} />}
+                icon={<User size={15} aria-hidden="true" />}
                 label="Filtrar por influencer"
                 pill
                 value={filtroInfluencer}
@@ -990,7 +1011,7 @@ export default function DashboardOverviewInfluencer() {
             {/* Filtro Operadora — ícone dentro do campo */}
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<GiShield size={15} aria-hidden />}
+                icon={<Building2 size={15} aria-hidden="true" />}
                 label="Filtrar por operadora"
                 pill
                 value={filtroOperadora}
@@ -1029,39 +1050,157 @@ export default function DashboardOverviewInfluencer() {
           }}
           role="status"
         >
-          Filtro de influencer removido — {MSG_SEM_DADOS_FILTRO}.
+          <AlertTriangle size={14} aria-hidden="true" /> Filtro de influencer removido — {MSG_SEM_DADOS_FILTRO}.
         </div>
       )}
 
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle
-          icon={<GiPodiumWinner size={14} aria-hidden />}
+          icon={<Award size={14} aria-hidden="true" />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Executivos
         </SectionTitle>
-        <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-          <KpiCard label="GGR Total" value={fmtBRL(totais.ggr)} icon={<GiMoneyStack size={16} />} accentVar="--brand-extra1" accentColor={BRAND.roxo} atual={totais.ggr} anterior={totaisAnt.ggr} isBRL isHistorico={historico} />
-          <KpiCard label="Investimento" value={fmtBRL(totais.investimento)} icon={<GiTakeMyMoney size={16} />} accentVar="--brand-extra4" accentColor={BRAND.azul} atual={totais.investimento} anterior={totaisAnt.investimento} isBRL isHistorico={historico} />
-          <KpiCard label="ROI" value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"} icon={<GiStarMedal size={16} />} accentVar="--brand-extra2" accentColor={BRAND.verde} atual={totais.roi} anterior={totaisAnt.roi} isHistorico={historico} />
-        </div>
-        <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-          <KpiCard label="Qtd de Lives" value={totais.lives.toLocaleString("pt-BR")} icon={<GiClapperboard size={16} />} accentVar="--brand-extra2" accentColor={BRAND.azul} atual={totais.lives} anterior={totaisAnt.lives} isHistorico={historico} />
-          <KpiCard label="Horas Realizadas" value={fmtHoras(totais.horas)} icon={<GiSandsOfTime size={16} />} accentVar="--brand-extra2" accentColor={BRAND.azul} atual={totais.horas} anterior={totaisAnt.horas} isHistorico={historico} />
-          <KpiCard label="Média de Views" value={totais.views > 0 ? totais.views.toLocaleString("pt-BR") : "—"} icon={<GiEyeball size={16} />} accentVar="--brand-extra2" accentColor={BRAND.azul} atual={totais.views} anterior={totaisAnt.views} isHistorico={historico} />
-        </div>
-        <div className="app-grid-kpi-4">
-          <KpiCard label="Registros" value={totais.registros.toLocaleString("pt-BR")} icon={<GiPerson size={16} />} accentVar="--brand-extra3" accentColor={BRAND.roxo} atual={totais.registros} anterior={totaisAnt.registros} isHistorico={historico} subValue={subValueReg} />
-          <KpiCard label="FTDs" value={totais.ftds.toLocaleString("pt-BR")} icon={<GiTrophy size={16} />} accentVar="--brand-extra3" accentColor={BRAND.roxo} atual={totais.ftds} anterior={totaisAnt.ftds} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }} />
-          <KpiCard label="Depósitos" value={totais.depositos_qtd.toLocaleString("pt-BR")} icon={<GiCardPlay size={16} />} accentVar="--brand-extra3" accentColor={BRAND.amarelo} atual={totais.depositos_qtd} anterior={totaisAnt.depositos_qtd} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.depositos_valor) }} />
-          <KpiCard label="Saques" value={totais.saques_qtd.toLocaleString("pt-BR")} icon={<GiCash size={16} />} accentVar="--brand-extra4" accentColor={BRAND.amarelo} atual={totais.saques_qtd} anterior={totaisAnt.saques_qtd} isHistorico={historico} subValue={{ label: "valor", value: fmtBRL(totais.saques_valor) }} />
-        </div>
+        {loading ? (
+          <>
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              {[0, 1, 2].map((i) => (
+                <SkeletonKpiCard key={`sk-r1-${i}`} />
+              ))}
+            </div>
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              {[0, 1, 2].map((i) => (
+                <SkeletonKpiCard key={`sk-r2-${i}`} />
+              ))}
+            </div>
+            <div className="app-grid-kpi-4">
+              {[0, 1, 2, 3].map((i) => (
+                <SkeletonKpiCard key={`sk-r3-${i}`} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              <KpiCard
+                label="GGR Total"
+                value={fmtBRL(totais.ggr)}
+                icon={<TrendingUp size={16} aria-hidden="true" />}
+                accentColor={totais.ggr >= 0 ? BRAND.verde : BRAND.vermelho}
+                atual={totais.ggr}
+                anterior={totaisAnt.ggr}
+                isBRL
+                isHistorico={historico}
+              />
+              <KpiCard
+                label="Investimento"
+                value={fmtBRL(totais.investimento)}
+                icon={<DollarSign size={16} aria-hidden="true" />}
+                accentVar="--brand-accent"
+                accentColor={BRAND.azul}
+                atual={totais.investimento}
+                anterior={totaisAnt.investimento}
+                isBRL
+                isHistorico={historico}
+              />
+              <KpiCard
+                label="ROI"
+                value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"}
+                icon={<Award size={16} aria-hidden="true" />}
+                accentColor={
+                  totais.investimento > 0 ? (totais.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde
+                }
+                atual={totais.roi}
+                anterior={totaisAnt.roi}
+                isHistorico={historico}
+              />
+            </div>
+            <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+              <KpiCard
+                label="Qtd de Lives"
+                value={totais.lives.toLocaleString("pt-BR")}
+                icon={<Video size={16} aria-hidden="true" />}
+                accentVar="--brand-accent"
+                accentColor={BRAND.azul}
+                atual={totais.lives}
+                anterior={totaisAnt.lives}
+                isHistorico={historico}
+              />
+              <KpiCard
+                label="Horas Realizadas"
+                value={fmtHorasTotal(totais.horas)}
+                icon={<Clock size={16} aria-hidden="true" />}
+                accentVar="--brand-accent"
+                accentColor={BRAND.azul}
+                atual={totais.horas}
+                anterior={totaisAnt.horas}
+                isHistorico={historico}
+              />
+              <KpiCard
+                label="Média de Views"
+                value={totais.views > 0 ? totais.views.toLocaleString("pt-BR") : "—"}
+                icon={<Eye size={16} aria-hidden="true" />}
+                accentVar="--brand-icon"
+                accentColor={BRAND.azul}
+                atual={totais.views}
+                anterior={totaisAnt.views}
+                isHistorico={historico}
+              />
+            </div>
+            <div className="app-grid-kpi-4">
+              <KpiCard
+                label="Registros"
+                value={totais.registros.toLocaleString("pt-BR")}
+                icon={<UserPlus size={16} aria-hidden="true" />}
+                accentVar="--brand-primary"
+                accentColor={BRAND.roxo}
+                atual={totais.registros}
+                anterior={totaisAnt.registros}
+                isHistorico={historico}
+                subValue={subValueReg}
+              />
+              <KpiCard
+                label="FTDs"
+                value={totais.ftds.toLocaleString("pt-BR")}
+                icon={<Trophy size={16} aria-hidden="true" />}
+                accentVar="--brand-primary"
+                accentColor={BRAND.roxo}
+                atual={totais.ftds}
+                anterior={totaisAnt.ftds}
+                isHistorico={historico}
+                subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }}
+              />
+              <KpiCard
+                label="Depósitos"
+                value={totais.depositos_qtd.toLocaleString("pt-BR")}
+                icon={<CreditCard size={16} aria-hidden="true" />}
+                accentVar="--brand-icon"
+                accentColor={BRAND.amarelo}
+                atual={totais.depositos_qtd}
+                anterior={totaisAnt.depositos_qtd}
+                isHistorico={historico}
+                subValue={{ label: "valor", value: fmtBRL(totais.depositos_valor) }}
+              />
+              <KpiCard
+                label="Saques"
+                value={totais.saques_qtd.toLocaleString("pt-BR")}
+                icon={<Banknote size={16} aria-hidden="true" />}
+                accentColor={BRAND.amarelo}
+                atual={totais.saques_qtd}
+                anterior={totaisAnt.saques_qtd}
+                isHistorico={historico}
+                subValue={{ label: "valor", value: fmtBRL(totais.saques_valor) }}
+                isInverso
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* ─── BLOCO 3: Funil de Conversão ───────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiFunnel size={14} />} sub={historico ? "acumulado" : undefined}>
+        <SectionTitle icon={<Filter size={14} aria-hidden="true" />} sub={historico ? "acumulado" : undefined}>
           Funil de Conversão
         </SectionTitle>
         <FunilVisual values={[totais.views, totais.acessos, totais.registros, totais.ftds]} taxas={[pctViewAcesso, pctAcessoReg, pctRegFTD, pctAcessoFTD, pctViewFTD]} />
@@ -1069,7 +1208,7 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 4: Eficiência ──────────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiSpeedometer size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+        <SectionTitle icon={<Gauge size={14} aria-hidden="true" />} sub={historico ? "acumulado" : undefined}>
           Eficiência
         </SectionTitle>
         <div style={{
@@ -1091,7 +1230,7 @@ export default function DashboardOverviewInfluencer() {
         <div style={{ ...card, padding: 0, overflow: "hidden", marginBottom: 0 }}>
           <div style={{ padding: "20px 20px 16px" }}>
             <SectionTitle
-              icon={<GiCalendar size={14} aria-hidden />}
+              icon={<CalendarDays size={14} aria-hidden="true" />}
               sub={historico ? "mês a mês" : undefined}
             >
               {historico ? "Comparativo Mensal" : "Comparativo Diário"}
@@ -1132,9 +1271,9 @@ export default function DashboardOverviewInfluencer() {
                               fontFamily: FONT.body,
                               fontSize: 11,
                               fontWeight: ativo ? 700 : 400,
-                              border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
-                              background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
-                              color: ativo ? BRAND.roxoVivo : t.textMuted,
+                              border: `1px solid ${ativo ? kpiChartPillActiveBorder : t.cardBorder}`,
+                              background: ativo ? kpiChartPillActiveBg : "transparent",
+                              color: ativo ? kpiChartPillActiveColor : t.textMuted,
                               transition: "all 0.15s",
                             }}
                           >
@@ -1143,7 +1282,7 @@ export default function DashboardOverviewInfluencer() {
                                 width: 6,
                                 height: 6,
                                 borderRadius: "50%",
-                                background: ativo ? BRAND.roxoVivo : t.cardBorder,
+                                background: ativo ? kpiChartPillActiveBorder : t.cardBorder,
                                 flexShrink: 0,
                               }}
                             />
@@ -1190,8 +1329,8 @@ export default function DashboardOverviewInfluencer() {
                       fontSize: 11,
                       fontWeight: modoVisualizacaoComparativo === modo ? 700 : 400,
                       background:
-                        modoVisualizacaoComparativo === modo ? "rgba(124,58,237,0.12)" : "transparent",
-                      color: modoVisualizacaoComparativo === modo ? BRAND.roxoVivo : t.textMuted,
+                        modoVisualizacaoComparativo === modo ? kpiChartPillActiveBg : "transparent",
+                      color: modoVisualizacaoComparativo === modo ? kpiChartPillActiveColor : t.textMuted,
                       transition: "all 0.15s",
                       borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
                     }}
@@ -1205,7 +1344,7 @@ export default function DashboardOverviewInfluencer() {
 
           {modoVisualizacaoComparativo === "tabela" ? (
             <div className="app-table-wrap">
-              <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
+              <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
                 <caption
                   style={{
                     position: "absolute",
@@ -1252,7 +1391,7 @@ export default function DashboardOverviewInfluencer() {
                       <td style={tdStyle}>
                         {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
                       </td>
-                      <td style={tdStyle}>{d.duracao > 0 ? fmtHoras(d.duracao) : "—"}</td>
+                      <td style={tdStyle}>{d.duracao > 0 ? fmtHorasTotal(d.duracao) : "—"}</td>
                       <td style={tdStyle}>{cel(d.media_views)}</td>
                       <td style={tdStyle}>{cel(d.max_views)}</td>
                       <td style={tdStyle}>{cel(d.acessos)}</td>
@@ -1312,7 +1451,7 @@ export default function DashboardOverviewInfluencer() {
                           }}
                         >
                           <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>Total</td>
-                          <td style={tdStyle}>{tot.duracao > 0 ? fmtHoras(tot.duracao) : "—"}</td>
+                          <td style={tdStyle}>{tot.duracao > 0 ? fmtHorasTotal(tot.duracao) : "—"}</td>
                           <td style={tdStyle}>—</td>
                           <td style={tdStyle}>—</td>
                           <td style={tdStyle}>{cel(tot.acessos)}</td>
@@ -1364,7 +1503,11 @@ export default function DashboardOverviewInfluencer() {
                 Exibindo <strong style={{ color: t.text }}>{kpiGraficoCompConfig.label}</strong>
                 {filtroInfluencer === "todos" ? " — consolidado" : ""}
               </p>
-              <div style={{ width: "100%", height: 320 }}>
+              <div
+                role="img"
+                aria-label={`Gráfico de ${kpiGraficoCompConfig.label} — ${historico ? "todo o período" : (mesSelecionado?.label ?? "")}`}
+                style={{ width: "100%", height: "clamp(220px, 35vh, 420px)" }}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   {kpiGraficoCompConfig.tipoGrafico === "barra" ? (
                     <BarChart
@@ -1400,7 +1543,7 @@ export default function DashboardOverviewInfluencer() {
                           key={id}
                           dataKey={id}
                           name={id === "tot" ? "Consolidado" : nomeInfluencer(id)}
-                          fill={coresSeriesComparativo.get(id) ?? BRAND.roxoVivo}
+                          fill={coresSeriesComparativo.get(id) ?? "var(--brand-primary, #7c3aed)"}
                           radius={[4, 4, 0, 0]}
                           maxBarSize={28}
                         />
@@ -1439,7 +1582,7 @@ export default function DashboardOverviewInfluencer() {
                           type="monotone"
                           name={id === "tot" ? "Consolidado" : nomeInfluencer(id)}
                           dataKey={id}
-                          stroke={coresSeriesComparativo.get(id) ?? BRAND.roxoVivo}
+                          stroke={coresSeriesComparativo.get(id) ?? "var(--brand-primary, #7c3aed)"}
                           strokeWidth={2}
                           dot={{ r: 2 }}
                           connectNulls

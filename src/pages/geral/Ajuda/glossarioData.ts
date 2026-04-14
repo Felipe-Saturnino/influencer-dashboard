@@ -41,7 +41,17 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "Média de Views",
         definicao:
           "Média de visualizações simultâneas por live no período. Lives sem dado de views são excluídas do cálculo.",
-        referencia: "Overview · Feedback",
+        nota:
+          "Diferente do Máx Views (pico): a Média representa a audiência sustentada ao longo da transmissão, enquanto o Máx representa o momento de maior audiência.\n\nUm influencer com média alta e pico próximo da média manteve a audiência de forma consistente. Um influencer com pico muito acima da média teve um momento específico de destaque.",
+        referencia: "Overview · Feedback · Overview Influencer",
+      },
+      {
+        termo: "Máx Views (Pico de Views)",
+        definicao:
+          "Número máximo de espectadores simultâneos registrado em uma live. Representa o pico de audiência da transmissão, em contraste com a Média de Views, que suaviza as variações ao longo da live.",
+        nota:
+          "Picos altos com média baixa indicam que o influencer teve um momento de destaque durante a transmissão, mas a audiência não se manteve. Quando ambos são altos, a live sustentou a audiência do início ao fim.\n\nExibido na coluna 'Máx Views' da tabela Comparativo Diário / Mensal no Overview Influencer.",
+        referencia: "Overview Influencer",
       },
       {
         termo: "MTD (Month To Date)",

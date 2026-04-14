@@ -14,6 +14,7 @@ import {
   GiBinoculars,
   GiCash,
   GiPokerHand,
+  GiMicrophone,
 } from "react-icons/gi";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
@@ -25,6 +26,11 @@ const MENU_AJUDA = [
     items: [
       { key: "streamers" as PageKey, label: "Streamers", Icon: GiTv },
       { key: "mesas_spin" as PageKey, label: "Overview Spin", Icon: GiPokerHand },
+      {
+        key: "dash_overview_influencer" as PageKey,
+        label: "Overview Influencer",
+        Icon: GiMicrophone,
+      },
     ],
   },
   {
@@ -116,6 +122,40 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Perfil Operador",
         texto:
           "Operadores visualizam os mesmos blocos e KPIs, com escopo restrito às mesas da sua operadora. O filtro de operadora não é exibido — os dados já correspondem ao acesso autorizado. O Comparativo de Mesa e os Dados por Mesa ficam disponíveis automaticamente, sem necessidade de selecionar uma operadora.",
+      },
+    ],
+  },
+  dash_overview_influencer: {
+    titulo: "Overview Influencer",
+    blocos: [
+      {
+        texto:
+          "Painel executivo dos resultados gerados pelo influencer — GGR, investimento, funil de conversão, eficiência e evolução temporal. Projetado para que o próprio influencer ou sua agência acompanhe os indicadores do canal com o mesmo nível de detalhe usado pela equipe Spin.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "Use as setas para navegar entre meses ou ative Histórico para ver o acumulado de todo o período. No modo Histórico, o comparativo MoM é desabilitado e a tabela de evolução exibe uma linha por mês em vez de uma por dia.\n\nO filtro de influencer aparece quando o perfil tem acesso a mais de um parceiro — por exemplo, uma agência que representa múltiplos influencers. Influencers visualizam os próprios dados sem esse filtro disponível.\n\nO filtro de operadora aparece quando o influencer atuou em mais de uma operadora no período, permitindo isolar os dados de uma específica.",
+      },
+      {
+        subtitulo: "KPIs Executivos",
+        texto:
+          "Três grupos de indicadores consolidados do período:\n\n— Financeiro: GGR Total, Investimento recebido e ROI — o retorno gerado em relação ao valor pago.\n— Operação: Quantidade de Lives, Horas Realizadas e Média de Views por live.\n— Conversão: Registros gerados, FTDs (quantidade e valor total), Depósitos e Saques dos jogadores captados.\n\nNo mês corrente (MTD), todos os indicadores exibem a variação em relação ao mesmo intervalo do mês anterior. No modo Histórico, o comparativo é desabilitado.",
+      },
+      {
+        subtitulo: "Funil de Conversão",
+        texto:
+          "Exibe os quatro estágios da jornada do jogador captado pelo influencer — Views, Acessos ao link, Registros e FTDs — com as taxas de passagem entre cada etapa. Taxas baixas em qualquer etapa indicam onde o funil está perdendo eficiência.",
+      },
+      {
+        subtitulo: "Eficiência",
+        texto:
+          "Cinco indicadores de qualidade e eficiência do canal:\n\n— FTD/Hora: quantos primeiros depósitos são gerados por hora de live transmitida.\n— Ticket Médio FTD: valor médio do primeiro depósito dos jogadores captados.\n— Ticket Médio Depósito: valor médio de todos os depósitos (incluindo os subsequentes ao primeiro).\n— Ticket Médio Saque: valor médio por saque realizado.\n— GGR por Jogador: receita bruta média gerada por jogador captado.",
+      },
+      {
+        subtitulo: "Comparativo Diário / Comparativo Mensal",
+        texto:
+          "Tabela com a evolução detalhada dos indicadores no tempo — dia a dia no mês selecionado, ou mês a mês no modo Histórico. A linha de Total ao final da tabela consolida todos os valores do período.\n\nUse o toggle Tabela / Gráfico para alternar entre a visualização em tabela e a evolução em gráfico. No modo gráfico, selecione o KPI que deseja visualizar nos botões acima do gráfico.\n\nNota: no mês corrente, os dados do dia de hoje não são exibidos — o comparativo vai até o dia anterior para garantir que apenas dados completos sejam considerados.",
       },
     ],
   },
@@ -345,6 +385,46 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "O drilldown por operadora não aparece na tabela?",
         texto:
           "A expansão por operadora (ícone de seta ao lado da data ou mês) só está disponível quando o filtro está em 'Todas as operadoras'. Se uma operadora específica estiver selecionada, os dados já estão filtrados e não há sublinhas para expandir.",
+      },
+    ],
+  },
+  dash_overview_influencer: {
+    titulo: "Overview Influencer",
+    blocos: [
+      {
+        subtitulo: "Os dados não estão aparecendo?",
+        texto:
+          "Verifique se há lives com status 'Realizada' validadas em Feedback para o período selecionado — sem lives validadas, os KPIs não são calculados. Se o filtro de influencer ou operadora estiver ativo, tente resetá-lo para confirmar se os dados existem em outro escopo.",
+      },
+      {
+        subtitulo: "O ROI ou o GGR aparecem como '—'?",
+        texto:
+          "ROI '—' indica que não há investimento registrado e aprovado no período — verifique se o ciclo de pagamento está fechado e aprovado no módulo Financeiro.\n\nGGR '—' indica ausência de jogadores com depósitos e saques vinculados ao canal do influencer. Confirme se o link de afiliado está ativo e corretamente configurado na operadora.",
+      },
+      {
+        subtitulo: "O Comparativo do mês atual tem menos dias do que o esperado?",
+        texto:
+          "Esse comportamento é intencional. No mês corrente, o comparativo exibe dados somente até o dia anterior — o dia de hoje não é incluído porque ainda está em andamento e os dados podem estar incompletos. Em meses anteriores, todos os dias são exibidos.",
+      },
+      {
+        subtitulo: "Uma notificação apareceu dizendo que o filtro foi removido?",
+        texto:
+          "Quando você navega para um mês em que o influencer selecionado não tem dados, o sistema remove o filtro automaticamente e exibe o resultado consolidado de todos os influencers disponíveis no período. A notificação some em alguns segundos. Se quiser filtrar novamente, selecione o influencer no campo de filtro após a navegação.",
+      },
+      {
+        subtitulo: "FTD/Hora, Ticket Médio ou GGR por Jogador aparecem como '—'?",
+        texto:
+          "Essas métricas exigem dados mínimos para o cálculo:\n\n— FTD/Hora '—': o influencer não tem horas de live registradas no período. Verifique se as lives têm duração preenchida em Feedback.\n— Ticket Médio FTD '—': não há FTDs no período — sem primeiros depósitos, não há base de cálculo.\n— GGR por Jogador '—': idem — a métrica é GGR dividido por número de FTDs.",
+      },
+      {
+        subtitulo: "O Investimento aparece como 'R$ 0,00' ou '—'?",
+        texto:
+          "O investimento exibido considera apenas pagamentos com status Pago no módulo Financeiro. Se o ciclo do período ainda está Em análise ou A pagar, o valor aparece como zero. Confirme o status do pagamento com o gestor responsável.",
+      },
+      {
+        subtitulo: "A tabela do Comparativo está vazia ou sem dados em algumas colunas?",
+        texto:
+          "A tabela exibe todos os dias do mês — mesmo dias sem atividade aparecem como linha com '—'. Se colunas de conversão (Acessos, Registros, FTDs) estão todas '—', pode indicar que o link de afiliado não gerou tráfego naquele dia. Colunas de live (Duração, Média Views) aparecem '—' em dias sem live realizada.",
       },
     ],
   },
