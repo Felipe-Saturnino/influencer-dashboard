@@ -13,7 +13,7 @@ import { PlatLogo } from "../../../components/PlatLogo";
 import { SelectComIcone } from "../../../components/dashboard";
 import {
   AlertTriangle,
-  Building2,
+  Shield,
   Check,
   CheckCircle,
   ClipboardList,
@@ -691,7 +691,7 @@ export default function Resultados() {
               {showFiltroOperadora && operadorasList.length > 0 && (
                 <SelectComIcone
                   pill
-                  icon={<Building2 size={13} aria-hidden="true" />}
+                  icon={<Shield size={13} aria-hidden="true" />}
                   label="Filtrar por operadora"
                   value={filterOperadora}
                   onChange={setFilterOperadora}

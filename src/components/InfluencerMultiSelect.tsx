@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { Check, ChevronDown, ChevronUp, Users, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, User, X } from "lucide-react";
 import { FONT, type Theme } from "../constants/theme";
 
 const BRAND_PRIMARY = "var(--brand-primary, #7c3aed)";
@@ -79,7 +79,7 @@ export default function InfluencerMultiSelect({ selected, onChange, influencers,
           whiteSpace: "nowrap" as const,
         }}
       >
-        <Users size={13} strokeWidth={2} aria-hidden />
+        <User size={13} strokeWidth={2} aria-hidden />
         {label}
         {open ? <ChevronUp size={9} aria-hidden /> : <ChevronDown size={9} aria-hidden />}
       </button>

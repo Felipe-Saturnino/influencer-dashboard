@@ -26,7 +26,7 @@ import {
   Clock,
   Link2,
   Plus,
-  Building2,
+  Shield,
 } from "lucide-react";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
@@ -719,7 +719,7 @@ export default function Agenda() {
             {showFiltroOperadora && operadorasList.length > 0 && (
               <SelectComIcone
                 pill
-                icon={<Building2 size={13} aria-hidden="true" />}
+                icon={<Shield size={13} aria-hidden="true" />}
                 label="Filtrar por operadora"
                 value={filterOperadora}
                 onChange={setFilterOperadora}
