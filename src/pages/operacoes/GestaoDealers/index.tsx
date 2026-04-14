@@ -627,6 +627,98 @@ export default function GestaoDealers() {
   );
 }
 
+/** Carrossel de fotos (cards e modal ver): setas só quando há mais de uma URL. */
+function DealerFotoCarrossel({
+  urls,
+  alt,
+  resetKey,
+}: {
+  urls: string[];
+  alt: string;
+  resetKey: string;
+}) {
+  const n = urls.length;
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    setIdx(0);
+  }, [resetKey, urls.join("|")]);
+
+  if (n === 0) return null;
+
+  const cur = ((idx % n) + n) % n;
+
+  const navBtn: CSSProperties = {
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    zIndex: 4,
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    border: "none",
+    background: "rgba(0,0,0,0.45)",
+    color: "#fff",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 0,
+  };
+
+  return (
+    <div style={{ position: "absolute", inset: 0 }}>
+      <img src={urls[cur]} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      {n > 1 ? (
+        <>
+          <button
+            type="button"
+            aria-label="Foto anterior"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIdx((i) => (i - 1 + n) % n);
+            }}
+            style={{ ...navBtn, left: 6 }}
+          >
+            <ChevronLeft size={18} strokeWidth={2.2} aria-hidden />
+          </button>
+          <button
+            type="button"
+            aria-label="Próxima foto"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIdx((i) => (i + 1) % n);
+            }}
+            style={{ ...navBtn, right: 6 }}
+          >
+            <ChevronRight size={18} strokeWidth={2.2} aria-hidden />
+          </button>
+          <div
+            style={{
+              position: "absolute",
+              bottom: 10,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 3,
+              background: "rgba(0,0,0,0.55)",
+              color: "#fff",
+              padding: "2px 10px",
+              borderRadius: 20,
+              fontSize: 10,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              pointerEvents: "none",
+            }}
+            aria-live="polite"
+          >
+            {cur + 1} / {n}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 // ─── DealerCard ────────────────────────────────────────────────────────────────
 function DealerCard({
   dealer,
@@ -650,7 +742,7 @@ function DealerCard({
   podeEditar: boolean;
 }) {
   const { theme: t, isDark } = useApp();
-  const fotoUrl = (dealer.fotos ?? [])[0];
+  const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
 
   return (
@@ -676,9 +768,10 @@ function DealerCard({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        overflow: "hidden",
       }}>
-        {fotoUrl ? (
-          <img src={fotoUrl} alt={dealer.nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {fotosUrls.length > 0 ? (
+          <DealerFotoCarrossel urls={fotosUrls} alt={dealer.nickname} resetKey={dealer.id} />
         ) : (
           <div style={{ fontSize: 48, color: "rgba(255,255,255,0.2)", fontWeight: 800, fontFamily: FONT.body }}>
             {(dealer.nickname || "?")[0]?.toUpperCase()}
@@ -981,16 +1074,16 @@ function ModalVer({
 }) {
   const { theme: t } = useApp();
   const op = operadoras.find((o) => o.slug === dealer.operadora_slug);
-  const fotoUrl = (dealer.fotos ?? [])[0];
+  const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
 
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
       <ModalHeader title={dealer.nickname} onClose={onClose} />
-      {fotoUrl && (
-        <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: "16/10" }}>
-          <img src={fotoUrl} alt={dealer.nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      {fotosUrls.length > 0 ? (
+        <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginBottom: 20, aspectRatio: "16/10" }}>
+          <DealerFotoCarrossel urls={fotosUrls} alt={dealer.nickname} resetKey={dealer.id} />
         </div>
-      )}
+      ) : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 14, fontFamily: FONT.body }}>
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Nome Real</span>
@@ -1097,10 +1190,9 @@ function ModalDealer({
     setErro("");
     try {
       const novas: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (const file of Array.from(files)) {
         const ext = file.name.split(".").pop() ?? "jpg";
-        const path = `${editando?.id ?? "new"}-${Date.now()}-${i}.${ext}`;
+        const path = `${editando?.id ?? crypto.randomUUID()}-${crypto.randomUUID()}.${ext}`;
         const { data, error } = await supabase.storage.from("dealer-photos").upload(path, file, { upsert: true });
         if (error) throw error;
         const { data: urlData } = supabase.storage.from("dealer-photos").getPublicUrl(data.path);
@@ -1176,6 +1268,9 @@ function ModalDealer({
 
         <div style={fieldStyle}>
           <label style={labelStyle}>Fotos</label>
+          <p style={{ margin: "0 0 10px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+            Você pode enviar várias imagens de uma vez; nos cards da listagem, use as setas para navegar entre elas.
+          </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
             {fotos.map((url, idx) => (
               <div key={idx} style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
