@@ -96,6 +96,8 @@ type LinhaDetalheTab = Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & {
   arpu: number | null;
   /** Chave estável para drilldown (YYYY-MM-DD ou YYYY-MM). */
   drillId?: string;
+  /** Eixo temporal do gráfico (YYYY-MM-DD no diário; YYYY-MM-01 no mensal). */
+  periodoIso: string;
 };
 
 type UapPorJogoPlanRow = { data: string; jogo: string; uap: number | null };
@@ -944,6 +946,34 @@ const KPIS_DISPONIVEIS: KpiJogoDef[] = [
   { key: "arpu", label: "ARPU", somavel: false, tipoGrafico: "linha" },
 ];
 
+function pickKpiMetricaDetalhe(
+  row: {
+    ggr: number | null;
+    turnover: number | null;
+    bets: number | null;
+    margin_pct: number | null;
+    bet_size: number | null;
+    uap: number | null;
+    arpu: number | null;
+  },
+  k: KpiJogoKey,
+): number | null {
+  const v = row[k];
+  return v != null && Number.isFinite(Number(v)) ? Number(v) : null;
+}
+
+/** Cores distintas por série no gráfico de detalhamento (operadoras). */
+const PALETA_OPERADORAS_DETALHE = [
+  "var(--brand-primary, #7c3aed)",
+  "var(--brand-accent, #1e36f8)",
+  "var(--brand-icon, #70cae4)",
+  "#22c55e",
+  "#f59e0b",
+  "#ec4899",
+  "#a78bfa",
+  "#14b8a6",
+] as const;
+
 const JOGOS_COMPARATIVO = [
   { key: "blackjack" as const, label: "Blackjack", cor: COR_BLACKJACK },
   { key: "roleta" as const, label: "Roleta", cor: COR_ROLETA },
@@ -1143,6 +1173,8 @@ export default function MesasSpin() {
   const [monthlyRawUnmerged, setMonthlyRawUnmerged] = useState<MonthlyRawRow[]>([]);
   const [expandedDetalhe, setExpandedDetalhe] = useState<Set<string>>(() => new Set());
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
+  const [modoVisualizacaoDetalhe, setModoVisualizacaoDetalhe] = useState<"tabela" | "grafico">("tabela");
+  const [kpiGraficoDetalhe, setKpiGraficoDetalhe] = useState<KpiJogoKey>("ggr");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -1391,7 +1423,10 @@ export default function MesasSpin() {
   );
 
   const tabelaRows = useMemo(() => {
-    const enrich = (base: Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & { label: string }): LinhaDetalheTab => {
+    const enrich = (
+      base: Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & { label: string },
+      periodoIso: string,
+    ): LinhaDetalheTab => {
       const t = base.turnover;
       const g = base.ggr;
       const b = base.bets;
@@ -1400,7 +1435,7 @@ export default function MesasSpin() {
       const bet_size =
         b != null && Number(b) !== 0 && t != null ? Number(t) / Number(b) : null;
       const arpu = u != null && Number(u) !== 0 && g != null ? Number(g) / Number(u) : null;
-      return { ...base, margin_pct, bet_size, arpu };
+      return { ...base, margin_pct, bet_size, arpu, periodoIso };
     };
     if (historico) {
       const dailyByYm = new Map<string, DailyRow[]>();
@@ -1437,15 +1472,19 @@ export default function MesasSpin() {
               bet_size,
               arpu,
               drillId: ym,
+              periodoIso: `${ym}-01`,
             };
           }
-          return enrich({
-            label: fmtMesAnoCurtoFromYm(ym),
-            turnover: agg?.turnover ?? null,
-            ggr: agg?.ggr ?? null,
-            bets: agg?.bets ?? null,
-            uap: m?.uap != null ? Number(m.uap) : agg?.uap ?? null,
-          });
+          return enrich(
+            {
+              label: fmtMesAnoCurtoFromYm(ym),
+              turnover: agg?.turnover ?? null,
+              ggr: agg?.ggr ?? null,
+              bets: agg?.bets ?? null,
+              uap: m?.uap != null ? Number(m.uap) : agg?.uap ?? null,
+            },
+            `${ym}-01`,
+          );
         });
     }
     if (modoAgregadoTodasOperadoras) {
@@ -1464,21 +1503,25 @@ export default function MesasSpin() {
           bet_size: r.bet_size,
           arpu: arpuComparativoFromGgrUap(r.ggr, r.uap),
           drillId: r.data,
+          periodoIso: normalizeMesasYmd(r.data),
         }));
     }
     return [...dailyData]
       .sort((a, b) => b.data.localeCompare(a.data))
       .map((r) =>
-        enrich({
-          label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-          }),
-          turnover: r.turnover,
-          ggr: r.ggr,
-          bets: r.bets,
-          uap: r.uap,
-        }),
+        enrich(
+          {
+            label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
+              day: "2-digit",
+              month: "2-digit",
+            }),
+            turnover: r.turnover,
+            ggr: r.ggr,
+            bets: r.bets,
+            uap: r.uap,
+          },
+          normalizeMesasYmd(r.data),
+        ),
       );
   }, [historico, dailyData, monthlyData, modoAgregadoTodasOperadoras]);
 
@@ -1746,6 +1789,67 @@ export default function MesasSpin() {
   }, [linhasComparativoJogo, kpiGrafico]);
 
   const isBRLKpiGrafico = ["ggr", "turnover", "bet_size", "arpu"].includes(kpiGrafico);
+
+  const kpiGraficoDetalheConfig = useMemo(
+    () => KPIS_DISPONIVEIS.find((k) => k.key === kpiGraficoDetalhe) ?? KPIS_DISPONIVEIS[0]!,
+    [kpiGraficoDetalhe],
+  );
+
+  const isBRLKpiGraficoDetalhe = ["ggr", "turnover", "bet_size", "arpu"].includes(kpiGraficoDetalhe);
+
+  const { dadosGraficoDetalheOperadoras, slugsGraficoDetalhe } = useMemo(() => {
+    const k = kpiGraficoDetalhe;
+    if (tabelaRows.length === 0) return { dadosGraficoDetalheOperadoras: [] as Record<string, unknown>[], slugsGraficoDetalhe: [] as string[] };
+
+    const chrono = [...tabelaRows].reverse();
+    const slugSet = new Set<string>();
+
+    const rowsOut = chrono.map((r) => {
+      const total = pickKpiMetricaDetalhe(r, k);
+      const base: Record<string, unknown> = {
+        label: r.label,
+        dataIso: r.periodoIso,
+        Total: total,
+      };
+
+      if (modoAgregadoTodasOperadoras && r.drillId != null) {
+        const subs = historico
+          ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, r.drillId, monthlyRawUnmerged)
+          : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, normalizeMesasYmd(r.drillId));
+        for (const sub of subs) {
+          if (!podeVerOperadora(sub.operadora_slug)) continue;
+          base[sub.operadora_slug] = pickKpiMetricaDetalhe(sub, k);
+          slugSet.add(sub.operadora_slug);
+        }
+      } else if (filtroOperadora !== "todas") {
+        base[filtroOperadora] = pickKpiMetricaDetalhe(r, k);
+        slugSet.add(filtroOperadora);
+      }
+      return base;
+    });
+
+    return {
+      dadosGraficoDetalheOperadoras: rowsOut,
+      slugsGraficoDetalhe: [...slugSet].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    };
+  }, [
+    tabelaRows,
+    kpiGraficoDetalhe,
+    modoAgregadoTodasOperadoras,
+    historico,
+    dailyRawUnmerged,
+    monthlyRawUnmerged,
+    podeVerOperadora,
+    filtroOperadora,
+  ]);
+
+  const coresOperadorasDetalhe = useMemo(() => {
+    const m = new Map<string, string>();
+    slugsGraficoDetalhe.forEach((slug, i) => {
+      m.set(slug, PALETA_OPERADORAS_DETALHE[i % PALETA_OPERADORAS_DETALHE.length]!);
+    });
+    return m;
+  }, [slugsGraficoDetalhe]);
 
   const minWidthTabelaComparativoJogo =
     120 + kpisAtivosComparativo.length * (100 + 3 * 90);
@@ -2048,6 +2152,491 @@ export default function MesasSpin() {
       </div>
     );
   }
+
+  function TooltipDetalheOperadoras({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: {
+      name?: string;
+      value?: unknown;
+      color?: string;
+      payload?: Record<string, unknown>;
+    }[];
+    label?: string;
+  }) {
+    if (!active || !payload?.length) return null;
+    const somavel = kpiGraficoDetalheConfig.somavel;
+    const full = payload[0]?.payload as Record<string, unknown> | undefined;
+    const totalOficial = full?.Total != null && Number.isFinite(Number(full.Total)) ? Number(full.Total) : null;
+    const totalSomavelFallback = payload.reduce((s, p) => {
+      const n = Number(p.value);
+      return s + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    const totalSomavel =
+      totalOficial != null && Number.isFinite(Number(totalOficial)) ? totalOficial : totalSomavelFallback;
+    const formatar = (v: number) =>
+      isBRLKpiGraficoDetalhe
+        ? fmtBRL(v)
+        : kpiGraficoDetalhe === "margin_pct"
+          ? `${v.toFixed(1)}%`
+          : v.toLocaleString("pt-BR");
+
+    const mostrarRodapeTotal =
+      somavel ||
+      kpiGraficoDetalhe === "margin_pct" ||
+      kpiGraficoDetalhe === "bet_size" ||
+      kpiGraficoDetalhe === "arpu";
+
+    const valorRodape = totalOficial;
+
+    return (
+      <div
+        style={{
+          background: t.cardBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: 10,
+          padding: "10px 14px",
+          fontSize: 12,
+          color: t.text,
+          fontFamily: FONT.body,
+          minWidth: 160,
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
+        {payload.map((p) => (
+          <div
+            key={String(p.name)}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 4,
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: p.color,
+                  flexShrink: 0,
+                }}
+              />
+              {p.name}
+            </span>
+            <span style={{ fontWeight: 600 }}>
+              {p.value != null && p.value !== ""
+                ? formatar(Number(p.value))
+                : "—"}
+            </span>
+          </div>
+        ))}
+        {mostrarRodapeTotal && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginTop: 6,
+              paddingTop: 6,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+          >
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>Total</span>
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>
+              {somavel
+                ? formatar(totalSomavel)
+                : valorRodape != null
+                  ? formatar(valorRodape)
+                  : "—"}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const renderDetalhamentoInterativo = (colTempoLabel: "Data" | "Mês") => (
+    <>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 200px", minWidth: 0 }}>
+          {modoVisualizacaoDetalhe === "grafico" && (
+            <>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                {KPIS_DISPONIVEIS.map((kpi) => {
+                  const ativo = kpiGraficoDetalhe === kpi.key;
+                  return (
+                    <button
+                      type="button"
+                      key={kpi.key}
+                      role="button"
+                      aria-pressed={ativo}
+                      aria-label={`KPI do gráfico: ${kpi.label}`}
+                      onClick={() => setKpiGraficoDetalhe(kpi.key)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "4px 12px",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        fontFamily: FONT.body,
+                        fontSize: 11,
+                        fontWeight: ativo ? 700 : 400,
+                        border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
+                        background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
+                        color: ativo ? BRAND.roxoVivo : t.textMuted,
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: ativo ? BRAND.roxoVivo : t.cardBorder,
+                          flexShrink: 0,
+                          transition: "background 0.15s",
+                        }}
+                      />
+                      {kpi.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
+                Selecione um KPI para o gráfico
+              </span>
+            </>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: 10,
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          {(
+            [
+              { modo: "tabela" as const, icon: <Table2 size={14} aria-hidden />, label: "Tabela" },
+              { modo: "grafico" as const, icon: <ChartColumnBig size={14} aria-hidden />, label: "Gráfico" },
+            ] as const
+          ).map(({ modo, icon, label }) => (
+            <button
+              type="button"
+              key={modo}
+              aria-label={`Ver em ${label}`}
+              aria-pressed={modoVisualizacaoDetalhe === modo}
+              onClick={() => setModoVisualizacaoDetalhe(modo)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "6px 12px",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 11,
+                fontWeight: modoVisualizacaoDetalhe === modo ? 700 : 400,
+                background: modoVisualizacaoDetalhe === modo ? "rgba(124,58,237,0.12)" : "transparent",
+                color: modoVisualizacaoDetalhe === modo ? BRAND.roxoVivo : t.textMuted,
+                transition: "all 0.15s",
+                borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
+              }}
+            >
+              {icon} {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {modoVisualizacaoDetalhe === "tabela" ? (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <caption style={{ display: "none" }}>
+              {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
+            </caption>
+            <thead>
+              <tr>
+                <th style={thStyle}>{colTempoLabel}</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>UAP</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>ARPU</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tabelaRows.map((r, i) => {
+                const ggr = r.ggr ?? 0;
+                const drillId = r.drillId;
+                const isDrillParent = modoAgregadoTodasOperadoras && drillId != null;
+                const aberto = drillId != null && expandedDetalhe.has(drillId);
+                const subLinhas =
+                  isDrillParent && aberto
+                    ? (
+                        historico
+                          ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, drillId, monthlyRawUnmerged)
+                          : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, normalizeMesasYmd(drillId))
+                      ).filter((sl) => podeVerOperadora(sl.operadora_slug))
+                    : [];
+                const rowKey = drillId ?? `${r.label}-${i}`;
+                return (
+                  <Fragment key={rowKey}>
+                    <tr
+                      style={{
+                        background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
+                      }}
+                    >
+                      <td style={{ ...tdStyle, fontWeight: 600 }}>
+                        {isDrillParent ? (
+                          <button
+                            type="button"
+                            aria-expanded={aberto}
+                            aria-label={
+                              aberto
+                                ? `Recolher detalhe por operadora — ${r.label}`
+                                : `Expandir detalhe por operadora — ${r.label}`
+                            }
+                            onClick={() => {
+                              setExpandedDetalhe((prev) => {
+                                const n = new Set(prev);
+                                if (n.has(drillId)) n.delete(drillId);
+                                else n.add(drillId);
+                                return n;
+                              });
+                            }}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              color: t.text,
+                              fontFamily: FONT.body,
+                              fontWeight: 600,
+                              padding: 0,
+                              textAlign: "left",
+                            }}
+                          >
+                            <ChevronDown
+                              size={16}
+                              aria-hidden
+                              style={{
+                                transform: aberto ? "rotate(180deg)" : "rotate(0deg)",
+                                transition: "transform 0.15s ease",
+                                flexShrink: 0,
+                              }}
+                            />
+                            {r.label}
+                          </button>
+                        ) : (
+                          r.label
+                        )}
+                      </td>
+                      <td
+                        style={{
+                          ...tdNum,
+                          color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {r.ggr != null ? fmtBRL(r.ggr) : "—"}
+                      </td>
+                      <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
+                      <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={{ ...tdNum }}>
+                        <MarginBadge value={r.margin_pct} />
+                      </td>
+                      <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
+                      <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
+                    </tr>
+                    {isDrillParent &&
+                      aberto &&
+                      subLinhas.map((sl, j) => {
+                        const gg = sl.ggr ?? 0;
+                        return (
+                          <tr
+                            key={`${rowKey}-${sl.operadora_slug}`}
+                            style={{
+                              background:
+                                j % 2 === 1 ? "rgba(74,32,130,0.04)" : "rgba(74,32,130,0.02)",
+                              borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
+                            }}
+                          >
+                            <th
+                              scope="row"
+                              style={{
+                                ...tdStyle,
+                                fontWeight: 600,
+                                paddingLeft: 32,
+                                boxShadow:
+                                  "inset 3px 0 0 color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
+                              }}
+                            >
+                              {slugToNome(sl.operadora_slug)}
+                            </th>
+                            <td
+                              style={{
+                                ...tdNum,
+                                color: gg > 0 ? BRAND.verde : gg < 0 ? BRAND.vermelho : t.text,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {sl.ggr != null ? fmtBRL(sl.ggr) : "—"}
+                            </td>
+                            <td style={tdNum}>{sl.turnover != null ? fmtBRL(sl.turnover) : "—"}</td>
+                            <td style={tdNum}>
+                              {sl.bets != null ? sl.bets.toLocaleString("pt-BR") : "—"}
+                            </td>
+                            <td style={{ ...tdNum }}>
+                              <MarginBadge value={sl.margin_pct} />
+                            </td>
+                            <td style={tdNum}>{sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}</td>
+                            <td style={tdNum}>{sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}</td>
+                            <td style={tdNum}>{sl.arpu != null ? fmtBRL(sl.arpu) : "—"}</td>
+                          </tr>
+                        );
+                      })}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : dadosGraficoDetalheOperadoras.length === 0 || slugsGraficoDetalhe.length === 0 ? (
+        <div
+          style={{
+            padding: "24px 0",
+            textAlign: "center",
+            color: t.textMuted,
+            fontSize: 12,
+            fontFamily: FONT.body,
+          }}
+        >
+          {MSG_SEM_DADOS_FILTRO}
+        </div>
+      ) : (
+        <>
+          <p
+            style={{
+              fontSize: 11,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              marginBottom: 8,
+              marginTop: 0,
+            }}
+          >
+            Exibindo <strong style={{ color: t.text }}>{kpiGraficoDetalheConfig.label}</strong> por operadora
+          </p>
+          <div style={{ width: "100%", height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              {kpiGraficoDetalheConfig.tipoGrafico === "barra" ? (
+                <BarChart
+                  data={dadosGraficoDetalheOperadoras as Record<string, string | number | null>[]}
+                  margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                  barCategoryGap="30%"
+                  barGap={3}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    interval="preserveStartEnd"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    width={isBRLKpiGraficoDetalhe ? 72 : 44}
+                    tickFormatter={(v) =>
+                      isBRLKpiGraficoDetalhe ? `R$${(v / 1000).toFixed(0)}K` : v.toLocaleString("pt-BR")
+                    }
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<TooltipDetalheOperadoras />} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                  {slugsGraficoDetalhe.map((slug) => (
+                    <Bar
+                      key={slug}
+                      dataKey={slug}
+                      name={slugToNome(slug)}
+                      fill={coresOperadorasDetalhe.get(slug) ?? BRAND.roxoVivo}
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={28}
+                    />
+                  ))}
+                </BarChart>
+              ) : (
+                <LineChart
+                  data={dadosGraficoDetalheOperadoras as Record<string, string | number | null>[]}
+                  margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    interval="preserveStartEnd"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    width={isBRLKpiGraficoDetalhe ? 72 : 44}
+                    tickFormatter={(v) =>
+                      isBRLKpiGraficoDetalhe
+                        ? `R$${(v / 1000).toFixed(0)}K`
+                        : kpiGraficoDetalhe === "margin_pct"
+                          ? `${v.toFixed(0)}%`
+                          : v.toLocaleString("pt-BR")
+                    }
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<TooltipDetalheOperadoras />} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                  {slugsGraficoDetalhe.map((slug) => (
+                    <Line
+                      key={slug}
+                      type="monotone"
+                      name={slugToNome(slug)}
+                      dataKey={slug}
+                      stroke={coresOperadorasDetalhe.get(slug) ?? BRAND.roxoVivo}
+                      strokeWidth={2}
+                      dot={{ r: 2 }}
+                      connectNulls
+                    />
+                  ))}
+                </LineChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+    </>
+  );
 
   const renderComparativoJogoInterativo = (colTempoLabel: "Data" | "Mês") => (
     <>
@@ -2803,161 +3392,7 @@ export default function MesasSpin() {
             {MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <caption style={{ display: "none" }}>
-                {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
-              </caption>
-              <thead>
-                <tr>
-                  <th style={thStyle}>{historico ? "Mês" : "Data"}</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>UAP</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>ARPU</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tabelaRows.map((r, i) => {
-                  const ggr = r.ggr ?? 0;
-                  const drillId = r.drillId;
-                  const isDrillParent = modoAgregadoTodasOperadoras && drillId != null;
-                  const aberto = drillId != null && expandedDetalhe.has(drillId);
-                  const subLinhas =
-                    isDrillParent && aberto
-                      ? historico
-                        ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, drillId, monthlyRawUnmerged)
-                        : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, drillId)
-                      : [];
-                  const rowKey = drillId ?? `${r.label}-${i}`;
-                  return (
-                    <Fragment key={rowKey}>
-                      <tr
-                        style={{
-                          background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
-                        }}
-                      >
-                        <td style={{ ...tdStyle, fontWeight: 600 }}>
-                          {isDrillParent ? (
-                            <button
-                              type="button"
-                              aria-expanded={aberto}
-                              aria-label={
-                                aberto
-                                  ? `Recolher detalhe por operadora — ${r.label}`
-                                  : `Expandir detalhe por operadora — ${r.label}`
-                              }
-                              onClick={() => {
-                                setExpandedDetalhe((prev) => {
-                                  const n = new Set(prev);
-                                  if (n.has(drillId)) n.delete(drillId);
-                                  else n.add(drillId);
-                                  return n;
-                                });
-                              }}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                color: t.text,
-                                fontFamily: FONT.body,
-                                fontWeight: 600,
-                                padding: 0,
-                                textAlign: "left",
-                              }}
-                            >
-                              <ChevronDown
-                                size={16}
-                                aria-hidden
-                                style={{
-                                  transform: aberto ? "rotate(180deg)" : "rotate(0deg)",
-                                  transition: "transform 0.15s ease",
-                                  flexShrink: 0,
-                                }}
-                              />
-                              {r.label}
-                            </button>
-                          ) : (
-                            r.label
-                          )}
-                        </td>
-                        <td
-                          style={{
-                            ...tdNum,
-                            color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {r.ggr != null ? fmtBRL(r.ggr) : "—"}
-                        </td>
-                        <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
-                        <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
-                        <td style={{ ...tdNum }}>
-                          <MarginBadge value={r.margin_pct} />
-                        </td>
-                        <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
-                        <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
-                        <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
-                      </tr>
-                      {isDrillParent &&
-                        aberto &&
-                        subLinhas.map((sl, j) => {
-                          const gg = sl.ggr ?? 0;
-                          return (
-                            <tr
-                              key={`${rowKey}-${sl.operadora_slug}`}
-                              style={{
-                                background:
-                                  j % 2 === 1 ? "rgba(74,32,130,0.04)" : "rgba(74,32,130,0.02)",
-                                borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
-                              }}
-                            >
-                              <th
-                                scope="row"
-                                style={{
-                                  ...tdStyle,
-                                  fontWeight: 600,
-                                  paddingLeft: 32,
-                                  boxShadow:
-                                    "inset 3px 0 0 color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
-                                }}
-                              >
-                                {slugToNome(sl.operadora_slug)}
-                              </th>
-                              <td
-                                style={{
-                                  ...tdNum,
-                                  color: gg > 0 ? BRAND.verde : gg < 0 ? BRAND.vermelho : t.text,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {sl.ggr != null ? fmtBRL(sl.ggr) : "—"}
-                              </td>
-                              <td style={tdNum}>{sl.turnover != null ? fmtBRL(sl.turnover) : "—"}</td>
-                              <td style={tdNum}>
-                                {sl.bets != null ? sl.bets.toLocaleString("pt-BR") : "—"}
-                              </td>
-                              <td style={{ ...tdNum }}>
-                                <MarginBadge value={sl.margin_pct} />
-                              </td>
-                              <td style={tdNum}>{sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}</td>
-                              <td style={tdNum}>{sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}</td>
-                              <td style={tdNum}>{sl.arpu != null ? fmtBRL(sl.arpu) : "—"}</td>
-                            </tr>
-                          );
-                        })}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          renderDetalhamentoInterativo(historico ? "Mês" : "Data")
         )}
       </div>
 
