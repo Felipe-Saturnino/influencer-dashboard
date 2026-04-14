@@ -7,7 +7,7 @@ type Modo = "gestor" | "operadora";
 
 /**
  * Badge no menu: pendentes aguardando o papel atual.
- * - gestor: solicitações dealer + campanha roteiro onde aguarda_resposta_de = 'gestor'
+ * - gestor: solicitações dealer + campanha roteiro + roteiro mesa onde aguarda_resposta_de = 'gestor'
  * - operadora: idem com aguarda = 'operadora' nas operadoras do escopo
  */
 export function usePendenciasCount(modo: Modo): number {
@@ -28,7 +28,7 @@ export function usePendenciasCount(modo: Modo): number {
 
     async function buscar() {
       if (modo === "gestor") {
-        const [{ count: cDealer, error: e1 }, { count: cCamp, error: e2 }] = await Promise.all([
+        const [{ count: cDealer, error: e1 }, { count: cCamp, error: e2 }, { count: cMesa, error: e3 }] = await Promise.all([
           supabase
             .from("dealer_solicitacoes")
             .select("*", { count: "exact", head: true })
@@ -39,12 +39,17 @@ export function usePendenciasCount(modo: Modo): number {
             .select("*", { count: "exact", head: true })
             .in("status", ["pendente", "em_andamento"])
             .eq("aguarda_resposta_de", "gestor"),
+          supabase
+            .from("roteiro_mesa_solicitacoes")
+            .select("*", { count: "exact", head: true })
+            .in("status", ["pendente", "em_andamento"])
+            .eq("aguarda_resposta_de", "gestor"),
         ]);
-        if (e1 || e2) {
+        if (e1 || e2 || e3) {
           setCount(0);
           return;
         }
-        setCount((cDealer ?? 0) + (cCamp ?? 0));
+        setCount((cDealer ?? 0) + (cCamp ?? 0) + (cMesa ?? 0));
         return;
       }
 
@@ -63,14 +68,24 @@ export function usePendenciasCount(modo: Modo): number {
         .select("*", { count: "exact", head: true })
         .eq("aguarda_resposta_de", "operadora")
         .in("status", ["pendente", "em_andamento"]);
+      const baseMesa = supabase
+        .from("roteiro_mesa_solicitacoes")
+        .select("*", { count: "exact", head: true })
+        .eq("aguarda_resposta_de", "operadora")
+        .in("status", ["pendente", "em_andamento"]);
       const qDealer = slugs.length === 1 ? baseDealer.eq("operadora_slug", slugs[0]) : baseDealer.in("operadora_slug", slugs);
       const qCamp = slugs.length === 1 ? baseCamp.eq("operadora_slug", slugs[0]) : baseCamp.in("operadora_slug", slugs);
-      const [{ count: cDealer, error: e1 }, { count: cCamp, error: e2 }] = await Promise.all([qDealer, qCamp]);
-      if (e1 || e2) {
+      const qMesa = slugs.length === 1 ? baseMesa.eq("operadora_slug", slugs[0]) : baseMesa.in("operadora_slug", slugs);
+      const [{ count: cDealer, error: e1 }, { count: cCamp, error: e2 }, { count: cMesa, error: e3 }] = await Promise.all([
+        qDealer,
+        qCamp,
+        qMesa,
+      ]);
+      if (e1 || e2 || e3) {
         setCount(0);
         return;
       }
-      setCount((cDealer ?? 0) + (cCamp ?? 0));
+      setCount((cDealer ?? 0) + (cCamp ?? 0) + (cMesa ?? 0));
     }
 
     void buscar();
@@ -81,6 +96,9 @@ export function usePendenciasCount(modo: Modo): number {
         void buscar();
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "roteiro_campanha_solicitacoes" }, () => {
+        void buscar();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "roteiro_mesa_solicitacoes" }, () => {
         void buscar();
       })
       .subscribe();

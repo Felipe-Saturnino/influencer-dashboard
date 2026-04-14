@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Loader2, Megaphone, Send } from "lucide-react";
+import { FileText, Loader2, Megaphone, Send } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -9,7 +9,7 @@ import type { OperadoraTagDados } from "./BannerPendencias";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { corStatusSolicitacao, labelTipoSolicitacao, tempoRelativo, type SolicitacaoStatus, type SolicitacaoTipo } from "./solicitacoesUtils";
 
-export type ThreadSolicitacaoOrigem = "dealer" | "campanha_roteiro";
+export type ThreadSolicitacaoOrigem = "dealer" | "campanha_roteiro" | "roteiro_mesa";
 
 export interface ModalThreadSolicitacaoProps {
   solicitacaoId: string;
@@ -18,7 +18,7 @@ export interface ModalThreadSolicitacaoProps {
   onResolvido?: () => void;
   /** Quando false: só leitura (sem enviar mensagem / resolver). Controlado por role_permissions.can_editar da página. */
   podeInteragir?: boolean;
-  /** Default: solicitação de dealer; `campanha_roteiro` usa tabelas de thread de campanha de roteiro. */
+  /** Default: solicitação de dealer; `campanha_roteiro` / `roteiro_mesa` usam tabelas de thread de roteiro de mesa. */
   origem?: ThreadSolicitacaoOrigem;
 }
 
@@ -61,13 +61,31 @@ interface SolicitacaoCabecalhoCampanha {
   campanha: { titulo: string; texto: string; jogos: string[] | null } | null;
 }
 
-type CabecalhoThread = SolicitacaoCabecalhoDealer | SolicitacaoCabecalhoCampanha;
+interface SolicitacaoCabecalhoMesa {
+  origem: "roteiro_mesa";
+  id: string;
+  sugestao_id: string;
+  operadora_slug: string;
+  status: SolicitacaoStatus;
+  aguarda_resposta_de: "operadora" | "gestor" | null;
+  titulo: string | null;
+  created_at: string;
+  sugestao: { bloco: string; tipo: string | null; texto: string; jogos: string[] | null } | null;
+}
+
+type CabecalhoThread = SolicitacaoCabecalhoDealer | SolicitacaoCabecalhoCampanha | SolicitacaoCabecalhoMesa;
 
 function tabelas(origem: ThreadSolicitacaoOrigem) {
   if (origem === "campanha_roteiro") {
     return {
       solicitacoes: "roteiro_campanha_solicitacoes" as const,
       mensagens: "roteiro_campanha_solicitacao_mensagens" as const,
+    };
+  }
+  if (origem === "roteiro_mesa") {
+    return {
+      solicitacoes: "roteiro_mesa_solicitacoes" as const,
+      mensagens: "roteiro_mesa_solicitacao_mensagens" as const,
     };
   }
   return {
@@ -174,6 +192,44 @@ export function ModalThreadSolicitacao({
         titulo: s.titulo as string | null,
         created_at: s.created_at as string,
         campanha,
+      });
+    } else if (origem === "roteiro_mesa") {
+      const { data: s, error: e1 } = await supabase
+        .from(tabSol)
+        .select(
+          "id, sugestao_id, operadora_slug, status, aguarda_resposta_de, titulo, created_at, roteiro_mesa_sugestoes(bloco, tipo, texto, jogos)",
+        )
+        .eq("id", solicitacaoId)
+        .maybeSingle();
+
+      if (e1 || !s) {
+        setCab(null);
+        setLoading(false);
+        return;
+      }
+
+      const rawSug = (s as { roteiro_mesa_sugestoes?: unknown }).roteiro_mesa_sugestoes;
+      const sugRow = Array.isArray(rawSug) ? rawSug[0] : rawSug;
+      const sugestao =
+        sugRow && typeof sugRow === "object"
+          ? {
+              bloco: String((sugRow as { bloco?: string }).bloco ?? ""),
+              tipo: ((sugRow as { tipo?: string | null }).tipo ?? null) as string | null,
+              texto: String((sugRow as { texto?: string }).texto ?? ""),
+              jogos: ((sugRow as { jogos?: string[] | null }).jogos ?? null) as string[] | null,
+            }
+          : null;
+
+      setCab({
+        origem: "roteiro_mesa",
+        id: s.id as string,
+        sugestao_id: s.sugestao_id as string,
+        operadora_slug: s.operadora_slug as string,
+        status: s.status as SolicitacaoStatus,
+        aguarda_resposta_de: s.aguarda_resposta_de as SolicitacaoCabecalhoMesa["aguarda_resposta_de"],
+        titulo: s.titulo as string | null,
+        created_at: s.created_at as string,
+        sugestao,
       });
     } else {
       const { data: s, error: e1 } = await supabase
@@ -318,15 +374,22 @@ export function ModalThreadSolicitacao({
 
   const op = operadoras.find((o) => o.slug === cab?.operadora_slug);
   const isCampanha = cab?.origem === "campanha_roteiro";
-  const foto = !isCampanha ? ((cab as SolicitacaoCabecalhoDealer | null)?.dealers?.fotos ?? [])[0] as string | undefined : undefined;
+  const isMesaRoteiro = cab?.origem === "roteiro_mesa";
+  const foto = !isCampanha && !isMesaRoteiro ? ((cab as SolicitacaoCabecalhoDealer | null)?.dealers?.fotos ?? [])[0] as string | undefined : undefined;
   const nick = isCampanha
     ? (cab as SolicitacaoCabecalhoCampanha).campanha?.titulo?.trim() || (cab as SolicitacaoCabecalhoCampanha).titulo?.trim() || "Campanha"
-    : (cab as SolicitacaoCabecalhoDealer)?.dealers?.nickname ?? "Dealer";
+    : isMesaRoteiro
+      ? (cab as SolicitacaoCabecalhoMesa).titulo?.trim() ||
+        (cab as SolicitacaoCabecalhoMesa).sugestao?.texto?.trim()?.slice(0, 72) ||
+        "Roteiro de mesa"
+      : (cab as SolicitacaoCabecalhoDealer)?.dealers?.nickname ?? "Dealer";
   const statusCor = cab ? corStatusSolicitacao(cab.status) : "#6b7280";
   const tituloModal =
     cab?.origem === "campanha_roteiro"
-      ? (cab.titulo ?? cab.campanha?.titulo ?? "Campanha — roteiro")
-      : cab?.titulo ?? "Solicitação";
+      ? (cab.titulo ?? (cab as SolicitacaoCabecalhoCampanha).campanha?.titulo ?? "Campanha — roteiro")
+      : cab?.origem === "roteiro_mesa"
+        ? ((cab as SolicitacaoCabecalhoMesa).titulo ?? "Roteiro de mesa")
+        : cab?.titulo ?? "Solicitação";
 
   return (
     <ModalBase onClose={() => { if (!sending && !resolvendo) onClose(); }} maxWidth={560} zIndex={1100}>
@@ -359,6 +422,8 @@ export function ModalThreadSolicitacao({
             >
               {isCampanha ? (
                 <Megaphone size={22} aria-hidden style={{ opacity: 0.95 }} />
+              ) : isMesaRoteiro ? (
+                <FileText size={22} aria-hidden style={{ opacity: 0.95 }} />
               ) : foto ? (
                 <img src={foto} alt="" width={48} height={48} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
@@ -367,7 +432,11 @@ export function ModalThreadSolicitacao({
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>
-                {isCampanha ? `${nick} · Roteiro de mesa` : `${nick} · ${labelTipoSolicitacao((cab as SolicitacaoCabecalhoDealer).tipo)}`}
+                {isCampanha
+                  ? `${nick} · Roteiro de mesa`
+                  : isMesaRoteiro
+                    ? `${nick} · Sugestão de roteiro`
+                    : `${nick} · ${labelTipoSolicitacao((cab as SolicitacaoCabecalhoDealer).tipo)}`}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 6 }}>
                 <OperadoraTag label={op?.nome ?? cab.operadora_slug} corPrimaria={op?.cor_primaria} />

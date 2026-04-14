@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, Megaphone, Inbox } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox } from "lucide-react";
 import { GiCalendar, GiDiceSixFacesFour, GiRingingBell, GiShield } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -15,7 +15,7 @@ import type { Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalThreadSolicitacao, type ThreadSolicitacaoOrigem } from "../solicitacoes/ModalThreadSolicitacao";
-import { corStatusSolicitacao, labelTipoSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
+import { labelTipoSolicitacao, tempoRelativo, type SolicitacaoTipo } from "../solicitacoes/solicitacoesUtils";
 
 const JOGO_ROTEIRO_LABEL: Record<string, string> = {
   todos: "Todos os Jogos",
@@ -29,11 +29,125 @@ function labelJogosRoteiro(jogos: string[] | undefined): string {
   return list.length ? list.join(", ") : "—";
 }
 
+const BLOCO_ROTEIRO_LABEL: Record<string, string> = {
+  abertura: "Abertura",
+  durante_jogo: "Durante o Jogo",
+  fechamento: "Fechamento",
+};
+
+const TIPO_SUGESTAO_ROTEIRO_LABEL: Record<string, string> = {
+  script: "Script",
+  orientacao: "Orientação",
+  alerta: "Alerta",
+};
+
 function periodoTimestamps(periodo: { inicio: string; fim: string }): { ini: string; fim: string } {
   return {
     ini: `${periodo.inicio}T00:00:00.000Z`,
     fim: `${periodo.fim}T23:59:59.999Z`,
   };
+}
+
+/** Rótulo e cor na Central (fluxo operadora ↔ estúdio), independente do `status` bruto na BD. */
+function etiquetaFluxoSolicitacao(status: string, temMensagemGestor: boolean): { label: string; cor: string } {
+  if (status === "resolvido") return { label: "Concluído", cor: "#22c55e" };
+  if (status === "cancelado") return { label: "Cancelada", cor: "#6b7280" };
+  if (!temMensagemGestor) return { label: "Aberta", cor: "#f59e0b" };
+  return { label: "Aguardando resposta", cor: "#6b7fff" };
+}
+
+function mergeDealerSolicLista(
+  abertas: DealerSolRow[] | null | undefined,
+  resolvidas: DealerSolRow[] | null | undefined,
+): DealerSolRow[] {
+  const map = new Map<string, DealerSolRow>();
+  for (const r of abertas ?? []) map.set(r.id, r);
+  for (const r of resolvidas ?? []) {
+    if (!map.has(r.id)) map.set(r.id, r);
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    const aOpen = a.status !== "resolvido" && a.status !== "cancelado";
+    const bOpen = b.status !== "resolvido" && b.status !== "cancelado";
+    if (aOpen !== bOpen) return aOpen ? -1 : 1;
+    if (aOpen) {
+      const aUrg = a.aguarda_resposta_de === "gestor";
+      const bUrg = b.aguarda_resposta_de === "gestor";
+      if (aUrg !== bUrg) return aUrg ? -1 : 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    const ta = a.resolvido_em ? new Date(a.resolvido_em).getTime() : 0;
+    const tb = b.resolvido_em ? new Date(b.resolvido_em).getTime() : 0;
+    return tb - ta;
+  });
+}
+
+function mergeCampanhaSolicLista(
+  abertas: CampanhaRoteiroSolRow[] | null | undefined,
+  resolvidas: CampanhaRoteiroSolRow[] | null | undefined,
+): CampanhaRoteiroSolRow[] {
+  const map = new Map<string, CampanhaRoteiroSolRow>();
+  for (const r of abertas ?? []) map.set(r.id, r);
+  for (const r of resolvidas ?? []) {
+    if (!map.has(r.id)) map.set(r.id, r);
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    const aOpen = a.status !== "resolvido" && a.status !== "cancelado";
+    const bOpen = b.status !== "resolvido" && b.status !== "cancelado";
+    if (aOpen !== bOpen) return aOpen ? -1 : 1;
+    if (aOpen) {
+      const aUrg = a.aguarda_resposta_de === "gestor";
+      const bUrg = b.aguarda_resposta_de === "gestor";
+      if (aUrg !== bUrg) return aUrg ? -1 : 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    const ta = a.resolvido_em ? new Date(a.resolvido_em).getTime() : 0;
+    const tb = b.resolvido_em ? new Date(b.resolvido_em).getTime() : 0;
+    return tb - ta;
+  });
+}
+
+async function mapSolicitacoesComMensagemGestorDealer(ids: string[]): Promise<Record<string, boolean>> {
+  const out: Record<string, boolean> = {};
+  for (const id of ids) out[id] = false;
+  if (ids.length === 0) return out;
+  const { data } = await supabase.from("solicitacao_mensagens").select("solicitacao_id").in("solicitacao_id", ids).eq("autor", "gestor");
+  for (const r of data ?? []) {
+    const id = (r as { solicitacao_id: string }).solicitacao_id;
+    if (id) out[id] = true;
+  }
+  return out;
+}
+
+async function mapSolicitacoesComMensagemGestorCamp(ids: string[]): Promise<Record<string, boolean>> {
+  const out: Record<string, boolean> = {};
+  for (const id of ids) out[id] = false;
+  if (ids.length === 0) return out;
+  const { data } = await supabase
+    .from("roteiro_campanha_solicitacao_mensagens")
+    .select("solicitacao_id")
+    .in("solicitacao_id", ids)
+    .eq("autor", "gestor");
+  for (const r of data ?? []) {
+    const id = (r as { solicitacao_id: string }).solicitacao_id;
+    if (id) out[id] = true;
+  }
+  return out;
+}
+
+async function mapSolicitacoesComMensagemGestorMesa(ids: string[]): Promise<Record<string, boolean>> {
+  const out: Record<string, boolean> = {};
+  for (const id of ids) out[id] = false;
+  if (ids.length === 0) return out;
+  const { data } = await supabase
+    .from("roteiro_mesa_solicitacao_mensagens")
+    .select("solicitacao_id")
+    .in("solicitacao_id", ids)
+    .eq("autor", "gestor");
+  for (const r of data ?? []) {
+    const id = (r as { solicitacao_id: string }).solicitacao_id;
+    if (id) out[id] = true;
+  }
+  return out;
 }
 
 type CampanhaComPerfil = RoteiroCampanha & {
@@ -48,7 +162,7 @@ function nomeCadastroCampanha(c: CampanhaComPerfil): string {
   return n || "Usuário não identificado";
 }
 
-type AbaStaff = "troca" | "feedback" | "campanha_roteiro";
+type AbaStaff = "troca" | "feedback" | "campanha_roteiro" | "roteiro_mesa";
 
 interface DealerSolRow {
   id: string;
@@ -67,9 +181,46 @@ interface CampanhaRoteiroSolRow {
   status: string;
   titulo: string | null;
   created_at: string;
+  resolvido_em?: string | null;
   aguarda_resposta_de: string | null;
   operadora_slug: string;
   roteiro_mesa_campanhas: { titulo: string } | null;
+}
+
+interface RoteiroMesaSolRow {
+  id: string;
+  status: string;
+  titulo: string | null;
+  created_at: string;
+  resolvido_em?: string | null;
+  aguarda_resposta_de: string | null;
+  operadora_slug: string;
+  roteiro_mesa_sugestoes: { bloco: string; tipo: string | null; texto: string } | null;
+}
+
+function mergeRoteiroMesaSolicLista(
+  abertas: RoteiroMesaSolRow[] | null | undefined,
+  resolvidas: RoteiroMesaSolRow[] | null | undefined,
+): RoteiroMesaSolRow[] {
+  const map = new Map<string, RoteiroMesaSolRow>();
+  for (const r of abertas ?? []) map.set(r.id, r);
+  for (const r of resolvidas ?? []) {
+    if (!map.has(r.id)) map.set(r.id, r);
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    const aOpen = a.status !== "resolvido" && a.status !== "cancelado";
+    const bOpen = b.status !== "resolvido" && b.status !== "cancelado";
+    if (aOpen !== bOpen) return aOpen ? -1 : 1;
+    if (aOpen) {
+      const aUrg = a.aguarda_resposta_de === "gestor";
+      const bUrg = b.aguarda_resposta_de === "gestor";
+      if (aUrg !== bUrg) return aUrg ? -1 : 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    const ta = a.resolvido_em ? new Date(a.resolvido_em).getTime() : 0;
+    const tb = b.resolvido_em ? new Date(b.resolvido_em).getTime() : 0;
+    return tb - ta;
+  });
 }
 
 export default function CentralNotificacoes() {
@@ -99,8 +250,13 @@ export default function CentralNotificacoes() {
   const [solMinhas, setSolMinhas] = useState<DealerSolRow[]>([]);
   const [solicConcluidas, setSolicConcluidas] = useState<DealerSolRow[]>([]);
   const [solicCampRoteiroGestor, setSolicCampRoteiroGestor] = useState<CampanhaRoteiroSolRow[]>([]);
+  const [solicMesaRoteiroGestor, setSolicMesaRoteiroGestor] = useState<RoteiroMesaSolRow[]>([]);
+  const [solicMesaRoteOperador, setSolicMesaRoteOperador] = useState<RoteiroMesaSolRow[]>([]);
   const [threadCtx, setThreadCtx] = useState<{ id: string; origem: ThreadSolicitacaoOrigem } | null>(null);
   const [inboxVersion, setInboxVersion] = useState(0);
+  const [mapMsgGestorDealer, setMapMsgGestorDealer] = useState<Record<string, boolean>>({});
+  const [mapMsgGestorCamp, setMapMsgGestorCamp] = useState<Record<string, boolean>>({});
+  const [mapMsgGestorMesa, setMapMsgGestorMesa] = useState<Record<string, boolean>>({});
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -159,12 +315,13 @@ export default function CentralNotificacoes() {
       if (verInboxEstudio) {
         setCampanhas([]);
         setSolicCampRoteiroPorCampanhaId({});
+        setSolicMesaRoteOperador([]);
       } else {
         let qCamp = supabase
           .from("roteiro_mesa_campanhas")
           .select("*, profiles!created_by(name)")
-          .gte("created_at", ini)
-          .lte("created_at", fim)
+          .or(`data_inicio.is.null,data_inicio.lte.${periodo.fim}`)
+          .or(`data_fim.is.null,data_fim.gte.${periodo.inicio}`)
           .order("created_at", { ascending: false });
 
         if (operadoraSlugsForcado?.length) {
@@ -210,60 +367,195 @@ export default function CentralNotificacoes() {
           return { ...r, roteiro_mesa_campanhas: tituloCamp ? { titulo: tituloCamp } : null };
         });
 
+      const normMesaSol = (rows: RoteiroMesaSolRow[] | null | undefined) =>
+        (rows ?? []).map((r) => {
+          const s = r.roteiro_mesa_sugestoes as RoteiroMesaSolRow["roteiro_mesa_sugestoes"] | Record<string, unknown>[] | null;
+          const emb = Array.isArray(s) ? s[0] ?? null : s;
+          const sugestao =
+            emb && typeof emb === "object" && "texto" in emb
+              ? {
+                  bloco: String((emb as { bloco?: string }).bloco ?? ""),
+                  tipo: ((emb as { tipo?: string | null }).tipo ?? null) as string | null,
+                  texto: String((emb as { texto?: string }).texto ?? ""),
+                }
+              : null;
+          return { ...r, roteiro_mesa_sugestoes: sugestao };
+        });
+
       if (verInboxEstudio) {
-        let qTroca = supabase
+        const selDealer =
+          "id, tipo, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)";
+        const selCampRt =
+          "id, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, roteiro_mesa_campanhas(titulo)";
+        const selMesaRt =
+          "id, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, roteiro_mesa_sugestoes(bloco, tipo, texto)";
+
+        let qTrocaOpen = supabase
           .from("dealer_solicitacoes")
-          .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)")
+          .select(selDealer)
           .eq("tipo", "troca_dealer")
           .in("status", ["pendente", "em_andamento"])
-          .eq("aguarda_resposta_de", "gestor")
           .order("created_at", { ascending: false })
           .limit(80);
-        let qFb = supabase
+        let qTrocaRes = supabase
           .from("dealer_solicitacoes")
-          .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)")
+          .select(selDealer)
+          .eq("tipo", "troca_dealer")
+          .eq("status", "resolvido")
+          .gte("resolvido_em", ini)
+          .lte("resolvido_em", fim)
+          .order("resolvido_em", { ascending: false })
+          .limit(80);
+
+        let qFbOpen = supabase
+          .from("dealer_solicitacoes")
+          .select(selDealer)
           .eq("tipo", "feedback")
           .in("status", ["pendente", "em_andamento"])
-          .eq("aguarda_resposta_de", "gestor")
           .order("created_at", { ascending: false })
           .limit(80);
-        let qCampRt = supabase
+        let qFbRes = supabase
+          .from("dealer_solicitacoes")
+          .select(selDealer)
+          .eq("tipo", "feedback")
+          .eq("status", "resolvido")
+          .gte("resolvido_em", ini)
+          .lte("resolvido_em", fim)
+          .order("resolvido_em", { ascending: false })
+          .limit(80);
+
+        let qCampOpen = supabase
           .from("roteiro_campanha_solicitacoes")
-          .select("id, status, titulo, created_at, aguarda_resposta_de, operadora_slug, roteiro_mesa_campanhas(titulo)")
+          .select(selCampRt)
           .in("status", ["pendente", "em_andamento"])
-          .eq("aguarda_resposta_de", "gestor")
           .order("created_at", { ascending: false })
           .limit(80);
+        let qCampRes = supabase
+          .from("roteiro_campanha_solicitacoes")
+          .select(selCampRt)
+          .eq("status", "resolvido")
+          .gte("resolvido_em", ini)
+          .lte("resolvido_em", fim)
+          .order("resolvido_em", { ascending: false })
+          .limit(80);
+
+        let qMesaOpen = supabase
+          .from("roteiro_mesa_solicitacoes")
+          .select(selMesaRt)
+          .in("status", ["pendente", "em_andamento"])
+          .order("created_at", { ascending: false })
+          .limit(80);
+        let qMesaRes = supabase
+          .from("roteiro_mesa_solicitacoes")
+          .select(selMesaRt)
+          .eq("status", "resolvido")
+          .gte("resolvido_em", ini)
+          .lte("resolvido_em", fim)
+          .order("resolvido_em", { ascending: false })
+          .limit(80);
+
         if (!operadoraSlugsForcado?.length && filtroOperadora !== "todas") {
-          qTroca = qTroca.eq("operadora_slug", filtroOperadora);
-          qFb = qFb.eq("operadora_slug", filtroOperadora);
-          qCampRt = qCampRt.eq("operadora_slug", filtroOperadora);
+          qTrocaOpen = qTrocaOpen.eq("operadora_slug", filtroOperadora);
+          qTrocaRes = qTrocaRes.eq("operadora_slug", filtroOperadora);
+          qFbOpen = qFbOpen.eq("operadora_slug", filtroOperadora);
+          qFbRes = qFbRes.eq("operadora_slug", filtroOperadora);
+          qCampOpen = qCampOpen.eq("operadora_slug", filtroOperadora);
+          qCampRes = qCampRes.eq("operadora_slug", filtroOperadora);
+          qMesaOpen = qMesaOpen.eq("operadora_slug", filtroOperadora);
+          qMesaRes = qMesaRes.eq("operadora_slug", filtroOperadora);
         }
-        const [{ data: dt }, { data: df }, { data: dcr }] = await Promise.all([qTroca, qFb, qCampRt]);
-        setSolicTroca(normSol(dt as DealerSolRow[] | null));
-        setSolicFeedback(normSol(df as DealerSolRow[] | null));
-        setSolicCampRoteiroGestor(normCampSol(dcr as CampanhaRoteiroSolRow[] | null));
+
+        const [
+          { data: dtOpen },
+          { data: dtRes },
+          { data: dfOpen },
+          { data: dfRes },
+          { data: dcrOpen },
+          { data: dcrRes },
+          { data: dmrOpen },
+          { data: dmrRes },
+        ] = await Promise.all([qTrocaOpen, qTrocaRes, qFbOpen, qFbRes, qCampOpen, qCampRes, qMesaOpen, qMesaRes]);
+
+        const mergedT = mergeDealerSolicLista(normSol(dtOpen as DealerSolRow[] | null), normSol(dtRes as DealerSolRow[] | null));
+        const mergedF = mergeDealerSolicLista(normSol(dfOpen as DealerSolRow[] | null), normSol(dfRes as DealerSolRow[] | null));
+        const mergedCamp = mergeCampanhaSolicLista(
+          normCampSol(dcrOpen as CampanhaRoteiroSolRow[] | null),
+          normCampSol(dcrRes as CampanhaRoteiroSolRow[] | null),
+        );
+        const mergedMesa = mergeRoteiroMesaSolicLista(
+          normMesaSol(dmrOpen as RoteiroMesaSolRow[] | null),
+          normMesaSol(dmrRes as RoteiroMesaSolRow[] | null),
+        );
+
+        setSolicTroca(mergedT);
+        setSolicFeedback(mergedF);
+        setSolicCampRoteiroGestor(mergedCamp);
+        setSolicMesaRoteiroGestor(mergedMesa);
         setSolMinhas([]);
+        setSolicMesaRoteOperador([]);
+
+        const idsD = [...new Set([...mergedT, ...mergedF].map((r) => r.id))];
+        const idsC = mergedCamp.map((r) => r.id);
+        const idsM = mergedMesa.map((r) => r.id);
+        const [mD, mC, mM] = await Promise.all([
+          mapSolicitacoesComMensagemGestorDealer(idsD),
+          mapSolicitacoesComMensagemGestorCamp(idsC),
+          mapSolicitacoesComMensagemGestorMesa(idsM),
+        ]);
+        setMapMsgGestorDealer(mD);
+        setMapMsgGestorCamp(mC);
+        setMapMsgGestorMesa(mM);
       } else if (user?.role === "operador" && operadoraSlugsForcado?.length) {
         const { data: dMin } = await supabase
           .from("dealer_solicitacoes")
-          .select("id, tipo, status, titulo, created_at, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)")
+          .select(
+            "id, tipo, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, dealers(nickname, nome_real, fotos, turno)",
+          )
           .in("operadora_slug", operadoraSlugsForcado)
           .in("status", ["pendente", "em_andamento"])
           .order("created_at", { ascending: false })
           .limit(40);
-        setSolMinhas(normSol(dMin as DealerSolRow[] | null));
+        const minhas = normSol(dMin as DealerSolRow[] | null);
+        setSolMinhas(minhas);
         setSolicTroca([]);
         setSolicFeedback([]);
         setSolicCampRoteiroGestor([]);
+        setSolicMesaRoteiroGestor([]);
+
+        const selMesaRtOp =
+          "id, status, titulo, created_at, resolvido_em, aguarda_resposta_de, operadora_slug, roteiro_mesa_sugestoes(bloco, tipo, texto)";
+        const { data: dMesaOp } = await supabase
+          .from("roteiro_mesa_solicitacoes")
+          .select(selMesaRtOp)
+          .in("operadora_slug", operadoraSlugsForcado)
+          .in("status", ["pendente", "em_andamento"])
+          .order("created_at", { ascending: false })
+          .limit(40);
+        const mesaOp = normMesaSol(dMesaOp as RoteiroMesaSolRow[] | null);
+        setSolicMesaRoteOperador(mesaOp);
+
+        const [mD, mM] = await Promise.all([
+          mapSolicitacoesComMensagemGestorDealer(minhas.map((r) => r.id)),
+          mapSolicitacoesComMensagemGestorMesa(mesaOp.map((r) => r.id)),
+        ]);
+        setMapMsgGestorDealer(mD);
+        setMapMsgGestorCamp({});
+        setMapMsgGestorMesa(mM);
       } else {
         setSolicTroca([]);
         setSolicFeedback([]);
         setSolMinhas([]);
         setSolicCampRoteiroGestor([]);
+        setSolicMesaRoteiroGestor([]);
+        setSolicMesaRoteOperador([]);
+        setMapMsgGestorDealer({});
+        setMapMsgGestorCamp({});
+        setMapMsgGestorMesa({});
       }
 
-      if (user?.role === "operador" && !operadoraSlugsForcado?.length) {
+      if (verInboxEstudio) {
+        setSolicConcluidas([]);
+      } else if (user?.role === "operador" && !operadoraSlugsForcado?.length) {
         setSolicConcluidas([]);
       } else {
         let qConc = supabase
@@ -279,8 +571,6 @@ export default function CentralNotificacoes() {
 
         if (user?.role === "operador" && operadoraSlugsForcado?.length) {
           qConc = qConc.in("operadora_slug", operadoraSlugsForcado);
-        } else if (verInboxEstudio && !operadoraSlugsForcado?.length && filtroOperadora !== "todas") {
-          qConc = qConc.eq("operadora_slug", filtroOperadora);
         }
 
         const { data: dConc, error: errConc } = await qConc;
@@ -338,9 +628,18 @@ export default function CentralNotificacoes() {
     padding: "16px 20px",
   };
 
-  const badgeTroca = solicTroca.length;
-  const badgeFb = solicFeedback.length;
-  const badgeCampRoteiro = solicCampRoteiroGestor.length;
+  const badgeTroca = solicTroca.filter(
+    (s) => (s.status === "pendente" || s.status === "em_andamento") && s.aguarda_resposta_de === "gestor",
+  ).length;
+  const badgeFb = solicFeedback.filter(
+    (s) => (s.status === "pendente" || s.status === "em_andamento") && s.aguarda_resposta_de === "gestor",
+  ).length;
+  const badgeCampRoteiro = solicCampRoteiroGestor.filter(
+    (s) => (s.status === "pendente" || s.status === "em_andamento") && s.aguarda_resposta_de === "gestor",
+  ).length;
+  const badgeMesaRoteiro = solicMesaRoteiroGestor.filter(
+    (s) => (s.status === "pendente" || s.status === "em_andamento") && s.aguarda_resposta_de === "gestor",
+  ).length;
 
   const chipTab = (ativo: boolean) => ({
     padding: "8px 14px",
@@ -358,11 +657,19 @@ export default function CentralNotificacoes() {
     cursor: "pointer",
   });
 
-  function renderListaCampanhaRoteiroSolic(lista: CampanhaRoteiroSolRow[]) {
+  function renderListaCampanhaRoteiroSolic(lista: CampanhaRoteiroSolRow[], opts?: { staffMesclado?: boolean }) {
+    const staffMesclado = opts?.staffMesclado ?? false;
+
+    const tagCampRow = (row: CampanhaRoteiroSolRow) => {
+      if (staffMesclado && row.status === "resolvido") return { label: "Concluído", cor: "#22c55e" };
+      if (row.status === "cancelado") return { label: "Cancelada", cor: "#6b7280" };
+      return etiquetaFluxoSolicitacao(row.status, mapMsgGestorCamp[row.id] ?? false);
+    };
+
     if (lista.length === 0 && !loading) {
       return (
         <div style={{ ...cardShell, color: t.textMuted, fontSize: 14, fontFamily: FONT.body }}>
-          Nenhuma conversa de campanha de roteiro em aberto neste filtro.
+          Sem dados para o período selecionado.
         </div>
       );
     }
@@ -370,9 +677,8 @@ export default function CentralNotificacoes() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
         {lista.map((row) => {
           const op = operadoraBySlug[row.operadora_slug];
-          const st = row.status as "pendente" | "em_andamento" | "resolvido" | "cancelado";
-          const cor = corStatusSolicitacao(st);
           const titCamp = row.roteiro_mesa_campanhas?.titulo ?? "—";
+          const { label: tagLabel, cor } = tagCampRow(row);
           return (
             <article key={row.id} style={cardShell} aria-label={`Solicitação de campanha: ${row.titulo ?? row.id}`}>
               <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -397,6 +703,14 @@ export default function CentralNotificacoes() {
                   <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
                     Campanha: {titCamp} · {tempoRelativo(row.created_at)}
                   </div>
+                  {staffMesclado && row.status === "resolvido" ? (
+                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+                      Concluída em{" "}
+                      {row.resolvido_em
+                        ? new Date(row.resolvido_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+                        : "—"}
+                    </div>
+                  ) : null}
                   <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                     <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.cor_primaria} />
                     <span
@@ -411,7 +725,7 @@ export default function CentralNotificacoes() {
                         fontFamily: FONT.body,
                       }}
                     >
-                      {row.status}
+                      {tagLabel}
                     </span>
                   </div>
                   <button
@@ -443,11 +757,128 @@ export default function CentralNotificacoes() {
     );
   }
 
-  function renderListaSolicitacoes(lista: DealerSolRow[], modo: "abertas" | "concluidas" = "abertas") {
+  function renderListaMesaRoteiroSolic(lista: RoteiroMesaSolRow[], opts?: { staffMesclado?: boolean }) {
+    const staffMesclado = opts?.staffMesclado ?? false;
+
+    const tagMesaRow = (row: RoteiroMesaSolRow) => {
+      if (staffMesclado && row.status === "resolvido") return { label: "Concluído", cor: "#22c55e" };
+      if (row.status === "cancelado") return { label: "Cancelada", cor: "#6b7280" };
+      return etiquetaFluxoSolicitacao(row.status, mapMsgGestorMesa[row.id] ?? false);
+    };
+
     if (lista.length === 0 && !loading) {
       return (
         <div style={{ ...cardShell, color: t.textMuted, fontSize: 14, fontFamily: FONT.body }}>
-          {modo === "concluidas" ? "Sem dados para o período selecionado." : "Nenhuma solicitação em aberto neste filtro."}
+          Sem dados para o período selecionado.
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+        {lista.map((row) => {
+          const op = operadoraBySlug[row.operadora_slug];
+          const sug = row.roteiro_mesa_sugestoes;
+          const blocoLabel = sug?.bloco ? (BLOCO_ROTEIRO_LABEL[sug.bloco] ?? sug.bloco) : "—";
+          const tipoLabel = sug?.tipo ? (TIPO_SUGESTAO_ROTEIRO_LABEL[sug.tipo] ?? sug.tipo) : "—";
+          const preview = sug?.texto ? (sug.texto.length > 72 ? `${sug.texto.slice(0, 72)}…` : sug.texto) : "—";
+          const { label: tagLabel, cor } = tagMesaRow(row);
+          return (
+            <article key={row.id} style={cardShell} aria-label={`Solicitação de roteiro: ${row.titulo ?? row.id}`}>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 10,
+                    flexShrink: 0,
+                    background: "rgba(124,58,237,0.12)",
+                    border: "1px solid rgba(124,58,237,0.35)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--brand-primary, #7c3aed)",
+                  }}
+                >
+                  <FileText size={20} aria-hidden />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{row.titulo ?? row.id}</div>
+                  <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
+                    {blocoLabel} · {tipoLabel} · {tempoRelativo(row.created_at)}
+                  </div>
+                  <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6, fontFamily: FONT.body, lineHeight: 1.45 }}>{preview}</div>
+                  {staffMesclado && row.status === "resolvido" ? (
+                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+                      Concluída em{" "}
+                      {row.resolvido_em
+                        ? new Date(row.resolvido_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+                        : "—"}
+                    </div>
+                  ) : null}
+                  <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                    <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.cor_primaria} />
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        background: `${cor}22`,
+                        color: cor,
+                        border: `1px solid ${cor}44`,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      {tagLabel}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setThreadCtx({ id: row.id, origem: "roteiro_mesa" })}
+                    style={{
+                      marginTop: 12,
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: brand.useBrand
+                        ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                        : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {perm.canEditarOk ? "Ver conversa" : "Ver conversa (somente leitura)"}
+                  </button>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderListaSolicitacoes(
+    lista: DealerSolRow[],
+    modo: "abertas" | "concluidas" = "abertas",
+    opts?: { staffMesclado?: boolean },
+  ) {
+    const staffMesclado = opts?.staffMesclado ?? false;
+
+    const tagDealerRow = (row: DealerSolRow) => {
+      if (modo === "concluidas") return { label: "Concluído", cor: "#22c55e" };
+      if (staffMesclado && row.status === "resolvido") return { label: "Concluído", cor: "#22c55e" };
+      if (row.status === "cancelado") return { label: "Cancelada", cor: "#6b7280" };
+      return etiquetaFluxoSolicitacao(row.status, mapMsgGestorDealer[row.id] ?? false);
+    };
+
+    if (lista.length === 0 && !loading) {
+      return (
+        <div style={{ ...cardShell, color: t.textMuted, fontSize: 14, fontFamily: FONT.body }}>
+          Sem dados para o período selecionado.
         </div>
       );
     }
@@ -457,8 +888,9 @@ export default function CentralNotificacoes() {
           const op = operadoraBySlug[row.operadora_slug];
           const d = row.dealers;
           const foto = (d?.fotos ?? [])[0] as string | undefined;
-          const st = row.status as "pendente" | "em_andamento" | "resolvido" | "cancelado";
-          const cor = corStatusSolicitacao(st);
+          const { label: tagLabel, cor } = tagDealerRow(row);
+          const ctxConcluido = modo === "concluidas" || (staffMesclado && row.status === "resolvido");
+
           return (
             <article key={row.id} style={cardShell} aria-label={`Solicitação: ${row.titulo ?? row.id}`}>
               <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -487,7 +919,7 @@ export default function CentralNotificacoes() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT.body }}>{row.titulo ?? row.id}</div>
-                  {modo === "concluidas" ? (
+                  {ctxConcluido ? (
                     <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
                       {labelTipoSolicitacao(row.tipo)} · {d?.nickname ?? "—"}
                     </div>
@@ -496,7 +928,7 @@ export default function CentralNotificacoes() {
                       {d?.nickname ?? "—"} · {tempoRelativo(row.created_at)}
                     </div>
                   )}
-                  {modo === "concluidas" ? (
+                  {ctxConcluido ? (
                     <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
                       Concluída em{" "}
                       {row.resolvido_em
@@ -518,7 +950,7 @@ export default function CentralNotificacoes() {
                         fontFamily: FONT.body,
                       }}
                     >
-                      {row.status}
+                      {tagLabel}
                     </span>
                   </div>
                   <button
@@ -728,7 +1160,7 @@ export default function CentralNotificacoes() {
               style={chipTab(abaStaff === "campanha_roteiro")}
             >
               <Megaphone size={14} style={{ marginRight: 6, verticalAlign: "middle" }} aria-hidden />
-              Campanhas (roteiro)
+              Campanhas
               {badgeCampRoteiro > 0 ? (
                 <span
                   style={{
@@ -745,21 +1177,53 @@ export default function CentralNotificacoes() {
                 </span>
               ) : null}
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={abaStaff === "roteiro_mesa"}
+              id="tab-central-roteiro-mesa"
+              aria-controls="panel-central-roteiro-mesa"
+              onClick={() => setAbaStaff("roteiro_mesa")}
+              style={chipTab(abaStaff === "roteiro_mesa")}
+            >
+              <FileText size={14} style={{ marginRight: 6, verticalAlign: "middle" }} aria-hidden />
+              Roteiros
+              {badgeMesaRoteiro > 0 ? (
+                <span
+                  style={{
+                    marginLeft: 8,
+                    background: "#e84025",
+                    color: "#fff",
+                    borderRadius: 10,
+                    padding: "0 6px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  {badgeMesaRoteiro}
+                </span>
+              ) : null}
+            </button>
           </div>
 
           {abaStaff === "troca" ? (
             <div role="tabpanel" id="panel-central-troca" aria-labelledby="tab-central-troca">
-              {renderListaSolicitacoes(solicTroca)}
+              {renderListaSolicitacoes(solicTroca, "abertas", { staffMesclado: true })}
             </div>
           ) : null}
           {abaStaff === "feedback" ? (
             <div role="tabpanel" id="panel-central-feedback" aria-labelledby="tab-central-feedback">
-              {renderListaSolicitacoes(solicFeedback)}
+              {renderListaSolicitacoes(solicFeedback, "abertas", { staffMesclado: true })}
             </div>
           ) : null}
           {abaStaff === "campanha_roteiro" ? (
             <div role="tabpanel" id="panel-central-campanha-roteiro" aria-labelledby="tab-central-campanha-roteiro">
-              {renderListaCampanhaRoteiroSolic(solicCampRoteiroGestor)}
+              {renderListaCampanhaRoteiroSolic(solicCampRoteiroGestor, { staffMesclado: true })}
+            </div>
+          ) : null}
+          {abaStaff === "roteiro_mesa" ? (
+            <div role="tabpanel" id="panel-central-roteiro-mesa" aria-labelledby="tab-central-roteiro-mesa">
+              {renderListaMesaRoteiroSolic(solicMesaRoteiroGestor, { staffMesclado: true })}
             </div>
           ) : null}
         </>
@@ -775,6 +1239,16 @@ export default function CentralNotificacoes() {
             </section>
           ) : null}
 
+          {user?.role === "operador" && solicMesaRoteOperador.length > 0 ? (
+            <section style={{ marginBottom: 28 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <FileText size={20} color={brand.accent} aria-hidden />
+                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>Roteiros de mesa</h2>
+              </div>
+              {renderListaMesaRoteiroSolic(solicMesaRoteOperador)}
+            </section>
+          ) : null}
+
           <section style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <Megaphone size={20} color={brand.accent} aria-hidden />
@@ -784,7 +1258,7 @@ export default function CentralNotificacoes() {
             </div>
             <div style={blocoCampanhasEnvelope}>
               {campanhas.length === 0 && !loading ? (
-                <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>Nenhuma campanha cadastrada neste período.</div>
+                <div style={{ ...cardShell, color: t.textMuted, fontSize: 14 }}>Sem dados para o período selecionado.</div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
                   {campanhas.map((c) => {
@@ -884,18 +1358,20 @@ export default function CentralNotificacoes() {
         </>
       )}
 
-      <section style={{ marginTop: 36 }} aria-labelledby="heading-solic-concluidas">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <CheckCircle size={20} color="#22c55e" aria-hidden />
-          <h2 id="heading-solic-concluidas" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>
-            Solicitações concluídas
-          </h2>
-        </div>
-        <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 640 }}>
-          Listagem das solicitações marcadas como resolvidas no período selecionado.
-        </p>
-        {renderListaSolicitacoes(solicConcluidas, "concluidas")}
-      </section>
+      {!verInboxEstudio ? (
+        <section style={{ marginTop: 36 }} aria-labelledby="heading-solic-concluidas">
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <CheckCircle size={20} color="#22c55e" aria-hidden />
+            <h2 id="heading-solic-concluidas" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>
+              Solicitações concluídas
+            </h2>
+          </div>
+          <p style={{ margin: "0 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 640 }}>
+            Listagem das solicitações marcadas como resolvidas no período selecionado.
+          </p>
+          {renderListaSolicitacoes(solicConcluidas, "concluidas")}
+        </section>
+      ) : null}
 
       {threadCtx ? (
         <ModalThreadSolicitacao

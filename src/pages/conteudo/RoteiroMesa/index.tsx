@@ -6,7 +6,7 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, MessageSquare } from "lucide-react";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check } from "lucide-react";
 import { GiNotebook, GiShield } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -188,6 +188,7 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
   const [texto, setTexto] = useState("");
   const [operadoraSlugModal, setOperadoraSlugModal] = useState(operadoraSlug === "todas" ? "" : operadoraSlug);
   const [saving, setSaving] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   const operadorasFiltradas = operadorasList.filter((o) => podeVerOperadora(o.slug));
   const operadoraFinal = mostraCampoOperadora ? operadoraSlugModal : operadoraSlug;
@@ -204,11 +205,79 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
   const handleSalvar = async () => {
     if (!texto.trim() || !operadoraFinal || operadoraFinal === "todas") return;
     setSaving(true);
+    setErroSalvar(null);
     const payload = { texto: texto.trim(), tipo, jogos, updated_at: new Date().toISOString() };
-    const { error } = await supabase.from("roteiro_mesa_sugestoes").insert({ operadora_slug: operadoraFinal, bloco, ordem: 0, ...payload });
-    if (error) console.error("[RoteiroMesa] insert roteiro:", error.message);
+    const { data: sugRow, error } = await supabase
+      .from("roteiro_mesa_sugestoes")
+      .insert({ operadora_slug: operadoraFinal, bloco, ordem: 0, ...payload })
+      .select("id")
+      .single();
+    if (error || !sugRow?.id) {
+      console.error("[RoteiroMesa] insert roteiro:", error?.message);
+      setErroSalvar(error?.message ?? "Não foi possível salvar o roteiro.");
+      setSaving(false);
+      return;
+    }
+
+    const isOperador = user?.role === "operador";
+    if (isOperador) {
+      const blocoLabel = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
+      const tipoLabel = TIPO_CONFIG[tipo].label;
+      const aguarda = "gestor";
+      const tituloSol = `Novo roteiro (${tipoLabel}) — ${blocoLabel}`;
+      const jogosLabel = jogos.map((j) => JOGOS.find((x) => x.key === j)?.label ?? j).join(", ");
+      const corpoMsg = [
+        "Nova sugestão de roteiro cadastrada no roteiro de mesa.",
+        "",
+        `Bloco: ${blocoLabel}`,
+        `Tipo: ${tipoLabel}`,
+        `Jogos: ${jogosLabel}`,
+        "",
+        "Texto:",
+        texto.trim(),
+      ].join("\n");
+
+      const { data: solRow, error: errSol } = await supabase
+        .from("roteiro_mesa_solicitacoes")
+        .insert({
+          sugestao_id: sugRow.id,
+          operadora_slug: operadoraFinal,
+          status: "em_andamento",
+          aguarda_resposta_de: aguarda,
+          titulo: tituloSol,
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
+
+      if (errSol || !solRow?.id) {
+        console.error("[RoteiroMesa] insert solicitação roteiro mesa:", errSol?.message);
+        await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", sugRow.id);
+        setErroSalvar(errSol?.message ?? "Roteiro não foi salvo: falha ao abrir a conversa com o estúdio.");
+        setSaving(false);
+        return;
+      }
+
+      const { error: errMsg } = await supabase.from("roteiro_mesa_solicitacao_mensagens").insert({
+        solicitacao_id: solRow.id,
+        autor: "operadora",
+        usuario_id: user?.id ?? null,
+        texto: corpoMsg,
+      });
+
+      if (errMsg) {
+        console.error("[RoteiroMesa] insert mensagem roteiro mesa:", errMsg.message);
+        await supabase.from("roteiro_mesa_solicitacoes").delete().eq("id", solRow.id);
+        await supabase.from("roteiro_mesa_sugestoes").delete().eq("id", sugRow.id);
+        setErroSalvar(errMsg.message ?? "Roteiro não foi salvo: falha ao registrar a primeira mensagem.");
+        setSaving(false);
+        return;
+      }
+    }
+
     setSaving(false);
-    if (!error) { onSalvo(); onClose(); }
+    onSalvo();
+    onClose();
   };
 
   const podeSalvar = texto.trim().length > 0 && operadoraFinal && operadoraFinal !== "todas";
@@ -258,6 +327,12 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
 
         <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Texto *</p>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "script" ? "Olá Jogadores, meu nome é [Nome]..." : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o dealer..."} rows={4} style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", outline: "none", marginBottom: 18 }} />
+
+        {erroSalvar ? (
+          <div role="alert" style={{ color: "#ef4444", fontSize: 12, marginBottom: 12, fontFamily: FONT.body }}>
+            {erroSalvar}
+          </div>
+        ) : null}
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
@@ -612,13 +687,10 @@ function SugestaoItem({ sugestao, podeExcluir, onExcluir, dark, operadoraNome, o
 }
 
 // ─── ITEM DE CAMPANHA ─────────────────────────────────────────────────────────
-function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, operadoraCor, solicitacaoId, onAbrirConversa, podeAbrirConversa }: {
+function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, operadoraCor }: {
   campanha: RoteiroCampanha; podeExcluir: boolean;
   onExcluir: (c: RoteiroCampanha) => void;
   dark: boolean; operadoraNome?: string; operadoraCor?: string | null;
-  solicitacaoId?: string | null;
-  onAbrirConversa?: (solicitacaoId: string) => void;
-  podeAbrirConversa?: boolean;
 }) {
   const [hover,    setHover]    = useState(false);
   const [excluirConfirmando, setExcluirConfirmando] = useState(false);
@@ -668,33 +740,6 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
         </div>
       </div>
       <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
-        {podeAbrirConversa && solicitacaoId && onAbrirConversa ? (
-          <button
-            type="button"
-            onClick={() => onAbrirConversa(solicitacaoId)}
-            title="Abrir conversa com o estúdio / operadora"
-            aria-label={`Conversa da campanha: ${campanha.titulo}`}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              minHeight: 34,
-              padding: "0 10px",
-              borderRadius: 8,
-              border: `1px solid ${dark ? "rgba(112,202,228,0.35)" : "rgba(15,106,138,0.35)"}`,
-              background: dark ? "rgba(112,202,228,0.1)" : "rgba(112,202,228,0.08)",
-              color: cianoText,
-              cursor: "pointer",
-              fontSize: 10,
-              fontWeight: 700,
-              fontFamily: FONT.body,
-            }}
-          >
-            <MessageSquare size={14} aria-hidden />
-            <span>Conversa</span>
-          </button>
-        ) : null}
         {podeExcluir && (
           <button
             type="button"
@@ -801,14 +846,11 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
 }
 
 // ─── BLOCO DE CAMPANHAS ───────────────────────────────────────────────────────
-function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora, solicCampanhaPorCampanhaId, onAbrirThreadCampanha, podeAbrirConversaCampanha, onThreadCampanhaCriada }: {
+function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora, onThreadCampanhaCriada }: {
   operadoraSlug: string | null; campanhas: RoteiroCampanha[];
   podeExcluir: boolean; podeCriar: boolean;
   onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; cor_primaria?: string | null }[];
   podeVerOperadora: (slug: string) => boolean;
-  solicCampanhaPorCampanhaId: Record<string, string>;
-  onAbrirThreadCampanha: (solicitacaoId: string) => void;
-  podeAbrirConversaCampanha: boolean;
   onThreadCampanhaCriada?: (solicitacaoId: string) => void;
 }) {
   const { theme: t } = useApp();
@@ -855,7 +897,6 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
         ) : (
           campanhas.map((c) => {
             const op = operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === c.operadora_slug) : undefined;
-            const sid = solicCampanhaPorCampanhaId[c.id] ?? null;
             return (
               <CampanhaItem
                 key={c.id}
@@ -865,9 +906,6 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
                 dark={dark}
                 operadoraNome={op?.nome}
                 operadoraCor={op?.cor_primaria}
-                solicitacaoId={sid}
-                onAbrirConversa={onAbrirThreadCampanha}
-                podeAbrirConversa={podeAbrirConversaCampanha}
               />
             );
           })
@@ -906,7 +944,6 @@ export default function RoteiroMesa() {
   const [filtroTipo,      setFiltroTipo]      = useState<TipoSugestao | "todos">("todos");
   const [sugestoes,       setSugestoes]       = useState<RoteiroSugestao[]>([]);
   const [campanhas,       setCampanhas]       = useState<RoteiroCampanha[]>([]);
-  const [solicCampanhaPorCampanhaId, setSolicCampanhaPorCampanhaId] = useState<Record<string, string>>({});
   const [threadCampSolId, setThreadCampSolId] = useState<string | null>(null);
   const [loading,         setLoading]         = useState(true);
 
@@ -934,21 +971,7 @@ export default function RoteiroMesa() {
     if (operadoraSlugSelecionada !== "todas") qCamp = qCamp.eq("operadora_slug", operadoraSlugSelecionada);
     const { data: dataCamp } = await qCamp;
     const listaCamp = (dataCamp ?? []) as RoteiroCampanha[];
-    const idsCamp = listaCamp.map((c) => c.id);
-    const mapSol: Record<string, string> = {};
-    if (idsCamp.length > 0) {
-      const { data: solRows, error: errSolMap } = await supabase
-        .from("roteiro_campanha_solicitacoes")
-        .select("id, campanha_id")
-        .in("campanha_id", idsCamp);
-      if (errSolMap) console.error("[RoteiroMesa] map solicitações campanha:", errSolMap.message);
-      for (const r of solRows ?? []) {
-        const row = r as { id: string; campanha_id: string };
-        mapSol[row.campanha_id] = row.id;
-      }
-    }
     setCampanhas(listaCamp);
-    setSolicCampanhaPorCampanhaId(mapSol);
 
     setLoading(false);
   }, [operadoraSlugSelecionada]);
@@ -989,10 +1012,6 @@ export default function RoteiroMesa() {
       const jogosList = c.jogos ?? ["todos"];
       return filtroJogo === "todos" || jogosList.includes(filtroJogo) || jogosList.includes("todos");
     });
-
-  /** Quem vê o roteiro pode abrir a thread; `podeInteragir` no modal segue a Central (edição). */
-  const podeAbrirConversaCampanha =
-    !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
 
   const sugestoesPorBloco = (bloco: BlocoRoteiro) =>
     filtrarSugestoes(sugestoes.filter((s) => s.bloco === bloco));
@@ -1114,9 +1133,6 @@ export default function RoteiroMesa() {
               dark={dark}
               operadorasList={operadorasList}
               podeVerOperadora={podeVerOperadora}
-              solicCampanhaPorCampanhaId={solicCampanhaPorCampanhaId}
-              onAbrirThreadCampanha={(id) => setThreadCampSolId(id)}
-              podeAbrirConversaCampanha={podeAbrirConversaCampanha}
               onThreadCampanhaCriada={(id) => setThreadCampSolId(id)}
             />
             {BLOCOS.map(({ key }) => (

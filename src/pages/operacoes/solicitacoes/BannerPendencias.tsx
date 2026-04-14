@@ -55,10 +55,20 @@ export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = t
         .limit(20);
       qCamp = operadoraSlugs.length === 1 ? qCamp.eq("operadora_slug", operadoraSlugs[0]) : qCamp.in("operadora_slug", operadoraSlugs);
 
-      const [{ data: dDealer }, { data: dCamp }] = await Promise.all([qDealer, qCamp]);
+      let qMesa = supabase
+        .from("roteiro_mesa_solicitacoes")
+        .select("id, titulo")
+        .eq("aguarda_resposta_de", "operadora")
+        .in("status", ["pendente", "em_andamento"])
+        .order("created_at", { ascending: false })
+        .limit(20);
+      qMesa = operadoraSlugs.length === 1 ? qMesa.eq("operadora_slug", operadoraSlugs[0]) : qMesa.in("operadora_slug", operadoraSlugs);
+
+      const [{ data: dDealer }, { data: dCamp }, { data: dMesa }] = await Promise.all([qDealer, qCamp, qMesa]);
       const lista: PendenciaItem[] = [
         ...(dDealer ?? []).map((r) => ({ id: r.id as string, titulo: r.titulo as string | null, origem: "dealer" as const })),
         ...(dCamp ?? []).map((r) => ({ id: r.id as string, titulo: r.titulo as string | null, origem: "campanha_roteiro" as const })),
+        ...(dMesa ?? []).map((r) => ({ id: r.id as string, titulo: r.titulo as string | null, origem: "roteiro_mesa" as const })),
       ];
       setPendentes(lista);
     }
@@ -70,6 +80,9 @@ export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = t
         void buscar();
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "roteiro_campanha_solicitacoes" }, () => {
+        void buscar();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "roteiro_mesa_solicitacoes" }, () => {
         void buscar();
       })
       .subscribe();
