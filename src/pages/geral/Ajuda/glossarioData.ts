@@ -32,6 +32,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Overview · Feedback",
       },
       {
+        termo: "Validação de Live",
+        definicao:
+          "Processo de confirmar o resultado de uma live agendada — registrando se ela foi Realizada ou Não Realizada, e quando realizada, os dados de duração e audiência. A validação é feita na página Resultado de Lives.",
+        nota:
+          "Somente lives com horário passado há mais de 5 horas aparecem para validação — a janela garante que a live terminou antes do registro.\n\nA operadora deve ser informada obrigatoriamente na validação, pois é o vínculo usado pelo módulo Financeiro para calcular os pagamentos do ciclo correspondente.",
+        referencia: "Resultados",
+      },
+      {
         termo: "Influencers Ativos",
         definicao:
           "Número de influencers que realizaram ao menos uma live no período. Influencers cadastrados sem live no período não são contabilizados.",

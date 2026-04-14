@@ -5,7 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
-import { HelpCircle } from "lucide-react";
+import { ClipboardList, HelpCircle } from "lucide-react";
 import {
   GiTv,
   GiCalendar,
@@ -37,6 +37,7 @@ const MENU_AJUDA = [
     section: "Lives",
     items: [
       { key: "agenda" as PageKey, label: "Agenda", Icon: GiCalendar },
+      { key: "resultados" as PageKey, label: "Resultados", Icon: ClipboardList },
       { key: "feedback" as PageKey, label: "Feedback", Icon: GiConversation },
     ],
   },
@@ -195,6 +196,40 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Visibilidade por Perfil",
         texto:
           "— Influencer / Agência: visualiza e agenda apenas as próprias lives ou as dos influencers sob sua gestão.\n— Operador: visualiza todas as lives dos influencers que atuam na sua operadora.\n— Gestor / Executivo: visão completa de todas as lives de todos os influencers e operadoras.",
+      },
+    ],
+  },
+  resultados: {
+    titulo: "Resultado de Lives",
+    blocos: [
+      {
+        texto:
+          "Área de validação das lives realizadas. Exibe todas as lives agendadas cujo horário passou há mais de 5 horas e que ainda não foram validadas. Para cada live, é possível registrar se ela foi realizada ou não — e, quando realizada, os dados de duração e audiência.",
+      },
+      {
+        subtitulo: "Janela de Elegibilidade",
+        texto:
+          "Apenas lives com horário passado há pelo menos 5 horas aparecem na lista. Essa janela existe para dar tempo à live de terminar e aos dados de serem registrados antes da validação. Lives que ainda estão no ar ou acabaram de terminar não aparecem.",
+      },
+      {
+        subtitulo: "Validando uma Live",
+        texto:
+          "Clique em Validar na live desejada para abrir o formulário. Preencha:\n\n— Status: escolha Realizada ou Não Realizada\n— Operadora: obrigatório para qualquer status — é o vínculo que conecta a live ao cálculo de pagamentos no módulo Financeiro\n— Observação: campo livre para comentários (opcional)\n\nPara lives Realizadas, campos adicionais ficam disponíveis:\n— Horário Real de Início: se a live começou em horário diferente do agendado\n— Duração: horas e minutos da transmissão\n— Média de Views: audiência média ao longo da live\n— Máximo de Views: pico de audiência",
+      },
+      {
+        subtitulo: "Live Não Realizada",
+        texto:
+          "Ao selecionar 'Não Realizada', uma mensagem de confirmação é exibida e os campos de resultado são ocultados. Nenhum dado de audiência ou duração é registrado. A live permanece no histórico com o status de não realizada.",
+      },
+      {
+        subtitulo: "Excluindo uma Live",
+        texto:
+          "O botão Excluir aparece para perfis com permissão de exclusão. Para evitar exclusões acidentais, é necessário clicar duas vezes — o primeiro clique transforma o botão em 'Confirmar?', e o segundo executa a exclusão. Clicar fora do botão cancela a operação.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Para perfis com acesso a múltiplos influencers ou operadoras, os filtros aparecem no topo da página. Eles permitem isolar as lives de um influencer específico ou de uma operadora, facilitando o trabalho em volumes maiores.",
       },
     ],
   },
@@ -475,6 +510,41 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "A live está no dia errado no calendário?",
         texto:
           "A data exibida no calendário é a data registrada no momento do agendamento, com base no fuso horário da plataforma. Se a live aparecer num dia diferente do esperado, verifique a data preenchida no formulário de edição.",
+      },
+    ],
+  },
+  resultados: {
+    titulo: "Resultado de Lives",
+    blocos: [
+      {
+        subtitulo: "Uma live não aparece na lista de validação?",
+        texto:
+          "A lista exibe apenas lives com status Agendada cujo horário passou há mais de 5 horas. Verifique:\n\n— A live pode ainda não ter atingido a janela de 5 horas desde o horário agendado.\n— Se os filtros de influencer ou operadora estiverem ativos, a live pode estar sendo ocultada.\n— Veja na Agenda se a live tem status diferente de Agendada — lives já validadas não aparecem na lista de validação.",
+      },
+      {
+        subtitulo: "Não consigo salvar a validação?",
+        texto:
+          "Verifique:\n\n— O campo Operadora é obrigatório para qualquer status (Realizada ou Não Realizada). Selecione a operadora antes de salvar.\n— Para lives Realizadas, a Duração deve ser preenchida — horas e minutos não podem ser ambos zero.\n— O Máximo de Views não pode ser menor que a Média de Views.",
+      },
+      {
+        subtitulo: "O botão Validar não aparece?",
+        texto:
+          "O botão só aparece para perfis com permissão de edição. Se o botão não aparecer, seu perfil pode não ter essa permissão configurada. Entre em contato com o administrador da conta.",
+      },
+      {
+        subtitulo: "Por que a operadora é obrigatória na validação?",
+        texto:
+          "A operadora registrada na validação é o vínculo que conecta a live ao cálculo de pagamentos no módulo Financeiro. Sem a operadora, o sistema não consegue associar as horas da live ao ciclo de pagamento correto. Por isso, é obrigatória independentemente do status da live.",
+      },
+      {
+        subtitulo: "Posso excluir uma live validada?",
+        texto:
+          "Lives com status Realizada ou Não Realizada só podem ser editadas ou excluídas na Agenda por Admin e Gestor. Na página de Resultados, o botão Excluir aparece apenas para lives ainda com status Agendada — que são exatamente as que estão aguardando validação.",
+      },
+      {
+        subtitulo: "A lista está vazia mas sei que há lives pendentes?",
+        texto:
+          "Confirme se os filtros de influencer ou operadora não estão ocultando as lives. Se os filtros estiverem em 'Todos', verifique se as lives em questão passaram da janela de 5 horas desde o horário agendado. Se as lives foram validadas por outro usuário enquanto você estava com a página aberta, recarregue a página para ver a lista atualizada.",
       },
     ],
   },

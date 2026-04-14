@@ -29,19 +29,21 @@ import {
 import { getThStyle, getTdStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import {
   AlertTriangle,
-  Award,
   Banknote,
-  Building2,
+  BarChart2,
+  Calendar,
   CalendarDays,
   ChartColumnBig,
   ChevronLeft,
   ChevronRight,
   Clock,
-  CreditCard,
-  DollarSign,
+  Coins,
   Eye,
   Filter,
   Gauge,
+  Percent,
+  PlayCircle,
+  Shield,
   Table2,
   TrendingUp,
   Trophy,
@@ -61,8 +63,6 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { GiCalendar } from "react-icons/gi";
-
 const MESES_CURTOS_TAB = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 /** `YYYY-MM` → Jan/2026 (igual Overview Spin / Detalhamento mensal). */
@@ -986,7 +986,7 @@ export default function DashboardOverviewInfluencer() {
               }}
               onClick={toggleHistorico}
             >
-              <GiCalendar size={15} aria-hidden="true" /> Histórico
+              <Calendar size={15} aria-hidden="true" /> Histórico
             </button>
 
             {/* Filtro Influencer — ícone dentro do campo (mesmo padrão do Histórico) */}
@@ -1011,7 +1011,7 @@ export default function DashboardOverviewInfluencer() {
             {/* Filtro Operadora — ícone dentro do campo */}
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<Building2 size={15} aria-hidden="true" />}
+                icon={<Shield size={15} aria-hidden="true" />}
                 label="Filtrar por operadora"
                 pill
                 value={filtroOperadora}
@@ -1057,7 +1057,7 @@ export default function DashboardOverviewInfluencer() {
       {/* ─── BLOCO 2: KPIs Executivos ─────────────────────────────────────────── */}
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle
-          icon={<Award size={14} aria-hidden="true" />}
+          icon={<BarChart2 size={14} aria-hidden="true" />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Executivos
@@ -1096,7 +1096,7 @@ export default function DashboardOverviewInfluencer() {
               <KpiCard
                 label="Investimento"
                 value={fmtBRL(totais.investimento)}
-                icon={<DollarSign size={16} aria-hidden="true" />}
+                icon={<Coins size={16} aria-hidden="true" />}
                 accentVar="--brand-accent"
                 accentColor={BRAND.azul}
                 atual={totais.investimento}
@@ -1107,7 +1107,7 @@ export default function DashboardOverviewInfluencer() {
               <KpiCard
                 label="ROI"
                 value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"}
-                icon={<Award size={16} aria-hidden="true" />}
+                icon={<Percent size={16} aria-hidden="true" />}
                 accentColor={
                   totais.investimento > 0 ? (totais.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde
                 }
@@ -1174,7 +1174,7 @@ export default function DashboardOverviewInfluencer() {
               <KpiCard
                 label="Depósitos"
                 value={totais.depositos_qtd.toLocaleString("pt-BR")}
-                icon={<CreditCard size={16} aria-hidden="true" />}
+                icon={<PlayCircle size={16} aria-hidden="true" />}
                 accentVar="--brand-icon"
                 accentColor={BRAND.amarelo}
                 atual={totais.depositos_qtd}

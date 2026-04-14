@@ -7,8 +7,8 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
-import { Eye, History, Pencil, Send, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot } from "lucide-react";
-import { GiCardRandom, GiShield, GiFemale, GiMale, GiCardPick, GiCardAceSpades } from "react-icons/gi";
+import { Eye, History, Pencil, Send, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot, Shield } from "lucide-react";
+import { GiCardRandom, GiFemale, GiMale, GiCardPick, GiCardAceSpades } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -353,7 +353,7 @@ export default function GestaoDealers() {
             {showFiltroOperadora && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={13} />
+                  <Shield size={13} aria-hidden />
                 </span>
                 <select value={filtroOperadora} onChange={(e) => setFiltroOperadora(e.target.value)} style={selectOperadoraStyle}>
                   <option value="todas">Todas as operadoras</option>

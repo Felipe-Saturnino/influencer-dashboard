@@ -15,6 +15,7 @@ import { getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
 import {
   Award,
   BarChart2,
+  Calendar,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -25,9 +26,9 @@ import {
   Percent,
   PlayCircle,
   Scale,
+  Shield,
   User,
 } from "lucide-react";
-import { GiCalendar, GiStarMedal, GiShield } from "react-icons/gi";
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
 } from "recharts";
@@ -603,11 +604,11 @@ export default function DashboardFinanceiro() {
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
-              <GiCalendar size={14} aria-hidden /> Histórico
+              <Calendar size={14} aria-hidden /> Histórico
             </button>
             {showFiltroInfluencer && (
               <SelectComIcone
-                icon={<GiStarMedal size={14} aria-hidden />}
+                icon={<User size={14} aria-hidden />}
                 label="Filtrar por influencer"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
@@ -620,7 +621,7 @@ export default function DashboardFinanceiro() {
             )}
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<GiShield size={14} aria-hidden />}
+                icon={<Shield size={14} aria-hidden />}
                 label="Filtrar por operadora"
                 value={operadoraFiltro}
                 onChange={setOperadoraFiltro}

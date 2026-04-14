@@ -7,10 +7,10 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
-import { X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { X, Pencil, Trash2, Calendar, User, ChevronLeft, ChevronRight, Loader2, Shield } from "lucide-react";
 import {
-  GiShield, GiPencil,
-  GiChatBubble, GiCalendar,
+  GiPencil,
+  GiChatBubble,
 } from "react-icons/gi";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
@@ -446,7 +446,7 @@ export default function Feedback() {
                 transition: "all 0.15s",
               }}
             >
-              <GiCalendar size={15} /> Histórico
+              <Calendar size={15} aria-hidden /> Histórico
             </button>
           </div>
 
@@ -485,7 +485,7 @@ export default function Feedback() {
                 {showFiltroOperadora && operadorasList.length > 0 && (
                   <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                     <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                      <GiShield size={13} />
+                      <Shield size={13} aria-hidden />
                     </span>
                     <select
                       value={filterOperadora}

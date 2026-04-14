@@ -7,8 +7,8 @@ import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { UtmAlias } from "../../../types";
-import { Link2, EyeOff, RotateCcw, AlertCircle } from "lucide-react";
-import { GiLinkedRings, GiShield } from "react-icons/gi";
+import { Link2, EyeOff, RotateCcw, AlertCircle, Shield } from "lucide-react";
+import { GiLinkedRings } from "react-icons/gi";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 
@@ -268,7 +268,7 @@ export default function GestaoLinks() {
           <div style={{ borderRadius: 14, border: brand.primaryTransparentBorder, background: brand.primaryTransparentBg, padding: "10px 16px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
               <span style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <GiShield size={13} style={{ position: "absolute", left: 10, color: theme.textMuted, pointerEvents: "none" }} />
+                <Shield size={13} aria-hidden style={{ position: "absolute", left: 10, color: theme.textMuted, pointerEvents: "none" }} />
                 <select
                   value={operadoraFiltro}
                   onChange={(e) => setOperadoraFiltro(e.target.value)}

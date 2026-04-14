@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy, type CSSProperties } from "react";
-import { Loader2, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Calendar, Loader2, ChevronLeft, ChevronRight, Clock, Shield, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -7,7 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { SelectComIcone } from "../../../components/dashboard";
-import { GiTv, GiCalendar, GiStarMedal, GiShield } from "react-icons/gi";
+import { GiTv } from "react-icons/gi";
 import { StreamersFiltrosProvider, useStreamersFiltros } from "./StreamersFiltrosContext";
 
 const DashboardOverview = lazy(() => import("./DashboardOverview"));
@@ -142,13 +142,13 @@ function StreamersFiltrosEUAbas({
               transition: "all 0.15s",
             }}
           >
-            <GiCalendar size={15} aria-hidden />
+            <Calendar size={15} aria-hidden />
             Histórico
           </button>
 
           {showFiltroInfluencer && (
             <SelectComIcone
-              icon={<GiStarMedal size={15} aria-hidden />}
+              icon={<User size={15} aria-hidden />}
               label="Filtrar por influencer"
               value={sf.filtroInfluencer}
               onChange={sf.setFiltroInfluencer}
@@ -164,7 +164,7 @@ function StreamersFiltrosEUAbas({
 
           {showFiltroOperadora && (
             <SelectComIcone
-              icon={<GiShield size={15} aria-hidden />}
+              icon={<Shield size={15} aria-hidden />}
               label="Filtrar por operadora"
               value={sf.filtroOperadora}
               onChange={sf.setFiltroOperadora}

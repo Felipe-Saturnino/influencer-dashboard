@@ -10,9 +10,8 @@ import { SelectComIcone, SectionTitle } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, Shield, User } from "lucide-react";
 import {
-  GiCalendar, GiStarMedal, GiShield,
   GiTrophy, GiMedal, GiLaurelsTrophy,
   GiConvergenceTarget, GiArcheryTarget,
   GiCheckMark, GiShare, GiGamepad,
@@ -670,12 +669,12 @@ export default function DashboardConversao() {
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
-              <GiCalendar size={14} aria-hidden /> Histórico
+              <Calendar size={14} aria-hidden /> Histórico
             </button>
 
             {showFiltroInfluencer && (
               <SelectComIcone
-                icon={<GiStarMedal size={14} />}
+                icon={<User size={14} aria-hidden />}
                 label="Filtrar por influencer"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
@@ -689,7 +688,7 @@ export default function DashboardConversao() {
 
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<GiShield size={14} />}
+                icon={<Shield size={14} aria-hidden />}
                 label="Filtrar por operadora"
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}

@@ -7,10 +7,10 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { Operadora, InfluencerOperadora } from "../../../types";
-import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Shield } from "lucide-react";
 import {
   GiMicrophone, GiPodium, GiWarPick, GiTwoCoins,
-  GiPokerHand, GiCheckMark, GiShield,
+  GiPokerHand, GiCheckMark,
 } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
@@ -587,7 +587,7 @@ export default function Influencers() {
                   <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Operadora</span>
                   <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                     <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                      <GiShield size={13} />
+                      <Shield size={13} aria-hidden />
                     </span>
                     <select value={filterOp} onChange={(e) => setFilterOp(e.target.value)}
                       style={{

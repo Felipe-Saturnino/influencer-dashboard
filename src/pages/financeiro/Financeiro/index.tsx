@@ -12,8 +12,8 @@ import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
-import { GiReceiveMoney, GiShield } from "react-icons/gi";
+import { AlertTriangle, ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { GiReceiveMoney } from "react-icons/gi";
 
 // ── Tipos locais ───────────────────────────────────────────────────────────────
 
@@ -2212,7 +2212,7 @@ export default function Financeiro() {
             {showFiltroOperadora && operadorasList.length > 0 && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={13} />
+                  <Shield size={13} aria-hidden />
                 </span>
                 <select
                   value={filterOperadora}

@@ -11,8 +11,8 @@ import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
-import { GiChipsBag, GiShield } from "react-icons/gi";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Shield } from "lucide-react";
+import { GiChipsBag } from "react-icons/gi";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 
 type BancaStatus = "solicitado" | "aprovado" | "liberado";
@@ -604,6 +604,9 @@ function BlocoSolicitacoes({
   const [modalOpen, setModalOpen] = useState(false);
   const [bloqueioSolicitacao, setBloqueioSolicitacao] = useState<"perfil" | "playbook" | null>(null);
   const [modalAprovar, setModalAprovar] = useState<BancaRowDb | null>(null);
+  const [confirmRecusar, setConfirmRecusar] = useState<BancaRowDb | null>(null);
+  const [recusandoId, setRecusandoId] = useState<string | null>(null);
+  const [recusarErr, setRecusarErr] = useState("");
   const [modalLiberar, setModalLiberar] = useState<BancaRowDb | null>(null);
   const [liberando, setLiberando] = useState(false);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
@@ -680,6 +683,21 @@ function BlocoSolicitacoes({
     setExcluindoId(null);
     setConfirmExcluir(null);
     if (!error) onRecarregar();
+  }
+
+  async function recusarSolicitacao(r: BancaRowDb) {
+    if (!staffPodeAprovar || r.status !== "solicitado") return;
+    setRecusarErr("");
+    setRecusandoId(r.id);
+    const { error } = await supabase.from("banca_jogo_solicitacoes").delete().eq("id", r.id).eq("status", "solicitado");
+    setRecusandoId(null);
+    if (error) {
+      setRecusarErr(error.message ?? "Não foi possível recusar.");
+      return;
+    }
+    setConfirmRecusar(null);
+    onRecarregar();
+    onPerfisAtualizados();
   }
 
   const th: React.CSSProperties = {
@@ -806,9 +824,24 @@ function BlocoSolicitacoes({
                     <td style={td}>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
                         {showAprovar ? (
-                          <button type="button" onClick={() => setModalAprovar(r)} style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #6b7fff44", background: "#6b7fff15", color: "#6b7fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-                            Aprovar
-                          </button>
+                          <>
+                            <button type="button" onClick={() => setModalAprovar(r)} style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #6b7fff44", background: "#6b7fff15", color: "#6b7fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+                              Aprovar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRecusarErr("");
+                                setConfirmRecusar(r);
+                              }}
+                              style={{
+                                padding: "5px 12px", borderRadius: 8, border: "1px solid #ef444444", background: "#ef444415",
+                                color: "#ef4444", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+                              }}
+                            >
+                              Recusar
+                            </button>
+                          </>
                         ) : null}
                         {showLiberar ? (
                           <button type="button" onClick={() => setModalLiberar(r)} style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #10b98144", background: "#10b98115", color: "#10b981", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
@@ -867,6 +900,21 @@ function BlocoSolicitacoes({
           userId={user.id}
           onClose={() => setModalAprovar(null)}
           onSucesso={() => { onRecarregar(); onPerfisAtualizados(); }}
+        />
+      ) : null}
+      {confirmRecusar ? (
+        <ModalConfirmDelete
+          title="Confirmar recusa"
+          texto={`Recusar a solicitação de ${perfilMap[confirmRecusar.influencer_id]?.nome ?? "influencer"} no valor de ${fmtMoeda(Number(confirmRecusar.valor))}? A solicitação será removida e não poderá ser recuperada.`}
+          confirmLabel="Recusar"
+          loading={recusandoId === confirmRecusar.id}
+          loadingLabel="Recusando..."
+          error={recusarErr || null}
+          onCancel={() => {
+            setConfirmRecusar(null);
+            setRecusarErr("");
+          }}
+          onConfirm={() => void recusarSolicitacao(confirmRecusar)}
         />
       ) : null}
       {modalLiberar ? (
@@ -1519,7 +1567,7 @@ export default function BancaJogo() {
             {showFiltroOperadoraExtra && operadorasList.length > 0 ? (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={13} />
+                  <Shield size={13} aria-hidden />
                 </span>
                 <select
                   value={filterOperadora}

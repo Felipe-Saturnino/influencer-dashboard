@@ -1,29 +1,27 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
+// Dívida técnica (B6): migrar para InfluencerDropdown na refatoração de filtros.
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { X, Loader2, AlertTriangle, Info, Trash2 } from "lucide-react";
+import { SelectComIcone } from "../../../components/dashboard";
 import {
-  GiNotebook, GiShield, GiCheckMark,
-} from "react-icons/gi";
-
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-} as const;
+  AlertTriangle,
+  Building2,
+  Check,
+  CheckCircle,
+  ClipboardList,
+  Info,
+  Loader2,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 
@@ -59,6 +57,487 @@ function fmtData(iso: string): string {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y.slice(2)}`;
+}
+
+type ThemeTokens = ReturnType<typeof useApp>["theme"];
+type DashboardBrand = ReturnType<typeof useDashboardBrand>;
+type PermResultados = ReturnType<typeof usePermission>;
+type EscoposVisiveis = ReturnType<typeof useDashboardFiltros>["escoposVisiveis"];
+
+const ctaGradient = (brand: DashboardBrand) =>
+  brand.useBrand ? "var(--brand-accent)" : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
+
+interface LiveCardProps {
+  live: Live;
+  brand: DashboardBrand;
+  t: ThemeTokens;
+  isDark: boolean | undefined;
+  perm: PermResultados;
+  podeVerInfluencer: (id: string) => boolean;
+  showInfluencerName: boolean;
+  nomeCompletos: Record<string, string>;
+  excluindo: Live | null;
+  setExcluindo: (v: Live | null) => void;
+  onValidar: (live: Live) => void;
+  onLiveDeleted: (live: Live) => void;
+}
+
+function LiveCard({
+  live,
+  brand,
+  t,
+  isDark,
+  perm,
+  podeVerInfluencer,
+  showInfluencerName,
+  nomeCompletos,
+  excluindo,
+  setExcluindo,
+  onValidar,
+  onLiveDeleted,
+}: LiveCardProps) {
+  const [confirmExcluir, setConfirmExcluir] = useState(false);
+  const nomeCompleto = nomeCompletos[live.influencer_id] ?? "";
+  const platColor = PLAT_COLOR[live.plataforma];
+  const podeExcluir = perm.canExcluirOk && (perm.canExcluir !== "proprios" || podeVerInfluencer(live.influencer_id));
+  const isExcluindo = excluindo?.id === live.id;
+
+  async function handleExcluirConfirmado() {
+    if (!perm.canExcluirOk) return;
+    setExcluindo(live);
+    await supabase.from("live_resultados").delete().eq("live_id", live.id);
+    const { error } = await supabase.from("lives").delete().eq("id", live.id);
+    setExcluindo(null);
+    setConfirmExcluir(false);
+    if (!error) onLiveDeleted(live);
+  }
+
+  return (
+    <div style={{
+      background: brand.blockBg,
+      border: `1px solid ${t.cardBorder}`,
+      borderRadius: 18,
+      padding: 20,
+      marginBottom: 12,
+      boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+    }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
+          <div style={{
+            width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+            background: `${platColor}22`,
+            border: `1.5px solid ${platColor}44`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <PlatLogo plataforma={live.plataforma} size={20} isDark={isDark ?? false} />
+          </div>
+
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
+              {live.influencer_name}
+            </div>
+            <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {showInfluencerName && nomeCompleto && <span>{nomeCompleto} · </span>}
+              {fmtData(live.data)} · {live.horario?.slice(0, 5)}
+            </div>
+            <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: 11, padding: "3px 9px", borderRadius: 20,
+                background: `${platColor}22`, color: platColor,
+                fontWeight: 600, fontFamily: FONT.body,
+              }}>
+                <PlatLogo plataforma={live.plataforma} size={11} isDark={isDark ?? false} />
+                {live.plataforma}
+              </span>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: 11, padding: "3px 9px", borderRadius: 20,
+                background: `${BRAND.amarelo}22`, color: BRAND.amarelo,
+                fontWeight: 600, fontFamily: FONT.body,
+                border: `1px solid ${BRAND.amarelo}44`,
+              }}>
+                <AlertTriangle size={10} aria-hidden="true" />
+                Pendente validação
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap", alignItems: "center" }}>
+          {perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(live.influencer_id)) && (
+            <button
+              type="button"
+              onClick={() => onValidar(live)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "8px 16px", borderRadius: 10, border: "none",
+                cursor: "pointer",
+                background: ctaGradient(brand),
+                color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
+              }}
+            >
+              <Check size={13} aria-hidden="true" />
+              Validar
+            </button>
+          )}
+          {podeExcluir && (
+            <button
+              type="button"
+              onClick={() => {
+                if (!confirmExcluir) { setConfirmExcluir(true); return; }
+                void handleExcluirConfirmado();
+              }}
+              onBlur={() => setConfirmExcluir(false)}
+              disabled={isExcluindo}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "8px 16px", borderRadius: 10,
+                border: `1px solid ${BRAND.vermelho}50`,
+                background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}10`,
+                color: confirmExcluir ? "#fff" : BRAND.vermelho,
+                fontSize: 12, fontWeight: 600,
+                cursor: isExcluindo ? "not-allowed" : "pointer",
+                fontFamily: FONT.body, opacity: isExcluindo ? 0.6 : 1,
+                transition: "all 0.15s",
+              }}
+            >
+              <Trash2 size={12} aria-hidden="true" />
+              {isExcluindo ? "..." : confirmExcluir ? "Confirmar?" : "Excluir"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ModalValidacaoProps {
+  live: Live;
+  brand: DashboardBrand;
+  t: ThemeTokens;
+  resultados: Record<string, LiveResultado>;
+  operadorasList: { slug: string; nome: string }[];
+  escoposVisiveis: EscoposVisiveis;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}
+
+function ModalValidacao({
+  live,
+  brand,
+  t,
+  resultados,
+  operadorasList,
+  escoposVisiveis,
+  onClose,
+  onSaved,
+}: ModalValidacaoProps) {
+  const existing = resultados[live.id];
+  const [status, setStatus] = useState<LiveStatus>("realizada");
+  const [operadoraSlug, setOperadoraSlug] = useState(live.operadora_slug ?? "");
+  const [observacao, setObservacao] = useState(live.observacao ?? "");
+  const [horarioReal, setHorarioReal] = useState(live.horario?.slice(0, 5) ?? "");
+  const [duracaoHoras, setDuracaoHoras] = useState(existing?.duracao_horas ?? 0);
+  const [duracaoMin, setDuracaoMin] = useState(existing?.duracao_min ?? 0);
+  const [mediaViews, setMediaViews] = useState(existing?.media_views ?? 0);
+  const [maxViews, setMaxViews] = useState(existing?.max_views ?? 0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      containerRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [live.id]);
+
+  const showResultFields = status === "realizada";
+
+  async function handleSave() {
+    setError("");
+    if (!operadoraSlug?.trim())
+      return setError("Selecione a operadora. É obrigatório para salvar a validação (realizada ou não realizada).");
+    if (showResultFields) {
+      if (duracaoHoras === 0 && duracaoMin === 0)
+        return setError("Informe a duração da live.");
+      if (maxViews < mediaViews)
+        return setError("Máximo não pode ser menor que a média.");
+    }
+
+    setSaving(true);
+    const liveUpdate: Record<string, unknown> = {
+      status,
+      observacao: observacao || null,
+      operadora_slug: operadoraSlug.trim(),
+    };
+    if (showResultFields && horarioReal) (liveUpdate as Record<string, string>).horario = horarioReal;
+
+    const { error: updateError } = await supabase.from("lives").update(liveUpdate).eq("id", live.id);
+    if (updateError) { setError("Erro ao salvar. Tente novamente."); setSaving(false); return; }
+
+    if (showResultFields) {
+      const payload = { live_id: live.id, duracao_horas: duracaoHoras, duracao_min: duracaoMin, media_views: mediaViews, max_views: maxViews };
+      const { error: resultError } = existing
+        ? await supabase.from("live_resultados").update(payload).eq("live_id", live.id)
+        : await supabase.from("live_resultados").insert(payload);
+      if (resultError) { setError("Erro ao salvar resultado. Tente novamente."); setSaving(false); return; }
+    }
+
+    setSaving(false);
+    onClose();
+    await onSaved();
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", boxSizing: "border-box", padding: "10px 14px",
+    borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text,
+    fontSize: 13, fontFamily: FONT.body, outline: "none",
+  };
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "1.2px",
+    textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
+  };
+  const row: React.CSSProperties = { marginBottom: 14 };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+      <div
+        ref={containerRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-validacao-title"
+        style={{
+          background: t.cardBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: 20,
+          padding: "clamp(16px, 4vw, 28px)",
+          width: "100%",
+          maxWidth: 480,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          outline: "none",
+        }}
+      >
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: brand.primaryIconBg,
+              border: brand.primaryIconBorder,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: brand.primaryIconColor,
+            }}>
+              <CheckCircle size={13} aria-hidden="true" />
+            </span>
+            <h2 id="modal-validacao-title" style={{ margin: 0, fontSize: 15, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Validar Live
+            </h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, marginBottom: 20 }}>
+          {live.influencer_name} · {fmtData(live.data)} {live.horario?.slice(0, 5)}
+        </div>
+
+        {error && (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              background: `${BRAND.vermelho}18`,
+              border: `1px solid ${BRAND.vermelho}44`,
+              color: BRAND.vermelho,
+              borderRadius: 10,
+              padding: "10px 14px",
+              fontSize: 13,
+              marginBottom: 14,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+            }}
+          >
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => setError("")}
+              aria-label="Fechar erro"
+              style={{ background: "none", border: "none", cursor: "pointer", color: BRAND.vermelho, display: "flex", flexShrink: 0 }}
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
+        <div style={row}>
+          <label style={labelStyle}>Status da Live</label>
+          <div style={{ display: "flex", gap: 10 }}>
+            {STATUS_OPTS.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                aria-pressed={status === opt.value}
+                onClick={() => setStatus(opt.value)}
+                style={{
+                  flex: 1, padding: 10, borderRadius: 10,
+                  border: `2px solid ${status === opt.value ? opt.color : t.cardBorder}`,
+                  background: status === opt.value ? `${opt.color}18` : (t.inputBg ?? t.cardBg),
+                  color: status === opt.value ? opt.color : t.textMuted,
+                  fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  fontFamily: FONT.body, transition: "all 0.15s",
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {status === "nao_realizada" && (
+          <div style={{
+            background: `${BRAND.amarelo}12`,
+            border: `1px solid ${BRAND.amarelo}35`,
+            color: BRAND.amarelo,
+            borderRadius: 10,
+            padding: "10px 14px",
+            fontSize: 12,
+            marginBottom: 14,
+            fontFamily: FONT.body,
+          }}>
+            Live marcada como Não Realizada — nenhum resultado será registrado.
+          </div>
+        )}
+
+        {operadorasList.length > 0 && (
+          <div style={row}>
+            <label style={labelStyle}>Operadora <span style={{ color: BRAND.vermelho }}>*</span></label>
+            <select
+              value={operadoraSlug}
+              onChange={e => setOperadoraSlug(e.target.value)}
+              style={{ ...inputStyle, cursor: "pointer" }}
+            >
+              <option value="">Selecione a operadora...</option>
+              {operadorasList
+                .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                .map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+            </select>
+            <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
+              Obrigatório para salvar. Em lives realizadas, o Financeiro usa a operadora no cálculo de pagamentos.
+            </span>
+          </div>
+        )}
+
+        <div style={row}>
+          <label style={labelStyle}>Observação</label>
+          <textarea value={observacao} onChange={e => setObservacao(e.target.value)}
+            rows={3} placeholder="Comentários sobre a live..."
+            style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }} />
+        </div>
+
+        {showResultFields && (
+          <>
+            <div style={row}>
+              <label style={labelStyle}>Horário Real de Início</label>
+              <input type="time" value={horarioReal} onChange={e => setHorarioReal(e.target.value)} style={inputStyle} />
+              <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
+                Pré-preenchido com o horário agendado. Altere se a live começou em outro horário.
+              </span>
+            </div>
+
+            <div style={row}>
+              <label style={labelStyle}>Duração</label>
+              <div className="app-grid-2-tight" style={{ gap: 10 }}>
+                <div>
+                  <input
+                    aria-label="Duração em horas"
+                    type="number"
+                    min={0}
+                    max={24}
+                    value={duracaoHoras}
+                    onChange={e => setDuracaoHoras(Math.max(0, Math.min(24, Number(e.target.value) || 0)))}
+                    style={inputStyle}
+                    placeholder="0"
+                  />
+                  <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>horas</span>
+                </div>
+                <div>
+                  <input
+                    aria-label="Duração em minutos"
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={duracaoMin}
+                    onChange={e => setDuracaoMin(Math.max(0, Math.min(59, Number(e.target.value) || 0)))}
+                    style={inputStyle}
+                    placeholder="0"
+                  />
+                  <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>min</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={row}>
+              <label style={labelStyle}>Média de Views</label>
+              <input type="number" min={0} value={mediaViews} onChange={e => setMediaViews(Number(e.target.value) || 0)} style={inputStyle} placeholder="0" />
+            </div>
+
+            <div style={row}>
+              <label style={labelStyle}>Máximo de Views</label>
+              <input type="number" min={0} value={maxViews} onChange={e => setMaxViews(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} placeholder="0" />
+            </div>
+
+            <div style={{
+              display: "flex", alignItems: "flex-start", gap: 8,
+              padding: "10px 12px", borderRadius: 10, marginBottom: 16,
+              background: `${BRAND.azul}0d`,
+              border: `1px solid ${BRAND.azul}30`,
+            }}>
+              <Info size={13} color={BRAND.azul} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.5 }}>
+                Salvar irá marcar a live como <strong style={{ color: BRAND.verde }}>Realizada</strong> automaticamente.
+              </span>
+            </div>
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={saving}
+          style={{
+            width: "100%", padding: 13, borderRadius: 10, border: "none",
+            cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.7 : 1,
+            background: ctaGradient(brand),
+            color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          }}
+        >
+          {saving ? (
+            <>
+              <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Check size={14} aria-hidden="true" />
+              Salvar Validação
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
@@ -153,364 +632,16 @@ export default function Resultados() {
     return out;
   }, [lives, filterInfluencers, filterOperadora, operadoraSlugsForcado]);
 
-  // ── LiveCard ─────────────────────────────────────────────────────────────────
-  function LiveCard({ live }: { live: Live }) {
-    const [confirmExcluir, setConfirmExcluir] = useState(false);
-    const nomeCompleto = nomeCompletos[live.influencer_id] ?? "";
-    const platColor    = PLAT_COLOR[live.plataforma];
-    const podeExcluir  = perm.canExcluirOk && (perm.canExcluir !== "proprios" || podeVerInfluencer(live.influencer_id));
-    const isExcluindo  = excluindo?.id === live.id;
-
-    async function handleExcluirConfirmado() {
-      if (!perm.canExcluirOk) return;
-      setExcluindo(live);
-      await supabase.from("live_resultados").delete().eq("live_id", live.id);
-      const { error } = await supabase.from("lives").delete().eq("id", live.id);
-      setExcluindo(null);
-      setConfirmExcluir(false);
-      if (modal?.id === live.id) setModal(null);
-      if (!error) loadData();
-    }
-
-    return (
-      <div style={{
-        background: brand.blockBg, border: `1px solid ${t.cardBorder}`,
-        borderRadius: 16, padding: 20, marginBottom: 12,
-      }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Ícone da plataforma — logo SVG oficial */}
-            <div style={{
-              width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-              background: `${platColor}22`,
-              border: `1.5px solid ${platColor}44`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <PlatLogo plataforma={live.plataforma} size={20} isDark={isDark ?? false} />
-            </div>
-
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>
-                {live.influencer_name}
-              </div>
-              <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>
-                {showInfluencerName && nomeCompleto && <span>{nomeCompleto} · </span>}
-                {fmtData(live.data)} · {live.horario?.slice(0, 5)}
-              </div>
-              <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                {/* Badge plataforma */}
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  fontSize: 11, padding: "3px 9px", borderRadius: 20,
-                  background: `${platColor}22`, color: platColor,
-                  fontWeight: 600, fontFamily: FONT.body,
-                }}>
-                  <PlatLogo plataforma={live.plataforma} size={11} isDark={isDark ?? false} />
-                  {live.plataforma}
-                </span>
-                {/* Badge pendente */}
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  fontSize: 11, padding: "3px 9px", borderRadius: 20,
-                  background: `${BRAND.amarelo}22`, color: BRAND.amarelo,
-                  fontWeight: 600, fontFamily: FONT.body,
-                  border: `1px solid ${BRAND.amarelo}44`,
-                }}>
-                  <AlertTriangle size={10} aria-hidden="true" />
-                  Pendente validação
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap", alignItems: "center" }}>
-            {perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(live.influencer_id)) && (
-              <button
-                type="button"
-                onClick={() => setModal(live)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "8px 16px", borderRadius: 10, border: "none",
-                  cursor: "pointer",
-                  background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-                  color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
-                }}
-              >
-                <GiCheckMark size={13} />
-                Validar
-              </button>
-            )}
-            {podeExcluir && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!confirmExcluir) { setConfirmExcluir(true); return; }
-                  void handleExcluirConfirmado();
-                }}
-                onBlur={() => setConfirmExcluir(false)}
-                disabled={isExcluindo}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  padding: "8px 16px", borderRadius: 10,
-                  border: `1px solid ${BRAND.vermelho}50`,
-                  background: confirmExcluir ? BRAND.vermelho : `${BRAND.vermelho}10`,
-                  color: confirmExcluir ? "#fff" : BRAND.vermelho,
-                  fontSize: 12, fontWeight: 600,
-                  cursor: isExcluindo ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body, opacity: isExcluindo ? 0.6 : 1,
-                  transition: "all 0.15s",
-                }}
-              >
-                <Trash2 size={12} aria-hidden="true" />
-                {isExcluindo ? "..." : confirmExcluir ? "Confirmar?" : "Excluir"}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Modal Validação ───────────────────────────────────────────────────────────
-  function ModalValidacao({ live }: { live: Live }) {
-    const existing = resultados[live.id];
-    const [status,       setStatus]       = useState<LiveStatus>("realizada");
-    const [operadoraSlug, setOperadoraSlug] = useState(live.operadora_slug ?? "");
-    const [observacao,   setObservacao]   = useState(live.observacao ?? "");
-    const [horarioReal,  setHorarioReal]  = useState(live.horario?.slice(0, 5) ?? "");
-    const [duracaoHoras, setDuracaoHoras] = useState(existing?.duracao_horas ?? 0);
-    const [duracaoMin,   setDuracaoMin]   = useState(existing?.duracao_min   ?? 0);
-    const [mediaViews,   setMediaViews]   = useState(existing?.media_views   ?? 0);
-    const [maxViews,     setMaxViews]     = useState(existing?.max_views     ?? 0);
-    const [saving,       setSaving]       = useState(false);
-    const [error,        setError]        = useState("");
-
-    const showResultFields = status === "realizada";
-
-    async function handleSave() {
-      setError("");
-      if (!operadoraSlug?.trim())
-        return setError("Selecione a operadora. É obrigatório para salvar a validação (realizada ou não realizada).");
-      if (showResultFields) {
-        if (duracaoHoras === 0 && duracaoMin === 0)
-          return setError("Informe a duração da live.");
-        if (maxViews < mediaViews)
-          return setError("Máximo não pode ser menor que a média.");
-      }
-
-      setSaving(true);
-      const liveUpdate: Record<string, unknown> = {
-        status,
-        observacao: observacao || null,
-        operadora_slug: operadoraSlug.trim(),
-      };
-      if (showResultFields && horarioReal) (liveUpdate as Record<string, string>).horario = horarioReal;
-
-      const { error: updateError } = await supabase.from("lives").update(liveUpdate).eq("id", live.id);
-      if (updateError) { setError("Erro ao salvar. Tente novamente."); setSaving(false); return; }
-
-      if (showResultFields) {
-        const payload = { live_id: live.id, duracao_horas: duracaoHoras, duracao_min: duracaoMin, media_views: mediaViews, max_views: maxViews };
-        const { error: resultError } = existing
-          ? await supabase.from("live_resultados").update(payload).eq("live_id", live.id)
-          : await supabase.from("live_resultados").insert(payload);
-        if (resultError) { setError("Erro ao salvar resultado. Tente novamente."); setSaving(false); return; }
-      }
-
-      setSaving(false);
-      setModal(null);
-      await loadData();
-    }
-
-    const inputStyle: React.CSSProperties = {
-      width: "100%", boxSizing: "border-box", padding: "10px 14px",
-      borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`,
-      background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text,
-      fontSize: 13, fontFamily: FONT.body, outline: "none",
-    };
-    const labelStyle: React.CSSProperties = {
-      display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "1.2px",
-      textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
-    };
-    const row: React.CSSProperties = { marginBottom: 14 };
-
-    return (
-      <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
-        <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
-
-          {/* Cabeçalho do modal */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: brand.primaryIconBg,
-                border: brand.primaryIconBorder,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: brand.primaryIconColor,
-              }}>
-                <GiCheckMark size={13} />
-              </span>
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                Validar Live
-              </h2>
-            </div>
-            <button type="button" onClick={() => setModal(null)} aria-label="Fechar" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Subtítulo com data formatada */}
-          <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, marginBottom: 20 }}>
-            {live.influencer_name} · {fmtData(live.data)} {live.horario?.slice(0, 5)}
-          </div>
-
-          {/* Erro */}
-          {error && (
-            <div style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
-              {error}
-            </div>
-          )}
-
-          {/* Status */}
-          <div style={row}>
-            <label style={labelStyle}>Status da Live</label>
-            <div style={{ display: "flex", gap: 10 }}>
-              {STATUS_OPTS.map(opt => (
-                <button key={opt.value} onClick={() => setStatus(opt.value)}
-                  style={{
-                    flex: 1, padding: 10, borderRadius: 10,
-                    border: `2px solid ${status === opt.value ? opt.color : t.cardBorder}`,
-                    background: status === opt.value ? `${opt.color}18` : (t.inputBg ?? t.cardBg),
-                    color: status === opt.value ? opt.color : t.textMuted,
-                    fontSize: 12, fontWeight: 700, cursor: "pointer",
-                    fontFamily: FONT.body, transition: "all 0.15s",
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {status === "nao_realizada" && (
-            <div style={{
-              background: `${BRAND.amarelo}12`,
-              border: `1px solid ${BRAND.amarelo}35`,
-              color: BRAND.amarelo,
-              borderRadius: 10,
-              padding: "10px 14px",
-              fontSize: 12,
-              marginBottom: 14,
-              fontFamily: FONT.body,
-            }}>
-              Live marcada como Não Realizada — nenhum resultado será registrado.
-            </div>
-          )}
-
-          {/* Operadora — obrigatória para qualquer status ao validar */}
-          {operadorasList.length > 0 && (
-            <div style={row}>
-              <label style={labelStyle}>Operadora <span style={{ color: BRAND.vermelho }}>*</span></label>
-              <select
-                value={operadoraSlug}
-                onChange={e => setOperadoraSlug(e.target.value)}
-                style={{ ...inputStyle, cursor: "pointer" }}
-              >
-                <option value="">Selecione a operadora...</option>
-                {operadorasList
-                  .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
-                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                  .map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-              </select>
-              <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
-                Obrigatório para salvar. Em lives realizadas, o Financeiro usa a operadora no cálculo de pagamentos.
-              </span>
-            </div>
-          )}
-
-          {/* Observação */}
-          <div style={row}>
-            <label style={labelStyle}>Observação</label>
-            <textarea value={observacao} onChange={e => setObservacao(e.target.value)}
-              rows={3} placeholder="Comentários sobre a live..."
-              style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }} />
-          </div>
-
-          {/* Campos de resultado — só se Realizada */}
-          {showResultFields && (
-            <>
-              <div style={row}>
-                <label style={labelStyle}>Horário Real de Início</label>
-                <input type="time" value={horarioReal} onChange={e => setHorarioReal(e.target.value)} style={inputStyle} />
-                <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
-                  Pré-preenchido com o horário agendado. Altere se a live começou em outro horário.
-                </span>
-              </div>
-
-              <div style={row}>
-                <label style={labelStyle}>Duração</label>
-                <div className="app-grid-2-tight" style={{ gap: 10 }}>
-                  <div>
-                    <input type="number" min={0} max={24} value={duracaoHoras} onChange={e => setDuracaoHoras(Math.max(0, Math.min(24, Number(e.target.value) || 0)))} style={inputStyle} placeholder="0" />
-                    <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>horas</span>
-                  </div>
-                  <div>
-                    <input type="number" min={0} max={59} value={duracaoMin} onChange={e => setDuracaoMin(Math.max(0, Math.min(59, Number(e.target.value) || 0)))} style={inputStyle} placeholder="0" />
-                    <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>min</span>
-                  </div>
-                </div>
-              </div>
-
-              <div style={row}>
-                <label style={labelStyle}>Média de Views</label>
-                <input type="number" min={0} value={mediaViews} onChange={e => setMediaViews(Number(e.target.value) || 0)} style={inputStyle} placeholder="0" />
-              </div>
-
-              <div style={row}>
-                <label style={labelStyle}>Máximo de Views</label>
-                <input type="number" min={0} value={maxViews} onChange={e => setMaxViews(Math.max(0, Number(e.target.value) || 0))} style={inputStyle} placeholder="0" />
-              </div>
-
-              {/* Hint estilizado — sem emoji inline */}
-              <div style={{
-                display: "flex", alignItems: "flex-start", gap: 8,
-                padding: "10px 12px", borderRadius: 10, marginBottom: 16,
-                background: `${BRAND.azul}0d`,
-                border: `1px solid ${BRAND.azul}30`,
-              }}>
-                <Info size={13} color={BRAND.azul} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
-                <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.5 }}>
-                  Salvar irá marcar a live como <strong style={{ color: BRAND.verde }}>Realizada</strong> automaticamente.
-                </span>
-              </div>
-            </>
-          )}
-
-          {/* Botão salvar */}
-          <button
-            onClick={handleSave} disabled={saving}
-            style={{
-              width: "100%", padding: 13, borderRadius: 10, border: "none",
-              cursor: saving ? "not-allowed" : "pointer",
-              opacity: saving ? 0.7 : 1,
-              background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-              color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            }}
-          >
-            <GiCheckMark size={14} />
-            {saving ? "Salvando..." : "Salvar Validação"}
-          </button>
-        </div>
-      </div>
-    );
+  function handleLiveDeleted(deleted: Live) {
+    if (modal?.id === deleted.id) setModal(null);
+    void loadData();
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar os resultados de lives.
+        Você não tem permissão para visualizar este dashboard.
       </div>
     );
   }
@@ -527,7 +658,7 @@ export default function Resultados() {
           display: "flex", alignItems: "center", justifyContent: "center",
           color: brand.primaryIconColor, flexShrink: 0,
         }}>
-          <GiNotebook size={16} />
+          <ClipboardList size={16} aria-hidden="true" />
         </span>
         <div>
           <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
@@ -558,29 +689,29 @@ export default function Resultados() {
                 />
               )}
               {showFiltroOperadora && operadorasList.length > 0 && (
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                    <GiShield size={13} />
-                  </span>
-                  <select
-                    value={filterOperadora}
-                    onChange={(e) => setFilterOperadora(e.target.value)}
-                    style={{
-                      padding: "6px 14px 6px 30px", borderRadius: 999,
-                      border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                      background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
-                      color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
-                      fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                      fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
-                    }}
-                  >
-                    <option value="todas">Todas as operadoras</option>
-                    {operadorasList
-                      .filter((o) => podeVerOperadora(o.slug))
-                      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                      .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-                  </select>
-                </div>
+                <SelectComIcone
+                  pill
+                  icon={<Building2 size={13} aria-hidden="true" />}
+                  label="Filtrar por operadora"
+                  value={filterOperadora}
+                  onChange={setFilterOperadora}
+                  minWidth={200}
+                  style={{
+                    border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                    background:
+                      filterOperadora !== "todas"
+                        ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)")
+                        : (t.inputBg ?? t.cardBg),
+                    color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
+                    fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                  }}
+                >
+                  <option value="todas">Todas as operadoras</option>
+                  {operadorasList
+                    .filter((o) => podeVerOperadora(o.slug))
+                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+                </SelectComIcone>
               )}
             </div>
           </div>
@@ -599,7 +730,7 @@ export default function Resultados() {
           borderRadius: 16, padding: 48,
           textAlign: "center", color: t.textMuted, fontFamily: FONT.body,
         }}>
-          <GiCheckMark size={24} style={{ marginBottom: 8, color: BRAND.verde }} aria-hidden="true" />
+          <CheckCircle size={24} style={{ marginBottom: 8, color: BRAND.verde }} aria-hidden="true" />
           <div style={{ fontSize: 14, fontWeight: 600 }}>Nenhuma live pendente de validação.</div>
         </div>
       ) : (
@@ -613,11 +744,39 @@ export default function Resultados() {
             <AlertTriangle size={15} aria-hidden="true" />
             {livesFiltered.length} live{livesFiltered.length !== 1 ? "s" : ""} aguardando validação
           </div>
-          {livesFiltered.map(l => <LiveCard key={l.id} live={l} />)}
+          {livesFiltered.map(l => (
+            <LiveCard
+              key={l.id}
+              live={l}
+              brand={brand}
+              t={t}
+              isDark={isDark}
+              perm={perm}
+              podeVerInfluencer={podeVerInfluencer}
+              showInfluencerName={showInfluencerName}
+              nomeCompletos={nomeCompletos}
+              excluindo={excluindo}
+              setExcluindo={setExcluindo}
+              onValidar={setModal}
+              onLiveDeleted={handleLiveDeleted}
+            />
+          ))}
         </>
       )}
 
-      {modal && <ModalValidacao live={modal} />}
+      {modal && (
+        <ModalValidacao
+          key={modal.id}
+          live={modal}
+          brand={brand}
+          t={t}
+          resultados={resultados}
+          operadorasList={operadorasList}
+          escoposVisiveis={escoposVisiveis}
+          onClose={() => setModal(null)}
+          onSaved={loadData}
+        />
+      )}
     </div>
   );
 }

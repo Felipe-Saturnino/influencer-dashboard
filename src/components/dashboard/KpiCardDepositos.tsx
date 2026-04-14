@@ -1,4 +1,4 @@
-import { GiCardPlay } from "react-icons/gi";
+import { PlayCircle } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { FONT } from "../../constants/theme";
 import { BRAND } from "../../lib/dashboardConstants";
@@ -65,7 +65,7 @@ export default function KpiCardDepositos({
               color: iconBoxColor,
             }}
           >
-            <GiCardPlay size={16} />
+            <PlayCircle size={16} aria-hidden />
           </span>
           <span
             style={{
