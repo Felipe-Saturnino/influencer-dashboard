@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -26,7 +26,19 @@ import {
   RateCard,
 } from "../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Table2, ChartColumnBig } from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 import {
   GiPodiumWinner, GiFunnel, GiSpeedometer, GiCalendar,
   GiMoneyStack, GiTakeMyMoney, GiStarMedal, GiClapperboard,
@@ -61,6 +73,7 @@ interface Metrica {
   withdrawal_total: number;
   ggr: number;
   data: string;
+  operadora_slug?: string | null;
 }
 
 interface LiveData {
@@ -99,6 +112,264 @@ interface DiaData {
   withdrawal_total: number; ggr: number;
 }
 
+const PALETA_INFLUENCER_GRAFICO = [
+  "var(--brand-primary, #7c3aed)",
+  "var(--brand-accent, #1e36f8)",
+  "var(--brand-icon, #70cae4)",
+  "#22c55e",
+  "#f59e0b",
+  "#ec4899",
+  "#a78bfa",
+  "#14b8a6",
+] as const;
+
+type KpiComparativoInflKey =
+  | "ggr"
+  | "acessos"
+  | "registros"
+  | "ftd_count"
+  | "ftd_total"
+  | "deposit_count"
+  | "deposit_total"
+  | "withdrawal_count"
+  | "withdrawal_total"
+  | "duracao"
+  | "media_views"
+  | "max_views";
+
+type KpiComparativoInflDef = {
+  key: KpiComparativoInflKey;
+  label: string;
+  somavel: boolean;
+  tipoGrafico: "barra" | "linha";
+};
+
+const KPIS_COMPARATIVO_INFLUENCER: KpiComparativoInflDef[] = [
+  { key: "ggr", label: "GGR", somavel: true, tipoGrafico: "barra" },
+  { key: "ftd_total", label: "R$ FTDs", somavel: true, tipoGrafico: "barra" },
+  { key: "deposit_total", label: "R$ Depósitos", somavel: true, tipoGrafico: "barra" },
+  { key: "withdrawal_total", label: "R$ Saques", somavel: true, tipoGrafico: "barra" },
+  { key: "acessos", label: "Acessos", somavel: true, tipoGrafico: "barra" },
+  { key: "registros", label: "Registros", somavel: true, tipoGrafico: "barra" },
+  { key: "ftd_count", label: "# FTDs", somavel: true, tipoGrafico: "barra" },
+  { key: "deposit_count", label: "# Depósitos", somavel: true, tipoGrafico: "barra" },
+  { key: "withdrawal_count", label: "# Saques", somavel: true, tipoGrafico: "barra" },
+  { key: "duracao", label: "Duração Live", somavel: true, tipoGrafico: "barra" },
+  { key: "media_views", label: "Média Views", somavel: false, tipoGrafico: "linha" },
+  { key: "max_views", label: "Máx Views", somavel: false, tipoGrafico: "linha" },
+];
+
+function emptyDiaData(dataIso: string): DiaData {
+  return {
+    data: dataIso,
+    duracao: 0,
+    media_views: 0,
+    max_views: 0,
+    acessos: 0,
+    registros: 0,
+    ftd_count: 0,
+    ftd_total: 0,
+    deposit_count: 0,
+    deposit_total: 0,
+    withdrawal_count: 0,
+    withdrawal_total: 0,
+    ggr: 0,
+  };
+}
+
+function mergeLivesEmDia(
+  alvo: DiaData,
+  lives: LiveData[],
+  resultados: LiveResultado[],
+  dateStr: string,
+  influencerId: string | null,
+  podeVer: (id: string) => boolean,
+): void {
+  const viewsArr: number[] = [];
+  for (const live of lives) {
+    if (live.data !== dateStr || !podeVer(live.influencer_id)) continue;
+    if (influencerId != null && live.influencer_id !== influencerId) continue;
+    const res = resultados.find((r) => r.live_id === live.id);
+    if (!res) continue;
+    const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
+    alvo.duracao += h;
+    const media = Number(res.media_views) || 0;
+    const pico =
+      res.max_views != null && Number(res.max_views) > 0
+        ? Number(res.max_views)
+        : media > 0
+          ? media
+          : 0;
+    if (media > 0) viewsArr.push(media);
+    if (pico > 0) alvo.max_views = Math.max(alvo.max_views, pico);
+  }
+  if (viewsArr.length > 0) {
+    alvo.media_views = Math.round(viewsArr.reduce((a, b) => a + b, 0) / viewsArr.length);
+  }
+}
+
+/** Agrega métricas + lives num único dia, opcionalmente só de um influencer. */
+function diaAgregadoParaGrafico(
+  dateStr: string,
+  metricas: Metrica[],
+  lives: LiveData[],
+  resultados: LiveResultado[],
+  influencerId: string | null,
+  podeVer: (id: string) => boolean,
+): DiaData {
+  const d = emptyDiaData(dateStr);
+  for (const m of metricas) {
+    if (m.data !== dateStr || !podeVer(m.influencer_id)) continue;
+    if (influencerId != null && m.influencer_id !== influencerId) continue;
+    d.acessos += m.visit_count || 0;
+    d.registros += m.registration_count || 0;
+    d.ftd_count += m.ftd_count || 0;
+    d.ftd_total += m.ftd_total || 0;
+    d.deposit_count += m.deposit_count || 0;
+    d.deposit_total += m.deposit_total || 0;
+    d.withdrawal_count += m.withdrawal_count || 0;
+    d.withdrawal_total += m.withdrawal_total || 0;
+    d.ggr += m.ggr || 0;
+  }
+  mergeLivesEmDia(d, lives, resultados, dateStr, influencerId, podeVer);
+  return d;
+}
+
+function diaPorInfluencerMap(
+  dateStr: string,
+  metricas: Metrica[],
+  lives: LiveData[],
+  resultados: LiveResultado[],
+  podeVer: (id: string) => boolean,
+): Map<string, DiaData> {
+  const map = new Map<string, DiaData>();
+  for (const m of metricas) {
+    if (m.data !== dateStr || !podeVer(m.influencer_id)) continue;
+    if (!map.has(m.influencer_id)) map.set(m.influencer_id, emptyDiaData(dateStr));
+    const d = map.get(m.influencer_id)!;
+    d.acessos += m.visit_count || 0;
+    d.registros += m.registration_count || 0;
+    d.ftd_count += m.ftd_count || 0;
+    d.ftd_total += m.ftd_total || 0;
+    d.deposit_count += m.deposit_count || 0;
+    d.deposit_total += m.deposit_total || 0;
+    d.withdrawal_count += m.withdrawal_count || 0;
+    d.withdrawal_total += m.withdrawal_total || 0;
+    d.ggr += m.ggr || 0;
+  }
+  const viewsPorInf = new Map<string, number[]>();
+  for (const live of lives) {
+    if (live.data !== dateStr || !podeVer(live.influencer_id)) continue;
+    const res = resultados.find((r) => r.live_id === live.id);
+    if (!res) continue;
+    if (!map.has(live.influencer_id)) map.set(live.influencer_id, emptyDiaData(dateStr));
+    const d = map.get(live.influencer_id)!;
+    const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
+    d.duracao += h;
+    const media = Number(res.media_views) || 0;
+    const pico =
+      res.max_views != null && Number(res.max_views) > 0
+        ? Number(res.max_views)
+        : media > 0
+          ? media
+          : 0;
+    if (media > 0) {
+      if (!viewsPorInf.has(live.influencer_id)) viewsPorInf.set(live.influencer_id, []);
+      viewsPorInf.get(live.influencer_id)!.push(media);
+    }
+    if (pico > 0) d.max_views = Math.max(d.max_views, pico);
+  }
+  for (const [infId, arr] of viewsPorInf) {
+    const cell = map.get(infId);
+    if (cell && arr.length > 0) cell.media_views = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+  }
+  return map;
+}
+
+/** Agrega um mês (YYYY-MM) por influencer (histórico). */
+function mesPorInfluencerMap(
+  ym: string,
+  metricas: Metrica[],
+  lives: LiveData[],
+  resultados: LiveResultado[],
+  podeVer: (id: string) => boolean,
+): Map<string, DiaData> {
+  const stub = `${ym}-01`;
+  const map = new Map<string, DiaData>();
+  for (const m of metricas) {
+    if (m.data.slice(0, 7) !== ym || !podeVer(m.influencer_id)) continue;
+    if (!map.has(m.influencer_id)) map.set(m.influencer_id, emptyDiaData(stub));
+    const d = map.get(m.influencer_id)!;
+    d.acessos += m.visit_count || 0;
+    d.registros += m.registration_count || 0;
+    d.ftd_count += m.ftd_count || 0;
+    d.ftd_total += m.ftd_total || 0;
+    d.deposit_count += m.deposit_count || 0;
+    d.deposit_total += m.deposit_total || 0;
+    d.withdrawal_count += m.withdrawal_count || 0;
+    d.withdrawal_total += m.withdrawal_total || 0;
+    d.ggr += m.ggr || 0;
+  }
+  const viewsPorMesInf = new Map<string, number[]>();
+  for (const live of lives) {
+    if (live.data.slice(0, 7) !== ym || !podeVer(live.influencer_id)) continue;
+    const res = resultados.find((r) => r.live_id === live.id);
+    if (!res) continue;
+    if (!map.has(live.influencer_id)) map.set(live.influencer_id, emptyDiaData(stub));
+    const d = map.get(live.influencer_id)!;
+    const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
+    d.duracao += h;
+    const media = Number(res.media_views) || 0;
+    const pico =
+      res.max_views != null && Number(res.max_views) > 0
+        ? Number(res.max_views)
+        : media > 0
+          ? media
+          : 0;
+    if (media > 0) {
+      if (!viewsPorMesInf.has(live.influencer_id)) viewsPorMesInf.set(live.influencer_id, []);
+      viewsPorMesInf.get(live.influencer_id)!.push(media);
+    }
+    if (pico > 0) d.max_views = Math.max(d.max_views, pico);
+  }
+  for (const [infId, arr] of viewsPorMesInf) {
+    const cell = map.get(infId);
+    if (cell && arr.length > 0) cell.media_views = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+  }
+  return map;
+}
+
+function pickKpiDiaData(d: DiaData, k: KpiComparativoInflKey): number | null {
+  switch (k) {
+    case "ggr":
+      return d.ggr;
+    case "acessos":
+      return d.acessos;
+    case "registros":
+      return d.registros;
+    case "ftd_count":
+      return d.ftd_count;
+    case "ftd_total":
+      return d.ftd_total;
+    case "deposit_count":
+      return d.deposit_count;
+    case "deposit_total":
+      return d.deposit_total;
+    case "withdrawal_count":
+      return d.withdrawal_count;
+    case "withdrawal_total":
+      return d.withdrawal_total;
+    case "duracao":
+      return d.duracao;
+    case "media_views":
+      return d.media_views > 0 ? d.media_views : null;
+    case "max_views":
+      return d.max_views > 0 ? d.max_views : null;
+    default:
+      return null;
+  }
+}
+
 function cel(v: number, isBRL = false) {
   if (v === 0 || (typeof v === "number" && isNaN(v))) return "—";
   return isBRL ? fmtBRL(v) : v.toLocaleString("pt-BR");
@@ -106,7 +377,7 @@ function cel(v: number, isBRL = false) {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DashboardOverviewInfluencer() {
-  const { theme: t, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
+  const { theme: t, isDark, podeVerInfluencer, podeVerOperadora, escoposVisiveis } = useApp();
   const { showFiltroInfluencer, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("dash_overview_influencer");
 
@@ -125,6 +396,11 @@ export default function DashboardOverviewInfluencer() {
   const [totais, setTotais] = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
   const [totaisAnt, setTotaisAnt] = useState<TotaisData>(totais);
   const [diasData, setDiasData] = useState<DiaData[]>([]);
+  const [metricasComparativo, setMetricasComparativo] = useState<Metrica[]>([]);
+  const [livesComparativo, setLivesComparativo] = useState<LiveData[]>([]);
+  const [liveResultadosComparativo, setLiveResultadosComparativo] = useState<LiveResultado[]>([]);
+  const [modoVisualizacaoComparativo, setModoVisualizacaoComparativo] = useState<"tabela" | "grafico">("tabela");
+  const [kpiGraficoComparativo, setKpiGraficoComparativo] = useState<KpiComparativoInflKey>("ggr");
   const [perfis, setPerfis] = useState<InfluencerPerfil[]>([]);
   const [influencersComDadosIds, setInfluencersComDadosIds] = useState<string[]>([]);
   const [filtroResetado, setFiltroResetado] = useState(false);
@@ -152,6 +428,9 @@ export default function DashboardOverviewInfluencer() {
   useEffect(() => {
     async function carregar() {
       setLoading(true);
+      setMetricasComparativo([]);
+      setLivesComparativo([]);
+      setLiveResultadosComparativo([]);
 
       const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
         supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
@@ -433,6 +712,10 @@ export default function DashboardOverviewInfluencer() {
         setDiasData([]);
       }
 
+      setMetricasComparativo(rows);
+      setLivesComparativo(liveRows);
+      setLiveResultadosComparativo(resultados);
+
       setLoading(false);
     }
     carregar();
@@ -448,6 +731,230 @@ export default function DashboardOverviewInfluencer() {
     const limite = `${ontem.getFullYear()}-${String(ontem.getMonth() + 1).padStart(2, "0")}-${String(ontem.getDate()).padStart(2, "0")}`;
     return diasData.filter((d) => d.data <= limite);
   }, [diasData, historico, mesSelecionado]);
+
+  useEffect(() => {
+    setModoVisualizacaoComparativo("tabela");
+  }, [historico, filtroInfluencer, filtroOperadora, idxMes]);
+
+  const kpiGraficoCompConfig = useMemo(
+    () =>
+      KPIS_COMPARATIVO_INFLUENCER.find((x) => x.key === kpiGraficoComparativo) ??
+      KPIS_COMPARATIVO_INFLUENCER[0]!,
+    [kpiGraficoComparativo],
+  );
+
+  const isBrlKpiComp = ["ggr", "ftd_total", "deposit_total", "withdrawal_total"].includes(kpiGraficoComparativo);
+
+  const nomeInfluencer = useCallback(
+    (id: string) => perfis.find((p) => p.id === id)?.nome_artistico ?? id,
+    [perfis],
+  );
+
+  const { dadosGraficoComparativo, idsSeriesComparativo } = useMemo(() => {
+    const k = kpiGraficoComparativo;
+    if (diasDataComparativoExibicao.length === 0) {
+      return { dadosGraficoComparativo: [] as Record<string, unknown>[], idsSeriesComparativo: [] as string[] };
+    }
+
+    const chrono = [...diasDataComparativoExibicao].reverse();
+    const idSet = new Set<string>();
+    const chartRows: Record<string, unknown>[] = [];
+
+    for (const d of chrono) {
+      const label = historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data);
+      const periodKey = d.data.slice(0, 7);
+      const tot = pickKpiDiaData(d, k);
+      const base: Record<string, unknown> = { label, dataIso: d.data, Total: tot };
+
+      if (filtroInfluencer !== "todos") {
+        if (!podeVerInfluencer(filtroInfluencer)) {
+          chartRows.push(base);
+          continue;
+        }
+        const cell = historico
+          ? mesPorInfluencerMap(
+              periodKey,
+              metricasComparativo,
+              livesComparativo,
+              liveResultadosComparativo,
+              podeVerInfluencer,
+            ).get(filtroInfluencer) ?? emptyDiaData(d.data)
+          : diaAgregadoParaGrafico(
+              d.data,
+              metricasComparativo,
+              livesComparativo,
+              liveResultadosComparativo,
+              filtroInfluencer,
+              podeVerInfluencer,
+            );
+        base[filtroInfluencer] = pickKpiDiaData(cell, k);
+        idSet.add(filtroInfluencer);
+      } else {
+        const mp = historico
+          ? mesPorInfluencerMap(
+              periodKey,
+              metricasComparativo,
+              livesComparativo,
+              liveResultadosComparativo,
+              podeVerInfluencer,
+            )
+          : diaPorInfluencerMap(
+              d.data,
+              metricasComparativo,
+              livesComparativo,
+              liveResultadosComparativo,
+              podeVerInfluencer,
+            );
+        for (const [infId, cell] of mp) {
+          base[infId] = pickKpiDiaData(cell, k);
+          idSet.add(infId);
+        }
+      }
+      chartRows.push(base);
+    }
+
+    let idsSeriesComparativo = [...idSet].sort((a, b) =>
+      nomeInfluencer(a).localeCompare(nomeInfluencer(b), "pt-BR"),
+    );
+    if (idsSeriesComparativo.length === 0 && chartRows.length > 0) {
+      for (const row of chartRows) {
+        row.tot = row.Total ?? null;
+      }
+      idsSeriesComparativo = ["tot"];
+    }
+
+    return { dadosGraficoComparativo: chartRows, idsSeriesComparativo };
+  }, [
+    diasDataComparativoExibicao,
+    historico,
+    kpiGraficoComparativo,
+    metricasComparativo,
+    livesComparativo,
+    liveResultadosComparativo,
+    filtroInfluencer,
+    podeVerInfluencer,
+    nomeInfluencer,
+  ]);
+
+  const coresSeriesComparativo = useMemo(() => {
+    const m = new Map<string, string>();
+    idsSeriesComparativo.forEach((id, i) => {
+      m.set(
+        id,
+        id === "tot"
+          ? "var(--brand-secondary, #4a2082)"
+          : PALETA_INFLUENCER_GRAFICO[i % PALETA_INFLUENCER_GRAFICO.length]!,
+      );
+    });
+    return m;
+  }, [idsSeriesComparativo]);
+
+  const COR_TOTAL_COMP = isDark ? "#ffffff" : "#000000";
+
+  function TooltipComparativoInflChart({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: {
+      name?: string;
+      value?: unknown;
+      color?: string;
+      payload?: Record<string, unknown>;
+    }[];
+    label?: string;
+  }) {
+    if (!active || !payload?.length) return null;
+    const somavel = kpiGraficoCompConfig.somavel;
+    const full = payload[0]?.payload as Record<string, unknown> | undefined;
+    const totalOficial =
+      full?.Total != null && Number.isFinite(Number(full.Total)) ? Number(full.Total) : null;
+    const totalSomavelFallback = payload.reduce((s, p) => {
+      const n = Number(p.value);
+      return s + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    const totalSomavel =
+      totalOficial != null && Number.isFinite(Number(totalOficial)) ? totalOficial : totalSomavelFallback;
+    const formatar = (v: number) => {
+      if (isBrlKpiComp) return fmtBRL(v);
+      if (kpiGraficoComparativo === "duracao") return fmtHoras(v);
+      return v.toLocaleString("pt-BR");
+    };
+    const mostrarRodapeTotal =
+      somavel ||
+      kpiGraficoComparativo === "media_views" ||
+      kpiGraficoComparativo === "max_views";
+    const valorRodape = totalOficial;
+    return (
+      <div
+        style={{
+          background: t.cardBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: 10,
+          padding: "10px 14px",
+          fontSize: 12,
+          color: t.text,
+          fontFamily: FONT.body,
+          minWidth: 160,
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
+        {payload.map((p) => (
+          <div
+            key={String(p.name)}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 4,
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: p.color,
+                  flexShrink: 0,
+                }}
+              />
+              {p.name}
+            </span>
+            <span style={{ fontWeight: 600 }}>
+              {p.value != null && p.value !== ""
+                ? formatar(Number(p.value))
+                : "—"}
+            </span>
+          </div>
+        ))}
+        {mostrarRodapeTotal && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginTop: 6,
+              paddingTop: 6,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+          >
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>Total</span>
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>
+              {somavel
+                ? formatar(totalSomavel)
+                : valorRodape != null
+                  ? formatar(valorRodape)
+                  : "—"}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const pctViewAcesso = totais.views > 0 ? ((totais.acessos / totais.views) * 100).toFixed(1) + "%" : "—";
   const pctAcessoReg = totais.acessos > 0 ? ((totais.registros / totais.acessos) * 100).toFixed(1) + "%" : "—";
@@ -655,107 +1162,362 @@ export default function DashboardOverviewInfluencer() {
               {historico ? "Comparativo Mensal" : "Comparativo Diário"}
             </SectionTitle>
           </div>
-          <div className="app-table-wrap">
-            <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
-              <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
-                {historico
-                  ? "Comparativo mensal — todo o período"
-                  : `Comparativo diário — ${mesSelecionado?.label ?? ""}`}
-              </caption>
-              <thead>
-                <tr>
-                  {[
-                    historico ? "Mês" : "Data",
-                    "Duração Live",
-                    "Média Views",
-                    "Máx Views",
-                    "Acessos",
-                    "Registros",
-                    "# FTDs",
-                    "R$ FTDs",
-                    "# Depósitos",
-                    "R$ Depósitos",
-                    "# Saques",
-                    "R$ Saques",
-                    "R$ GGR",
-                  ].map((h) => (
-                    <th key={h} scope="col" style={thStyle}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {diasDataComparativoExibicao.map((d, i) => (
-                  <tr key={d.data} style={{ background: zebraStripe(i) }}>
-                    <td style={tdStyle}>
-                      {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
-                    </td>
-                    <td style={tdStyle}>{d.duracao > 0 ? fmtHoras(d.duracao) : "—"}</td>
-                    <td style={tdStyle}>{cel(d.media_views)}</td>
-                    <td style={tdStyle}>{cel(d.max_views)}</td>
-                    <td style={tdStyle}>{cel(d.acessos)}</td>
-                    <td style={tdStyle}>{cel(d.registros)}</td>
-                    <td style={tdStyle}>{cel(d.ftd_count)}</td>
-                    <td style={tdStyle}>{cel(d.ftd_total, true)}</td>
-                    <td style={tdStyle}>{cel(d.deposit_count)}</td>
-                    <td style={tdStyle}>{cel(d.deposit_total, true)}</td>
-                    <td style={tdStyle}>{cel(d.withdrawal_count)}</td>
-                    <td style={tdStyle}>{cel(d.withdrawal_total, true)}</td>
-                    <td
-                      style={{
-                        ...tdStyle,
-                        color: d.ggr > 0 ? BRAND.verde : d.ggr < 0 ? BRAND.vermelho : t.text,
-                        fontWeight: d.ggr !== 0 ? 600 : undefined,
-                      }}
-                    >
-                      {cel(d.ggr, true)}
-                    </td>
-                  </tr>
+
+          <div style={{ padding: "0 20px 16px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 10,
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 200px", minWidth: 0 }}>
+                {modoVisualizacaoComparativo === "grafico" && (
+                  <>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                      {KPIS_COMPARATIVO_INFLUENCER.map((kpi) => {
+                        const ativo = kpiGraficoComparativo === kpi.key;
+                        return (
+                          <button
+                            type="button"
+                            key={kpi.key}
+                            aria-pressed={ativo}
+                            aria-label={`KPI do gráfico: ${kpi.label}`}
+                            onClick={() => setKpiGraficoComparativo(kpi.key)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                              padding: "4px 12px",
+                              borderRadius: 999,
+                              cursor: "pointer",
+                              fontFamily: FONT.body,
+                              fontSize: 11,
+                              fontWeight: ativo ? 700 : 400,
+                              border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
+                              background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
+                              color: ativo ? BRAND.roxoVivo : t.textMuted,
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: "50%",
+                                background: ativo ? BRAND.roxoVivo : t.cardBorder,
+                                flexShrink: 0,
+                              }}
+                            />
+                            {kpi.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <span style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
+                      Selecione um KPI para o gráfico
+                    </span>
+                  </>
+                )}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  border: `1px solid ${t.cardBorder}`,
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  flexShrink: 0,
+                }}
+              >
+                {(
+                  [
+                    { modo: "tabela" as const, icon: <Table2 size={14} aria-hidden />, label: "Tabela" },
+                    { modo: "grafico" as const, icon: <ChartColumnBig size={14} aria-hidden />, label: "Gráfico" },
+                  ] as const
+                ).map(({ modo, icon, label }) => (
+                  <button
+                    type="button"
+                    key={modo}
+                    aria-label={`Ver em ${label}`}
+                    aria-pressed={modoVisualizacaoComparativo === modo}
+                    onClick={() => setModoVisualizacaoComparativo(modo)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "6px 12px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: FONT.body,
+                      fontSize: 11,
+                      fontWeight: modoVisualizacaoComparativo === modo ? 700 : 400,
+                      background:
+                        modoVisualizacaoComparativo === modo ? "rgba(124,58,237,0.12)" : "transparent",
+                      color: modoVisualizacaoComparativo === modo ? BRAND.roxoVivo : t.textMuted,
+                      transition: "all 0.15s",
+                      borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
+                    }}
+                  >
+                    {icon} {label}
+                  </button>
                 ))}
-                {diasData.length > 0 &&
-                  (() => {
-                  const tot = diasDataComparativoExibicao.reduce((acc, d) => ({
-                    duracao: acc.duracao + d.duracao,
-                    acessos: acc.acessos + d.acessos,
-                    registros: acc.registros + d.registros,
-                    ftd_count: acc.ftd_count + d.ftd_count,
-                    ftd_total: acc.ftd_total + d.ftd_total,
-                    deposit_count: acc.deposit_count + d.deposit_count,
-                    deposit_total: acc.deposit_total + d.deposit_total,
-                    withdrawal_count: acc.withdrawal_count + d.withdrawal_count,
-                    withdrawal_total: acc.withdrawal_total + d.withdrawal_total,
-                    ggr: acc.ggr + d.ggr,
-                  }), { duracao: 0, acessos: 0, registros: 0, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
-                  return (
-                    <tr key="total" style={{ background: TOTAL_ROW_BG, fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
-                      <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>Total</td>
-                      <td style={tdStyle}>{tot.duracao > 0 ? fmtHoras(tot.duracao) : "—"}</td>
-                      <td style={tdStyle}>—</td>
-                      <td style={tdStyle}>—</td>
-                      <td style={tdStyle}>{cel(tot.acessos)}</td>
-                      <td style={tdStyle}>{cel(tot.registros)}</td>
-                      <td style={tdStyle}>{cel(tot.ftd_count)}</td>
-                      <td style={tdStyle}>{cel(tot.ftd_total, true)}</td>
-                      <td style={tdStyle}>{cel(tot.deposit_count)}</td>
-                      <td style={tdStyle}>{cel(tot.deposit_total, true)}</td>
-                      <td style={tdStyle}>{cel(tot.withdrawal_count)}</td>
-                      <td style={tdStyle}>{cel(tot.withdrawal_total, true)}</td>
+              </div>
+            </div>
+          </div>
+
+          {modoVisualizacaoComparativo === "tabela" ? (
+            <div className="app-table-wrap">
+              <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
+                <caption
+                  style={{
+                    position: "absolute",
+                    width: 1,
+                    height: 1,
+                    padding: 0,
+                    margin: -1,
+                    overflow: "hidden",
+                    clip: "rect(0,0,0,0)",
+                    whiteSpace: "nowrap",
+                    border: 0,
+                  }}
+                >
+                  {historico
+                    ? "Comparativo mensal — todo o período"
+                    : `Comparativo diário — ${mesSelecionado?.label ?? ""}`}
+                </caption>
+                <thead>
+                  <tr>
+                    {[
+                      historico ? "Mês" : "Data",
+                      "Duração Live",
+                      "Média Views",
+                      "Máx Views",
+                      "Acessos",
+                      "Registros",
+                      "# FTDs",
+                      "R$ FTDs",
+                      "# Depósitos",
+                      "R$ Depósitos",
+                      "# Saques",
+                      "R$ Saques",
+                      "R$ GGR",
+                    ].map((h) => (
+                      <th key={h} scope="col" style={thStyle}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {diasDataComparativoExibicao.map((d, i) => (
+                    <tr key={d.data} style={{ background: zebraStripe(i) }}>
+                      <td style={tdStyle}>
+                        {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
+                      </td>
+                      <td style={tdStyle}>{d.duracao > 0 ? fmtHoras(d.duracao) : "—"}</td>
+                      <td style={tdStyle}>{cel(d.media_views)}</td>
+                      <td style={tdStyle}>{cel(d.max_views)}</td>
+                      <td style={tdStyle}>{cel(d.acessos)}</td>
+                      <td style={tdStyle}>{cel(d.registros)}</td>
+                      <td style={tdStyle}>{cel(d.ftd_count)}</td>
+                      <td style={tdStyle}>{cel(d.ftd_total, true)}</td>
+                      <td style={tdStyle}>{cel(d.deposit_count)}</td>
+                      <td style={tdStyle}>{cel(d.deposit_total, true)}</td>
+                      <td style={tdStyle}>{cel(d.withdrawal_count)}</td>
+                      <td style={tdStyle}>{cel(d.withdrawal_total, true)}</td>
                       <td
                         style={{
                           ...tdStyle,
-                          color: tot.ggr > 0 ? BRAND.verde : tot.ggr < 0 ? BRAND.vermelho : t.text,
-                          fontWeight: 700,
+                          color: d.ggr > 0 ? BRAND.verde : d.ggr < 0 ? BRAND.vermelho : t.text,
+                          fontWeight: d.ggr !== 0 ? 600 : undefined,
                         }}
                       >
-                        {cel(tot.ggr, true)}
+                        {cel(d.ggr, true)}
                       </td>
                     </tr>
-                  );
-                })()}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                  {diasData.length > 0 &&
+                    (() => {
+                      const tot = diasDataComparativoExibicao.reduce(
+                        (acc, d) => ({
+                          duracao: acc.duracao + d.duracao,
+                          acessos: acc.acessos + d.acessos,
+                          registros: acc.registros + d.registros,
+                          ftd_count: acc.ftd_count + d.ftd_count,
+                          ftd_total: acc.ftd_total + d.ftd_total,
+                          deposit_count: acc.deposit_count + d.deposit_count,
+                          deposit_total: acc.deposit_total + d.deposit_total,
+                          withdrawal_count: acc.withdrawal_count + d.withdrawal_count,
+                          withdrawal_total: acc.withdrawal_total + d.withdrawal_total,
+                          ggr: acc.ggr + d.ggr,
+                        }),
+                        {
+                          duracao: 0,
+                          acessos: 0,
+                          registros: 0,
+                          ftd_count: 0,
+                          ftd_total: 0,
+                          deposit_count: 0,
+                          deposit_total: 0,
+                          withdrawal_count: 0,
+                          withdrawal_total: 0,
+                          ggr: 0,
+                        },
+                      );
+                      return (
+                        <tr
+                          key="total"
+                          style={{
+                            background: TOTAL_ROW_BG,
+                            fontWeight: 700,
+                            borderTop: `2px solid ${t.cardBorder}`,
+                          }}
+                        >
+                          <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>Total</td>
+                          <td style={tdStyle}>{tot.duracao > 0 ? fmtHoras(tot.duracao) : "—"}</td>
+                          <td style={tdStyle}>—</td>
+                          <td style={tdStyle}>—</td>
+                          <td style={tdStyle}>{cel(tot.acessos)}</td>
+                          <td style={tdStyle}>{cel(tot.registros)}</td>
+                          <td style={tdStyle}>{cel(tot.ftd_count)}</td>
+                          <td style={tdStyle}>{cel(tot.ftd_total, true)}</td>
+                          <td style={tdStyle}>{cel(tot.deposit_count)}</td>
+                          <td style={tdStyle}>{cel(tot.deposit_total, true)}</td>
+                          <td style={tdStyle}>{cel(tot.withdrawal_count)}</td>
+                          <td style={tdStyle}>{cel(tot.withdrawal_total, true)}</td>
+                          <td
+                            style={{
+                              ...tdStyle,
+                              color: tot.ggr > 0 ? BRAND.verde : tot.ggr < 0 ? BRAND.vermelho : t.text,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {cel(tot.ggr, true)}
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                </tbody>
+              </table>
+            </div>
+          ) : dadosGraficoComparativo.length === 0 ? (
+            <div
+              style={{
+                padding: "24px 20px 32px",
+                textAlign: "center",
+                color: t.textMuted,
+                fontSize: 12,
+                fontFamily: FONT.body,
+              }}
+            >
+              {MSG_SEM_DADOS_FILTRO}
+            </div>
+          ) : (
+            <div style={{ padding: "0 20px 24px" }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  marginBottom: 8,
+                  marginTop: 0,
+                }}
+              >
+                Exibindo <strong style={{ color: t.text }}>{kpiGraficoCompConfig.label}</strong>
+                {filtroInfluencer === "todos" && idsSeriesComparativo[0] !== "tot"
+                  ? " por influencer"
+                  : ""}
+              </p>
+              <div style={{ width: "100%", height: 320 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  {kpiGraficoCompConfig.tipoGrafico === "barra" ? (
+                    <BarChart
+                      data={dadosGraficoComparativo as Record<string, string | number | null>[]}
+                      margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                      barCategoryGap="30%"
+                      barGap={3}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                        interval="preserveStartEnd"
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                        width={isBrlKpiComp ? 72 : kpiGraficoComparativo === "duracao" ? 52 : 44}
+                        tickFormatter={(v) =>
+                          isBrlKpiComp
+                            ? `R$${(v / 1000).toFixed(0)}K`
+                            : kpiGraficoComparativo === "duracao"
+                              ? `${Number(v).toFixed(1)}h`
+                              : v.toLocaleString("pt-BR")
+                        }
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip content={<TooltipComparativoInflChart />} />
+                      <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                      {idsSeriesComparativo.map((id) => (
+                        <Bar
+                          key={id}
+                          dataKey={id}
+                          name={id === "tot" ? "Total" : nomeInfluencer(id)}
+                          fill={coresSeriesComparativo.get(id) ?? BRAND.roxoVivo}
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={28}
+                        />
+                      ))}
+                    </BarChart>
+                  ) : (
+                    <LineChart
+                      data={dadosGraficoComparativo as Record<string, string | number | null>[]}
+                      margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                        interval="preserveStartEnd"
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                        width={isBrlKpiComp ? 72 : kpiGraficoComparativo === "duracao" ? 52 : 44}
+                        tickFormatter={(v) =>
+                          isBrlKpiComp
+                            ? `R$${(v / 1000).toFixed(0)}K`
+                            : kpiGraficoComparativo === "duracao"
+                              ? `${Number(v).toFixed(1)}h`
+                              : v.toLocaleString("pt-BR")
+                        }
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip content={<TooltipComparativoInflChart />} />
+                      <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                      {idsSeriesComparativo.map((id) => (
+                        <Line
+                          key={id}
+                          type="monotone"
+                          name={id === "tot" ? "Total" : nomeInfluencer(id)}
+                          dataKey={id}
+                          stroke={coresSeriesComparativo.get(id) ?? BRAND.roxoVivo}
+                          strokeWidth={2}
+                          dot={{ r: 2 }}
+                          connectNulls
+                        />
+                      ))}
+                    </LineChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
