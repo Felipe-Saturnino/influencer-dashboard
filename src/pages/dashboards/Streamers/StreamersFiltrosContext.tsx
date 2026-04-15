@@ -35,6 +35,9 @@ export type StreamersFiltrosContextValue = {
   irMesAnterior: () => void;
   irMesProximo: () => void;
   toggleHistorico: () => void;
+  /** True enquanto a aba ativa (Overview / Conversão / Financeiro) está a carregar dados. */
+  isLoading: boolean;
+  setIsLoading: (v: boolean) => void;
 };
 
 const StreamersFiltrosCtx = createContext<StreamersFiltrosContextValue | null>(null);
@@ -65,6 +68,10 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
   const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
   const [influencerOptions, setInfluencerOptions] = useState<{ id: string; nome: string }[]>([]);
+  const [isLoading, setIsLoadingState] = useState(false);
+  const setIsLoading = useCallback((v: boolean) => {
+    setIsLoadingState(v);
+  }, []);
 
   useEffect(() => {
     let cancel = false;
@@ -135,6 +142,8 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
       irMesAnterior,
       irMesProximo,
       toggleHistorico,
+      isLoading,
+      setIsLoading,
     }),
     [
       mesesDisponiveis,
@@ -152,6 +161,8 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
       irMesAnterior,
       irMesProximo,
       toggleHistorico,
+      isLoading,
+      setIsLoading,
     ]
   );
 

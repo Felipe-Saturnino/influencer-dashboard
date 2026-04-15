@@ -1,14 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
-import { useStreamersFiltrosOptional } from "../Streamers/StreamersFiltrosContext";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { usePermission } from "../../../hooks/usePermission";
-import { FONT } from "../../../constants/theme";
-import { supabase } from "../../../lib/supabase";
-import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
-import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../lib/investimentoPago";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { useStreamersFiltrosOptional } from "../StreamersFiltrosContext";
+import { useApp } from "../../../../context/AppContext";
+import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { usePermission } from "../../../../hooks/usePermission";
+import { FONT } from "../../../../constants/theme";
+import { supabase } from "../../../../lib/supabase";
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
+import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
+import {
+  BRAND,
+  MSG_SEM_DADOS_FILTRO,
+  STATUS_ORDEM,
+  type StatusLabel,
+} from "../../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
@@ -16,34 +21,37 @@ import {
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
   getStatusROI,
-} from "../../../lib/dashboardHelpers";
+} from "../../../../lib/dashboardHelpers";
 import {
   SectionTitle,
   KpiCard,
   KpiCardDepositos,
   FunilVisual,
   SelectComIcone,
-} from "../../../components/dashboard";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+} from "../../../../components/dashboard";
+import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import {
-  GiPokerHand,
-  GiCoins,
-  GiTrophy,
-  GiFilmProjector,
-  GiSandsOfTime,
-  GiMicrophone,
-  GiPlayerNext,
-  GiReceiveMoney,
-  GiPayMoney,
-  GiCalendar,
-  GiStarMedal,
-  GiShield,
-} from "react-icons/gi";
-import {
-  STATUS_ORDEM,
-  type StatusLabel,
-} from "../../../lib/dashboardConstants";
+  BarChart2,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  Clock,
+  Coins,
+  CircleDollarSign,
+  Filter,
+  Percent,
+  Shield,
+  TrendingUp,
+  Trophy,
+  User,
+  UserPlus,
+  Users,
+  Video,
+  Wallet,
+} from "lucide-react";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Metrica {
@@ -223,6 +231,11 @@ export default function DashboardOverview() {
     } else setHistorico(true);
   }
 
+  useEffect(() => {
+    if (!embed || !sf) return;
+    sf.setIsLoading(loading);
+  }, [embed, sf, loading]);
+
   // ── BUSCA DE DADOS (idêntica ao original) ────────────────────────────────────
   useEffect(() => {
     async function carregar() {
@@ -263,7 +276,7 @@ export default function DashboardOverview() {
         const { data } = await q;
         const metricas = data || [];
         if (!incluirAliases) return metricas;
-        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
+        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
           operadora_slug: operadoraSlugParaApi,
           dataInicio: ini,
@@ -340,7 +353,7 @@ export default function DashboardOverview() {
       if (historico) {
         periodo = { inicio: "2020-01-01", fim: fmt(new Date()) };
         const mRaw = await fetchMetricasHistoricoPaginado(filtroOperadora, operadoraSlugsForcado);
-        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../lib/metricasAliases");
+        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
         const aliasesSinteticas = await buscarMetricasDeAliases({
           operadora_slug: operadoraSlugParaApi,
           dataInicio: periodo.inicio,
@@ -495,8 +508,12 @@ export default function DashboardOverview() {
         aria-sort={ativo ? (sortRanking.dir === "desc" ? "descending" : "ascending") : "none"}
       >
         {label}
-        <span style={{ marginLeft: 4, opacity: ativo ? 1 : 0.3 }} aria-hidden>
-          {ativo ? (sortRanking.dir === "desc" ? "↓" : "↑") : "↕"}
+        <span style={{ marginLeft: 4, display: "inline-flex", alignItems: "center", opacity: ativo ? 1 : 0.3 }} aria-hidden>
+          {ativo
+            ? sortRanking.dir === "desc"
+              ? <ChevronDown size={11} aria-hidden />
+              : <ChevronUp size={11} aria-hidden />
+            : <ChevronsUpDown size={11} aria-hidden />}
         </span>
       </th>
     );
@@ -589,13 +606,13 @@ export default function DashboardOverview() {
                 transition: "all 0.15s",
               }}
             >
-              <GiCalendar size={15} aria-hidden />
+              <Calendar size={15} aria-hidden />
               Histórico
             </button>
 
             {showFiltroInfluencer && (
               <SelectComIcone
-                icon={<GiStarMedal size={15} aria-hidden />}
+                icon={<User size={15} aria-hidden />}
                 label="Filtrar por influencer"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
@@ -609,7 +626,7 @@ export default function DashboardOverview() {
 
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<GiShield size={15} aria-hidden />}
+                icon={<Shield size={15} aria-hidden />}
                 label="Filtrar por operadora"
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
@@ -637,7 +654,7 @@ export default function DashboardOverview() {
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle
-          icon={<GiPokerHand size={15} aria-hidden />}
+          icon={<BarChart2 size={15} aria-hidden />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Executivos
@@ -657,9 +674,9 @@ export default function DashboardOverview() {
           Financeiro
         </div>
         <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-          <KpiCard label="GGR Total" value={fmtBRL(totaisExibidos.ggr)} icon={<GiPokerHand size={16} aria-hidden />} accentVar="--brand-extra1" accentColor={BRAND.receita} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
-          <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<GiCoins size={16} aria-hidden />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
-          <KpiCard label="ROI Geral" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<GiTrophy size={16} aria-hidden />} accentVar="--brand-extra2" accentColor={BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
+          <KpiCard label="GGR Total" value={fmtBRL(totaisExibidos.ggr)} icon={<TrendingUp size={16} aria-hidden />} accentVar="--brand-primary" accentColor={BRAND.receita} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
+          <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<Coins size={16} aria-hidden />} accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
+          <KpiCard label="ROI Geral" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<Percent size={16} aria-hidden />} accentVar="--brand-primary" accentColor={BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
         </div>
 
         <div
@@ -678,9 +695,9 @@ export default function DashboardOverview() {
           Operação
         </div>
         <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
-          <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<GiFilmProjector size={16} aria-hidden />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
-          <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<GiSandsOfTime size={16} aria-hidden />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
-          <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<GiMicrophone size={16} aria-hidden />} accentVar="--brand-extra2" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
+          <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<Video size={16} aria-hidden />} accentVar="--brand-icon" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
+          <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<Clock size={16} aria-hidden />} accentVar="--brand-icon" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
+          <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<Users size={16} aria-hidden />} accentVar="--brand-icon" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
           <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico} />
         </div>
 
@@ -700,16 +717,16 @@ export default function DashboardOverview() {
           Conversão
         </div>
         <div className="app-grid-kpi-4">
-          <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<GiPlayerNext size={16} aria-hidden />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
-          <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<GiReceiveMoney size={16} aria-hidden />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
-          <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<GiTrophy size={16} aria-hidden />} accentVar="--brand-extra3" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
-          <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<GiPayMoney size={16} aria-hidden />} accentVar="--brand-extra4" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
+          <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<UserPlus size={16} aria-hidden />} accentVar="--brand-accent" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
+          <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<CircleDollarSign size={16} aria-hidden />} accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
+          <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<Trophy size={16} aria-hidden />} accentVar="--brand-accent" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
+          <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<Wallet size={16} aria-hidden />} accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
         </div>
       </div>
 
       {/* ══ BLOCO 3: Funil de Conversão ════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiPlayerNext size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+        <SectionTitle icon={<Filter size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
           Funil de Conversão
         </SectionTitle>
         <FunilVisual
@@ -721,7 +738,7 @@ export default function DashboardOverview() {
       {/* ══ BLOCO 4: RANKING ═════════════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiTrophy size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+          <SectionTitle icon={<Trophy size={15} aria-hidden />} sub={historico ? "acumulado" : undefined}>
             Ranking de Influencers
           </SectionTitle>
 
@@ -732,7 +749,9 @@ export default function DashboardOverview() {
               const qtd = ranking.filter((r) => r.statusLabel === s.label).length;
               return (
                 <button
+                  type="button"
                   key={s.label}
+                  aria-pressed={ativo}
                   onClick={() => setStatusFiltro(ativo ? null : s.label)}
                   style={{
                     padding: "4px 10px", borderRadius: 999, cursor: "pointer",

@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { FONT } from "../constants/theme";
-import { ChevronDown, Check } from "lucide-react";
-import { GiStarMedal } from "react-icons/gi";
+import { ChevronDown, Check, User } from "lucide-react";
 
 const BRAND_VERMELHO = "#e84025";
 const BRAND_AZUL = "#1e36f8";
@@ -80,7 +79,7 @@ export function InfluencerDropdown({
         }}
       >
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <GiStarMedal size={13} aria-hidden="true" />
+          <User size={13} aria-hidden="true" />
           {label}
         </span>
         <ChevronDown

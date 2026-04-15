@@ -5,29 +5,32 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
+// Dívida técnica (B5): migrar para InfluencerDropdown em refatoração de filtros.
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Loader2, Clock, Link2 } from "lucide-react";
 import {
-  GiFilmProjector, GiCalendar, GiShield,
-} from "react-icons/gi";
-
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-} as const;
+  CalendarDays,
+  CalendarRange,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  X,
+  Loader2,
+  Clock,
+  Link2,
+  Plus,
+  Shield,
+} from "lucide-react";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
+import { SelectComIcone } from "../../../components/dashboard";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
@@ -98,7 +101,11 @@ function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDro
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button
+        type="button"
         onClick={() => setOpen(!open)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Modo de visualização: ${current?.label ?? value}`}
         style={{
           padding: "6px 14px", borderRadius: 999,
           border: `1px solid ${accentColor}`,
@@ -116,16 +123,21 @@ function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDro
       </button>
 
       {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 200,
-          background: t.cardBg, border: `1px solid ${t.cardBorder}`,
-          borderRadius: 12, padding: 8, minWidth: 130,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-        }}>
+        <div
+          role="menu"
+          style={{
+            position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 200,
+            background: t.cardBg, border: `1px solid ${t.cardBorder}`,
+            borderRadius: 12, padding: 8, minWidth: 130,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+          }}
+        >
           {options.map(opt => {
             const selected = opt.value === value;
             return (
               <button
+                type="button"
+                role="menuitem"
                 key={opt.value}
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 style={{
@@ -144,9 +156,8 @@ function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDro
                   border: `1.5px solid ${selected ? accentColor : t.cardBorder}`,
                   background: selected ? accentColor : "transparent",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 8, color: "#fff",
                 }}>
-                  {selected ? "●" : ""}
+                  {selected ? <Check size={9} color="#fff" aria-hidden="true" /> : null}
                 </span>
                 {opt.label}
               </button>
@@ -278,8 +289,18 @@ export default function Agenda() {
   }
 
   const card: React.CSSProperties = {
-    background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 16, padding: 20,
+    background: brand.blockBg,
+    border: `1px solid ${t.cardBorder}`,
+    borderRadius: 18,
+    padding: 20,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
+
+  const DEFAULT_CHIP_COLOR = "var(--brand-primary, #7c3aed)";
+  function chipActiveBg(color: string): string {
+    if (color.startsWith("var(")) return `color-mix(in srgb, ${color} 14%, transparent)`;
+    return `${color}22`;
+  }
 
   const btnNav: React.CSSProperties = {
     width: 30, height: 30, borderRadius: "50%",
@@ -288,10 +309,10 @@ export default function Agenda() {
     display: "flex", alignItems: "center", justifyContent: "center",
   };
 
-  const chipBase = (active: boolean, color = BRAND.roxoVivo): React.CSSProperties => ({
+  const chipBase = (active: boolean, color: string = DEFAULT_CHIP_COLOR): React.CSSProperties => ({
     padding: "6px 14px", borderRadius: 999, fontSize: 13,
     cursor: "pointer", border: `1px solid ${active ? color : t.cardBorder}`,
-    background: active ? `${color}22` : "transparent",
+    background: active ? chipActiveBg(color) : "transparent",
     color: active ? color : t.textMuted,
     fontFamily: FONT.body, fontWeight: active ? 700 : 400,
     transition: "all 0.15s",
@@ -347,31 +368,47 @@ export default function Agenda() {
             return (
               <div
                 key={i}
-                onClick={() => { setCurrent(date); setView("dia"); }}
                 style={{
-                  minHeight: 140, padding: 8, borderRadius: 10, cursor: "pointer",
+                  minHeight: 140, padding: 8, borderRadius: 10,
                   display: "flex", flexDirection: "column", overflow: "hidden",
                   boxSizing: "border-box", transition: "background 0.15s",
                   ...dayStyle(date, todayISO),
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => { setCurrent(date); setView("dia"); }}
+                  aria-label={`Ver lives de ${date.getDate()} de ${MONTHS[date.getMonth()]}`}
+                  style={{
+                    all: "unset",
+                    cursor: "pointer",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexShrink: 0,
+                    ...(dayLives.length === 0 ? { flex: 1, minHeight: 72 } : {}),
+                  }}
+                >
                   <span style={{ fontSize: 13, fontWeight: toISO(date) === todayISO ? 700 : 400, color: dayNumberColor(date, todayISO), fontFamily: FONT.body }}>
                     {date.getDate()}
                   </span>
                   {dayLives.length > 0 && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 10, padding: "1px 6px", fontFamily: FONT.body }}>
+                    <span
+                      aria-label={`${dayLives.length} live${dayLives.length > 1 ? "s" : ""} neste dia`}
+                      style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 10, padding: "1px 6px", fontFamily: FONT.body }}
+                    >
                       {dayLives.length}
                     </span>
                   )}
-                </div>
+                </button>
                 <div className="agenda-day-scroll" style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}>
                   {dayLives.slice(0, 8).map(l => <LiveChip key={l.id} live={l} />)}
                   {dayLives.length > 8 && (
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      onClick={() => {
                         setCurrent(date);
                         setView("dia");
                       }}
@@ -419,7 +456,10 @@ export default function Agenda() {
                   {date.getDate()}
                 </div>
                 {dayLives.length > 0 && (
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 10, padding: "1px 8px", display: "inline-block", fontFamily: FONT.body, marginTop: 2 }}>
+                  <div
+                    aria-label={`${dayLives.length} live${dayLives.length > 1 ? "s" : ""} neste dia`}
+                    style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 10, padding: "1px 8px", display: "inline-block", fontFamily: FONT.body, marginTop: 2 }}
+                  >
                     {dayLives.length} live{dayLives.length > 1 ? "s" : ""}
                   </div>
                 )}
@@ -453,7 +493,10 @@ export default function Agenda() {
             {DAYS[current.getDay()]}
           </span>
           {dayLives.length > 0 && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 12, padding: "2px 10px", marginLeft: 10, fontFamily: FONT.body }}>
+            <span
+              aria-label={`${dayLives.length} live${dayLives.length > 1 ? "s" : ""} neste dia`}
+              style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: brand.accent, borderRadius: 12, padding: "2px 10px", marginLeft: 10, fontFamily: FONT.body }}
+            >
               {dayLives.length} live{dayLives.length > 1 ? "s" : ""}
             </span>
           )}
@@ -466,70 +509,79 @@ export default function Agenda() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {dayLives.map(l => (
-              <div
-                key={l.id}
-                onClick={() => setModal({ open: true, live: l })}
-                style={{
-                  padding: 16, borderRadius: 12, cursor: "pointer",
-                  border: `1.5px solid ${PLAT_COLOR[l.plataforma]}44`,
-                  background: `${PLAT_COLOR[l.plataforma]}0d`,
-                  display: "flex", alignItems: "center", gap: 14,
-                }}
-              >
-                {/* Ícone da plataforma — logo SVG oficial */}
-                <div style={{
-                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
-                  background: `${PLAT_COLOR[l.plataforma]}22`,
-                  border: `1.5px solid ${PLAT_COLOR[l.plataforma]}44`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <PlatLogo plataforma={l.plataforma} size={22} isDark={isDark ?? false} />
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  {l.influencer_name && (
-                    <div style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>
-                      {l.influencer_name}
-                    </div>
-                  )}
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                    {/* Badge plataforma */}
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 5,
-                      fontSize: 11, background: `${PLAT_COLOR[l.plataforma]}22`,
-                      color: PLAT_COLOR[l.plataforma], padding: "3px 9px",
-                      borderRadius: 20, fontFamily: FONT.body, fontWeight: 600,
-                    }}>
-                      <PlatLogo plataforma={l.plataforma} size={11} isDark={isDark ?? false} />
-                      {l.plataforma}
-                    </span>
-                    {/* Badge status */}
-                    <span style={{
-                      fontSize: 11, background: `${STATUS_COLOR[l.status]}22`,
-                      color: STATUS_COLOR[l.status], padding: "3px 9px",
-                      borderRadius: 20, fontFamily: FONT.body, fontWeight: 600,
-                      border: `1px solid ${STATUS_COLOR[l.status]}44`,
-                    }}>
-                      {STATUS_LABEL[l.status]}
-                    </span>
-                    {/* Horário */}
-                    <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <Clock size={11} aria-hidden="true" />
-                      {l.horario.slice(0, 5)}
-                    </span>
+              <div key={l.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => setModal({ open: true, live: l })}
+                  aria-label={`Abrir live de ${l.influencer_name ?? l.plataforma} — ${l.horario.slice(0, 5)}`}
+                  style={{
+                    all: "unset",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    padding: 16,
+                    borderRadius: 12,
+                    cursor: "pointer",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    border: `1.5px solid ${PLAT_COLOR[l.plataforma]}44`,
+                    background: `${PLAT_COLOR[l.plataforma]}0d`,
+                  }}
+                >
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                    background: `${PLAT_COLOR[l.plataforma]}22`,
+                    border: `1.5px solid ${PLAT_COLOR[l.plataforma]}44`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <PlatLogo plataforma={l.plataforma} size={22} isDark={isDark ?? false} />
                   </div>
-                  {l.link && (
-                    <a
-                      href={l.link.startsWith("http") ? l.link : `https://${l.link}`}
-                      target="_blank" rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 11, color: BRAND.azul, fontFamily: FONT.body, textDecoration: "none", wordBreak: "break-all" }}
-                    >
-                      <Link2 size={11} aria-hidden="true" />
-                      {l.link}
-                    </a>
-                  )}
-                </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {l.influencer_name && (
+                      <div style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginBottom: 4 }}>
+                        {l.influencer_name}
+                      </div>
+                    )}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        fontSize: 11, background: `${PLAT_COLOR[l.plataforma]}22`,
+                        color: PLAT_COLOR[l.plataforma], padding: "3px 9px",
+                        borderRadius: 20, fontFamily: FONT.body, fontWeight: 600,
+                      }}>
+                        <PlatLogo plataforma={l.plataforma} size={11} isDark={isDark ?? false} />
+                        {l.plataforma}
+                      </span>
+                      <span style={{
+                        fontSize: 11, background: `${STATUS_COLOR[l.status]}22`,
+                        color: STATUS_COLOR[l.status], padding: "3px 9px",
+                        borderRadius: 20, fontFamily: FONT.body, fontWeight: 600,
+                        border: `1px solid ${STATUS_COLOR[l.status]}44`,
+                      }}>
+                        {STATUS_LABEL[l.status]}
+                      </span>
+                      <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <Clock size={11} aria-hidden="true" />
+                        {l.horario.slice(0, 5)}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+                {l.link && (
+                  <a
+                    href={l.link.startsWith("http") ? l.link : `https://${l.link}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      marginLeft: 58,
+                      fontSize: 11, color: BRAND.azul, fontFamily: FONT.body, textDecoration: "none", wordBreak: "break-all",
+                    }}
+                  >
+                    <Link2 size={11} aria-hidden="true" />
+                    {l.link}
+                  </a>
+                )}
               </div>
             ))}
           </div>
@@ -564,7 +616,7 @@ export default function Agenda() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar a agenda de lives.
+        Você não tem permissão para visualizar este dashboard.
       </div>
     );
   }
@@ -583,7 +635,7 @@ export default function Agenda() {
             display: "flex", alignItems: "center", justifyContent: "center",
             color: brand.primaryIconColor, flexShrink: 0,
           }}>
-            <GiFilmProjector size={16} />
+            <CalendarRange size={16} aria-hidden="true" />
           </span>
           <h1 style={{
             fontSize: 18, fontWeight: 800, color: brand.primary,
@@ -605,12 +657,21 @@ export default function Agenda() {
               padding: "10px 20px", borderRadius: 10, border: "none",
               cursor: checandoNovaLive ? "not-allowed" : "pointer",
               opacity: checandoNovaLive ? 0.75 : 1,
-              background: brand.useBrand ? "var(--brand-accent)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: brand.useBrand ? "var(--brand-accent)" : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))",
               color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
             }}
           >
-            <GiFilmProjector size={14} />
-            {checandoNovaLive ? "Verificando..." : "+ Nova Live"}
+            {checandoNovaLive ? (
+              <>
+                <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" />
+                Verificando...
+              </>
+            ) : (
+              <>
+                <Plus size={14} aria-hidden="true" />
+                + Nova Live
+              </>
+            )}
           </button>
         )}
       </div>
@@ -626,22 +687,22 @@ export default function Agenda() {
           {/* Linha principal — centralizada */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
             <button type="button" onClick={prev} style={btnNav} aria-label="Período anterior">
-              <ChevronLeft size={14} />
+              <ChevronLeft size={14} aria-hidden="true" />
             </button>
             <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 180, textAlign: "center" }}>
               {headerTitle()}
             </span>
             <button type="button" onClick={next} style={btnNav} aria-label="Próximo período">
-              <ChevronRight size={14} />
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <button onClick={goToday} style={chipBase(false)}>Hoje</button>
+            <button type="button" onClick={goToday} style={chipBase(false)}>Hoje</button>
 
             <SingleDropdown
               value={view}
               options={VIEW_OPTIONS}
               onChange={v => setView(v as ViewMode)}
-              icon={<GiCalendar size={13} />}
+              icon={<CalendarDays size={13} aria-hidden="true" />}
               t={t}
               accent={brand.accent}
             />
@@ -656,29 +717,29 @@ export default function Agenda() {
             )}
 
             {showFiltroOperadora && operadorasList.length > 0 && (
-              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={13} />
-                </span>
-                <select
-                  value={filterOperadora}
-                  onChange={(e) => setFilterOperadora(e.target.value)}
-                  style={{
-                    padding: "6px 14px 6px 30px", borderRadius: 999,
-                    border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
-                    background: filterOperadora !== "todas" ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : (t.inputBg ?? t.cardBg),
-                    color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
-                    fontSize: 13, fontWeight: filterOperadora !== "todas" ? 700 : 400,
-                    fontFamily: FONT.body, cursor: "pointer", outline: "none", appearance: "none",
-                  }}
-                >
-                  <option value="todas">Todas as operadoras</option>
-                  {operadorasList
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-                </select>
-              </div>
+              <SelectComIcone
+                pill
+                icon={<Shield size={13} aria-hidden="true" />}
+                label="Filtrar por operadora"
+                value={filterOperadora}
+                onChange={setFilterOperadora}
+                minWidth={200}
+                style={{
+                  border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
+                  background:
+                    filterOperadora !== "todas"
+                      ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `color-mix(in srgb, ${BRAND.roxoVivo} 14%, transparent)`)
+                      : (t.inputBg ?? t.cardBg),
+                  color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
+                  fontWeight: filterOperadora !== "todas" ? 700 : 400,
+                }}
+              >
+                <option value="todas">Todas as operadoras</option>
+                {operadorasList
+                  .filter((o) => podeVerOperadora(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
+              </SelectComIcone>
             )}
           </div>
 
@@ -690,7 +751,9 @@ export default function Agenda() {
                 const active = filterStatus === status;
                 return (
                   <button
+                    type="button"
                     key={status}
+                    aria-pressed={active}
                     onClick={() => setFilterStatus(prev => prev === status ? null : status)}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
@@ -714,7 +777,9 @@ export default function Agenda() {
                 const active = filterPlat === plat;
                 return (
                   <button
+                    type="button"
                     key={plat}
+                    aria-pressed={active}
                     onClick={() => setFilterPlat(prev => prev === plat ? null : plat)}
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 6,

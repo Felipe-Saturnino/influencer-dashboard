@@ -1,27 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { Live, Plataforma } from "../../../types";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
-import { X, Trash2, Lock } from "lucide-react";
-import { GiFilmProjector } from "react-icons/gi";
+import { X, Trash2, Lock, Video, Loader2 } from "lucide-react";
 
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-} as const;
+import { PLATAFORMAS, PLAT_COLOR, PLAT_LINK_KEY } from "../../../constants/platforms";
+import { PlatLogo } from "../../../components/PlatLogo";
 
 function dateToISOLocal(d: Date): string {
   const y = d.getFullYear();
@@ -39,9 +30,6 @@ function tomorrowISOLocal(): string {
   d.setDate(d.getDate() + 1);
   return dateToISOLocal(d);
 }
-
-import { PLATAFORMAS, PLAT_COLOR, PLAT_LINK_KEY } from "../../../constants/platforms";
-import { PlatLogo } from "../../../components/PlatLogo";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -86,6 +74,14 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     perfilIncompleto: boolean;
     faltaPlaybook: boolean;
   } | null>(null);
+
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => {
+      panelRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [live?.id, isEdit]);
 
   useEffect(() => {
     if (!isInfluencer) {
@@ -210,7 +206,24 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   return (
     <>
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
-      <div style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-live-title"
+        style={{
+          background: t.cardBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: 20,
+          padding: "clamp(16px, 4vw, 28px)",
+          width: "100%",
+          maxWidth: 480,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          outline: "none",
+        }}
+      >
 
         {/* Cabeçalho */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -222,9 +235,9 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               display: "flex", alignItems: "center", justifyContent: "center",
               color: brand.primaryIconColor,
             }}>
-              <GiFilmProjector size={14} />
+              <Video size={14} aria-hidden="true" />
             </span>
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            <h2 id="modal-live-title" style={{ margin: 0, fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.05em", textTransform: "uppercase" }}>
               {isEdit ? "Editar Live" : "Nova Live"}
             </h2>
           </div>
@@ -235,8 +248,33 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
         {/* Mensagem de erro */}
         {error && (
-          <div style={{ background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, color: BRAND.vermelho, borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
-            {error}
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              background: `${BRAND.vermelho}18`,
+              border: `1px solid ${BRAND.vermelho}44`,
+              color: BRAND.vermelho,
+              borderRadius: 10,
+              padding: "10px 14px",
+              fontSize: 13,
+              marginBottom: 14,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+            }}
+          >
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => setError("")}
+              aria-label="Fechar erro"
+              style={{ background: "none", border: "none", cursor: "pointer", color: BRAND.vermelho, display: "flex", flexShrink: 0 }}
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
           </div>
         )}
 
@@ -350,12 +388,12 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             readOnly={somenteLeitura}
             style={{
               ...inputStyle,
-              borderColor: error.includes("link") ? BRAND.vermelho : linkAutoPreenchido ? BRAND.roxoVivo : (t.inputBorder ?? t.cardBorder),
+              borderColor: error.includes("link") ? BRAND.vermelho : linkAutoPreenchido ? brand.primary : (t.inputBorder ?? t.cardBorder),
             }}
             placeholder={`https://${form.plataforma.toLowerCase()}.com/...`}
           />
           {linkAutoPreenchido ? (
-            <span style={{ fontSize: 11, color: BRAND.roxoVivo, fontFamily: FONT.body, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 11, color: brand.primary, fontFamily: FONT.body, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
               Pré-preenchido com o link do perfil do influencer.
             </span>
           ) : (
@@ -367,40 +405,63 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
         {/* Botões de ação */}
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          {podeExcluir && !confirm && (
+          {podeExcluir && (
             <button
-              onClick={() => setConfirm(true)}
-              style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${BRAND.vermelho}`, background: `${BRAND.vermelho}11`, color: BRAND.vermelho, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+              type="button"
+              onClick={() => {
+                if (!confirm) { setConfirm(true); return; }
+                void handleDelete();
+                setConfirm(false);
+              }}
+              onBlur={() => {
+                window.setTimeout(() => setConfirm(false), 180);
+              }}
+              disabled={saving}
+              style={{
+                flex: 1, padding: 12, borderRadius: 10,
+                border: `1px solid ${confirm ? "none" : `${BRAND.vermelho}`}`,
+                background: confirm ? BRAND.vermelho : `${BRAND.vermelho}11`,
+                color: confirm ? "#fff" : BRAND.vermelho,
+                fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer",
+                fontFamily: FONT.body,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                transition: "all 0.15s",
+              }}
             >
-              <Trash2 size={14} aria-hidden="true" /> Excluir
-            </button>
-          )}
-          {podeExcluir && confirm && (
-            <button
-              onClick={handleDelete} disabled={saving}
-              style={{ flex: 1, padding: 12, borderRadius: 10, border: "none", background: BRAND.vermelho, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body }}
-            >
-              Confirmar exclusão?
+              {!confirm && <Trash2 size={14} aria-hidden="true" />}
+              {confirm ? "Confirmar exclusão?" : "Excluir"}
             </button>
           )}
           {(podeCriar || podeEditar) && (
             <button
-              onClick={handleSave} disabled={saving}
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving}
               style={{
                 flex: 2, padding: 12, borderRadius: 10, border: "none",
-                background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                background: brand.useBrand ? "var(--brand-accent)" : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))",
                 color: "#fff", fontSize: 13, fontWeight: 700,
                 cursor: saving ? "not-allowed" : "pointer",
                 opacity: saving ? 0.7 : 1, fontFamily: FONT.body,
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               }}
             >
-              <GiFilmProjector size={14} />
-              {saving ? "Salvando..." : isEdit ? "Salvar Alterações" : "Criar Live"}
+              {saving ? (
+                <>
+                  <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Video size={14} aria-hidden="true" />
+                  {isEdit ? "Salvar Alterações" : "Criar Live"}
+                </>
+              )}
             </button>
           )}
           {!podeCriar && !podeEditar && !podeExcluir && (
             <button
+              type="button"
               onClick={onClose}
               style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body }}
             >

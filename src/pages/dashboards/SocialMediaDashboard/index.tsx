@@ -9,16 +9,24 @@ import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { SkeletonKpiCard } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
-import { ChevronLeft, ChevronRight, Clock, Play, Heart, MessageCircle, Bookmark } from "lucide-react";
 import {
-  GiPokerHand,
-  GiMicrophone,
-  GiStarMedal,
-  GiPlayerNext,
-  GiShield,
-  GiFilmProjector,
-  GiCalendar,
-} from "react-icons/gi";
+  BarChart2,
+  Bookmark,
+  Calendar,
+  Clock,
+  Filter,
+  Heart,
+  Layers,
+  MessageCircle,
+  Mic,
+  Percent,
+  Play,
+  Shield,
+  Sparkles,
+  Video,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 // ─── BRAND COLORS (Brand Guide Spin Gaming) ───────────────────────────────────
 const BRAND = {
@@ -695,7 +703,7 @@ export default function SocialMediaDashboard() {
               transition: "all 0.15s",
             }}
           >
-            <GiCalendar size={15} aria-hidden />
+            <Calendar size={15} aria-hidden />
             Histórico
           </button>
           {loading && (
@@ -710,7 +718,7 @@ export default function SocialMediaDashboard() {
         <>
           <div style={card}>
             <SectionTitle
-              icon={<GiPokerHand size={14} aria-hidden />}
+              icon={<BarChart2 size={14} aria-hidden />}
               sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
             >
               KPIs de Mídias Sociais
@@ -741,7 +749,7 @@ export default function SocialMediaDashboard() {
           {/* KPIs GERAIS */}
           <div style={card}>
             <SectionTitle
-              icon={<GiPokerHand size={14} />}
+              icon={<BarChart2 size={14} />}
               sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
             >
               KPIs de Mídias Sociais
@@ -752,7 +760,7 @@ export default function SocialMediaDashboard() {
                 valor={fmtNum(totais.seguidores)}
                 accentVar="--brand-extra1"
                 accentCor={BRAND.roxo}
-                icon={<GiMicrophone size={15} />}
+                icon={<Mic size={15} aria-hidden />}
                 momComparativo={
                   cmpSeguidores
                     ? {
@@ -768,7 +776,7 @@ export default function SocialMediaDashboard() {
                 valor={fmtNum(totais.impressoes)}
                 accentVar="--brand-extra2"
                 accentCor={BRAND.azul}
-                icon={<GiStarMedal size={15} />}
+                icon={<Sparkles size={15} aria-hidden />}
                 momComparativo={
                   cmpImpressoes
                     ? {
@@ -784,7 +792,7 @@ export default function SocialMediaDashboard() {
                 valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"}
                 accentVar="--brand-extra3"
                 accentCor={BRAND.ciano}
-                icon={<GiPokerHand size={15} />}
+                icon={<Percent size={15} aria-hidden />}
                 momComparativo={
                   cmpEngMedio && engMedioAnt != null
                     ? {
@@ -830,7 +838,7 @@ export default function SocialMediaDashboard() {
           {/* Engajamento por formato + Funil */}
           <div className="app-grid-2-tight" style={{ marginBottom: 14 }}>
             <div style={{ ...card, marginBottom: 0 }}>
-              <SectionTitle icon={<GiStarMedal size={14} />}>Engajamento por formato</SectionTitle>
+              <SectionTitle icon={<Layers size={14} aria-hidden />}>Engajamento por formato</SectionTitle>
               {formatos.length > 0 ? (
                 formatos.map((f, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === formatos.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
@@ -846,7 +854,7 @@ export default function SocialMediaDashboard() {
               )}
             </div>
             <div style={{ ...card, marginBottom: 0 }}>
-              <SectionTitle icon={<GiPlayerNext size={14} />} sub={historico ? "acumulado" : undefined}>
+              <SectionTitle icon={<Filter size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
                 Funil de conversão
               </SectionTitle>
               {(() => {
@@ -935,7 +943,7 @@ export default function SocialMediaDashboard() {
 
           {/* Campanhas — Performance */}
           <div style={card}>
-            <SectionTitle icon={<GiShield size={14} />} sub={historico ? "acumulado" : undefined}>
+            <SectionTitle icon={<Shield size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
               Campanhas — Performance de conversão
             </SectionTitle>
             {campanhasPerf.length > 0 ? (
@@ -999,7 +1007,7 @@ export default function SocialMediaDashboard() {
 
           {/* Carrossel postagens */}
           <div style={card}>
-            <SectionTitle icon={<GiFilmProjector size={14} />}>Postagens recentes</SectionTitle>
+            <SectionTitle icon={<Video size={14} aria-hidden />}>Postagens recentes</SectionTitle>
             {posts.length > 0 ? (
               <>
                 <div style={{ overflow: "hidden" }}>

@@ -1,57 +1,74 @@
 import { useState, useEffect, useMemo } from "react";
-import { useStreamersFiltrosOptional } from "../Streamers/StreamersFiltrosContext";
-import { useApp } from "../../../context/AppContext";
-import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { usePermission } from "../../../hooks/usePermission";
-import { FONT } from "../../../constants/theme";
-import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
-import { SelectComIcone } from "../../../components/dashboard";
-import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
-import { supabase } from "../../../lib/supabase";
-import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
-import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../lib/investimentoPago";
-import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { useStreamersFiltrosOptional } from "../StreamersFiltrosContext";
+import { useApp } from "../../../../context/AppContext";
+import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
+import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { usePermission } from "../../../../hooks/usePermission";
+import { FONT } from "../../../../constants/theme";
+import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
+import { SelectComIcone, SectionTitle, KpiCard } from "../../../../components/dashboard";
+import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
+import { supabase } from "../../../../lib/supabase";
+import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
+import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
+import { getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
 import {
-  GiCalendar, GiStarMedal, GiShield,
-  GiTrophy, GiCardPlay, GiPayMoney,
-  GiScales, GiPokerHand, GiSpeedometer,
-  GiCoins, GiWhiteTower, GiPerson,
-  GiDiceSixFacesFour,
-} from "react-icons/gi";
+  Award,
+  BarChart2,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Coins,
+  CreditCard,
+  Gauge,
+  ListOrdered,
+  Percent,
+  PlayCircle,
+  Scale,
+  Shield,
+  User,
+} from "lucide-react";
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
 } from "recharts";
 
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  salmao:   "#e5755a",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-} as const;
-
-// Cores do gráfico de pizza — paleta oficial
 const PIE_COLORS = [
-  BRAND.roxoVivo, BRAND.azul,    BRAND.ciano,
-  BRAND.verde,    BRAND.vermelho, BRAND.salmao,
-  "#a78bfa",      "#38bdf8",     "#94a3b8",
+  "var(--brand-primary, #7c3aed)",
+  "var(--brand-accent, #1e36f8)",
+  "var(--brand-icon, #70cae4)",
+  "#22c55e",
+  "#e84025",
+  "#e5755a",
+  "#a78bfa",
+  "#38bdf8",
+  "#94a3b8",
 ];
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 type PerfilJogador = "Whales" | "Core" | "Recreativos" | "Caçadores de Bônus";
 
-// Perfis de jogador — paleta oficial
 const PERFIL_CORES: Record<PerfilJogador, { cor: string; bg: string; border: string }> = {
-  "Whales":             { cor: BRAND.roxoVivo, bg: "rgba(124,58,237,0.12)", border: "rgba(124,58,237,0.35)" },
-  "Core":               { cor: BRAND.azul,    bg: "rgba(30,54,248,0.12)",  border: "rgba(30,54,248,0.35)"  },
-  "Recreativos":        { cor: BRAND.ciano,   bg: "rgba(112,202,228,0.12)",border: "rgba(112,202,228,0.35)"},
-  "Caçadores de Bônus": { cor: BRAND.vermelho,bg: "rgba(232,64,37,0.12)",  border: "rgba(232,64,37,0.35)"  },
+  Whales: {
+    cor: "var(--brand-primary, #7c3aed)",
+    bg: "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)",
+    border: "color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
+  },
+  Core: {
+    cor: "var(--brand-accent, #1e36f8)",
+    bg: "color-mix(in srgb, var(--brand-accent, #1e36f8) 12%, transparent)",
+    border: "color-mix(in srgb, var(--brand-accent, #1e36f8) 35%, transparent)",
+  },
+  Recreativos: {
+    cor: "var(--brand-icon, #70cae4)",
+    bg: "color-mix(in srgb, var(--brand-icon, #70cae4) 12%, transparent)",
+    border: "color-mix(in srgb, var(--brand-icon, #70cae4) 35%, transparent)",
+  },
+  "Caçadores de Bônus": {
+    cor: "#e84025",
+    bg: "rgba(232,64,37,0.12)",
+    border: "rgba(232,64,37,0.35)",
+  },
 };
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
@@ -138,108 +155,6 @@ function wdRatioColor(pct: number): string {
   return BRAND.vermelho;
 }
 
-// ─── SECTION TITLE (padrão Overview / Conversão) ──────────────────────────────
-function SectionTitle({ icon, children, sub }: {
-  icon: React.ReactNode; children: React.ReactNode; sub?: React.ReactNode;
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-      <span style={{
-        width: 28, height: 28, borderRadius: 8,
-        background: brand.primaryIconBg,
-        border: brand.primaryIconBorder,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: brand.primaryIconColor, flexShrink: 0,
-      }}>
-        {icon}
-      </span>
-      <span style={{
-        fontSize: 14, fontWeight: 800, color: brand.primary,
-        fontFamily: FONT_TITLE,
-        letterSpacing: "0.05em", textTransform: "uppercase" as const,
-      }}>
-        {children}
-      </span>
-      {sub && (
-        <span style={{ fontSize: 11, fontWeight: 400, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
-          {sub}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ─── KPI CARD (padrão unificado com Overview) ─────────────────────────────────
-function KpiCard({ label, value, subValue, icon, accentVar: _accentVar, accentColor, atual, anterior, isHistorico, isBRL, isInverso }: {
-  label: string; value: string;
-  subValue?: { label: string; value: string };
-  icon: React.ReactNode; accentVar: string; accentColor: string;
-  atual: number; anterior: number;
-  isHistorico?: boolean; isBRL?: boolean;
-  isInverso?: boolean;
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  const diff    = atual - anterior;
-  const pct     = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
-  const up      = diff >= 0;
-  const positivo = isInverso ? !up : up;
-  const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
-
-  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
-  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
-  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentColor}18`;
-  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentColor}35`;
-  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
-
-  return (
-    <div style={{
-      borderRadius: 14,
-      border: `1px solid ${t.cardBorder}`,
-      background: brand.blockBg,
-      overflow: "hidden",
-    }}>
-      <div style={{ height: 3, background: barBg }} />
-      <div style={{ padding: "14px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{
-            width: 30, height: 30, borderRadius: 8,
-            background: iconBoxBg,
-            border: iconBoxBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: iconBoxColor, flexShrink: 0,
-          }}>
-            {icon}
-          </span>
-          <span style={{ color: t.textMuted, fontSize: 10, fontFamily: FONT.body, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const }}>
-            {label}
-          </span>
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: t.text, fontFamily: FONT.body, marginBottom: subValue ? 4 : 6, lineHeight: 1.1 }}>
-          {value}
-        </div>
-        {subValue && (
-          <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
-            <span style={{ color: t.text, fontWeight: 600 }}>{subValue.value}</span> {subValue.label}
-          </div>
-        )}
-        {!isHistorico && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontFamily: FONT.body }}>
-            <span style={{ color: corSeta, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>
-              {up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
-            </span>
-            <span style={{ color: t.textMuted, fontSize: 10 }}>
-              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} · mesmo período mês ant.
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── TOOLTIP CUSTOMIZADO DA PIZZA ─────────────────────────────────────────────
 function PieTooltip({ active, payload, total }: {
   active?: boolean; payload?: { name: string; value: number; payload: { color: string; nomeCompleto: string } }[];
@@ -307,6 +222,11 @@ export default function DashboardFinanceiro() {
   const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfMapLocal;
   const idxInicial = embed ? sf.idxInicial : idxStartLocal;
 
+  useEffect(() => {
+    if (!embed || !sf) return;
+    sf.setIsLoading(loading);
+  }, [embed, sf, loading]);
+
   const mesSelecionado = mesesDisponiveis[idxMes];
 
   function irMesAnterior() { setHistorico(false); setIdxMes((i) => Math.max(0, i - 1)); }
@@ -366,7 +286,7 @@ export default function DashboardFinanceiro() {
         if (!rpcErr && rpcData) {
           metricas = rpcData;
           if (historico) {
-            const { buscarMetricasDeAliases } = await import("../../../lib/metricasAliases");
+            const { buscarMetricasDeAliases } = await import("../../../../lib/metricasAliases");
             const aliasesSinteticas = await buscarMetricasDeAliases({
               operadora_slug: operadoraForApi ?? undefined,
               influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
@@ -410,7 +330,7 @@ export default function DashboardFinanceiro() {
           r.ggr += m.ggr || 0;
         });
         if (historico) {
-          const { buscarMetricasDeAliases } = await import("../../../lib/metricasAliases");
+          const { buscarMetricasDeAliases } = await import("../../../../lib/metricasAliases");
           const aliasesSinteticas = await buscarMetricasDeAliases({
             operadora_slug: operadoraForApi ?? undefined,
             influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
@@ -684,11 +604,11 @@ export default function DashboardFinanceiro() {
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
-              <GiCalendar size={14} aria-hidden /> Histórico
+              <Calendar size={14} aria-hidden /> Histórico
             </button>
             {showFiltroInfluencer && (
               <SelectComIcone
-                icon={<GiStarMedal size={14} aria-hidden />}
+                icon={<User size={14} aria-hidden />}
                 label="Filtrar por influencer"
                 value={filtroInfluencer}
                 onChange={setFiltroInfluencer}
@@ -701,7 +621,7 @@ export default function DashboardFinanceiro() {
             )}
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<GiShield size={14} aria-hidden />}
+                icon={<Shield size={14} aria-hidden />}
                 label="Filtrar por operadora"
                 value={operadoraFiltro}
                 onChange={setOperadoraFiltro}
@@ -728,7 +648,7 @@ export default function DashboardFinanceiro() {
       {/* ══ BLOCO 2: KPIs FINANCEIROS ═══════════════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle
-          icon={<GiPokerHand size={14} />}
+          icon={<BarChart2 size={14} aria-hidden />}
           sub={historico ? "acumulado" : "· comparativo MTD vs mesmo período do mês anterior"}
         >
           KPIs Financeiros
@@ -739,21 +659,21 @@ export default function DashboardFinanceiro() {
           <KpiCard
             label="FTD" value={fmtBRL(totaisExibir.ftd_total)}
             subValue={{ label: "ticket médio", value: totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ftd_ticket_medio) : "—" }}
-            icon={<GiTrophy size={14} />} accentVar="--brand-extra1" accentColor={BRAND.roxo}
+            icon={<Award size={14} aria-hidden />} accentVar="--brand-primary" accentColor={BRAND.roxo}
             atual={totaisExibir.ftd_total} anterior={totaisAnt.ftd_total}
             isHistorico={historico} isBRL
           />
           <KpiCard
             label="Depósitos" value={fmtBRL(totaisExibir.depositos)}
             subValue={{ label: "ticket médio", value: totaisExibir.deposit_count > 0 ? fmtBRL(totaisExibir.deposito_ticket_medio) : "—" }}
-            icon={<GiCardPlay size={14} />} accentVar="--brand-extra3" accentColor={BRAND.ciano}
+            icon={<PlayCircle size={14} aria-hidden />} accentVar="--brand-icon" accentColor={BRAND.ciano}
             atual={totaisExibir.depositos} anterior={totaisAnt.depositos}
             isHistorico={historico} isBRL
           />
           <KpiCard
             label="Saques" value={fmtBRL(totaisExibir.saques)}
             subValue={{ label: "ticket médio", value: totaisExibir.saque_ticket_medio > 0 ? fmtBRL(totaisExibir.saque_ticket_medio) : "—" }}
-            icon={<GiPayMoney size={14} />} accentVar="--brand-extra4" accentColor={BRAND.vermelho}
+            icon={<CreditCard size={14} aria-hidden />} accentColor={BRAND.vermelho}
             atual={totaisExibir.saques} anterior={totaisAnt.saques}
             isHistorico={historico} isBRL isInverso
           />
@@ -764,14 +684,14 @@ export default function DashboardFinanceiro() {
           <KpiCard
             label="WD Ratio"
             value={totaisExibir.depositos > 0 ? `${totaisExibir.wd_ratio.toFixed(1)}%` : "—"}
-            icon={<GiScales size={14} />} accentVar="--brand-extra4" accentColor={BRAND.vermelho}
+            icon={<Scale size={14} aria-hidden />} accentColor={BRAND.vermelho}
             atual={totaisExibir.wd_ratio} anterior={totaisAnt.wd_ratio}
             isHistorico={historico} isInverso
           />
           <KpiCard
             label="GGR por Jogador"
             value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ggr_por_jogador) : "—"}
-            icon={<GiDiceSixFacesFour size={14} />} accentVar="--brand-extra1" accentColor={BRAND.roxo}
+            icon={<Percent size={14} aria-hidden />} accentVar="--brand-primary" accentColor={BRAND.roxo}
             atual={totaisExibir.ggr_por_jogador} anterior={totaisAnt.ggr_por_jogador}
             isHistorico={historico} isBRL
           />
@@ -779,7 +699,7 @@ export default function DashboardFinanceiro() {
             label="PVI"
             value={totaisExibir.pvi > 0 ? `${totaisExibir.pvi} pts` : "—"}
             subValue={{ label: "Player Value Index (0–100)", value: "" }}
-            icon={<GiSpeedometer size={14} />} accentVar="--brand-extra2" accentColor={BRAND.verde}
+            icon={<Gauge size={14} aria-hidden />} accentVar="--brand-primary" accentColor={BRAND.verde}
             atual={totaisExibir.pvi} anterior={totaisAnt.pvi}
             isHistorico={historico}
           />
@@ -788,7 +708,7 @@ export default function DashboardFinanceiro() {
 
       {/* ══ BLOCO 3: INVESTIMENTO POR INFLUENCER ════════════════════════════════ */}
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionTitle icon={<GiCoins size={14} />} sub={historico ? "acumulado" : undefined}>
+        <SectionTitle icon={<Coins size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
           Investimento por Influencer
         </SectionTitle>
 
@@ -799,7 +719,11 @@ export default function DashboardFinanceiro() {
         ) : (
           <div style={{ display: "flex", gap: 48, flexWrap: "wrap", alignItems: "center", justifyContent: "center" }}>
             {/* Gráfico */}
-            <div style={{ flex: "0 0 320px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+            <div
+              role="img"
+              aria-label={`Distribuição de investimento por influencer — ${historico ? "todo o período" : (mesSelecionado?.label ?? "")}`}
+              style={{ flex: "0 0 320px", display: "flex", justifyContent: "center", alignItems: "center" }}
+            >
               <ResponsiveContainer width={320} height={320}>
                 <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                   <Pie data={pieInvestimento} cx="50%" cy="50%" outerRadius={130} innerRadius={50} dataKey="value" paddingAngle={2}>
@@ -841,7 +765,7 @@ export default function DashboardFinanceiro() {
       {/* ══ BLOCO 4: RANKING FINANCEIRO ══════════════════════════════════════════ */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <SectionTitle icon={<GiWhiteTower size={14} />} sub={historico ? "acumulado" : undefined}>
+          <SectionTitle icon={<ListOrdered size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
             Ranking Financeiro
           </SectionTitle>
           {/* Legenda de perfis */}
@@ -850,7 +774,7 @@ export default function DashboardFinanceiro() {
               const st = PERFIL_CORES[p];
               return (
                 <span key={p} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontFamily: FONT.body }}>
-                  <GiPerson size={11} aria-hidden /> {p}
+                  <User size={11} aria-hidden /> {p}
                 </span>
               );
             })}
@@ -862,10 +786,11 @@ export default function DashboardFinanceiro() {
         ) : rowsParaExibir.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="app-table-wrap">
+            <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
               <caption style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
-                Ranking financeiro — {historico ? "Todo o período" : (mesSelecionado?.label ?? "")}
+                Ranking financeiro de influencers — {historico ? "Todo o período" : (mesSelecionado?.label ?? "")}
               </caption>
               <thead>
                 <tr>
@@ -892,7 +817,7 @@ export default function DashboardFinanceiro() {
                 {rowsParaExibir.map((r, i) => {
                   const st = PERFIL_CORES[r.perfil_jogador];
                   return (
-                    <tr key={r.influencer_id} style={{ background: i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)" }}>
+                    <tr key={r.influencer_id} style={{ background: zebraStripe(i) }}>
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{r.nome}</td>
                       <td style={tdStyle}>{fmtBRL(r.ftd_total)}</td>
                       <td style={tdStyle}>{r.ftds > 0 ? fmtBRL(r.ftd_ticket_medio) : "—"}</td>
@@ -912,7 +837,7 @@ export default function DashboardFinanceiro() {
                       <td style={tdStyle}>{r.pvi} pts</td>
                       <td style={tdStyle}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 999, border: `1px solid ${st.border}`, background: st.bg, color: st.cor, fontSize: 11, fontFamily: FONT.body, whiteSpace: "nowrap" }}>
-                          <GiPerson size={11} aria-hidden /> {r.perfil_jogador}
+                          <User size={11} aria-hidden /> {r.perfil_jogador}
                         </span>
                       </td>
                     </tr>
@@ -920,6 +845,7 @@ export default function DashboardFinanceiro() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

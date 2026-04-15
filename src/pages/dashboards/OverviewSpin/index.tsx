@@ -4,20 +4,25 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
 import KpiCard from "../../../components/dashboard/KpiCard";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
-import { getThStyle, getTdStyle, getTdNumStyle } from "../../../lib/tableStyles";
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
+  Calendar,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Dice6,
   LayoutGrid,
+  Shield,
   Table2,
+  Target,
   Wallet,
   TrendingUp,
   ListOrdered,
@@ -26,7 +31,6 @@ import {
   Users,
   Coins,
 } from "lucide-react";
-import { GiCalendar, GiConvergenceTarget, GiDiceSixFacesFour, GiShield } from "react-icons/gi";
 import {
   ResponsiveContainer,
   LineChart,
@@ -65,6 +69,11 @@ const COR_MESA_B = {
   border: "rgba(30,54,248,0.35)",
 } as const;
 
+/** Zebras por coluna nas tabelas de mesa (A/B e Baccarat/Roleta) — alinhado a tokens de marca. */
+const ZEBRA_MESA_STRIPE_PRIMARY = "color-mix(in srgb, var(--brand-primary, #7c3aed) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_ACCENT = "color-mix(in srgb, var(--brand-accent, #1e36f8) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_SECONDARY = "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)";
+
 interface DailyRow {
   data: string;
   turnover: number | null;
@@ -96,6 +105,8 @@ type LinhaDetalheTab = Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & {
   arpu: number | null;
   /** Chave estável para drilldown (YYYY-MM-DD ou YYYY-MM). */
   drillId?: string;
+  /** Eixo temporal do gráfico (YYYY-MM-DD no diário; YYYY-MM-01 no mensal). */
+  periodoIso: string;
 };
 
 type UapPorJogoPlanRow = { data: string; jogo: string; uap: number | null };
@@ -121,7 +132,7 @@ const MESES_PT = [
 ];
 const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-/** Primeiro mês com operação Mesas Spin — o carrossel não lista meses anteriores (evita confusão). */
+/** Primeiro mês com operação Overview Spin — o carrossel não lista meses anteriores (evita confusão). */
 const CARROSSEL_MESAS_MIN_ANO = 2025;
 const CARROSSEL_MESAS_MIN_MES = 11; // Dezembro (0-based)
 
@@ -921,9 +932,9 @@ function linhaComparativoJogoAgregadaMes(
   };
 }
 
-const COR_BLACKJACK = "#7c3aed";
-const COR_ROLETA = "#22c55e";
-const COR_BACCARAT = "#1e36f8";
+const COR_BLACKJACK = "var(--brand-primary, #7c3aed)";
+const COR_ROLETA = "var(--brand-success, #22c55e)";
+const COR_BACCARAT = "var(--brand-accent, #1e36f8)";
 
 type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap" | "arpu";
 
@@ -943,6 +954,34 @@ const KPIS_DISPONIVEIS: KpiJogoDef[] = [
   { key: "uap", label: "UAP", somavel: true, tipoGrafico: "linha" },
   { key: "arpu", label: "ARPU", somavel: false, tipoGrafico: "linha" },
 ];
+
+function pickKpiMetricaDetalhe(
+  row: {
+    ggr: number | null;
+    turnover: number | null;
+    bets: number | null;
+    margin_pct: number | null;
+    bet_size: number | null;
+    uap: number | null;
+    arpu: number | null;
+  },
+  k: KpiJogoKey,
+): number | null {
+  const v = row[k];
+  return v != null && Number.isFinite(Number(v)) ? Number(v) : null;
+}
+
+/** Cores distintas por série no gráfico de detalhamento (operadoras). */
+const PALETA_OPERADORAS_DETALHE = [
+  "var(--brand-primary, #7c3aed)",
+  "var(--brand-accent, #1e36f8)",
+  "var(--brand-icon, #70cae4)",
+  "#22c55e",
+  "#f59e0b",
+  "#ec4899",
+  "#a78bfa",
+  "#14b8a6",
+] as const;
 
 const JOGOS_COMPARATIVO = [
   { key: "blackjack" as const, label: "Blackjack", cor: COR_BLACKJACK },
@@ -979,47 +1018,6 @@ function renderValorKpiComparativo(kpi: KpiJogoDef, valor: number | null): React
     default:
       return String(valor);
   }
-}
-
-function SectionHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
-  const { theme: tt } = useApp();
-  const brand = useDashboardBrand();
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-      <span
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: 8,
-          background: brand.primaryIconBg,
-          border: brand.primaryIconBorder,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: brand.primaryIconColor,
-        }}
-      >
-        {icon}
-      </span>
-      <span
-        style={{
-          fontSize: 14,
-          fontWeight: 800,
-          color: brand.primary,
-          fontFamily: FONT_TITLE,
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-        }}
-      >
-        {title}
-      </span>
-      {sub && (
-        <span style={{ fontSize: 11, color: tt.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
-          {sub}
-        </span>
-      )}
-    </div>
-  );
 }
 
 function mapMonthlyV2(r: { mes: string; uap: number | null; arpu: number | null }): MonthlyRow {
@@ -1100,7 +1098,7 @@ function mergeMonthlyUapArpuAgregadoTodas(
   return { uap, arpu: null };
 }
 
-export default function MesasSpin() {
+export default function OverviewSpin() {
   const { theme: t, isDark, escoposVisiveis } = useApp();
   const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("mesas_spin");
@@ -1143,6 +1141,8 @@ export default function MesasSpin() {
   const [monthlyRawUnmerged, setMonthlyRawUnmerged] = useState<MonthlyRawRow[]>([]);
   const [expandedDetalhe, setExpandedDetalhe] = useState<Set<string>>(() => new Set());
   const [modoVisualizacao, setModoVisualizacao] = useState<"tabela" | "grafico">("tabela");
+  const [modoVisualizacaoDetalhe, setModoVisualizacaoDetalhe] = useState<"tabela" | "grafico">("tabela");
+  const [kpiGraficoDetalhe, setKpiGraficoDetalhe] = useState<KpiJogoKey>("ggr");
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -1391,7 +1391,10 @@ export default function MesasSpin() {
   );
 
   const tabelaRows = useMemo(() => {
-    const enrich = (base: Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & { label: string }): LinhaDetalheTab => {
+    const enrich = (
+      base: Pick<DailyRow, "turnover" | "ggr" | "bets" | "uap"> & { label: string },
+      periodoIso: string,
+    ): LinhaDetalheTab => {
       const t = base.turnover;
       const g = base.ggr;
       const b = base.bets;
@@ -1400,7 +1403,7 @@ export default function MesasSpin() {
       const bet_size =
         b != null && Number(b) !== 0 && t != null ? Number(t) / Number(b) : null;
       const arpu = u != null && Number(u) !== 0 && g != null ? Number(g) / Number(u) : null;
-      return { ...base, margin_pct, bet_size, arpu };
+      return { ...base, margin_pct, bet_size, arpu, periodoIso };
     };
     if (historico) {
       const dailyByYm = new Map<string, DailyRow[]>();
@@ -1437,15 +1440,19 @@ export default function MesasSpin() {
               bet_size,
               arpu,
               drillId: ym,
+              periodoIso: `${ym}-01`,
             };
           }
-          return enrich({
-            label: fmtMesAnoCurtoFromYm(ym),
-            turnover: agg?.turnover ?? null,
-            ggr: agg?.ggr ?? null,
-            bets: agg?.bets ?? null,
-            uap: m?.uap != null ? Number(m.uap) : agg?.uap ?? null,
-          });
+          return enrich(
+            {
+              label: fmtMesAnoCurtoFromYm(ym),
+              turnover: agg?.turnover ?? null,
+              ggr: agg?.ggr ?? null,
+              bets: agg?.bets ?? null,
+              uap: m?.uap != null ? Number(m.uap) : agg?.uap ?? null,
+            },
+            `${ym}-01`,
+          );
         });
     }
     if (modoAgregadoTodasOperadoras) {
@@ -1464,21 +1471,25 @@ export default function MesasSpin() {
           bet_size: r.bet_size,
           arpu: arpuComparativoFromGgrUap(r.ggr, r.uap),
           drillId: r.data,
+          periodoIso: normalizeMesasYmd(r.data),
         }));
     }
     return [...dailyData]
       .sort((a, b) => b.data.localeCompare(a.data))
       .map((r) =>
-        enrich({
-          label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-          }),
-          turnover: r.turnover,
-          ggr: r.ggr,
-          bets: r.bets,
-          uap: r.uap,
-        }),
+        enrich(
+          {
+            label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
+              day: "2-digit",
+              month: "2-digit",
+            }),
+            turnover: r.turnover,
+            ggr: r.ggr,
+            bets: r.bets,
+            uap: r.uap,
+          },
+          normalizeMesasYmd(r.data),
+        ),
       );
   }, [historico, dailyData, monthlyData, modoAgregadoTodasOperadoras]);
 
@@ -1747,6 +1758,67 @@ export default function MesasSpin() {
 
   const isBRLKpiGrafico = ["ggr", "turnover", "bet_size", "arpu"].includes(kpiGrafico);
 
+  const kpiGraficoDetalheConfig = useMemo(
+    () => KPIS_DISPONIVEIS.find((k) => k.key === kpiGraficoDetalhe) ?? KPIS_DISPONIVEIS[0]!,
+    [kpiGraficoDetalhe],
+  );
+
+  const isBRLKpiGraficoDetalhe = ["ggr", "turnover", "bet_size", "arpu"].includes(kpiGraficoDetalhe);
+
+  const { dadosGraficoDetalheOperadoras, slugsGraficoDetalhe } = useMemo(() => {
+    const k = kpiGraficoDetalhe;
+    if (tabelaRows.length === 0) return { dadosGraficoDetalheOperadoras: [] as Record<string, unknown>[], slugsGraficoDetalhe: [] as string[] };
+
+    const chrono = [...tabelaRows].reverse();
+    const slugSet = new Set<string>();
+
+    const rowsOut = chrono.map((r) => {
+      const total = pickKpiMetricaDetalhe(r, k);
+      const base: Record<string, unknown> = {
+        label: r.label,
+        dataIso: r.periodoIso,
+        Total: total,
+      };
+
+      if (modoAgregadoTodasOperadoras && r.drillId != null) {
+        const subs = historico
+          ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, r.drillId, monthlyRawUnmerged)
+          : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, normalizeMesasYmd(r.drillId));
+        for (const sub of subs) {
+          if (!podeVerOperadora(sub.operadora_slug)) continue;
+          base[sub.operadora_slug] = pickKpiMetricaDetalhe(sub, k);
+          slugSet.add(sub.operadora_slug);
+        }
+      } else if (filtroOperadora !== "todas") {
+        base[filtroOperadora] = pickKpiMetricaDetalhe(r, k);
+        slugSet.add(filtroOperadora);
+      }
+      return base;
+    });
+
+    return {
+      dadosGraficoDetalheOperadoras: rowsOut,
+      slugsGraficoDetalhe: [...slugSet].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    };
+  }, [
+    tabelaRows,
+    kpiGraficoDetalhe,
+    modoAgregadoTodasOperadoras,
+    historico,
+    dailyRawUnmerged,
+    monthlyRawUnmerged,
+    podeVerOperadora,
+    filtroOperadora,
+  ]);
+
+  const coresOperadorasDetalhe = useMemo(() => {
+    const m = new Map<string, string>();
+    slugsGraficoDetalhe.forEach((slug, i) => {
+      m.set(slug, PALETA_OPERADORAS_DETALHE[i % PALETA_OPERADORAS_DETALHE.length]!);
+    });
+    return m;
+  }, [slugsGraficoDetalhe]);
+
   const minWidthTabelaComparativoJogo =
     120 + kpisAtivosComparativo.length * (100 + 3 * 90);
 
@@ -1798,15 +1870,55 @@ export default function MesasSpin() {
 
   const brand = useDashboardBrand();
 
+  const corCompMesaA = useMemo(
+    () =>
+      brand.useBrand
+        ? {
+            accent: "var(--brand-primary)",
+            bg: "color-mix(in srgb, var(--brand-primary) 10%, transparent)",
+            border: "color-mix(in srgb, var(--brand-primary) 35%, transparent)",
+          }
+        : COR_MESA_A,
+    [brand.useBrand],
+  );
+  const corCompMesaB = useMemo(
+    () =>
+      brand.useBrand
+        ? {
+            accent: "var(--brand-accent)",
+            bg: "color-mix(in srgb, var(--brand-accent) 10%, transparent)",
+            border: "color-mix(in srgb, var(--brand-accent) 35%, transparent)",
+          }
+        : COR_MESA_B,
+    [brand.useBrand],
+  );
+
+  const vsBadgeStyle: React.CSSProperties = {
+    padding: "5px 12px",
+    borderRadius: 999,
+    border: brand.useBrand
+      ? "1px solid color-mix(in srgb, var(--brand-secondary) 30%, transparent)"
+      : "1px solid rgba(74,32,130,0.35)",
+    background: brand.useBrand
+      ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)"
+      : "rgba(74,32,130,0.10)",
+    fontSize: 12,
+    fontWeight: 800,
+    color: t.textMuted,
+    fontFamily: FONT.body,
+    letterSpacing: "0.05em",
+    textAlign: "center",
+  };
+
   const card: React.CSSProperties = {
     background: brand.blockBg,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: 20,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+    boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.35)" : "0 4px 20px rgba(0,0,0,0.08)",
   };
 
-  const thStyle = getThStyle(t, { verticalAlign: "middle", background: "rgba(74,32,130,0.08)" });
+  const thStyle = getThStyle(t, { verticalAlign: "middle" });
   const tdStyle = getTdStyle(t, { padding: "9px 12px" });
   const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
 
@@ -1852,8 +1964,8 @@ export default function MesasSpin() {
     rowStripe: string,
     colTempo: "Data" | "Mês" = "Data",
   ) => (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <div className="app-table-wrap">
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
         <thead>
           <tr>
             <th style={thStyle}>{colTempo}</th>
@@ -1911,7 +2023,6 @@ export default function MesasSpin() {
   };
 
   const COR_TOTAL_COMP = isDark ? "#ffffff" : "#000000";
-  const COR_PCT_COMP = isDark ? "#ffffff" : "#000000";
 
   const thStickyComparativo: React.CSSProperties = {
     ...thStyle,
@@ -1930,7 +2041,7 @@ export default function MesasSpin() {
     fontWeight: 600,
     background:
       i % 2 === 1
-        ? `color-mix(in srgb, ${brand.blockBg} 95%, rgba(74,32,130,0.06))`
+        ? `color-mix(in srgb, ${brand.blockBg} 92%, var(--brand-secondary, #4a2082) 8%)`
         : brand.blockBg,
     boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
   });
@@ -2049,6 +2160,496 @@ export default function MesasSpin() {
     );
   }
 
+  function TooltipDetalheOperadoras({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: {
+      name?: string;
+      value?: unknown;
+      color?: string;
+      payload?: Record<string, unknown>;
+    }[];
+    label?: string;
+  }) {
+    if (!active || !payload?.length) return null;
+    const somavel = kpiGraficoDetalheConfig.somavel;
+    const full = payload[0]?.payload as Record<string, unknown> | undefined;
+    const totalOficial = full?.Total != null && Number.isFinite(Number(full.Total)) ? Number(full.Total) : null;
+    const totalSomavelFallback = payload.reduce((s, p) => {
+      const n = Number(p.value);
+      return s + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    const totalSomavel =
+      totalOficial != null && Number.isFinite(Number(totalOficial)) ? totalOficial : totalSomavelFallback;
+    const formatar = (v: number) =>
+      isBRLKpiGraficoDetalhe
+        ? fmtBRL(v)
+        : kpiGraficoDetalhe === "margin_pct"
+          ? `${v.toFixed(1)}%`
+          : v.toLocaleString("pt-BR");
+
+    const mostrarRodapeTotal =
+      somavel ||
+      kpiGraficoDetalhe === "margin_pct" ||
+      kpiGraficoDetalhe === "bet_size" ||
+      kpiGraficoDetalhe === "arpu";
+
+    const valorRodape = totalOficial;
+
+    return (
+      <div
+        style={{
+          background: t.cardBg,
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: 10,
+          padding: "10px 14px",
+          fontSize: 12,
+          color: t.text,
+          fontFamily: FONT.body,
+          minWidth: 160,
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 8, color: t.text }}>{label}</div>
+        {payload.map((p) => (
+          <div
+            key={String(p.name)}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 4,
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: p.color,
+                  flexShrink: 0,
+                }}
+              />
+              {p.name}
+            </span>
+            <span style={{ fontWeight: 600 }}>
+              {p.value != null && p.value !== ""
+                ? formatar(Number(p.value))
+                : "—"}
+            </span>
+          </div>
+        ))}
+        {mostrarRodapeTotal && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              marginTop: 6,
+              paddingTop: 6,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+          >
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>Total</span>
+            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>
+              {somavel
+                ? formatar(totalSomavel)
+                : valorRodape != null
+                  ? formatar(valorRodape)
+                  : "—"}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const renderDetalhamentoInterativo = (colTempoLabel: "Data" | "Mês") => (
+    <>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 200px", minWidth: 0 }}>
+          {modoVisualizacaoDetalhe === "grafico" && (
+            <>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                {KPIS_DISPONIVEIS.map((kpi) => {
+                  const ativo = kpiGraficoDetalhe === kpi.key;
+                  return (
+                    <button
+                      type="button"
+                      key={kpi.key}
+                      role="button"
+                      aria-pressed={ativo}
+                      aria-label={`KPI do gráfico: ${kpi.label}`}
+                      onClick={() => setKpiGraficoDetalhe(kpi.key)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "4px 12px",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        fontFamily: FONT.body,
+                        fontSize: 11,
+                        fontWeight: ativo ? 700 : 400,
+                        border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                        background: ativo ? `color-mix(in srgb, ${brand.accent} 12%, transparent)` : "transparent",
+                        color: ativo ? brand.accent : t.textMuted,
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: ativo ? brand.accent : t.cardBorder,
+                          flexShrink: 0,
+                          transition: "background 0.15s",
+                        }}
+                      />
+                      {kpi.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
+                Selecione um KPI para o gráfico
+              </span>
+            </>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: 10,
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          {(
+            [
+              { modo: "tabela" as const, icon: <Table2 size={14} aria-hidden />, label: "Tabela" },
+              { modo: "grafico" as const, icon: <ChartColumnBig size={14} aria-hidden />, label: "Gráfico" },
+            ] as const
+          ).map(({ modo, icon, label }) => (
+            <button
+              type="button"
+              key={modo}
+              aria-label={`Ver em ${label}`}
+              aria-pressed={modoVisualizacaoDetalhe === modo}
+              onClick={() => setModoVisualizacaoDetalhe(modo)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "6px 12px",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 11,
+                fontWeight: modoVisualizacaoDetalhe === modo ? 700 : 400,
+                background:
+                  modoVisualizacaoDetalhe === modo
+                    ? `color-mix(in srgb, ${brand.accent} 12%, transparent)`
+                    : "transparent",
+                color: modoVisualizacaoDetalhe === modo ? brand.accent : t.textMuted,
+                transition: "all 0.15s",
+                borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
+              }}
+            >
+              {icon} {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {modoVisualizacaoDetalhe === "tabela" ? (
+        <div className="app-table-wrap">
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+            <caption style={{ display: "none" }}>
+              {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
+            </caption>
+            <thead>
+              <tr>
+                <th style={thStyle}>{colTempoLabel}</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>UAP</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>ARPU</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tabelaRows.map((r, i) => {
+                const ggr = r.ggr ?? 0;
+                const drillId = r.drillId;
+                const isDrillParent = modoAgregadoTodasOperadoras && drillId != null;
+                const aberto = drillId != null && expandedDetalhe.has(drillId);
+                const subLinhas =
+                  isDrillParent && aberto
+                    ? (
+                        historico
+                          ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, drillId, monthlyRawUnmerged)
+                          : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, normalizeMesasYmd(drillId))
+                      ).filter((sl) => podeVerOperadora(sl.operadora_slug))
+                    : [];
+                const rowKey = drillId ?? `${r.label}-${i}`;
+                return (
+                  <Fragment key={rowKey}>
+                    <tr
+                      style={{
+                        background: zebraStripe(i),
+                      }}
+                    >
+                      <td style={{ ...tdStyle, fontWeight: 600 }}>
+                        {isDrillParent ? (
+                          <button
+                            type="button"
+                            aria-expanded={aberto}
+                            aria-label={
+                              aberto
+                                ? `Recolher detalhe por operadora — ${r.label}`
+                                : `Expandir detalhe por operadora — ${r.label}`
+                            }
+                            onClick={() => {
+                              setExpandedDetalhe((prev) => {
+                                const n = new Set(prev);
+                                if (n.has(drillId)) n.delete(drillId);
+                                else n.add(drillId);
+                                return n;
+                              });
+                            }}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              color: t.text,
+                              fontFamily: FONT.body,
+                              fontWeight: 600,
+                              padding: 0,
+                              textAlign: "left",
+                            }}
+                          >
+                            <ChevronDown
+                              size={16}
+                              aria-hidden
+                              style={{
+                                transform: aberto ? "rotate(180deg)" : "rotate(0deg)",
+                                transition: "transform 0.15s ease",
+                                flexShrink: 0,
+                              }}
+                            />
+                            {r.label}
+                          </button>
+                        ) : (
+                          r.label
+                        )}
+                      </td>
+                      <td
+                        style={{
+                          ...tdNum,
+                          color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {r.ggr != null ? fmtBRL(r.ggr) : "—"}
+                      </td>
+                      <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
+                      <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={{ ...tdNum }}>
+                        <MarginBadge value={r.margin_pct} />
+                      </td>
+                      <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
+                      <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
+                      <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
+                    </tr>
+                    {isDrillParent &&
+                      aberto &&
+                      subLinhas.map((sl, j) => {
+                        const gg = sl.ggr ?? 0;
+                        return (
+                          <tr
+                            key={`${rowKey}-${sl.operadora_slug}`}
+                            style={{
+                              background:
+                                j % 2 === 1
+                                  ? "color-mix(in srgb, var(--brand-secondary, #4a2082) 4%, transparent)"
+                                  : "color-mix(in srgb, var(--brand-secondary, #4a2082) 2%, transparent)",
+                              borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
+                            }}
+                          >
+                            <th
+                              scope="row"
+                              style={{
+                                ...tdStyle,
+                                fontWeight: 600,
+                                paddingLeft: 32,
+                                boxShadow:
+                                  "inset 3px 0 0 color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
+                              }}
+                            >
+                              {slugToNome(sl.operadora_slug)}
+                            </th>
+                            <td
+                              style={{
+                                ...tdNum,
+                                color: gg > 0 ? BRAND.verde : gg < 0 ? BRAND.vermelho : t.text,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {sl.ggr != null ? fmtBRL(sl.ggr) : "—"}
+                            </td>
+                            <td style={tdNum}>{sl.turnover != null ? fmtBRL(sl.turnover) : "—"}</td>
+                            <td style={tdNum}>
+                              {sl.bets != null ? sl.bets.toLocaleString("pt-BR") : "—"}
+                            </td>
+                            <td style={{ ...tdNum }}>
+                              <MarginBadge value={sl.margin_pct} />
+                            </td>
+                            <td style={tdNum}>{sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}</td>
+                            <td style={tdNum}>{sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}</td>
+                            <td style={tdNum}>{sl.arpu != null ? fmtBRL(sl.arpu) : "—"}</td>
+                          </tr>
+                        );
+                      })}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : dadosGraficoDetalheOperadoras.length === 0 || slugsGraficoDetalhe.length === 0 ? (
+        <div
+          style={{
+            padding: "24px 0",
+            textAlign: "center",
+            color: t.textMuted,
+            fontSize: 12,
+            fontFamily: FONT.body,
+          }}
+        >
+          {MSG_SEM_DADOS_FILTRO}
+        </div>
+      ) : (
+        <>
+          <p
+            style={{
+              fontSize: 11,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              marginBottom: 8,
+              marginTop: 0,
+            }}
+          >
+            Exibindo <strong style={{ color: t.text }}>{kpiGraficoDetalheConfig.label}</strong> por operadora
+          </p>
+          <div style={{ width: "100%", height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              {kpiGraficoDetalheConfig.tipoGrafico === "barra" ? (
+                <BarChart
+                  data={dadosGraficoDetalheOperadoras as Record<string, string | number | null>[]}
+                  margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                  barCategoryGap="30%"
+                  barGap={3}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    interval="preserveStartEnd"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    width={isBRLKpiGraficoDetalhe ? 72 : 44}
+                    tickFormatter={(v) =>
+                      isBRLKpiGraficoDetalhe ? `R$${(v / 1000).toFixed(0)}K` : v.toLocaleString("pt-BR")
+                    }
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<TooltipDetalheOperadoras />} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                  {slugsGraficoDetalhe.map((slug) => (
+                    <Bar
+                      key={slug}
+                      dataKey={slug}
+                      name={slugToNome(slug)}
+                      fill={coresOperadorasDetalhe.get(slug) ?? "var(--brand-primary, #7c3aed)"}
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={28}
+                    />
+                  ))}
+                </BarChart>
+              ) : (
+                <LineChart
+                  data={dadosGraficoDetalheOperadoras as Record<string, string | number | null>[]}
+                  margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    interval="preserveStartEnd"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
+                    width={isBRLKpiGraficoDetalhe ? 72 : 44}
+                    tickFormatter={(v) =>
+                      isBRLKpiGraficoDetalhe
+                        ? `R$${(v / 1000).toFixed(0)}K`
+                        : kpiGraficoDetalhe === "margin_pct"
+                          ? `${v.toFixed(0)}%`
+                          : v.toLocaleString("pt-BR")
+                    }
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<TooltipDetalheOperadoras />} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
+                  {slugsGraficoDetalhe.map((slug) => (
+                    <Line
+                      key={slug}
+                      type="monotone"
+                      name={slugToNome(slug)}
+                      dataKey={slug}
+                      stroke={coresOperadorasDetalhe.get(slug) ?? "var(--brand-primary, #7c3aed)"}
+                      strokeWidth={2}
+                      dot={{ r: 2 }}
+                      connectNulls
+                    />
+                  ))}
+                </LineChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+    </>
+  );
+
   const renderComparativoJogoInterativo = (colTempoLabel: "Data" | "Mês") => (
     <>
       <div
@@ -2115,9 +2716,9 @@ export default function MesasSpin() {
                     fontFamily: FONT.body,
                     fontSize: 11,
                     fontWeight: ativo ? 700 : 400,
-                    border: `1px solid ${ativo ? BRAND.roxoVivo : t.cardBorder}`,
-                    background: ativo ? "rgba(124,58,237,0.12)" : "transparent",
-                    color: ativo ? BRAND.roxoVivo : t.textMuted,
+                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                    background: ativo ? `color-mix(in srgb, ${brand.accent} 12%, transparent)` : "transparent",
+                    color: ativo ? brand.accent : t.textMuted,
                     transition: "all 0.15s",
                   }}
                 >
@@ -2126,7 +2727,7 @@ export default function MesasSpin() {
                       width: 6,
                       height: 6,
                       borderRadius: "50%",
-                      background: ativo ? BRAND.roxoVivo : t.cardBorder,
+                      background: ativo ? brand.accent : t.cardBorder,
                       flexShrink: 0,
                       transition: "background 0.15s",
                     }}
@@ -2173,8 +2774,9 @@ export default function MesasSpin() {
                 fontFamily: FONT.body,
                 fontSize: 11,
                 fontWeight: modoVisualizacao === modo ? 700 : 400,
-                background: modoVisualizacao === modo ? "rgba(124,58,237,0.12)" : "transparent",
-                color: modoVisualizacao === modo ? BRAND.roxoVivo : t.textMuted,
+                background:
+                  modoVisualizacao === modo ? `color-mix(in srgb, ${brand.accent} 12%, transparent)` : "transparent",
+                color: modoVisualizacao === modo ? brand.accent : t.textMuted,
                 transition: "all 0.15s",
                 borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
               }}
@@ -2261,7 +2863,7 @@ export default function MesasSpin() {
                     <tr
                       key={row.dataIso}
                       style={{
-                        background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
+                        background: zebraStripe(i),
                       }}
                     >
                       <th scope="row" style={tdStickyComparativo(i)}>
@@ -2310,7 +2912,7 @@ export default function MesasSpin() {
                                       <span
                                         style={{
                                           fontSize: 10,
-                                          color: COR_PCT_COMP,
+                                          color: t.textMuted,
                                           fontWeight: 700,
                                           opacity: 0.75,
                                         }}
@@ -2461,7 +3063,7 @@ export default function MesasSpin() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar o Overview Spin.
+        Você não tem permissão para visualizar este dashboard.
       </div>
     );
   }
@@ -2508,7 +3110,7 @@ export default function MesasSpin() {
                 fontWeight: 800,
                 color: t.text,
                 fontFamily: FONT.body,
-                minWidth: 180,
+                minWidth: "min(100%, 180px)",
                 textAlign: "center",
               }}
             >
@@ -2546,19 +3148,19 @@ export default function MesasSpin() {
                 background: historico
                   ? brand.useBrand
                     ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                    : `${BRAND.roxoVivo}18`
+                    : `color-mix(in srgb, ${brand.accent} 12%, transparent)`
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
             >
-              <GiCalendar size={15} aria-hidden /> Histórico
+              <Calendar size={15} aria-hidden /> Histórico
             </button>
 
             {showFiltroOperadora && (
               <SelectComIcone
-                icon={<GiShield size={15} aria-hidden />}
+                icon={<Shield size={15} aria-hidden />}
                 label="Filtrar por operadora"
                 value={filtroOperadora}
                 onChange={setFiltroOperadora}
@@ -2594,15 +3196,16 @@ export default function MesasSpin() {
       </div>
 
       <div style={{ ...card, marginBottom: 14 }}>
-          <SectionHeader
+          <SectionTitle
             icon={<LayoutGrid size={15} />}
-            title="KPIs Consolidados"
             sub={
               historico
                 ? "acumulado"
                 : "comparativo MTD vs mesmo período do mês anterior"
             }
-          />
+          >
+            KPIs Consolidados
+          </SectionTitle>
           {loading ? (
             modoAgregadoTodasOperadoras ? (
               <>
@@ -2787,11 +3390,9 @@ export default function MesasSpin() {
         </div>
 
       <div style={{ ...card, marginBottom: 14 }}>
-        <SectionHeader
-          icon={<GiCalendar size={15} />}
-          title={historico ? "Comparativo Mensal" : "Detalhamento Diário"}
-          sub={historico ? "mês a mês" : "dia a dia"}
-        />
+        <SectionTitle icon={<Calendar size={15} />} sub={historico ? "mês a mês" : "dia a dia"}>
+          {historico ? "Comparativo Mensal" : "Detalhamento Diário"}
+        </SectionTitle>
 
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
@@ -2803,161 +3404,7 @@ export default function MesasSpin() {
             {MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <caption style={{ display: "none" }}>
-                {historico ? "Detalhamento mensal consolidado" : "Detalhamento diário consolidado"}
-              </caption>
-              <thead>
-                <tr>
-                  <th style={thStyle}>{historico ? "Mês" : "Data"}</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>GGR</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Turnover</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Apostas</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Margem</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>Aposta média</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>UAP</th>
-                  <th style={{ ...thStyle, textAlign: "right" }}>ARPU</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tabelaRows.map((r, i) => {
-                  const ggr = r.ggr ?? 0;
-                  const drillId = r.drillId;
-                  const isDrillParent = modoAgregadoTodasOperadoras && drillId != null;
-                  const aberto = drillId != null && expandedDetalhe.has(drillId);
-                  const subLinhas =
-                    isDrillParent && aberto
-                      ? historico
-                        ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, drillId, monthlyRawUnmerged)
-                        : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, drillId)
-                      : [];
-                  const rowKey = drillId ?? `${r.label}-${i}`;
-                  return (
-                    <Fragment key={rowKey}>
-                      <tr
-                        style={{
-                          background: i % 2 === 1 ? "rgba(74,32,130,0.05)" : "transparent",
-                        }}
-                      >
-                        <td style={{ ...tdStyle, fontWeight: 600 }}>
-                          {isDrillParent ? (
-                            <button
-                              type="button"
-                              aria-expanded={aberto}
-                              aria-label={
-                                aberto
-                                  ? `Recolher detalhe por operadora — ${r.label}`
-                                  : `Expandir detalhe por operadora — ${r.label}`
-                              }
-                              onClick={() => {
-                                setExpandedDetalhe((prev) => {
-                                  const n = new Set(prev);
-                                  if (n.has(drillId)) n.delete(drillId);
-                                  else n.add(drillId);
-                                  return n;
-                                });
-                              }}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                color: t.text,
-                                fontFamily: FONT.body,
-                                fontWeight: 600,
-                                padding: 0,
-                                textAlign: "left",
-                              }}
-                            >
-                              <ChevronDown
-                                size={16}
-                                aria-hidden
-                                style={{
-                                  transform: aberto ? "rotate(180deg)" : "rotate(0deg)",
-                                  transition: "transform 0.15s ease",
-                                  flexShrink: 0,
-                                }}
-                              />
-                              {r.label}
-                            </button>
-                          ) : (
-                            r.label
-                          )}
-                        </td>
-                        <td
-                          style={{
-                            ...tdNum,
-                            color: ggr > 0 ? BRAND.verde : ggr < 0 ? BRAND.vermelho : t.text,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {r.ggr != null ? fmtBRL(r.ggr) : "—"}
-                        </td>
-                        <td style={tdNum}>{r.turnover != null ? fmtBRL(r.turnover) : "—"}</td>
-                        <td style={tdNum}>{r.bets != null ? r.bets.toLocaleString("pt-BR") : "—"}</td>
-                        <td style={{ ...tdNum }}>
-                          <MarginBadge value={r.margin_pct} />
-                        </td>
-                        <td style={tdNum}>{r.bet_size != null ? fmtBRL(Number(r.bet_size)) : "—"}</td>
-                        <td style={tdNum}>{r.uap != null ? r.uap.toLocaleString("pt-BR") : "—"}</td>
-                        <td style={tdNum}>{r.arpu != null ? fmtBRL(Number(r.arpu)) : "—"}</td>
-                      </tr>
-                      {isDrillParent &&
-                        aberto &&
-                        subLinhas.map((sl, j) => {
-                          const gg = sl.ggr ?? 0;
-                          return (
-                            <tr
-                              key={`${rowKey}-${sl.operadora_slug}`}
-                              style={{
-                                background:
-                                  j % 2 === 1 ? "rgba(74,32,130,0.04)" : "rgba(74,32,130,0.02)",
-                                borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
-                              }}
-                            >
-                              <th
-                                scope="row"
-                                style={{
-                                  ...tdStyle,
-                                  fontWeight: 600,
-                                  paddingLeft: 32,
-                                  boxShadow:
-                                    "inset 3px 0 0 color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
-                                }}
-                              >
-                                {slugToNome(sl.operadora_slug)}
-                              </th>
-                              <td
-                                style={{
-                                  ...tdNum,
-                                  color: gg > 0 ? BRAND.verde : gg < 0 ? BRAND.vermelho : t.text,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {sl.ggr != null ? fmtBRL(sl.ggr) : "—"}
-                              </td>
-                              <td style={tdNum}>{sl.turnover != null ? fmtBRL(sl.turnover) : "—"}</td>
-                              <td style={tdNum}>
-                                {sl.bets != null ? sl.bets.toLocaleString("pt-BR") : "—"}
-                              </td>
-                              <td style={{ ...tdNum }}>
-                                <MarginBadge value={sl.margin_pct} />
-                              </td>
-                              <td style={tdNum}>{sl.bet_size != null ? fmtBRL(sl.bet_size) : "—"}</td>
-                              <td style={tdNum}>{sl.uap != null ? sl.uap.toLocaleString("pt-BR") : "—"}</td>
-                              <td style={tdNum}>{sl.arpu != null ? fmtBRL(sl.arpu) : "—"}</td>
-                            </tr>
-                          );
-                        })}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          renderDetalhamentoInterativo(historico ? "Mês" : "Data")
         )}
       </div>
 
@@ -2966,11 +3413,9 @@ export default function MesasSpin() {
           {loading ? (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub={mesSelecionado?.label}
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
+                  Comparativo de Jogo
+                </SectionTitle>
                 <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                   <Clock size={16} style={{ marginBottom: 8 }} />
                   Carregando…
@@ -2979,22 +3424,18 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                       <Clock size={16} style={{ marginBottom: 8 }} />
                       Carregando…
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<Table2 size={15} />}
-                      title="Dados por mesa"
-                      sub="Baccarat e Roleta"
-                    />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
                     <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                       <Clock size={16} style={{ marginBottom: 8 }} />
                       Carregando…
@@ -3006,11 +3447,9 @@ export default function MesasSpin() {
           ) : porTabelaRows.length === 0 ? (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub={mesSelecionado?.label}
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
+                  Comparativo de Jogo
+                </SectionTitle>
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                   {MSG_SEM_DADOS_FILTRO}
                 </div>
@@ -3018,11 +3457,9 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
@@ -3030,7 +3467,9 @@ export default function MesasSpin() {
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
@@ -3043,11 +3482,9 @@ export default function MesasSpin() {
           ) : (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub={mesSelecionado?.label}
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
+                  Comparativo de Jogo
+                </SectionTitle>
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                     {MSG_SEM_DADOS_FILTRO}
@@ -3060,11 +3497,9 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <p
                       style={{
                         margin: "0 0 16px",
@@ -3096,7 +3531,7 @@ export default function MesasSpin() {
                         }}
                         style={{
                           ...selectStyleSimple,
-                          borderColor: compMesaA ? COR_MESA_A.border : undefined,
+                          borderColor: compMesaA ? corCompMesaA.border : undefined,
                           width: "100%",
                         }}
                       >
@@ -3108,22 +3543,7 @@ export default function MesasSpin() {
                             </option>
                           ))}
                       </select>
-                      <div
-                        style={{
-                          padding: "5px 12px",
-                          borderRadius: 999,
-                          border: "1px solid rgba(74,32,130,0.35)",
-                          background: "rgba(74,32,130,0.10)",
-                          fontSize: 12,
-                          fontWeight: 800,
-                          color: t.textMuted,
-                          fontFamily: FONT.body,
-                          letterSpacing: "0.05em",
-                          textAlign: "center",
-                        }}
-                      >
-                        VS
-                      </div>
+                      <div style={vsBadgeStyle}>VS</div>
                       <select
                         value={compMesaB}
                         onChange={(e) => {
@@ -3136,7 +3556,7 @@ export default function MesasSpin() {
                         }}
                         style={{
                           ...selectStyleSimple,
-                          borderColor: compMesaB ? COR_MESA_B.border : undefined,
+                          borderColor: compMesaB ? corCompMesaB.border : undefined,
                           width: "100%",
                         }}
                       >
@@ -3156,12 +3576,12 @@ export default function MesasSpin() {
                           style={{
                             padding: "6px 12px",
                             borderRadius: 10,
-                            background: COR_MESA_A.bg,
-                            border: `1px solid ${COR_MESA_A.border}`,
+                            background: corCompMesaA.bg,
+                            border: `1px solid ${corCompMesaA.border}`,
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: COR_MESA_A.accent,
+                            color: corCompMesaA.accent,
                             fontFamily: FONT.body,
                           }}
                         >
@@ -3171,12 +3591,12 @@ export default function MesasSpin() {
                           style={{
                             padding: "6px 12px",
                             borderRadius: 10,
-                            background: COR_MESA_B.bg,
-                            border: `1px solid ${COR_MESA_B.border}`,
+                            background: corCompMesaB.bg,
+                            border: `1px solid ${corCompMesaB.border}`,
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: COR_MESA_B.accent,
+                            color: corCompMesaB.accent,
                             fontFamily: FONT.body,
                           }}
                         >
@@ -3187,14 +3607,14 @@ export default function MesasSpin() {
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaA, "rgba(124,58,237,0.06)")}
+                        {renderMesaDiaTabela(linhasMesaA, ZEBRA_MESA_STRIPE_PRIMARY)}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaB, "rgba(30,54,248,0.06)")}
+                        {renderMesaDiaTabela(linhasMesaB, ZEBRA_MESA_STRIPE_ACCENT)}
                       </div>
                     </div>
                   </>
@@ -3202,7 +3622,9 @@ export default function MesasSpin() {
               </div>
 
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                  Dados por mesa
+                </SectionTitle>
 
                 <div className="app-conversao-funil-duo">
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -3211,18 +3633,18 @@ export default function MesasSpin() {
                         marginBottom: 10,
                         padding: "6px 10px",
                         borderRadius: 10,
-                        background: "rgba(112,202,228,0.10)",
-                        border: "1px solid rgba(112,202,228,0.35)",
+                        background: "color-mix(in srgb, var(--brand-icon, #70cae4) 10%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--brand-icon, #70cae4) 35%, transparent)",
                         textAlign: "center",
                         fontSize: 13,
                         fontWeight: 700,
-                        color: BRAND.ciano,
+                        color: "var(--brand-icon, #70cae4)",
                         fontFamily: FONT.body,
                       }}
                     >
                       Speed Baccarat
                     </div>
-                    {renderMesaDiaTabela(linhasSpeedBaccarat, "rgba(74,32,130,0.06)")}
+                    {renderMesaDiaTabela(linhasSpeedBaccarat, ZEBRA_MESA_STRIPE_SECONDARY)}
                   </div>
                   <div
                     className="app-conversao-funil-divider"
@@ -3234,18 +3656,18 @@ export default function MesasSpin() {
                         marginBottom: 10,
                         padding: "6px 10px",
                         borderRadius: 10,
-                        background: "rgba(124,58,237,0.10)",
-                        border: "1px solid rgba(124,58,237,0.30)",
+                        background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 30%, transparent)",
                         textAlign: "center",
                         fontSize: 13,
                         fontWeight: 700,
-                        color: BRAND.roxoVivo,
+                        color: "var(--brand-primary, #7c3aed)",
                         fontFamily: FONT.body,
                       }}
                     >
                       Roleta
                     </div>
-                    {renderMesaDiaTabela(linhasRoleta, "rgba(74,32,130,0.06)")}
+                    {renderMesaDiaTabela(linhasRoleta, ZEBRA_MESA_STRIPE_SECONDARY)}
                   </div>
                 </div>
               </div>
@@ -3261,11 +3683,9 @@ export default function MesasSpin() {
           {loading ? (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub="mês a mês"
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
+                  Comparativo de Jogo
+                </SectionTitle>
                 <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                   <Clock size={16} style={{ marginBottom: 8 }} />
                   Carregando…
@@ -3274,22 +3694,18 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                       <Clock size={16} style={{ marginBottom: 8 }} />
                       Carregando…
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<Table2 size={15} />}
-                      title="Dados por mesa"
-                      sub="Baccarat e Roleta"
-                    />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
                     <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
                       <Clock size={16} style={{ marginBottom: 8 }} />
                       Carregando…
@@ -3301,11 +3717,9 @@ export default function MesasSpin() {
           ) : porTabelaHistAll.length === 0 ? (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub="mês a mês"
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
+                  Comparativo de Jogo
+                </SectionTitle>
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                   {MSG_SEM_DADOS_FILTRO}
                 </div>
@@ -3313,11 +3727,9 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
@@ -3325,7 +3737,9 @@ export default function MesasSpin() {
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
@@ -3338,11 +3752,9 @@ export default function MesasSpin() {
           ) : (
             <>
               <div style={{ ...card, marginBottom: 14 }}>
-                <SectionHeader
-                  icon={<GiDiceSixFacesFour size={15} />}
-                  title="Comparativo de Jogo"
-                  sub="mês a mês"
-                />
+                <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
+                  Comparativo de Jogo
+                </SectionTitle>
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
                     {MSG_SEM_DADOS_FILTRO}
@@ -3355,11 +3767,9 @@ export default function MesasSpin() {
               {!modoAgregadoTodasOperadoras && (
                 <>
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader
-                      icon={<GiConvergenceTarget size={15} />}
-                      title="Comparativo de mesa"
-                      sub="Blackjack"
-                    />
+                    <SectionTitle icon={<Target size={15} />} sub="Blackjack">
+                      Comparativo de mesa
+                    </SectionTitle>
                     <p
                       style={{
                         margin: "0 0 16px",
@@ -3393,7 +3803,7 @@ export default function MesasSpin() {
                             }}
                             style={{
                               ...selectStyleSimple,
-                              borderColor: compMesaA ? COR_MESA_A.border : undefined,
+                              borderColor: compMesaA ? corCompMesaA.border : undefined,
                               width: "100%",
                             }}
                           >
@@ -3405,22 +3815,7 @@ export default function MesasSpin() {
                                 </option>
                               ))}
                           </select>
-                          <div
-                            style={{
-                              padding: "5px 12px",
-                              borderRadius: 999,
-                              border: "1px solid rgba(74,32,130,0.35)",
-                              background: "rgba(74,32,130,0.10)",
-                              fontSize: 12,
-                              fontWeight: 800,
-                              color: t.textMuted,
-                              fontFamily: FONT.body,
-                              letterSpacing: "0.05em",
-                              textAlign: "center",
-                            }}
-                          >
-                            VS
-                          </div>
+                          <div style={vsBadgeStyle}>VS</div>
                           <select
                             value={compMesaB}
                             onChange={(e) => {
@@ -3433,7 +3828,7 @@ export default function MesasSpin() {
                             }}
                             style={{
                               ...selectStyleSimple,
-                              borderColor: compMesaB ? COR_MESA_B.border : undefined,
+                              borderColor: compMesaB ? corCompMesaB.border : undefined,
                               width: "100%",
                             }}
                           >
@@ -3453,12 +3848,12 @@ export default function MesasSpin() {
                               style={{
                                 padding: "6px 12px",
                                 borderRadius: 10,
-                                background: COR_MESA_A.bg,
-                                border: `1px solid ${COR_MESA_A.border}`,
+                                background: corCompMesaA.bg,
+                                border: `1px solid ${corCompMesaA.border}`,
                                 textAlign: "center",
                                 fontSize: 13,
                                 fontWeight: 700,
-                                color: COR_MESA_A.accent,
+                                color: corCompMesaA.accent,
                                 fontFamily: FONT.body,
                               }}
                             >
@@ -3468,12 +3863,12 @@ export default function MesasSpin() {
                               style={{
                                 padding: "6px 12px",
                                 borderRadius: 10,
-                                background: COR_MESA_B.bg,
-                                border: `1px solid ${COR_MESA_B.border}`,
+                                background: corCompMesaB.bg,
+                                border: `1px solid ${corCompMesaB.border}`,
                                 textAlign: "center",
                                 fontSize: 13,
                                 fontWeight: 700,
-                                color: COR_MESA_B.accent,
+                                color: corCompMesaB.accent,
                                 fontFamily: FONT.body,
                               }}
                             >
@@ -3484,14 +3879,14 @@ export default function MesasSpin() {
 
                         <div className="app-conversao-funil-duo">
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaA, "rgba(124,58,237,0.06)", "Mês")}
+                            {renderMesaDiaTabela(linhasMesaA, ZEBRA_MESA_STRIPE_PRIMARY, "Mês")}
                           </div>
                           <div
                             className="app-conversao-funil-divider"
                             style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaB, "rgba(30,54,248,0.06)", "Mês")}
+                            {renderMesaDiaTabela(linhasMesaB, ZEBRA_MESA_STRIPE_ACCENT, "Mês")}
                           </div>
                         </div>
                       </>
@@ -3499,7 +3894,9 @@ export default function MesasSpin() {
                   </div>
 
                   <div style={{ ...card, marginBottom: 14 }}>
-                    <SectionHeader icon={<Table2 size={15} />} title="Dados por mesa" sub="Baccarat e Roleta" />
+                    <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
+                      Dados por mesa
+                    </SectionTitle>
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -3508,18 +3905,18 @@ export default function MesasSpin() {
                             marginBottom: 10,
                             padding: "6px 10px",
                             borderRadius: 10,
-                            background: "rgba(112,202,228,0.10)",
-                            border: "1px solid rgba(112,202,228,0.35)",
+                            background: "color-mix(in srgb, var(--brand-icon, #70cae4) 10%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--brand-icon, #70cae4) 35%, transparent)",
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: BRAND.ciano,
+                            color: "var(--brand-icon, #70cae4)",
                             fontFamily: FONT.body,
                           }}
                         >
                           Speed Baccarat
                         </div>
-                        {renderMesaDiaTabela(linhasSpeedBaccarat, "rgba(74,32,130,0.06)", "Mês")}
+                        {renderMesaDiaTabela(linhasSpeedBaccarat, ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
@@ -3531,18 +3928,18 @@ export default function MesasSpin() {
                             marginBottom: 10,
                             padding: "6px 10px",
                             borderRadius: 10,
-                            background: "rgba(124,58,237,0.10)",
-                            border: "1px solid rgba(124,58,237,0.30)",
+                            background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 30%, transparent)",
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: BRAND.roxoVivo,
+                            color: "var(--brand-primary, #7c3aed)",
                             fontFamily: FONT.body,
                           }}
                         >
                           Roleta
                         </div>
-                        {renderMesaDiaTabela(linhasRoleta, "rgba(74,32,130,0.06)", "Mês")}
+                        {renderMesaDiaTabela(linhasRoleta, ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
                       </div>
                     </div>
                   </div>

@@ -167,6 +167,13 @@
   .app-conversao-vs-row {
     grid-template-columns: 1fr;
     justify-items: stretch;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-conversao-vs-row {
+    gap: 8px;
   }
 }
 

@@ -6,8 +6,8 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check } from "lucide-react";
-import { GiNotebook, GiShield } from "react-icons/gi";
+import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Shield } from "lucide-react";
+import { GiNotebook } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { BannerPendencias } from "../../operacoes/solicitacoes/BannerPendencias";
@@ -1081,7 +1081,7 @@ export default function RoteiroMesa() {
             {mostrarFiltroOp && opcoesFiltro.length > 0 && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={15} />
+                  <Shield size={15} aria-hidden />
                 </span>
                 <select
                   value={filtroOperadora}

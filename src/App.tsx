@@ -37,7 +37,7 @@ const Configuracoes          = lazyWithRetry(() => import("./pages/geral/Configu
 const Ajuda                  = lazyWithRetry(() => import("./pages/geral/Ajuda"));
 const Streamers                  = lazyWithRetry(() => import("./pages/dashboards/Streamers"));
 const DashboardOverviewInfluencer = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
-const MesasSpin                 = lazyWithRetry(() => import("./pages/dashboards/MesasSpin"));
+const OverviewSpin              = lazyWithRetry(() => import("./pages/dashboards/OverviewSpin"));
 const SocialMediaDashboard      = lazyWithRetry(() => import("./pages/dashboards/SocialMediaDashboard"));
 const Agenda     = lazyWithRetry(() => import("./pages/lives/Agenda"));
 const Resultados = lazyWithRetry(() => import("./pages/lives/Resultados"));
@@ -62,7 +62,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   home:                     Home,
   streamers:                 Streamers,
   dash_overview_influencer:  DashboardOverviewInfluencer,
-  mesas_spin:               MesasSpin,
+  mesas_spin:               OverviewSpin,
   dash_midias_sociais:      SocialMediaDashboard,
   agenda:           Agenda,
   resultados:       Resultados,

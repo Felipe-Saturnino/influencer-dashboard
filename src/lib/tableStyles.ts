@@ -14,7 +14,7 @@ export function getThStyle(t: TableThemePick, extra?: CSSProperties): CSSPropert
     fontWeight: 600,
     padding: "10px 12px",
     borderBottom: `1px solid ${t.cardBorder}`,
-    background: "rgba(74,32,130,0.10)",
+    background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, transparent)",
     fontFamily: FONT.body,
     whiteSpace: "nowrap",
     ...extra,
@@ -42,6 +42,7 @@ export function getTdNumStyle(t: TableThemePick, extra?: CSSProperties): CSSProp
 }
 
 export const zebraStripe = (i: number): string =>
-  i % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent";
+  i % 2 === 1 ? "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)" : "transparent";
 
-export const TOTAL_ROW_BG = "rgba(74,32,130,0.12)";
+export const TOTAL_ROW_BG =
+  "color-mix(in srgb, var(--brand-secondary, #4a2082) 12%, transparent)";

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox } from "lucide-react";
-import { GiCalendar, GiDiceSixFacesFour, GiRingingBell, GiShield } from "react-icons/gi";
+import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Shield } from "lucide-react";
+import { GiDiceSixFacesFour, GiRingingBell } from "react-icons/gi";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -1056,14 +1056,14 @@ export default function CentralNotificacoes() {
                 transition: "all 0.15s",
               }}
             >
-              <GiCalendar size={15} aria-hidden />
+              <Calendar size={15} aria-hidden />
               Histórico
             </button>
 
             {showFiltroOperadora && (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span style={{ position: "absolute", left: 10, display: "flex", alignItems: "center", pointerEvents: "none", color: t.textMuted }}>
-                  <GiShield size={15} aria-hidden />
+                  <Shield size={15} aria-hidden />
                 </span>
                 <select
                   value={filtroOperadora}

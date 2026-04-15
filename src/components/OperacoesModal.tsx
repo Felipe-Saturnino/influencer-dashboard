@@ -151,6 +151,8 @@ export function ModalConfirmDelete({
   confirmLabel = "Excluir",
   destructive = true,
   zIndex = 1000,
+  error,
+  loadingLabel,
 }: {
   texto: string;
   onCancel: () => void;
@@ -161,12 +163,23 @@ export function ModalConfirmDelete({
   confirmLabel?: string;
   destructive?: boolean;
   zIndex?: number;
+  /** Mensagem inline (ex.: erro de API); não usar alert(). */
+  error?: string | null;
+  /** Texto do botão de confirmação enquanto loading (padrão: Excluindo… / Aguarde…). */
+  loadingLabel?: string;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const loadingText =
+    loadingLabel ??
+    (destructive ? "Excluindo..." : "Aguarde...");
+  function handleClose() {
+    if (loading) return;
+    onCancel();
+  }
   return (
-    <ModalBase onClose={onCancel} maxWidth={400} zIndex={zIndex}>
-      <ModalHeader title={title} onClose={onCancel} />
+    <ModalBase onClose={handleClose} maxWidth={400} zIndex={zIndex}>
+      <ModalHeader title={title} onClose={handleClose} />
       <p
         style={{
           fontSize: 14,
@@ -178,10 +191,25 @@ export function ModalConfirmDelete({
       >
         {texto}
       </p>
+      {error ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            color: "#ef4444",
+            fontSize: 12,
+            fontFamily: FONT.body,
+            marginTop: -12,
+            marginBottom: 16,
+          }}
+        >
+          {error}
+        </div>
+      ) : null}
       <div style={{ display: "flex", gap: 10 }}>
         <button
           type="button"
-          onClick={onCancel}
+          onClick={handleClose}
           disabled={loading}
           style={{
             flex: 1,
@@ -218,7 +246,7 @@ export function ModalConfirmDelete({
             opacity: loading ? 0.7 : 1,
           }}
         >
-          {loading ? (destructive ? "Excluindo..." : "Aguarde...") : confirmLabel}
+          {loading ? loadingText : confirmLabel}
         </button>
       </div>
     </ModalBase>

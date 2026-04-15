@@ -9,6 +9,7 @@ export const BRAND = {
   ciano: "#70cae4",
   verde: "#22c55e",
   amarelo: "#f59e0b",
+  salmao: "#e5755a",
   receita: "#4a2082",
   operacao: "#1e36f8",
   transacao: "#70cae4",
