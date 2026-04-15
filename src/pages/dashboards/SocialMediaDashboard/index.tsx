@@ -1262,15 +1262,15 @@ export default function SocialMediaDashboard() {
                         <tr>
                           {[
                             { label: "Período", scope: "col" as const, align: "left" as const },
-                            { label: "Visitas", scope: "col" as const, align: "right" as const },
-                            { label: "Registros", scope: "col" as const, align: "right" as const },
-                            { label: "FTDs", scope: "col" as const, align: "right" as const },
+                            { label: "# Visitas", scope: "col" as const, align: "right" as const },
+                            { label: "# Registros", scope: "col" as const, align: "right" as const },
+                            { label: "# FTD", scope: "col" as const, align: "right" as const },
                             { label: "R$ FTD", scope: "col" as const, align: "right" as const },
-                            { label: "Quantidade de depósitos", scope: "col" as const, align: "right" as const },
-                            { label: "Valor de depósitos (R$)", scope: "col" as const, align: "right" as const },
-                            { label: "Quantidade de saques", scope: "col" as const, align: "right" as const },
-                            { label: "Valor de saques (R$)", scope: "col" as const, align: "right" as const },
-                            { label: "GGR", scope: "col" as const, align: "right" as const },
+                            { label: "# Depósito", scope: "col" as const, align: "right" as const },
+                            { label: "R$ Depósito", scope: "col" as const, align: "right" as const },
+                            { label: "# Saque", scope: "col" as const, align: "right" as const },
+                            { label: "R$ Saque", scope: "col" as const, align: "right" as const },
+                            { label: "R$ GGR", scope: "col" as const, align: "right" as const },
                           ].map((h) => (
                             <th key={h.label} scope={h.scope} style={{ ...thStyle, textAlign: h.align }}>
                               {h.label}
