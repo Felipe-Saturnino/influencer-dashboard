@@ -1274,27 +1274,24 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 5: Detalhamento Mensal (histórico) / Detalhamento Diário (mês) ─ */}
       {(historico || mesSelecionado) && diasData.length > 0 && (
-        <div style={{ ...card, padding: 0, overflow: "hidden", marginBottom: 0 }}>
-          <div style={{ padding: "20px 20px 16px" }}>
-            <SectionTitle
-              icon={<CalendarDays size={14} aria-hidden="true" />}
-              sub={historico ? "mês a mês" : undefined}
-            >
-              {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
-            </SectionTitle>
-          </div>
+        <div style={{ ...card, marginBottom: 14 }}>
+          <SectionTitle
+            icon={<CalendarDays size={14} aria-hidden="true" />}
+            sub={historico ? "mês a mês" : undefined}
+          >
+            {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
+          </SectionTitle>
 
-          <div style={{ padding: "0 20px 16px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: 10,
-                marginBottom: 16,
-              }}
-            >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 10,
+              marginBottom: 16,
+            }}
+          >
               <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 200px", minWidth: 0 }}>
                 {modoVisualizacaoComparativo === "grafico" && (
                   <>
@@ -1387,7 +1384,6 @@ export default function DashboardOverviewInfluencer() {
                 ))}
               </div>
             </div>
-          </div>
 
           {modoVisualizacaoComparativo === "tabela" ? (
             <div className="app-table-wrap">
@@ -1466,7 +1462,7 @@ export default function DashboardOverviewInfluencer() {
           ) : dadosGraficoComparativo.length === 0 ? (
             <div
               style={{
-                padding: "24px 20px 32px",
+                padding: "24px 0 8px",
                 textAlign: "center",
                 color: t.textMuted,
                 fontSize: 12,
@@ -1476,7 +1472,7 @@ export default function DashboardOverviewInfluencer() {
               {MSG_SEM_DADOS_FILTRO}
             </div>
           ) : (
-            <div style={{ padding: "0 20px 24px" }}>
+            <div>
               <p
                 style={{
                   fontSize: 11,

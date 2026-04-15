@@ -1142,7 +1142,7 @@ export default function OverviewSpin() {
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
   const [kpisSelecionados, setKpisSelecionados] = useState<Set<KpiJogoKey>>(
-    () => new Set<KpiJogoKey>(["ggr", "turnover", "bets", "margin_pct", "bet_size", "uap"]),
+    () => new Set<KpiJogoKey>(["ggr", "turnover", "uap"]),
   );
   const [kpiGrafico, setKpiGrafico] = useState<KpiJogoKey>("ggr");
   const [dailyRawUnmerged, setDailyRawUnmerged] = useState<DailyRawRow[]>([]);
@@ -2792,14 +2792,19 @@ export default function OverviewSpin() {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 5,
-                    padding: "4px 12px",
-                    borderRadius: 999,
+                    padding: "8px 14px",
+                    minHeight: 40,
+                    borderRadius: 10,
                     cursor: "pointer",
                     fontFamily: FONT.body,
-                    fontSize: 11,
-                    fontWeight: ativo ? 700 : 400,
+                    fontSize: 12,
+                    fontWeight: ativo ? 700 : 500,
                     border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                    background: ativo ? `color-mix(in srgb, ${brand.accent} 12%, transparent)` : "transparent",
+                    background: ativo
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                      : (t.inputBg ?? t.cardBg),
                     color: ativo ? brand.accent : t.textMuted,
                     transition: "all 0.15s",
                   }}
