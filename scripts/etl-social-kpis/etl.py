@@ -15,7 +15,9 @@ v3 (Meta):
 - Janelas since/until via _utc_day_unix_bounds; versão da API em META_GRAPH_VERSION (padrão v21.0)
 - OAuth 190 / token expirado: preflight no job diário; collectors não retentam endpoints se o token já falhou
 - YouTube: parse Analytics via columnHeaders + fallback views/engajamento somando vídeos do dia (Analytics vazio/atrasado)
+- YouTube: vídeos do dia via playlistItems (uploads), não search.list (quota ~100/dia por chamada)
 - FB/IG: insights de página/conta usam a mesma janela UTC que `TARGET_DATE` (posts e `kpi_daily.date`), não “hoje-2”
+- Facebook: métricas de insights de página uma por requisição (evita #100 se um nome do lote for inválido)
 """
 
 import os
@@ -52,6 +54,9 @@ YOUTUBE_CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID", "")
 YOUTUBE_CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET", "")
 YOUTUBE_REFRESH_TOKEN = os.environ.get("YOUTUBE_REFRESH_TOKEN", "")
 YOUTUBE_CHANNEL_ID = os.environ.get("YOUTUBE_CHANNEL_ID", "")
+
+# channel_id -> uploads playlist id (evita channels.list repetido no mesmo processo)
+_YT_UPLOADS_PLAYLIST_CACHE: dict[str, str] = {}
 
 LINKEDIN_TOKEN = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
 LINKEDIN_ORG_ID = os.environ.get("LINKEDIN_ORG_ID", "")
@@ -203,6 +208,134 @@ def _classify_video(duration: str, snippet: dict) -> str:
     if _parse_iso_duration_seconds(duration) <= 60:
         return "short"
     return "upload"
+
+
+def _fetch_fb_page_day_metrics(
+    base: str, page_id: str, token: str, since_ts: int, until_ts: int
+) -> dict[str, int]:
+    """
+    Insights de página com period=day, uma métrica por GET.
+    A Graph API rejeita o pedido inteiro se `metric=a,b` contiver um nome inválido (#100).
+    """
+    out: dict[str, int] = {}
+    for metric in ("page_impressions",):
+        r = requests.get(
+            f"{base}/{page_id}/insights",
+            params={
+                "metric": metric,
+                "period": "day",
+                "since": since_ts,
+                "until": until_ts,
+                "access_token": token,
+            },
+            timeout=60,
+        )
+        if r.status_code == 200:
+            for row in r.json().get("data", []):
+                if row.get("name") == metric and row.get("values"):
+                    out[metric] = int(row["values"][0]["value"] or 0)
+        else:
+            _log_api_error(r, f"Facebook insights ({metric})")
+
+    eng_key = "page_post_engagements"
+    for i, metric in enumerate(("page_post_engagements", "page_engaged_users")):
+        r = requests.get(
+            f"{base}/{page_id}/insights",
+            params={
+                "metric": metric,
+                "period": "day",
+                "since": since_ts,
+                "until": until_ts,
+                "access_token": token,
+            },
+            timeout=60,
+        )
+        if r.status_code == 200:
+            for row in r.json().get("data", []):
+                if row.get("name") == metric and row.get("values"):
+                    out[eng_key] = int(row["values"][0]["value"] or 0)
+                    break
+            if eng_key in out:
+                break
+        elif i == 0:
+            _log_api_error(r, f"Facebook insights ({metric})")
+        else:
+            log.debug("Facebook insights %s: %s", metric, (r.text or "")[:160])
+    return out
+
+
+def _youtube_uploads_playlist_id(base: str, channel_id: str, headers: dict) -> str | None:
+    cached = _YT_UPLOADS_PLAYLIST_CACHE.get(channel_id)
+    if cached:
+        return cached
+    if channel_id.startswith("UC") and len(channel_id) > 2:
+        pid = "UU" + channel_id[2:]
+        _YT_UPLOADS_PLAYLIST_CACHE[channel_id] = pid
+        return pid
+    ch = requests.get(
+        f"{base}/channels",
+        headers=headers,
+        params={"part": "contentDetails", "id": channel_id},
+        timeout=60,
+    )
+    if ch.status_code != 200:
+        log.warning("YouTube — channels (uploads playlist): %s", ch.text[:200])
+        return None
+    items = ch.json().get("items") or []
+    if not items:
+        return None
+    rel = (items[0].get("contentDetails") or {}).get("relatedPlaylists") or {}
+    pid = rel.get("uploads")
+    if pid:
+        _YT_UPLOADS_PLAYLIST_CACHE[channel_id] = pid
+    return pid
+
+
+def _youtube_video_ids_published_on_day(
+    base: str, playlist_id: str, headers: dict, target: date
+) -> list[str]:
+    """Lista videoIds publicados no dia UTC `target` via playlist de uploads (mais barato que search.list)."""
+    day_start = datetime(target.year, target.month, target.day, tzinfo=timezone.utc)
+    day_end = day_start + timedelta(days=1)
+    out: list[str] = []
+    page_token: str | None = None
+    while True:
+        params: dict[str, str | int] = {
+            "part": "snippet",
+            "playlistId": playlist_id,
+            "maxResults": 50,
+        }
+        if page_token:
+            params["pageToken"] = page_token
+        r = requests.get(f"{base}/playlistItems", headers=headers, params=params, timeout=60)
+        if r.status_code != 200:
+            _log_api_error(r, "YouTube playlistItems")
+            break
+        data = r.json()
+        for it in data.get("items", []):
+            sn = it.get("snippet") or {}
+            published = sn.get("publishedAt")
+            if not published:
+                continue
+            try:
+                ts = published.replace("Z", "+00:00")
+                dt = datetime.fromisoformat(ts)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+            if dt >= day_end:
+                continue
+            if day_start <= dt < day_end:
+                vid = (sn.get("resourceId") or {}).get("videoId")
+                if vid:
+                    out.append(vid)
+            elif dt < day_start:
+                return out
+        page_token = data.get("nextPageToken")
+        if not page_token:
+            break
+    return out
 
 
 def _parse_yt_analytics_report(payload: dict) -> dict[str, int]:
@@ -748,25 +881,9 @@ def fetch_facebook():
     page_data = page_resp.json() if page_resp.status_code == 200 else {}
     followers_count = page_data.get("fan_count")
 
-    metrics = {}
-    # page_engaged_users não é métrica válida no endpoint atual → (#100) valid insights metric
-    ins_resp = requests.get(
-        f"{base}/{META_PAGE_ID}/insights",
-        params={
-            "metric": "page_impressions,page_post_engagements",
-            "period": "day",
-            "since": day_start,
-            "until": day_end,
-            "access_token": META_TOKEN,
-        },
-    )
-    if ins_resp.status_code == 200:
-        for m in ins_resp.json().get("data", []):
-            if m.get("values"):
-                metrics[m["name"]] = m["values"][0]["value"]
-    else:
-        _log_api_error(ins_resp, "Facebook insights")
-        log.warning("Facebook — insights indisponíveis, continuando sem métricas de página.")
+    metrics = _fetch_fb_page_day_metrics(base, META_PAGE_ID, META_TOKEN, day_start, day_end)
+    if not metrics:
+        log.warning("Facebook — insights de página não obtidos; continuando com posts apenas.")
 
     posts_raw = _collect_fb_posts_for_day(META_PAGE_ID, META_TOKEN, day_start, day_end)
 
@@ -923,51 +1040,48 @@ def fetch_youtube():
 
     shares = 0
 
-    search_resp = requests.get(
-        f"{base}/search",
-        headers=headers,
-        params={
-            "part": "id,snippet",
-            "channelId": YOUTUBE_CHANNEL_ID,
-            "type": "video",
-            "publishedAfter": f"{date_str}T00:00:00Z",
-            "publishedBefore": f"{date_str}T23:59:59Z",
-            "maxResults": 50,
-        },
-    )
-    search_resp.raise_for_status()
-    video_items = search_resp.json().get("items", [])
-    video_ids = [v["id"]["videoId"] for v in video_items]
+    playlist_id = _youtube_uploads_playlist_id(base, YOUTUBE_CHANNEL_ID, headers)
+    video_ids: list[str] = []
+    if playlist_id:
+        video_ids = _youtube_video_ids_published_on_day(base, playlist_id, headers, TARGET_DATE)
+        log.info("YouTube — playlist uploads: %d vídeo(s) no dia %s", len(video_ids), date_str)
+    else:
+        log.warning("YouTube — uploads playlistId não resolvido; sem linhas em youtube_videos para o dia.")
 
     video_rows = []
     if video_ids:
-        stats_resp = requests.get(
-            f"{base}/videos",
-            headers=headers,
-            params={"part": "statistics,contentDetails,snippet", "id": ",".join(video_ids)},
-        )
-        stats_resp.raise_for_status()
-        for v in stats_resp.json().get("items", []):
-            s = v.get("statistics", {})
-            duration = v["contentDetails"].get("duration", "PT0S")
-            vtype = _classify_video(duration, v["snippet"])
-            video_rows.append(
-                {
-                    "video_id": v["id"],
-                    "date": date_str,
-                    "published_at": _parse_api_datetime(v["snippet"].get("publishedAt")),
-                    "title": v["snippet"]["title"],
-                    "type": vtype,
-                    "views": int(s.get("viewCount", 0)),
-                    "watch_time_min": int(watch_min) if len(video_ids) == 1 else None,
-                    "avg_view_pct": None,
-                    "likes": int(s.get("likeCount", 0)),
-                    "comments": int(s.get("commentCount", 0)),
-                    "impressions": channel_impressions if len(video_ids) == 1 else None,
-                    "ctr": channel_ctr if len(video_ids) == 1 else None,
-                    "subscribers_gained": int(subs_gained) if len(video_ids) == 1 else None,
-                }
+        for off in range(0, len(video_ids), 50):
+            chunk = video_ids[off : off + 50]
+            stats_resp = requests.get(
+                f"{base}/videos",
+                headers=headers,
+                params={"part": "statistics,contentDetails,snippet", "id": ",".join(chunk)},
+                timeout=60,
             )
+            if stats_resp.status_code != 200:
+                _log_api_error(stats_resp, "YouTube videos")
+                stats_resp.raise_for_status()
+            for v in stats_resp.json().get("items", []):
+                s = v.get("statistics", {})
+                duration = v["contentDetails"].get("duration", "PT0S")
+                vtype = _classify_video(duration, v["snippet"])
+                video_rows.append(
+                    {
+                        "video_id": v["id"],
+                        "date": date_str,
+                        "published_at": _parse_api_datetime(v["snippet"].get("publishedAt")),
+                        "title": v["snippet"]["title"],
+                        "type": vtype,
+                        "views": int(s.get("viewCount", 0)),
+                        "watch_time_min": int(watch_min) if len(video_ids) == 1 else None,
+                        "avg_view_pct": None,
+                        "likes": int(s.get("likeCount", 0)),
+                        "comments": int(s.get("commentCount", 0)),
+                        "impressions": channel_impressions if len(video_ids) == 1 else None,
+                        "ctr": channel_ctr if len(video_ids) == 1 else None,
+                        "subscribers_gained": int(subs_gained) if len(video_ids) == 1 else None,
+                    }
+                )
 
     # Analytics pode vir vazio ou atrasado para o dia; o dashboard usa video_views do kpi_daily.
     v_views = sum(int(r.get("views", 0) or 0) for r in video_rows)
