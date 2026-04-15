@@ -64,8 +64,8 @@ type DashboardBrand = ReturnType<typeof useDashboardBrand>;
 type PermResultados = ReturnType<typeof usePermission>;
 type EscoposVisiveis = ReturnType<typeof useDashboardFiltros>["escoposVisiveis"];
 
-const ctaGradient = (brand: DashboardBrand) =>
-  brand.useBrand ? "var(--brand-accent)" : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
+const ctaGradient = (_brand: DashboardBrand) =>
+  "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
 
 interface LiveCardProps {
   live: Live;
@@ -700,7 +700,7 @@ export default function Resultados() {
                     border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
                     background:
                       filterOperadora !== "todas"
-                        ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)")
+                        ? "var(--brand-action-12)"
                         : (t.inputBg ?? t.cardBg),
                     color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
                     fontWeight: filterOperadora !== "todas" ? 700 : 400,

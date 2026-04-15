@@ -62,8 +62,8 @@ function statBox(color: string, isDark: boolean): CSSProperties {
     padding: "10px 8px",
     borderRadius: 10,
     minWidth: 0,
-    background: `color-mix(in srgb, ${color} ${isDark ? "14%" : "10%"}, transparent)`,
-    border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
+    background: `color-mix(in srgb, ${color} ${isDark ? "8%" : "6%"}, transparent)`,
+    border: `1px solid color-mix(in srgb, ${color} 22%, transparent)`,
   };
 }
 
@@ -297,12 +297,12 @@ function LiveCard({
 
       {isRealizada && res && (
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <div style={statBox("var(--brand-primary, #7c3aed)", isDark)}>
+          <div style={statBox("var(--brand-action, #7c3aed)", isDark)}>
             <div
               style={{
                 fontSize: 16,
                 fontWeight: 800,
-                color: "var(--brand-primary, #7c3aed)",
+                color: "var(--brand-action, #7c3aed)",
                 fontFamily: FONT.body,
               }}
             >
@@ -310,12 +310,12 @@ function LiveCard({
             </div>
             <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>Duração</div>
           </div>
-          <div style={statBox("var(--brand-accent, #1e36f8)", isDark)}>
+          <div style={statBox("var(--brand-contrast, #1e36f8)", isDark)}>
             <div
               style={{
                 fontSize: 16,
                 fontWeight: 800,
-                color: "var(--brand-accent, #1e36f8)",
+                color: "var(--brand-contrast, #1e36f8)",
                 fontFamily: FONT.body,
               }}
             >
@@ -323,12 +323,12 @@ function LiveCard({
             </div>
             <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, marginTop: 2 }}>Média Views</div>
           </div>
-          <div style={statBox("var(--brand-icon, #70cae4)", isDark)}>
+          <div style={statBox("var(--brand-icon-color)", isDark)}>
             <div
               style={{
                 fontSize: 16,
                 fontWeight: 800,
-                color: "var(--brand-icon, #70cae4)",
+                color: "var(--brand-icon-color)",
                 fontFamily: FONT.body,
               }}
             >
@@ -550,7 +550,7 @@ export default function Feedback() {
                 padding: "6px 14px", minHeight: 44, borderRadius: 999, cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13,
                 border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
+                background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : `${BRAND.roxoVivo}18`) : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
@@ -575,7 +575,7 @@ export default function Feedback() {
                   background:
                     filterOperadora !== "todas"
                       ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
                         : `${BRAND.roxoVivo}18`
                       : (t.inputBg ?? t.cardBg),
                   color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
@@ -811,9 +811,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
     textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
 
-  const ctaSalvarBg = brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
+  const ctaSalvarBg = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "clamp(16px, 4vw, 28px)" }}>

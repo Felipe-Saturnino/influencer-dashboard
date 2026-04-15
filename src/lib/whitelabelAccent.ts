@@ -10,6 +10,8 @@ export function resolveWhitelabelAccentCss(accentVar?: string): string {
     "--brand-accent": "var(--brand-contrast, #1e36f8)",
     "--brand-secondary": "var(--brand-contrast, #1e36f8)",
     "--brand-icon": "var(--brand-icon-color)",
+    "--brand-success": "var(--brand-success, #22c55e)",
+    "--brand-icon-color": "var(--brand-icon-color)",
   };
   return map[accentVar] ?? `var(${accentVar})`;
 }

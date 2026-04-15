@@ -623,7 +623,8 @@ export default function SocialMediaDashboard() {
       stats: (byCh: KpiDaily[]) => [
         { label: "Inscritos",     val: fmtNum(lastVal(byCh, "followers"))    },
         { label: "Visualizações", val: fmtNum(sumVal(byCh, "video_views"))   },
-        { label: "Impressões",    val: fmtNum(sumVal(byCh, "impressions"))   },
+        // ETL não grava impressions no kpi_daily do YouTube (Analytics day não expõe); evitar "0" falso
+        { label: "Impressões",    val: "—" },
         { label: "Engajamento",   val: fmtNum(sumVal(byCh, "engagements"))   },
         { label: "Taxa eng.",     val: calcEngRate(byCh) },
       ],
@@ -699,7 +700,7 @@ export default function SocialMediaDashboard() {
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
               border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400,
               transition: "all 0.15s",
@@ -760,7 +761,7 @@ export default function SocialMediaDashboard() {
               <KpiCard
                 label="Seguidores totais"
                 valor={fmtNum(totais.seguidores)}
-                accentVar="--brand-extra1"
+                accentVar="--brand-contrast"
                 accentCor={BRAND.roxo}
                 icon={<Mic size={15} aria-hidden />}
                 momComparativo={
@@ -776,7 +777,7 @@ export default function SocialMediaDashboard() {
               <KpiCard
                 label="Impressões totais"
                 valor={fmtNum(totais.impressoes)}
-                accentVar="--brand-extra2"
+                accentVar="--brand-success"
                 accentCor={BRAND.azul}
                 icon={<Sparkles size={15} aria-hidden />}
                 momComparativo={
@@ -792,7 +793,7 @@ export default function SocialMediaDashboard() {
               <KpiCard
                 label="Engajamento médio"
                 valor={engMedio != null ? `${engMedio.toFixed(1)}%` : "—"}
-                accentVar="--brand-extra3"
+                accentVar="--brand-action"
                 accentCor={BRAND.ciano}
                 icon={<Percent size={15} aria-hidden />}
                 momComparativo={

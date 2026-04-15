@@ -439,7 +439,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               disabled={saving}
               style={{
                 flex: 2, padding: 12, borderRadius: 10, border: "none",
-                background: brand.useBrand ? "var(--brand-accent)" : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))",
+                background: "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))",
                 color: "#fff", fontSize: 13, fontWeight: 700,
                 cursor: saving ? "not-allowed" : "pointer",
                 opacity: saving ? 0.7 : 1, fontFamily: FONT.body,

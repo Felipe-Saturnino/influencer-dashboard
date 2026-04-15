@@ -5,7 +5,7 @@ import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
+import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
 import { SelectComIcone, SectionTitle } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
@@ -19,20 +19,20 @@ import {
 } from "react-icons/gi";
 
 const COR_A = {
-  accent: "var(--brand-primary, #7c3aed)",
-  bg: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
-  border: "color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
-  step: "color-mix(in srgb, var(--brand-primary, #7c3aed) 7%, transparent)",
-  taxa: "color-mix(in srgb, var(--brand-primary, #7c3aed) 13%, transparent)",
-  taxaBorder: "color-mix(in srgb, var(--brand-primary, #7c3aed) 40%, transparent)",
+  accent: "var(--brand-action, #7c3aed)",
+  bg: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+  border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
+  step: "color-mix(in srgb, var(--brand-action, #7c3aed) 7%, transparent)",
+  taxa: "color-mix(in srgb, var(--brand-action, #7c3aed) 13%, transparent)",
+  taxaBorder: "color-mix(in srgb, var(--brand-action, #7c3aed) 40%, transparent)",
 } as const;
 const COR_B = {
-  accent: "var(--brand-accent, #1e36f8)",
-  bg: "color-mix(in srgb, var(--brand-accent, #1e36f8) 10%, transparent)",
-  border: "color-mix(in srgb, var(--brand-accent, #1e36f8) 35%, transparent)",
-  step: "color-mix(in srgb, var(--brand-accent, #1e36f8) 7%, transparent)",
-  taxa: "color-mix(in srgb, var(--brand-accent, #1e36f8) 13%, transparent)",
-  taxaBorder: "color-mix(in srgb, var(--brand-accent, #1e36f8) 40%, transparent)",
+  accent: "var(--brand-contrast, #1e36f8)",
+  bg: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)",
+  border: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
+  step: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 7%, transparent)",
+  taxa: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 13%, transparent)",
+  taxaBorder: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 40%, transparent)",
 } as const;
 
 type CorFunilComparativo = typeof COR_A | typeof COR_B;
@@ -102,12 +102,7 @@ const FUNIL_STEPS_CONFIG = [
   { key: "ftds",      label: "FTDs"      },
 ] as const;
 
-const FUNIL_CORES = [
-  "var(--brand-primary, #7c3aed)",
-  "var(--brand-accent, #1e36f8)",
-  "var(--brand-icon, #70cae4)",
-  "#22c55e",
-] as const;
+const FUNIL_CORES = [...FUNIL_COLORS] as readonly string[];
 
 function FunilSVG({ row, cor, idPrefix }: { row: ConversaoRow; cor: CorFunilComparativo; idPrefix: string }) {
   const { theme: t } = useApp();
@@ -280,7 +275,7 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
             style={{
               width: `${barPct}%`,
               height: "100%",
-              background: "var(--brand-secondary, #4a2082)",
+              background: "var(--brand-action, #7c3aed)",
               opacity: 0.65,
               borderRadius: 999,
             }}
@@ -364,9 +359,9 @@ function PodioFTDHora({ ranking }: { ranking: ConversaoRow[] }) {
               {Array.from({ length: totalPags }).map((_, i) => (
                 <button type="button" key={i} aria-label={`Página ${i + 1} da lista FTD por hora`} onClick={() => setPagResto(i)} style={{
                   width: 28, height: 28, borderRadius: "50%",
-                  border: `1px solid ${pagResto === i ? "var(--brand-primary, #7c3aed)" : t.cardBorder}`,
-                  background: pagResto === i ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)" : "transparent",
-                  color: pagResto === i ? "var(--brand-primary, #7c3aed)" : t.textMuted,
+                  border: `1px solid ${pagResto === i ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
+                  background: pagResto === i ? "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)" : "transparent",
+                  color: pagResto === i ? "var(--brand-action, #7c3aed)" : t.textMuted,
                   fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT.body,
                 }}>
                   {i + 1}
@@ -665,7 +660,7 @@ export default function DashboardConversao() {
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
               border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
@@ -740,11 +735,11 @@ export default function DashboardConversao() {
             style={{
               padding: "5px 12px",
               borderRadius: 999,
-              border: "1px solid color-mix(in srgb, var(--brand-secondary, #4a2082) 35%, transparent)",
-              background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
+              background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
               fontSize: 12,
               fontWeight: 800,
-              color: "var(--brand-secondary, #4a2082)",
+              color: "var(--brand-action, #7c3aed)",
               fontFamily: FONT.body,
               letterSpacing: "0.05em",
               textAlign: "center",

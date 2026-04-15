@@ -34,9 +34,9 @@ import {
 } from "recharts";
 
 const PIE_COLORS = [
-  "var(--brand-primary, #7c3aed)",
-  "var(--brand-accent, #1e36f8)",
-  "var(--brand-icon, #70cae4)",
+  "var(--brand-action, #7c3aed)",
+  "var(--brand-contrast, #1e36f8)",
+  "var(--brand-icon-color)",
   "#22c55e",
   "#e84025",
   "#e5755a",
@@ -48,21 +48,22 @@ const PIE_COLORS = [
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 type PerfilJogador = "Whales" | "Core" | "Recreativos" | "Caçadores de Bônus";
 
+/** Categorias analíticas — paleta semântica fixa (não segue brand da operadora). */
 const PERFIL_CORES: Record<PerfilJogador, { cor: string; bg: string; border: string }> = {
   Whales: {
-    cor: "var(--brand-primary, #7c3aed)",
-    bg: "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)",
-    border: "color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
+    cor: "#a78bfa",
+    bg: "rgba(167,139,250,0.12)",
+    border: "rgba(167,139,250,0.35)",
   },
   Core: {
-    cor: "var(--brand-accent, #1e36f8)",
-    bg: "color-mix(in srgb, var(--brand-accent, #1e36f8) 12%, transparent)",
-    border: "color-mix(in srgb, var(--brand-accent, #1e36f8) 35%, transparent)",
+    cor: "#22c55e",
+    bg: "rgba(34,197,94,0.12)",
+    border: "rgba(34,197,94,0.35)",
   },
   Recreativos: {
-    cor: "var(--brand-icon, #70cae4)",
-    bg: "color-mix(in srgb, var(--brand-icon, #70cae4) 12%, transparent)",
-    border: "color-mix(in srgb, var(--brand-icon, #70cae4) 35%, transparent)",
+    cor: "#f59e0b",
+    bg: "rgba(245,158,11,0.12)",
+    border: "rgba(245,158,11,0.35)",
   },
   "Caçadores de Bônus": {
     cor: "#e84025",
@@ -600,7 +601,7 @@ export default function DashboardFinanceiro() {
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
               border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
@@ -659,14 +660,14 @@ export default function DashboardFinanceiro() {
           <KpiCard
             label="FTD" value={fmtBRL(totaisExibir.ftd_total)}
             subValue={{ label: "ticket médio", value: totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ftd_ticket_medio) : "—" }}
-            icon={<Award size={14} aria-hidden />} accentVar="--brand-primary" accentColor={BRAND.roxo}
+            icon={<Award size={14} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.roxo}
             atual={totaisExibir.ftd_total} anterior={totaisAnt.ftd_total}
             isHistorico={historico} isBRL
           />
           <KpiCard
             label="Depósitos" value={fmtBRL(totaisExibir.depositos)}
             subValue={{ label: "ticket médio", value: totaisExibir.deposit_count > 0 ? fmtBRL(totaisExibir.deposito_ticket_medio) : "—" }}
-            icon={<PlayCircle size={14} aria-hidden />} accentVar="--brand-icon" accentColor={BRAND.ciano}
+            icon={<PlayCircle size={14} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.ciano}
             atual={totaisExibir.depositos} anterior={totaisAnt.depositos}
             isHistorico={historico} isBRL
           />
@@ -691,7 +692,7 @@ export default function DashboardFinanceiro() {
           <KpiCard
             label="GGR por Jogador"
             value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ggr_por_jogador) : "—"}
-            icon={<Percent size={14} aria-hidden />} accentVar="--brand-primary" accentColor={BRAND.roxo}
+            icon={<Percent size={14} aria-hidden />} accentColor={BRAND.roxo}
             atual={totaisExibir.ggr_por_jogador} anterior={totaisAnt.ggr_por_jogador}
             isHistorico={historico} isBRL
           />
@@ -699,7 +700,7 @@ export default function DashboardFinanceiro() {
             label="PVI"
             value={totaisExibir.pvi > 0 ? `${totaisExibir.pvi} pts` : "—"}
             subValue={{ label: "Player Value Index (0–100)", value: "" }}
-            icon={<Gauge size={14} aria-hidden />} accentVar="--brand-primary" accentColor={BRAND.verde}
+            icon={<Gauge size={14} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.verde}
             atual={totaisExibir.pvi} anterior={totaisAnt.pvi}
             isHistorico={historico}
           />

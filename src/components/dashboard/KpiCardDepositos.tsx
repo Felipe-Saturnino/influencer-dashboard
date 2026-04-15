@@ -19,11 +19,11 @@ export default function KpiCardDepositos({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const accentColor = BRAND.transacao;
-  const barColor = brand.useBrand ? "var(--brand-contrast, #1e36f8)" : accentColor;
+  const barColor = brand.useBrand ? "var(--brand-icon-color)" : accentColor;
   const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
-  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)" : `${accentColor}18`;
-  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)" : `1px solid ${accentColor}35`;
-  const iconBoxColor = brand.useBrand ? "var(--brand-contrast, #1e36f8)" : accentColor;
+  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-icon-color) 10%, transparent)" : `${accentColor}18`;
+  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-icon-color) 22%, transparent)" : `1px solid ${accentColor}35`;
+  const iconBoxColor = brand.useBrand ? "var(--brand-icon-color)" : accentColor;
   const diffQtd = atual.qtd - anterior.qtd;
   const pctQtd =
     anterior.qtd !== 0 ? (diffQtd / Math.abs(anterior.qtd)) * 100 : null;

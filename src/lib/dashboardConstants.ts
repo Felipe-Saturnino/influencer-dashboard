@@ -1,6 +1,7 @@
 /** Constantes compartilhadas entre dashboards (Overview, OverviewInfluencer, etc.) */
 export { FONT_TITLE } from "../constants/theme";
 
+/** Paleta Spin de referência. Valores como `verde` / `vermelho` / `amarelo` são semânticos — não substituir por tokens de whitelabel. */
 export const BRAND = {
   roxo: "#4a2082",
   roxoVivo: "#7c3aed",
@@ -29,6 +30,15 @@ export type StatusLabel = (typeof STATUS_ORDEM)[number];
 /** Empty state quando não há dados para o período e filtros atuais (tabelas, gráficos, KPIs). */
 export const MSG_SEM_DADOS_FILTRO = "Sem dados para o filtro selecionado";
 
-export const FUNIL_COLORS = ["#4a2082", "#1e36f8", "#70cae4", "#22c55e"] as const;
+/**
+ * Cores do funil (4 etapas). Duas primeiras: brand; duas últimas: semânticas (@semantic).
+ * Usado por `FunilVisual` e alinhado ao whitelabel Opção C.
+ */
+export const FUNIL_COLORS = [
+  "var(--brand-action, #7c3aed)",
+  "var(--brand-contrast, #1e36f8)",
+  "#22c55e",
+  "#f59e0b",
+] as const;
 /** Referência para gráficos de funil (tokens sempre definidos no `:root` / AppContext). */
 export const FUNIL_VARS = ["--brand-action", "--brand-contrast", "--brand-success", "--brand-extra3"] as const;

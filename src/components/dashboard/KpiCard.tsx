@@ -44,15 +44,18 @@ export default function KpiCard({
     isInverso === true ? !up : isCusto ? !up : up;
   const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
 
-  const barColor = brand.useBrand ? resolveWhitelabelAccentCss(accentVar) : accentColor;
+  /** Sem `accentVar`: barra/ícone seguem `accentColor` (ex.: GGR verde/vermelho, margem âmbar). */
+  const useBrandToken = brand.useBrand && accentVar != null && accentVar !== "";
+  const tokenOrAccent = useBrandToken ? resolveWhitelabelAccentCss(accentVar) : accentColor;
+  const barColor = tokenOrAccent;
   const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
-  const iconBoxBg = brand.useBrand
-    ? `color-mix(in srgb, ${resolveWhitelabelAccentCss(accentVar)} 10%, transparent)`
+  const iconBoxBg = useBrandToken
+    ? `color-mix(in srgb, ${tokenOrAccent} 10%, transparent)`
     : `${accentColor}18`;
-  const iconBoxBorder = brand.useBrand
-    ? `1px solid color-mix(in srgb, ${resolveWhitelabelAccentCss(accentVar)} 22%, transparent)`
+  const iconBoxBorder = useBrandToken
+    ? `1px solid color-mix(in srgb, ${tokenOrAccent} 22%, transparent)`
     : `1px solid ${accentColor}35`;
-  const iconBoxColor = brand.useBrand ? resolveWhitelabelAccentCss(accentVar) : accentColor;
+  const iconBoxColor = tokenOrAccent;
 
   return (
     <div
