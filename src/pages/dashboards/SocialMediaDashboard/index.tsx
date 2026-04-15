@@ -1307,7 +1307,10 @@ export default function SocialMediaDashboard() {
                           const ggrDep = row.deposit_count > 0 ? ggr / row.deposit_count : null;
                           return (
                             <tr key={row.periodo} style={{ background: zebraStripe(i) }}>
-                              <td style={{ ...tdStyle, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", title: row.periodo }}>
+                              <td
+                                style={{ ...tdStyle, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}
+                                title={row.periodo}
+                              >
                                 {fmtPeriodoSerieCell(row.periodo, historico)}
                               </td>
                               <td style={tdNumStyle}>{fmtNum(row.visitas)}</td>
@@ -1456,31 +1459,31 @@ export default function SocialMediaDashboard() {
                     <tbody>
                       {(
                         [
-                          ["Visitas", (c) => fmtNum(c.visitas)],
-                          ["Registros", (c) => fmtNum(c.registros)],
-                          ["FTDs", (c) => fmtNum(c.ftds)],
-                          ["R$ FTDs", (c) => fmtBRL(c.ftd_total)],
-                          ["# Depósitos", (c) => fmtNum(c.deposit_count ?? 0)],
-                          ["R$ Depósitos", (c) => fmtBRL(c.deposit_total)],
-                          ["# Saques", (c) => fmtNum(c.withdrawal_count ?? 0)],
-                          ["R$ Saques", (c) => fmtBRL(c.withdrawal_total)],
+                          ["Visitas", (c: CampanhaPerfRow) => fmtNum(c.visitas)],
+                          ["Registros", (c: CampanhaPerfRow) => fmtNum(c.registros)],
+                          ["FTDs", (c: CampanhaPerfRow) => fmtNum(c.ftds)],
+                          ["R$ FTDs", (c: CampanhaPerfRow) => fmtBRL(c.ftd_total)],
+                          ["# Depósitos", (c: CampanhaPerfRow) => fmtNum(c.deposit_count ?? 0)],
+                          ["R$ Depósitos", (c: CampanhaPerfRow) => fmtBRL(c.deposit_total)],
+                          ["# Saques", (c: CampanhaPerfRow) => fmtNum(c.withdrawal_count ?? 0)],
+                          ["R$ Saques", (c: CampanhaPerfRow) => fmtBRL(c.withdrawal_total)],
                           [
                             "GGR",
-                            (c) => {
+                            (c: CampanhaPerfRow) => {
                               const g = ggrCampanha(c);
                               return g != null ? fmtBRL(g) : "—";
                             },
                           ],
                           [
                             "GGR por depositante",
-                            (c) => {
+                            (c: CampanhaPerfRow) => {
                               const n = c.deposit_count ?? 0;
                               const g = ggrCampanha(c);
                               if (g == null || n === 0) return "—";
                               return fmtBRL(g / n);
                             },
                           ],
-                        ] as const
+                        ] as [string, (c: CampanhaPerfRow) => string][]
                       ).map(([label, fmtCell], i) => (
                         <tr key={label} style={{ background: zebraStripe(i) }}>
                           <td style={{ ...tdStyle, fontWeight: 600 }}>{label}</td>
@@ -1691,7 +1694,10 @@ export default function SocialMediaDashboard() {
                           const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
                           return (
                             <tr key={c.campanha_id} style={{ background: zebraStripe(i) }}>
-                              <td style={{ ...tdStyle, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", title: c.campanha_nome }}>
+                              <td
+                                style={{ ...tdStyle, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
+                                title={c.campanha_nome}
+                              >
                                 {c.campanha_nome}
                               </td>
                               <td style={tdNumStyle}>{fmtNum(c.visitas)}</td>
