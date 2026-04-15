@@ -3,10 +3,10 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
-import { SkeletonKpiCard, KpiCardDepositos } from "../../../components/dashboard";
+import { SectionTitle, SkeletonKpiCard, KpiCardDepositos } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
@@ -35,17 +35,6 @@ import {
   PiggyBank,
   Landmark,
 } from "lucide-react";
-
-// ─── BRAND COLORS (Brand Guide Spin Gaming) ───────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  ciano:    "#70cae4",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-} as const;
 
 // ─── CONSTANTES DE MÊS ────────────────────────────────────────────────────────
 const MES_INICIO = { ano: 2026, mes: 0 }; // Janeiro 2026 — dados de mídias começam aqui
@@ -257,7 +246,11 @@ function FunilSocialTresNiveis({
   const levels = 3;
   const H = stepH * levels;
   const widths = [1.0, 0.68, 0.38].map((f) => f * W);
-  const FUNIL_COLORS = [BRAND.roxo, BRAND.azul, BRAND.verde];
+  const FUNIL_COLORS = [
+    "var(--brand-action, #4a2082)",
+    "var(--brand-contrast, #1e36f8)",
+    BRAND.verde,
+  ];
   const steps = [
     { label: "Visitas", valor: visitas },
     { label: "Registros", valor: registros },
@@ -269,7 +262,11 @@ function FunilSocialTresNiveis({
 
   return (
     <div className="app-grid-2" style={{ gap: 20, alignItems: "center" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div
+        role="img"
+        aria-label={`Funil de conversão: ${fmtNum(visitas)} visitas, ${fmtNum(registros)} registros, ${fmtNum(ftds)} FTDs`}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxHeight: 280, display: "block" }} preserveAspectRatio="xMidYMid meet" aria-hidden>
           <defs>
             {steps.map((_, i) => (
@@ -377,7 +374,7 @@ function fmtPostPublicacao(publishedAt: string | null | undefined, dataFallback:
   if (dataFallback) {
     const d = new Date(`${dataFallback}T12:00:00`);
     if (!Number.isNaN(d.getTime())) {
-      return `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })} · só dia (sem hora no registo)`;
+      return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
     }
   }
   return "—";
@@ -439,46 +436,11 @@ function ordenarPostsRecentes(a: PostUnificado, b: PostUnificado): number {
   return b.date.localeCompare(a.date);
 }
 
-// ─── COMPONENTE: SECTION TITLE (padrão do Overview) ──────────────────────────
-function SectionTitle({
-  icon,
-  children,
-  sub,
-}: {
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  sub?: string;
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-      <span style={{
-        width: 28, height: 28, borderRadius: 8,
-        background: brand.primaryIconBg,
-        border: brand.primaryIconBorder,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: brand.primaryIconColor, flexShrink: 0,
-      }}>
-        {icon}
-      </span>
-      <span style={{
-        fontSize: 14, fontWeight: 800, color: brand.primary,
-        fontFamily: FONT_TITLE,
-        letterSpacing: "0.05em", textTransform: "uppercase" as const,
-      }}>
-        {children}
-      </span>
-      {sub && (
-        <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
-          {sub}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ─── KPI CARD (alinhado ao padrão do Overview) ───────────────────────────────
+/**
+ * KpiCard especializado para Mídias Sociais.
+ * Usa resolveWhitelabelAccentCss para tokens CSS vars dinâmicos.
+ * Interface difere do KpiCard compartilhado (components/dashboard/KpiCard).
+ */
 function KpiCard({
   label,
   valor,
@@ -496,11 +458,19 @@ function KpiCard({
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const resolved = brand.useBrand ? resolveWhitelabelAccentCss(accentVar) : accentCor;
-  const barColor = brand.useBrand ? resolved : accentCor;
-  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
-  const iconBoxBg = brand.useBrand ? `color-mix(in srgb, ${resolved} 10%, transparent)` : `${accentCor}20`;
-  const iconBoxBorder = brand.useBrand ? `1px solid color-mix(in srgb, ${resolved} 22%, transparent)` : `1px solid ${accentCor}40`;
+  const resolved =
+    brand.useBrand && accentVar != null && accentVar !== ""
+      ? resolveWhitelabelAccentCss(accentVar) ?? "var(--brand-action, #7c3aed)"
+      : accentCor;
+  const barBg = brand.useBrand
+    ? `linear-gradient(90deg, ${resolved}, transparent)`
+    : `linear-gradient(90deg, ${accentCor}, transparent)`;
+  const iconBoxBg = brand.useBrand
+    ? `color-mix(in srgb, ${resolved} 12%, transparent)`
+    : `${accentCor}20`;
+  const iconBoxBorder = brand.useBrand
+    ? "1px solid var(--brand-action-border)"
+    : `1px solid ${accentCor}40`;
   const iconBoxColor = brand.useBrand ? resolved : accentCor;
   return (
     <div style={{
@@ -1060,13 +1030,9 @@ export default function SocialMediaDashboard() {
                 cursor: "pointer",
                 fontFamily: FONT.body,
                 fontSize: 13,
-                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-                background: historico
-                  ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "rgba(124,58,237,0.15)"
-                  : "transparent",
-                color: historico ? brand.accent : t.textMuted,
+                border: historico ? `1px solid ${brand.primary}` : `1px solid ${t.cardBorder}`,
+                background: historico ? "var(--brand-action-12)" : "transparent",
+                color: historico ? brand.primary : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
@@ -1113,13 +1079,9 @@ export default function SocialMediaDashboard() {
                     padding: "10px 18px",
                     minHeight: 44,
                     borderRadius: 10,
-                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                    background: ativo
-                      ? brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                        : "rgba(124,58,237,0.15)"
-                      : (t.inputBg ?? t.cardBg),
-                    color: ativo ? brand.accent : t.textMuted,
+                    border: `1px solid ${ativo ? brand.primary : t.cardBorder}`,
+                    background: ativo ? "var(--brand-action-12)" : (t.inputBg ?? t.cardBg),
+                    color: ativo ? brand.primary : t.textMuted,
                     fontWeight: ativo ? 700 : 500,
                     fontSize: 13,
                     fontFamily: FONT.body,
@@ -1165,7 +1127,6 @@ export default function SocialMediaDashboard() {
                   <KpiCard
                     label="GGR"
                     valor={fmtBRL(consolidado.ggr)}
-                    accentVar="--brand-success"
                     accentCor={BRAND.verde}
                     icon={<TrendingUp size={15} aria-hidden />}
                     momComparativo={
@@ -1653,7 +1614,7 @@ export default function SocialMediaDashboard() {
               <KpiCard
                 label="Impressões totais"
                 valor={fmtNum(totais.impressoes)}
-                accentVar="--brand-success"
+                accentVar="--brand-contrast"
                 accentCor={BRAND.azul}
                 icon={<Sparkles size={15} aria-hidden />}
                 momComparativo={
@@ -1692,7 +1653,11 @@ export default function SocialMediaDashboard() {
               const stats  = cfg.stats(byCh);
               const engVal = calcEngBadge(byCh);
               return (
-                <div key={cfg.channel} style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, overflow: "hidden" }}>
+                <section
+                  key={cfg.channel}
+                  aria-label={`Métricas de ${cfg.nome}`}
+                  style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, background: brand.blockBg, overflow: "hidden" }}
+                >
                   <div style={{ height: 3, background: cfg.cor }} />
                   <div style={{ padding: "14px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${t.cardBorder}` }}>
@@ -1709,7 +1674,7 @@ export default function SocialMediaDashboard() {
                       </div>
                     ))}
                   </div>
-                </div>
+                </section>
               );
             })}
           </div>
@@ -1722,7 +1687,19 @@ export default function SocialMediaDashboard() {
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === formatos.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
                   <span style={{ color: t.textMuted, flex: 1 }}>{f.tipo}</span>
                   <div style={{ width: 90, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)", borderRadius: 3, height: 7, flexShrink: 0 }}>
-                    <div style={{ width: `${totalFormatos > 0 ? (f.total / totalFormatos) * 100 : 0}%`, height: 7, borderRadius: 3, background: [BRAND.roxo, BRAND.azul, BRAND.ciano, "#5a5678"][i % 4] }} />
+                    <div
+                      style={{
+                        width: `${totalFormatos > 0 ? (f.total / totalFormatos) * 100 : 0}%`,
+                        height: 7,
+                        borderRadius: 3,
+                        background: [
+                          "var(--brand-action, #4a2082)",
+                          "var(--brand-contrast, #1e36f8)",
+                          "var(--brand-icon-color)",
+                          "#6b7280",
+                        ][i % 4],
+                      }}
+                    />
                   </div>
                   <span style={{ fontWeight: 600, color: t.text, minWidth: 52, textAlign: "right" }}>{f.total} posts</span>
                 </div>
@@ -1743,15 +1720,20 @@ export default function SocialMediaDashboard() {
                   <div style={{
                     display: "flex",
                     gap: POST_GAP,
-                    transition: "transform .3s ease",
                   }}>
                     {posts.slice(carIdx, carIdx + CAR_WINDOW).map((p, i) => (
-                      <div key={`${carIdx}-${i}`} style={{
-                        flex: `0 0 ${POST_W}px`, borderRadius: 18,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
-                        overflow: "hidden",
-                      }}>
+                      <article
+                        key={`${carIdx}-${i}`}
+                        aria-label={`${p.canal} · ${p.tipo}`}
+                        style={{
+                          flex: `0 0 min(${POST_W}px, 85vw)`,
+                          minWidth: "min(520px, 85vw)",
+                          borderRadius: 18,
+                          border: `1px solid ${t.cardBorder}`,
+                          background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
+                          overflow: "hidden",
+                        }}
+                      >
                         <PostCarouselThumb p={p} />
                         <div style={{ padding: 24 }}>
                           <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 6, color: p.cor }}>
@@ -1782,7 +1764,7 @@ export default function SocialMediaDashboard() {
                             {p.stats.map((s, j) => <span key={j}>{s}</span>)}
                           </div>
                         </div>
-                      </div>
+                      </article>
                     ))}
                   </div>
                 </div>
@@ -1801,7 +1783,7 @@ export default function SocialMediaDashboard() {
                       transition: "opacity 0.15s",
                     }}
                   >
-                    ←
+                    <ChevronLeft size={14} aria-hidden="true" />
                   </button>
                   <button
                     type="button"
@@ -1817,7 +1799,7 @@ export default function SocialMediaDashboard() {
                       transition: "opacity 0.15s",
                     }}
                   >
-                    →
+                    <ChevronRight size={14} aria-hidden="true" />
                   </button>
                   <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
                     {posts.length > 0 ? `${carIdx + 1}–${Math.min(carIdx + CAR_WINDOW, posts.length)} / ${posts.length}` : "0 / 0"}
@@ -1837,7 +1819,7 @@ export default function SocialMediaDashboard() {
                             padding: 0,
                             border: "none",
                             borderRadius: 999,
-                            background: ativo ? brand.accent : t.cardBorder,
+                            background: ativo ? brand.primary : t.cardBorder,
                             cursor: "pointer",
                             transition: "all 0.2s",
                           }}
