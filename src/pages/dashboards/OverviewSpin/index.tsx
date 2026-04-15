@@ -59,20 +59,20 @@ const BRAND = {
 
 /** Paleta A/B — mesmo padrão do Comparativo de Funil (Conversão). */
 const COR_MESA_A = {
-  accent: "#7c3aed",
-  bg: "rgba(124,58,237,0.10)",
-  border: "rgba(124,58,237,0.35)",
+  accent: "var(--brand-action, #7c3aed)",
+  bg: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+  border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
 } as const;
 const COR_MESA_B = {
-  accent: "#1e36f8",
-  bg: "rgba(30,54,248,0.10)",
-  border: "rgba(30,54,248,0.35)",
+  accent: "var(--brand-contrast, #1e36f8)",
+  bg: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)",
+  border: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
 } as const;
 
 /** Zebras por coluna nas tabelas de mesa (A/B e Baccarat/Roleta) — alinhado a tokens de marca. */
-const ZEBRA_MESA_STRIPE_PRIMARY = "color-mix(in srgb, var(--brand-primary, #7c3aed) 6%, transparent)";
-const ZEBRA_MESA_STRIPE_ACCENT = "color-mix(in srgb, var(--brand-accent, #1e36f8) 6%, transparent)";
-const ZEBRA_MESA_STRIPE_SECONDARY = "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_PRIMARY = "color-mix(in srgb, var(--brand-action, #7c3aed) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_ACCENT = "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_SECONDARY = "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)";
 
 interface DailyRow {
   data: string;
@@ -932,9 +932,10 @@ function linhaComparativoJogoAgregadaMes(
   };
 }
 
-const COR_BLACKJACK = "var(--brand-primary, #7c3aed)";
-const COR_ROLETA = "var(--brand-success, #22c55e)";
-const COR_BACCARAT = "var(--brand-accent, #1e36f8)";
+/** Identidade visual do tipo de jogo — não segue a paleta da operadora. */
+const COR_BLACKJACK = "#22c55e";
+const COR_ROLETA = "#a78bfa";
+const COR_BACCARAT = "#70cae4";
 
 type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap" | "arpu";
 

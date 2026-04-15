@@ -299,7 +299,7 @@ export default function Home() {
   }
 
   const accentColor = useBrand ? "var(--brand-primary)" : BRAND.roxoVivo;
-  const cardBg = useBrand && operadoraBrand?.cor_background ? operadoraBrand.cor_background : t.cardBg;
+  const cardBg = useBrand && operadoraBrand?.brand_bg ? operadoraBrand.brand_bg : t.cardBg;
 
   const nomePerfil = perfilRow?.nome_artistico?.trim() || user.name;
   const welcomeAvatarLabel = perfilRow?.nome_artistico?.trim() || user.name || user.email || "?";

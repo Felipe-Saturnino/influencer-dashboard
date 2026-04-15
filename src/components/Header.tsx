@@ -104,7 +104,7 @@ export default function Header({ activePage, onNavigate, onLogout, showMenuButto
   };
 
   const headerBg =
-    user?.role === "operador" && operadoraBrand?.cor_background && t.isDark ? operadoraBrand.cor_background : t.headerBg;
+    user?.role === "operador" && operadoraBrand?.brand_bg && t.isDark ? operadoraBrand.brand_bg : t.headerBg;
 
   const triggerHot = open || hover;
 

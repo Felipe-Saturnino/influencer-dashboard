@@ -203,7 +203,7 @@ export default function Influencers() {
   const operadorasNoEscopo = operadorasList.filter((o) => podeVerOperadora(o.slug));
   /** Sem cor salva: omitir — `OperadoraTag` aplica `--brand-primary` via color-mix (não passar `var()` aqui: quebraria o sufixo `18` do componente). */
   const opsColorMap = Object.fromEntries(
-    operadorasList.map((o) => [o.slug, o.cor_primaria?.trim() || undefined])
+    operadorasList.map((o) => [o.slug, o.brand_action?.trim() || undefined])
   );
   const [loading,        setLoading]        = useState(true);
   const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar"; inf?: Influencer } | null>(null);
@@ -1007,7 +1007,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
                 const vinculo = influencer.operadoras?.find((o) => o.operadora_slug === op.slug);
                 const ativo = !!vinculo?.ativo;
                 const id = vinculo?.id_operadora;
-                const opColor = op.cor_primaria?.trim() || "var(--brand-primary, #7c3aed)";
+                const opColor = op.brand_action?.trim() || "var(--brand-action, #7c3aed)";
                 return (
                   <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `color-mix(in srgb, ${opColor} 40%, transparent)` : t.cardBorder}`, background: ativo ? `color-mix(in srgb, ${opColor} 12%, transparent)` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1336,7 +1336,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
               operadorasList.map((op) => {
                 const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
                 const ativo = st.ativo;
-                const opColor = op.cor_primaria?.trim() || "var(--brand-primary, #7c3aed)";
+                const opColor = op.brand_action?.trim() || "var(--brand-action, #7c3aed)";
                 return (
                   <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `color-mix(in srgb, ${opColor} 40%, transparent)` : t.cardBorder}`, background: ativo ? `color-mix(in srgb, ${opColor} 12%, transparent)` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? 12 : 0 }}>

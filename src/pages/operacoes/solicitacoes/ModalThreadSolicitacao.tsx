@@ -439,7 +439,7 @@ export function ModalThreadSolicitacao({
                     : `${nick} · ${labelTipoSolicitacao((cab as SolicitacaoCabecalhoDealer).tipo)}`}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 6 }}>
-                <OperadoraTag label={op?.nome ?? cab.operadora_slug} corPrimaria={op?.cor_primaria} />
+                <OperadoraTag label={op?.nome ?? cab.operadora_slug} corPrimaria={op?.brand_action} />
                 <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{tempoRelativo(cab.created_at)}</span>
               </div>
               <div style={{ marginTop: 8 }}>

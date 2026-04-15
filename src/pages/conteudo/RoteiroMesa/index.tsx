@@ -790,7 +790,7 @@ function CampanhaItem({ campanha, podeExcluir, onExcluir, dark, operadoraNome, o
 function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora }: {
   bloco: BlocoRoteiro; operadoraSlug: string | null;
   sugestoes: RoteiroSugestao[]; podeExcluir: boolean; podeCriar: boolean;
-  onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; cor_primaria?: string | null }[];
+  onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; brand_action?: string | null }[];
   podeVerOperadora: (slug: string) => boolean;
 }) {
   const { theme: t } = useApp();
@@ -834,7 +834,7 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
           sugestoes.map((s) => {
             const op = operadoraSlug === "todas" ? operadorasList.find((o) => o.slug === s.operadora_slug) : undefined;
             return (
-              <SugestaoItem key={s.id} sugestao={s} podeExcluir={podeExcluir} onExcluir={handleExcluir} dark={dark} operadoraNome={op?.nome} operadoraCor={op?.cor_primaria} />
+              <SugestaoItem key={s.id} sugestao={s} podeExcluir={podeExcluir} onExcluir={handleExcluir} dark={dark} operadoraNome={op?.nome} operadoraCor={op?.brand_action} />
             );
           })
         )}
@@ -849,7 +849,7 @@ function BlocoSugestoes({ bloco, operadoraSlug, sugestoes, podeExcluir, podeCria
 function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCarregar, dark, operadorasList, podeVerOperadora, onThreadCampanhaCriada }: {
   operadoraSlug: string | null; campanhas: RoteiroCampanha[];
   podeExcluir: boolean; podeCriar: boolean;
-  onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; cor_primaria?: string | null }[];
+  onCarregar: () => void; dark: boolean; operadorasList: { slug: string; nome: string; brand_action?: string | null }[];
   podeVerOperadora: (slug: string) => boolean;
   onThreadCampanhaCriada?: (solicitacaoId: string) => void;
 }) {
@@ -905,7 +905,7 @@ function BlocoCampanhas({ operadoraSlug, campanhas, podeExcluir, podeCriar, onCa
                 onExcluir={handleExcluir}
                 dark={dark}
                 operadoraNome={op?.nome}
-                operadoraCor={op?.cor_primaria}
+                operadoraCor={op?.brand_action}
               />
             );
           })
@@ -938,7 +938,7 @@ export default function RoteiroMesa() {
   const permCentral = usePermission("central_notificacoes");
   const dark = isDark ?? false;
 
-  const [operadorasList,  setOperadorasList]  = useState<{ slug: string; nome: string; cor_primaria?: string | null }[]>([]);
+  const [operadorasList,  setOperadorasList]  = useState<{ slug: string; nome: string; brand_action?: string | null }[]>([]);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
   const [filtroJogo,      setFiltroJogo]      = useState<JogoTag | "todos">("todos");
   const [filtroTipo,      setFiltroTipo]      = useState<TipoSugestao | "todos">("todos");
@@ -979,7 +979,7 @@ export default function RoteiroMesa() {
   useEffect(() => { carregarDados(); }, [carregarDados]);
 
   useEffect(() => {
-    supabase.from("operadoras").select("slug, nome, cor_primaria").eq("ativo", true).order("nome")
+    supabase.from("operadoras").select("slug, nome, brand_action").eq("ativo", true).order("nome")
       .then(({ data }) => setOperadorasList(data ?? []));
   }, []);
 

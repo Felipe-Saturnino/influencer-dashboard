@@ -30,4 +30,5 @@ export type StatusLabel = (typeof STATUS_ORDEM)[number];
 export const MSG_SEM_DADOS_FILTRO = "Sem dados para o filtro selecionado";
 
 export const FUNIL_COLORS = ["#4a2082", "#1e36f8", "#70cae4", "#22c55e"] as const;
-export const FUNIL_VARS = ["--brand-extra1", "--brand-extra2", "--brand-extra3", "--brand-extra4"] as const;
+/** Referência para gráficos de funil (tokens sempre definidos no `:root` / AppContext). */
+export const FUNIL_VARS = ["--brand-action", "--brand-contrast", "--brand-success", "--brand-extra3"] as const;

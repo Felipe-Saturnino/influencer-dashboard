@@ -8,6 +8,7 @@ import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { SkeletonKpiCard } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
+import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
   BarChart2,
@@ -252,7 +253,7 @@ function KpiCard({
   label,
   valor,
   momComparativo,
-  accentVar: _accentVar,
+  accentVar,
   accentCor,
   icon,
 }: {
@@ -265,11 +266,12 @@ function KpiCard({
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentCor;
+  const resolved = brand.useBrand ? resolveWhitelabelAccentCss(accentVar) : accentCor;
+  const barColor = brand.useBrand ? resolved : accentCor;
   const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
-  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentCor}20`;
-  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentCor}40`;
-  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentCor;
+  const iconBoxBg = brand.useBrand ? `color-mix(in srgb, ${resolved} 10%, transparent)` : `${accentCor}20`;
+  const iconBoxBorder = brand.useBrand ? `1px solid color-mix(in srgb, ${resolved} 22%, transparent)` : `1px solid ${accentCor}40`;
+  const iconBoxColor = brand.useBrand ? resolved : accentCor;
   return (
     <div style={{
       borderRadius: 14,

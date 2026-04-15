@@ -9,7 +9,7 @@ import type { ThreadSolicitacaoOrigem } from "./ModalThreadSolicitacao";
 export interface OperadoraTagDados {
   slug: string;
   nome: string;
-  cor_primaria?: string | null;
+  brand_action?: string | null;
 }
 
 interface PendenciaItem {

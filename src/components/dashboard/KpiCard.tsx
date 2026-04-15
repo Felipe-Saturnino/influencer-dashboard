@@ -1,13 +1,14 @@
 import { useApp } from "../../context/AppContext";
 import { FONT } from "../../constants/theme";
 import { fmtBRL } from "../../lib/dashboardHelpers";
+import { resolveWhitelabelAccentCss } from "../../lib/whitelabelAccent";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
 
 interface Props {
   label: string;
   value: string;
   icon: React.ReactNode;
-  /** Token de marca (referência de design); o render usa `accentColor` quando não é operador whitelabel. */
+  /** Token CSS (ex: `--brand-action`); no whitelabel, mapeado para contraste/ação conforme tabela. */
   accentVar?: string;
   accentColor: string;
   atual: number;
@@ -23,7 +24,7 @@ export default function KpiCard({
   label,
   value,
   icon,
-  accentVar: _accentVar,
+  accentVar,
   accentColor,
   atual,
   anterior,
@@ -43,12 +44,15 @@ export default function KpiCard({
     isInverso === true ? !up : isCusto ? !up : up;
   const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
 
-  // Secundária: faixa e ícones dos KPIs
-  const barColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
+  const barColor = brand.useBrand ? resolveWhitelabelAccentCss(accentVar) : accentColor;
   const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
-  const iconBoxBg = brand.useBrand ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)" : `${accentColor}18`;
-  const iconBoxBorder = brand.useBrand ? "1px solid color-mix(in srgb, var(--brand-secondary) 22%, transparent)" : `1px solid ${accentColor}35`;
-  const iconBoxColor = brand.useBrand ? "var(--brand-secondary)" : accentColor;
+  const iconBoxBg = brand.useBrand
+    ? `color-mix(in srgb, ${resolveWhitelabelAccentCss(accentVar)} 10%, transparent)`
+    : `${accentColor}18`;
+  const iconBoxBorder = brand.useBrand
+    ? `1px solid color-mix(in srgb, ${resolveWhitelabelAccentCss(accentVar)} 22%, transparent)`
+    : `1px solid ${accentColor}35`;
+  const iconBoxColor = brand.useBrand ? resolveWhitelabelAccentCss(accentVar) : accentColor;
 
   return (
     <div

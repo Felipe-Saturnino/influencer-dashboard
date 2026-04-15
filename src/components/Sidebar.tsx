@@ -86,7 +86,7 @@ export default function Sidebar({ activePage, onNavigate, isDrawer = false, draw
     fontFamily: "var(--brand-fontFamily, 'Inter', sans-serif)",
   };
 
-  const sidebarBg = operadoraBrand?.cor_background ?? t.sidebar;
+  const sidebarBg = operadoraBrand?.brand_bg ?? t.sidebar;
 
   const asideClass = ["app-sidebar-fill", isDrawer ? "app-sidebar-drawer" : "", isDrawer && drawerOpen ? "app-sidebar-drawer-open" : ""]
     .filter(Boolean)
