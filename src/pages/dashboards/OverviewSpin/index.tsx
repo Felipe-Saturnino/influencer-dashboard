@@ -121,6 +121,8 @@ type UapPorJogoPlanRow = { data: string; jogo: string; uap: number | null };
 interface PorTabelaRow {
   data_relatorio: string;
   nome_tabela: string;
+  /** Valor de `relatorio_por_tabela.mesa` — usado para classificar jogo quando o prefixo de `operadoras.nome` ≠ texto em `nome_tabela`. */
+  mesaRaw?: string;
   operadora: string | null;
   ggr_d1: number | null;
   turnover_d1: number | null;
@@ -192,9 +194,11 @@ function mapPorTabelaV2(r: {
     r.operadora_slug != null && String(r.operadora_slug).trim().length > 0
       ? String(r.operadora_slug).trim()
       : slugFromRelatorioOperadora(r.operadora);
+  const mesaRaw = String(r.mesa ?? "").trim();
   return {
     data_relatorio: r.dia,
     nome_tabela: nome,
+    ...(mesaRaw.length > 0 ? { mesaRaw } : {}),
     operadora: slug,
     ggr_d1: r.ggr != null ? Number(r.ggr) : null,
     turnover_d1: r.turnover != null ? Number(r.turnover) : null,
@@ -246,6 +250,10 @@ function nomeMesaParaExibicao(
   slug: string,
   operadorasList: { slug: string; nome: string }[],
 ): string {
+  if (row.mesaRaw != null && row.mesaRaw.length > 0) {
+    const fromCol = canonicalMesasSpinFromMesaColumn(row.mesaRaw);
+    if (fromCol != null) return fromCol;
+  }
   const canon = canonicalMesaCasaAposta(row.nome_tabela);
   if (canon != null) return canon;
 
@@ -262,6 +270,19 @@ function nomeMesaParaExibicao(
 }
 
 const LABELS_BLACKJACK_COMPARATIVO = new Set(["Blackjack 1", "Blackjack 2", "Blackjack VIP"]);
+
+/** Alinha ao inventário canónico de mesas Spin (coluna `mesa` no banco). */
+function canonicalMesasSpinFromMesaColumn(mesa: string): string | null {
+  const m = mesa.trim();
+  if (!m) return null;
+  const ml = m.toLowerCase();
+  if (ml === "blackjack 1") return "Blackjack 1";
+  if (ml === "blackjack 2") return "Blackjack 2";
+  if (ml === "blackjack vip") return "Blackjack VIP";
+  if (ml === "roleta" || ml === "roulette") return "Roleta";
+  if (ml === "speed baccarat") return "Speed Baccarat";
+  return null;
+}
 
 function labelMesaCda(
   row: PorTabelaRow,
@@ -382,6 +403,63 @@ function pickPorTabelaOperDayShift(
     }
   }
   return best;
+}
+
+function filterBucketExcludingClaimed(
+  bucket: PorTabelaGameBucket,
+  claimed: Set<PorTabelaRow>,
+): PorTabelaGameBucket {
+  const ex = (rows: PorTabelaRow[]) => rows.filter((r) => !claimed.has(r));
+  return { bj: ex(bucket.bj), roleta: ex(bucket.roleta), baccarat: ex(bucket.baccarat) };
+}
+
+/**
+ * Bucket por data operacional para o Comparativo de jogo: aplica o shift global e, nos dias em que o
+ * resumo diário tem apostas mas o bucket global fica vazio (mistura de lotes com `dia` civil certo só
+ * em alguns dias vs resto do mês deslocado ±1), usa `relatorio_por_tabela` com `dia` = essa data e
+ * remove essas linhas dos outros dias para não duplicar.
+ */
+function buildComparativoGameBucketsByDate(
+  dailyRows: DailyRow[],
+  porRows: PorTabelaRow[],
+  operadorasListFmt: { slug: string; nome: string }[],
+): Map<string, PorTabelaGameBucket> {
+  const globalShift = pickPorTabelaOperDayShift(dailyRows, porRows, operadorasListFmt);
+  const byGlobal = buildPorTabelaGameBuckets(porRows, operadorasListFmt, globalShift);
+  const civilClaimed = new Set<PorTabelaRow>();
+  const civilDays = new Set<string>();
+
+  for (const dr of dailyRows) {
+    const D = normalizeMesasYmd(dr.data);
+    const b = byGlobal.get(D) ?? { bj: [], roleta: [], baccarat: [] };
+    const sumG = sumComparableGameBets(b);
+    const off = dr.bets != null ? Number(dr.bets) : null;
+    if (sumG > 0 || off == null || off <= 0) continue;
+
+    const civilRows = porRows.filter((r) => normalizeMesasYmd(r.data_relatorio) === D);
+    if (civilRows.length === 0) continue;
+
+    const tmp = buildPorTabelaGameBuckets(civilRows, operadorasListFmt, 0);
+    const bCivil = tmp.get(D) ?? { bj: [], roleta: [], baccarat: [] };
+    if (sumComparableGameBets(bCivil) <= 0) continue;
+
+    civilDays.add(D);
+    for (const r of civilRows) civilClaimed.add(r);
+  }
+
+  const out = new Map<string, PorTabelaGameBucket>();
+  for (const dr of dailyRows) {
+    const D = normalizeMesasYmd(dr.data);
+    if (civilDays.has(D)) {
+      const civilRows = porRows.filter((r) => normalizeMesasYmd(r.data_relatorio) === D);
+      const tmp = buildPorTabelaGameBuckets(civilRows, operadorasListFmt, 0);
+      out.set(D, tmp.get(D) ?? { bj: [], roleta: [], baccarat: [] });
+    } else {
+      const b = byGlobal.get(D) ?? { bj: [], roleta: [], baccarat: [] };
+      out.set(D, filterBucketExcludingClaimed(b, civilClaimed));
+    }
+  }
+  return out;
 }
 
 /** `YYYY-MM` → ex.: Jan/2026, Dez/2025 (coluna Mês na visão histórico). */
@@ -1679,8 +1757,7 @@ export default function OverviewSpin() {
           ),
         );
     }
-    const shiftOper = pickPorTabelaOperDayShift(dailyData, porTabelaFiltradas, operadorasListFmt);
-    const byDate = buildPorTabelaGameBuckets(porTabelaFiltradas, operadorasListFmt, shiftOper);
+    const byDate = buildComparativoGameBucketsByDate(dailyData, porTabelaFiltradas, operadorasListFmt);
 
     const uapByDateJogo = new Map<string, Partial<Record<"blackjack" | "roleta" | "baccarat", number>>>();
     for (const r of uapPorJogoRows) {
