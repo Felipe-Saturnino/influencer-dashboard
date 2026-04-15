@@ -54,6 +54,9 @@ const MESES_PT = [
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
 ];
 
+/** Rótulo curto para período mensal (ex.: Abr/2026), alinhado ao modo histórico. */
+const MESES_ABREV = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"] as const;
+
 function getMesesDisponiveis() {
   const hoje = new Date();
   const lista: { ano: number; mes: number; label: string }[] = [];
@@ -219,13 +222,13 @@ function fmtPctCamp(v: number | null): string {
   return v === null ? "—" : `${v.toFixed(1)}%`;
 }
 
-/** Rótulo de período na série do RPC (dia a dia ou mês a mês). */
+/** Rótulo de período na série do RPC (dia a dia ou mês a mês no formato Abr/2026). */
 function fmtPeriodoSerieCell(periodo: string, historico: boolean): string {
   const base = periodo.length === 7 ? `${periodo}-01` : periodo.slice(0, 10);
   const d = new Date(base.includes("T") ? base : `${base}T12:00:00`);
   if (Number.isNaN(d.getTime())) return periodo;
   if (historico) {
-    return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+    return `${MESES_ABREV[d.getMonth()]}/${d.getFullYear()}`;
   }
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
@@ -582,7 +585,7 @@ export default function SocialMediaDashboard() {
   const { start, end, startPrev, endPrev } = useMemo(() => {
     if (historico) {
       return {
-        start: "2020-01-01",
+        start: `${MES_INICIO.ano}-${String(MES_INICIO.mes + 1).padStart(2, "0")}-01`,
         end: hoje.toISOString().slice(0, 10),
         startPrev: null as string | null,
         endPrev: null as string | null,
@@ -605,7 +608,9 @@ export default function SocialMediaDashboard() {
     };
   }, [historico, mesSelecionado]);
 
-  const label = historico ? "Todo o período" : (mesSelecionado?.label ?? "");
+  const label = historico
+    ? `${MESES_ABREV[MES_INICIO.mes]}/${MES_INICIO.ano} – ${MESES_ABREV[hoje.getMonth()]}/${hoje.getFullYear()}`
+    : (mesSelecionado?.label ?? "");
 
   // ── Estados de dados ──────────────────────────────────────────────────────────
   const [carIdx,   setCarIdx]   = useState(0);
@@ -852,6 +857,12 @@ export default function SocialMediaDashboard() {
 
   const campanhaA = campanhasPerf.find((c) => c.campanha_id === compCampA) ?? null;
   const campanhaB = campanhasPerf.find((c) => c.campanha_id === compCampB) ?? null;
+
+  /** Detalhamento: mais recente primeiro (dia ou mês). */
+  const serieFunilOrdenado = useMemo(
+    () => [...serieFunil].sort((a, b) => b.periodo.localeCompare(a.periodo)),
+    [serieFunil]
+  );
 
   const lastVal = (arr: KpiDaily[], f: keyof KpiDaily): number | null => {
     const v = arr[arr.length - 1]?.[f]; return v != null ? Number(v) : null;
@@ -1218,7 +1229,6 @@ export default function SocialMediaDashboard() {
                   <KpiCardDepositos
                     label="Saques"
                     icon={<Landmark size={16} aria-hidden />}
-                    invertMom
                     atual={{ qtd: consolidado.withdrawal_count, valor: consolidado.withdrawal_total }}
                     anterior={{ qtd: consolidadoPrev.withdrawal_count, valor: consolidadoPrev.withdrawal_total }}
                     isHistorico={historico}
@@ -1229,11 +1239,11 @@ export default function SocialMediaDashboard() {
               <div style={card}>
                 <SectionTitle
                   icon={<Calendar size={14} aria-hidden />}
-                  sub={historico ? "agregação mensal" : "dia a dia"}
+                  sub={historico ? "Mês a mês (Jan/2026 em diante)" : "dia a dia"}
                 >
                   Detalhamento {historico ? "mensal" : "diário"}
                 </SectionTitle>
-                {serieFunil.length > 0 ? (
+                {serieFunilOrdenado.length > 0 ? (
                   <div className="app-table-wrap">
                     <table
                       style={{
@@ -1256,12 +1266,11 @@ export default function SocialMediaDashboard() {
                             { label: "Registros", scope: "col" as const, align: "right" as const },
                             { label: "FTDs", scope: "col" as const, align: "right" as const },
                             { label: "R$ FTD", scope: "col" as const, align: "right" as const },
-                            { label: "# Dep.", scope: "col" as const, align: "right" as const },
-                            { label: "R$ Dep.", scope: "col" as const, align: "right" as const },
-                            { label: "# Saq.", scope: "col" as const, align: "right" as const },
-                            { label: "R$ Saq.", scope: "col" as const, align: "right" as const },
+                            { label: "Quantidade de depósitos", scope: "col" as const, align: "right" as const },
+                            { label: "Valor de depósitos (R$)", scope: "col" as const, align: "right" as const },
+                            { label: "Quantidade de saques", scope: "col" as const, align: "right" as const },
+                            { label: "Valor de saques (R$)", scope: "col" as const, align: "right" as const },
                             { label: "GGR", scope: "col" as const, align: "right" as const },
-                            { label: "GGR/dep.", scope: "col" as const, align: "right" as const },
                           ].map((h) => (
                             <th key={h.label} scope={h.scope} style={{ ...thStyle, textAlign: h.align }}>
                               {h.label}
@@ -1270,9 +1279,8 @@ export default function SocialMediaDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {serieFunil.map((row, i) => {
+                        {serieFunilOrdenado.map((row, i) => {
                           const ggr = (row.deposit_total ?? 0) - (row.withdrawal_total ?? 0);
-                          const ggrDep = row.deposit_count > 0 ? ggr / row.deposit_count : null;
                           return (
                             <tr key={row.periodo} style={{ background: zebraStripe(i) }}>
                               <td
@@ -1284,13 +1292,12 @@ export default function SocialMediaDashboard() {
                               <td style={tdNumStyle}>{fmtNum(row.visitas)}</td>
                               <td style={tdNumStyle}>{fmtNum(row.registros)}</td>
                               <td style={tdNumStyle}>{fmtNum(row.ftds)}</td>
-                              <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtBRL(row.ftd_total)}</td>
+                              <td style={tdNumStyle}>{fmtBRL(row.ftd_total)}</td>
                               <td style={tdNumStyle}>{fmtNum(row.deposit_count)}</td>
                               <td style={tdNumStyle}>{fmtBRL(row.deposit_total)}</td>
                               <td style={tdNumStyle}>{fmtNum(row.withdrawal_count)}</td>
                               <td style={tdNumStyle}>{fmtBRL(row.withdrawal_total)}</td>
                               <td style={{ ...tdNumStyle, color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(ggr)}</td>
-                              <td style={tdNumStyle}>{ggrDep != null ? fmtBRL(ggrDep) : "—"}</td>
                             </tr>
                           );
                         })}
@@ -1358,8 +1365,8 @@ export default function SocialMediaDashboard() {
                                 </td>
                                 <td style={tdNumStyle}>{fmtNum(c.visitas)}</td>
                                 <td style={tdNumStyle}>{fmtNum(c.registros)}</td>
-                                <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
-                                <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtBRL(c.ftd_total)}</td>
+                                <td style={tdNumStyle}>{fmtNum(c.ftds)}</td>
+                                <td style={tdNumStyle}>{fmtBRL(c.ftd_total)}</td>
                                 <td style={tdNumStyle}>{fmtNum(c.deposit_count ?? 0)}</td>
                                 <td style={tdNumStyle}>{fmtBRL(c.deposit_total)}</td>
                                 <td style={tdNumStyle}>{fmtNum(c.withdrawal_count ?? 0)}</td>
