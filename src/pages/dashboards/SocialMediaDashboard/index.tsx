@@ -151,11 +151,13 @@ function totaisFromKpiRows(kpiData: KpiDaily[]) {
     const v = arr[arr.length - 1]?.[f];
     return v != null ? Number(v) : null;
   };
+  const postagens = kpiData.reduce((a, r) => a + (Number(r.posts_published) || 0), 0);
   return {
     seguidores: Object.values(byCh).reduce((a, arr) => a + (last(arr, "followers") || 0), 0),
     impressoes: Object.values(byCh).reduce((a, arr) => a + sum(arr, "impressions"), 0),
     engagements: Object.values(byCh).reduce((a, arr) => a + sum(arr, "engagements"), 0),
     link_clicks: Object.values(byCh).reduce((a, arr) => a + sum(arr, "link_clicks"), 0),
+    postagens,
     byChannel: byCh,
   };
 }
@@ -226,11 +228,6 @@ function fmtPeriodoSerieCell(periodo: string, historico: boolean): string {
     return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
   }
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-}
-
-function ggrCampanha(c: CampanhaPerfRow | null): number | null {
-  if (!c) return null;
-  return (Number(c.deposit_total) || 0) - (Number(c.withdrawal_total) || 0);
 }
 
 /** Funil 3 níveis: visitas → registros → FTDs (campanhas / consolidado). */
@@ -839,6 +836,7 @@ export default function SocialMediaDashboard() {
   const cmpImpressoes = !historico ? fmtComparativoMoM(totais.impressoes, totaisAntMom.impressoes) : null;
   const cmpEngMedio =
     !historico && engMedio != null && engMedioAnt != null ? fmtComparativoMoM(engMedio, engMedioAnt) : null;
+  const cmpPostagens = !historico ? fmtComparativoMoM(totais.postagens, totaisAntMom.postagens) : null;
 
   const consolidado = useMemo(() => sumCampanhasPerf(campanhasPerf), [campanhasPerf]);
   const consolidadoPrev = useMemo(() => sumCampanhasPerf(campanhasPerfPrev), [campanhasPerfPrev]);
@@ -1153,11 +1151,11 @@ export default function SocialMediaDashboard() {
                   icon={<LayoutDashboard size={14} aria-hidden />}
                   sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
                 >
-                  KPIs consolidados — UTMs mapeadas
+                  KPIs consolidados
                 </SectionTitle>
-                <div className="app-grid-kpi-6">
+                <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
                   <KpiCard
-                    label="GGR (depósitos − saques)"
+                    label="GGR"
                     valor={fmtBRL(consolidado.ggr)}
                     accentVar="--brand-success"
                     accentCor={BRAND.verde}
@@ -1173,8 +1171,8 @@ export default function SocialMediaDashboard() {
                     }
                   />
                   <KpiCard
-                    label="Registros (qtd · volume)"
-                    valor={`${fmtNum(consolidado.registros)} · —`}
+                    label="Registros"
+                    valor={fmtNum(consolidado.registros)}
                     accentVar="--brand-contrast"
                     accentCor={BRAND.roxoVivo}
                     icon={<UserPlus size={15} aria-hidden />}
@@ -1189,7 +1187,7 @@ export default function SocialMediaDashboard() {
                     }
                   />
                   <KpiCard
-                    label="FTDs (qtd · volume)"
+                    label="FTDs"
                     valor={`${fmtNum(consolidado.ftds)} · ${fmtBRL(consolidado.ftd_total)}`}
                     accentVar="--brand-success"
                     accentCor={BRAND.verde}
@@ -1204,8 +1202,10 @@ export default function SocialMediaDashboard() {
                         : null
                     }
                   />
+                </div>
+                <div className="app-grid-kpi-3">
                   <KpiCard
-                    label="Depósitos (qtd · volume)"
+                    label="Depósitos"
                     valor={`${fmtNum(consolidado.deposit_count)} · ${fmtBRL(consolidado.deposit_total)}`}
                     accentVar="--brand-action"
                     accentCor={BRAND.azul}
@@ -1221,7 +1221,7 @@ export default function SocialMediaDashboard() {
                     }
                   />
                   <KpiCard
-                    label="Saques (qtd · volume)"
+                    label="Saques"
                     valor={`${fmtNum(consolidado.withdrawal_count)} · ${fmtBRL(consolidado.withdrawal_total)}`}
                     accentVar="--brand-action"
                     accentCor={BRAND.ciano}
@@ -1237,7 +1237,7 @@ export default function SocialMediaDashboard() {
                     }
                   />
                   <KpiCard
-                    label="GGR por depositante"
+                    label="GGR por Jogador"
                     valor={ggrPorJogador != null ? fmtBRL(ggrPorJogador) : "—"}
                     accentVar="--brand-contrast"
                     accentCor={BRAND.roxo}
@@ -1334,163 +1334,77 @@ export default function SocialMediaDashboard() {
               </div>
 
               <div style={card}>
-                <SectionTitle icon={<Target size={14} aria-hidden />} sub="Métricas lado a lado">
+                <SectionTitle icon={<Target size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
                   Comparativo de campanha
                 </SectionTitle>
-                <div className="app-conversao-vs-row" style={{ marginBottom: 14 }}>
-                  <select
-                    aria-label="Campanha A no comparativo de campanha"
-                    value={compCampA}
-                    onChange={(e) => setCompCampA(e.target.value)}
-                    style={{
-                      ...selectCampStyle,
-                      borderColor: compCampA ? COR_FUNIL_A.border : undefined,
-                    }}
-                  >
-                    <option value="">— Selecione —</option>
-                    {campanhasPerf
-                      .filter((c) => c.campanha_id !== compCampB)
-                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
-                      .map((c) => (
-                        <option key={c.campanha_id} value={c.campanha_id}>
-                          {c.campanha_nome}
-                        </option>
-                      ))}
-                  </select>
-                  <div
-                    style={{
-                      padding: "5px 12px",
-                      borderRadius: 999,
-                      border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
-                      background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-                      fontSize: 12,
-                      fontWeight: 800,
-                      color: "var(--brand-action, #7c3aed)",
-                      fontFamily: FONT.body,
-                      letterSpacing: "0.05em",
-                      textAlign: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    VS
+                {campanhasPerf.length > 0 ? (
+                  <div className="app-table-wrap">
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "separate",
+                        borderSpacing: 0,
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        border: `1px solid ${t.cardBorder}`,
+                      }}
+                    >
+                      <caption style={{ display: "none" }}>
+                        Performance por campanha com UTMs mapeadas no período selecionado.
+                      </caption>
+                      <thead>
+                        <tr>
+                          {[
+                            { label: "Campanha", align: "left" as const },
+                            { label: "Acessos", align: "right" as const },
+                            { label: "Registros", align: "right" as const },
+                            { label: "# FTDs", align: "right" as const },
+                            { label: "R$ FTDs", align: "right" as const },
+                            { label: "# Depósitos", align: "right" as const },
+                            { label: "R$ Depósitos", align: "right" as const },
+                            { label: "# Saques", align: "right" as const },
+                            { label: "R$ Saques", align: "right" as const },
+                            { label: "R$ GGR", align: "right" as const },
+                          ].map((h) => (
+                            <th key={h.label} scope="col" style={{ ...thStyle, textAlign: h.align }}>
+                              {h.label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...campanhasPerf]
+                          .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
+                          .map((c, i) => {
+                            const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
+                            return (
+                              <tr key={c.campanha_id} style={{ background: zebraStripe(i) }}>
+                                <td
+                                  style={{ ...tdStyle, fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
+                                  title={c.campanha_nome}
+                                >
+                                  {c.campanha_nome}
+                                </td>
+                                <td style={tdNumStyle}>{fmtNum(c.visitas)}</td>
+                                <td style={tdNumStyle}>{fmtNum(c.registros)}</td>
+                                <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
+                                <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtBRL(c.ftd_total)}</td>
+                                <td style={tdNumStyle}>{fmtNum(c.deposit_count ?? 0)}</td>
+                                <td style={tdNumStyle}>{fmtBRL(c.deposit_total)}</td>
+                                <td style={tdNumStyle}>{fmtNum(c.withdrawal_count ?? 0)}</td>
+                                <td style={tdNumStyle}>{fmtBRL(c.withdrawal_total)}</td>
+                                <td style={{ ...tdNumStyle, color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(ggr)}</td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
                   </div>
-                  <select
-                    aria-label="Campanha B no comparativo de campanha"
-                    value={compCampB}
-                    onChange={(e) => setCompCampB(e.target.value)}
-                    style={{
-                      ...selectCampStyle,
-                      borderColor: compCampB ? COR_FUNIL_B.border : undefined,
-                    }}
-                  >
-                    <option value="">— Selecione —</option>
-                    {campanhasPerf
-                      .filter((c) => c.campanha_id !== compCampA)
-                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
-                      .map((c) => (
-                        <option key={c.campanha_id} value={c.campanha_id}>
-                          {c.campanha_nome}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                {(campanhaA || campanhaB) && (
-                  <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
-                    <div
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: 10,
-                        background: COR_FUNIL_A.step,
-                        border: `1px solid ${COR_FUNIL_A.border}`,
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: COR_FUNIL_A.accent,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      {campanhaA?.campanha_nome ?? "—"}
-                    </div>
-                    <div
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: 10,
-                        background: COR_FUNIL_B.step,
-                        border: `1px solid ${COR_FUNIL_B.border}`,
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: COR_FUNIL_B.accent,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      {campanhaB?.campanha_nome ?? "—"}
-                    </div>
+                ) : (
+                  <div style={{ color: t.textMuted, fontSize: 12, padding: "24px 0", fontFamily: FONT.body }}>
+                    Nenhuma campanha com UTMs mapeadas no período. Cadastre campanhas e mapeie UTMs na Gestão de Links.
                   </div>
                 )}
-                <div className="app-table-wrap">
-                  <table
-                    style={{
-                      width: "100%",
-                      borderCollapse: "separate",
-                      borderSpacing: 0,
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      border: `1px solid ${t.cardBorder}`,
-                    }}
-                  >
-                    <caption style={{ display: "none" }}>Comparativo de métricas entre duas campanhas selecionadas.</caption>
-                    <thead>
-                      <tr>
-                        <th scope="col" style={thStyle}>
-                          Métrica
-                        </th>
-                        <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
-                          Campanha A
-                        </th>
-                        <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
-                          Campanha B
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(
-                        [
-                          ["Visitas", (c: CampanhaPerfRow) => fmtNum(c.visitas)],
-                          ["Registros", (c: CampanhaPerfRow) => fmtNum(c.registros)],
-                          ["FTDs", (c: CampanhaPerfRow) => fmtNum(c.ftds)],
-                          ["R$ FTDs", (c: CampanhaPerfRow) => fmtBRL(c.ftd_total)],
-                          ["# Depósitos", (c: CampanhaPerfRow) => fmtNum(c.deposit_count ?? 0)],
-                          ["R$ Depósitos", (c: CampanhaPerfRow) => fmtBRL(c.deposit_total)],
-                          ["# Saques", (c: CampanhaPerfRow) => fmtNum(c.withdrawal_count ?? 0)],
-                          ["R$ Saques", (c: CampanhaPerfRow) => fmtBRL(c.withdrawal_total)],
-                          [
-                            "GGR",
-                            (c: CampanhaPerfRow) => {
-                              const g = ggrCampanha(c);
-                              return g != null ? fmtBRL(g) : "—";
-                            },
-                          ],
-                          [
-                            "GGR por depositante",
-                            (c: CampanhaPerfRow) => {
-                              const n = c.deposit_count ?? 0;
-                              const g = ggrCampanha(c);
-                              if (g == null || n === 0) return "—";
-                              return fmtBRL(g / n);
-                            },
-                          ],
-                        ] as [string, (c: CampanhaPerfRow) => string][]
-                      ).map(([label, fmtCell], i) => (
-                        <tr key={label} style={{ background: zebraStripe(i) }}>
-                          <td style={{ ...tdStyle, fontWeight: 600 }}>{label}</td>
-                          <td style={tdNumStyle}>{campanhaA ? fmtCell(campanhaA) : "—"}</td>
-                          <td style={tdNumStyle}>{campanhaB ? fmtCell(campanhaB) : "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </>
           )}
@@ -1678,7 +1592,6 @@ export default function SocialMediaDashboard() {
                             { label: "Registro → FTD", align: "right" as const },
                             { label: "Visita → FTD", align: "right" as const },
                             { label: "# FTDs", align: "right" as const },
-                            { label: "R$ GGR", align: "right" as const },
                           ].map((h) => (
                             <th key={h.label} scope="col" style={{ ...thStyle, textAlign: h.align }}>
                               {h.label}
@@ -1687,27 +1600,21 @@ export default function SocialMediaDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {campanhasPerf.map((c, i) => {
-                          const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
-                          return (
-                            <tr key={c.campanha_id} style={{ background: zebraStripe(i) }}>
-                              <td
-                                style={{ ...tdStyle, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
-                                title={c.campanha_nome}
-                              >
-                                {c.campanha_nome}
-                              </td>
-                              <td style={tdNumStyle}>{fmtNum(c.visitas)}</td>
-                              <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.registros, c.visitas))}</td>
-                              <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.registros))}</td>
-                              <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.visitas))}</td>
-                              <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
-                              <td style={{ ...tdNumStyle, color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
-                                {fmtBRL(ggr)}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {campanhasPerf.map((c, i) => (
+                          <tr key={c.campanha_id} style={{ background: zebraStripe(i) }}>
+                            <td
+                              style={{ ...tdStyle, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
+                              title={c.campanha_nome}
+                            >
+                              {c.campanha_nome}
+                            </td>
+                            <td style={tdNumStyle}>{fmtNum(c.visitas)}</td>
+                            <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.registros, c.visitas))}</td>
+                            <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.registros))}</td>
+                            <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.visitas))}</td>
+                            <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -1730,7 +1637,23 @@ export default function SocialMediaDashboard() {
             >
               KPIs de Mídias Sociais
             </SectionTitle>
-            <div className="app-grid-kpi-3">
+            <div className="app-grid-kpi-4">
+              <KpiCard
+                label="Postagens"
+                valor={fmtNum(totais.postagens)}
+                accentVar="--brand-contrast"
+                accentCor={BRAND.roxoVivo}
+                icon={<Bookmark size={15} aria-hidden />}
+                momComparativo={
+                  cmpPostagens
+                    ? {
+                        pctLabel: cmpPostagens.pctLabel,
+                        up: cmpPostagens.up,
+                        refLine: `vs ${fmtNum(totaisAntMom.postagens)} · mesmo período mês ant.`,
+                      }
+                    : null
+                }
+              />
               <KpiCard
                 label="Seguidores totais"
                 valor={fmtNum(totais.seguidores)}
