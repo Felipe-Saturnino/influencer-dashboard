@@ -1026,13 +1026,18 @@ export default function SocialMediaDashboard() {
                 alignItems: "center",
                 gap: 6,
                 padding: "6px 14px",
+                minHeight: 44,
                 borderRadius: 999,
                 cursor: "pointer",
                 fontFamily: FONT.body,
                 fontSize: 13,
-                border: historico ? `1px solid ${brand.primary}` : `1px solid ${t.cardBorder}`,
-                background: historico ? "var(--brand-action-12)" : "transparent",
-                color: historico ? brand.primary : t.textMuted,
+                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+                background: historico
+                  ? brand.useBrand
+                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                    : "rgba(124,58,237,0.15)"
+                  : "transparent",
+                color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
               }}
@@ -1079,9 +1084,13 @@ export default function SocialMediaDashboard() {
                     padding: "10px 18px",
                     minHeight: 44,
                     borderRadius: 10,
-                    border: `1px solid ${ativo ? brand.primary : t.cardBorder}`,
-                    background: ativo ? "var(--brand-action-12)" : (t.inputBg ?? t.cardBg),
-                    color: ativo ? brand.primary : t.textMuted,
+                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                    background: ativo
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                        : "rgba(124,58,237,0.15)"
+                      : (t.inputBg ?? t.cardBg),
+                    color: ativo ? brand.accent : t.textMuted,
                     fontWeight: ativo ? 700 : 500,
                     fontSize: 13,
                     fontFamily: FONT.body,
@@ -1819,7 +1828,7 @@ export default function SocialMediaDashboard() {
                             padding: 0,
                             border: "none",
                             borderRadius: 999,
-                            background: ativo ? brand.primary : t.cardBorder,
+                            background: ativo ? brand.accent : t.cardBorder,
                             cursor: "pointer",
                             transition: "all 0.2s",
                           }}
