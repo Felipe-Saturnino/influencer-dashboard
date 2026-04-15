@@ -848,11 +848,8 @@ export default function SocialMediaDashboard() {
   const cmpGgr = !historico ? fmtComparativoMoM(consolidado.ggr, consolidadoPrev.ggr) : null;
   const cmpRegs = !historico ? fmtComparativoMoM(consolidado.registros, consolidadoPrev.registros) : null;
   const cmpFtds = !historico ? fmtComparativoMoM(consolidado.ftds, consolidadoPrev.ftds) : null;
-  const cmpFtdVol = !historico ? fmtComparativoMoM(consolidado.ftd_total, consolidadoPrev.ftd_total) : null;
   const cmpDepN = !historico ? fmtComparativoMoM(consolidado.deposit_count, consolidadoPrev.deposit_count) : null;
-  const cmpDepV = !historico ? fmtComparativoMoM(consolidado.deposit_total, consolidadoPrev.deposit_total) : null;
   const cmpWdN = !historico ? fmtComparativoMoM(consolidado.withdrawal_count, consolidadoPrev.withdrawal_count) : null;
-  const cmpWdV = !historico ? fmtComparativoMoM(consolidado.withdrawal_total, consolidadoPrev.withdrawal_total) : null;
   const cmpGgrJog =
     !historico && ggrPorJogador != null && ggrPorJogadorPrev != null
       ? fmtComparativoMoM(ggrPorJogador, ggrPorJogadorPrev)
