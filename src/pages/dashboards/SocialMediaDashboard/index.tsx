@@ -6,7 +6,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
-import { SkeletonKpiCard } from "../../../components/dashboard";
+import { SkeletonKpiCard, KpiCardDepositos } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
@@ -845,9 +845,6 @@ export default function SocialMediaDashboard() {
 
   const cmpGgr = !historico ? fmtComparativoMoM(consolidado.ggr, consolidadoPrev.ggr) : null;
   const cmpRegs = !historico ? fmtComparativoMoM(consolidado.registros, consolidadoPrev.registros) : null;
-  const cmpFtds = !historico ? fmtComparativoMoM(consolidado.ftds, consolidadoPrev.ftds) : null;
-  const cmpDepN = !historico ? fmtComparativoMoM(consolidado.deposit_count, consolidadoPrev.deposit_count) : null;
-  const cmpWdN = !historico ? fmtComparativoMoM(consolidado.withdrawal_count, consolidadoPrev.withdrawal_count) : null;
   const cmpGgrJog =
     !historico && ggrPorJogador != null && ggrPorJogadorPrev != null
       ? fmtComparativoMoM(ggrPorJogador, ggrPorJogadorPrev)
@@ -1187,56 +1184,6 @@ export default function SocialMediaDashboard() {
                     }
                   />
                   <KpiCard
-                    label="FTDs"
-                    valor={`${fmtNum(consolidado.ftds)} · ${fmtBRL(consolidado.ftd_total)}`}
-                    accentVar="--brand-success"
-                    accentCor={BRAND.verde}
-                    icon={<Target size={15} aria-hidden />}
-                    momComparativo={
-                      cmpFtds
-                        ? {
-                            pctLabel: cmpFtds.pctLabel,
-                            up: cmpFtds.up,
-                            refLine: `vs ${fmtNum(consolidadoPrev.ftds)} · ${fmtBRL(consolidadoPrev.ftd_total)} · mês ant.`,
-                          }
-                        : null
-                    }
-                  />
-                </div>
-                <div className="app-grid-kpi-3">
-                  <KpiCard
-                    label="Depósitos"
-                    valor={`${fmtNum(consolidado.deposit_count)} · ${fmtBRL(consolidado.deposit_total)}`}
-                    accentVar="--brand-action"
-                    accentCor={BRAND.azul}
-                    icon={<PiggyBank size={15} aria-hidden />}
-                    momComparativo={
-                      cmpDepN
-                        ? {
-                            pctLabel: cmpDepN.pctLabel,
-                            up: cmpDepN.up,
-                            refLine: `vs ${fmtNum(consolidadoPrev.deposit_count)} · ${fmtBRL(consolidadoPrev.deposit_total)} · mês ant.`,
-                          }
-                        : null
-                    }
-                  />
-                  <KpiCard
-                    label="Saques"
-                    valor={`${fmtNum(consolidado.withdrawal_count)} · ${fmtBRL(consolidado.withdrawal_total)}`}
-                    accentVar="--brand-action"
-                    accentCor={BRAND.ciano}
-                    icon={<Landmark size={15} aria-hidden />}
-                    momComparativo={
-                      cmpWdN
-                        ? {
-                            pctLabel: cmpWdN.pctLabel,
-                            up: cmpWdN.up,
-                            refLine: `vs ${fmtNum(consolidadoPrev.withdrawal_count)} · ${fmtBRL(consolidadoPrev.withdrawal_total)} · mês ant.`,
-                          }
-                        : null
-                    }
-                  />
-                  <KpiCard
                     label="GGR por Jogador"
                     valor={ggrPorJogador != null ? fmtBRL(ggrPorJogador) : "—"}
                     accentVar="--brand-contrast"
@@ -1251,6 +1198,30 @@ export default function SocialMediaDashboard() {
                           }
                         : null
                     }
+                  />
+                </div>
+                <div className="app-grid-kpi-3">
+                  <KpiCardDepositos
+                    label="FTDs"
+                    icon={<Target size={16} aria-hidden />}
+                    atual={{ qtd: consolidado.ftds, valor: consolidado.ftd_total }}
+                    anterior={{ qtd: consolidadoPrev.ftds, valor: consolidadoPrev.ftd_total }}
+                    isHistorico={historico}
+                  />
+                  <KpiCardDepositos
+                    label="Depósitos"
+                    icon={<PiggyBank size={16} aria-hidden />}
+                    atual={{ qtd: consolidado.deposit_count, valor: consolidado.deposit_total }}
+                    anterior={{ qtd: consolidadoPrev.deposit_count, valor: consolidadoPrev.deposit_total }}
+                    isHistorico={historico}
+                  />
+                  <KpiCardDepositos
+                    label="Saques"
+                    icon={<Landmark size={16} aria-hidden />}
+                    invertMom
+                    atual={{ qtd: consolidado.withdrawal_count, valor: consolidado.withdrawal_total }}
+                    anterior={{ qtd: consolidadoPrev.withdrawal_count, valor: consolidadoPrev.withdrawal_total }}
+                    isHistorico={historico}
                   />
                 </div>
               </div>
@@ -1589,9 +1560,10 @@ export default function SocialMediaDashboard() {
                             { label: "Campanha", align: "left" as const },
                             { label: "Visitas", align: "right" as const },
                             { label: "Visita → Registro", align: "right" as const },
+                            { label: "Registros", align: "right" as const },
                             { label: "Registro → FTD", align: "right" as const },
+                            { label: "FTDs", align: "right" as const },
                             { label: "Visita → FTD", align: "right" as const },
-                            { label: "# FTDs", align: "right" as const },
                           ].map((h) => (
                             <th key={h.label} scope="col" style={{ ...thStyle, textAlign: h.align }}>
                               {h.label}
@@ -1610,9 +1582,10 @@ export default function SocialMediaDashboard() {
                             </td>
                             <td style={tdNumStyle}>{fmtNum(c.visitas)}</td>
                             <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.registros, c.visitas))}</td>
+                            <td style={tdNumStyle}>{fmtNum(c.registros)}</td>
                             <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.registros))}</td>
-                            <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.visitas))}</td>
                             <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
+                            <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.visitas))}</td>
                           </tr>
                         ))}
                       </tbody>

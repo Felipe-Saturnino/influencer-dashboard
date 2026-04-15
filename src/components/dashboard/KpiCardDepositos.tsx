@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { PlayCircle } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { FONT } from "../../constants/theme";
@@ -9,12 +10,21 @@ interface Props {
   atual: { qtd: number; valor: number };
   anterior: { qtd: number; valor: number };
   isHistorico?: boolean;
+  /** Padrão: Depósitos (Overview Streamers). */
+  label?: string;
+  /** Padrão: ícone PlayCircle. */
+  icon?: ReactNode;
+  /** Quando true, aumento no período usa cor de alerta (ex.: saques). */
+  invertMom?: boolean;
 }
 
 export default function KpiCardDepositos({
   atual,
   anterior,
   isHistorico,
+  label = "Depósitos",
+  icon,
+  invertMom = false,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -32,6 +42,8 @@ export default function KpiCardDepositos({
   const pctVal =
     anterior.valor !== 0 ? (diffVal / Math.abs(anterior.valor)) * 100 : null;
   const upVal = diffVal >= 0;
+  const momQtdUpColor = invertMom ? !upQtd : upQtd;
+  const momValUpColor = invertMom ? !upVal : upVal;
 
   return (
     <div
@@ -65,7 +77,7 @@ export default function KpiCardDepositos({
               color: iconBoxColor,
             }}
           >
-            <PlayCircle size={16} aria-hidden />
+            {icon ?? <PlayCircle size={16} aria-hidden />}
           </span>
           <span
             style={{
@@ -77,7 +89,7 @@ export default function KpiCardDepositos({
               textTransform: "uppercase" as const,
             }}
           >
-            Depósitos
+            {label}
           </span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -109,7 +121,7 @@ export default function KpiCardDepositos({
               <div style={{ fontSize: 10, fontFamily: FONT.body }}>
                 <span
                   style={{
-                    color: upQtd ? "var(--brand-success)" : "var(--brand-danger)",
+                    color: momQtdUpColor ? "var(--brand-success)" : "var(--brand-danger)",
                     fontWeight: 700,
                   }}
                 >
@@ -147,7 +159,7 @@ export default function KpiCardDepositos({
               <div style={{ fontSize: 10, fontFamily: FONT.body }}>
                 <span
                   style={{
-                    color: upVal ? "var(--brand-success)" : "var(--brand-danger)",
+                    color: momValUpColor ? "var(--brand-success)" : "var(--brand-danger)",
                     fontWeight: 700,
                   }}
                 >
