@@ -5,7 +5,14 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
+import {
+  getThStyle,
+  getThStyleBrandAction,
+  getTdStyle,
+  getTdNumStyle,
+  zebraStripe,
+  zebraStripeBrandContrast,
+} from "../../../lib/tableStyles";
 import { SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
@@ -1013,7 +1020,10 @@ export default function SocialMediaDashboard() {
     display: "flex", alignItems: "center", justifyContent: "center",
   });
 
-  const thStyle = getThStyle(t);
+  const thStyle = brand.useBrand ? getThStyleBrandAction(t) : getThStyle(t);
+  const zebraTabelaMidias = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
+  const corFunilComparativoCampanhaA = brand.useBrand ? COR_FUNIL_B : COR_FUNIL_A;
+  const corFunilComparativoCampanhaB = COR_FUNIL_B;
   const tdStyle = getTdStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
   const tdNumStyle = getTdNumStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
   const selectCampStyle: React.CSSProperties = {
@@ -1085,8 +1095,8 @@ export default function SocialMediaDashboard() {
         <div
           style={{
             borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
+            border: `1px solid ${t.cardBorder}`,
+            background: brand.blockBg,
             padding: "12px 20px",
           }}
         >
@@ -1346,7 +1356,7 @@ export default function SocialMediaDashboard() {
                         {serieFunilOrdenado.map((row, i) => {
                           const ggr = (row.deposit_total ?? 0) - (row.withdrawal_total ?? 0);
                           return (
-                            <tr key={row.periodo} style={{ background: zebraStripe(i) }}>
+                            <tr key={row.periodo} style={{ background: zebraTabelaMidias(i) }}>
                               <td
                                 style={{ ...tdStyle, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}
                                 title={row.periodo}
@@ -1365,54 +1375,6 @@ export default function SocialMediaDashboard() {
                             </tr>
                           );
                         })}
-                        {(() => {
-                          const tot = serieFunilOrdenado.reduce(
-                            (a, row) => ({
-                              visitas: a.visitas + (Number(row.visitas) || 0),
-                              registros: a.registros + (Number(row.registros) || 0),
-                              ftds: a.ftds + (Number(row.ftds) || 0),
-                              ftd_total: a.ftd_total + (Number(row.ftd_total) || 0),
-                              deposit_count: a.deposit_count + (Number(row.deposit_count) || 0),
-                              deposit_total: a.deposit_total + (Number(row.deposit_total) || 0),
-                              withdrawal_count: a.withdrawal_count + (Number(row.withdrawal_count) || 0),
-                              withdrawal_total: a.withdrawal_total + (Number(row.withdrawal_total) || 0),
-                            }),
-                            {
-                              visitas: 0,
-                              registros: 0,
-                              ftds: 0,
-                              ftd_total: 0,
-                              deposit_count: 0,
-                              deposit_total: 0,
-                              withdrawal_count: 0,
-                              withdrawal_total: 0,
-                            },
-                          );
-                          const ggrTot = tot.deposit_total - tot.withdrawal_total;
-                          return (
-                            <tr
-                              key="total-serie-funil"
-                              style={{
-                                background: TOTAL_ROW_BG,
-                                fontWeight: 700,
-                                borderTop: `2px solid ${t.cardBorder}`,
-                              }}
-                            >
-                              <td style={{ ...tdStyle, fontWeight: 700, color: brand.primary }}>Total</td>
-                              <td style={tdNumStyle}>{fmtNum(tot.visitas)}</td>
-                              <td style={tdNumStyle}>{fmtNum(tot.registros)}</td>
-                              <td style={tdNumStyle}>{fmtNum(tot.ftds)}</td>
-                              <td style={tdNumStyle}>{fmtBRL(tot.ftd_total)}</td>
-                              <td style={tdNumStyle}>{fmtNum(tot.deposit_count)}</td>
-                              <td style={tdNumStyle}>{fmtBRL(tot.deposit_total)}</td>
-                              <td style={tdNumStyle}>{fmtNum(tot.withdrawal_count)}</td>
-                              <td style={tdNumStyle}>{fmtBRL(tot.withdrawal_total)}</td>
-                              <td style={{ ...tdNumStyle, color: ggrTot >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
-                                {fmtBRL(ggrTot)}
-                              </td>
-                            </tr>
-                          );
-                        })()}
                       </tbody>
                     </table>
                   </div>
@@ -1468,7 +1430,7 @@ export default function SocialMediaDashboard() {
                         {campanhasCmpOrdenadas.map((c, i) => {
                             const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
                             return (
-                              <tr key={c.campanha_id} style={{ background: zebraStripe(i) }}>
+                              <tr key={c.campanha_id} style={{ background: zebraTabelaMidias(i) }}>
                                 <td
                                   style={{ ...tdStyle, fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
                                   title={c.campanha_nome}
@@ -1533,7 +1495,7 @@ export default function SocialMediaDashboard() {
                     onChange={(e) => setCompCampA(e.target.value)}
                     style={{
                       ...selectCampStyle,
-                      borderColor: compCampA ? COR_FUNIL_A.border : undefined,
+                      borderColor: compCampA ? corFunilComparativoCampanhaA.border : undefined,
                     }}
                   >
                     <option value="">— Selecione —</option>
@@ -1550,11 +1512,13 @@ export default function SocialMediaDashboard() {
                     style={{
                       padding: "5px 12px",
                       borderRadius: 999,
-                      border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
-                      background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+                      border: brand.useBrand
+                        ? `1px solid ${COR_FUNIL_B.border}`
+                        : "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
+                      background: brand.useBrand ? COR_FUNIL_B.step : "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
                       fontSize: 12,
                       fontWeight: 800,
-                      color: "var(--brand-action, #7c3aed)",
+                      color: brand.useBrand ? COR_FUNIL_B.accent : "var(--brand-action, #7c3aed)",
                       fontFamily: FONT.body,
                       letterSpacing: "0.05em",
                       textAlign: "center",
@@ -1569,7 +1533,7 @@ export default function SocialMediaDashboard() {
                     onChange={(e) => setCompCampB(e.target.value)}
                     style={{
                       ...selectCampStyle,
-                      borderColor: compCampB ? COR_FUNIL_B.border : undefined,
+                      borderColor: compCampB ? corFunilComparativoCampanhaB.border : undefined,
                     }}
                   >
                     <option value="">— Selecione —</option>
@@ -1589,12 +1553,12 @@ export default function SocialMediaDashboard() {
                       style={{
                         padding: "6px 12px",
                         borderRadius: 10,
-                        background: COR_FUNIL_A.step,
-                        border: `1px solid ${COR_FUNIL_A.border}`,
+                        background: corFunilComparativoCampanhaA.step,
+                        border: `1px solid ${corFunilComparativoCampanhaA.border}`,
                         textAlign: "center",
                         fontSize: 13,
                         fontWeight: 700,
-                        color: COR_FUNIL_A.accent,
+                        color: corFunilComparativoCampanhaA.accent,
                         fontFamily: FONT.body,
                       }}
                     >
@@ -1604,12 +1568,12 @@ export default function SocialMediaDashboard() {
                       style={{
                         padding: "6px 12px",
                         borderRadius: 10,
-                        background: COR_FUNIL_B.step,
-                        border: `1px solid ${COR_FUNIL_B.border}`,
+                        background: corFunilComparativoCampanhaB.step,
+                        border: `1px solid ${corFunilComparativoCampanhaB.border}`,
                         textAlign: "center",
                         fontSize: 13,
                         fontWeight: 700,
-                        color: COR_FUNIL_B.accent,
+                        color: corFunilComparativoCampanhaB.accent,
                         fontFamily: FONT.body,
                       }}
                     >
@@ -1624,9 +1588,9 @@ export default function SocialMediaDashboard() {
                         visitas={campanhaA.visitas}
                         registros={campanhaA.registros}
                         ftds={campanhaA.ftds}
-                        accentBorder={COR_FUNIL_A.border}
-                        accentStep={COR_FUNIL_A.step}
-                        accentColor={COR_FUNIL_A.accent}
+                        accentBorder={corFunilComparativoCampanhaA.border}
+                        accentStep={corFunilComparativoCampanhaA.step}
+                        accentColor={corFunilComparativoCampanhaA.accent}
                         idPrefix="ca"
                       />
                     ) : (
@@ -1642,9 +1606,9 @@ export default function SocialMediaDashboard() {
                         visitas={campanhaB.visitas}
                         registros={campanhaB.registros}
                         ftds={campanhaB.ftds}
-                        accentBorder={COR_FUNIL_B.border}
-                        accentStep={COR_FUNIL_B.step}
-                        accentColor={COR_FUNIL_B.accent}
+                        accentBorder={corFunilComparativoCampanhaB.border}
+                        accentStep={corFunilComparativoCampanhaB.step}
+                        accentColor={corFunilComparativoCampanhaB.accent}
                         idPrefix="cb"
                       />
                     ) : (
@@ -1694,7 +1658,7 @@ export default function SocialMediaDashboard() {
                       </thead>
                       <tbody>
                         {campanhasTaxasOrdenadas.map((c, i) => (
-                          <tr key={c.campanha_id} style={{ background: zebraStripe(i) }}>
+                          <tr key={c.campanha_id} style={{ background: zebraTabelaMidias(i) }}>
                             <td
                               style={{ ...tdStyle, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
                               title={c.campanha_nome}
@@ -1869,18 +1833,33 @@ export default function SocialMediaDashboard() {
             <SectionTitle icon={<Video size={14} aria-hidden />}>Postagens recentes</SectionTitle>
             {posts.length > 0 ? (
               <>
-                <div style={{ overflow: "hidden" }}>
-                  <div style={{
-                    display: "flex",
-                    gap: POST_GAP,
-                  }}>
+                <div
+                  style={{
+                    overflowX: "auto",
+                    overflowY: "hidden",
+                    width: "100%",
+                    WebkitOverflowScrolling: "touch",
+                    overscrollBehaviorX: "contain",
+                    paddingBottom: 6,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: POST_GAP,
+                      width: "100%",
+                      minWidth: 0,
+                      paddingRight: POST_GAP,
+                    }}
+                  >
                     {posts.slice(carIdx, carIdx + CAR_WINDOW).map((p, i) => (
                       <article
                         key={`${carIdx}-${i}`}
                         aria-label={`${p.canal} · ${p.tipo}`}
                         style={{
-                          flex: `0 0 min(${POST_W}px, 85vw)`,
-                          minWidth: "min(520px, 85vw)",
+                          flex: "1 1 0",
+                          minWidth: 180,
+                          maxWidth: POST_W,
                           borderRadius: 18,
                           border: `1px solid ${t.cardBorder}`,
                           background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",

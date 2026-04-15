@@ -26,7 +26,13 @@ import {
   RateCard,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
-import { getThStyle, getTdStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
+import {
+  getThStyle,
+  getThStyleBrandAction,
+  getTdStyle,
+  zebraStripe,
+  zebraStripeBrandContrast,
+} from "../../../lib/tableStyles";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -925,13 +931,15 @@ export default function DashboardOverviewInfluencer() {
     ? brand.primaryTransparentBg
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)";
   const kpiChartPillActiveColor = brand.useBrand ? brand.primary : "var(--brand-action, #7c3aed)";
+  const tabelaGraficoToggleActiveBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
+    : "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)";
+  const tabelaGraficoToggleActiveColor = brand.useBrand ? brand.accent : "var(--brand-action, #7c3aed)";
   const card: React.CSSProperties = { background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
-  const thStyle = getThStyle(t, {
-    fontSize: 11,
-    letterSpacing: "0.08em",
-    fontWeight: 700,
-  });
+  const thDetalhamentoExtra = { fontSize: 11, letterSpacing: "0.08em", fontWeight: 700 } as const;
+  const thStyle = brand.useBrand ? getThStyleBrandAction(t, thDetalhamentoExtra) : getThStyle(t, thDetalhamentoExtra);
+  const zebraTabelaDetalhamento = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
   const tdStyle = getTdStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
 
   const isPrimeiro = idxMes === 0;
@@ -982,12 +990,12 @@ export default function DashboardOverviewInfluencer() {
         </div>
       </div>
 
-      {/* ─── BLOCO 1: Filtros — primária transparente ───────────────────────────── */}
+      {/* ─── BLOCO 1: Filtros (mesmo padrão visual dos cards) ───────────────────── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -1368,8 +1376,8 @@ export default function DashboardOverviewInfluencer() {
                       fontSize: 11,
                       fontWeight: modoVisualizacaoComparativo === modo ? 700 : 400,
                       background:
-                        modoVisualizacaoComparativo === modo ? kpiChartPillActiveBg : "transparent",
-                      color: modoVisualizacaoComparativo === modo ? kpiChartPillActiveColor : t.textMuted,
+                        modoVisualizacaoComparativo === modo ? tabelaGraficoToggleActiveBg : "transparent",
+                      color: modoVisualizacaoComparativo === modo ? tabelaGraficoToggleActiveColor : t.textMuted,
                       transition: "all 0.15s",
                       borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
                     }}
@@ -1426,7 +1434,7 @@ export default function DashboardOverviewInfluencer() {
                 </thead>
                 <tbody>
                   {diasDataComparativoExibicao.map((d, i) => (
-                    <tr key={d.data} style={{ background: zebraStripe(i) }}>
+                    <tr key={d.data} style={{ background: zebraTabelaDetalhamento(i) }}>
                       <td style={tdStyle}>
                         {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
                       </td>
@@ -1452,67 +1460,6 @@ export default function DashboardOverviewInfluencer() {
                       </td>
                     </tr>
                   ))}
-                  {diasData.length > 0 &&
-                    (() => {
-                      const tot = diasDataComparativoExibicao.reduce(
-                        (acc, d) => ({
-                          duracao: acc.duracao + d.duracao,
-                          acessos: acc.acessos + d.acessos,
-                          registros: acc.registros + d.registros,
-                          ftd_count: acc.ftd_count + d.ftd_count,
-                          ftd_total: acc.ftd_total + d.ftd_total,
-                          deposit_count: acc.deposit_count + d.deposit_count,
-                          deposit_total: acc.deposit_total + d.deposit_total,
-                          withdrawal_count: acc.withdrawal_count + d.withdrawal_count,
-                          withdrawal_total: acc.withdrawal_total + d.withdrawal_total,
-                          ggr: acc.ggr + d.ggr,
-                        }),
-                        {
-                          duracao: 0,
-                          acessos: 0,
-                          registros: 0,
-                          ftd_count: 0,
-                          ftd_total: 0,
-                          deposit_count: 0,
-                          deposit_total: 0,
-                          withdrawal_count: 0,
-                          withdrawal_total: 0,
-                          ggr: 0,
-                        },
-                      );
-                      return (
-                        <tr
-                          key="total"
-                          style={{
-                            background: TOTAL_ROW_BG,
-                            fontWeight: 700,
-                            borderTop: `2px solid ${t.cardBorder}`,
-                          }}
-                        >
-                          <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>Total</td>
-                          <td style={tdStyle}>{tot.duracao > 0 ? fmtHorasTotal(tot.duracao) : "—"}</td>
-                          <td style={tdStyle}>—</td>
-                          <td style={tdStyle}>—</td>
-                          <td style={tdStyle}>{cel(tot.acessos)}</td>
-                          <td style={tdStyle}>{cel(tot.registros)}</td>
-                          <td style={tdStyle}>{cel(tot.ftd_count)}</td>
-                          <td style={tdStyle}>{cel(tot.ftd_total, true)}</td>
-                          <td style={tdStyle}>{cel(tot.deposit_count)}</td>
-                          <td style={tdStyle}>{cel(tot.deposit_total, true)}</td>
-                          <td style={tdStyle}>{cel(tot.withdrawal_count)}</td>
-                          <td style={tdStyle}>{cel(tot.withdrawal_total, true)}</td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              color: tot.ggr > 0 ? BRAND.verde : tot.ggr < 0 ? BRAND.vermelho : t.text,
-                              fontWeight: 700,
-                            }}
-                          >
-                            {cel(tot.ggr, true)}
-                          </td>
-                        </tr>
-                      );
-                    })()}
                 </tbody>
               </table>
             </div>

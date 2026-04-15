@@ -11,7 +11,14 @@ import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib
 import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
+import {
+  getThStyle,
+  getThStyleBrandAction,
+  getTdStyle,
+  getTdNumStyle,
+  zebraStripe,
+  zebraStripeBrandContrast,
+} from "../../../lib/tableStyles";
 import {
   ArrowUpDown,
   Calendar,
@@ -1895,9 +1902,9 @@ export default function OverviewSpin() {
     () =>
       brand.useBrand
         ? {
-            accent: "var(--brand-action)",
-            bg: "color-mix(in srgb, var(--brand-action) 10%, transparent)",
-            border: "color-mix(in srgb, var(--brand-action) 35%, transparent)",
+            accent: "var(--brand-contrast)",
+            bg: "color-mix(in srgb, var(--brand-contrast) 10%, transparent)",
+            border: "color-mix(in srgb, var(--brand-contrast) 35%, transparent)",
           }
         : COR_MESA_A,
     [brand.useBrand],
@@ -1939,7 +1946,55 @@ export default function OverviewSpin() {
     boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.35)" : "0 4px 20px rgba(0,0,0,0.08)",
   };
 
-  const thStyle = getThStyle(t, { verticalAlign: "middle" });
+  const thStyle = brand.useBrand
+    ? getThStyleBrandAction(t, { verticalAlign: "middle" })
+    : getThStyle(t, { verticalAlign: "middle" });
+  const zebraTabelaSpin = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
+  const stripeMesaLinha = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)"
+    : null;
+
+  const tituloMesaDadosContrasteOp: React.CSSProperties = {
+    marginBottom: 10,
+    padding: "6px 10px",
+    borderRadius: 10,
+    background: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)",
+    border: "1px solid color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: 700,
+    color: "var(--brand-contrast, #1e36f8)",
+    fontFamily: FONT.body,
+  };
+  const tituloMesaSpeedBaccarat: React.CSSProperties = brand.useBrand
+    ? tituloMesaDadosContrasteOp
+    : {
+        marginBottom: 10,
+        padding: "6px 10px",
+        borderRadius: 10,
+        background: "color-mix(in srgb, var(--brand-icon-color, #70cae4) 10%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--brand-icon-color, #70cae4) 35%, transparent)",
+        textAlign: "center",
+        fontSize: 13,
+        fontWeight: 700,
+        color: "var(--brand-icon-color, #70cae4)",
+        fontFamily: FONT.body,
+      };
+  const tituloMesaRoleta: React.CSSProperties = brand.useBrand
+    ? tituloMesaDadosContrasteOp
+    : {
+        marginBottom: 10,
+        padding: "6px 10px",
+        borderRadius: 10,
+        background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)",
+        textAlign: "center",
+        fontSize: 13,
+        fontWeight: 700,
+        color: "var(--brand-action, #7c3aed)",
+        fontFamily: FONT.body,
+      };
+
   const tdStyle = getTdStyle(t, { padding: "9px 12px" });
   const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
 
@@ -2048,7 +2103,9 @@ export default function OverviewSpin() {
     position: "sticky",
     left: 0,
     zIndex: 3,
-    background: brand.blockBg,
+    background: brand.useBrand
+      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)"
+      : brand.blockBg,
     boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
   };
 
@@ -2058,8 +2115,9 @@ export default function OverviewSpin() {
     left: 0,
     zIndex: 2,
     fontWeight: 600,
-    background:
-      i % 2 === 1
+    background: brand.useBrand
+      ? zebraStripeBrandContrast(i)
+      : i % 2 === 1
         ? `color-mix(in srgb, ${brand.blockBg} 92%, var(--brand-contrast, #4a2082) 8%)`
         : brand.blockBg,
     boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
@@ -2435,7 +2493,7 @@ export default function OverviewSpin() {
                   <Fragment key={rowKey}>
                     <tr
                       style={{
-                        background: zebraStripe(i),
+                        background: zebraTabelaSpin(i),
                       }}
                     >
                       <td style={{ ...tdStyle, fontWeight: 600 }}>
@@ -2511,8 +2569,9 @@ export default function OverviewSpin() {
                           <tr
                             key={`${rowKey}-${sl.operadora_slug}`}
                             style={{
-                              background:
-                                j % 2 === 1
+                              background: brand.useBrand
+                                ? zebraStripeBrandContrast(j)
+                                : j % 2 === 1
                                   ? "color-mix(in srgb, var(--brand-contrast, #4a2082) 4%, transparent)"
                                   : "color-mix(in srgb, var(--brand-contrast, #4a2082) 2%, transparent)",
                               borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
@@ -2555,50 +2614,6 @@ export default function OverviewSpin() {
                   </Fragment>
                 );
               })}
-              {(() => {
-                const tot = tabelaRows.reduce(
-                  (a, r) => ({
-                    ggr: a.ggr + (Number(r.ggr) || 0),
-                    turnover: a.turnover + (Number(r.turnover) || 0),
-                    bets: a.bets + (Number(r.bets) || 0),
-                    uap: a.uap + (Number(r.uap) || 0),
-                  }),
-                  { ggr: 0, turnover: 0, bets: 0, uap: 0 },
-                );
-                const margin_pct =
-                  tot.turnover !== 0 ? (tot.ggr / tot.turnover) * 100 : null;
-                const bet_size = tot.bets !== 0 ? tot.turnover / tot.bets : null;
-                const arpu = tot.uap !== 0 ? tot.ggr / tot.uap : null;
-                return (
-                  <tr
-                    key="total-detalhamento-spin"
-                    style={{
-                      background: TOTAL_ROW_BG,
-                      fontWeight: 700,
-                      borderTop: `2px solid ${t.cardBorder}`,
-                    }}
-                  >
-                    <td style={{ ...tdStyle, fontWeight: 700, color: brand.primary }}>Total</td>
-                    <td
-                      style={{
-                        ...tdNum,
-                        color: tot.ggr > 0 ? BRAND.verde : tot.ggr < 0 ? BRAND.vermelho : t.text,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {fmtBRL(tot.ggr)}
-                    </td>
-                    <td style={tdNum}>{fmtBRL(tot.turnover)}</td>
-                    <td style={tdNum}>{tot.bets.toLocaleString("pt-BR")}</td>
-                    <td style={{ ...tdNum }}>
-                      <MarginBadge value={margin_pct} />
-                    </td>
-                    <td style={tdNum}>{bet_size != null ? fmtBRL(Number(bet_size)) : "—"}</td>
-                    <td style={tdNum}>{tot.uap.toLocaleString("pt-BR")}</td>
-                    <td style={tdNum}>{arpu != null ? fmtBRL(Number(arpu)) : "—"}</td>
-                  </tr>
-                );
-              })()}
             </tbody>
           </table>
         </div>
@@ -2930,7 +2945,7 @@ export default function OverviewSpin() {
                     <tr
                       key={row.dataIso}
                       style={{
-                        background: zebraStripe(i),
+                        background: zebraTabelaSpin(i),
                       }}
                     >
                       <th scope="row" style={tdStickyComparativo(i)}>
@@ -3187,8 +3202,8 @@ export default function OverviewSpin() {
         <div
           style={{
             borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
+            border: `1px solid ${t.cardBorder}`,
+            background: brand.blockBg,
             padding: "12px 20px",
           }}
         >
@@ -3754,14 +3769,14 @@ export default function OverviewSpin() {
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaA, ZEBRA_MESA_STRIPE_PRIMARY)}
+                        {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY)}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaB, ZEBRA_MESA_STRIPE_ACCENT)}
+                        {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT)}
                       </div>
                     </div>
                   </>
@@ -3775,46 +3790,20 @@ export default function OverviewSpin() {
 
                 <div className="app-conversao-funil-duo">
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        marginBottom: 10,
-                        padding: "6px 10px",
-                        borderRadius: 10,
-                        background: "color-mix(in srgb, var(--brand-icon-color, #70cae4) 10%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--brand-icon-color, #70cae4) 35%, transparent)",
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "var(--brand-icon-color, #70cae4)",
-                        fontFamily: FONT.body,
-                      }}
-                    >
+                    <div style={tituloMesaSpeedBaccarat}>
                       Speed Baccarat
                     </div>
-                    {renderMesaDiaTabela(linhasSpeedBaccarat, ZEBRA_MESA_STRIPE_SECONDARY)}
+                    {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY)}
                   </div>
                   <div
                     className="app-conversao-funil-divider"
                     style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        marginBottom: 10,
-                        padding: "6px 10px",
-                        borderRadius: 10,
-                        background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)",
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "var(--brand-action, #7c3aed)",
-                        fontFamily: FONT.body,
-                      }}
-                    >
+                    <div style={tituloMesaRoleta}>
                       Roleta
                     </div>
-                    {renderMesaDiaTabela(linhasRoleta, ZEBRA_MESA_STRIPE_SECONDARY)}
+                    {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY)}
                   </div>
                 </div>
               </div>
@@ -4056,14 +4045,14 @@ export default function OverviewSpin() {
 
                         <div className="app-conversao-funil-duo">
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaA, ZEBRA_MESA_STRIPE_PRIMARY, "Mês")}
+                            {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY, "Mês")}
                           </div>
                           <div
                             className="app-conversao-funil-divider"
                             style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaB, ZEBRA_MESA_STRIPE_ACCENT, "Mês")}
+                            {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT, "Mês")}
                           </div>
                         </div>
                       </>
@@ -4077,46 +4066,20 @@ export default function OverviewSpin() {
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            marginBottom: 10,
-                            padding: "6px 10px",
-                            borderRadius: 10,
-                            background: "color-mix(in srgb, var(--brand-icon-color, #70cae4) 10%, transparent)",
-                            border: "1px solid color-mix(in srgb, var(--brand-icon-color, #70cae4) 35%, transparent)",
-                            textAlign: "center",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: "var(--brand-icon-color, #70cae4)",
-                            fontFamily: FONT.body,
-                          }}
-                        >
+                        <div style={tituloMesaSpeedBaccarat}>
                           Speed Baccarat
                         </div>
-                        {renderMesaDiaTabela(linhasSpeedBaccarat, ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
+                        {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            marginBottom: 10,
-                            padding: "6px 10px",
-                            borderRadius: 10,
-                            background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-                            border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)",
-                            textAlign: "center",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: "var(--brand-action, #7c3aed)",
-                            fontFamily: FONT.body,
-                          }}
-                        >
+                        <div style={tituloMesaRoleta}>
                           Roleta
                         </div>
-                        {renderMesaDiaTabela(linhasRoleta, ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
+                        {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
                       </div>
                     </div>
                   </div>

@@ -56,8 +56,8 @@ function StreamersFiltrosEUAbas({
       <div
         style={{
           borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}
       >

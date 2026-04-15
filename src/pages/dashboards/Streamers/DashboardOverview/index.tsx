@@ -183,6 +183,17 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
   };
 }
 
+/** Chave numérica para ordenar a coluna Performance em todas as linhas (não só quem tem investimento e ROI%). */
+function performanceSortValue(row: RankingRow): number {
+  if (row.roi !== null) return row.roi;
+  if (row.investimento === 0) {
+    if (row.ggr > 0) return 1e9;
+    if (row.ggr < 0) return row.ggr;
+    return -1e9;
+  }
+  return 0;
+}
+
 function RankingThSort({
   col,
   label,
@@ -491,12 +502,9 @@ export default function DashboardOverview() {
           primary = mul * a.nome.localeCompare(b.nome, "pt-BR");
           break;
         case "roi": {
-          const na = a.roi == null;
-          const nb = b.roi == null;
-          if (na && nb) primary = 0;
-          else if (na) primary = 1;
-          else if (nb) primary = -1;
-          else primary = mul * (a.roi! - b.roi!);
+          const va = performanceSortValue(a);
+          const vb = performanceSortValue(b);
+          primary = mul * (va - vb);
           break;
         }
         default: {
@@ -584,8 +592,8 @@ export default function DashboardOverview() {
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -842,7 +850,7 @@ export default function DashboardOverview() {
                   <RankingThSort col="registros" label="Registros" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
                   <RankingThSort col="ftds" label="FTDs" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
                   <RankingThSort col="ggr" label="GGR" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
-                  <RankingThSort col="investimento" label="Invest." sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="investimento" label="Investimento" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
                   <RankingThSort col="roi" label="Performance" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
                 </tr>
               </thead>
