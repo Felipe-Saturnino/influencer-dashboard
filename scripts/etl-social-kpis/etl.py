@@ -15,6 +15,7 @@ v3 (Meta):
 - Janelas since/until via _utc_day_unix_bounds; versão da API em META_GRAPH_VERSION (padrão v21.0)
 - OAuth 190 / token expirado: preflight no job diário; collectors não retentam endpoints se o token já falhou
 - YouTube: parse Analytics via columnHeaders + fallback views/engajamento somando vídeos do dia (Analytics vazio/atrasado)
+- FB/IG: insights de página/conta usam a mesma janela UTC que `TARGET_DATE` (posts e `kpi_daily.date`), não “hoje-2”
 """
 
 import os
@@ -56,7 +57,7 @@ LINKEDIN_TOKEN = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
 LINKEDIN_ORG_ID = os.environ.get("LINKEDIN_ORG_ID", "")
 
 TARGET_DATE = date.today() - timedelta(days=1)
-# Backfill redefine por dia; no job diário não usar “hoje-2” para insights — alinhar ao TARGET_DATE (mesmo dia dos posts e de kpi_daily.date)
+# Backfill (`backfill.py`) atribui `INSIGHTS_DATE` por dia; no job diário insights FB/IG usam o mesmo dia que `TARGET_DATE`.
 INSIGHTS_DATE = date.today() - timedelta(days=2)
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
