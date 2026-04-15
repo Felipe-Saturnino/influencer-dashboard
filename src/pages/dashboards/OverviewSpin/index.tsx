@@ -1793,6 +1793,25 @@ export default function OverviewSpin() {
       } else if (filtroOperadora !== "todas") {
         base[filtroOperadora] = pickKpiMetricaDetalhe(r, k);
         slugSet.add(filtroOperadora);
+      } else if (operadoraSlugsForcado != null && operadoraSlugsForcado.length > 0) {
+        /** "Todas" no UI mas escopo fixo (ex.: operador) — mesmo breakdown por slug que no modo agregado. */
+        const ym = historico
+          ? r.drillId != null
+            ? String(r.drillId).slice(0, 7)
+            : r.periodoIso.slice(0, 7)
+          : null;
+        const dia = !historico
+          ? normalizeMesasYmd(r.drillId != null ? String(r.drillId) : r.periodoIso)
+          : null;
+        const subs = historico
+          ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, ym!, monthlyRawUnmerged)
+          : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, dia!);
+        for (const sub of subs) {
+          if (!operadoraSlugsForcado.includes(sub.operadora_slug)) continue;
+          if (!podeVerOperadora(sub.operadora_slug)) continue;
+          base[sub.operadora_slug] = pickKpiMetricaDetalhe(sub, k);
+          slugSet.add(sub.operadora_slug);
+        }
       }
       return base;
     });
@@ -1810,6 +1829,7 @@ export default function OverviewSpin() {
     monthlyRawUnmerged,
     podeVerOperadora,
     filtroOperadora,
+    operadoraSlugsForcado,
   ]);
 
   const coresOperadorasDetalhe = useMemo(() => {
