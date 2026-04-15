@@ -121,8 +121,8 @@ export interface BrandValidated {
 export function validarBrandguide(input: Partial<BrandInput>): BrandValidated {
   const warnings: string[] = [];
 
-  let bg = normalizeHex(input.bg) ?? SPIN_FALLBACK.bg;
-  let text = normalizeHex(input.text) ?? SPIN_FALLBACK.text;
+  const bg = normalizeHex(input.bg) ?? SPIN_FALLBACK.bg;
+  const text = normalizeHex(input.text) ?? SPIN_FALLBACK.text;
   let action = normalizeHex(input.action) ?? SPIN_FALLBACK.action;
   let contrast = normalizeHex(input.contrast) ?? SPIN_FALLBACK.contrast;
 
