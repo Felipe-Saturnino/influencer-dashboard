@@ -374,8 +374,15 @@ function sumComparableGameBets(bucket: PorTabelaGameBucket): number {
  * Alguns lotes gravam `relatorio_por_tabela.dia` com calendário deslocado em ±1 dia em relação a
  * `relatorio_daily_summary.data`. Escolhe o shift que melhor alinha soma(BJ+Roleta+Bacc) ao total de apostas.
  */
-/** Penalidade quando há apostas no resumo diário mas nenhuma mesa comparável no bucket (evita shift que “empurra” por_tabela para o dia errado e deixa breakdown vazio). */
-const POR_SHIFT_PENALTY_DIA_SEM_BREAKDOWN = 4e11;
+/**
+ * Penalidade quando há apostas no resumo diário mas nenhuma mesa comparável no bucket.
+ * Precisa ser maior que a penalidade de “soma de mesas > total” (duplicados / ruído no por_tabela),
+ * senão o shift ±1 que esvazia um dia civil (ex.: 10/04) ainda vence o shift 0.
+ */
+const POR_SHIFT_PENALTY_DIA_SEM_BREAKDOWN = 3e12;
+
+/** Excesso de apostas nas mesas vs resumo diário — valor alto mas abaixo de `POR_SHIFT_PENALTY_DIA_SEM_BREAKDOWN`. */
+const POR_SHIFT_PENALTY_SOMA_MESAS_ACIMA_TOTAL = 8e11;
 
 function pickPorTabelaOperDayShift(
   dailyRows: DailyRow[],
@@ -400,7 +407,7 @@ function pickPorTabelaOperDayShift(
         penalty += POR_SHIFT_PENALTY_DIA_SEM_BREAKDOWN;
         continue;
       }
-      if (sumG > off * 1.0005) penalty += 1e12;
+      if (sumG > off * 1.0005) penalty += POR_SHIFT_PENALTY_SOMA_MESAS_ACIMA_TOTAL;
       penalty += (sumG - off) ** 2;
     }
     const sc = n === 0 ? 1e18 : penalty;
