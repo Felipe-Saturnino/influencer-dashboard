@@ -374,6 +374,9 @@ function sumComparableGameBets(bucket: PorTabelaGameBucket): number {
  * Alguns lotes gravam `relatorio_por_tabela.dia` com calendário deslocado em ±1 dia em relação a
  * `relatorio_daily_summary.data`. Escolhe o shift que melhor alinha soma(BJ+Roleta+Bacc) ao total de apostas.
  */
+/** Penalidade quando há apostas no resumo diário mas nenhuma mesa comparável no bucket (evita shift que “empurra” por_tabela para o dia errado e deixa breakdown vazio). */
+const POR_SHIFT_PENALTY_DIA_SEM_BREAKDOWN = 4e11;
+
 function pickPorTabelaOperDayShift(
   dailyRows: DailyRow[],
   porRows: PorTabelaRow[],
@@ -391,8 +394,12 @@ function pickPorTabelaOperDayShift(
       const b = byDate.get(key) ?? { bj: [], roleta: [], baccarat: [] };
       const sumG = sumComparableGameBets(b);
       const off = dr.bets != null ? Number(dr.bets) : null;
-      if (off == null || off <= 0 || sumG <= 0) continue;
+      if (off == null || off <= 0) continue;
       n++;
+      if (sumG <= 0) {
+        penalty += POR_SHIFT_PENALTY_DIA_SEM_BREAKDOWN;
+        continue;
+      }
       if (sumG > off * 1.0005) penalty += 1e12;
       penalty += (sumG - off) ** 2;
     }
@@ -403,63 +410,6 @@ function pickPorTabelaOperDayShift(
     }
   }
   return best;
-}
-
-function filterBucketExcludingClaimed(
-  bucket: PorTabelaGameBucket,
-  claimed: Set<PorTabelaRow>,
-): PorTabelaGameBucket {
-  const ex = (rows: PorTabelaRow[]) => rows.filter((r) => !claimed.has(r));
-  return { bj: ex(bucket.bj), roleta: ex(bucket.roleta), baccarat: ex(bucket.baccarat) };
-}
-
-/**
- * Bucket por data operacional para o Comparativo de jogo: aplica o shift global e, nos dias em que o
- * resumo diário tem apostas mas o bucket global fica vazio (mistura de lotes com `dia` civil certo só
- * em alguns dias vs resto do mês deslocado ±1), usa `relatorio_por_tabela` com `dia` = essa data e
- * remove essas linhas dos outros dias para não duplicar.
- */
-function buildComparativoGameBucketsByDate(
-  dailyRows: DailyRow[],
-  porRows: PorTabelaRow[],
-  operadorasListFmt: { slug: string; nome: string }[],
-): Map<string, PorTabelaGameBucket> {
-  const globalShift = pickPorTabelaOperDayShift(dailyRows, porRows, operadorasListFmt);
-  const byGlobal = buildPorTabelaGameBuckets(porRows, operadorasListFmt, globalShift);
-  const civilClaimed = new Set<PorTabelaRow>();
-  const civilDays = new Set<string>();
-
-  for (const dr of dailyRows) {
-    const D = normalizeMesasYmd(dr.data);
-    const b = byGlobal.get(D) ?? { bj: [], roleta: [], baccarat: [] };
-    const sumG = sumComparableGameBets(b);
-    const off = dr.bets != null ? Number(dr.bets) : null;
-    if (sumG > 0 || off == null || off <= 0) continue;
-
-    const civilRows = porRows.filter((r) => normalizeMesasYmd(r.data_relatorio) === D);
-    if (civilRows.length === 0) continue;
-
-    const tmp = buildPorTabelaGameBuckets(civilRows, operadorasListFmt, 0);
-    const bCivil = tmp.get(D) ?? { bj: [], roleta: [], baccarat: [] };
-    if (sumComparableGameBets(bCivil) <= 0) continue;
-
-    civilDays.add(D);
-    for (const r of civilRows) civilClaimed.add(r);
-  }
-
-  const out = new Map<string, PorTabelaGameBucket>();
-  for (const dr of dailyRows) {
-    const D = normalizeMesasYmd(dr.data);
-    if (civilDays.has(D)) {
-      const civilRows = porRows.filter((r) => normalizeMesasYmd(r.data_relatorio) === D);
-      const tmp = buildPorTabelaGameBuckets(civilRows, operadorasListFmt, 0);
-      out.set(D, tmp.get(D) ?? { bj: [], roleta: [], baccarat: [] });
-    } else {
-      const b = byGlobal.get(D) ?? { bj: [], roleta: [], baccarat: [] };
-      out.set(D, filterBucketExcludingClaimed(b, civilClaimed));
-    }
-  }
-  return out;
 }
 
 /** `YYYY-MM` → ex.: Jan/2026, Dez/2025 (coluna Mês na visão histórico). */
@@ -1757,7 +1707,8 @@ export default function OverviewSpin() {
           ),
         );
     }
-    const byDate = buildComparativoGameBucketsByDate(dailyData, porTabelaFiltradas, operadorasListFmt);
+    const shiftOper = pickPorTabelaOperDayShift(dailyData, porTabelaFiltradas, operadorasListFmt);
+    const byDate = buildPorTabelaGameBuckets(porTabelaFiltradas, operadorasListFmt, shiftOper);
 
     const uapByDateJogo = new Map<string, Partial<Record<"blackjack" | "roleta" | "baccarat", number>>>();
     for (const r of uapPorJogoRows) {
