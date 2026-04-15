@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
+import { validarBrandguide } from "../../../lib/brandguideValidation";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -113,7 +114,7 @@ export default function GestaoOperadoras() {
               type="button"
               onClick={() => { setEditando(null); setModalOpen(true); }}
               style={{
-                background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                background: dashBrand.useBrand ? "var(--brand-action, #7c3aed)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
                 color: "#fff", border: "none", borderRadius: 10,
                 padding: "9px 18px", cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
@@ -218,12 +219,11 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
   const [nome, setNome] = useState(editando?.nome ?? "");
   const [slug, setSlug] = useState(editando?.slug ?? "");
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
-  const [corPrimaria, setCorPrimaria] = useState(editando?.cor_primaria ?? "");
-  const [corSecundaria, setCorSecundaria] = useState(editando?.cor_secundaria ?? "");
-  const [corAccent, setCorAccent] = useState(editando?.cor_accent ?? "");
-  const [corBackground, setCorBackground] = useState(editando?.cor_background ?? "");
-  const [corTextos, setCorTextos] = useState(editando?.cor_textos ?? "");
-  const [corIcones, setCorIcones] = useState(editando?.cor_icones ?? "");
+  const [brandAction, setBrandAction] = useState(editando?.brand_action ?? "");
+  const [brandContrast, setBrandContrast] = useState(editando?.brand_contrast ?? "");
+  const [brandBg, setBrandBg] = useState(editando?.brand_bg ?? "");
+  const [brandText, setBrandText] = useState(editando?.brand_text ?? "");
+  const [brandAvisos, setBrandAvisos] = useState<string[]>([]);
   const [logoUrl, setLogoUrl] = useState(editando?.logo_url ?? "");
   const [fontUrl, setFontUrl] = useState(editando?.font_url ?? "");
   const [salvando, setSalvando] = useState(false);
@@ -248,12 +248,11 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
   // Sincroniza campos de brand quando abre para outra operadora
   useEffect(() => {
     if (editando) {
-      setCorPrimaria(editando.cor_primaria ?? "");
-      setCorSecundaria(editando.cor_secundaria ?? "");
-      setCorAccent(editando.cor_accent ?? "");
-      setCorBackground(editando.cor_background ?? "");
-      setCorTextos(editando.cor_textos ?? "");
-      setCorIcones(editando.cor_icones ?? "");
+      setBrandAction(editando.brand_action ?? "");
+      setBrandContrast(editando.brand_contrast ?? "");
+      setBrandBg(editando.brand_bg ?? "");
+      setBrandText(editando.brand_text ?? "");
+      setBrandAvisos([]);
       setLogoUrl(editando.logo_url ?? "");
       setFontUrl(editando.font_url ?? "");
     }
@@ -318,16 +317,23 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
 
     setSalvando(true);
     try {
-      const brandPayload = {
-        cor_primaria:     corPrimaria.trim() || null,
-        cor_secundaria:   corSecundaria.trim() || null,
-        cor_accent:       corAccent.trim() || null,
-        cor_background:   corBackground.trim() || null,
-        cor_textos:       corTextos.trim() || null,
-        cor_icones:       corIcones.trim() || null,
-        logo_url:         logoUrl.trim() || null,
-        font_url:         fontUrl.trim() || null,
+      const brandPayload: Record<string, string | null> = {
+        logo_url: logoUrl.trim() || null,
+        font_url: fontUrl.trim() || null,
       };
+      if (editando) {
+        const v = validarBrandguide({
+          action: brandAction.trim() || null,
+          contrast: brandContrast.trim() || null,
+          bg: brandBg.trim() || null,
+          text: brandText.trim() || null,
+        });
+        setBrandAvisos(v.warnings);
+        brandPayload.brand_action = v.action;
+        brandPayload.brand_contrast = v.contrast;
+        brandPayload.brand_bg = v.bg;
+        brandPayload.brand_text = v.text;
+      }
       if (editando) {
         const { error } = await supabase.from("operadoras").update({ nome, ativo, ...brandPayload }).eq("slug", editando.slug);
         if (error) throw error;
@@ -408,47 +414,52 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
             <div style={{ ...labelStyle, marginBottom: 12 }}>Brandguide (operadores)</div>
             <div className="app-grid-2-tight">
               <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Primária</label>
-                <input type="color" value={corPrimaria || "#7c3aed"} onChange={e => setCorPrimaria(e.target.value)}
+                <label style={{ ...labelStyle, fontSize: 10 }}>Cor de ação</label>
+                <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
+                  CTAs, títulos, item ativo no menu. Alto contraste sobre o fundo.
+                </div>
+                <input type="color" value={brandAction || "#7c3aed"} onChange={(e) => setBrandAction(e.target.value)}
                   style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corPrimaria} onChange={e => setCorPrimaria(e.target.value)} placeholder="#7c3aed"
+                <input type="text" value={brandAction} onChange={(e) => setBrandAction(e.target.value)} placeholder="#7c3aed"
                   style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
               </div>
               <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Secundária</label>
-                <input type="color" value={corSecundaria || "#4a2082"} onChange={e => setCorSecundaria(e.target.value)}
+                <label style={{ ...labelStyle, fontSize: 10 }}>Cor de contraste</label>
+                <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
+                  Comparativos e destaque secundário — deve ser distinta da cor de ação.
+                </div>
+                <input type="color" value={brandContrast || "#1e36f8"} onChange={(e) => setBrandContrast(e.target.value)}
                   style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corSecundaria} onChange={e => setCorSecundaria(e.target.value)} placeholder="#4a2082"
+                <input type="text" value={brandContrast} onChange={(e) => setBrandContrast(e.target.value)} placeholder="#1e36f8"
                   style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
               </div>
               <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Accent</label>
-                <input type="color" value={corAccent || "#1e36f8"} onChange={e => setCorAccent(e.target.value)}
+                <label style={{ ...labelStyle, fontSize: 10 }}>Fundo</label>
+                <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
+                  Background da aplicação (modo operador escuro).
+                </div>
+                <input type="color" value={brandBg || "#0f0f1a"} onChange={(e) => setBrandBg(e.target.value)}
                   style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corAccent} onChange={e => setCorAccent(e.target.value)} placeholder="#1e36f8"
+                <input type="text" value={brandBg} onChange={(e) => setBrandBg(e.target.value)} placeholder="#0f0f1a"
                   style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
               </div>
               <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Background</label>
-                <input type="color" value={corBackground || "#0f0f1a"} onChange={e => setCorBackground(e.target.value)}
+                <label style={{ ...labelStyle, fontSize: 10 }}>Texto</label>
+                <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
+                  Texto principal e ícones estruturais (derivados de contraste no app).
+                </div>
+                <input type="color" value={brandText || "#ffffff"} onChange={(e) => setBrandText(e.target.value)}
                   style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corBackground} onChange={e => setCorBackground(e.target.value)} placeholder="#0f0f1a"
+                <input type="text" value={brandText} onChange={(e) => setBrandText(e.target.value)} placeholder="#ffffff"
                   style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
               </div>
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Textos</label>
-                <input type="color" value={corTextos || "#ffffff"} onChange={e => setCorTextos(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corTextos} onChange={e => setCorTextos(e.target.value)} placeholder="#ffffff"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Ícones</label>
-                <input type="color" value={corIcones || "#70cae4"} onChange={e => setCorIcones(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={corIcones} onChange={e => setCorIcones(e.target.value)} placeholder="#70cae4"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
+              {brandAvisos.length > 0 && (
+                <div style={{ gridColumn: "1 / -1", fontSize: 11, color: BRAND.amarelo, fontFamily: FONT.body, lineHeight: 1.45, padding: "8px 10px", borderRadius: 8, border: `1px solid ${BRAND.amarelo}55`, background: `${BRAND.amarelo}14` }}>
+                  {brandAvisos.map((w, i) => (
+                    <div key={i}>{w}</div>
+                  ))}
+                </div>
+              )}
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={{ ...labelStyle, fontSize: 10 }}>Logo (opcional)</label>
                 <input type="url" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="URL ou envie um arquivo"
@@ -542,7 +553,7 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
             onClick={salvar}
             disabled={salvando}
             style={{
-              background: dashBrand.useBrand ? "var(--brand-primary)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+              background: dashBrand.useBrand ? "var(--brand-action, #7c3aed)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
               color: "#fff", border: "none", borderRadius: 10,
               padding: "9px 20px", cursor: salvando ? "not-allowed" : "pointer",
               fontFamily: FONT.body, fontSize: 13, fontWeight: 700, opacity: salvando ? 0.7 : 1,

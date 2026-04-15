@@ -102,7 +102,7 @@ export default function GestaoDealers() {
     }
     const [dealersRes, operadorasRes] = await Promise.all([
       qDealers,
-      supabase.from("operadoras").select("slug, nome, cor_primaria").order("nome").eq("ativo", true),
+      supabase.from("operadoras").select("slug, nome, brand_action").order("nome").eq("ativo", true),
     ]);
     setDealers((dealersRes.data ?? []) as Dealer[]);
     setOperadoras((operadorasRes.data ?? []) as Operadora[]);
@@ -855,7 +855,7 @@ function DealerCard({
             {GENERO_OPTS.find((o) => o.value === dealer.genero)?.label ?? dealer.genero}
           </span>
           {op && (
-            <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} />
+            <OperadoraTag label={op.nome} corPrimaria={op.brand_action} />
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1005,7 +1005,7 @@ function ModalHistoricoSolicitacoesDealer({
                     </span>
                     {!slugSolicitacaoFiltro ? (
                       <span style={{ fontSize: 11, color: t.textMuted }}>
-                        <OperadoraTag label={opRow?.nome ?? s.operadora_slug} corPrimaria={opRow?.cor_primaria} />
+                        <OperadoraTag label={opRow?.nome ?? s.operadora_slug} corPrimaria={opRow?.brand_action} />
                       </span>
                     ) : null}
                   </div>
@@ -1091,7 +1091,7 @@ function ModalVer({
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span>
           <br />
-          {op ? <OperadoraTag label={op.nome} corPrimaria={op.cor_primaria} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}
+          {op ? <OperadoraTag label={op.nome} corPrimaria={op.brand_action} /> : <span style={{ fontSize: 14, color: t.text }}>Nenhuma</span>}
         </div>
         {dealer.perfil_influencer && (
           <div>

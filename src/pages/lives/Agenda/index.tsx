@@ -109,7 +109,7 @@ function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDro
         style={{
           padding: "6px 14px", borderRadius: 999,
           border: `1px solid ${accentColor}`,
-          background: accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}22`,
+          background: accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : `${accentColor}22`,
           color: accentColor,
           fontSize: 13, fontWeight: 600, fontFamily: FONT.body,
           cursor: "pointer", outline: "none",
@@ -143,7 +143,7 @@ function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDro
                 style={{
                   width: "100%", padding: "8px 12px", borderRadius: 8,
                   border: "none",
-                  background: selected ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${accentColor}22`) : "transparent",
+                  background: selected ? (accentColor.startsWith("var(") ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : `${accentColor}22`) : "transparent",
                   color: selected ? accentColor : t.text,
                   fontSize: 12, fontFamily: FONT.body,
                   cursor: "pointer", textAlign: "left",
@@ -296,7 +296,7 @@ export default function Agenda() {
     boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
-  const DEFAULT_CHIP_COLOR = "var(--brand-primary, #7c3aed)";
+  const DEFAULT_CHIP_COLOR = "var(--brand-action, #7c3aed)";
   function chipActiveBg(color: string): string {
     if (color.startsWith("var(")) return `color-mix(in srgb, ${color} 14%, transparent)`;
     return `${color}22`;
@@ -657,7 +657,7 @@ export default function Agenda() {
               padding: "10px 20px", borderRadius: 10, border: "none",
               cursor: checandoNovaLive ? "not-allowed" : "pointer",
               opacity: checandoNovaLive ? 0.75 : 1,
-              background: brand.useBrand ? "var(--brand-accent)" : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))",
+              background: "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))",
               color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
             }}
           >
@@ -728,7 +728,7 @@ export default function Agenda() {
                   border: `1px solid ${filterOperadora !== "todas" ? brand.accent : t.cardBorder}`,
                   background:
                     filterOperadora !== "todas"
-                      ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `color-mix(in srgb, ${BRAND.roxoVivo} 14%, transparent)`)
+                      ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : `color-mix(in srgb, ${BRAND.roxoVivo} 14%, transparent)`)
                       : (t.inputBg ?? t.cardBg),
                   color: filterOperadora !== "todas" ? brand.accent : t.textMuted,
                   fontWeight: filterOperadora !== "todas" ? 700 : 400,

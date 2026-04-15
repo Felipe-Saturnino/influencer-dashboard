@@ -169,6 +169,23 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Divulgar o link: taxa View→Acesso abaixo de 10% — o influencer precisa mencionar o link com mais frequência durante as lives.\n\nConverter visita: taxa Acesso→Registro abaixo de 10% — os usuários chegam ao link mas não completam o cadastro.\n\nAtivar cadastro: taxa Registro→FTD abaixo de 60% — os cadastros existem mas os jogadores não estão realizando o primeiro depósito.\n\nEm dia: todas as taxas dentro dos limites — nenhuma ação prioritária identificada.",
         referencia: "Streamers → Conversão",
       },
+      {
+        termo: "Engajamento (Mídias Sociais)",
+        definicao:
+          "Soma de interações dos usuários com as publicações — curtidas, comentários, salvamentos, reações e cliques, dependendo da plataforma.",
+        nota:
+          "Cada rede social contabiliza o engajamento de forma diferente:\n\n— Instagram: curtidas + comentários + salvamentos\n— Facebook: reações + comentários\n— YouTube: visualizações + curtidas + comentários\n\nO valor exibido nos cards de canal é a soma do período, não uma média.",
+        referencia: "Mídias Sociais → Alcance",
+      },
+      {
+        termo: "Taxa de Engajamento",
+        definicao:
+          "Percentual de pessoas que interagiram com o conteúdo em relação ao total de impressões (ou visualizações no YouTube). Indica a qualidade do conteúdo além do volume.",
+        formula: "Engajamentos ÷ Impressões × 100",
+        nota:
+          "Uma taxa alta com volume baixo indica conteúdo relevante para a audiência que o vê, mas alcance limitado. Uma taxa baixa com volume alto indica alcance amplo, mas baixa conexão com o público.\n\nExibida como 'Eng. X.X%' no badge de cada card de canal na aba Alcance.",
+        referencia: "Mídias Sociais → Alcance",
+      },
     ],
   },
   {
@@ -398,13 +415,6 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "Engajamentos",
         definicao:
           "Total de interações com o conteúdo: curtidas, comentários, compartilhamentos e salvamentos.",
-        referencia: "Mídias Sociais",
-      },
-      {
-        termo: "Taxa de Engajamento",
-        definicao:
-          "Percentual de impressões que geraram engajamento. Indica a relevância do conteúdo para quem o viu.",
-        formula: "Engajamentos ÷ Impressões × 100",
         referencia: "Mídias Sociais",
       },
       {

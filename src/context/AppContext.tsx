@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { User, PageKey, PermissaoValor, Role } from "../types";
 import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
+import { validarBrandguide, cssDerivadasBrand, type BrandValidated } from "../lib/brandguideValidation";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
@@ -31,12 +32,12 @@ export interface EscoposVisiveis {
   gestorTiposVisiveis?: string[];
 }
 
-/** Brand da operadora (operador): logo, fonte e cores aplicadas via CSS vars */
+/** Brand da operadora (operador): logo, fonte e fundo (hex); demais cores via CSS vars --brand-* */
 export interface OperadoraBrand {
-  nome:          string | null;
-  logo_url:      string | null;
-  font_url:      string | null;
-  cor_background: string | null;
+  nome:      string | null;
+  logo_url:  string | null;
+  font_url:  string | null;
+  brand_bg:  string | null;
 }
 
 interface AppContextValue {
@@ -68,28 +69,61 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 const ESCOPOS_VAZIOS: EscoposVisiveis = { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: false };
 
-const BRAND_DEFAULTS = {
-  primary:     "#7c3aed",
-  secondary:   "#4a2082",
-  accent:      "#1e36f8",
-  background:  "#0f0f1a",
-  text:        "#ffffff",
-  icon:        "#70cae4",
-  extra1:      "#1e36f8",
-  extra2:      "#22c55e",
-  extra3:      "#f59e0b",
-  extra4:      "#e84025",
-  danger:      "#e84025",
-  success:     "#22c55e",
-  fontFamily:  "'Inter', 'Helvetica Neue', Arial, sans-serif",
+const DEFAULT_FONT_FAMILY = "'Inter', 'Helvetica Neue', Arial, sans-serif";
+
+/** Cores extras de gráficos / semântica — não vêm da operadora. */
+const CHART_SEMANTIC = {
+  extra1: "#1e36f8",
+  extra2: "#22c55e",
+  extra3: "#f59e0b",
+  extra4: "#e84025",
 } as const;
 
-function aplicarBrandguide(vars: Partial<Record<keyof typeof BRAND_DEFAULTS, string | null>>) {
+/** Injeta tokens Opção C + aliases legados (`--brand-primary` = `--brand-action`, etc.). */
+function injectBrandCss(validated: BrandValidated) {
   const root = document.documentElement.style;
-  (Object.keys(BRAND_DEFAULTS) as (keyof typeof BRAND_DEFAULTS)[]).forEach((k) => {
-    const v = vars[k];
-    root.setProperty(`--brand-${k}`, v ?? BRAND_DEFAULTS[k]);
+  const der = cssDerivadasBrand(validated);
+  Object.entries(der).forEach(([k, v]) => root.setProperty(k, v));
+  root.setProperty("--brand-action", validated.action);
+  root.setProperty("--brand-contrast", validated.contrast);
+  root.setProperty("--brand-bg", validated.bg);
+  root.setProperty("--brand-text", validated.text);
+  root.setProperty("--brand-primary", validated.action);
+  root.setProperty("--brand-secondary", validated.contrast);
+  root.setProperty("--brand-accent", validated.contrast);
+  root.setProperty("--brand-background", validated.bg);
+  const iconMix = der["--brand-icon-color"]!;
+  root.setProperty("--brand-icon-color", iconMix);
+  root.setProperty("--brand-icon", iconMix);
+  (Object.keys(CHART_SEMANTIC) as (keyof typeof CHART_SEMANTIC)[]).forEach((k) => {
+    root.setProperty(`--brand-${k}`, CHART_SEMANTIC[k]);
   });
+  root.setProperty("--brand-danger", CHART_SEMANTIC.extra4);
+  root.setProperty("--brand-success", CHART_SEMANTIC.extra2);
+}
+
+/** Reseta para paleta Spin validada (usuário não operador ou sem brand). */
+function aplicarBrandguideReset() {
+  injectBrandCss(validarBrandguide({}));
+}
+
+type OperadoraBrandRow = {
+  brand_action?: string | null;
+  brand_contrast?: string | null;
+  brand_bg?: string | null;
+  brand_text?: string | null;
+  logo_url?: string | null;
+};
+
+function aplicarBrandguideOperadora(data: OperadoraBrandRow | null | undefined) {
+  const validated = validarBrandguide({
+    action: data?.brand_action,
+    contrast: data?.brand_contrast,
+    bg: data?.brand_bg,
+    text: data?.brand_text,
+  });
+  if (validated.warnings.length) console.warn("[brandguide]", validated.warnings);
+  injectBrandCss(validated);
 }
 
 // ─── Carrega escopos visíveis por role e user_scopes (Etapa 7) ─────────────────
@@ -277,7 +311,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Brandguide: operador vê cores e logo da operadora; demais roles usam default
   useEffect(() => {
     if (!user || user.role !== "operador" || !escoposVisiveis.operadorasVisiveis?.length) {
-      aplicarBrandguide({});
+      aplicarBrandguideReset();
       setOperadoraBrand(null);
       return;
     }
@@ -285,28 +319,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         const { data } = await supabase.from("operadoras").select(
-          "nome, cor_primaria, cor_secundaria, cor_accent, cor_background, cor_textos, cor_icones, logo_url, font_url"
+          "nome, brand_action, brand_contrast, brand_bg, brand_text, logo_url, font_url"
         ).eq("slug", slug).single();
-        const hasBrand = !!(data?.cor_primaria || data?.cor_secundaria || data?.cor_accent || data?.cor_background || data?.cor_textos || data?.cor_icones || (data?.logo_url ?? "").trim());
+        const hasBrand = !!(
+          data?.brand_action || data?.brand_contrast || data?.brand_bg || data?.brand_text
+          || (data?.logo_url ?? "").trim()
+        );
         if (hasBrand) {
-          aplicarBrandguide({
-            primary:    data?.cor_primaria    ?? null,
-            secondary:  data?.cor_secundaria  ?? null,
-            accent:     data?.cor_accent      ?? null,
-            background: data?.cor_background  ?? null,
-            text:       data?.cor_textos      ?? null,
-            icon:       data?.cor_icones      ?? null,
-          });
+          aplicarBrandguideOperadora(data as OperadoraBrandRow);
         } else {
-          aplicarBrandguide({});
+          aplicarBrandguideReset();
         }
         const nome = (data?.nome ?? "").trim() || null;
         const logo = (data?.logo_url ?? "").trim() || null;
         const font = (data?.font_url ?? "").trim() || null;
-        const bg = (data?.cor_background ?? "").trim() || null;
-        setOperadoraBrand({ nome, logo_url: logo, font_url: font, cor_background: bg });
+        const bg = (data?.brand_bg ?? "").trim() || null;
+        setOperadoraBrand({ nome, logo_url: logo, font_url: font, brand_bg: bg });
       } catch {
-        aplicarBrandguide({});
+        aplicarBrandguideReset();
         setOperadoraBrand(null);
       }
     })();
@@ -319,7 +349,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (existing) existing.remove();
     const root = document.documentElement.style;
     if (!operadoraBrand?.font_url) {
-      root.setProperty("--brand-fontFamily", BRAND_DEFAULTS.fontFamily);
+      root.setProperty("--brand-fontFamily", DEFAULT_FONT_FAMILY);
       return;
     }
     const url = operadoraBrand.font_url;
@@ -332,7 +362,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     root.setProperty("--brand-fontFamily", '"OperadoraBrandFont", "Inter", sans-serif');
     return () => {
       document.getElementById(id)?.remove();
-      root.setProperty("--brand-fontFamily", BRAND_DEFAULTS.fontFamily);
+      root.setProperty("--brand-fontFamily", DEFAULT_FONT_FAMILY);
     };
   }, [operadoraBrand?.font_url]);
 

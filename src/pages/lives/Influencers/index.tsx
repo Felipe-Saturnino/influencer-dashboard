@@ -201,9 +201,9 @@ export default function Influencers() {
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
 
   const operadorasNoEscopo = operadorasList.filter((o) => podeVerOperadora(o.slug));
-  /** Sem cor salva: omitir — `OperadoraTag` aplica `--brand-primary` via color-mix (não passar `var()` aqui: quebraria o sufixo `18` do componente). */
+  /** Sem cor salva: omitir — `OperadoraTag` aplica `--brand-action` via color-mix (não passar `var()` aqui: quebraria o sufixo `18` do componente). */
   const opsColorMap = Object.fromEntries(
-    operadorasList.map((o) => [o.slug, o.cor_primaria?.trim() || undefined])
+    operadorasList.map((o) => [o.slug, o.brand_action?.trim() || undefined])
   );
   const [loading,        setLoading]        = useState(true);
   const [modal,          setModal]          = useState<{ mode: "visualizar" | "editar"; inf?: Influencer } | null>(null);
@@ -374,15 +374,9 @@ export default function Influencers() {
   });
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
-  const ctaGradient = brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
-  const sliderTrackGradient = brand.useBrand
-    ? "linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(90deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
-  const sliderThumbGradient = brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
+  const ctaGradient = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
+  const sliderTrackGradient = "linear-gradient(90deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
+  const sliderThumbGradient = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
 
   // ── Styles ──
   const cardStyle: CSSProperties = {
@@ -538,7 +532,7 @@ export default function Influencers() {
                       background:
                         filterOp !== "todas"
                           ? brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
                             : `${BRAND.roxoVivo}18`
                           : (t.inputBg ?? t.cardBg),
                       color: filterOp !== "todas" ? brand.accent : t.textMuted,
@@ -877,9 +871,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
     textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
   const row: CSSProperties = { marginBottom: 14 };
-  const tabActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
+  const tabActiveBg = brand.useBrand ? "var(--brand-action-12)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
   const val = (v?: string | number) => (
     <span style={{ fontSize: "13px", color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>
       {v || "—"}
@@ -913,8 +905,8 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
           </button>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.azul}0d`, border: `1px solid ${brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 20%, transparent)" : `${BRAND.azul}30`}`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
-          <Eye size={13} aria-hidden="true" style={{ color: brand.accent, flexShrink: 0 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? "var(--brand-action-12)" : `${BRAND.azul}0d`, border: `1px solid ${brand.useBrand ? "var(--brand-action-border)" : `${BRAND.azul}30`}`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
+          <Eye size={13} aria-hidden="true" style={{ color: brand.primary, flexShrink: 0 }} />
           <span>Modo visualização — somente leitura. Dados sensíveis protegidos.</span>
         </div>
 
@@ -927,9 +919,9 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
               onClick={() => setTab(tb.key)}
               style={{
                 padding: "7px 14px", borderRadius: 20, flexShrink: 0,
-                border: `1px solid ${tab === tb.key ? brand.accent : t.cardBorder}`,
+                border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`,
                 background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb.key ? brand.accent : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
+                color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
               }}
             >
               {tb.label}
@@ -1007,7 +999,7 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
                 const vinculo = influencer.operadoras?.find((o) => o.operadora_slug === op.slug);
                 const ativo = !!vinculo?.ativo;
                 const id = vinculo?.id_operadora;
-                const opColor = op.cor_primaria?.trim() || "var(--brand-primary, #7c3aed)";
+                const opColor = op.brand_action?.trim() || "var(--brand-action, #7c3aed)";
                 return (
                   <div key={op.slug} style={{ marginBottom: 14, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `color-mix(in srgb, ${opColor} 40%, transparent)` : t.cardBorder}`, background: ativo ? `color-mix(in srgb, ${opColor} 12%, transparent)` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1051,12 +1043,8 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
   const existing = influencer.perfil;
-  const tabActiveBg = brand.useBrand
-    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)";
-  const ctaSalvar = brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-secondary, #4a2082), var(--brand-accent, #1e36f8))";
+  const tabActiveBg = brand.useBrand ? "var(--brand-action-12)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
+  const ctaSalvar = "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))";
 
   useEffect(() => {
     const id = window.setTimeout(() => containerRef.current?.focus(), 50);
@@ -1205,9 +1193,9 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
               onClick={() => setTab(tb.key)}
               style={{
                 padding: "7px 14px", borderRadius: 20, flexShrink: 0,
-                border: `1px solid ${tab === tb.key ? brand.accent : t.cardBorder}`,
+                border: `1px solid ${tab === tb.key ? brand.primary : t.cardBorder}`,
                 background: tab === tb.key ? tabActiveBg : (t.inputBg ?? t.cardBg),
-                color: tab === tb.key ? brand.accent : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
+                color: tab === tb.key ? brand.primary : t.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: FONT.body,
               }}
             >
               {tb.label}
@@ -1336,7 +1324,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
               operadorasList.map((op) => {
                 const st = operadorasForm[op.slug] ?? { ativo: false, id_operadora: "" };
                 const ativo = st.ativo;
-                const opColor = op.cor_primaria?.trim() || "var(--brand-primary, #7c3aed)";
+                const opColor = op.brand_action?.trim() || "var(--brand-action, #7c3aed)";
                 return (
                   <div key={op.slug} style={{ ...row, padding: 14, borderRadius: 12, border: `1px solid ${ativo ? `color-mix(in srgb, ${opColor} 40%, transparent)` : t.cardBorder}`, background: ativo ? `color-mix(in srgb, ${opColor} 12%, transparent)` : "transparent" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: ativo ? 12 : 0 }}>

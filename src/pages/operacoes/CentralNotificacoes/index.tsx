@@ -283,7 +283,7 @@ export default function CentralNotificacoes() {
 
   useEffect(() => {
     void (async () => {
-      const { data } = await supabase.from("operadoras").select("slug, nome, cor_primaria").order("nome").eq("ativo", true);
+      const { data } = await supabase.from("operadoras").select("slug, nome, brand_action").order("nome").eq("ativo", true);
       setOperadorasList((data ?? []) as Operadora[]);
     })();
   }, []);
@@ -712,7 +712,7 @@ export default function CentralNotificacoes() {
                     </div>
                   ) : null}
                   <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                    <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.cor_primaria} />
+                    <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.brand_action} />
                     <span
                       style={{
                         fontSize: 10,
@@ -816,7 +816,7 @@ export default function CentralNotificacoes() {
                     </div>
                   ) : null}
                   <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                    <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.cor_primaria} />
+                    <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.brand_action} />
                     <span
                       style={{
                         fontSize: 10,
@@ -937,7 +937,7 @@ export default function CentralNotificacoes() {
                     </div>
                   ) : null}
                   <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                    <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.cor_primaria} />
+                    <OperadoraTag label={op?.nome ?? row.operadora_slug} corPrimaria={op?.brand_action} />
                     <span
                       style={{
                         fontSize: 10,
@@ -1273,7 +1273,7 @@ export default function CentralNotificacoes() {
                     return (
                       <article key={c.id} style={cardShell} aria-label={`Campanha: ${c.titulo}`}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
-                          <OperadoraTag label={op?.nome ?? c.operadora_slug} corPrimaria={op?.cor_primaria} />
+                          <OperadoraTag label={op?.nome ?? c.operadora_slug} corPrimaria={op?.brand_action} />
                           <span
                             style={{
                               display: "inline-flex",

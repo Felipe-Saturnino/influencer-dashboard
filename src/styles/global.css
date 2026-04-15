@@ -65,12 +65,26 @@ html, body {
   --app-breakpoint-nav: 900px;
   /* Escala da UI no desktop (browser 100%). Em telas estreitas os @media abaixo reduzem um pouco mais. */
   --app-ui-zoom: 0.9;
+  /* Opção C — tokens base */
+  --brand-action:     #7c3aed;
+  --brand-contrast:   #1e36f8;
+  --brand-bg:         #0f0f1a;
+  --brand-text:       #ffffff;
+  --brand-action-12:     color-mix(in srgb, #7c3aed 12%, transparent);
+  --brand-action-20:     color-mix(in srgb, #7c3aed 20%, transparent);
+  --brand-action-30:     color-mix(in srgb, #7c3aed 30%, transparent);
+  --brand-action-border: color-mix(in srgb, #7c3aed 35%, transparent);
+  --brand-contrast-12:   color-mix(in srgb, #1e36f8 12%, transparent);
+  --brand-contrast-30:   color-mix(in srgb, #1e36f8 30%, transparent);
+  --brand-surface:       color-mix(in srgb, #ffffff 5%, #0f0f1a);
+  --brand-surface-hi:    color-mix(in srgb, #ffffff 9%, #0f0f1a);
+  --brand-icon-color:    color-mix(in srgb, #ffffff 70%, #0f0f1a);
+  /* Aliases legados (mesmos eixos) */
   --brand-primary:    #7c3aed;
-  --brand-secondary:  #4a2082;
+  --brand-secondary:  #1e36f8;
   --brand-accent:     #1e36f8;
   --brand-background: #0f0f1a;
-  --brand-text:       #ffffff;
-  --brand-icon:       #70cae4;
+  --brand-icon:       color-mix(in srgb, #ffffff 70%, #0f0f1a);
   --brand-extra1:     #1e36f8;
   --brand-extra2:     #22c55e;
   --brand-extra3:     #f59e0b;
@@ -99,14 +113,14 @@ html, body {
 
 /* Sidebar: item ativo — fundo sólido (fallback) + gradiente com color-mix (navegadores recentes) */
 .sidebar-nav-item--active {
-  background: var(--brand-primary, #7c3aed);
+  background: var(--brand-action, #7c3aed);
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--brand-primary, #7c3aed) 80%, transparent),
-    color-mix(in srgb, var(--brand-secondary, #4a2082) 80%, transparent)
+    color-mix(in srgb, var(--brand-action, #7c3aed) 80%, transparent),
+    color-mix(in srgb, var(--brand-contrast, #1e36f8) 80%, transparent)
   );
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--brand-primary, #7c3aed) 27%, transparent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--brand-action, #7c3aed) 27%, transparent);
 }
 
 @supports (zoom: 1) {

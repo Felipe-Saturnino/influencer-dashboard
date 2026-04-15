@@ -136,8 +136,8 @@ export default function FunilVisual({
           { label: "View → Acesso", taxa: taxas[0], color: FUNIL_COLORS[1] },
           { label: "Acesso → Registro", taxa: taxas[1], color: FUNIL_COLORS[2] },
           { label: "Registro → FTD", taxa: taxas[2], color: FUNIL_COLORS[3] },
-          { label: "Acesso → FTD", taxa: taxas[3], color: brand.useBrand ? "var(--brand-accent)" : FUNIL_COLORS[3], highlight: true },
-          { label: "View → FTD", taxa: taxas[4], color: brand.useBrand ? "var(--brand-accent)" : FUNIL_COLORS[0], highlight: true },
+          { label: "Acesso → FTD", taxa: taxas[3], color: brand.useBrand ? "var(--brand-contrast, #1e36f8)" : FUNIL_COLORS[3], highlight: true },
+          { label: "View → FTD", taxa: taxas[4], color: brand.useBrand ? "var(--brand-action, #7c3aed)" : FUNIL_COLORS[0], highlight: true },
         ].map((r) => {
           const highlightColor = r.color;
           const border = (r as { highlight?: boolean }).highlight

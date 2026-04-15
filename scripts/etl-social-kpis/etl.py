@@ -13,6 +13,11 @@ v3 (Meta):
 - Facebook: não solicitar thumbnail_url em /posts (campo inválido no Post → 400); usar picture; fan_count na Page
 - IG/FB: fallback de listagem sem since/until + filtro UTC; FB tenta published_posts; IG tenta fields mínimos
 - Janelas since/until via _utc_day_unix_bounds; versão da API em META_GRAPH_VERSION (padrão v21.0)
+- OAuth 190 / token expirado: preflight no job diário; collectors não retentam endpoints se o token já falhou
+- YouTube: parse Analytics via columnHeaders + fallback views/engajamento somando vídeos do dia (Analytics vazio/atrasado)
+- YouTube: vídeos do dia via playlistItems (uploads), não search.list (quota ~100/dia por chamada)
+- FB/IG: insights de página/conta usam a mesma janela UTC que `TARGET_DATE` (posts e `kpi_daily.date`), não “hoje-2”
+- Facebook: métricas de insights de página uma por requisição (evita #100 se um nome do lote for inválido)
 """
 
 import os
@@ -50,15 +55,71 @@ YOUTUBE_CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET", "")
 YOUTUBE_REFRESH_TOKEN = os.environ.get("YOUTUBE_REFRESH_TOKEN", "")
 YOUTUBE_CHANNEL_ID = os.environ.get("YOUTUBE_CHANNEL_ID", "")
 
+# channel_id -> uploads playlist id (evita channels.list repetido no mesmo processo)
+_YT_UPLOADS_PLAYLIST_CACHE: dict[str, str] = {}
+
 LINKEDIN_TOKEN = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
 LINKEDIN_ORG_ID = os.environ.get("LINKEDIN_ORG_ID", "")
 
 TARGET_DATE = date.today() - timedelta(days=1)
+# Backfill (`backfill.py`) atribui `INSIGHTS_DATE` por dia; no job diário insights FB/IG usam o mesmo dia que `TARGET_DATE`.
 INSIGHTS_DATE = date.today() - timedelta(days=2)
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 _MAX_ENGAGEMENT_RATE = 99.9999
+
+
+class MetaTokenExpiredError(Exception):
+    """Page/User access token da Meta expirado, revogado ou inválido (ex.: OAuth code 190)."""
+
+
+def _meta_graph_error_dict(resp: requests.Response) -> dict | None:
+    try:
+        body = resp.json()
+        err = body.get("error")
+        return err if isinstance(err, dict) else None
+    except Exception:
+        return None
+
+
+def _meta_graph_error_message(resp: requests.Response) -> str:
+    err = _meta_graph_error_dict(resp)
+    if err:
+        return str(err.get("message") or "")[:800]
+    return (resp.text or "")[:400]
+
+
+def _meta_token_invalid_response(resp: requests.Response | None) -> bool:
+    """HTTP 400/401 com OAuth 190 ou mensagem típica de sessão/token expirado."""
+    if resp is None or resp.status_code not in (400, 401, 403):
+        return False
+    err = _meta_graph_error_dict(resp)
+    if err:
+        if err.get("code") == 190:
+            return True
+        msg = (err.get("message") or "").lower()
+        if "error validating access token" in msg:
+            return True
+        if "session has expired" in msg or ("has expired" in msg and "token" in msg):
+            return True
+        if "has been invalidated" in msg or "invalidated" in msg:
+            return True
+    raw = (resp.text or "").lower()
+    return "session has expired" in raw or '"code":190' in raw.replace(" ", "")
+
+
+def _meta_token_invalid_message(text: str | None) -> bool:
+    if not text:
+        return False
+    t = text.lower()
+    compact = text.replace(" ", "").replace("\n", "")
+    return (
+        "session has expired" in t
+        or "error validating access token" in t
+        or '"code":190' in compact
+        or ("expired" in t and "access token" in t)
+    )
 
 
 def _redact_secrets_for_log(msg: str | None) -> str | None:
@@ -149,6 +210,188 @@ def _classify_video(duration: str, snippet: dict) -> str:
     return "upload"
 
 
+def _fetch_fb_page_day_metrics(
+    base: str, page_id: str, token: str, since_ts: int, until_ts: int
+) -> dict[str, int]:
+    """
+    Insights de página com period=day, uma métrica por GET.
+    A Graph API rejeita o pedido inteiro se `metric=a,b` contiver um nome inválido (#100).
+    """
+    out: dict[str, int] = {}
+    for metric in ("page_impressions",):
+        r = requests.get(
+            f"{base}/{page_id}/insights",
+            params={
+                "metric": metric,
+                "period": "day",
+                "since": since_ts,
+                "until": until_ts,
+                "access_token": token,
+            },
+            timeout=60,
+        )
+        if r.status_code == 200:
+            for row in r.json().get("data", []):
+                if row.get("name") == metric and row.get("values"):
+                    out[metric] = int(row["values"][0]["value"] or 0)
+        else:
+            _log_api_error(r, f"Facebook insights ({metric})")
+
+    eng_key = "page_post_engagements"
+    for i, metric in enumerate(("page_post_engagements", "page_engaged_users")):
+        r = requests.get(
+            f"{base}/{page_id}/insights",
+            params={
+                "metric": metric,
+                "period": "day",
+                "since": since_ts,
+                "until": until_ts,
+                "access_token": token,
+            },
+            timeout=60,
+        )
+        if r.status_code == 200:
+            for row in r.json().get("data", []):
+                if row.get("name") == metric and row.get("values"):
+                    out[eng_key] = int(row["values"][0]["value"] or 0)
+                    break
+            if eng_key in out:
+                break
+        elif i == 0:
+            _log_api_error(r, f"Facebook insights ({metric})")
+        else:
+            log.debug("Facebook insights %s: %s", metric, (r.text or "")[:160])
+    return out
+
+
+def _youtube_uploads_playlist_id(base: str, channel_id: str, headers: dict) -> str | None:
+    cached = _YT_UPLOADS_PLAYLIST_CACHE.get(channel_id)
+    if cached:
+        return cached
+    if channel_id.startswith("UC") and len(channel_id) > 2:
+        pid = "UU" + channel_id[2:]
+        _YT_UPLOADS_PLAYLIST_CACHE[channel_id] = pid
+        return pid
+    ch = requests.get(
+        f"{base}/channels",
+        headers=headers,
+        params={"part": "contentDetails", "id": channel_id},
+        timeout=60,
+    )
+    if ch.status_code != 200:
+        log.warning("YouTube — channels (uploads playlist): %s", ch.text[:200])
+        return None
+    items = ch.json().get("items") or []
+    if not items:
+        return None
+    rel = (items[0].get("contentDetails") or {}).get("relatedPlaylists") or {}
+    pid = rel.get("uploads")
+    if pid:
+        _YT_UPLOADS_PLAYLIST_CACHE[channel_id] = pid
+    return pid
+
+
+def _youtube_video_ids_published_on_day(
+    base: str, playlist_id: str, headers: dict, target: date
+) -> list[str]:
+    """Lista videoIds publicados no dia UTC `target` via playlist de uploads (mais barato que search.list)."""
+    day_start = datetime(target.year, target.month, target.day, tzinfo=timezone.utc)
+    day_end = day_start + timedelta(days=1)
+    out: list[str] = []
+    page_token: str | None = None
+    while True:
+        params: dict[str, str | int] = {
+            "part": "snippet",
+            "playlistId": playlist_id,
+            "maxResults": 50,
+        }
+        if page_token:
+            params["pageToken"] = page_token
+        r = requests.get(f"{base}/playlistItems", headers=headers, params=params, timeout=60)
+        if r.status_code != 200:
+            _log_api_error(r, "YouTube playlistItems")
+            break
+        data = r.json()
+        for it in data.get("items", []):
+            sn = it.get("snippet") or {}
+            published = sn.get("publishedAt")
+            if not published:
+                continue
+            try:
+                ts = published.replace("Z", "+00:00")
+                dt = datetime.fromisoformat(ts)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+            if dt >= day_end:
+                continue
+            if day_start <= dt < day_end:
+                vid = (sn.get("resourceId") or {}).get("videoId")
+                if vid:
+                    out.append(vid)
+            elif dt < day_start:
+                return out
+        page_token = data.get("nextPageToken")
+        if not page_token:
+            break
+    return out
+
+
+def _parse_yt_analytics_report(payload: dict) -> dict[str, int]:
+    """
+    Lê a 1ª linha do relatório YouTube Analytics v2 usando columnHeaders.
+    Evita índices fixos (a 1ª coluna é a dimensão `day`, não views).
+    Se columnHeaders vier vazio, tenta layout legado [day, views, watchMin, likes, comments, subsGained].
+    """
+    rows = payload.get("rows") or []
+    if not rows:
+        return {}
+    row0 = rows[0]
+    if not isinstance(row0, (list, tuple)) or len(row0) < 2:
+        return {}
+
+    headers = payload.get("columnHeaders") or []
+    names: list[str] = []
+    for h in headers:
+        if isinstance(h, dict) and h.get("name"):
+            names.append(str(h["name"]))
+
+    out: dict[str, int] = {}
+    if names:
+        for i, name in enumerate(names):
+            if i >= len(row0):
+                break
+            if name == "day":
+                continue
+            val = row0[i]
+            if isinstance(val, bool):
+                continue
+            if isinstance(val, (int, float)):
+                out[name] = int(val)
+            elif isinstance(val, str) and val.strip():
+                try:
+                    out[name] = int(float(val.replace(",", ".")))
+                except ValueError:
+                    pass
+        if out:
+            return out
+
+    # Legado: day + 5 métricas na ordem pedida pelo ETL
+    if len(row0) >= 6:
+        try:
+            return {
+                "views": int(row0[1]),
+                "estimatedMinutesWatched": int(float(row0[2])),
+                "likes": int(row0[3]),
+                "comments": int(row0[4]),
+                "subscribersGained": int(row0[5]),
+            }
+        except (TypeError, ValueError):
+            pass
+    return {}
+
+
 def get_youtube_token() -> str:
     resp = requests.post(
         "https://oauth2.googleapis.com/token",
@@ -222,11 +465,8 @@ def meta_preflight() -> tuple[bool, str]:
             log.info("Meta preflight OK (token válido para Page/IG).")
             return True, ""
         _log_api_error(r, "Meta preflight")
-        try:
-            body = r.json()
-            err = body.get("error", {}) if isinstance(body.get("error"), dict) else {}
-            msg = err.get("message", r.text[:400] if r.text else "unknown")
-        except Exception:
+        msg = _meta_graph_error_message(r)
+        if not msg:
             msg = (r.text or "")[:400]
         return False, msg
     except requests.RequestException as e:
@@ -309,6 +549,12 @@ def _collect_ig_media_for_day(ig_id: str, token: str, day_start: int, day_end: i
     if err is None:
         return posts
 
+    if _meta_token_invalid_response(err):
+        raise MetaTokenExpiredError(
+            _meta_graph_error_message(err)
+            or "META_ACCESS_TOKEN expirado ou inválido. Atualize o secret META_ACCESS_TOKEN no GitHub (Page Token em Meta for Developers)."
+        )
+
     _log_api_error(err, "Instagram media (since/until)")
     log.warning("Instagram — fallback: listagem sem since/until + filtro UTC no servidor.")
     posts2, err2 = walk_media(
@@ -317,6 +563,12 @@ def _collect_ig_media_for_day(ig_id: str, token: str, day_start: int, day_end: i
     )
     if err2 is None:
         return posts2
+
+    if _meta_token_invalid_response(err2):
+        raise MetaTokenExpiredError(
+            _meta_graph_error_message(err2)
+            or "META_ACCESS_TOKEN expirado ou inválido."
+        )
 
     _log_api_error(err2, "Instagram media (sem filtro)")
     fields_min = (
@@ -330,6 +582,11 @@ def _collect_ig_media_for_day(ig_id: str, token: str, day_start: int, day_end: i
         open_paging=True,
     )
     if err3 is not None:
+        if _meta_token_invalid_response(err3):
+            raise MetaTokenExpiredError(
+                _meta_graph_error_message(err3)
+                or "META_ACCESS_TOKEN expirado ou inválido."
+            )
         _log_api_error(err3, "Instagram media (fields mínimos)")
         err3.raise_for_status()
     return posts3
@@ -407,6 +664,12 @@ def _collect_fb_posts_for_day(page_id: str, token: str, day_start: int, day_end:
     if err is None:
         return posts
 
+    if _meta_token_invalid_response(err):
+        raise MetaTokenExpiredError(
+            _meta_graph_error_message(err)
+            or "META_ACCESS_TOKEN expirado ou inválido. Atualize o secret META_ACCESS_TOKEN no GitHub."
+        )
+
     _log_api_error(err, "Facebook posts (since/until)")
     log.warning("Facebook — fallback: /posts sem since/until + filtro UTC no servidor.")
     posts2, err2 = walk_posts(
@@ -417,6 +680,12 @@ def _collect_fb_posts_for_day(page_id: str, token: str, day_start: int, day_end:
     if err2 is None:
         return posts2
 
+    if _meta_token_invalid_response(err2):
+        raise MetaTokenExpiredError(
+            _meta_graph_error_message(err2)
+            or "META_ACCESS_TOKEN expirado ou inválido."
+        )
+
     _log_api_error(err2, "Facebook posts (sem filtro)")
     log.warning("Facebook — fallback: aresta published_posts.")
     posts3, err3 = walk_posts(
@@ -425,6 +694,11 @@ def _collect_fb_posts_for_day(page_id: str, token: str, day_start: int, day_end:
         open_paging=True,
     )
     if err3 is not None:
+        if _meta_token_invalid_response(err3):
+            raise MetaTokenExpiredError(
+                _meta_graph_error_message(err3)
+                or "META_ACCESS_TOKEN expirado ou inválido."
+            )
         _log_api_error(err3, "Facebook published_posts")
         err3.raise_for_status()
     return posts3
@@ -445,7 +719,6 @@ def fetch_instagram():
     log.info("Instagram — iniciando coleta para %s", TARGET_DATE)
     base = graph_base()
     day_start, day_end = _utc_day_unix_bounds(TARGET_DATE)
-    ins_start, ins_end = _utc_day_unix_bounds(INSIGHTS_DATE)
 
     ig_id = META_IG_ACCOUNT_ID
     if not ig_id:
@@ -455,8 +728,17 @@ def fetch_instagram():
         )
         if page_resp.status_code != 200:
             _log_api_error(page_resp, "Instagram (Page lookup)")
-            if "expired" in (page_resp.text or "").lower():
-                log.error("Instagram — Token expirado. Renove META_ACCESS_TOKEN em Meta for Developers.")
+            if _meta_token_invalid_response(page_resp):
+                ms = int((time.monotonic() - t0) * 1000)
+                log_run(
+                    "instagram",
+                    "error",
+                    0,
+                    error=_meta_graph_error_message(page_resp)
+                    or "META_ACCESS_TOKEN expirado ou inválido.",
+                    ms=ms,
+                )
+                return
             page_resp.raise_for_status()
         data = page_resp.json()
         ig_biz = data.get("instagram_business_account")
@@ -480,6 +762,17 @@ def fetch_instagram():
     )
     if profile_resp.status_code == 200:
         followers = profile_resp.json().get("followers_count", 0) or 0
+    elif _meta_token_invalid_response(profile_resp):
+        ms = int((time.monotonic() - t0) * 1000)
+        log_run(
+            "instagram",
+            "error",
+            0,
+            error=_meta_graph_error_message(profile_resp)
+            or "META_ACCESS_TOKEN expirado ou inválido.",
+            ms=ms,
+        )
+        return
     else:
         log.warning("Instagram — falha ao buscar followers_count: %s", profile_resp.text[:200])
 
@@ -489,8 +782,8 @@ def fetch_instagram():
         params={
             "metric": "reach",
             "period": "day",
-            "since": ins_start,
-            "until": ins_end,
+            "since": day_start,
+            "until": day_end,
             "access_token": META_TOKEN,
         },
     )
@@ -580,7 +873,6 @@ def fetch_facebook():
     log.info("Facebook — iniciando coleta para %s", TARGET_DATE)
     base = graph_base()
     day_start, day_end = _utc_day_unix_bounds(TARGET_DATE)
-    ins_start, ins_end = _utc_day_unix_bounds(INSIGHTS_DATE)
 
     page_resp = requests.get(
         f"{base}/{META_PAGE_ID}",
@@ -589,25 +881,9 @@ def fetch_facebook():
     page_data = page_resp.json() if page_resp.status_code == 200 else {}
     followers_count = page_data.get("fan_count")
 
-    metrics = {}
-    # page_engaged_users não é métrica válida no endpoint atual → (#100) valid insights metric
-    ins_resp = requests.get(
-        f"{base}/{META_PAGE_ID}/insights",
-        params={
-            "metric": "page_impressions,page_post_engagements",
-            "period": "day",
-            "since": ins_start,
-            "until": ins_end,
-            "access_token": META_TOKEN,
-        },
-    )
-    if ins_resp.status_code == 200:
-        for m in ins_resp.json().get("data", []):
-            if m.get("values"):
-                metrics[m["name"]] = m["values"][0]["value"]
-    else:
-        _log_api_error(ins_resp, "Facebook insights")
-        log.warning("Facebook — insights indisponíveis, continuando sem métricas de página.")
+    metrics = _fetch_fb_page_day_metrics(base, META_PAGE_ID, META_TOKEN, day_start, day_end)
+    if not metrics:
+        log.warning("Facebook — insights de página não obtidos; continuando com posts apenas.")
 
     posts_raw = _collect_fb_posts_for_day(META_PAGE_ID, META_TOKEN, day_start, day_end)
 
@@ -746,66 +1022,85 @@ def fetch_youtube():
         _log_api_error(ana_resp, "YouTube Analytics")
         ana_resp.raise_for_status()
 
-    rows = ana_resp.json().get("rows", [[]])
-    row = rows[0] if rows else ["", 0, 0, 0, 0, 0]
-
-    views = int(row[1]) if len(row) > 1 else 0
-    watch_min = row[2] if len(row) > 2 else 0
-    likes = int(row[3]) if len(row) > 3 else 0
-    comments = int(row[4]) if len(row) > 4 else 0
-    subs_gained = int(row[5]) if len(row) > 5 else 0
+    ana_payload = ana_resp.json()
+    am = _parse_yt_analytics_report(ana_payload)
+    views = int(am.get("views", 0) or 0)
+    watch_min = float(am.get("estimatedMinutesWatched", 0) or 0)
+    likes = int(am.get("likes", 0) or 0)
+    comments = int(am.get("comments", 0) or 0)
+    subs_gained = int(am.get("subscribersGained", 0) or 0)
+    if not am:
+        log.warning(
+            "YouTube — Analytics sem linhas ou formato inesperado para %s (rows=%s).",
+            date_str,
+            len(ana_payload.get("rows") or []),
+        )
     channel_impressions = None  # não disponível neste report; dashboard usa video_views no fallback
     channel_ctr = None
 
     shares = 0
 
-    search_resp = requests.get(
-        f"{base}/search",
-        headers=headers,
-        params={
-            "part": "id,snippet",
-            "channelId": YOUTUBE_CHANNEL_ID,
-            "type": "video",
-            "publishedAfter": f"{date_str}T00:00:00Z",
-            "publishedBefore": f"{date_str}T23:59:59Z",
-            "maxResults": 50,
-        },
-    )
-    search_resp.raise_for_status()
-    video_items = search_resp.json().get("items", [])
-    video_ids = [v["id"]["videoId"] for v in video_items]
+    playlist_id = _youtube_uploads_playlist_id(base, YOUTUBE_CHANNEL_ID, headers)
+    video_ids: list[str] = []
+    if playlist_id:
+        video_ids = _youtube_video_ids_published_on_day(base, playlist_id, headers, TARGET_DATE)
+        log.info("YouTube — playlist uploads: %d vídeo(s) no dia %s", len(video_ids), date_str)
+    else:
+        log.warning("YouTube — uploads playlistId não resolvido; sem linhas em youtube_videos para o dia.")
 
     video_rows = []
     if video_ids:
-        stats_resp = requests.get(
-            f"{base}/videos",
-            headers=headers,
-            params={"part": "statistics,contentDetails,snippet", "id": ",".join(video_ids)},
-        )
-        stats_resp.raise_for_status()
-        for v in stats_resp.json().get("items", []):
-            s = v.get("statistics", {})
-            duration = v["contentDetails"].get("duration", "PT0S")
-            vtype = _classify_video(duration, v["snippet"])
-            video_rows.append(
-                {
-                    "video_id": v["id"],
-                    "date": date_str,
-                    "published_at": _parse_api_datetime(v["snippet"].get("publishedAt")),
-                    "title": v["snippet"]["title"],
-                    "type": vtype,
-                    "views": int(s.get("viewCount", 0)),
-                    "watch_time_min": int(watch_min) if len(video_ids) == 1 else None,
-                    "avg_view_pct": None,
-                    "likes": int(s.get("likeCount", 0)),
-                    "comments": int(s.get("commentCount", 0)),
-                    "impressions": channel_impressions if len(video_ids) == 1 else None,
-                    "ctr": channel_ctr if len(video_ids) == 1 else None,
-                    "subscribers_gained": int(subs_gained) if len(video_ids) == 1 else None,
-                }
+        for off in range(0, len(video_ids), 50):
+            chunk = video_ids[off : off + 50]
+            stats_resp = requests.get(
+                f"{base}/videos",
+                headers=headers,
+                params={"part": "statistics,contentDetails,snippet", "id": ",".join(chunk)},
+                timeout=60,
             )
+            if stats_resp.status_code != 200:
+                _log_api_error(stats_resp, "YouTube videos")
+                stats_resp.raise_for_status()
+            for v in stats_resp.json().get("items", []):
+                s = v.get("statistics", {})
+                duration = v["contentDetails"].get("duration", "PT0S")
+                vtype = _classify_video(duration, v["snippet"])
+                video_rows.append(
+                    {
+                        "video_id": v["id"],
+                        "date": date_str,
+                        "published_at": _parse_api_datetime(v["snippet"].get("publishedAt")),
+                        "title": v["snippet"]["title"],
+                        "type": vtype,
+                        "views": int(s.get("viewCount", 0)),
+                        "watch_time_min": int(watch_min) if len(video_ids) == 1 else None,
+                        "avg_view_pct": None,
+                        "likes": int(s.get("likeCount", 0)),
+                        "comments": int(s.get("commentCount", 0)),
+                        "impressions": channel_impressions if len(video_ids) == 1 else None,
+                        "ctr": channel_ctr if len(video_ids) == 1 else None,
+                        "subscribers_gained": int(subs_gained) if len(video_ids) == 1 else None,
+                    }
+                )
 
+    # Analytics pode vir vazio ou atrasado para o dia; o dashboard usa video_views do kpi_daily.
+    v_views = sum(int(r.get("views", 0) or 0) for r in video_rows)
+    v_likes = sum(int(r.get("likes", 0) or 0) for r in video_rows)
+    v_comments = sum(int(r.get("comments", 0) or 0) for r in video_rows)
+    if views == 0 and v_views > 0:
+        log.warning(
+            "YouTube — KPI: views do Analytics = 0; usando soma das views dos vídeos publicados no dia (%s).",
+            v_views,
+        )
+        views = v_views
     eng_total = likes + comments + shares
+    if eng_total == 0 and (v_likes + v_comments) > 0:
+        log.warning(
+            "YouTube — KPI: engajamentos do Analytics = 0; usando likes+comentários dos vídeos do dia (%s).",
+            v_likes + v_comments,
+        )
+        eng_total = v_likes + v_comments + shares
+
     eng_base = max(views, 1)
 
     kpi_row = {
@@ -945,6 +1240,20 @@ if __name__ == "__main__":
         log.error("SUPABASE_URL e SUPABASE_SERVICE_KEY (ou SUPABASE_SERVICE_ROLE_KEY) são obrigatórios")
         exit(1)
 
+    skip_meta = False
+    meta_skip_msg = ""
+    if META_TOKEN and (META_PAGE_ID or META_IG_ACCOUNT_ID):
+        ok_pf, err_pf = meta_preflight()
+        if not ok_pf and _meta_token_invalid_message(err_pf):
+            skip_meta = True
+            meta_skip_msg = (
+                "META_ACCESS_TOKEN expirado ou inválido (Meta). "
+                "Gere um novo Page Access Token em developers.facebook.com → seu App → Ferramentas, "
+                "estenda para longa duração e atualize o secret META_ACCESS_TOKEN no GitHub Actions. "
+                f"Detalhe: {err_pf[:700] if err_pf else ''}"
+            )
+            log.error("Meta preflight — Instagram e Facebook serão pulados neste job. %s", meta_skip_msg[:900])
+
     channels = {
         "instagram": fetch_instagram,
         "facebook": fetch_facebook,
@@ -953,7 +1262,14 @@ if __name__ == "__main__":
     }
     for name, fn in channels.items():
         try:
+            if skip_meta and name in ("instagram", "facebook"):
+                log.warning("Pulando %s — token Meta inválido no preflight.", name)
+                log_run(name, "error", 0, error=meta_skip_msg)
+                continue
             fn()
+        except MetaTokenExpiredError as exc:
+            log.error("%s — token Meta inválido: %s", name, exc)
+            log_run(name, "error", 0, error=str(exc))
         except Exception as exc:
             log.error("%s — ERRO: %s", name, exc, exc_info=True)
             log_run(name, "error", error=str(exc))

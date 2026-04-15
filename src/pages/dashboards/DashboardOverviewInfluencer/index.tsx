@@ -127,9 +127,9 @@ interface DiaData {
 }
 
 const PALETA_INFLUENCER_GRAFICO = [
-  "var(--brand-primary, #7c3aed)",
-  "var(--brand-accent, #1e36f8)",
-  "var(--brand-icon, #70cae4)",
+  "var(--brand-action, #7c3aed)",
+  "var(--brand-contrast, #1e36f8)",
+  "var(--brand-icon-color)",
   "#22c55e",
   "#f59e0b",
   "#ec4899",
@@ -791,7 +791,7 @@ export default function DashboardOverviewInfluencer() {
       m.set(
         id,
         id === "tot"
-          ? "var(--brand-secondary, #4a2082)"
+          ? "var(--brand-contrast, #1e36f8)"
           : PALETA_INFLUENCER_GRAFICO[i % PALETA_INFLUENCER_GRAFICO.length]!,
       );
     });
@@ -920,11 +920,11 @@ export default function DashboardOverviewInfluencer() {
   const ggrPorJogador = totais.ftds > 0 ? fmtBRL(totais.ggr / totais.ftds) : "—";
 
   const brand = useDashboardBrand();
-  const kpiChartPillActiveBorder = brand.useBrand ? brand.primary : "var(--brand-primary, #7c3aed)";
+  const kpiChartPillActiveBorder = brand.useBrand ? brand.primary : "var(--brand-action, #7c3aed)";
   const kpiChartPillActiveBg = brand.useBrand
     ? brand.primaryTransparentBg
-    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)";
-  const kpiChartPillActiveColor = brand.useBrand ? brand.primary : "var(--brand-primary, #7c3aed)";
+    : "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)";
+  const kpiChartPillActiveColor = brand.useBrand ? brand.primary : "var(--brand-action, #7c3aed)";
   const card: React.CSSProperties = { background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
   const thStyle = getThStyle(t, {
@@ -977,8 +977,8 @@ export default function DashboardOverviewInfluencer() {
                 border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
                 background: historico
                   ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
-                    : "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)"
+                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
@@ -1097,7 +1097,7 @@ export default function DashboardOverviewInfluencer() {
                 label="Investimento"
                 value={fmtBRL(totais.investimento)}
                 icon={<Coins size={16} aria-hidden="true" />}
-                accentVar="--brand-accent"
+                accentVar="--brand-contrast"
                 accentColor={BRAND.azul}
                 atual={totais.investimento}
                 anterior={totaisAnt.investimento}
@@ -1121,7 +1121,7 @@ export default function DashboardOverviewInfluencer() {
                 label="Qtd de Lives"
                 value={totais.lives.toLocaleString("pt-BR")}
                 icon={<Video size={16} aria-hidden="true" />}
-                accentVar="--brand-accent"
+                accentVar="--brand-contrast"
                 accentColor={BRAND.azul}
                 atual={totais.lives}
                 anterior={totaisAnt.lives}
@@ -1131,7 +1131,7 @@ export default function DashboardOverviewInfluencer() {
                 label="Horas Realizadas"
                 value={fmtHorasTotal(totais.horas)}
                 icon={<Clock size={16} aria-hidden="true" />}
-                accentVar="--brand-accent"
+                accentVar="--brand-contrast"
                 accentColor={BRAND.azul}
                 atual={totais.horas}
                 anterior={totaisAnt.horas}
@@ -1141,7 +1141,7 @@ export default function DashboardOverviewInfluencer() {
                 label="Média de Views"
                 value={totais.views > 0 ? totais.views.toLocaleString("pt-BR") : "—"}
                 icon={<Eye size={16} aria-hidden="true" />}
-                accentVar="--brand-icon"
+                accentVar="--brand-icon-color"
                 accentColor={BRAND.azul}
                 atual={totais.views}
                 anterior={totaisAnt.views}
@@ -1153,7 +1153,7 @@ export default function DashboardOverviewInfluencer() {
                 label="Registros"
                 value={totais.registros.toLocaleString("pt-BR")}
                 icon={<UserPlus size={16} aria-hidden="true" />}
-                accentVar="--brand-primary"
+                accentVar="--brand-action"
                 accentColor={BRAND.roxo}
                 atual={totais.registros}
                 anterior={totaisAnt.registros}
@@ -1164,7 +1164,7 @@ export default function DashboardOverviewInfluencer() {
                 label="FTDs"
                 value={totais.ftds.toLocaleString("pt-BR")}
                 icon={<Trophy size={16} aria-hidden="true" />}
-                accentVar="--brand-primary"
+                accentVar="--brand-action"
                 accentColor={BRAND.roxo}
                 atual={totais.ftds}
                 anterior={totaisAnt.ftds}
@@ -1175,7 +1175,7 @@ export default function DashboardOverviewInfluencer() {
                 label="Depósitos"
                 value={totais.depositos_qtd.toLocaleString("pt-BR")}
                 icon={<PlayCircle size={16} aria-hidden="true" />}
-                accentVar="--brand-icon"
+                accentVar="--brand-icon-color"
                 accentColor={BRAND.amarelo}
                 atual={totais.depositos_qtd}
                 anterior={totaisAnt.depositos_qtd}
@@ -1543,7 +1543,7 @@ export default function DashboardOverviewInfluencer() {
                           key={id}
                           dataKey={id}
                           name={id === "tot" ? "Consolidado" : nomeInfluencer(id)}
-                          fill={coresSeriesComparativo.get(id) ?? "var(--brand-primary, #7c3aed)"}
+                          fill={coresSeriesComparativo.get(id) ?? "var(--brand-action, #7c3aed)"}
                           radius={[4, 4, 0, 0]}
                           maxBarSize={28}
                         />
@@ -1582,7 +1582,7 @@ export default function DashboardOverviewInfluencer() {
                           type="monotone"
                           name={id === "tot" ? "Consolidado" : nomeInfluencer(id)}
                           dataKey={id}
-                          stroke={coresSeriesComparativo.get(id) ?? "var(--brand-primary, #7c3aed)"}
+                          stroke={coresSeriesComparativo.get(id) ?? "var(--brand-action, #7c3aed)"}
                           strokeWidth={2}
                           dot={{ r: 2 }}
                           connectNulls

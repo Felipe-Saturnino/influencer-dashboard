@@ -134,7 +134,7 @@ function StreamersFiltrosEUAbas({
               border: sf.historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
               background: sf.historico
                 ? brand.useBrand
-                  ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                  ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
                   : "rgba(124,58,237,0.15)"
                 : "transparent",
               color: sf.historico ? brand.accent : t.textMuted,
@@ -242,7 +242,7 @@ function StreamersFiltrosEUAbas({
                   border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
                   background: ativo
                     ? brand.useBrand
-                      ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
                       : "rgba(124,58,237,0.15)"
                     : (t.inputBg ?? t.cardBg),
                   color: ativo ? brand.accent : t.textMuted,
@@ -331,7 +331,7 @@ function StreamersAutorizado() {
                 <Loader2
                   size={20}
                   className="app-lucide-spin"
-                  color="var(--brand-primary, #7c3aed)"
+                  color="var(--brand-action, #7c3aed)"
                   aria-hidden="true"
                 />
                 Carregando…
@@ -368,7 +368,7 @@ export default function Streamers() {
         <Loader2
           size={24}
           className="app-lucide-spin"
-          color="var(--brand-primary, #7c3aed)"
+          color="var(--brand-action, #7c3aed)"
           aria-hidden="true"
         />
       </div>

@@ -196,18 +196,14 @@ export interface Operadora {
   nome:           string;
   ativo:          boolean;
   criado_em?:     string;
-  /** Brandguide: cor principal (ex: #7c3aed) */
-  cor_primaria?:    string | null;
-  /** Brandguide: cor secundária */
-  cor_secundaria?:  string | null;
-  /** Brandguide: cor de destaque */
-  cor_accent?:      string | null;
-  /** Brandguide: cor de fundo */
-  cor_background?:  string | null;
-  /** Brandguide: cor dos textos */
-  cor_textos?:      string | null;
-  /** Brandguide: cor dos ícones */
-  cor_icones?:      string | null;
+  /** Brandguide Opção C: cor de ação (CTAs, títulos) */
+  brand_action?:   string | null;
+  /** Brandguide: cor de contraste (comparativos, suporte vs ação) */
+  brand_contrast?: string | null;
+  /** Brandguide: fundo da app (operador) */
+  brand_bg?:       string | null;
+  /** Brandguide: texto principal */
+  brand_text?:     string | null;
   /** Brandguide: URL do logo */
   logo_url?:        string | null;
   /** Brandguide: URL da fonte customizada (.woff2, .woff, .ttf) */

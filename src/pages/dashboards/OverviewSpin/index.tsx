@@ -59,20 +59,20 @@ const BRAND = {
 
 /** Paleta A/B — mesmo padrão do Comparativo de Funil (Conversão). */
 const COR_MESA_A = {
-  accent: "#7c3aed",
-  bg: "rgba(124,58,237,0.10)",
-  border: "rgba(124,58,237,0.35)",
+  accent: "var(--brand-action, #7c3aed)",
+  bg: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+  border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
 } as const;
 const COR_MESA_B = {
-  accent: "#1e36f8",
-  bg: "rgba(30,54,248,0.10)",
-  border: "rgba(30,54,248,0.35)",
+  accent: "var(--brand-contrast, #1e36f8)",
+  bg: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)",
+  border: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
 } as const;
 
 /** Zebras por coluna nas tabelas de mesa (A/B e Baccarat/Roleta) — alinhado a tokens de marca. */
-const ZEBRA_MESA_STRIPE_PRIMARY = "color-mix(in srgb, var(--brand-primary, #7c3aed) 6%, transparent)";
-const ZEBRA_MESA_STRIPE_ACCENT = "color-mix(in srgb, var(--brand-accent, #1e36f8) 6%, transparent)";
-const ZEBRA_MESA_STRIPE_SECONDARY = "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_PRIMARY = "color-mix(in srgb, var(--brand-action, #7c3aed) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_ACCENT = "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)";
+const ZEBRA_MESA_STRIPE_SECONDARY = "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)";
 
 interface DailyRow {
   data: string;
@@ -932,9 +932,10 @@ function linhaComparativoJogoAgregadaMes(
   };
 }
 
-const COR_BLACKJACK = "var(--brand-primary, #7c3aed)";
-const COR_ROLETA = "var(--brand-success, #22c55e)";
-const COR_BACCARAT = "var(--brand-accent, #1e36f8)";
+/** Identidade visual do tipo de jogo — não segue a paleta da operadora. */
+const COR_BLACKJACK = "#22c55e";
+const COR_ROLETA = "#a78bfa";
+const COR_BACCARAT = "#70cae4";
 
 type KpiJogoKey = "ggr" | "turnover" | "bets" | "margin_pct" | "bet_size" | "uap" | "arpu";
 
@@ -973,9 +974,9 @@ function pickKpiMetricaDetalhe(
 
 /** Cores distintas por série no gráfico de detalhamento (operadoras). */
 const PALETA_OPERADORAS_DETALHE = [
-  "var(--brand-primary, #7c3aed)",
-  "var(--brand-accent, #1e36f8)",
-  "var(--brand-icon, #70cae4)",
+  "var(--brand-action, #7c3aed)",
+  "var(--brand-contrast, #1e36f8)",
+  "var(--brand-icon-color, #70cae4)",
   "#22c55e",
   "#f59e0b",
   "#ec4899",
@@ -1792,6 +1793,25 @@ export default function OverviewSpin() {
       } else if (filtroOperadora !== "todas") {
         base[filtroOperadora] = pickKpiMetricaDetalhe(r, k);
         slugSet.add(filtroOperadora);
+      } else if (operadoraSlugsForcado != null && operadoraSlugsForcado.length > 0) {
+        /** "Todas" no UI mas escopo fixo (ex.: operador) — mesmo breakdown por slug que no modo agregado. */
+        const ym = historico
+          ? r.drillId != null
+            ? String(r.drillId).slice(0, 7)
+            : r.periodoIso.slice(0, 7)
+          : null;
+        const dia = !historico
+          ? normalizeMesasYmd(r.drillId != null ? String(r.drillId) : r.periodoIso)
+          : null;
+        const subs = historico
+          ? agregaDailyRawPorOperadoraNoMes(dailyRawUnmerged, ym!, monthlyRawUnmerged)
+          : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, dia!);
+        for (const sub of subs) {
+          if (!operadoraSlugsForcado.includes(sub.operadora_slug)) continue;
+          if (!podeVerOperadora(sub.operadora_slug)) continue;
+          base[sub.operadora_slug] = pickKpiMetricaDetalhe(sub, k);
+          slugSet.add(sub.operadora_slug);
+        }
       }
       return base;
     });
@@ -1809,6 +1829,7 @@ export default function OverviewSpin() {
     monthlyRawUnmerged,
     podeVerOperadora,
     filtroOperadora,
+    operadoraSlugsForcado,
   ]);
 
   const coresOperadorasDetalhe = useMemo(() => {
@@ -1874,9 +1895,9 @@ export default function OverviewSpin() {
     () =>
       brand.useBrand
         ? {
-            accent: "var(--brand-primary)",
-            bg: "color-mix(in srgb, var(--brand-primary) 10%, transparent)",
-            border: "color-mix(in srgb, var(--brand-primary) 35%, transparent)",
+            accent: "var(--brand-action)",
+            bg: "color-mix(in srgb, var(--brand-action) 10%, transparent)",
+            border: "color-mix(in srgb, var(--brand-action) 35%, transparent)",
           }
         : COR_MESA_A,
     [brand.useBrand],
@@ -1885,9 +1906,9 @@ export default function OverviewSpin() {
     () =>
       brand.useBrand
         ? {
-            accent: "var(--brand-accent)",
-            bg: "color-mix(in srgb, var(--brand-accent) 10%, transparent)",
-            border: "color-mix(in srgb, var(--brand-accent) 35%, transparent)",
+            accent: "var(--brand-contrast)",
+            bg: "color-mix(in srgb, var(--brand-contrast) 10%, transparent)",
+            border: "color-mix(in srgb, var(--brand-contrast) 35%, transparent)",
           }
         : COR_MESA_B,
     [brand.useBrand],
@@ -1897,14 +1918,14 @@ export default function OverviewSpin() {
     padding: "5px 12px",
     borderRadius: 999,
     border: brand.useBrand
-      ? "1px solid color-mix(in srgb, var(--brand-secondary) 30%, transparent)"
+      ? "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)"
       : "1px solid rgba(74,32,130,0.35)",
     background: brand.useBrand
-      ? "color-mix(in srgb, var(--brand-secondary) 10%, transparent)"
+      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)"
       : "rgba(74,32,130,0.10)",
     fontSize: 12,
     fontWeight: 800,
-    color: t.textMuted,
+    color: brand.useBrand ? "var(--brand-action, #7c3aed)" : t.textMuted,
     fontFamily: FONT.body,
     letterSpacing: "0.05em",
     textAlign: "center",
@@ -2022,8 +2043,6 @@ export default function OverviewSpin() {
     fontWeight: 600,
   };
 
-  const COR_TOTAL_COMP = isDark ? "#ffffff" : "#000000";
-
   const thStickyComparativo: React.CSSProperties = {
     ...thStyle,
     position: "sticky",
@@ -2041,7 +2060,7 @@ export default function OverviewSpin() {
     fontWeight: 600,
     background:
       i % 2 === 1
-        ? `color-mix(in srgb, ${brand.blockBg} 92%, var(--brand-secondary, #4a2082) 8%)`
+        ? `color-mix(in srgb, ${brand.blockBg} 92%, var(--brand-contrast, #4a2082) 8%)`
         : brand.blockBg,
     boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
   });
@@ -2146,8 +2165,8 @@ export default function OverviewSpin() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>Total</span>
-            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>
+            <span style={{ fontWeight: 700, color: t.text }}>Total</span>
+            <span style={{ fontWeight: 700, color: t.text }}>
               {somavel
                 ? formatar(totalSomavel)
                 : valorRodape != null
@@ -2255,8 +2274,8 @@ export default function OverviewSpin() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>Total</span>
-            <span style={{ fontWeight: 700, color: COR_TOTAL_COMP }}>
+            <span style={{ fontWeight: 700, color: t.text }}>Total</span>
+            <span style={{ fontWeight: 700, color: t.text }}>
               {somavel
                 ? formatar(totalSomavel)
                 : valorRodape != null
@@ -2494,8 +2513,8 @@ export default function OverviewSpin() {
                             style={{
                               background:
                                 j % 2 === 1
-                                  ? "color-mix(in srgb, var(--brand-secondary, #4a2082) 4%, transparent)"
-                                  : "color-mix(in srgb, var(--brand-secondary, #4a2082) 2%, transparent)",
+                                  ? "color-mix(in srgb, var(--brand-contrast, #4a2082) 4%, transparent)"
+                                  : "color-mix(in srgb, var(--brand-contrast, #4a2082) 2%, transparent)",
                               borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
                             }}
                           >
@@ -2506,7 +2525,7 @@ export default function OverviewSpin() {
                                 fontWeight: 600,
                                 paddingLeft: 32,
                                 boxShadow:
-                                  "inset 3px 0 0 color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)",
+                                  "inset 3px 0 0 color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
                               }}
                             >
                               {slugToNome(sl.operadora_slug)}
@@ -2596,7 +2615,7 @@ export default function OverviewSpin() {
                       key={slug}
                       dataKey={slug}
                       name={slugToNome(slug)}
-                      fill={coresOperadorasDetalhe.get(slug) ?? "var(--brand-primary, #7c3aed)"}
+                      fill={coresOperadorasDetalhe.get(slug) ?? "var(--brand-action, #7c3aed)"}
                       radius={[4, 4, 0, 0]}
                       maxBarSize={28}
                     />
@@ -2635,7 +2654,7 @@ export default function OverviewSpin() {
                       type="monotone"
                       name={slugToNome(slug)}
                       dataKey={slug}
-                      stroke={coresOperadorasDetalhe.get(slug) ?? "var(--brand-primary, #7c3aed)"}
+                      stroke={coresOperadorasDetalhe.get(slug) ?? "var(--brand-action, #7c3aed)"}
                       strokeWidth={2}
                       dot={{ r: 2 }}
                       connectNulls
@@ -2878,7 +2897,7 @@ export default function OverviewSpin() {
                               fontVariantNumeric: "tabular-nums",
                               borderLeft: `2px solid ${t.cardBorder}`,
                               fontWeight: 700,
-                              color: COR_TOTAL_COMP,
+                              color: t.text,
                             }}
                           >
                             {renderValorKpiComparativo(kpi, totaisOficiais[kpi.key])}
@@ -3147,7 +3166,7 @@ export default function OverviewSpin() {
                 border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
                 background: historico
                   ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                    ? "color-mix(in srgb, var(--brand-contrast) 15%, transparent)"
                     : `color-mix(in srgb, ${brand.accent} 12%, transparent)`
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
@@ -3241,7 +3260,6 @@ export default function OverviewSpin() {
                   label="GGR"
                   value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
                   icon={<TrendingUp size={16} />}
-                  accentVar="--brand-extra1"
                   accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
                   atual={nKpi(kpiExibir?.ggr)}
                   anterior={nKpi(kpiAntExibir?.ggr)}
@@ -3252,7 +3270,7 @@ export default function OverviewSpin() {
                   label="Turnover"
                   value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
                   icon={<Wallet size={16} />}
-                  accentVar="--brand-extra3"
+                  accentVar="--brand-contrast"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.turnover)}
                   anterior={nKpi(kpiAntExibir?.turnover)}
@@ -3263,7 +3281,6 @@ export default function OverviewSpin() {
                   label="Margem"
                   value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
                   icon={<Percent size={16} />}
-                  accentVar="--brand-extra4"
                   accentColor={BRAND.amarelo}
                   atual={nKpi(kpiExibir?.margin_pct)}
                   anterior={nKpi(kpiAntExibir?.margin_pct)}
@@ -3275,7 +3292,7 @@ export default function OverviewSpin() {
                   label="Apostas"
                   value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
                   icon={<ListOrdered size={16} />}
-                  accentVar="--brand-extra2"
+                  accentVar="--brand-action"
                   accentColor={BRAND.azul}
                   atual={nKpi(kpiExibir?.bets)}
                   anterior={nKpi(kpiAntExibir?.bets)}
@@ -3285,7 +3302,7 @@ export default function OverviewSpin() {
                   label="Aposta média"
                   value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
                   icon={<ChartColumnBig size={16} />}
-                  accentVar="--brand-extra4"
+                  accentVar="--brand-contrast"
                   accentColor={BRAND.ciano}
                   atual={nKpi(kpiExibir?.bet_size)}
                   anterior={nKpi(kpiAntExibir?.bet_size)}
@@ -3296,7 +3313,7 @@ export default function OverviewSpin() {
                   label="ARPU"
                   value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
                   icon={<Coins size={16} />}
-                  accentVar="--brand-extra3"
+                  accentVar="--brand-icon-color"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.arpu)}
                   anterior={nKpi(kpiAntExibir?.arpu)}
@@ -3312,7 +3329,6 @@ export default function OverviewSpin() {
                   label="GGR"
                   value={kpiExibir?.ggr != null ? fmtBRL(kpiExibir.ggr) : "—"}
                   icon={<TrendingUp size={16} />}
-                  accentVar="--brand-extra1"
                   accentColor={nKpi(kpiExibir?.ggr) >= 0 ? BRAND.verde : BRAND.vermelho}
                   atual={nKpi(kpiExibir?.ggr)}
                   anterior={nKpi(kpiAntExibir?.ggr)}
@@ -3323,7 +3339,7 @@ export default function OverviewSpin() {
                   label="Turnover"
                   value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
                   icon={<Wallet size={16} />}
-                  accentVar="--brand-extra3"
+                  accentVar="--brand-contrast"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.turnover)}
                   anterior={nKpi(kpiAntExibir?.turnover)}
@@ -3334,7 +3350,7 @@ export default function OverviewSpin() {
                   label="Apostas"
                   value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
                   icon={<ListOrdered size={16} />}
-                  accentVar="--brand-extra2"
+                  accentVar="--brand-action"
                   accentColor={BRAND.azul}
                   atual={nKpi(kpiExibir?.bets)}
                   anterior={nKpi(kpiAntExibir?.bets)}
@@ -3344,7 +3360,6 @@ export default function OverviewSpin() {
                   label="Margem"
                   value={kpiExibir?.margin_pct != null ? fmtPct(kpiExibir.margin_pct) : "—"}
                   icon={<Percent size={16} />}
-                  accentVar="--brand-extra4"
                   accentColor={BRAND.amarelo}
                   atual={nKpi(kpiExibir?.margin_pct)}
                   anterior={nKpi(kpiAntExibir?.margin_pct)}
@@ -3356,7 +3371,7 @@ export default function OverviewSpin() {
                   label="Aposta média"
                   value={kpiExibir?.bet_size != null ? fmtBRL(kpiExibir.bet_size) : "—"}
                   icon={<ChartColumnBig size={16} />}
-                  accentVar="--brand-extra4"
+                  accentVar="--brand-contrast"
                   accentColor={BRAND.ciano}
                   atual={nKpi(kpiExibir?.bet_size)}
                   anterior={nKpi(kpiAntExibir?.bet_size)}
@@ -3367,7 +3382,7 @@ export default function OverviewSpin() {
                   label={historico ? "Média UAP" : "UAP"}
                   value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
                   icon={<Users size={16} />}
-                  accentVar="--brand-extra2"
+                  accentVar="--brand-icon-color"
                   accentColor={BRAND.roxo}
                   atual={nKpi(kpiExibir?.uap)}
                   anterior={nKpi(kpiAntExibir?.uap)}
@@ -3377,7 +3392,7 @@ export default function OverviewSpin() {
                   label="ARPU"
                   value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
                   icon={<Coins size={16} />}
-                  accentVar="--brand-extra3"
+                  accentVar="--brand-icon-color"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.arpu)}
                   anterior={nKpi(kpiAntExibir?.arpu)}
@@ -3633,12 +3648,12 @@ export default function OverviewSpin() {
                         marginBottom: 10,
                         padding: "6px 10px",
                         borderRadius: 10,
-                        background: "color-mix(in srgb, var(--brand-icon, #70cae4) 10%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--brand-icon, #70cae4) 35%, transparent)",
+                        background: "color-mix(in srgb, var(--brand-icon-color, #70cae4) 10%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--brand-icon-color, #70cae4) 35%, transparent)",
                         textAlign: "center",
                         fontSize: 13,
                         fontWeight: 700,
-                        color: "var(--brand-icon, #70cae4)",
+                        color: "var(--brand-icon-color, #70cae4)",
                         fontFamily: FONT.body,
                       }}
                     >
@@ -3656,12 +3671,12 @@ export default function OverviewSpin() {
                         marginBottom: 10,
                         padding: "6px 10px",
                         borderRadius: 10,
-                        background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 30%, transparent)",
+                        background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)",
                         textAlign: "center",
                         fontSize: 13,
                         fontWeight: 700,
-                        color: "var(--brand-primary, #7c3aed)",
+                        color: "var(--brand-action, #7c3aed)",
                         fontFamily: FONT.body,
                       }}
                     >
@@ -3905,12 +3920,12 @@ export default function OverviewSpin() {
                             marginBottom: 10,
                             padding: "6px 10px",
                             borderRadius: 10,
-                            background: "color-mix(in srgb, var(--brand-icon, #70cae4) 10%, transparent)",
-                            border: "1px solid color-mix(in srgb, var(--brand-icon, #70cae4) 35%, transparent)",
+                            background: "color-mix(in srgb, var(--brand-icon-color, #70cae4) 10%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--brand-icon-color, #70cae4) 35%, transparent)",
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: "var(--brand-icon, #70cae4)",
+                            color: "var(--brand-icon-color, #70cae4)",
                             fontFamily: FONT.body,
                           }}
                         >
@@ -3928,12 +3943,12 @@ export default function OverviewSpin() {
                             marginBottom: 10,
                             padding: "6px 10px",
                             borderRadius: 10,
-                            background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)",
-                            border: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 30%, transparent)",
+                            background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)",
                             textAlign: "center",
                             fontSize: 13,
                             fontWeight: 700,
-                            color: "var(--brand-primary, #7c3aed)",
+                            color: "var(--brand-action, #7c3aed)",
                             fontFamily: FONT.body,
                           }}
                         >

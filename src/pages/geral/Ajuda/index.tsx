@@ -15,6 +15,7 @@ import {
   GiCash,
   GiPokerHand,
   GiMicrophone,
+  GiShare,
 } from "react-icons/gi";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
@@ -26,6 +27,7 @@ const MENU_AJUDA = [
     items: [
       { key: "streamers" as PageKey, label: "Streamers", Icon: GiTv },
       { key: "mesas_spin" as PageKey, label: "Overview Spin", Icon: GiPokerHand },
+      { key: "dash_midias_sociais" as PageKey, label: "Mídias Sociais", Icon: GiShare },
       {
         key: "dash_overview_influencer" as PageKey,
         label: "Overview Influencer",
@@ -123,6 +125,45 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Perfil Operador",
         texto:
           "Operadores visualizam os mesmos blocos e KPIs, com escopo restrito às mesas da sua operadora. O filtro de operadora não é exibido — os dados já correspondem ao acesso autorizado. O Comparativo de Mesa e os Dados por Mesa ficam disponíveis automaticamente, sem necessidade de selecionar uma operadora.",
+      },
+    ],
+  },
+  dash_midias_sociais: {
+    titulo: "Mídias Sociais",
+    blocos: [
+      {
+        texto:
+          "Dashboard de acompanhamento do canal de mídias sociais — desempenho orgânico nas redes e conversão gerada por campanhas com UTMs mapeadas. Organizado em três abas: Overview, Conversão e Alcance. Use o seletor de período no topo para navegar entre meses ou ativar o histórico completo.",
+      },
+      {
+        subtitulo: "Aba Overview",
+        texto:
+          "Visão financeira do canal: o impacto das mídias sociais em receita e jogadores captados.\n\n— KPIs consolidados: GGR, Registros, GGR por Jogador, FTDs, Depósitos e Saques — todos com comparativo MoM quando disponível.\n— Detalhamento: evolução dia a dia (ou mês a mês no Histórico) com visitas, conversões, FTDs e GGR por período.\n— Comparativo de campanhas: performance de cada campanha com UTMs mapeadas — acessos, registros, FTDs e GGR por campanha.",
+      },
+      {
+        subtitulo: "Aba Conversão",
+        texto:
+          "Análise detalhada do funil de aquisição por campanha.\n\n— Funil consolidado: visão geral de Visitas → Registros → FTDs com as taxas de passagem entre etapas.\n— Comparativo de funil: selecione duas campanhas para comparar o funil lado a lado, com taxas individuais.\n— Comparativo de taxas: tabela com as taxas Visita→Registro, Registro→FTD e Visita→FTD para cada campanha mapeada.",
+      },
+      {
+        subtitulo: "Aba Alcance",
+        texto:
+          "Performance de conteúdo orgânico nas redes sociais.\n\n— KPIs de Mídias: Postagens, Seguidores totais, Impressões totais e Engajamento médio — com comparativo MoM.\n— Por canal: cards individuais para Instagram, Facebook e YouTube com as métricas específicas de cada plataforma.\n— Engajamento por formato: distribuição do volume de posts por tipo de conteúdo (Reels, Vídeo, Carrossel, Foto, Short etc.).\n— Postagens recentes: carrossel com as publicações mais recentes do período, com preview, data, link e estatísticas de cada post.",
+      },
+      {
+        subtitulo: "Campanhas e UTMs",
+        texto:
+          "Os dados de conversão (Visitas, Registros, FTDs e GGR) vêm de UTMs mapeadas na Gestão de Links e vinculadas a campanhas cadastradas em Campanhas. Sem esse mapeamento, a aba Overview e a aba Conversão ficam sem dados de funil — apenas os KPIs de mídias sociais da aba Alcance aparecem.",
+      },
+      {
+        subtitulo: "Postagens Recentes",
+        texto:
+          "O carrossel exibe as publicações do período selecionado em ordem cronológica reversa. Use as setas para navegar entre os posts. Clique no título de uma publicação para abrir o post original na rede social.\n\nAs publicações são buscadas diretamente das APIs do Instagram, Facebook e YouTube — posts sem imagem exibem um ícone substituto com as iniciais do canal.",
+      },
+      {
+        subtitulo: "Histórico e Comparativo MoM",
+        texto:
+          "No modo mês a mês, use as setas para navegar entre períodos. Ative Histórico para ver o acumulado desde o início dos dados (Janeiro/2026). No modo Histórico, os comparativos MoM são desabilitados e a tabela de detalhamento exibe uma linha por mês.",
       },
     ],
   },
@@ -465,6 +506,46 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "O drilldown por operadora não aparece na tabela?",
         texto:
           "A expansão por operadora (ícone de seta ao lado da data ou mês) só está disponível quando o filtro está em 'Todas as operadoras'. Se uma operadora específica estiver selecionada, os dados já estão filtrados e não há sublinhas para expandir.",
+      },
+    ],
+  },
+  dash_midias_sociais: {
+    titulo: "Mídias Sociais",
+    blocos: [
+      {
+        subtitulo: "O funil de conversão está vazio?",
+        texto:
+          "Os dados de Visitas, Registros e FTDs vêm de UTMs mapeadas na Gestão de Links e vinculadas a campanhas. Se o funil estiver vazio, verifique se:\n\n— As campanhas foram cadastradas em Campanhas.\n— As UTMs das publicações foram mapeadas na Gestão de Links e vinculadas a essas campanhas.\n— O período selecionado tem tráfego registrado via UTMs.",
+      },
+      {
+        subtitulo: "A aba Alcance não mostra dados de um canal específico?",
+        texto:
+          "Os dados de cada canal (Instagram, Facebook, YouTube) são coletados pelo ETL que sincroniza com as APIs das plataformas. Se um canal não aparecer, pode ser que:\n\n— A conta não está conectada ou a autorização expirou.\n— O ETL ainda não rodou para o período selecionado.\n— Não houve atividade na conta no período (zero publicações, zero alcance).\n\nEntre em contato com a equipe técnica se um canal esperado estiver consistentemente sem dados.",
+      },
+      {
+        subtitulo: "Os KPIs de GGR e FTDs diferem dos dashboards de Streamers?",
+        texto:
+          "Isso é esperado. Os dados do dashboard de Mídias Sociais vêm exclusivamente das UTMs mapeadas a campanhas de mídias sociais — não incluem conversões via links de influencers. São canais de aquisição diferentes com origens de dados distintas.",
+      },
+      {
+        subtitulo: "O Comparativo de campanhas está vazio mas há UTMs mapeadas?",
+        texto:
+          "Verifique se as UTMs mapeadas na Gestão de Links estão vinculadas a uma campanha (campo 'Campanha' no mapeamento de UTM). UTMs mapeadas para influencers mas não vinculadas a campanhas de mídias sociais não aparecem neste dashboard.",
+      },
+      {
+        subtitulo: "O Engajamento aparece como '—'?",
+        texto:
+          "O Engajamento médio é calculado como Engajamentos ÷ Impressões. Se as Impressões do período forem zero — por exemplo, no YouTube onde impressões não são coletadas pela API Analytics — a taxa não pode ser calculada e aparece como '—'.",
+      },
+      {
+        subtitulo: "As Postagens Recentes não carregam as imagens?",
+        texto:
+          "As imagens das postagens são carregadas diretamente das URLs das APIs das plataformas. Quando a imagem não carrega, um ícone substituto é exibido automaticamente. Isso pode ocorrer quando:\n\n— A URL da imagem expirou (comum em tokens temporários do Instagram).\n— O post foi excluído ou tornado privado após a coleta.\n— O dispositivo está bloqueando requisições externas.",
+      },
+      {
+        subtitulo: "O Comparativo de funil não lista uma campanha?",
+        texto:
+          "O seletor de campanhas exibe apenas campanhas com dados no período selecionado. Se uma campanha não aparecer na lista, confirme que ela tem UTMs mapeadas com tráfego registrado no período.",
       },
     ],
   },
