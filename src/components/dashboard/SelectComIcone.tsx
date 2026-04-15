@@ -59,6 +59,7 @@ export function SelectComIcone({
           color: t.text,
           fontSize: 13,
           fontFamily: FONT.body,
+          lineHeight: 1.25,
           cursor: "pointer",
           outline: "none",
           appearance: "none" as const,

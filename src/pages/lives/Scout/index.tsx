@@ -8,6 +8,7 @@ import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/pla
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { PlatLogo } from "../../../components/PlatLogo";
+import { DashboardPageHeader } from "../../../components/dashboard";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { X, Eye, Pencil, Trash2, ChevronDown, Loader2, Search, Coins, Building2 } from "lucide-react";
 
@@ -349,31 +350,29 @@ export default function Scout() {
   const PLATS_ORDEM = ["Twitch", "YouTube", "Kick", "Instagram", "TikTok", "Discord", "WhatsApp", "Telegram"];
 
   return (
-    <div className="app-page-shell">
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: brand.primaryIconBg, border: brand.primaryIconBorder, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: brand.primaryIconColor }}>
-            <Search size={14} aria-hidden="true" />
-          </div>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.5px", textTransform: "uppercase" }}>Scout</h1>
-            <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>Prospecte e registre informações de influencers para parcerias.</p>
-          </div>
-        </div>
-        {perm.canCriarOk && (
-          <button
-            type="button"
-            onClick={() => setModalNovo(true)}
-            style={{
-              padding: "10px 18px", borderRadius: 10, border: "none", cursor: "pointer",
-              background: CTA_GRADIENT,
-              color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
-            }}
-          >
-            + Adicionar
-          </button>
-        )}
-      </div>
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+      <DashboardPageHeader
+        icon={<Search size={14} aria-hidden="true" />}
+        title="Scout"
+        subtitle="Prospecte e registre informações de influencers para parcerias."
+        brand={brand}
+        t={t}
+        right={
+          perm.canCriarOk ? (
+            <button
+              type="button"
+              onClick={() => setModalNovo(true)}
+              style={{
+                padding: "10px 18px", borderRadius: 10, border: "none", cursor: "pointer",
+                background: CTA_GRADIENT,
+                color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
+              }}
+            >
+              + Adicionar
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* Bloco 1: Cards Consolidados */}
       {!loading && (
@@ -421,14 +420,15 @@ export default function Scout() {
                       cursor: "pointer",
                       font: "inherit",
                       textAlign: "center",
+                      lineHeight: 1,
                     }}
                   >
                     <PlatLogo plataforma={plat} size={14} isDark={isDark ?? false} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: cor, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: cor, fontFamily: FONT.body, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "inline-flex", alignItems: "center" }}>
                       {plat}
                     </span>
-                    <span style={{ width: 1, height: 12, background: `${cor}44`, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0 }}>
+                    <span style={{ width: 1, height: 12, background: `${cor}44`, flexShrink: 0, alignSelf: "center" }} />
+                    <span style={{ fontSize: 13, fontWeight: 800, color: count > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0, display: "inline-flex", alignItems: "center", lineHeight: 1 }}>
                       {count}
                     </span>
                   </button>
@@ -444,8 +444,8 @@ export default function Scout() {
       <div style={{ marginBottom: 20 }}>
         <div style={{
           borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           {/* Linha 1: Status (filtro de plataforma: chips em Cobertura de Plataformas) */}
@@ -463,11 +463,12 @@ export default function Scout() {
                     background: active ? `${color}22` : "transparent",
                     color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
                     fontFamily: FONT.body, transition: "all 0.15s",
+                    lineHeight: 1,
                   }}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                  {STATUS_SCOUT_LABEL[s]}
-                  {active && <X size={9} aria-hidden="true" />}
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
+                  <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_SCOUT_LABEL[s]}</span>
+                  {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
                 </button>
               );
             })}
@@ -803,7 +804,7 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
             <div style={row}><label style={labelStyle}>Telefone</label>{val(scout.telefone)}</div>
             <div style={row}><label style={labelStyle}>Cachê Negociado</label>{val(toCacheNumber(scout.cache_negociado) > 0 ? fmtBRL(toCacheNumber(scout.cache_negociado)) : null)}</div>
             <div style={row}><label style={labelStyle}>Live Cassino</label>{val(getLiveCassinoLabel(scout.live_cassino))}</div>
-            <div style={row}><label style={labelStyle}>Operadora (parceria)</label>{val(scout.operadora_slug ? (operadorasList.find((o) => o.slug === scout.operadora_slug)?.nome ?? scout.operadora_slug) : null)}</div>
+            <div style={row}><label style={labelStyle}>Operadora</label>{val(scout.operadora_slug ? (operadorasList.find((o) => o.slug === scout.operadora_slug)?.nome ?? scout.operadora_slug) : null)}</div>
           </>
         )}
         {tab === "canais" && (
@@ -1289,21 +1290,18 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
             </div>
             <div style={row}>
               <label style={labelStyle}>
-                Operadora (parceria) {status === "fechado" && <span style={{ color: BRAND.vermelho }}>*</span>}
+                Operadora {status === "fechado" && <span style={{ color: BRAND.vermelho }}>*</span>}
               </label>
               {operadorasList.length === 0 ? (
                 <p style={{ fontSize: 12, color: t.textMuted, margin: 0, fontFamily: FONT.body }}>Cadastre operadoras em Gestão de Operadoras.</p>
               ) : (
                 <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                  <option value="">— {status === "fechado" ? "Obrigatória para Fechado" : "Selecione"}</option>
+                  <option value="">{status === "fechado" ? "Obrigatória para Fechado" : "Selecione"}</option>
                   {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
                     <option key={o.slug} value={o.slug}>{o.nome}</option>
                   ))}
                 </select>
               )}
-              <p style={{ fontSize: 11, color: t.textMuted, margin: "6px 0 0", fontFamily: FONT.body, lineHeight: 1.35 }}>
-                Ao fechar o prospecto, esta operadora é gravada no perfil do influencer (aba Operadoras) e no escopo do usuário na Gestão de Usuários — o mesmo vínculo exigido ao criar um influencer pela Gestão.
-              </p>
             </div>
           </>
         )}
@@ -1317,8 +1315,9 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                   const ativo = plataformas.includes(p);
                   return (
                     <button key={p} type="button" onClick={() => togglePlataforma(p)}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 20, cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : (t.inputBg ?? t.cardBg), color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
-                      <PlatLogo plataforma={p} size={13} isDark={isDark ?? false} /> {p}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 20, cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : (t.inputBg ?? t.cardBg), color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, lineHeight: 1 }}>
+                      <PlatLogo plataforma={p} size={13} isDark={isDark ?? false} />
+                      <span style={{ display: "inline-flex", alignItems: "center" }}>{p}</span>
                     </button>
                   );
                 })}
@@ -1329,8 +1328,9 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
               const metrica = PLAT_METRICA[p] ?? "Views";
               return (
                 <div key={p} style={row}>
-                  <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 6 }}>
-                    <PlatLogo plataforma={p} size={12} isDark={isDark ?? false} /> {p} — Link e {metrica}
+                  <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
+                    <PlatLogo plataforma={p} size={12} isDark={isDark ?? false} />
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>{p} — Link e {metrica}</span>
                   </label>
                   <div style={{ display: "flex", gap: "10px" }}>
                     <input value={links[key] ?? ""} onChange={(e) => setLinks((l) => ({ ...l, [key]: e.target.value }))} style={{ ...inputStyle, flex: 2 }} placeholder={`Link ${p}`} />

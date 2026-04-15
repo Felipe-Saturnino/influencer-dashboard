@@ -239,8 +239,10 @@ export default function Sidebar({ activePage, onNavigate, isDrawer = false, draw
                         color: active ? "white" : "#e5dce1",
                       }}
                     >
-                      <Icon size={15} color={iconColor} />
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, lineHeight: 0 }}>
+                        <Icon size={15} color={iconColor} />
+                      </span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, lineHeight: 1.2 }}>
                         {item.label}
                         {item.key === "central_notificacoes" && badgeCentral > 0 ? (
                           <span

@@ -86,6 +86,68 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "cadastro_influencers",
+    label: "Gestão de Influencers",
+    accentColor: "#22c55e",
+    termos: [
+      {
+        termo: "Status do Influencer",
+        definicao:
+          "Classificação do estado do relacionamento comercial com o influencer na plataforma.",
+        nota:
+          "Ativo: influencer com parceria vigente, habilitado para agendar lives e gerar links.\nInativo: parceria pausada — o influencer continua cadastrado mas não pode ser agendado.\nCancelado: parceria encerrada definitivamente.\n\nAlterações de status são restritas a Admin e Gestor. A data da última alteração de status é registrada automaticamente e pode ser consultada na aba Histórico do modal de visualização.",
+        referencia: "Influencers",
+      },
+      {
+        termo: "Cachê por Hora",
+        definicao:
+          "Valor de remuneração do influencer por hora de live transmitida. Base de cálculo dos pagamentos no módulo Financeiro.",
+        nota:
+          "Alterações do cachê por hora são restritas a Admin e Gestor. O campo aparece bloqueado no formulário de edição para outros perfis.\n\nNo Scout, o campo correspondente é 'Cachê Negociado' — ao fechar a parceria, o valor é sincronizado automaticamente com o cachê por hora no cadastro do influencer em Influencers.",
+        referencia: "Influencers · Operações → Financeiro",
+      },
+      {
+        termo: "Perfil Incompleto",
+        definicao:
+          "Indicação de que um influencer ativo possui dados obrigatórios não preenchidos no cadastro. Um perfil incompleto bloqueia o agendamento de novas lives e a emissão de links de rastreamento.",
+        nota:
+          "Os dados obrigatórios que geram o alerta incluem: nome artístico, pelo menos um canal com link e dados bancários para pagamento.\n\nO quadro 'Perfil Incompleto' no topo da página Influencers lista os nomes clicáveis — clique no nome para abrir diretamente o formulário de edição. O badge 'Perfil incompleto' também aparece no card da lista.",
+        referencia: "Influencers · Agenda",
+      },
+    ],
+  },
+  {
+    key: "prospeccao_scout",
+    label: "Prospecção e Scout",
+    accentColor: "#6b7280",
+    termos: [
+      {
+        termo: "Funil de Prospecção",
+        definicao:
+          "Etapas do processo de negociação com um candidato a parceiro, desde o primeiro contato até o fechamento.",
+        nota:
+          "Visualizado → Contato → Negociação → Fechado.\n\nCada etapa representa um avanço na negociação. Ao marcar como Fechado com todos os dados obrigatórios preenchidos, a plataforma cria automaticamente o usuário do influencer.",
+        referencia: "Scout",
+      },
+      {
+        termo: "Live Cassino",
+        definicao:
+          "Indicação de que o prospecto realiza ou tem histórico de lives de cassino ao vivo. Campo informativo cadastrado na aba Contato do Scout.",
+        nota:
+          "Quando marcado como 'Sim', o badge 'Live Cassino' aparece no card do prospecto na lista, facilitando a identificação visual de candidatos com experiência nesse formato.",
+        referencia: "Scout",
+      },
+      {
+        termo: "Categorias de Conteúdo",
+        definicao:
+          "Classificação do tipo de conteúdo que o prospecto produz, usada para segmentar e identificar candidatos por perfil de audiência.",
+        nota:
+          "Opções disponíveis: Vida Real, Jogos Populares, Variedades, Esportes, Cassino. Multi-seleção — um prospecto pode ter mais de uma categoria.",
+        referencia: "Scout",
+      },
+    ],
+  },
+  {
     key: "funil_conversao",
     label: "Funil de Conversão",
     accentColor: "#1e36f8",

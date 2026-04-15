@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
-import { SelectComIcone } from "../../../components/dashboard";
+import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
@@ -115,10 +115,11 @@ function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDro
           cursor: "pointer", outline: "none",
           display: "flex", alignItems: "center", gap: 6,
           whiteSpace: "nowrap" as const,
+          lineHeight: 1,
         }}
       >
-        {icon && <span style={{ display: "flex", alignItems: "center" }}>{icon}</span>}
-        {current?.label}
+        {icon && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}>{icon}</span>}
+        <span style={{ display: "inline-flex", alignItems: "center" }}>{current?.label}</span>
         {open ? <ChevronUp size={9} style={{ opacity: 0.7 }} aria-hidden="true" /> : <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />}
       </button>
 
@@ -317,6 +318,7 @@ export default function Agenda() {
     fontFamily: FONT.body, fontWeight: active ? 700 : 400,
     transition: "all 0.15s",
     display: "flex", alignItems: "center", gap: 6,
+    lineHeight: 1,
   });
 
   // ── Chip de live no calendário ───────────────────────────────────────────────
@@ -334,6 +336,7 @@ export default function Agenda() {
           marginBottom: 4,
           width: "100%",
           textAlign: "left",
+          lineHeight: 1,
         }}
       >
         <span style={{
@@ -622,66 +625,51 @@ export default function Agenda() {
   }
 
   return (
-    <div className="app-page-shell">
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ── HEADER ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        {/* Título — cor primária */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: brand.primaryIconBg,
-            border: brand.primaryIconBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: brand.primaryIconColor, flexShrink: 0,
-          }}>
-            <CalendarRange size={16} aria-hidden="true" />
-          </span>
-          <h1 style={{
-            fontSize: 18, fontWeight: 800, color: brand.primary,
-            fontFamily: FONT_TITLE, margin: 0,
-            letterSpacing: "0.05em", textTransform: "uppercase",
-          }}>
-            Agenda de Lives
-          </h1>
-        </div>
-
-        {/* Botão Nova Live — cor accent */}
-        {perm.canCriarOk && (
-          <button
-            type="button"
-            onClick={() => void tentarAbrirNovaLive()}
-            disabled={checandoNovaLive}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "10px 20px", borderRadius: 10, border: "none",
-              cursor: checandoNovaLive ? "not-allowed" : "pointer",
-              opacity: checandoNovaLive ? 0.75 : 1,
-              background: "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))",
-              color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
-            }}
-          >
-            {checandoNovaLive ? (
-              <>
-                <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" />
-                Verificando...
-              </>
-            ) : (
-              <>
-                <Plus size={14} aria-hidden="true" />
-                + Nova Live
-              </>
-            )}
-          </button>
-        )}
-      </div>
+      <DashboardPageHeader
+        icon={<CalendarRange size={14} aria-hidden="true" />}
+        title="Agenda de Lives"
+        subtitle="Calendário central de lives — visualize, agende e acompanhe lives de todos os influencers."
+        brand={brand}
+        t={t}
+        right={
+          perm.canCriarOk ? (
+            <button
+              type="button"
+              onClick={() => void tentarAbrirNovaLive()}
+              disabled={checandoNovaLive}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "10px 20px", borderRadius: 10, border: "none",
+                cursor: checandoNovaLive ? "not-allowed" : "pointer",
+                opacity: checandoNovaLive ? 0.75 : 1,
+                background: "linear-gradient(135deg, var(--brand-action, #4a2082), var(--brand-contrast, #1e36f8))",
+                color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body,
+              }}
+            >
+              {checandoNovaLive ? (
+                <>
+                  <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  <Plus size={14} aria-hidden="true" />
+                  Nova Live
+                </>
+              )}
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           {/* Linha principal — centralizada */}
@@ -762,11 +750,12 @@ export default function Agenda() {
                       background: active ? `${color}22` : "transparent",
                       color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
                       fontFamily: FONT.body, transition: "all 0.15s",
+                      lineHeight: 1,
                     }}
                   >
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                    {STATUS_LABEL[status]}
-                    {active && <X size={9} aria-hidden="true" />}
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[status]}</span>
+                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
                   </button>
                 );
               })}
@@ -789,11 +778,12 @@ export default function Agenda() {
                       color: active ? color : color + "cc",
                       fontSize: 12, fontWeight: active ? 700 : 500,
                       fontFamily: FONT.body, transition: "all 0.15s",
+                      lineHeight: 1,
                     }}
                   >
                     <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                    {plat}
-                    {active && <X size={9} aria-hidden="true" />}
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>{plat}</span>
+                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
                   </button>
                 );
               })}

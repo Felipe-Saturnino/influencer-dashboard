@@ -7,3 +7,4 @@ export { SkeletonKpiCard, SkeletonTableRow } from "./SkeletonCard";
 export { MarginBadge } from "./MarginBadge";
 export { RateCard } from "./RateCard";
 export { SortTableTh, type SortDir } from "./SortTableTh";
+export { DashboardPageHeader } from "./DashboardPageHeader";
