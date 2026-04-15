@@ -8,7 +8,7 @@ import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
@@ -29,7 +29,8 @@ import {
 import { getThStyle, getTdStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import {
   AlertTriangle,
-  Banknote,
+  ArrowDownToLine,
+  ArrowUpFromLine,
   BarChart2,
   Calendar,
   CalendarDays,
@@ -41,8 +42,7 @@ import {
   Eye,
   Filter,
   Gauge,
-  Percent,
-  PlayCircle,
+  Loader2,
   Shield,
   Table2,
   TrendingUp,
@@ -560,7 +560,7 @@ export default function DashboardOverviewInfluencer() {
         setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
       }
 
-      // Bloco 5: Comparativo Mensal (histórico) ou Comparativo Diário (mês no carrossel)
+      // Bloco 5: Detalhamento Mensal (histórico) ou Detalhamento Diário (mês no carrossel)
       if (historico) {
         const ymSet = new Set<string>();
         rows.forEach((m) => ymSet.add(m.data.slice(0, 7)));
@@ -943,6 +943,44 @@ export default function DashboardOverviewInfluencer() {
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: brand.primaryIconBg,
+              border: brand.primaryIconBorder,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              color: brand.primaryIconColor,
+            }}
+          >
+            <BarChart2 size={14} aria-hidden="true" />
+          </div>
+          <div>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: brand.primary,
+                fontFamily: FONT_TITLE,
+                margin: 0,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+              }}
+            >
+              Overview Influencer
+            </h1>
+            <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
+              Visão executiva da performance do canal de influencers.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* ─── BLOCO 1: Filtros — primária transparente ───────────────────────────── */}
       <div style={{ marginBottom: 14 }}>
@@ -1025,8 +1063,9 @@ export default function DashboardOverviewInfluencer() {
             )}
 
             {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} aria-hidden /> Carregando...
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
+                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                Carregando…
               </span>
             )}
           </div>
@@ -1084,7 +1123,7 @@ export default function DashboardOverviewInfluencer() {
           <>
             <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
               <KpiCard
-                label="GGR Total"
+                label="GGR"
                 value={fmtBRL(totais.ggr)}
                 icon={<TrendingUp size={16} aria-hidden="true" />}
                 accentColor={totais.ggr >= 0 ? BRAND.verde : BRAND.vermelho}
@@ -1107,7 +1146,7 @@ export default function DashboardOverviewInfluencer() {
               <KpiCard
                 label="ROI"
                 value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"}
-                icon={<Percent size={16} aria-hidden="true" />}
+                icon={<BarChart2 size={16} aria-hidden="true" />}
                 accentColor={
                   totais.investimento > 0 ? (totais.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde
                 }
@@ -1118,7 +1157,7 @@ export default function DashboardOverviewInfluencer() {
             </div>
             <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
               <KpiCard
-                label="Qtd de Lives"
+                label="Lives"
                 value={totais.lives.toLocaleString("pt-BR")}
                 icon={<Video size={16} aria-hidden="true" />}
                 accentVar="--brand-contrast"
@@ -1174,7 +1213,7 @@ export default function DashboardOverviewInfluencer() {
               <KpiCard
                 label="Depósitos"
                 value={totais.depositos_qtd.toLocaleString("pt-BR")}
-                icon={<PlayCircle size={16} aria-hidden="true" />}
+                icon={<ArrowDownToLine size={16} aria-hidden="true" />}
                 accentVar="--brand-icon-color"
                 accentColor={BRAND.amarelo}
                 atual={totais.depositos_qtd}
@@ -1185,7 +1224,7 @@ export default function DashboardOverviewInfluencer() {
               <KpiCard
                 label="Saques"
                 value={totais.saques_qtd.toLocaleString("pt-BR")}
-                icon={<Banknote size={16} aria-hidden="true" />}
+                icon={<ArrowUpFromLine size={16} aria-hidden="true" />}
                 accentColor={BRAND.amarelo}
                 atual={totais.saques_qtd}
                 anterior={totaisAnt.saques_qtd}
@@ -1225,7 +1264,7 @@ export default function DashboardOverviewInfluencer() {
         </div>
       </div>
 
-      {/* ─── BLOCO 5: Comparativo Mensal (histórico) / Comparativo Diário (mês) ─ */}
+      {/* ─── BLOCO 5: Detalhamento Mensal (histórico) / Detalhamento Diário (mês) ─ */}
       {(historico || mesSelecionado) && diasData.length > 0 && (
         <div style={{ ...card, padding: 0, overflow: "hidden", marginBottom: 0 }}>
           <div style={{ padding: "20px 20px 16px" }}>
@@ -1233,7 +1272,7 @@ export default function DashboardOverviewInfluencer() {
               icon={<CalendarDays size={14} aria-hidden="true" />}
               sub={historico ? "mês a mês" : undefined}
             >
-              {historico ? "Comparativo Mensal" : "Comparativo Diário"}
+              {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
             </SectionTitle>
           </div>
 
@@ -1359,8 +1398,8 @@ export default function DashboardOverviewInfluencer() {
                   }}
                 >
                   {historico
-                    ? "Comparativo mensal — todo o período"
-                    : `Comparativo diário — ${mesSelecionado?.label ?? ""}`}
+                    ? "Detalhamento mensal — todo o período"
+                    : `Detalhamento diário — ${mesSelecionado?.label ?? ""}`}
                 </caption>
                 <thead>
                   <tr>

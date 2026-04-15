@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import { useStreamersFiltrosOptional } from "../StreamersFiltrosContext";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
@@ -28,6 +28,8 @@ import {
   KpiCardDepositos,
   FunilVisual,
   SelectComIcone,
+  SortTableTh,
+  type SortDir,
 } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import {
@@ -35,14 +37,12 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  ChevronsUpDown,
   Clock,
   Coins,
-  CircleDollarSign,
+  Loader2,
+  Receipt,
+  Wallet,
   Filter,
-  Percent,
   Shield,
   TrendingUp,
   Trophy,
@@ -50,7 +50,6 @@ import {
   UserPlus,
   Users,
   Video,
-  Wallet,
 } from "lucide-react";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
@@ -122,7 +121,17 @@ interface LiveResultado {
   media_views: number;
 }
 
-type RankingSortCol = "ggr" | "investimento" | "roi" | "ftds" | "lives" | "horas";
+type RankingSortCol =
+  | "nome"
+  | "views"
+  | "acessos"
+  | "registros"
+  | "ggr"
+  | "investimento"
+  | "roi"
+  | "ftds"
+  | "lives"
+  | "horas";
 
 interface RankingRow {
   influencer_id: string;
@@ -172,6 +181,37 @@ function calculaTotais(rows: RankingRow[], totalInvestimento?: number): TotaisDa
     custoPorFTD: ftds > 0 ? invest / ftds : 0,
     custoPorRegistro: registros > 0 ? invest / registros : 0,
   };
+}
+
+function RankingThSort({
+  col,
+  label,
+  sortRanking,
+  setSortRanking,
+  thStyle,
+}: {
+  col: RankingSortCol;
+  label: string;
+  sortRanking: { col: RankingSortCol; dir: SortDir };
+  setSortRanking: Dispatch<SetStateAction<{ col: RankingSortCol; dir: SortDir }>>;
+  thStyle: React.CSSProperties;
+}) {
+  return (
+    <SortTableTh
+      col={col}
+      label={label}
+      sortCol={sortRanking.col}
+      sortDir={sortRanking.dir}
+      thStyle={thStyle}
+      align="left"
+      onSort={(c) =>
+        setSortRanking((s) => ({
+          col: c,
+          dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+        }))
+      }
+    />
+  );
 }
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
@@ -443,10 +483,28 @@ export default function DashboardOverview() {
   const rankingOrdenado = useMemo(() => {
     const list = [...rankingFiltrado];
     const { col, dir } = sortRanking;
+    const mul = dir === "desc" ? -1 : 1;
     list.sort((a, b) => {
-      const va = (a[col] ?? 0) as number;
-      const vb = (b[col] ?? 0) as number;
-      const primary = dir === "desc" ? vb - va : va - vb;
+      let primary = 0;
+      switch (col) {
+        case "nome":
+          primary = mul * a.nome.localeCompare(b.nome, "pt-BR");
+          break;
+        case "roi": {
+          const na = a.roi == null;
+          const nb = b.roi == null;
+          if (na && nb) primary = 0;
+          else if (na) primary = 1;
+          else if (nb) primary = -1;
+          else primary = mul * (a.roi! - b.roi!);
+          break;
+        }
+        default: {
+          const va = Number(a[col as keyof RankingRow]) || 0;
+          const vb = Number(b[col as keyof RankingRow]) || 0;
+          primary = mul * (va - vb);
+        }
+      }
       if (primary !== 0) return primary;
       return a.nome.localeCompare(b.nome, "pt-BR");
     });
@@ -492,32 +550,6 @@ export default function DashboardOverview() {
 
   const thStyle = getThStyle(t);
   const tdStyle = getTdStyle(t);
-
-  function ThRankingSort({ col, label }: { col: RankingSortCol; label: string }) {
-    const ativo = sortRanking.col === col;
-    return (
-      <th
-        scope="col"
-        onClick={() =>
-          setSortRanking((s) => ({
-            col,
-            dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
-          }))
-        }
-        style={{ ...thStyle, cursor: "pointer", userSelect: "none" }}
-        aria-sort={ativo ? (sortRanking.dir === "desc" ? "descending" : "ascending") : "none"}
-      >
-        {label}
-        <span style={{ marginLeft: 4, display: "inline-flex", alignItems: "center", opacity: ativo ? 1 : 0.3 }} aria-hidden>
-          {ativo
-            ? sortRanking.dir === "desc"
-              ? <ChevronDown size={11} aria-hidden />
-              : <ChevronUp size={11} aria-hidden />
-            : <ChevronsUpDown size={11} aria-hidden />}
-        </span>
-      </th>
-    );
-  }
 
   // ── STATUS BADGES ─────────────────────────────────────────────────────────────
   const statusBadges = [
@@ -599,7 +631,9 @@ export default function DashboardOverview() {
                   ? `1px solid ${brand.accent}`
                   : `1px solid ${t.cardBorder}`,
                 background: historico
-                  ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : "rgba(124,58,237,0.15)")
+                  ? (brand.useBrand
+                      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                      : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
@@ -642,8 +676,9 @@ export default function DashboardOverview() {
             )}
 
             {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} aria-hidden /> Carregando...
+              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
+                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                Carregando…
               </span>
             )}
           </div>
@@ -674,9 +709,9 @@ export default function DashboardOverview() {
           Financeiro
         </div>
         <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-          <KpiCard label="GGR Total" value={fmtBRL(totaisExibidos.ggr)} icon={<TrendingUp size={16} aria-hidden />} accentColor={totaisExibidos.ggr >= 0 ? BRAND.verde : BRAND.vermelho} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
+          <KpiCard label="GGR" value={fmtBRL(totaisExibidos.ggr)} icon={<TrendingUp size={16} aria-hidden />} accentColor={totaisExibidos.ggr >= 0 ? BRAND.verde : BRAND.vermelho} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
           <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<Coins size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
-          <KpiCard label="ROI Geral" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<Percent size={16} aria-hidden />} accentColor={totaisExibidos.investimento > 0 ? (totaisExibidos.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
+          <KpiCard label="ROI" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<BarChart2 size={16} aria-hidden />} accentColor={totaisExibidos.investimento > 0 ? (totaisExibidos.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
         </div>
 
         <div
@@ -718,7 +753,7 @@ export default function DashboardOverview() {
         </div>
         <div className="app-grid-kpi-4">
           <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<UserPlus size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
-          <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<CircleDollarSign size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
+          <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<Receipt size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
           <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<Trophy size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
           <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<Wallet size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
         </div>
@@ -771,7 +806,7 @@ export default function DashboardOverview() {
             {statusFiltro && (
               <button
                 type="button"
-                aria-label="Remover filtro de status"
+                aria-label="Limpar filtro de status"
                 onClick={() => setStatusFiltro(null)}
                 style={{ padding: "4px 10px", borderRadius: 999, cursor: "pointer", fontFamily: FONT.body, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontSize: 11 }}
               >
@@ -799,16 +834,16 @@ export default function DashboardOverview() {
               </caption>
               <thead>
                 <tr>
-                  <th scope="col" style={thStyle}>Influencer</th>
-                  <ThRankingSort col="lives" label="Lives" />
-                  <ThRankingSort col="horas" label="Horas" />
-                  <th scope="col" style={thStyle}>Views</th>
-                  <th scope="col" style={thStyle}>Acessos</th>
-                  <th scope="col" style={thStyle}>Registros</th>
-                  <ThRankingSort col="ftds" label="FTDs" />
-                  <ThRankingSort col="ggr" label="GGR" />
-                  <ThRankingSort col="investimento" label="Invest." />
-                  <ThRankingSort col="roi" label="Performance" />
+                  <RankingThSort col="nome" label="Influencer" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="lives" label="Lives" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="horas" label="Horas" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="views" label="Views" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="acessos" label="Acessos" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="registros" label="Registros" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="ftds" label="FTDs" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="ggr" label="GGR" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="investimento" label="Invest." sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
+                  <RankingThSort col="roi" label="Performance" sortRanking={sortRanking} setSortRanking={setSortRanking} thStyle={thStyle} />
                 </tr>
               </thead>
               <tbody>

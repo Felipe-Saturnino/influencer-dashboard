@@ -4,32 +4,32 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
-import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
 import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import {
+  ArrowUpDown,
   Calendar,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clock,
+  CircleDollarSign,
   Dice6,
   LayoutGrid,
+  Loader2,
   Shield,
   Table2,
   Target,
-  Wallet,
   TrendingUp,
   ListOrdered,
   Percent,
   ChartColumnBig,
   Users,
-  Coins,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -2555,6 +2555,50 @@ export default function OverviewSpin() {
                   </Fragment>
                 );
               })}
+              {(() => {
+                const tot = tabelaRows.reduce(
+                  (a, r) => ({
+                    ggr: a.ggr + (Number(r.ggr) || 0),
+                    turnover: a.turnover + (Number(r.turnover) || 0),
+                    bets: a.bets + (Number(r.bets) || 0),
+                    uap: a.uap + (Number(r.uap) || 0),
+                  }),
+                  { ggr: 0, turnover: 0, bets: 0, uap: 0 },
+                );
+                const margin_pct =
+                  tot.turnover !== 0 ? (tot.ggr / tot.turnover) * 100 : null;
+                const bet_size = tot.bets !== 0 ? tot.turnover / tot.bets : null;
+                const arpu = tot.uap !== 0 ? tot.ggr / tot.uap : null;
+                return (
+                  <tr
+                    key="total-detalhamento-spin"
+                    style={{
+                      background: TOTAL_ROW_BG,
+                      fontWeight: 700,
+                      borderTop: `2px solid ${t.cardBorder}`,
+                    }}
+                  >
+                    <td style={{ ...tdStyle, fontWeight: 700, color: brand.primary }}>Total</td>
+                    <td
+                      style={{
+                        ...tdNum,
+                        color: tot.ggr > 0 ? BRAND.verde : tot.ggr < 0 ? BRAND.vermelho : t.text,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {fmtBRL(tot.ggr)}
+                    </td>
+                    <td style={tdNum}>{fmtBRL(tot.turnover)}</td>
+                    <td style={tdNum}>{tot.bets.toLocaleString("pt-BR")}</td>
+                    <td style={{ ...tdNum }}>
+                      <MarginBadge value={margin_pct} />
+                    </td>
+                    <td style={tdNum}>{bet_size != null ? fmtBRL(Number(bet_size)) : "—"}</td>
+                    <td style={tdNum}>{tot.uap.toLocaleString("pt-BR")}</td>
+                    <td style={tdNum}>{arpu != null ? fmtBRL(Number(arpu)) : "—"}</td>
+                  </tr>
+                );
+              })()}
             </tbody>
           </table>
         </div>
@@ -2583,7 +2627,11 @@ export default function OverviewSpin() {
           >
             Exibindo <strong style={{ color: t.text }}>{kpiGraficoDetalheConfig.label}</strong> por operadora
           </p>
-          <div style={{ width: "100%", height: 320 }}>
+          <div
+            role="img"
+            aria-label={`Gráfico de ${kpiGraficoDetalheConfig.label} por operadora — ${historico ? "todo o período" : mesSelecionado?.label ?? ""}`}
+            style={{ width: "100%", height: "clamp(220px, 35vh, 420px)", minHeight: 220 }}
+          >
             <ResponsiveContainer width="100%" height="100%">
               {kpiGraficoDetalheConfig.tipoGrafico === "barra" ? (
                 <BarChart
@@ -2980,7 +3028,11 @@ export default function OverviewSpin() {
           >
             Exibindo <strong style={{ color: t.text }}>{kpiGraficoConfig.label}</strong> por jogo
           </p>
-          <div style={{ width: "100%", height: 320 }}>
+          <div
+            role="img"
+            aria-label={`Gráfico de ${kpiGraficoConfig.label} por jogo — ${historico ? "todo o período" : mesSelecionado?.label ?? ""}`}
+            style={{ width: "100%", height: "clamp(220px, 35vh, 420px)", minHeight: 220 }}
+          >
             <ResponsiveContainer width="100%" height="100%">
               {kpiGraficoConfig.tipoGrafico === "barra" ? (
                 <BarChart
@@ -3092,6 +3144,45 @@ export default function OverviewSpin() {
       className="app-page-shell app-page-shell--pb64"
       style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}
     >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: brand.primaryIconBg,
+              border: brand.primaryIconBorder,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              color: brand.primaryIconColor,
+            }}
+          >
+            <LayoutGrid size={14} aria-hidden />
+          </div>
+          <div>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: brand.primary,
+                fontFamily: FONT_TITLE,
+                margin: 0,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+              }}
+            >
+              Overview Spin
+            </h1>
+            <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
+              Resultados consolidados das mesas ao vivo — Baccarat, Roleta e Blackjack.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div style={{ marginBottom: 14 }}>
         <div
           style={{
@@ -3166,8 +3257,8 @@ export default function OverviewSpin() {
                 border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
                 background: historico
                   ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast) 15%, transparent)"
-                    : `color-mix(in srgb, ${brand.accent} 12%, transparent)`
+                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
@@ -3204,10 +3295,11 @@ export default function OverviewSpin() {
                   fontFamily: FONT.body,
                   display: "flex",
                   alignItems: "center",
-                  gap: 4,
+                  gap: 6,
                 }}
               >
-                <Clock size={12} /> Carregando...
+                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                Carregando…
               </span>
             )}
           </div>
@@ -3269,7 +3361,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="Turnover"
                   value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
-                  icon={<Wallet size={16} />}
+                  icon={<ArrowUpDown size={16} />}
                   accentVar="--brand-contrast"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.turnover)}
@@ -3312,7 +3404,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="ARPU"
                   value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
-                  icon={<Coins size={16} />}
+                  icon={<CircleDollarSign size={16} />}
                   accentVar="--brand-icon-color"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.arpu)}
@@ -3338,7 +3430,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="Turnover"
                   value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
-                  icon={<Wallet size={16} />}
+                  icon={<ArrowUpDown size={16} />}
                   accentVar="--brand-contrast"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.turnover)}
@@ -3391,7 +3483,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="ARPU"
                   value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
-                  icon={<Coins size={16} />}
+                  icon={<CircleDollarSign size={16} />}
                   accentVar="--brand-icon-color"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.arpu)}
@@ -3406,13 +3498,23 @@ export default function OverviewSpin() {
 
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle icon={<Calendar size={15} />} sub={historico ? "mês a mês" : "dia a dia"}>
-          {historico ? "Comparativo Mensal" : "Detalhamento Diário"}
+          {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
         </SectionTitle>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-            <Clock size={16} style={{ marginBottom: 8 }} />
-            <div>Carregando...</div>
+          <div
+            style={{
+              padding: 40,
+              textAlign: "center",
+              color: t.textMuted,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+            <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
           </div>
         ) : tabelaRows.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
@@ -3431,9 +3533,19 @@ export default function OverviewSpin() {
                 <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
                   Comparativo de Jogo
                 </SectionTitle>
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
+                <div
+                  style={{
+                    padding: 24,
+                    textAlign: "center",
+                    color: t.textMuted,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                  <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                 </div>
               </div>
               {!modoAgregadoTodasOperadoras && (
@@ -3442,18 +3554,38 @@ export default function OverviewSpin() {
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
-                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                      <Clock size={16} style={{ marginBottom: 8 }} />
-                      Carregando…
+                    <div
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: t.textMuted,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
                     <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
                       Dados por mesa
                     </SectionTitle>
-                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                      <Clock size={16} style={{ marginBottom: 8 }} />
-                      Carregando…
+                    <div
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: t.textMuted,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
                 </>
@@ -3701,9 +3833,19 @@ export default function OverviewSpin() {
                 <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
                   Comparativo de Jogo
                 </SectionTitle>
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
+                <div
+                  style={{
+                    padding: 24,
+                    textAlign: "center",
+                    color: t.textMuted,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                  <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                 </div>
               </div>
               {!modoAgregadoTodasOperadoras && (
@@ -3712,18 +3854,38 @@ export default function OverviewSpin() {
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
-                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                      <Clock size={16} style={{ marginBottom: 8 }} />
-                      Carregando…
+                    <div
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: t.textMuted,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
                     <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
                       Dados por mesa
                     </SectionTitle>
-                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                      <Clock size={16} style={{ marginBottom: 8 }} />
-                      Carregando…
+                    <div
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: t.textMuted,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
                 </>

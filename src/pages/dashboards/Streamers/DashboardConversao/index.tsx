@@ -6,7 +6,7 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { BRAND, FUNIL_COLORS, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
-import { SelectComIcone, SectionTitle } from "../../../../components/dashboard";
+import { SelectComIcone, SectionTitle, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
@@ -56,6 +56,24 @@ interface ConversaoRow {
   pctViewAcesso: number | null; pctAcessoReg: number | null;
   pctRegFTD: number | null; pctViewFTD: number | null;
   ftdPorHora: number; acaoLabel: string;
+}
+
+type TaxasConvSortCol =
+  | "nome"
+  | "views"
+  | "pctViewAcesso"
+  | "acessos"
+  | "pctAcessoReg"
+  | "registros"
+  | "pctRegFTD"
+  | "ftds"
+  | "acao";
+
+function cmpNullableNumConv(a: number | null, b: number | null, mul: number): number {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return mul * (a - b);
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -396,6 +414,7 @@ export default function DashboardConversao() {
   const [compA, setCompA] = useState<string>("");
   const [compB, setCompB] = useState<string>("");
   const [acaoFiltro, setAcaoFiltro] = useState<string | null>(null);
+  const [sortTaxasConv, setSortTaxasConv] = useState<{ col: TaxasConvSortCol; dir: SortDir }>({ col: "ftds", dir: "desc" });
   const [filtroInfluencerLocal, setFiltroInfluencerLocal] = useState<string>("todos");
   const [filtroOperadoraLocal, setFiltroOperadoraLocal] = useState<string>("todas");
   const [operadorasListLocal, setOperadorasListLocal] = useState<{ slug: string; nome: string }[]>([]);
@@ -581,6 +600,53 @@ export default function DashboardConversao() {
   ];
   const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
 
+  const onSortTaxasConv = (col: TaxasConvSortCol) => {
+    setSortTaxasConv((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
+  };
+
+  const rowsTaxasOrdenadas = useMemo(() => {
+    const list = [...rowsFiltrados];
+    const { col, dir } = sortTaxasConv;
+    const mul = dir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      let primary = 0;
+      switch (col) {
+        case "nome":
+          primary = mul * a.nome.localeCompare(b.nome, "pt-BR");
+          break;
+        case "views":
+          primary = mul * (a.views - b.views);
+          break;
+        case "acessos":
+          primary = mul * (a.acessos - b.acessos);
+          break;
+        case "registros":
+          primary = mul * (a.registros - b.registros);
+          break;
+        case "ftds":
+          primary = mul * (a.ftds - b.ftds);
+          break;
+        case "pctViewAcesso":
+          primary = cmpNullableNumConv(a.pctViewAcesso, b.pctViewAcesso, mul);
+          break;
+        case "pctAcessoReg":
+          primary = cmpNullableNumConv(a.pctAcessoReg, b.pctAcessoReg, mul);
+          break;
+        case "pctRegFTD":
+          primary = cmpNullableNumConv(a.pctRegFTD, b.pctRegFTD, mul);
+          break;
+        case "acao":
+          primary = mul * a.acaoLabel.localeCompare(b.acaoLabel, "pt-BR");
+          break;
+        default:
+          primary = 0;
+      }
+      if (primary !== 0) return primary;
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    });
+    return list;
+  }, [rowsFiltrados, sortTaxasConv]);
+
   const brand = useDashboardBrand();
 
   // ── ESTILOS ────────────────────────────────────────────────────────────────────
@@ -660,7 +726,11 @@ export default function DashboardConversao() {
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
               border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              background: historico
+                ? (brand.useBrand
+                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
+                : "transparent",
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
@@ -864,13 +934,19 @@ export default function DashboardConversao() {
               </caption>
               <thead>
                 <tr>
-                  {["Influencer","Views","View→Acesso","Acessos","Acesso→Reg","Registros","Reg→FTD","FTDs","Ação"].map((h) => (
-                    <th key={h} scope="col" style={thStyle}>{h}</th>
-                  ))}
+                  <SortTableTh<TaxasConvSortCol> label="Influencer" col="nome" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh label="Views" col="views" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh label="View→Acesso" col="pctViewAcesso" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh label="Acessos" col="acessos" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh label="Acesso→Reg" col="pctAcessoReg" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh label="Registros" col="registros" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh label="Reg→FTD" col="pctRegFTD" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh label="FTDs" col="ftds" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
+                  <SortTableTh label="Ação" col="acao" sortCol={sortTaxasConv.col} sortDir={sortTaxasConv.dir} onSort={onSortTaxasConv} thStyle={thStyle} align="left" />
                 </tr>
               </thead>
               <tbody>
-                {rowsFiltrados.map((r, i) => {
+                {rowsTaxasOrdenadas.map((r, i) => {
                   const ac  = getAcao(r);
                   const hl1 = r.pctViewAcesso !== null && r.pctViewAcesso < 10;
                   const hl2 = !hl1 && r.pctAcessoReg !== null && r.pctAcessoReg < 10;

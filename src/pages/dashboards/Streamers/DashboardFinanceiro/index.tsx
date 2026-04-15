@@ -6,27 +6,28 @@ import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
-import { SelectComIcone, SectionTitle, KpiCard } from "../../../../components/dashboard";
+import { SelectComIcone, SectionTitle, KpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../../lib/tableStyles";
 import { supabase } from "../../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
 import { getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
 import {
-  Award,
+  ArrowDownToLine,
+  ArrowUpFromLine,
   BarChart2,
   Calendar,
   ChevronLeft,
   ChevronRight,
+  CircleDollarSign,
   Clock,
   Coins,
-  CreditCard,
   Gauge,
   ListOrdered,
-  Percent,
-  PlayCircle,
+  Loader2,
   Scale,
   Shield,
+  Trophy,
   User,
 } from "lucide-react";
 import {
@@ -94,6 +95,33 @@ interface FinanceiroRow {
   saques: number; saque_ticket_medio: number;
   ggr_por_jogador: number; wd_ratio: number; pvi: number;
   perfil_jogador: PerfilJogador;
+}
+
+type FinanceRankSortCol =
+  | "nome"
+  | "ftd_total"
+  | "ftd_ticket_medio"
+  | "depositos"
+  | "deposito_ticket_medio"
+  | "saques"
+  | "saque_ticket_medio"
+  | "ggr"
+  | "ggr_por_jogador"
+  | "wd_ratio"
+  | "pvi"
+  | "perfil";
+
+function perfilSortRank(p: PerfilJogador): number {
+  switch (p) {
+    case "Whales":
+      return 4;
+    case "Core":
+      return 3;
+    case "Recreativos":
+      return 2;
+    case "Caçadores de Bônus":
+      return 1;
+  }
 }
 
 interface TotaisFinanceiros {
@@ -217,6 +245,7 @@ export default function DashboardFinanceiro() {
   const [totais, setTotais]         = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
   const [totaisAnt, setTotaisAnt]   = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
   const [investimentoAgentes, setInvestimentoAgentes] = useState(0);
+  const [sortFinRank, setSortFinRank] = useState<{ col: FinanceRankSortCol; dir: SortDir }>({ col: "pvi", dir: "desc" });
   const [operadorasListLocal, setOperadorasListLocal] = useState<{ slug: string; nome: string }[]>([]);
   const [operadoraInfMapLocal, setOperadoraInfMapLocal] = useState<Record<string, string[]>>({});
   const operadorasList = embed ? sf.operadorasList : operadorasListLocal;
@@ -510,6 +539,35 @@ export default function DashboardFinanceiro() {
     return rows.filter((r) => ids.includes(r.influencer_id));
   }, [rows, operadoraFiltro, operadoraInfMap, operadoraSlugsForcado]);
 
+  const onSortFinRank = (col: FinanceRankSortCol) => {
+    setSortFinRank((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
+  };
+
+  const rowsFinOrdenadas = useMemo(() => {
+    const list = [...rowsParaExibir];
+    const { col, dir } = sortFinRank;
+    const mul = dir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      let primary = 0;
+      switch (col) {
+        case "nome":
+          primary = mul * a.nome.localeCompare(b.nome, "pt-BR");
+          break;
+        case "perfil":
+          primary = mul * (perfilSortRank(a.perfil_jogador) - perfilSortRank(b.perfil_jogador));
+          break;
+        default: {
+          const va = Number(a[col as keyof FinanceiroRow]) || 0;
+          const vb = Number(b[col as keyof FinanceiroRow]) || 0;
+          primary = mul * (va - vb);
+        }
+      }
+      if (primary !== 0) return primary;
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    });
+    return list;
+  }, [rowsParaExibir, sortFinRank]);
+
   const totaisExibir = useMemo(() => {
     const tFTDs = rowsParaExibir.reduce((s,r) => s+r.ftds, 0);
     const tFtdTotal = rowsParaExibir.reduce((s,r) => s+r.ftd_total, 0);
@@ -601,7 +659,11 @@ export default function DashboardFinanceiro() {
               padding: "6px 14px", borderRadius: 999, cursor: "pointer",
               fontFamily: FONT.body, fontSize: 13,
               border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
+              background: historico
+                ? (brand.useBrand
+                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
+                : "transparent",
               color: historico ? brand.accent : t.textMuted,
               fontWeight: historico ? 700 : 400, transition: "all 0.15s",
             }}>
@@ -637,8 +699,9 @@ export default function DashboardFinanceiro() {
               </SelectComIcone>
             )}
             {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} aria-hidden /> Carregando...
+              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
+                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                Carregando…
               </span>
             )}
           </div>
@@ -660,21 +723,21 @@ export default function DashboardFinanceiro() {
           <KpiCard
             label="FTD" value={fmtBRL(totaisExibir.ftd_total)}
             subValue={{ label: "ticket médio", value: totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ftd_ticket_medio) : "—" }}
-            icon={<Award size={14} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.roxo}
+            icon={<Trophy size={14} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.roxo}
             atual={totaisExibir.ftd_total} anterior={totaisAnt.ftd_total}
             isHistorico={historico} isBRL
           />
           <KpiCard
             label="Depósitos" value={fmtBRL(totaisExibir.depositos)}
             subValue={{ label: "ticket médio", value: totaisExibir.deposit_count > 0 ? fmtBRL(totaisExibir.deposito_ticket_medio) : "—" }}
-            icon={<PlayCircle size={14} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.ciano}
+            icon={<ArrowDownToLine size={14} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.ciano}
             atual={totaisExibir.depositos} anterior={totaisAnt.depositos}
             isHistorico={historico} isBRL
           />
           <KpiCard
             label="Saques" value={fmtBRL(totaisExibir.saques)}
             subValue={{ label: "ticket médio", value: totaisExibir.saque_ticket_medio > 0 ? fmtBRL(totaisExibir.saque_ticket_medio) : "—" }}
-            icon={<CreditCard size={14} aria-hidden />} accentColor={BRAND.vermelho}
+            icon={<ArrowUpFromLine size={14} aria-hidden />} accentColor={BRAND.vermelho}
             atual={totaisExibir.saques} anterior={totaisAnt.saques}
             isHistorico={historico} isBRL isInverso
           />
@@ -692,7 +755,7 @@ export default function DashboardFinanceiro() {
           <KpiCard
             label="GGR por Jogador"
             value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ggr_por_jogador) : "—"}
-            icon={<Percent size={14} aria-hidden />} accentColor={BRAND.roxo}
+            icon={<CircleDollarSign size={14} aria-hidden />} accentColor={BRAND.roxo}
             atual={totaisExibir.ggr_por_jogador} anterior={totaisAnt.ggr_por_jogador}
             isHistorico={historico} isBRL
           />
@@ -795,27 +858,97 @@ export default function DashboardFinanceiro() {
               </caption>
               <thead>
                 <tr>
-                  <th rowSpan={2} scope="col" style={thStyle}>Influencer</th>
+                  <SortTableTh<FinanceRankSortCol>
+                    rowSpan={2}
+                    label="Influencer"
+                    col="nome"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={thStyle}
+                    align="left"
+                  />
                   <th colSpan={2} scope="colgroup" style={thGroup}>FTD</th>
                   <th colSpan={2} scope="colgroup" style={{ ...thGroup, borderLeft: `1px solid ${t.cardBorder}` }}>Depósitos</th>
                   <th colSpan={2} scope="colgroup" style={{ ...thGroup, borderLeft: `1px solid ${t.cardBorder}` }}>Saques</th>
-                  <th rowSpan={2} scope="col" style={thStyle}>R$ GGR</th>
-                  <th rowSpan={2} scope="col" style={thStyle}>GGR/Jogador</th>
-                  <th rowSpan={2} scope="col" style={thStyle}>WD Ratio</th>
-                  <th rowSpan={2} scope="col" style={thStyle}>PVI</th>
-                  <th rowSpan={2} scope="col" style={thStyle}>Perfil</th>
+                  <SortTableTh<FinanceRankSortCol>
+                    rowSpan={2}
+                    label="R$ GGR"
+                    col="ggr"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={thStyle}
+                    align="right"
+                  />
+                  <SortTableTh<FinanceRankSortCol>
+                    rowSpan={2}
+                    label="GGR/Jogador"
+                    col="ggr_por_jogador"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={thStyle}
+                    align="right"
+                  />
+                  <SortTableTh<FinanceRankSortCol>
+                    rowSpan={2}
+                    label="WD Ratio"
+                    col="wd_ratio"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={thStyle}
+                    align="right"
+                  />
+                  <SortTableTh<FinanceRankSortCol>
+                    rowSpan={2}
+                    label="PVI"
+                    col="pvi"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={thStyle}
+                    align="right"
+                  />
+                  <SortTableTh<FinanceRankSortCol>
+                    rowSpan={2}
+                    label="Perfil"
+                    col="perfil"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={thStyle}
+                    align="left"
+                  />
                 </tr>
                 <tr>
-                  <th scope="col" style={thSub}>R$ Total</th>
-                  <th scope="col" style={thSub}>Ticket Médio</th>
-                  <th scope="col" style={{ ...thSub, borderLeft: `1px solid ${t.cardBorder}` }}>R$ Total</th>
-                  <th scope="col" style={thSub}>Ticket Médio</th>
-                  <th scope="col" style={{ ...thSub, borderLeft: `1px solid ${t.cardBorder}` }}>R$ Total</th>
-                  <th scope="col" style={thSub}>Ticket Médio</th>
+                  <SortTableTh label="R$ Total" col="ftd_total" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={thSub} align="right" />
+                  <SortTableTh label="Ticket Médio" col="ftd_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={thSub} align="right" />
+                  <SortTableTh
+                    label="R$ Total"
+                    col="depositos"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={{ ...thSub, borderLeft: `1px solid ${t.cardBorder}` }}
+                    align="right"
+                  />
+                  <SortTableTh label="Ticket Médio" col="deposito_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={thSub} align="right" />
+                  <SortTableTh
+                    label="R$ Total"
+                    col="saques"
+                    sortCol={sortFinRank.col}
+                    sortDir={sortFinRank.dir}
+                    onSort={onSortFinRank}
+                    thStyle={{ ...thSub, borderLeft: `1px solid ${t.cardBorder}` }}
+                    align="right"
+                  />
+                  <SortTableTh label="Ticket Médio" col="saque_ticket_medio" sortCol={sortFinRank.col} sortDir={sortFinRank.dir} onSort={onSortFinRank} thStyle={thSub} align="right" />
                 </tr>
               </thead>
               <tbody>
-                {rowsParaExibir.map((r, i) => {
+                {rowsFinOrdenadas.map((r, i) => {
                   const st = PERFIL_CORES[r.perfil_jogador];
                   return (
                     <tr key={r.influencer_id} style={{ background: zebraStripe(i) }}>

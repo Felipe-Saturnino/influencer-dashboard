@@ -60,7 +60,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Central de análise do canal de influencers. Reúne três visões complementares em abas — Overview, Conversão e Financeiro — com filtros de período, influencer e operadora compartilhados: mudanças nos filtros aplicam-se à aba atual e permanecem ao navegar entre elas.",
+          "Central de análise do canal de influencers. Reúne três visões complementares em abas — Overview, Conversão e Financeiro — com filtros de período, influencer e operadora compartilhados: mudanças nos filtros aplicam-se à aba atual e permanecem ao navegar entre elas.\n\nEsta aba Financeiro é o dashboard de métricas de jogadores captados; o menu Operações → Financeiro trata de ciclos de pagamento aos influencers.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -70,7 +70,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Aba Overview",
         texto:
-          "Visão executiva consolidada, organizada em três grupos de KPIs:\n\n— Financeiro: GGR Total, Investimento e ROI Geral — o resultado financeiro do canal.\n— Operação: Lives, Horas Realizadas, Influencers Ativos e Depósitos — a dimensão operacional das ativações.\n— Conversão: Registros, Custo por Registro, FTDs e Custo por FTD — eficiência do funil de aquisição.\n\nO Funil de Conversão abaixo dos KPIs exibe os quatro estágios (Views → Acessos → Registros → FTDs) com as taxas de passagem entre cada etapa.\n\nO Ranking de Influencers lista todos os parceiros com seus indicadores principais e o status de performance (Rentável, Atenção, Não Rentável, Bônus ou Sem dados). Use os badges de status no topo da tabela para filtrar por categoria, e clique nos cabeçalhos de coluna para ordenar por qualquer indicador.",
+          "Visão executiva consolidada, organizada em três grupos de KPIs:\n\n— Financeiro: GGR, Investimento e ROI — o resultado financeiro do canal.\n— Operação: Lives, Horas Realizadas, Influencers Ativos e Depósitos — a dimensão operacional das ativações.\n— Conversão: Registros, Custo por Registro, FTDs e Custo por FTD — eficiência do funil de aquisição.\n\nO Funil de Conversão abaixo dos KPIs exibe os quatro estágios (Views → Acessos → Registros → FTDs) com as taxas de passagem entre cada etapa.\n\nO Ranking de Influencers lista todos os parceiros com seus indicadores principais e o status de performance (Rentável, Atenção, Não Rentável, Bônus ou Sem dados). Use os badges de status no topo da tabela para filtrar por categoria, e clique nos cabeçalhos de coluna para ordenar por qualquer indicador.",
       },
       {
         subtitulo: "Aba Conversão",
@@ -80,7 +80,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Aba Financeiro",
         texto:
-          "Análise do comportamento financeiro dos jogadores captados por cada influencer, com três blocos:\n\n— KPIs Financeiros: R$ FTD, Depósitos, Saques, WD Ratio, GGR por Jogador e PVI — todos com comparativo MoM quando disponível.\n\n— Investimento por Influencer: gráfico de distribuição do investimento total entre os parceiros no período. A fatia 'Outros' agrupa influencers fora do top 9 e, quando aplicável, pagamentos de agentes.\n\n— Ranking Financeiro: tabela com métricas de qualidade de jogadores por influencer — ticket médio de depósito e saque, GGR, WD Ratio, PVI e o Perfil de Jogador calculado (Whales, Core, Recreativos ou Caçadores de Bônus).",
+          "Análise do comportamento financeiro dos jogadores captados por cada influencer, com três blocos:\n\n— KPIs Financeiros: FTD (valor total e ticket médio nos subrótulos), Depósitos e Saques (volume em R$ e ticket médio), WD Ratio, GGR por Jogador e PVI (índice de 0 a 100 pontos — não é percentual). Todos com comparativo MoM quando disponível.\n\n— Investimento por Influencer: gráfico de pizza com a distribuição do investimento pago entre os parceiros no período. A fatia 'Outros' agrupa influencers fora do top 9 e, quando aplicável, pagamentos de agentes.\n\n— Ranking Financeiro: tabela detalhada por influencer com FTD, depósitos, saques, R$ GGR, GGR/Jogador, WD Ratio, PVI e Perfil de Jogador (Whales, Core, Recreativos ou Caçadores de Bônus).",
       },
       {
         subtitulo: "Perfis e Visibilidade",
@@ -107,7 +107,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
           "Bloco de indicadores que resume a performance geral das mesas no período:\n\n— GGR: receita bruta das mesas (depósitos − saques de todos os canais)\n— Turnover: volume financeiro total apostado\n— Apostas: quantidade de apostas realizadas\n— Margem: percentual de retenção da casa sobre o turnover\n— Aposta Média: valor médio por aposta\n— UAP: jogadores únicos ativos no período\n— ARPU: receita média por jogador ativo\n\nNo mês corrente (MTD), todos os indicadores exibem a variação em relação ao mesmo intervalo do mês anterior. No modo Histórico, o comparativo é desabilitado.",
       },
       {
-        subtitulo: "Detalhamento Diário / Comparativo Mensal",
+        subtitulo: "Detalhamento Diário / Detalhamento Mensal",
         texto:
           "Tabela com a evolução dos KPIs ao longo do tempo. No mês selecionado, exibe uma linha por dia. No modo Histórico, exibe uma linha por mês.\n\nQuando o filtro está em 'Todas as operadoras', cada linha pode ser expandida — clique na seta ao lado da data para ver o detalhamento por operadora naquele dia ou mês.\n\nUse o toggle Tabela / Gráfico para alternar entre a visualização em tabela e a evolução em gráfico.",
       },
@@ -148,7 +148,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "Aba Alcance",
         texto:
-          "Performance de conteúdo orgânico nas redes sociais.\n\n— KPIs de Mídias: Postagens, Seguidores totais, Impressões totais e Engajamento médio — com comparativo MoM.\n— Por canal: cards individuais para Instagram, Facebook e YouTube com as métricas específicas de cada plataforma.\n— Engajamento por formato: distribuição do volume de posts por tipo de conteúdo (Reels, Vídeo, Carrossel, Foto, Short etc.).\n— Postagens recentes: carrossel com as publicações mais recentes do período, com preview, data, link e estatísticas de cada post.",
+          "Performance de conteúdo orgânico nas redes sociais.\n\n— KPIs de Mídias: Postagens, Seguidores totais, Impressões totais e Engajamento médio — com comparativo MoM.\n— Por canal: cards individuais para Instagram, Facebook e YouTube. Instagram destaca Alcance, Impressões e Engajamento; Facebook usa Reações e Cliques no lugar de Engajamento agregado; YouTube exibe Inscritos, Visualizações e Engajamento (Impressões podem aparecer como '—' quando a API não fornece o dado).\n— Engajamento por formato: distribuição do volume de posts por tipo de conteúdo (Reels, Vídeo, Carrossel, Foto, Short etc.).\n— Postagens recentes: carrossel com as publicações mais recentes do período, com preview, data, link e estatísticas de cada post.",
       },
       {
         subtitulo: "Campanhas e UTMs",
@@ -182,7 +182,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       {
         subtitulo: "KPIs Executivos",
         texto:
-          "Três grupos de indicadores consolidados do período:\n\n— Financeiro: GGR Total, Investimento recebido e ROI — o retorno gerado em relação ao valor pago.\n— Operação: Quantidade de Lives, Horas Realizadas e Média de Views por live.\n— Conversão: Registros gerados, FTDs (quantidade e valor total), Depósitos e Saques dos jogadores captados.\n\nNo mês corrente (MTD), todos os indicadores exibem a variação em relação ao mesmo intervalo do mês anterior. No modo Histórico, o comparativo é desabilitado.",
+          "Três grupos de indicadores consolidados do período:\n\n— Financeiro: GGR, Investimento recebido e ROI — o retorno gerado em relação ao valor pago.\n— Operação: Lives, Horas Realizadas e Média de Views por live.\n— Conversão: Registros gerados, FTDs (quantidade e valor total), Depósitos e Saques dos jogadores captados.\n\nNo mês corrente (MTD), todos os indicadores exibem a variação em relação ao mesmo intervalo do mês anterior. No modo Histórico, o comparativo MoM é desabilitado.",
       },
       {
         subtitulo: "Funil de Conversão",
@@ -195,9 +195,9 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
           "Cinco indicadores de qualidade e eficiência do canal:\n\n— FTD/Hora: quantos primeiros depósitos são gerados por hora de live transmitida.\n— Ticket Médio FTD: valor médio do primeiro depósito dos jogadores captados.\n— Ticket Médio Depósito: valor médio de todos os depósitos (incluindo os subsequentes ao primeiro).\n— Ticket Médio Saque: valor médio por saque realizado.\n— GGR por Jogador: receita bruta média gerada por jogador captado.",
       },
       {
-        subtitulo: "Comparativo Diário / Comparativo Mensal",
+        subtitulo: "Detalhamento Diário / Detalhamento Mensal",
         texto:
-          "Tabela com a evolução detalhada dos indicadores no tempo — dia a dia no mês selecionado, ou mês a mês no modo Histórico. A linha de Total ao final da tabela consolida todos os valores do período.\n\nUse o toggle Tabela / Gráfico para alternar entre a visualização em tabela e a evolução em gráfico. No modo gráfico, selecione o KPI que deseja visualizar nos botões acima do gráfico.\n\nNota: no mês corrente, os dados do dia de hoje não são exibidos — o comparativo vai até o dia anterior para garantir que apenas dados completos sejam considerados.",
+          "Tabela com a evolução detalhada dos indicadores no tempo — dia a dia no mês selecionado, ou mês a mês no modo Histórico. A linha de Total ao final da tabela consolida todos os valores do período.\n\nColunas: Data · Duração Live · Média Views · Máx Views · Acessos · Registros · # FTDs · R$ FTDs · # Depósitos · R$ Depósitos · # Saques · R$ Saques · R$ GGR.\n\nUse o toggle Tabela / Gráfico para alternar entre a visualização em tabela e a evolução em gráfico. No modo gráfico, selecione o KPI que deseja visualizar nos botões acima do gráfico.\n\nNota: no mês corrente, os dados do dia de hoje não são exibidos — o detalhamento vai até o dia anterior para garantir que apenas dados completos sejam considerados.",
       },
     ],
   },
@@ -480,7 +480,7 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
       {
         subtitulo: "O Comparativo de Jogo, o Comparativo de Mesa e os Dados por Mesa não aparecem?",
         texto:
-          "Esses blocos só são exibidos quando um mês específico está selecionado. No modo Histórico, apenas os KPIs Consolidados e o Comparativo Mensal ficam disponíveis — os demais blocos são ocultados automaticamente.",
+          "Esses blocos só são exibidos quando um mês específico está selecionado. No modo Histórico, apenas os KPIs Consolidados e o Detalhamento Mensal ficam disponíveis — os demais blocos são ocultados automaticamente.",
       },
       {
         subtitulo: "O Comparativo de Mesa não lista opções de mesa?",
@@ -563,9 +563,9 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
           "ROI '—' indica que não há investimento registrado e aprovado no período — verifique se o ciclo de pagamento está fechado e aprovado no módulo Financeiro.\n\nGGR '—' indica ausência de jogadores com depósitos e saques vinculados ao canal do influencer. Confirme se o link de afiliado está ativo e corretamente configurado na operadora.",
       },
       {
-        subtitulo: "O Comparativo do mês atual tem menos dias do que o esperado?",
+        subtitulo: "O Detalhamento do mês atual tem menos dias do que o esperado?",
         texto:
-          "Esse comportamento é intencional. No mês corrente, o comparativo exibe dados somente até o dia anterior — o dia de hoje não é incluído porque ainda está em andamento e os dados podem estar incompletos. Em meses anteriores, todos os dias são exibidos.",
+          "Esse comportamento é intencional. No mês corrente, a tabela de detalhamento exibe dados somente até o dia anterior — o dia de hoje não é incluído porque ainda está em andamento e os dados podem estar incompletos. Em meses anteriores, todos os dias são exibidos.",
       },
       {
         subtitulo: "Uma notificação apareceu dizendo que o filtro foi removido?",
@@ -583,9 +583,9 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
           "O investimento exibido considera apenas pagamentos com status Pago no módulo Financeiro. Se o ciclo do período ainda está Em análise ou A pagar, o valor aparece como zero. Confirme o status do pagamento com o gestor responsável.",
       },
       {
-        subtitulo: "A tabela do Comparativo está vazia ou sem dados em algumas colunas?",
+        subtitulo: "A tabela de Detalhamento Diário está vazia ou sem dados em algumas colunas?",
         texto:
-          "A tabela exibe todos os dias do mês — mesmo dias sem atividade aparecem como linha com '—'. Se colunas de conversão (Acessos, Registros, FTDs) estão todas '—', pode indicar que o link de afiliado não gerou tráfego naquele dia. Colunas de live (Duração, Média Views) aparecem '—' em dias sem live realizada.",
+          "A tabela exibe todos os dias do mês — mesmo dias sem atividade aparecem como linha com '—'. Se colunas de conversão (Acessos, Registros, FTDs) estão todas '—', pode indicar que o link de afiliado não gerou tráfego naquele dia. Colunas de live (Duração, Média Views, Máx Views) aparecem '—' em dias sem live realizada.",
       },
     ],
   },

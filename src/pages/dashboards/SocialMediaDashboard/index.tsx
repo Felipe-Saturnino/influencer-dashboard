@@ -5,16 +5,17 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
-import { SectionTitle, SkeletonKpiCard, KpiCardDepositos } from "../../../components/dashboard";
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
+import { SectionTitle, SkeletonKpiCard, KpiCardDepositos, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
   BarChart2,
   Bookmark,
   Calendar,
-  Clock,
   Filter,
   Heart,
   Layers,
@@ -27,13 +28,13 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
+  Loader2,
   Share2,
   Target,
+  Trophy,
   TrendingUp,
   CircleDollarSign,
   UserPlus,
-  PiggyBank,
-  Landmark,
 } from "lucide-react";
 
 // ─── CONSTANTES DE MÊS ────────────────────────────────────────────────────────
@@ -207,9 +208,35 @@ function sumCampanhasPerf(rows: CampanhaPerfRow[]) {
 function pctCamp(num: number, den: number): number | null {
   return den === 0 ? null : (num / den) * 100;
 }
+
+function cmpNullableNum(a: number | null, b: number | null, mul: number): number {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return mul * (a - b);
+}
+
+function ggrCampanha(c: CampanhaPerfRow): number {
+  return (Number(c.deposit_total) || 0) - (Number(c.withdrawal_total) || 0);
+}
+
 function fmtPctCamp(v: number | null): string {
   return v === null ? "—" : `${v.toFixed(1)}%`;
 }
+
+type CampCmpSortCol =
+  | "nome"
+  | "visitas"
+  | "registros"
+  | "ftds"
+  | "ftd_total"
+  | "deposit_count"
+  | "deposit_total"
+  | "withdrawal_count"
+  | "withdrawal_total"
+  | "ggr";
+
+type TaxCmpSortCol = "nome" | "visitas" | "pctVR" | "registros" | "pctRF" | "ftds" | "pctVF";
 
 /** Rótulo de período na série do RPC (dia a dia ou mês a mês no formato Abr/2026). */
 function fmtPeriodoSerieCell(periodo: string, historico: boolean): string {
@@ -578,9 +605,8 @@ export default function SocialMediaDashboard() {
     };
   }, [historico, mesSelecionado]);
 
-  const label = historico
-    ? `${MESES_ABREV[MES_INICIO.mes]}/${MES_INICIO.ano} – ${MESES_ABREV[hoje.getMonth()]}/${hoje.getFullYear()}`
-    : (mesSelecionado?.label ?? "");
+  /** Texto central da navegação de período — alinhado às outras páginas de dashboard. */
+  const label = historico ? "Todo o período" : (mesSelecionado?.label ?? "");
 
   // ── Estados de dados ──────────────────────────────────────────────────────────
   const [carIdx,   setCarIdx]   = useState(0);
@@ -598,6 +624,8 @@ export default function SocialMediaDashboard() {
   const [aba, setAba] = useState<SocialMediaTab>("overview");
   const [compCampA, setCompCampA] = useState<string>("");
   const [compCampB, setCompCampB] = useState<string>("");
+  const [sortCampCmp, setSortCampCmp] = useState<{ col: CampCmpSortCol; dir: SortDir }>({ col: "ggr", dir: "desc" });
+  const [sortTaxCmp, setSortTaxCmp] = useState<{ col: TaxCmpSortCol; dir: SortDir }>({ col: "ftds", dir: "desc" });
 
   useEffect(() => {
     const withData = campanhasPerf.filter((c) => (Number(c.visitas) || 0) > 0 || (Number(c.ftds) || 0) > 0);
@@ -901,6 +929,71 @@ export default function SocialMediaDashboard() {
 
   const brand = useDashboardBrand();
 
+  const onSortCampCmp = (col: CampCmpSortCol) => {
+    setSortCampCmp((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
+  };
+  const onSortTaxCmp = (col: TaxCmpSortCol) => {
+    setSortTaxCmp((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
+  };
+
+  const campanhasCmpOrdenadas = useMemo(() => {
+    const list = [...campanhasPerf];
+    const { col, dir } = sortCampCmp;
+    const mul = dir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      let primary = 0;
+      if (col === "nome") {
+        primary = mul * a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR");
+      } else if (col === "ggr") {
+        primary = mul * (ggrCampanha(a) - ggrCampanha(b));
+      } else {
+        const va = Number(a[col as keyof CampanhaPerfRow]) || 0;
+        const vb = Number(b[col as keyof CampanhaPerfRow]) || 0;
+        primary = mul * (va - vb);
+      }
+      if (primary !== 0) return primary;
+      return a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR");
+    });
+    return list;
+  }, [campanhasPerf, sortCampCmp]);
+
+  const campanhasTaxasOrdenadas = useMemo(() => {
+    const list = [...campanhasPerf];
+    const { col, dir } = sortTaxCmp;
+    const mul = dir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      let primary = 0;
+      switch (col) {
+        case "nome":
+          primary = mul * a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR");
+          break;
+        case "visitas":
+          primary = mul * (a.visitas - b.visitas);
+          break;
+        case "registros":
+          primary = mul * (a.registros - b.registros);
+          break;
+        case "ftds":
+          primary = mul * (a.ftds - b.ftds);
+          break;
+        case "pctVR":
+          primary = cmpNullableNum(pctCamp(a.registros, a.visitas), pctCamp(b.registros, b.visitas), mul);
+          break;
+        case "pctRF":
+          primary = cmpNullableNum(pctCamp(a.ftds, a.registros), pctCamp(b.ftds, b.registros), mul);
+          break;
+        case "pctVF":
+          primary = cmpNullableNum(pctCamp(a.ftds, a.visitas), pctCamp(b.ftds, b.visitas), mul);
+          break;
+        default:
+          primary = 0;
+      }
+      if (primary !== 0) return primary;
+      return a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR");
+    });
+    return list;
+  }, [campanhasPerf, sortTaxCmp]);
+
   // ── Estilos base ─────────────────────────────────────────────────────────────
   const card: React.CSSProperties = {
     background: brand.blockBg,
@@ -1010,7 +1103,7 @@ export default function SocialMediaDashboard() {
             <button type="button" aria-label="Mês anterior" style={btnNavStyle(historico || isPrimeiro)} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
               <ChevronLeft size={14} aria-hidden />
             </button>
-            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, minWidth: 220, textAlign: "center" }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: 220, textAlign: "center" }}>
               {label}
             </span>
             <button type="button" aria-label="Próximo mês" style={btnNavStyle(historico || isUltimo)} onClick={irMesProximo} disabled={historico || isUltimo}>
@@ -1035,7 +1128,7 @@ export default function SocialMediaDashboard() {
                 background: historico
                   ? brand.useBrand
                     ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                    : "rgba(124,58,237,0.15)"
+                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
@@ -1046,8 +1139,9 @@ export default function SocialMediaDashboard() {
               Histórico
             </button>
             {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} aria-hidden /> Carregando...
+              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
+                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                Carregando…
               </span>
             )}
           </div>
@@ -1088,7 +1182,7 @@ export default function SocialMediaDashboard() {
                     background: ativo
                       ? brand.useBrand
                         ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                        : "rgba(124,58,237,0.15)"
+                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                       : (t.inputBg ?? t.cardBg),
                     color: ativo ? brand.accent : t.textMuted,
                     fontWeight: ativo ? 700 : 500,
@@ -1184,21 +1278,21 @@ export default function SocialMediaDashboard() {
                 <div className="app-grid-kpi-3">
                   <KpiCardDepositos
                     label="FTDs"
-                    icon={<Target size={16} aria-hidden />}
+                    icon={<Trophy size={16} aria-hidden />}
                     atual={{ qtd: consolidado.ftds, valor: consolidado.ftd_total }}
                     anterior={{ qtd: consolidadoPrev.ftds, valor: consolidadoPrev.ftd_total }}
                     isHistorico={historico}
                   />
                   <KpiCardDepositos
                     label="Depósitos"
-                    icon={<PiggyBank size={16} aria-hidden />}
+                    icon={<ArrowDownToLine size={16} aria-hidden />}
                     atual={{ qtd: consolidado.deposit_count, valor: consolidado.deposit_total }}
                     anterior={{ qtd: consolidadoPrev.deposit_count, valor: consolidadoPrev.deposit_total }}
                     isHistorico={historico}
                   />
                   <KpiCardDepositos
                     label="Saques"
-                    icon={<Landmark size={16} aria-hidden />}
+                    icon={<ArrowUpFromLine size={16} aria-hidden />}
                     atual={{ qtd: consolidado.withdrawal_count, valor: consolidado.withdrawal_total }}
                     anterior={{ qtd: consolidadoPrev.withdrawal_count, valor: consolidadoPrev.withdrawal_total }}
                     isHistorico={historico}
@@ -1271,6 +1365,54 @@ export default function SocialMediaDashboard() {
                             </tr>
                           );
                         })}
+                        {(() => {
+                          const tot = serieFunilOrdenado.reduce(
+                            (a, row) => ({
+                              visitas: a.visitas + (Number(row.visitas) || 0),
+                              registros: a.registros + (Number(row.registros) || 0),
+                              ftds: a.ftds + (Number(row.ftds) || 0),
+                              ftd_total: a.ftd_total + (Number(row.ftd_total) || 0),
+                              deposit_count: a.deposit_count + (Number(row.deposit_count) || 0),
+                              deposit_total: a.deposit_total + (Number(row.deposit_total) || 0),
+                              withdrawal_count: a.withdrawal_count + (Number(row.withdrawal_count) || 0),
+                              withdrawal_total: a.withdrawal_total + (Number(row.withdrawal_total) || 0),
+                            }),
+                            {
+                              visitas: 0,
+                              registros: 0,
+                              ftds: 0,
+                              ftd_total: 0,
+                              deposit_count: 0,
+                              deposit_total: 0,
+                              withdrawal_count: 0,
+                              withdrawal_total: 0,
+                            },
+                          );
+                          const ggrTot = tot.deposit_total - tot.withdrawal_total;
+                          return (
+                            <tr
+                              key="total-serie-funil"
+                              style={{
+                                background: TOTAL_ROW_BG,
+                                fontWeight: 700,
+                                borderTop: `2px solid ${t.cardBorder}`,
+                              }}
+                            >
+                              <td style={{ ...tdStyle, fontWeight: 700, color: brand.primary }}>Total</td>
+                              <td style={tdNumStyle}>{fmtNum(tot.visitas)}</td>
+                              <td style={tdNumStyle}>{fmtNum(tot.registros)}</td>
+                              <td style={tdNumStyle}>{fmtNum(tot.ftds)}</td>
+                              <td style={tdNumStyle}>{fmtBRL(tot.ftd_total)}</td>
+                              <td style={tdNumStyle}>{fmtNum(tot.deposit_count)}</td>
+                              <td style={tdNumStyle}>{fmtBRL(tot.deposit_total)}</td>
+                              <td style={tdNumStyle}>{fmtNum(tot.withdrawal_count)}</td>
+                              <td style={tdNumStyle}>{fmtBRL(tot.withdrawal_total)}</td>
+                              <td style={{ ...tdNumStyle, color: ggrTot >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
+                                {fmtBRL(ggrTot)}
+                              </td>
+                            </tr>
+                          );
+                        })()}
                       </tbody>
                     </table>
                   </div>
@@ -1302,28 +1444,28 @@ export default function SocialMediaDashboard() {
                       </caption>
                       <thead>
                         <tr>
-                          {[
-                            { label: "Campanha", align: "left" as const },
-                            { label: "Acessos", align: "right" as const },
-                            { label: "Registros", align: "right" as const },
-                            { label: "# FTDs", align: "right" as const },
-                            { label: "R$ FTDs", align: "right" as const },
-                            { label: "# Depósitos", align: "right" as const },
-                            { label: "R$ Depósitos", align: "right" as const },
-                            { label: "# Saques", align: "right" as const },
-                            { label: "R$ Saques", align: "right" as const },
-                            { label: "R$ GGR", align: "right" as const },
-                          ].map((h) => (
-                            <th key={h.label} scope="col" style={{ ...thStyle, textAlign: h.align }}>
-                              {h.label}
-                            </th>
-                          ))}
+                          <SortTableTh<CampCmpSortCol>
+                            label="Campanha"
+                            col="nome"
+                            sortCol={sortCampCmp.col}
+                            sortDir={sortCampCmp.dir}
+                            onSort={onSortCampCmp}
+                            thStyle={thStyle}
+                            align="left"
+                          />
+                          <SortTableTh label="Acessos" col="visitas" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="Registros" col="registros" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="# FTDs" col="ftds" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="R$ FTDs" col="ftd_total" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="# Depósitos" col="deposit_count" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="R$ Depósitos" col="deposit_total" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="# Saques" col="withdrawal_count" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="R$ Saques" col="withdrawal_total" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="R$ GGR" col="ggr" sortCol={sortCampCmp.col} sortDir={sortCampCmp.dir} onSort={onSortCampCmp} thStyle={thStyle} align="right" />
                         </tr>
                       </thead>
                       <tbody>
-                        {[...campanhasPerf]
-                          .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
-                          .map((c, i) => {
+                        {campanhasCmpOrdenadas.map((c, i) => {
                             const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
                             return (
                               <tr key={c.campanha_id} style={{ background: zebraStripe(i) }}>
@@ -1533,23 +1675,25 @@ export default function SocialMediaDashboard() {
                       <caption style={{ display: "none" }}>Taxas de conversão por campanha no período.</caption>
                       <thead>
                         <tr>
-                          {[
-                            { label: "Campanha", align: "left" as const },
-                            { label: "Visitas", align: "right" as const },
-                            { label: "Visita → Registro", align: "right" as const },
-                            { label: "Registros", align: "right" as const },
-                            { label: "Registro → FTD", align: "right" as const },
-                            { label: "FTDs", align: "right" as const },
-                            { label: "Visita → FTD", align: "right" as const },
-                          ].map((h) => (
-                            <th key={h.label} scope="col" style={{ ...thStyle, textAlign: h.align }}>
-                              {h.label}
-                            </th>
-                          ))}
+                          <SortTableTh<TaxCmpSortCol>
+                            label="Campanha"
+                            col="nome"
+                            sortCol={sortTaxCmp.col}
+                            sortDir={sortTaxCmp.dir}
+                            onSort={onSortTaxCmp}
+                            thStyle={thStyle}
+                            align="left"
+                          />
+                          <SortTableTh label="Visitas" col="visitas" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="Visita → Registro" col="pctVR" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="Registros" col="registros" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="Registro → FTD" col="pctRF" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="FTDs" col="ftds" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
+                          <SortTableTh label="Visita → FTD" col="pctVF" sortCol={sortTaxCmp.col} sortDir={sortTaxCmp.dir} onSort={onSortTaxCmp} thStyle={thStyle} align="right" />
                         </tr>
                       </thead>
                       <tbody>
-                        {campanhasPerf.map((c, i) => (
+                        {campanhasTaxasOrdenadas.map((c, i) => (
                           <tr key={c.campanha_id} style={{ background: zebraStripe(i) }}>
                             <td
                               style={{ ...tdStyle, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
