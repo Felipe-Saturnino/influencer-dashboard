@@ -3,9 +3,9 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
-import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
-import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import { SkeletonKpiCard } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { resolveWhitelabelAccentCss } from "../../../lib/whitelabelAccent";
@@ -22,11 +22,18 @@ import {
   Mic,
   Percent,
   Play,
-  Shield,
   Sparkles,
   Video,
   ChevronLeft,
   ChevronRight,
+  LayoutDashboard,
+  Share2,
+  Target,
+  TrendingUp,
+  CircleDollarSign,
+  UserPlus,
+  PiggyBank,
+  Landmark,
 } from "lucide-react";
 
 // ─── BRAND COLORS (Brand Guide Spin Gaming) ───────────────────────────────────
@@ -75,6 +82,38 @@ interface KpiDaily {
   video_views: number | null;
   link_clicks: number | null;
 }
+
+/** Série diária ou mensal (RPC get_campanha_funil_serie_temporal). */
+interface FunilSerieRow {
+  periodo: string;
+  visitas: number;
+  registros: number;
+  ftds: number;
+  ftd_total: number;
+  deposit_count: number;
+  deposit_total: number;
+  withdrawal_count: number;
+  withdrawal_total: number;
+}
+
+type SocialMediaTab = "overview" | "conversao" | "alcance";
+
+const TAB_LABELS: Record<SocialMediaTab, string> = {
+  overview: "Overview",
+  conversao: "Conversão",
+  alcance: "Alcance",
+};
+
+const COR_FUNIL_A = {
+  accent: "var(--brand-action, #7c3aed)",
+  border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
+  step: "color-mix(in srgb, var(--brand-action, #7c3aed) 7%, transparent)",
+} as const;
+const COR_FUNIL_B = {
+  accent: "var(--brand-contrast, #1e36f8)",
+  border: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
+  step: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 7%, transparent)",
+} as const;
 
 interface PostUnificado {
   canal: string;
@@ -127,6 +166,197 @@ function fmtComparativoMoM(atual: number, anterior: number): { pctLabel: string;
   const pct = anterior !== 0 ? (diff / Math.abs(anterior)) * 100 : null;
   const up = diff >= 0;
   return { pctLabel: pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—", up };
+}
+
+type CampanhaPerfRow = {
+  campanha_id: string;
+  campanha_nome: string;
+  visitas: number;
+  registros: number;
+  ftds: number;
+  ftd_total: number;
+  deposit_count?: number;
+  deposit_total: number;
+  withdrawal_count?: number;
+  withdrawal_total: number;
+  utms_count: number;
+};
+
+function sumCampanhasPerf(rows: CampanhaPerfRow[]) {
+  return rows.reduce(
+    (acc, c) => {
+      acc.visitas += Number(c.visitas) || 0;
+      acc.registros += Number(c.registros) || 0;
+      acc.ftds += Number(c.ftds) || 0;
+      acc.ftd_total += Number(c.ftd_total) || 0;
+      acc.deposit_count += Number(c.deposit_count) || 0;
+      acc.deposit_total += Number(c.deposit_total) || 0;
+      acc.withdrawal_count += Number(c.withdrawal_count) || 0;
+      acc.withdrawal_total += Number(c.withdrawal_total) || 0;
+      acc.ggr += (Number(c.deposit_total) || 0) - (Number(c.withdrawal_total) || 0);
+      return acc;
+    },
+    {
+      visitas: 0,
+      registros: 0,
+      ftds: 0,
+      ftd_total: 0,
+      deposit_count: 0,
+      deposit_total: 0,
+      withdrawal_count: 0,
+      withdrawal_total: 0,
+      ggr: 0,
+    }
+  );
+}
+
+function pctCamp(num: number, den: number): number | null {
+  return den === 0 ? null : (num / den) * 100;
+}
+function fmtPctCamp(v: number | null): string {
+  return v === null ? "—" : `${v.toFixed(1)}%`;
+}
+
+/** Rótulo de período na série do RPC (dia a dia ou mês a mês). */
+function fmtPeriodoSerieCell(periodo: string, historico: boolean): string {
+  const base = periodo.length === 7 ? `${periodo}-01` : periodo.slice(0, 10);
+  const d = new Date(base.includes("T") ? base : `${base}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return periodo;
+  if (historico) {
+    return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+  }
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function ggrCampanha(c: CampanhaPerfRow | null): number | null {
+  if (!c) return null;
+  return (Number(c.deposit_total) || 0) - (Number(c.withdrawal_total) || 0);
+}
+
+/** Funil 3 níveis: visitas → registros → FTDs (campanhas / consolidado). */
+function FunilSocialTresNiveis({
+  visitas,
+  registros,
+  ftds,
+  accentBorder,
+  accentStep,
+  accentColor,
+  idPrefix,
+}: {
+  visitas: number;
+  registros: number;
+  ftds: number;
+  accentBorder: string;
+  accentStep: string;
+  accentColor: string;
+  idPrefix: string;
+}) {
+  const { theme: t } = useApp();
+  const W = 320;
+  const stepH = 88;
+  const levels = 3;
+  const H = stepH * levels;
+  const widths = [1.0, 0.68, 0.38].map((f) => f * W);
+  const FUNIL_COLORS = [BRAND.roxo, BRAND.azul, BRAND.verde];
+  const steps = [
+    { label: "Visitas", valor: visitas },
+    { label: "Registros", valor: registros },
+    { label: "FTDs", valor: ftds },
+  ];
+  const pctVisitReg = visitas > 0 ? ((registros / visitas) * 100).toFixed(1) + "%" : "—";
+  const pctRegFtd = registros > 0 ? ((ftds / registros) * 100).toFixed(1) + "%" : "—";
+  const pctVisitFtd = visitas > 0 ? ((ftds / visitas) * 100).toFixed(1) + "%" : "—";
+
+  return (
+    <div className="app-grid-2" style={{ gap: 20, alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxHeight: 280, display: "block" }} preserveAspectRatio="xMidYMid meet" aria-hidden>
+          <defs>
+            {steps.map((_, i) => (
+              <linearGradient key={i} id={`sms-fgrad-${idPrefix}-${i}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={FUNIL_COLORS[i]} stopOpacity="0.92" />
+                <stop offset="100%" stopColor={FUNIL_COLORS[i]} stopOpacity="0.62" />
+              </linearGradient>
+            ))}
+          </defs>
+          {steps.map((step, i) => {
+            const wTop = widths[i];
+            const wBot = widths[i + 1] ?? widths[i] * 0.55;
+            const xTop = (W - wTop) / 2;
+            const xBot = (W - wBot) / 2;
+            const yTop = i * stepH;
+            const yBot = yTop + stepH - 2;
+            const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
+            return (
+              <g key={step.label}>
+                <path d={path} fill={`url(#sms-fgrad-${idPrefix}-${i})`} />
+                <text
+                  x={W / 2}
+                  y={yTop + stepH / 2 - 7}
+                  textAnchor="middle"
+                  fill="#fff"
+                  fontSize={9}
+                  fontFamily={FONT.body}
+                  fontWeight={700}
+                  letterSpacing="0.09em"
+                  style={{ textTransform: "uppercase" }}
+                >
+                  {step.label}
+                </text>
+                <text x={W / 2} y={yTop + stepH / 2 + 10} textAnchor="middle" fill="#fff" fontSize={18} fontFamily={FONT.body} fontWeight={800}>
+                  {fmtNum(step.valor)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          style={{
+            fontSize: 10,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginBottom: 4,
+            fontWeight: 600,
+          }}
+        >
+          Taxas de conversão
+        </div>
+        {[
+          { label: "Visita → Registro", taxa: pctVisitReg, hl: false },
+          { label: "Registro → FTD", taxa: pctRegFtd, hl: false },
+          { label: "Visita → FTD", taxa: pctVisitFtd, hl: true },
+        ].map((r) => (
+          <div
+            key={r.label}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: r.hl ? `1px solid ${accentBorder}` : `1px solid ${t.cardBorder}`,
+              background: r.hl ? accentStep : "transparent",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 9,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+                marginBottom: 3,
+              }}
+            >
+              {r.label}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, fontFamily: FONT.body, color: r.hl ? accentColor : t.text }}>{r.taxa}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /** Data/hora da publicação no carrossel (America/Sao_Paulo). */
@@ -390,19 +620,23 @@ export default function SocialMediaDashboard() {
   const [funilTotais, setFunilTotais] = useState<{
     visitas: number; registros: number; ftds: number; ftd_total: number;
   } | null>(null);
-  const [campanhasPerf, setCampanhasPerf] = useState<Array<{
-    campanha_id: string;
-    campanha_nome: string;
-    visitas: number;
-    registros: number;
-    ftds: number;
-    ftd_total: number;
-    deposit_count?: number;
-    deposit_total: number;
-    withdrawal_count?: number;
-    withdrawal_total: number;
-    utms_count: number;
-  }>>([]);
+  const [campanhasPerf, setCampanhasPerf] = useState<CampanhaPerfRow[]>([]);
+  const [campanhasPerfPrev, setCampanhasPerfPrev] = useState<CampanhaPerfRow[]>([]);
+  const [serieFunil, setSerieFunil] = useState<FunilSerieRow[]>([]);
+  const [aba, setAba] = useState<SocialMediaTab>("overview");
+  const [compCampA, setCompCampA] = useState<string>("");
+  const [compCampB, setCompCampB] = useState<string>("");
+
+  useEffect(() => {
+    const withData = campanhasPerf.filter((c) => (Number(c.visitas) || 0) > 0 || (Number(c.ftds) || 0) > 0);
+    if (withData.length >= 1) {
+      setCompCampA(withData[0].campanha_id);
+      setCompCampB(withData.length >= 2 ? withData[1].campanha_id : "");
+    } else {
+      setCompCampA("");
+      setCompCampB("");
+    }
+  }, [campanhasPerf]);
 
   useEffect(() => {
     setCarIdx(0);
@@ -536,15 +770,49 @@ export default function SocialMediaDashboard() {
           .sort((a, b) => b.total - a.total)
       );
 
-      const [funilRes, campRes] = await Promise.all([
+      const agregacaoSerie = historico ? "month" : "day";
+      const [funilRes, campRes, serieRes, campPrevRes] = await Promise.all([
         supabase.rpc("get_campanha_funil_totais", { p_data_inicio: start, p_data_fim: end, p_operadora_slug: null }),
-        supabase.rpc("get_campanhas_performance",  { p_data_inicio: start, p_data_fim: end, p_operadora_slug: null }),
+        supabase.rpc("get_campanhas_performance", { p_data_inicio: start, p_data_fim: end, p_operadora_slug: null }),
+        supabase.rpc("get_campanha_funil_serie_temporal", {
+          p_data_inicio: start,
+          p_data_fim: end,
+          p_agregacao: agregacaoSerie,
+          p_operadora_slug: null,
+        }),
+        startPrev && endPrev
+          ? supabase.rpc("get_campanhas_performance", {
+              p_data_inicio: startPrev,
+              p_data_fim: endPrev,
+              p_operadora_slug: null,
+            })
+          : Promise.resolve({ data: null as CampanhaPerfRow[] | null, error: null }),
       ]);
 
       if (!cancelled) {
         const fr = funilRes.data as Array<{ visitas: number; registros: number; ftds: number; ftd_total: number }> | null;
         setFunilTotais(fr && fr.length > 0 ? fr[0] : null);
-        setCampanhasPerf((campRes.data as typeof campanhasPerf) ?? []);
+        setCampanhasPerf((campRes.data as CampanhaPerfRow[]) ?? []);
+        if (serieRes.error) {
+          console.error("[SocialMediaDashboard] get_campanha_funil_serie_temporal:", serieRes.error);
+          setSerieFunil([]);
+        } else {
+          const raw = (serieRes.data ?? []) as Array<Record<string, unknown>>;
+          setSerieFunil(
+            raw.map((r) => ({
+              periodo: String(r.periodo),
+              visitas: Number(r.visitas) || 0,
+              registros: Number(r.registros) || 0,
+              ftds: Number(r.ftds) || 0,
+              ftd_total: Number(r.ftd_total) || 0,
+              deposit_count: Number(r.deposit_count) || 0,
+              deposit_total: Number(r.deposit_total) || 0,
+              withdrawal_count: Number(r.withdrawal_count) || 0,
+              withdrawal_total: Number(r.withdrawal_total) || 0,
+            }))
+          );
+        }
+        setCampanhasPerfPrev((campPrevRes.data as CampanhaPerfRow[] | null) ?? []);
       }
       setLoading(false);
     }
@@ -571,6 +839,27 @@ export default function SocialMediaDashboard() {
   const cmpImpressoes = !historico ? fmtComparativoMoM(totais.impressoes, totaisAntMom.impressoes) : null;
   const cmpEngMedio =
     !historico && engMedio != null && engMedioAnt != null ? fmtComparativoMoM(engMedio, engMedioAnt) : null;
+
+  const consolidado = useMemo(() => sumCampanhasPerf(campanhasPerf), [campanhasPerf]);
+  const consolidadoPrev = useMemo(() => sumCampanhasPerf(campanhasPerfPrev), [campanhasPerfPrev]);
+  const ggrPorJogador = consolidado.deposit_count > 0 ? consolidado.ggr / consolidado.deposit_count : null;
+  const ggrPorJogadorPrev = consolidadoPrev.deposit_count > 0 ? consolidadoPrev.ggr / consolidadoPrev.deposit_count : null;
+
+  const cmpGgr = !historico ? fmtComparativoMoM(consolidado.ggr, consolidadoPrev.ggr) : null;
+  const cmpRegs = !historico ? fmtComparativoMoM(consolidado.registros, consolidadoPrev.registros) : null;
+  const cmpFtds = !historico ? fmtComparativoMoM(consolidado.ftds, consolidadoPrev.ftds) : null;
+  const cmpFtdVol = !historico ? fmtComparativoMoM(consolidado.ftd_total, consolidadoPrev.ftd_total) : null;
+  const cmpDepN = !historico ? fmtComparativoMoM(consolidado.deposit_count, consolidadoPrev.deposit_count) : null;
+  const cmpDepV = !historico ? fmtComparativoMoM(consolidado.deposit_total, consolidadoPrev.deposit_total) : null;
+  const cmpWdN = !historico ? fmtComparativoMoM(consolidado.withdrawal_count, consolidadoPrev.withdrawal_count) : null;
+  const cmpWdV = !historico ? fmtComparativoMoM(consolidado.withdrawal_total, consolidadoPrev.withdrawal_total) : null;
+  const cmpGgrJog =
+    !historico && ggrPorJogador != null && ggrPorJogadorPrev != null
+      ? fmtComparativoMoM(ggrPorJogador, ggrPorJogadorPrev)
+      : null;
+
+  const campanhaA = campanhasPerf.find((c) => c.campanha_id === compCampA) ?? null;
+  const campanhaB = campanhasPerf.find((c) => c.campanha_id === compCampB) ?? null;
 
   const lastVal = (arr: KpiDaily[], f: keyof KpiDaily): number | null => {
     const v = arr[arr.length - 1]?.[f]; return v != null ? Number(v) : null;
@@ -660,99 +949,780 @@ export default function SocialMediaDashboard() {
 
   const thStyle = getThStyle(t);
   const tdStyle = getTdStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
+  const tdNumStyle = getTdNumStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
+  const selectCampStyle: React.CSSProperties = {
+    flex: 1,
+    minWidth: 120,
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg,
+    color: t.text,
+    fontFamily: FONT.body,
+    fontSize: 13,
+  };
 
   if (perm.canView === "nao") {
     return (
-      <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Sem permissão para visualizar este dashboard.
+      <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body, background: t.bg }}>
+        Você não tem permissão para visualizar este dashboard.
       </div>
     );
   }
 
-  return (
-    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, color: t.text }}>
+  const tabIds: SocialMediaTab[] = ["overview", "conversao", "alcance"];
 
-      {/* Barra de navegação — primária transparente */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{
-          borderRadius: 14, border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
-          padding: "12px 20px",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          gap: 10, flexWrap: "wrap" as const,
-        }}>
-          <button type="button" aria-label="Mês anterior" style={btnNavStyle(historico || isPrimeiro)} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
-            <ChevronLeft size={14} aria-hidden />
-          </button>
-          <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, minWidth: 220, textAlign: "center" }}>
-            {label}
-          </span>
-          <button type="button" aria-label="Próximo mês" style={btnNavStyle(historico || isUltimo)} onClick={irMesProximo} disabled={historico || isUltimo}>
-            <ChevronRight size={14} aria-hidden />
-          </button>
-          <button
-            type="button"
-            aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
-            aria-pressed={historico}
-            onClick={toggleHistorico}
+  return (
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, color: t.text, paddingBottom: 12 }}>
+
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div
             style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-              fontFamily: FONT.body, fontSize: 13,
-              border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-              background: historico ? (brand.useBrand ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)" : "rgba(124,58,237,0.15)") : "transparent",
-              color: historico ? brand.accent : t.textMuted,
-              fontWeight: historico ? 700 : 400,
-              transition: "all 0.15s",
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: brand.primaryIconBg,
+              border: brand.primaryIconBorder,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              color: brand.primaryIconColor,
             }}
           >
-            <Calendar size={15} aria-hidden />
-            Histórico
-          </button>
-          {loading && (
-            <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-              <Clock size={12} aria-hidden /> Carregando...
-            </span>
-          )}
+            <Share2 size={14} aria-hidden />
+          </div>
+          <div>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: brand.primary,
+                fontFamily: FONT_TITLE,
+                margin: 0,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+              }}
+            >
+              Mídias sociais
+            </h1>
+            <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
+              Alcance orgânico, conversão por campanha e KPIs consolidados de UTMs mapeadas.
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Período + abas */}
+      <div style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            borderRadius: 14,
+            border: brand.primaryTransparentBorder,
+            background: brand.primaryTransparentBg,
+            padding: "12px 20px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              marginBottom: 12,
+            }}
+          >
+            <button type="button" aria-label="Mês anterior" style={btnNavStyle(historico || isPrimeiro)} onClick={irMesAnterior} disabled={historico || isPrimeiro}>
+              <ChevronLeft size={14} aria-hidden />
+            </button>
+            <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, minWidth: 220, textAlign: "center" }}>
+              {label}
+            </span>
+            <button type="button" aria-label="Próximo mês" style={btnNavStyle(historico || isUltimo)} onClick={irMesProximo} disabled={historico || isUltimo}>
+              <ChevronRight size={14} aria-hidden />
+            </button>
+            <button
+              type="button"
+              aria-label={historico ? "Desativar modo histórico" : "Ativar modo histórico — ver todo o período"}
+              aria-pressed={historico}
+              onClick={toggleHistorico}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 14px",
+                borderRadius: 999,
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+                background: historico
+                  ? brand.useBrand
+                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                    : "rgba(124,58,237,0.15)"
+                  : "transparent",
+                color: historico ? brand.accent : t.textMuted,
+                fontWeight: historico ? 700 : 400,
+                transition: "all 0.15s",
+              }}
+            >
+              <Calendar size={15} aria-hidden />
+              Histórico
+            </button>
+            {loading && (
+              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
+                <Clock size={12} aria-hidden /> Carregando...
+              </span>
+            )}
+          </div>
+
+          <div role="tablist" aria-label="Seções Mídias sociais" style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            {tabIds.map((key) => {
+              const ativo = aba === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  id={`tab-midias-${key}`}
+                  tabIndex={ativo ? 0 : -1}
+                  aria-selected={ativo}
+                  aria-controls={`panel-midias-${key}`}
+                  onClick={() => setAba(key)}
+                  onKeyDown={(e) => {
+                    const current = tabIds.indexOf(key);
+                    if (e.key === "ArrowRight") {
+                      e.preventDefault();
+                      const next = tabIds[(current + 1) % tabIds.length];
+                      setAba(next);
+                      requestAnimationFrame(() => document.getElementById(`tab-midias-${next}`)?.focus());
+                    }
+                    if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      const next = tabIds[(current - 1 + tabIds.length) % tabIds.length];
+                      setAba(next);
+                      requestAnimationFrame(() => document.getElementById(`tab-midias-${next}`)?.focus());
+                    }
+                  }}
+                  style={{
+                    padding: "10px 18px",
+                    minHeight: 44,
+                    borderRadius: 10,
+                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                    background: ativo
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                        : "rgba(124,58,237,0.15)"
+                      : (t.inputBg ?? t.cardBg),
+                    color: ativo ? brand.accent : t.textMuted,
+                    fontWeight: ativo ? 700 : 500,
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                  }}
+                >
+                  {TAB_LABELS[key]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div role="tabpanel" id={`panel-midias-${aba}`} aria-labelledby={`tab-midias-${aba}`}>
 
       {loading ? (
         <>
           <div style={card}>
-            <SectionTitle
-              icon={<BarChart2 size={14} aria-hidden />}
-              sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
-            >
-              KPIs de Mídias Sociais
-            </SectionTitle>
-            <div className="app-grid-kpi-3">
-              {[0, 1, 2].map((i) => (
+            <SectionTitle icon={<BarChart2 size={14} aria-hidden />}>Carregando…</SectionTitle>
+            <div className="app-grid-kpi-6">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
                 <SkeletonKpiCard key={i} />
               ))}
             </div>
           </div>
-          <div className="app-grid-kpi-3" style={{ marginBottom: 14 }}>
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                style={{
-                  borderRadius: 14,
-                  border: `1px solid ${t.cardBorder}`,
-                  height: 240,
-                  animation: "skeleton-pulse 1.5s ease-in-out infinite",
-                  background: "rgba(124,58,237,0.10)",
-                }}
-              />
-            ))}
+          <div style={{ ...card, marginTop: 14 }}>
+            <div style={{ height: 200, borderRadius: 12, animation: "skeleton-pulse 1.5s ease-in-out infinite", background: "rgba(124,58,237,0.08)" }} />
           </div>
         </>
       ) : (
         <>
+          {aba === "overview" && (
+            <>
+              <div style={card}>
+                <SectionTitle
+                  icon={<LayoutDashboard size={14} aria-hidden />}
+                  sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
+                >
+                  KPIs consolidados — UTMs mapeadas
+                </SectionTitle>
+                <div className="app-grid-kpi-6">
+                  <KpiCard
+                    label="GGR (depósitos − saques)"
+                    valor={fmtBRL(consolidado.ggr)}
+                    accentVar="--brand-success"
+                    accentCor={BRAND.verde}
+                    icon={<TrendingUp size={15} aria-hidden />}
+                    momComparativo={
+                      cmpGgr
+                        ? {
+                            pctLabel: cmpGgr.pctLabel,
+                            up: cmpGgr.up,
+                            refLine: `vs ${fmtBRL(consolidadoPrev.ggr)} · mesmo período mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                  <KpiCard
+                    label="Registros (qtd · volume)"
+                    valor={`${fmtNum(consolidado.registros)} · —`}
+                    accentVar="--brand-contrast"
+                    accentCor={BRAND.roxoVivo}
+                    icon={<UserPlus size={15} aria-hidden />}
+                    momComparativo={
+                      cmpRegs
+                        ? {
+                            pctLabel: cmpRegs.pctLabel,
+                            up: cmpRegs.up,
+                            refLine: `vs ${fmtNum(consolidadoPrev.registros)} · mesmo período mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                  <KpiCard
+                    label="FTDs (qtd · volume)"
+                    valor={`${fmtNum(consolidado.ftds)} · ${fmtBRL(consolidado.ftd_total)}`}
+                    accentVar="--brand-success"
+                    accentCor={BRAND.verde}
+                    icon={<Target size={15} aria-hidden />}
+                    momComparativo={
+                      cmpFtds
+                        ? {
+                            pctLabel: cmpFtds.pctLabel,
+                            up: cmpFtds.up,
+                            refLine: `vs ${fmtNum(consolidadoPrev.ftds)} · ${fmtBRL(consolidadoPrev.ftd_total)} · mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                  <KpiCard
+                    label="Depósitos (qtd · volume)"
+                    valor={`${fmtNum(consolidado.deposit_count)} · ${fmtBRL(consolidado.deposit_total)}`}
+                    accentVar="--brand-action"
+                    accentCor={BRAND.azul}
+                    icon={<PiggyBank size={15} aria-hidden />}
+                    momComparativo={
+                      cmpDepN
+                        ? {
+                            pctLabel: cmpDepN.pctLabel,
+                            up: cmpDepN.up,
+                            refLine: `vs ${fmtNum(consolidadoPrev.deposit_count)} · ${fmtBRL(consolidadoPrev.deposit_total)} · mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                  <KpiCard
+                    label="Saques (qtd · volume)"
+                    valor={`${fmtNum(consolidado.withdrawal_count)} · ${fmtBRL(consolidado.withdrawal_total)}`}
+                    accentVar="--brand-action"
+                    accentCor={BRAND.ciano}
+                    icon={<Landmark size={15} aria-hidden />}
+                    momComparativo={
+                      cmpWdN
+                        ? {
+                            pctLabel: cmpWdN.pctLabel,
+                            up: cmpWdN.up,
+                            refLine: `vs ${fmtNum(consolidadoPrev.withdrawal_count)} · ${fmtBRL(consolidadoPrev.withdrawal_total)} · mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                  <KpiCard
+                    label="GGR por depositante"
+                    valor={ggrPorJogador != null ? fmtBRL(ggrPorJogador) : "—"}
+                    accentVar="--brand-contrast"
+                    accentCor={BRAND.roxo}
+                    icon={<CircleDollarSign size={15} aria-hidden />}
+                    momComparativo={
+                      cmpGgrJog && ggrPorJogadorPrev != null
+                        ? {
+                            pctLabel: cmpGgrJog.pctLabel,
+                            up: cmpGgrJog.up,
+                            refLine: `vs ${fmtBRL(ggrPorJogadorPrev)} · mesmo período mês ant.`,
+                          }
+                        : null
+                    }
+                  />
+                </div>
+              </div>
+
+              <div style={card}>
+                <SectionTitle
+                  icon={<Calendar size={14} aria-hidden />}
+                  sub={historico ? "agregação mensal" : "dia a dia"}
+                >
+                  Detalhamento {historico ? "mensal" : "diário"}
+                </SectionTitle>
+                {serieFunil.length > 0 ? (
+                  <div className="app-table-wrap">
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "separate",
+                        borderSpacing: 0,
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        border: `1px solid ${t.cardBorder}`,
+                      }}
+                    >
+                      <caption style={{ display: "none" }}>
+                        Detalhamento de visitas, conversões e GGR por {historico ? "mês" : "dia"} no período selecionado.
+                      </caption>
+                      <thead>
+                        <tr>
+                          {[
+                            { label: "Período", scope: "col" as const, align: "left" as const },
+                            { label: "Visitas", scope: "col" as const, align: "right" as const },
+                            { label: "Registros", scope: "col" as const, align: "right" as const },
+                            { label: "FTDs", scope: "col" as const, align: "right" as const },
+                            { label: "R$ FTD", scope: "col" as const, align: "right" as const },
+                            { label: "# Dep.", scope: "col" as const, align: "right" as const },
+                            { label: "R$ Dep.", scope: "col" as const, align: "right" as const },
+                            { label: "# Saq.", scope: "col" as const, align: "right" as const },
+                            { label: "R$ Saq.", scope: "col" as const, align: "right" as const },
+                            { label: "GGR", scope: "col" as const, align: "right" as const },
+                            { label: "GGR/dep.", scope: "col" as const, align: "right" as const },
+                          ].map((h) => (
+                            <th key={h.label} scope={h.scope} style={{ ...thStyle, textAlign: h.align }}>
+                              {h.label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {serieFunil.map((row, i) => {
+                          const ggr = (row.deposit_total ?? 0) - (row.withdrawal_total ?? 0);
+                          const ggrDep = row.deposit_count > 0 ? ggr / row.deposit_count : null;
+                          return (
+                            <tr key={row.periodo} style={{ background: zebraStripe(i) }}>
+                              <td style={{ ...tdStyle, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", title: row.periodo }}>
+                                {fmtPeriodoSerieCell(row.periodo, historico)}
+                              </td>
+                              <td style={tdNumStyle}>{fmtNum(row.visitas)}</td>
+                              <td style={tdNumStyle}>{fmtNum(row.registros)}</td>
+                              <td style={tdNumStyle}>{fmtNum(row.ftds)}</td>
+                              <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtBRL(row.ftd_total)}</td>
+                              <td style={tdNumStyle}>{fmtNum(row.deposit_count)}</td>
+                              <td style={tdNumStyle}>{fmtBRL(row.deposit_total)}</td>
+                              <td style={tdNumStyle}>{fmtNum(row.withdrawal_count)}</td>
+                              <td style={tdNumStyle}>{fmtBRL(row.withdrawal_total)}</td>
+                              <td style={{ ...tdNumStyle, color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>{fmtBRL(ggr)}</td>
+                              <td style={tdNumStyle}>{ggrDep != null ? fmtBRL(ggrDep) : "—"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                    Sem dados para o período selecionado.
+                  </div>
+                )}
+              </div>
+
+              <div style={card}>
+                <SectionTitle icon={<Target size={14} aria-hidden />} sub="Métricas lado a lado">
+                  Comparativo de campanha
+                </SectionTitle>
+                <div className="app-conversao-vs-row" style={{ marginBottom: 14 }}>
+                  <select
+                    aria-label="Campanha A no comparativo de campanha"
+                    value={compCampA}
+                    onChange={(e) => setCompCampA(e.target.value)}
+                    style={{
+                      ...selectCampStyle,
+                      borderColor: compCampA ? COR_FUNIL_A.border : undefined,
+                    }}
+                  >
+                    <option value="">— Selecione —</option>
+                    {campanhasPerf
+                      .filter((c) => c.campanha_id !== compCampB)
+                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
+                      .map((c) => (
+                        <option key={c.campanha_id} value={c.campanha_id}>
+                          {c.campanha_nome}
+                        </option>
+                      ))}
+                  </select>
+                  <div
+                    style={{
+                      padding: "5px 12px",
+                      borderRadius: 999,
+                      border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
+                      background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: "var(--brand-action, #7c3aed)",
+                      fontFamily: FONT.body,
+                      letterSpacing: "0.05em",
+                      textAlign: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    VS
+                  </div>
+                  <select
+                    aria-label="Campanha B no comparativo de campanha"
+                    value={compCampB}
+                    onChange={(e) => setCompCampB(e.target.value)}
+                    style={{
+                      ...selectCampStyle,
+                      borderColor: compCampB ? COR_FUNIL_B.border : undefined,
+                    }}
+                  >
+                    <option value="">— Selecione —</option>
+                    {campanhasPerf
+                      .filter((c) => c.campanha_id !== compCampA)
+                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
+                      .map((c) => (
+                        <option key={c.campanha_id} value={c.campanha_id}>
+                          {c.campanha_nome}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                {(campanhaA || campanhaB) && (
+                  <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
+                    <div
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 10,
+                        background: COR_FUNIL_A.step,
+                        border: `1px solid ${COR_FUNIL_A.border}`,
+                        textAlign: "center",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: COR_FUNIL_A.accent,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      {campanhaA?.campanha_nome ?? "—"}
+                    </div>
+                    <div
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 10,
+                        background: COR_FUNIL_B.step,
+                        border: `1px solid ${COR_FUNIL_B.border}`,
+                        textAlign: "center",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: COR_FUNIL_B.accent,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      {campanhaB?.campanha_nome ?? "—"}
+                    </div>
+                  </div>
+                )}
+                <div className="app-table-wrap">
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "separate",
+                      borderSpacing: 0,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: `1px solid ${t.cardBorder}`,
+                    }}
+                  >
+                    <caption style={{ display: "none" }}>Comparativo de métricas entre duas campanhas selecionadas.</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col" style={thStyle}>
+                          Métrica
+                        </th>
+                        <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                          Campanha A
+                        </th>
+                        <th scope="col" style={{ ...thStyle, textAlign: "right" }}>
+                          Campanha B
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(
+                        [
+                          ["Visitas", (c) => fmtNum(c.visitas)],
+                          ["Registros", (c) => fmtNum(c.registros)],
+                          ["FTDs", (c) => fmtNum(c.ftds)],
+                          ["R$ FTDs", (c) => fmtBRL(c.ftd_total)],
+                          ["# Depósitos", (c) => fmtNum(c.deposit_count ?? 0)],
+                          ["R$ Depósitos", (c) => fmtBRL(c.deposit_total)],
+                          ["# Saques", (c) => fmtNum(c.withdrawal_count ?? 0)],
+                          ["R$ Saques", (c) => fmtBRL(c.withdrawal_total)],
+                          [
+                            "GGR",
+                            (c) => {
+                              const g = ggrCampanha(c);
+                              return g != null ? fmtBRL(g) : "—";
+                            },
+                          ],
+                          [
+                            "GGR por depositante",
+                            (c) => {
+                              const n = c.deposit_count ?? 0;
+                              const g = ggrCampanha(c);
+                              if (g == null || n === 0) return "—";
+                              return fmtBRL(g / n);
+                            },
+                          ],
+                        ] as const
+                      ).map(([label, fmtCell], i) => (
+                        <tr key={label} style={{ background: zebraStripe(i) }}>
+                          <td style={{ ...tdStyle, fontWeight: 600 }}>{label}</td>
+                          <td style={tdNumStyle}>{campanhaA ? fmtCell(campanhaA) : "—"}</td>
+                          <td style={tdNumStyle}>{campanhaB ? fmtCell(campanhaB) : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {aba === "conversao" && (
+            <>
+              <div style={card}>
+                <SectionTitle icon={<Filter size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                  Funil de conversão
+                </SectionTitle>
+                {(funilTotais?.visitas ?? 0) + (funilTotais?.registros ?? 0) + (funilTotais?.ftds ?? 0) > 0 ? (
+                  <FunilSocialTresNiveis
+                    visitas={funilTotais?.visitas ?? 0}
+                    registros={funilTotais?.registros ?? 0}
+                    ftds={funilTotais?.ftds ?? 0}
+                    accentBorder={COR_FUNIL_A.border}
+                    accentStep={COR_FUNIL_A.step}
+                    accentColor={COR_FUNIL_A.accent}
+                    idPrefix="agg"
+                  />
+                ) : (
+                  <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                    Sem dados para o período selecionado.
+                  </div>
+                )}
+              </div>
+
+              <div style={card}>
+                <SectionTitle icon={<Share2 size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                  Comparativo de funil
+                </SectionTitle>
+                <div className="app-conversao-vs-row" style={{ marginBottom: 14 }}>
+                  <select
+                    aria-label="Campanha A no comparativo de funil"
+                    value={compCampA}
+                    onChange={(e) => setCompCampA(e.target.value)}
+                    style={{
+                      ...selectCampStyle,
+                      borderColor: compCampA ? COR_FUNIL_A.border : undefined,
+                    }}
+                  >
+                    <option value="">— Selecione —</option>
+                    {campanhasPerf
+                      .filter((c) => c.campanha_id !== compCampB)
+                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
+                      .map((c) => (
+                        <option key={c.campanha_id} value={c.campanha_id}>
+                          {c.campanha_nome}
+                        </option>
+                      ))}
+                  </select>
+                  <div
+                    style={{
+                      padding: "5px 12px",
+                      borderRadius: 999,
+                      border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
+                      background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: "var(--brand-action, #7c3aed)",
+                      fontFamily: FONT.body,
+                      letterSpacing: "0.05em",
+                      textAlign: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    VS
+                  </div>
+                  <select
+                    aria-label="Campanha B no comparativo de funil"
+                    value={compCampB}
+                    onChange={(e) => setCompCampB(e.target.value)}
+                    style={{
+                      ...selectCampStyle,
+                      borderColor: compCampB ? COR_FUNIL_B.border : undefined,
+                    }}
+                  >
+                    <option value="">— Selecione —</option>
+                    {campanhasPerf
+                      .filter((c) => c.campanha_id !== compCampA)
+                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
+                      .map((c) => (
+                        <option key={c.campanha_id} value={c.campanha_id}>
+                          {c.campanha_nome}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                {(campanhaA || campanhaB) && (
+                  <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
+                    <div
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 10,
+                        background: COR_FUNIL_A.step,
+                        border: `1px solid ${COR_FUNIL_A.border}`,
+                        textAlign: "center",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: COR_FUNIL_A.accent,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      {campanhaA?.campanha_nome ?? "—"}
+                    </div>
+                    <div
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 10,
+                        background: COR_FUNIL_B.step,
+                        border: `1px solid ${COR_FUNIL_B.border}`,
+                        textAlign: "center",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: COR_FUNIL_B.accent,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      {campanhaB?.campanha_nome ?? "—"}
+                    </div>
+                  </div>
+                )}
+                <div className="app-conversao-funil-duo">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {campanhaA ? (
+                      <FunilSocialTresNiveis
+                        visitas={campanhaA.visitas}
+                        registros={campanhaA.registros}
+                        ftds={campanhaA.ftds}
+                        accentBorder={COR_FUNIL_A.border}
+                        accentStep={COR_FUNIL_A.step}
+                        accentColor={COR_FUNIL_A.accent}
+                        idPrefix="ca"
+                      />
+                    ) : (
+                      <div style={{ padding: 32, textAlign: "center", color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
+                        Selecione a campanha A.
+                      </div>
+                    )}
+                  </div>
+                  <div className="app-conversao-funil-divider" style={{ width: 1, background: t.cardBorder, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {campanhaB ? (
+                      <FunilSocialTresNiveis
+                        visitas={campanhaB.visitas}
+                        registros={campanhaB.registros}
+                        ftds={campanhaB.ftds}
+                        accentBorder={COR_FUNIL_B.border}
+                        accentStep={COR_FUNIL_B.step}
+                        accentColor={COR_FUNIL_B.accent}
+                        idPrefix="cb"
+                      />
+                    ) : (
+                      <div style={{ padding: 32, textAlign: "center", color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
+                        Selecione a campanha B.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={card}>
+                <SectionTitle icon={<TrendingUp size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
+                  Comparativo de taxas
+                </SectionTitle>
+                {campanhasPerf.length > 0 ? (
+                  <div className="app-table-wrap">
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "separate",
+                        borderSpacing: 0,
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        border: `1px solid ${t.cardBorder}`,
+                      }}
+                    >
+                      <caption style={{ display: "none" }}>Taxas de conversão por campanha no período.</caption>
+                      <thead>
+                        <tr>
+                          {[
+                            { label: "Campanha", align: "left" as const },
+                            { label: "Visitas", align: "right" as const },
+                            { label: "Visita → Registro", align: "right" as const },
+                            { label: "Registro → FTD", align: "right" as const },
+                            { label: "Visita → FTD", align: "right" as const },
+                            { label: "# FTDs", align: "right" as const },
+                            { label: "R$ GGR", align: "right" as const },
+                          ].map((h) => (
+                            <th key={h.label} scope="col" style={{ ...thStyle, textAlign: h.align }}>
+                              {h.label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {campanhasPerf.map((c, i) => {
+                          const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
+                          return (
+                            <tr key={c.campanha_id} style={{ background: zebraStripe(i) }}>
+                              <td style={{ ...tdStyle, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", title: c.campanha_nome }}>
+                                {c.campanha_nome}
+                              </td>
+                              <td style={tdNumStyle}>{fmtNum(c.visitas)}</td>
+                              <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.registros, c.visitas))}</td>
+                              <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.registros))}</td>
+                              <td style={tdNumStyle}>{fmtPctCamp(pctCamp(c.ftds, c.visitas))}</td>
+                              <td style={{ ...tdNumStyle, color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
+                              <td style={{ ...tdNumStyle, color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
+                                {fmtBRL(ggr)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ color: t.textMuted, fontSize: 12, padding: "24px 0", fontFamily: FONT.body }}>
+                    Nenhuma campanha com UTMs mapeadas no período. Cadastre campanhas e mapeie UTMs na Gestão de Links.
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {aba === "alcance" && (
+          <>
           {/* KPIs GERAIS */}
           <div style={card}>
             <SectionTitle
-              icon={<BarChart2 size={14} />}
+              icon={<BarChart2 size={14} aria-hidden />}
               sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
             >
               KPIs de Mídias Sociais
@@ -838,172 +1808,22 @@ export default function SocialMediaDashboard() {
             })}
           </div>
 
-          {/* Engajamento por formato + Funil */}
-          <div className="app-grid-2-tight" style={{ marginBottom: 14 }}>
-            <div style={{ ...card, marginBottom: 0 }}>
-              <SectionTitle icon={<Layers size={14} aria-hidden />}>Engajamento por formato</SectionTitle>
-              {formatos.length > 0 ? (
-                formatos.map((f, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === formatos.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
-                    <span style={{ color: t.textMuted, flex: 1 }}>{f.tipo}</span>
-                    <div style={{ width: 90, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)", borderRadius: 3, height: 7, flexShrink: 0 }}>
-                      <div style={{ width: `${totalFormatos > 0 ? (f.total / totalFormatos) * 100 : 0}%`, height: 7, borderRadius: 3, background: [BRAND.roxo, BRAND.azul, BRAND.ciano, "#5a5678"][i % 4] }} />
-                    </div>
-                    <span style={{ fontWeight: 600, color: t.text, minWidth: 52, textAlign: "right" }}>{f.total} posts</span>
-                  </div>
-                ))
-              ) : (
-                <div style={{ color: t.textMuted, fontSize: 12, padding: "8px 0" }}>{MSG_SEM_DADOS_FILTRO}</div>
-              )}
-            </div>
-            <div style={{ ...card, marginBottom: 0 }}>
-              <SectionTitle icon={<Filter size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
-                Funil de conversão
-              </SectionTitle>
-              {(() => {
-                const acessos   = funilTotais?.visitas   ?? 0;
-                const registros = funilTotais?.registros ?? 0;
-                const ftds      = funilTotais?.ftds      ?? 0;
-
-                const pctAcessoReg = acessos   > 0 ? ((registros / acessos)   * 100).toFixed(1) + "%" : "—";
-                const pctRegFTD    = registros > 0 ? ((ftds      / registros)  * 100).toFixed(1) + "%" : "—";
-                const pctAcessoFTD = acessos   > 0 ? ((ftds      / acessos)    * 100).toFixed(1) + "%" : "—";
-
-                const W = 360, stepH = 90, levels = 3;
-                const H = stepH * levels;
-                const widths = [1.0, 0.68, 0.38].map((f) => f * W);
-                const FUNIL_COLORS = [BRAND.roxo, BRAND.azul, BRAND.verde];
-                const FUNIL_STEPS = [
-                  { label: "Acessos",   valor: acessos   },
-                  { label: "Registros", valor: registros },
-                  { label: "FTDs",      valor: ftds      },
-                ];
-
-                const taxas = [
-                  { label: "Acesso → Registro", taxa: pctAcessoReg, color: BRAND.azul,  highlight: false },
-                  { label: "Registro → FTD",    taxa: pctRegFTD,    color: BRAND.verde, highlight: false },
-                  { label: "Acesso → FTD",      taxa: pctAcessoFTD, color: BRAND.verde, highlight: true  },
-                ];
-
-                return (
-                  <div className="app-grid-2" style={{ gap: 20, alignItems: "center" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxHeight: 280, display: "block" }} preserveAspectRatio="xMidYMid meet">
-                        <defs>
-                          {FUNIL_STEPS.map((_, i) => (
-                            <linearGradient key={i} id={`ms-fgrad-${i}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={FUNIL_COLORS[i]} stopOpacity="0.92" />
-                              <stop offset="100%" stopColor={FUNIL_COLORS[i]} stopOpacity="0.62" />
-                            </linearGradient>
-                          ))}
-                        </defs>
-                        {FUNIL_STEPS.map((step, i) => {
-                          const wTop = widths[i];
-                          const wBot = widths[i + 1] ?? widths[i] * 0.55;
-                          const xTop = (W - wTop) / 2;
-                          const xBot = (W - wBot) / 2;
-                          const yTop = i * stepH;
-                          const yBot = yTop + stepH - 2;
-                          const path = `M ${xTop} ${yTop} L ${xTop + wTop} ${yTop} L ${xBot + wBot} ${yBot} L ${xBot} ${yBot} Z`;
-                          return (
-                            <g key={step.label}>
-                              <path d={path} fill={`url(#ms-fgrad-${i})`} />
-                              <text x={W / 2} y={yTop + stepH / 2 - 7} textAnchor="middle" fill="#fff" fontSize={9} fontFamily={FONT.body} fontWeight={700} letterSpacing="0.09em" style={{ textTransform: "uppercase" }}>
-                                {step.label}
-                              </text>
-                              <text x={W / 2} y={yTop + stepH / 2 + 10} textAnchor="middle" fill="#fff" fontSize={18} fontFamily={FONT.body} fontWeight={800}>
-                                {fmtNum(step.valor)}
-                              </text>
-                            </g>
-                          );
-                        })}
-                      </svg>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 4, fontWeight: 600 }}>
-                        Taxas de Conversão
-                      </div>
-                      {taxas.map((r) => (
-                        <div key={r.label} style={{
-                          padding: "8px 12px", borderRadius: 10,
-                          border: r.highlight ? `1px solid ${r.color}50` : `1px solid ${t.cardBorder}`,
-                          background: r.highlight ? `${r.color}12` : isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
-                        }}>
-                          <div style={{ fontSize: 9, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 3 }}>
-                            {r.label}
-                          </div>
-                          <div style={{ fontSize: 16, fontWeight: 800, fontFamily: FONT.body, color: r.highlight ? r.color : t.text }}>
-                            {r.taxa}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Campanhas — Performance */}
+          {/* Engajamento por formato */}
           <div style={card}>
-            <SectionTitle icon={<Shield size={14} aria-hidden />} sub={historico ? "acumulado" : undefined}>
-              Campanhas — Performance de conversão
-            </SectionTitle>
-            {campanhasPerf.length > 0 ? (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
-                  <thead>
-                    <tr>
-                      {[
-                        { label: "Campanha",      align: "left"  },
-                        { label: "UTMs",           align: "right" },
-                        { label: "Acessos",        align: "right" },
-                        { label: "Registros",      align: "right" },
-                        { label: "# FTDs",         align: "right" },
-                        { label: "R$ FTDs",        align: "right" },
-                        { label: "# Depósitos",    align: "right" },
-                        { label: "R$ Depósitos",   align: "right" },
-                        { label: "# Saques",       align: "right" },
-                        { label: "R$ Saques",      align: "right" },
-                        { label: "R$ GGR",         align: "right" },
-                      ].map((h) => (
-                        <th key={h.label} style={{ ...thStyle, textAlign: h.align as "left" | "right" }}>{h.label}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {campanhasPerf.map((c, i) => {
-                      const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
-                      return (
-                        <tr key={c.campanha_id} style={{ background: i % 2 === 1 ? "rgba(74,32,130,0.06)" : "transparent" }}>
-                          <td style={{ ...tdStyle, fontWeight: 600 }}>{c.campanha_nome}</td>
-                          <td style={{ ...tdStyle, textAlign: "right", color: t.textMuted }}>{c.utms_count}</td>
-                          <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.visitas)}</td>
-                          <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.registros)}</td>
-                          <td style={{ ...tdStyle, textAlign: "right", color: BRAND.verde, fontWeight: 600 }}>{fmtNum(c.ftds)}</td>
-                          <td style={{ ...tdStyle, textAlign: "right", color: BRAND.verde, fontWeight: 600 }}>
-                            {(c.ftd_total ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                          </td>
-                          <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.deposit_count ?? 0)}</td>
-                          <td style={{ ...tdStyle, textAlign: "right" }}>
-                            {(c.deposit_total ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                          </td>
-                          <td style={{ ...tdStyle, textAlign: "right" }}>{fmtNum(c.withdrawal_count ?? 0)}</td>
-                          <td style={{ ...tdStyle, textAlign: "right" }}>
-                            {(c.withdrawal_total ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                          </td>
-                          <td style={{ ...tdStyle, textAlign: "right", color: ggr >= 0 ? BRAND.verde : BRAND.vermelho, fontWeight: 700 }}>
-                            {ggr.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            <SectionTitle icon={<Layers size={14} aria-hidden />}>Engajamento por formato</SectionTitle>
+            {formatos.length > 0 ? (
+              formatos.map((f, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 12, fontFamily: FONT.body, borderBottom: i === formatos.length - 1 ? "none" : `1px solid ${t.cardBorder}` }}>
+                  <span style={{ color: t.textMuted, flex: 1 }}>{f.tipo}</span>
+                  <div style={{ width: 90, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)", borderRadius: 3, height: 7, flexShrink: 0 }}>
+                    <div style={{ width: `${totalFormatos > 0 ? (f.total / totalFormatos) * 100 : 0}%`, height: 7, borderRadius: 3, background: [BRAND.roxo, BRAND.azul, BRAND.ciano, "#5a5678"][i % 4] }} />
+                  </div>
+                  <span style={{ fontWeight: 600, color: t.text, minWidth: 52, textAlign: "right" }}>{f.total} posts</span>
+                </div>
+              ))
             ) : (
-              <div style={{ color: t.textMuted, fontSize: 12, padding: "24px 0", fontFamily: FONT.body }}>
-                Nenhuma campanha com UTMs mapeadas no período. Cadastre campanhas e mapeie UTMs na Gestão de Links.
+              <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                Sem dados para o período selecionado.
               </div>
             )}
           </div>
@@ -1125,13 +1945,16 @@ export default function SocialMediaDashboard() {
                 </div>
               </>
             ) : (
-              <div style={{ color: t.textMuted, fontSize: 12, padding: "8px 0", fontFamily: FONT.body }}>
-                Sem postagens no período.
+              <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                Sem dados para o período selecionado.
               </div>
             )}
           </div>
+          </>
+          )}
         </>
       )}
+      </div>
     </div>
   );
 }
