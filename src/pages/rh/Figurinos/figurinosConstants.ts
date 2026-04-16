@@ -1,4 +1,4 @@
-import type { RhFigurinoStatus } from "./types";
+import type { RhFigurinoStatus, RhWithdrawalType } from "./types";
 
 export const CATEGORIAS = ["Camisa", "Calça", "Colete", "Vestido", "Gravata", "Acessório"] as const;
 
@@ -60,6 +60,11 @@ export const TIPOS_MANUTENCAO: { value: RhFigurinoTipoManutencao; label: string 
 ];
 
 /** Rótulos em português para linhas do histórico de status (valores gravados em inglês). */
+export function labelTipoRetirada(w: RhWithdrawalType | null | undefined): string {
+  if (w === "fixo") return "Fixo";
+  return "Emprestar";
+}
+
 export function labelStatusHistorico(s: string | null | undefined): string {
   if (s == null || s === "") return "—";
   switch (s) {

@@ -19,6 +19,7 @@ import type {
   RhFigurinoPeca,
   RhFigurinoStatus,
   RhFigurinoStatusHist,
+  RhWithdrawalType,
 } from "./types";
 import { BarcodeBlock } from "./BarcodeBlock";
 import { ScannerPanel } from "./ScannerPanel";
@@ -30,6 +31,7 @@ import {
   labelAba,
   labelStatusHistorico,
   labelStatusPeca,
+  labelTipoRetirada,
   TIPOS_MANUTENCAO,
   type RhFigurinoTipoManutencao,
 } from "./figurinosConstants";
@@ -216,10 +218,18 @@ export default function FigurinosPage() {
   const kpis = useMemo(() => {
     const tot = pecasComFiltroTopo.length;
     const av = pecasComFiltroTopo.filter((p) => p.status === "available").length;
-    const bo = pecasComFiltroTopo.filter((p) => p.status === "borrowed").length;
+    const emprestadas = pecasComFiltroTopo.filter((p) => {
+      if (p.status !== "borrowed") return false;
+      const w = empPorItem[p.id]?.withdrawal_type ?? "emprestar";
+      return w === "emprestar";
+    }).length;
+    const fixos = pecasComFiltroTopo.filter((p) => {
+      if (p.status !== "borrowed") return false;
+      return empPorItem[p.id]?.withdrawal_type === "fixo";
+    }).length;
     const ma = pecasComFiltroTopo.filter((p) => p.status === "maintenance").length;
-    return { tot, av, bo, ma };
-  }, [pecasComFiltroTopo]);
+    return { tot, av, bo: emprestadas, fx: fixos, ma };
+  }, [pecasComFiltroTopo, empPorItem]);
 
   const buscaNorm = useMemo(
     () => busca.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, ""),
@@ -232,7 +242,7 @@ export default function FigurinosPage() {
       if (!buscaNorm) return true;
       const emp = empPorItem[p.id];
       const opNames = labelOperadorasPeca(p, operadoraNome);
-      const hay = `${p.code} ${p.category} ${opNames} ${emp?.borrower_name ?? ""} ${emp?.borrower_ref ?? ""}`
+      const hay = `${p.code} ${p.category} ${opNames} ${emp?.borrower_name ?? ""} ${emp?.borrower_ref ?? ""} ${labelTipoRetirada(emp?.withdrawal_type)}`
         .toLowerCase()
         .normalize("NFD")
         .replace(/\p{M}/gu, "");
@@ -548,6 +558,7 @@ export default function FigurinosPage() {
             { label: "Total de peças", value: kpis.tot, cor: t.text },
             { label: "Disponíveis", value: kpis.av, cor: "#22c55e" },
             { label: "Emprestadas", value: kpis.bo, cor: "#f59e0b" },
+            { label: "Fixos", value: kpis.fx, cor: "#0ea5e9" },
             { label: "Em manutenção", value: kpis.ma, cor: "#a78bfa" },
           ].map((k) => (
             <div
@@ -726,6 +737,9 @@ export default function FigurinosPage() {
                         Condição
                       </th>
                       <th scope="col" style={getThStyle(t)}>
+                        Tipo de retirada
+                      </th>
+                      <th scope="col" style={getThStyle(t)}>
                         Data de empréstimo
                       </th>
                       <th scope="col" style={getThStyle(t)}>
@@ -833,7 +847,7 @@ export default function FigurinosPage() {
                                     fontFamily: FONT.body,
                                   }}
                                 >
-                                  Emprestar
+                                  Retirada
                                 </button>
                                 <button
                                   type="button"
@@ -868,6 +882,7 @@ export default function FigurinosPage() {
                           <td style={getTdStyle(t)}>{p.category}</td>
                           <td style={getTdStyle(t)}>{p.size}</td>
                           <td style={getTdStyle(t)}>{labelCondicaoPeca(p.condition)}</td>
+                          <td style={getTdStyle(t)}>{labelTipoRetirada(emp?.withdrawal_type)}</td>
                           <td style={getTdStyle(t)}>{fmtDataHora(emp?.loaned_at)}</td>
                           <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={emprestadoPara}>
                             {emprestadoPara}
@@ -1017,7 +1032,7 @@ export default function FigurinosPage() {
       ) : null}
 
       {empPeca ? (
-        <ModalEmprestimo
+        <ModalRetirada
           peca={empPeca}
           resumoOperadoras={labelOperadorasPeca(empPeca, operadoraNome)}
           actor={actorLabel(user)}
@@ -1161,7 +1176,7 @@ export default function FigurinosPage() {
           empAtivo={empPorItem[detalhe.id]}
           podeEditar={podeEditar}
           onClose={() => setDetalhe(null)}
-          onEmprestar={() => {
+          onRetirada={() => {
             setDetalhe(null);
             setEmpPeca(detalhe);
           }}
@@ -1612,7 +1627,7 @@ function ModalScanner({
   );
 }
 
-function ModalEmprestimo({
+function ModalRetirada({
   peca,
   resumoOperadoras,
   actor,
@@ -1628,6 +1643,7 @@ function ModalEmprestimo({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [nome, setNome] = useState("");
+  const [tipoRetirada, setTipoRetirada] = useState<RhWithdrawalType>("emprestar");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -1641,7 +1657,7 @@ function ModalEmprestimo({
   const confirmar = async () => {
     setErr(null);
     if (!nome.trim()) {
-      setErr("Informe o nome da pessoa para quem a peça será emprestada.");
+      setErr("Informe o nome da pessoa responsável pela retirada.");
       return;
     }
     setLoading(true);
@@ -1649,6 +1665,7 @@ function ModalEmprestimo({
       p_item_id: peca.id,
       p_borrower_name: nome.trim(),
       p_borrower_ref: "",
+      p_withdrawal_type: tipoRetirada,
       p_actor: actor,
     });
     setLoading(false);
@@ -1661,10 +1678,10 @@ function ModalEmprestimo({
 
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
-      <ModalHeader title="Emprestar peça" onClose={onClose} />
+      <ModalHeader title="Retirada" onClose={onClose} />
       <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
       <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 10 }}>
-        Nome da pessoa que receberá o empréstimo *
+        Nome *
         <input
           ref={inputRef}
           value={nome}
@@ -1682,6 +1699,28 @@ function ModalEmprestimo({
             fontFamily: FONT.body,
           }}
         />
+      </label>
+      <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 10 }}>
+        Tipo de retirada *
+        <select
+          value={tipoRetirada}
+          onChange={(e) => setTipoRetirada(e.target.value as RhWithdrawalType)}
+          aria-label="Tipo de retirada"
+          style={{
+            display: "block",
+            width: "100%",
+            marginTop: 6,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg ?? t.cardBg,
+            color: t.text,
+            fontFamily: FONT.body,
+          }}
+        >
+          <option value="emprestar">Emprestar</option>
+          <option value="fixo">Fixo</option>
+        </select>
       </label>
       <div
         style={{
@@ -1739,7 +1778,7 @@ function ModalEmprestimo({
             opacity: loading ? 0.8 : 1,
           }}
         >
-          {loading ? "Salvando…" : "Confirmar Empréstimo"}
+          {loading ? "Salvando…" : "Confirmar Retirada"}
         </button>
       </div>
     </ModalBase>
@@ -1819,7 +1858,8 @@ function ModalDevolucao({
       <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
       {emprestimo ? (
         <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 12px" }}>
-          Empréstimo ativo: <strong style={{ color: t.text }}>{emprestimo.borrower_name}</strong> desde {fmtDataHora(emprestimo.loaned_at)}
+          Retirada ativa ({labelTipoRetirada(emprestimo.withdrawal_type)}):{" "}
+          <strong style={{ color: t.text }}>{emprestimo.borrower_name}</strong> desde {fmtDataHora(emprestimo.loaned_at)}
         </p>
       ) : (
         <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 12px" }}>Dados do empréstimo não encontrados.</p>
@@ -2286,7 +2326,7 @@ function ModalDetalhe({
   empAtivo,
   podeEditar,
   onClose,
-  onEmprestar,
+  onRetirada,
   onDevolver,
   onManutencao,
   onConcluirManut,
@@ -2299,7 +2339,7 @@ function ModalDetalhe({
   empAtivo: RhFigurinoEmprestimo | undefined;
   podeEditar: boolean;
   onClose: () => void;
-  onEmprestar: () => void;
+  onRetirada: () => void;
   onDevolver: () => void;
   onManutencao: () => void;
   onConcluirManut: () => void;
@@ -2370,7 +2410,8 @@ function ModalDetalhe({
           </div>
           {empAtivo ? (
             <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 14px" }}>
-              Empréstimo ativo: <strong style={{ color: t.text }}>{empAtivo.borrower_name}</strong> desde {fmtDataHora(empAtivo.loaned_at)}
+              Retirada ativa ({labelTipoRetirada(empAtivo.withdrawal_type)}):{" "}
+              <strong style={{ color: t.text }}>{empAtivo.borrower_name}</strong> desde {fmtDataHora(empAtivo.loaned_at)}
             </p>
           ) : null}
           <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -2419,7 +2460,7 @@ function ModalDetalhe({
                 <>
                   <button
                     type="button"
-                    onClick={onEmprestar}
+                    onClick={onRetirada}
                     style={{
                       padding: "8px 14px",
                       borderRadius: 10,
@@ -2431,7 +2472,7 @@ function ModalDetalhe({
                       cursor: "pointer",
                     }}
                   >
-                    Emprestar
+                    Retirada
                   </button>
                   <button
                     type="button"

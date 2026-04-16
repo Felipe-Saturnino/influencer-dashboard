@@ -4,6 +4,9 @@ export type RhFigurinoCondition = "good" | "damaged" | "needs_cleaning";
 
 export type RhEmprestimoStatus = "active" | "returned";
 
+/** Retirada ativa: empréstimo reembolsável vs uso fixo. */
+export type RhWithdrawalType = "emprestar" | "fixo";
+
 export type RhReturnCondition = "good" | "needs_cleaning" | "damaged";
 
 /** Linha da relação N:N com operadoras (embed Supabase). */
@@ -38,6 +41,8 @@ export interface RhFigurinoEmprestimo {
   item_id: string;
   borrower_name: string;
   borrower_ref: string | null;
+  /** Ausente em linhas antigas; tratar como `emprestar`. */
+  withdrawal_type?: RhWithdrawalType;
   loaned_by: string;
   loaned_at: string;
   returned_at: string | null;
