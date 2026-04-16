@@ -146,7 +146,7 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
         }}
       />
       {err ? (
-        <div role="alert" style={{ color: "#ef4444", fontSize: 12, fontFamily: FONT.body, marginTop: 12 }}>
+        <div role="alert" aria-live="polite" style={{ color: "#ef4444", fontSize: 12, fontFamily: FONT.body, marginTop: 12 }}>
           {err}
         </div>
       ) : null}
@@ -181,7 +181,7 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
             border: "none",
             background: brand.useBrand
               ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-              : "linear-gradient(135deg, #4a2082, #1e36f8)",
+              : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))",
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,

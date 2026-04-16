@@ -1,13 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
-import { Calendar, CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Megaphone, Inbox, Shield } from "lucide-react";
-import { GiDiceSixFacesFour, GiRingingBell } from "react-icons/gi";
+import { useState, useEffect, useMemo, type CSSProperties } from "react";
+import { Calendar, CheckCircle, ChevronLeft, ChevronRight, FileText, Megaphone, Inbox, Shield, Bell, Layers, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { usePendenciasCount } from "../../../hooks/usePendenciasCount";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fmt, getMesesDisponiveis, getDatasDoMes, fmtDia } from "../../../lib/dashboardHelpers";
 import type { RoteiroCampanha } from "../../conteudo/RoteiroMesa";
@@ -163,6 +162,32 @@ function nomeCadastroCampanha(c: CampanhaComPerfil): string {
 }
 
 type AbaStaff = "troca" | "feedback" | "campanha_roteiro" | "roteiro_mesa";
+
+const ABAS_STAFF: AbaStaff[] = ["troca", "feedback", "campanha_roteiro", "roteiro_mesa"];
+
+function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
+  return brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
+}
+
+function listaSolicSkeleton(cardShell: CSSProperties, t: ReturnType<typeof useApp>["theme"]) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            ...cardShell,
+            minHeight: 140,
+            background: t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+            border: cardShell.border,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 interface DealerSolRow {
   id: string;
@@ -660,6 +685,10 @@ export default function CentralNotificacoes() {
   function renderListaCampanhaRoteiroSolic(lista: CampanhaRoteiroSolRow[], opts?: { staffMesclado?: boolean }) {
     const staffMesclado = opts?.staffMesclado ?? false;
 
+    if (loading && lista.length === 0) {
+      return listaSolicSkeleton(cardShell, t);
+    }
+
     const tagCampRow = (row: CampanhaRoteiroSolRow) => {
       if (staffMesclado && row.status === "resolvido") return { label: "Concluído", cor: "#22c55e" };
       if (row.status === "cancelado") return { label: "Cancelada", cor: "#6b7280" };
@@ -736,9 +765,7 @@ export default function CentralNotificacoes() {
                       padding: "8px 14px",
                       borderRadius: 10,
                       border: "none",
-                      background: brand.useBrand
-                        ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-                        : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                      background: ctaGradient(brand),
                       color: "#fff",
                       fontWeight: 700,
                       fontSize: 12,
@@ -759,6 +786,10 @@ export default function CentralNotificacoes() {
 
   function renderListaMesaRoteiroSolic(lista: RoteiroMesaSolRow[], opts?: { staffMesclado?: boolean }) {
     const staffMesclado = opts?.staffMesclado ?? false;
+
+    if (loading && lista.length === 0) {
+      return listaSolicSkeleton(cardShell, t);
+    }
 
     const tagMesaRow = (row: RoteiroMesaSolRow) => {
       if (staffMesclado && row.status === "resolvido") return { label: "Concluído", cor: "#22c55e" };
@@ -840,9 +871,7 @@ export default function CentralNotificacoes() {
                       padding: "8px 14px",
                       borderRadius: 10,
                       border: "none",
-                      background: brand.useBrand
-                        ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-                        : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                      background: ctaGradient(brand),
                       color: "#fff",
                       fontWeight: 700,
                       fontSize: 12,
@@ -867,6 +896,10 @@ export default function CentralNotificacoes() {
     opts?: { staffMesclado?: boolean },
   ) {
     const staffMesclado = opts?.staffMesclado ?? false;
+
+    if (loading && lista.length === 0) {
+      return listaSolicSkeleton(cardShell, t);
+    }
 
     const tagDealerRow = (row: DealerSolRow) => {
       if (modo === "concluidas") return { label: "Concluído", cor: "#22c55e" };
@@ -961,9 +994,7 @@ export default function CentralNotificacoes() {
                       padding: "8px 14px",
                       borderRadius: 10,
                       border: "none",
-                      background: brand.useBrand
-                        ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-                        : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                      background: ctaGradient(brand),
                       color: "#fff",
                       fontWeight: 700,
                       fontSize: 12,
@@ -985,7 +1016,7 @@ export default function CentralNotificacoes() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar a Central de Notificações.
+        Você não tem permissão para visualizar este dashboard.
       </div>
     );
   }
@@ -993,7 +1024,7 @@ export default function CentralNotificacoes() {
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body, paddingBottom: 32 }}>
       <PageHeader
-        icon={<GiRingingBell size={14} aria-hidden />}
+        icon={<Bell size={14} aria-hidden strokeWidth={2.2} />}
         title="Central de Notificações"
         subtitle={
           verInboxEstudio && pendentesGestor > 0
@@ -1086,8 +1117,9 @@ export default function CentralNotificacoes() {
             )}
 
             {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} aria-hidden /> Carregando...
+              <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
+                <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                Carregando...
               </span>
             )}
           </div>
@@ -1096,13 +1128,29 @@ export default function CentralNotificacoes() {
 
       {verInboxEstudio ? (
         <>
-          <div role="tablist" aria-label="Inbox da Central" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+          <div
+            role="tablist"
+            aria-label="Inbox da Central"
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}
+            onKeyDown={(e) => {
+              const idx = ABAS_STAFF.indexOf(abaStaff);
+              if (e.key === "ArrowRight") {
+                e.preventDefault();
+                setAbaStaff(ABAS_STAFF[(idx + 1) % ABAS_STAFF.length]);
+              }
+              if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                setAbaStaff(ABAS_STAFF[(idx - 1 + ABAS_STAFF.length) % ABAS_STAFF.length]);
+              }
+            }}
+          >
             <button
               type="button"
               role="tab"
               aria-selected={abaStaff === "troca"}
               id="tab-central-troca"
               aria-controls="panel-central-troca"
+              tabIndex={abaStaff === "troca" ? 0 : -1}
               onClick={() => setAbaStaff("troca")}
               style={chipTab(abaStaff === "troca")}
             >
@@ -1112,7 +1160,7 @@ export default function CentralNotificacoes() {
                 <span
                   style={{
                     marginLeft: 8,
-                    background: "#e84025",
+                    background: BRAND.vermelho,
                     color: "#fff",
                     borderRadius: 10,
                     padding: "0 6px",
@@ -1130,6 +1178,7 @@ export default function CentralNotificacoes() {
               aria-selected={abaStaff === "feedback"}
               id="tab-central-feedback"
               aria-controls="panel-central-feedback"
+              tabIndex={abaStaff === "feedback" ? 0 : -1}
               onClick={() => setAbaStaff("feedback")}
               style={chipTab(abaStaff === "feedback")}
             >
@@ -1138,7 +1187,7 @@ export default function CentralNotificacoes() {
                 <span
                   style={{
                     marginLeft: 8,
-                    background: "#e84025",
+                    background: BRAND.vermelho,
                     color: "#fff",
                     borderRadius: 10,
                     padding: "0 6px",
@@ -1156,6 +1205,7 @@ export default function CentralNotificacoes() {
               aria-selected={abaStaff === "campanha_roteiro"}
               id="tab-central-campanha-roteiro"
               aria-controls="panel-central-campanha-roteiro"
+              tabIndex={abaStaff === "campanha_roteiro" ? 0 : -1}
               onClick={() => setAbaStaff("campanha_roteiro")}
               style={chipTab(abaStaff === "campanha_roteiro")}
             >
@@ -1165,7 +1215,7 @@ export default function CentralNotificacoes() {
                 <span
                   style={{
                     marginLeft: 8,
-                    background: "#e84025",
+                    background: BRAND.vermelho,
                     color: "#fff",
                     borderRadius: 10,
                     padding: "0 6px",
@@ -1183,6 +1233,7 @@ export default function CentralNotificacoes() {
               aria-selected={abaStaff === "roteiro_mesa"}
               id="tab-central-roteiro-mesa"
               aria-controls="panel-central-roteiro-mesa"
+              tabIndex={abaStaff === "roteiro_mesa" ? 0 : -1}
               onClick={() => setAbaStaff("roteiro_mesa")}
               style={chipTab(abaStaff === "roteiro_mesa")}
             >
@@ -1192,7 +1243,7 @@ export default function CentralNotificacoes() {
                 <span
                   style={{
                     marginLeft: 8,
-                    background: "#e84025",
+                    background: BRAND.vermelho,
                     color: "#fff",
                     borderRadius: 10,
                     padding: "0 6px",
@@ -1207,22 +1258,22 @@ export default function CentralNotificacoes() {
           </div>
 
           {abaStaff === "troca" ? (
-            <div role="tabpanel" id="panel-central-troca" aria-labelledby="tab-central-troca">
+            <div role="tabpanel" id="panel-central-troca" aria-labelledby="tab-central-troca" tabIndex={0}>
               {renderListaSolicitacoes(solicTroca, "abertas", { staffMesclado: true })}
             </div>
           ) : null}
           {abaStaff === "feedback" ? (
-            <div role="tabpanel" id="panel-central-feedback" aria-labelledby="tab-central-feedback">
+            <div role="tabpanel" id="panel-central-feedback" aria-labelledby="tab-central-feedback" tabIndex={0}>
               {renderListaSolicitacoes(solicFeedback, "abertas", { staffMesclado: true })}
             </div>
           ) : null}
           {abaStaff === "campanha_roteiro" ? (
-            <div role="tabpanel" id="panel-central-campanha-roteiro" aria-labelledby="tab-central-campanha-roteiro">
+            <div role="tabpanel" id="panel-central-campanha-roteiro" aria-labelledby="tab-central-campanha-roteiro" tabIndex={0}>
               {renderListaCampanhaRoteiroSolic(solicCampRoteiroGestor, { staffMesclado: true })}
             </div>
           ) : null}
           {abaStaff === "roteiro_mesa" ? (
-            <div role="tabpanel" id="panel-central-roteiro-mesa" aria-labelledby="tab-central-roteiro-mesa">
+            <div role="tabpanel" id="panel-central-roteiro-mesa" aria-labelledby="tab-central-roteiro-mesa" tabIndex={0}>
               {renderListaMesaRoteiroSolic(solicMesaRoteiroGestor, { staffMesclado: true })}
             </div>
           ) : null}
@@ -1288,7 +1339,7 @@ export default function CentralNotificacoes() {
                               fontWeight: 600,
                             }}
                           >
-                            <GiDiceSixFacesFour size={12} aria-hidden />
+                            <Layers size={12} aria-hidden strokeWidth={2.2} />
                             {labelJogosRoteiro(c.jogos as string[] | undefined)}
                           </span>
                         </div>
@@ -1335,9 +1386,7 @@ export default function CentralNotificacoes() {
                               padding: "8px 14px",
                               borderRadius: 10,
                               border: "none",
-                              background: brand.useBrand
-                                ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-                                : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                              background: ctaGradient(brand),
                               color: "#fff",
                               fontWeight: 700,
                               fontSize: 12,

@@ -16,6 +16,8 @@ import {
   GiPokerHand,
   GiMicrophone,
   GiShare,
+  GiCardRandom,
+  GiRingingBell,
 } from "react-icons/gi";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
@@ -47,7 +49,11 @@ const MENU_AJUDA = [
   },
   {
     section: "Operações",
-    items: [{ key: "financeiro" as PageKey, label: "Financeiro", Icon: GiCash }],
+    items: [
+      { key: "gestao_dealers" as PageKey, label: "Gestão de Dealers", Icon: GiCardRandom },
+      { key: "central_notificacoes" as PageKey, label: "Central de Notificações", Icon: GiRingingBell },
+      { key: "financeiro" as PageKey, label: "Financeiro", Icon: GiCash },
+    ],
   },
 ];
 
@@ -391,6 +397,74 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
         subtitulo: "Anotações",
         texto:
           "A aba Anotações permite registrar observações sobre o prospecto ao longo de todo o processo de prospecção. Cada anotação registra o usuário que a criou e a data e hora do registro. As anotações são visíveis tanto no modal de edição quanto no modal de visualização (somente leitura).",
+      },
+    ],
+  },
+  gestao_dealers: {
+    titulo: "Gestão de Dealers",
+    blocos: [
+      {
+        texto:
+          "Catálogo central do elenco de dealers de casino ao vivo da Spin Gaming. Reúne o cadastro completo de cada dealer — fotos, especialidades por jogo, turno, gênero e operadora vinculada — e centraliza as solicitações de troca ou feedback enviadas pelas operadoras ao estúdio.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas para navegar entre os turnos ou clique em 'Todos os turnos' para limpar o filtro.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname. O filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar o elenco de uma parceira específica.",
+      },
+      {
+        subtitulo: "Cards de Dealers",
+        texto:
+          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, jogos de especialidade e operadora vinculada.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, operadora e bio do dealer.",
+      },
+      {
+        subtitulo: "Solicitações ao Estúdio (perfil Operador)",
+        texto:
+          "Operadores com escopo de operadora definido encontram dois botões adicionais em cada card:\n\n— Solicitar: abre o formulário de nova solicitação para aquele dealer. Escolha o tipo — 'Solicitar troca de dealer' ou 'Deixar feedback' — e descreva o pedido com pelo menos 10 caracteres. A solicitação é enviada ao estúdio Spin e ficará visível na Central de Notificações.\n\n— Histórico: lista todas as solicitações já enviadas para aquele dealer na sua operadora. Clique em qualquer item para abrir a thread completa da conversa.\n\nUm banner amarelo no topo da página informa quantas solicitações aguardam resposta da operadora. Clique em Ver no banner para acessar a primeira pendência diretamente.",
+      },
+      {
+        subtitulo: "Cadastrando e Editando um Dealer",
+        texto:
+          "Gestores e administradores com permissão de criação encontram o botão '+ Adicionar Dealer' no topo da página. O formulário requer nome real, nickname, pelo menos um jogo de especialidade e gênero.\n\nO campo Fotos aceita múltiplas imagens de uma vez — elas ficam disponíveis no carrossel do card e no modal Ver. Para remover uma foto já enviada, clique no ícone de exclusão sobre a miniatura.\n\nO campo Status (Aprovado / Pendente) aparece apenas ao editar dealers já cadastrados — novos dealers entram como Aprovado por padrão. O campo VIP marca o dealer com o badge de destaque na listagem.\n\nA operadora pode ser travada automaticamente quando o usuário tem escopo restrito a uma única parceira — nesse caso, o campo aparece preenchido e bloqueado para edição.",
+      },
+      {
+        subtitulo: "Visibilidade por Perfil",
+        texto:
+          "— Gestor / Admin: acesso completo ao elenco de todas as operadoras. Pode criar, editar e visualizar qualquer dealer. Visualiza o histórico de solicitações de todas as operadoras.\n— Operador: visualiza apenas os dealers vinculados à sua operadora. Pode solicitar trocas ou deixar feedbacks. Não tem acesso ao botão Editar.\n— Executivo: visualização completa, sem ações de escrita.\n\nO botão Solicitar só aparece quando a operadora ativa está definida no escopo do usuário. O botão Histórico aparece para qualquer perfil com permissão de visualização na Central de Notificações.",
+      },
+    ],
+  },
+  central_notificacoes: {
+    titulo: "Central de Notificações",
+    blocos: [
+      {
+        texto:
+          "Hub de comunicação entre as operadoras e o estúdio Spin Gaming. Centraliza todas as solicitações em aberto e resolvidas — trocas de dealer, feedbacks, solicitações de roteiro de campanha e de roteiro de mesa — num único lugar, com histórico de conversa e status de cada item.\n\nA experiência é diferente conforme o perfil: gestores Spin visualizam o inbox completo organizado por tipo de solicitação; operadores veem as próprias solicitações e as campanhas da sua operadora.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "Use as setas para navegar entre meses ou ative Histórico para ver todas as solicitações desde o início da operação. No modo Histórico, as setas ficam desabilitadas.\n\nO filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar as notificações de uma parceira específica em todos os blocos da página.\n\nO indicador 'Carregando...' na barra de filtros é um estado secundário que confirma que os dados estão sendo atualizados após mudança de período ou operadora.",
+      },
+      {
+        subtitulo: "Inbox do Estúdio — perfil Gestor",
+        texto:
+          "Gestores e administradores Spin visualizam o inbox organizado em quatro abas:\n\n— Troca de dealer: solicitações de troca enviadas pelas operadoras para dealers específicos.\n— Feedbacks: mensagens de feedback sobre o desempenho ou comportamento de dealers.\n— Campanhas: solicitações ligadas a roteiros de campanha cadastrados no módulo Roteiro de Mesa.\n— Roteiros: solicitações ligadas a sugestões de roteiro de mesa.\n\nCada aba exibe um badge vermelho com a contagem de itens que aguardam resposta do estúdio — ou seja, onde o campo 'aguarda resposta de' está apontado para o gestor. Itens já resolvidos aparecem na mesma lista com o status 'Concluído' para consulta histórica dentro do período selecionado.",
+      },
+      {
+        subtitulo: "Minhas Solicitações e Campanhas — perfil Operador",
+        texto:
+          "Operadores visualizam a página em modo diferente do inbox do estúdio:\n\n— Minhas solicitações: lista das solicitações de dealer enviadas pela operadora que ainda estão abertas (pendente ou em andamento).\n— Roteiros de mesa: solicitações de roteiro vinculadas à operadora, também em aberto.\n— Minhas Campanhas: campanhas de roteiro cadastradas para a operadora no período selecionado. Campanhas vigentes são destacadas com o badge 'VIGENTE' em verde. Quando a campanha tem uma conversa aberta com o estúdio, o botão 'Ver conversa' aparece no card.\n\nA seção Solicitações concluídas aparece na parte inferior da página e lista os itens marcados como resolvidos no período selecionado.",
+      },
+      {
+        subtitulo: "Conversas e Status",
+        texto:
+          "Clique em 'Ver conversa' em qualquer card para abrir a thread de mensagens daquela solicitação. A conversa exibe todas as mensagens trocadas entre operadora e estúdio, com hora e nome do remetente.\n\nO status de cada solicitação segue o fluxo:\n— Aberta: solicitação criada, ainda sem resposta do estúdio.\n— Aguardando resposta: o estúdio já interagiu e a bola está com a operadora — ou vice-versa.\n— Concluído: marcada como resolvida pelo gestor Spin.\n— Cancelada: encerrada sem resolução.\n\nQuando o perfil não tem permissão de resposta na página, a thread abre em modo somente leitura com a mensagem 'Sem permissão para responder nesta página. Apenas visualização.'",
+      },
+      {
+        subtitulo: "Visibilidade por Perfil",
+        texto:
+          "— Gestor / Admin: inbox completo com todas as solicitações de todas as operadoras, organizadas por tipo em abas. Pode responder, questionar e marcar como resolvido.\n— Operador: visualiza apenas as próprias solicitações e campanhas. Pode abrir threads e responder mensagens. Não tem acesso ao inbox do estúdio nem às solicitações de outras operadoras.\n— Executivo: visualização completa em modo leitura. Não pode interagir nas threads.",
       },
     ],
   },
@@ -789,6 +863,86 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "As views do Scout diferem dos dados nos dashboards?",
         texto:
           "As views/seguidores cadastrados no Scout são dados de prospecção inseridos manualmente durante a negociação. Os números nos dashboards de Streamers e Overview Influencer vêm dos dados reais das lives realizadas. São fontes diferentes — diferenças são esperadas e não indicam inconsistência.",
+      },
+    ],
+  },
+  gestao_dealers: {
+    titulo: "Gestão de Dealers",
+    blocos: [
+      {
+        subtitulo: "Um dealer não aparece na listagem?",
+        texto:
+          "Verifique se há filtros ativos — turno, gênero, jogo ou operadora podem estar restringindo a listagem. O bloco consolidado exibe a contagem filtrada; compare com o total sem filtros para confirmar.\n\nO campo de busca aceita nome real e nickname. Se a busca estiver preenchida, ela se aplica em conjunto com os demais filtros — limpe o campo para ver todos os dealers do filtro atual.\n\nPara perfis com escopo de operadora restrito, apenas os dealers vinculados àquela operadora aparecem na listagem — isso é comportamento esperado.",
+      },
+      {
+        subtitulo: "O botão Solicitar não aparece no card?",
+        texto:
+          "O botão Solicitar só é exibido para o perfil Operador e apenas quando a operadora ativa está definida no escopo do usuário. Se o botão não aparece, verifique:\n\n— Se o usuário tem o perfil Operador configurado na Gestão de Usuários.\n— Se o escopo de operadora está atribuído corretamente ao usuário.\n— Se o filtro de operadora na página está definido para a operadora do escopo — quando o usuário tem acesso a mais de uma, a operadora precisa estar selecionada no filtro para que o botão apareça.",
+      },
+      {
+        subtitulo: "O botão Histórico não aparece?",
+        texto:
+          "O botão Histórico requer permissão de visualização na Central de Notificações (configurada em Gestão de Usuários → Permissões). Verifique se a permissão de visualização para a página 'Central de Notificações' está ativa no perfil do usuário.\n\nPara o perfil Operador, o Histórico também exige que a operadora ativa esteja definida no escopo — sem ela, o botão não é renderizado.",
+      },
+      {
+        subtitulo: "Não consigo editar um dealer?",
+        texto:
+          "O botão Editar aparece apenas para perfis com permissão de edição configurada em Gestão de Usuários. Verifique se a permissão 'can_editar' está ativa para a página 'Gestão de Dealers'.\n\nPara perfis com edição restrita a 'próprios', o botão só aparece em dealers vinculados a operadoras dentro do escopo do usuário. Dealers sem operadora ou de outras operadoras não exibem o botão Editar.",
+      },
+      {
+        subtitulo: "Não consigo salvar um dealer — aparece mensagem de erro?",
+        texto:
+          "Verifique os campos obrigatórios:\n\n— Nome real: não pode estar em branco.\n— Nickname: não pode estar em branco.\n— Jogos: pelo menos um jogo de especialidade deve ser selecionado.\n\nSe o upload de foto falhar, o erro indicará o motivo. Confirme se o bucket 'dealer-photos' existe e está configurado no Supabase Storage. O erro pode ocorrer também por limite de tamanho de arquivo — tente com imagens menores.",
+      },
+      {
+        subtitulo: "A foto enviada não aparece no card?",
+        texto:
+          "Após o upload, a URL da foto é armazenada no campo 'fotos' do dealer. Se a foto não aparece após salvar, verifique:\n\n— Se o upload foi concluído antes de clicar em Salvar — o indicador 'Enviando...' deve ter desaparecido.\n— Se a URL gerada pelo Storage é pública. Acesse o Supabase → Storage → dealer-photos e confirme que o bucket está configurado como público.\n— Fotos enviadas mas não salvas (modal fechado antes do Salvar) são perdidas — o upload ocorre no Storage mas a URL não é vinculada ao dealer.",
+      },
+      {
+        subtitulo: "O histórico de solicitações do dealer está vazio?",
+        texto:
+          "O modal de Histórico exibe solicitações registradas na tabela 'dealer_solicitacoes' para aquele dealer. Se estiver vazio, significa que nenhuma solicitação foi criada para esse dealer ainda — isso é comportamento esperado para dealers recém-cadastrados ou sem interação da operadora.\n\nPara o perfil Operador, o Histórico é filtrado pela operadora do escopo — solicitações de outras operadoras para o mesmo dealer não são exibidas.",
+      },
+    ],
+  },
+  central_notificacoes: {
+    titulo: "Central de Notificações",
+    blocos: [
+      {
+        subtitulo: "A listagem está vazia mas sei que há solicitações em aberto?",
+        texto:
+          "Verifique o período selecionado na barra de navegação. O filtro de período afeta as solicitações resolvidas exibidas, mas solicitações abertas (pendente ou em andamento) aparecem independentemente do mês selecionado — elas sempre são buscadas sem corte de data.\n\nSe os filtros de operadora estiverem ativos, tente mudar para 'Todas as operadoras' para confirmar se os dados existem em outro escopo.\n\nPara perfis Operador, apenas solicitações da operadora do escopo aparecem — isso é comportamento esperado.",
+      },
+      {
+        subtitulo: "O badge de contagem na aba não reflete o número correto?",
+        texto:
+          "O badge exibe apenas solicitações abertas (pendente ou em andamento) onde o campo 'aguarda_resposta_de' está definido como 'gestor' — ou seja, a bola está com o estúdio. Solicitações em andamento mas aguardando resposta da operadora não são contabilizadas no badge.\n\nSe o número parece desatualizado, recarregue a página — a contagem é calculada no momento do carregamento dos dados e não atualiza em tempo real nessa visualização.",
+      },
+      {
+        subtitulo: "Não consigo responder na thread?",
+        texto:
+          "O campo de texto e o botão de envio só aparecem quando:\n\n— A solicitação está com status diferente de 'resolvido' ou 'cancelado'.\n— O perfil tem permissão de edição ativa na Central de Notificações (Gestão de Usuários → Permissões → can_editar).\n\nSe a thread abre em modo somente leitura com a mensagem 'Sem permissão para responder nesta página', verifique a configuração de permissão na Gestão de Usuários.",
+      },
+      {
+        subtitulo: "A campanha não aparece para o Operador?",
+        texto:
+          "As campanhas exibidas para operadores vêm da tabela 'roteiro_mesa_campanhas' filtradas pela operadora do escopo e pelo período selecionado. Se uma campanha não aparece:\n\n— Verifique se a campanha foi cadastrada com a operadora correta no módulo Roteiro de Mesa.\n— Confirme que as datas de início e fim da campanha estão dentro do período selecionado na Central.\n— Ative o Histórico para ver campanhas fora do mês atual.\n— Verifique se o filtro de operadora na barra superior corresponde à operadora vinculada à campanha.",
+      },
+      {
+        subtitulo: "O botão 'Marcar como resolvido' não aparece na thread?",
+        texto:
+          "O botão de resolução só é exibido para perfis Staff (admin, gestor ou executivo) com permissão de edição ativa. Perfis Operador não têm acesso a essa ação — operadores podem enviar mensagens mas não podem encerrar solicitações.\n\nSe você é Gestor e o botão não aparece, verifique se a permissão 'can_editar' está ativa para a Central de Notificações na Gestão de Usuários.",
+      },
+      {
+        subtitulo: "O banner de pendências na Gestão de Dealers não aparece?",
+        texto:
+          "O banner amarelo de pendências (componente BannerPendencias) só é exibido para o perfil Operador quando há solicitações com 'aguarda_resposta_de = operadora' em aberto. Verifique:\n\n— Se o usuário tem o perfil Operador configurado.\n— Se há solicitações abertas aguardando resposta da operadora — o banner não aparece quando todas as solicitações estão aguardando o estúdio.\n— O banner monitora em tempo real via realtime do Supabase. Se a conexão realtime estiver instável, o banner pode não atualizar automaticamente — recarregue a página para forçar a leitura.",
+      },
+      {
+        subtitulo: "As solicitações concluídas não aparecem na seção de histórico?",
+        texto:
+          "A seção 'Solicitações concluídas' exibe itens com status 'resolvido' cuja data de resolução está dentro do período selecionado. Se o período estiver no mês atual e as resoluções ocorreram em meses anteriores, os itens não aparecerão — ative Histórico para ver o acumulado completo.\n\nA seção só é exibida para o perfil Operador. Para Gestores, os itens resolvidos aparecem dentro das próprias abas do inbox, mesclados com os abertos.",
       },
     ],
   },

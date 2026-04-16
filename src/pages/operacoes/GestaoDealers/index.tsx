@@ -5,10 +5,26 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from "../../../types";
-import { Eye, History, Pencil, Send, Upload, Trash2, ChevronLeft, ChevronRight, Search, CircleDot, Shield } from "lucide-react";
-import { GiCardRandom, GiFemale, GiMale, GiCardPick, GiCardAceSpades } from "react-icons/gi";
+import {
+  Eye,
+  History,
+  Pencil,
+  Send,
+  Upload,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  CircleDot,
+  Shield,
+  Users,
+  User,
+  Spade,
+  Crown,
+  Loader2,
+} from "lucide-react";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -20,16 +36,11 @@ import { corStatusSolicitacao, type SolicitacaoStatus, type SolicitacaoTipo } fr
 /** Jogos no cadastro e filtros. `mesa_vip` pode existir no banco por legado; usar flag `vip` no cadastro. */
 type DealerJogoCadastro = Exclude<DealerJogo, "mesa_vip">;
 
-// ─── BRAND ────────────────────────────────────────────────────────────────────
-const BRAND = {
-  roxo:     "#4a2082",
-  roxoVivo: "#7c3aed",
-  azul:     "#1e36f8",
-  vermelho: "#e84025",
-  verde:    "#22c55e",
-  amarelo:  "#f59e0b",
-  cinza:    "#6b7280",
-} as const;
+function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
+  return brand.useBrand
+    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
+}
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const GENERO_OPTS: { value: DealerGenero; label: string }[] = [
@@ -60,14 +71,14 @@ function normalizarBuscaTexto(s: string): string {
 }
 
 const ICONE_GENERO: Record<DealerGenero, ReactNode> = {
-  feminino: <GiFemale size={13} aria-hidden />,
-  masculino: <GiMale size={13} aria-hidden />,
+  feminino: <User size={13} aria-hidden strokeWidth={2.2} />,
+  masculino: <Users size={13} aria-hidden strokeWidth={2.2} />,
 };
 
 const ICONE_JOGO: Record<DealerJogoCadastro, ReactNode> = {
-  blackjack: <GiCardPick size={13} aria-hidden />,
+  blackjack: <Spade size={13} aria-hidden strokeWidth={2.2} />,
   roleta: <CircleDot size={13} aria-hidden strokeWidth={2.2} />,
-  baccarat: <GiCardAceSpades size={13} aria-hidden />,
+  baccarat: <Crown size={13} aria-hidden strokeWidth={2.2} />,
 };
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
@@ -240,7 +251,7 @@ export default function GestaoDealers() {
     border: `1px solid ${filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? brand.accent : t.cardBorder}`,
     background:
       filtroOperadora !== "todas" && filtroOperadora !== "nenhuma"
-        ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : `${BRAND.roxo}18`)
+        ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 14%, transparent)")
         : (t.inputBg ?? t.cardBg),
     color: filtroOperadora !== "todas" && filtroOperadora !== "nenhuma" ? brand.accent : t.text,
     fontSize: 13,
@@ -267,16 +278,16 @@ export default function GestaoDealers() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar a Gestão de Dealers.
+        Você não tem permissão para visualizar este dashboard.
       </div>
     );
   }
 
   return (
-    <div className="app-page-shell">
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
       <PageHeader
-        icon={<GiCardRandom size={14} aria-hidden />}
+        icon={<Users size={14} aria-hidden strokeWidth={2.2} />}
         title="Gestão de Dealers"
         subtitle="Gerencie o elenco de dealers de casino."
         actions={
@@ -285,7 +296,7 @@ export default function GestaoDealers() {
               type="button"
               onClick={() => setModalCriar(true)}
               style={{
-                background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+                background: ctaGradient(brand),
                 color: "#fff", border: "none", borderRadius: 10,
                 padding: "10px 18px", cursor: "pointer",
                 fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
@@ -325,6 +336,7 @@ export default function GestaoDealers() {
             </button>
             <button
               type="button"
+              aria-pressed={filtroTurno === "todos"}
               onClick={() => setFiltroTurno("todos")}
               style={{
                 display: "flex",
@@ -341,7 +353,7 @@ export default function GestaoDealers() {
                     : `1px solid ${t.cardBorder}`,
                 background:
                   filtroTurno === "todos"
-                    ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)")
+                    ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
                     : "transparent",
                 color: filtroTurno === "todos" ? brand.accent : t.textMuted,
                 fontWeight: filtroTurno === "todos" ? 700 : 400,
@@ -369,6 +381,28 @@ export default function GestaoDealers() {
       </div>
 
       {/* ─── Bloco consolidado: metade Dealers + metade filtros / busca ───────── */}
+      {loading ? (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "20px 28px",
+            background: brand.blockBg,
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: 16,
+            padding: "14px 18px",
+            marginBottom: 24,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+          }}
+        >
+          <div style={{ flex: "1 1 220px", minHeight: 118, borderRadius: 12, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }} />
+          <div style={{ flex: "2 1 320px", minWidth: 0, display: "flex", flexDirection: "column", gap: 10, justifyContent: "center" }}>
+            <div style={{ height: 14, width: "55%", borderRadius: 6, background: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }} />
+            <div style={{ height: 14, width: "80%", borderRadius: 6, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+            <div style={{ height: 36, width: "100%", borderRadius: 999, background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} />
+          </div>
+        </div>
+      ) : null}
       {!loading && (
         <div style={{
           display: "flex",
@@ -535,7 +569,7 @@ export default function GestaoDealers() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Nenhum dealer encontrado.</div>
+        <div style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>{MSG_SEM_DADOS_FILTRO}</div>
       ) : (
         <div
           style={{
@@ -667,7 +701,11 @@ function DealerFotoCarrossel({
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
-      <img src={urls[cur]} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      <img
+        src={urls[cur]}
+        alt={n > 1 ? `${alt} — foto ${cur + 1} de ${n}` : alt}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      />
       {n > 1 ? (
         <>
           <button
@@ -815,9 +853,9 @@ function DealerCard({
             <span
               key={j}
               style={{
-                background: `${BRAND.vermelho}22`,
-                border: `1px solid ${BRAND.vermelho}66`,
-                color: BRAND.vermelho,
+                background: "var(--brand-action-12, rgba(124,58,237,0.12))",
+                border: "1px solid var(--brand-action-border, rgba(124,58,237,0.3))",
+                color: "var(--brand-action, #7c3aed)",
                 padding: "3px 10px",
                 borderRadius: 20,
                 fontSize: 11,
@@ -851,7 +889,18 @@ function DealerCard({
         {/* Ocupa o espaço vertical restante para alinhar género e botões entre cards da mesma linha */}
         <div style={{ flex: 1, minHeight: 0 }} aria-hidden />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-          <span style={{ background: `${BRAND.roxoVivo}22`, color: BRAND.roxoVivo, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, fontFamily: FONT.body }}>
+          <span
+            style={{
+              background: "var(--brand-action-12, rgba(124,58,237,0.12))",
+              color: "var(--brand-action, #7c3aed)",
+              border: "1px solid var(--brand-action-border, rgba(124,58,237,0.28))",
+              padding: "3px 10px",
+              borderRadius: 20,
+              fontSize: 11,
+              fontWeight: 600,
+              fontFamily: FONT.body,
+            }}
+          >
             {GENERO_OPTS.find((o) => o.value === dealer.genero)?.label ?? dealer.genero}
           </span>
           {op && (
@@ -859,12 +908,29 @@ function DealerCard({
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={onVer} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-            <Eye size={13} /> Ver
+          <button type="button" onClick={onVer} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
+            <Eye size={13} aria-hidden /> Ver
           </button>
           {podeEditar && (
-            <button onClick={onEditar} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`, color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
-              <Pencil size={13} /> Editar
+            <button
+              type="button"
+              onClick={onEditar}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "none",
+                background: ctaGradient(brand),
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              <Pencil size={13} aria-hidden /> Editar
             </button>
           )}
           {onSolicitar ? (
@@ -950,7 +1016,9 @@ function ModalHistoricoSolicitacoesDealer({
         Todas as solicitações ligadas a este dealer{slugSolicitacaoFiltro ? " na sua operadora" : ""}.
       </p>
       {solLoading ? (
-        <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando...</span>
+        <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+          <Loader2 size={22} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+        </div>
       ) : solicitacoes.length === 0 ? (
         <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Nenhuma solicitação registrada.</span>
       ) : (
@@ -1142,6 +1210,7 @@ function ModalDealer({
   onSalvo: () => void;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const [nomeReal, setNomeReal] = useState(editando?.nome_real ?? "");
   const [nickname, setNickname] = useState(editando?.nickname ?? "");
   const [fotos, setFotos] = useState<string[]>(editando?.fotos ?? []);
@@ -1260,14 +1329,19 @@ function ModalDealer({
             {fotos.map((url, idx) => (
               <div key={idx} style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
                 <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <button onClick={() => removerFoto(idx)} style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: "50%", background: BRAND.vermelho, border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Trash2 size={12} />
+                <button
+                  type="button"
+                  aria-label="Remover foto"
+                  onClick={() => removerFoto(idx)}
+                  style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: "50%", background: BRAND.vermelho, border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <Trash2 size={12} aria-hidden />
                 </button>
               </div>
             ))}
           </div>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: `1px dashed ${t.cardBorder}`, cursor: "pointer", fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
-            <Upload size={16} />
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: `1px dashed ${t.cardBorder}`, cursor: uploading ? "wait" : "pointer", fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
+            {uploading ? <Loader2 size={14} className="app-lucide-spin" aria-hidden /> : <Upload size={16} aria-hidden />}
             {uploading ? "Enviando..." : "Adicionar fotos"}
             <input type="file" accept="image/*" multiple hidden onChange={handleFileUpload} disabled={uploading} />
           </label>
@@ -1298,9 +1372,11 @@ function ModalDealer({
                 aria-pressed={jogos.includes(o.value)}
                 onClick={() => toggleJogo(o.value)}
                 style={{
-                  padding: "8px 14px", borderRadius: 20, border: `1px solid ${jogos.includes(o.value) ? BRAND.roxoVivo : t.cardBorder}`,
-                  background: jogos.includes(o.value) ? `${BRAND.roxoVivo}22` : "transparent",
-                  color: jogos.includes(o.value) ? BRAND.roxoVivo : t.textMuted,
+                  padding: "8px 14px",
+                  borderRadius: 20,
+                  border: `1px solid ${jogos.includes(o.value) ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
+                  background: jogos.includes(o.value) ? "var(--brand-action-12, rgba(124,58,237,0.12))" : "transparent",
+                  color: jogos.includes(o.value) ? "var(--brand-action, #7c3aed)" : t.textMuted,
                   fontSize: 12, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer",
                 }}
               >
@@ -1340,28 +1416,52 @@ function ModalDealer({
         )}
 
         <div style={fieldStyle}>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT.body, fontSize: 13, color: t.text, cursor: "pointer" }}>
-            <input type="checkbox" checked={vip} onChange={(e) => setVip(e.target.checked)} />
+          <label htmlFor="dealer-modal-vip" style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT.body, fontSize: 13, color: t.text, cursor: "pointer" }}>
+            <input id="dealer-modal-vip" type="checkbox" checked={vip} onChange={(e) => setVip(e.target.checked)} />
             VIP
           </label>
         </div>
 
-        {erro && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: BRAND.vermelho, marginBottom: 16, fontFamily: FONT.body }}>
+        {erro ? (
+          <div role="alert" aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: BRAND.vermelho, marginBottom: 16, fontFamily: FONT.body }}>
             {erro}
           </div>
-        )}
+        ) : null}
 
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-          <button onClick={() => { if (!salvando) onClose(); }} style={{ background: "transparent", border: `1px solid ${t.cardBorder}`, borderRadius: 10, padding: "9px 18px", cursor: "pointer", fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+          <button type="button" onClick={() => { if (!salvando) onClose(); }} style={{ background: "transparent", border: `1px solid ${t.cardBorder}`, borderRadius: 10, padding: "9px 18px", cursor: "pointer", fontFamily: FONT.body, fontSize: 13, color: t.text }}>
             Cancelar
           </button>
-          <button onClick={salvar} disabled={salvando} style={{
-            background: `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-            color: "#fff", border: "none", borderRadius: 10, padding: "9px 20px", cursor: salvando ? "not-allowed" : "pointer",
-            fontFamily: FONT.body, fontSize: 13, fontWeight: 700, opacity: salvando ? 0.7 : 1,
-          }}>
-            {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar dealer"}
+          <button
+            type="button"
+            onClick={() => void salvar()}
+            disabled={salvando}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              background: ctaGradient(brand),
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              padding: "9px 20px",
+              cursor: salvando ? "not-allowed" : "pointer",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              opacity: salvando ? 0.85 : 1,
+            }}
+          >
+            {salvando ? (
+              <>
+                <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
+                Salvando...
+              </>
+            ) : editando ? (
+              "Salvar alterações"
+            ) : (
+              "Criar dealer"
+            )}
           </button>
         </div>
     </ModalBase>
