@@ -6,24 +6,29 @@ export type RhEmprestimoStatus = "active" | "returned";
 
 export type RhReturnCondition = "good" | "needs_cleaning" | "damaged";
 
+/** Linha da relação N:N com operadoras (embed Supabase). */
+export interface RhFigurinoPecaOperadora {
+  operadora_slug: string;
+}
+
 export interface RhFigurinoPeca {
   id: string;
-  operadora_slug: string;
+  rh_figurino_peca_operadoras?: RhFigurinoPecaOperadora[];
   code: string;
   barcode: string;
   name: string;
   category: string;
   size: string;
-  color: string | null;
   description: string | null;
   status: RhFigurinoStatus;
   condition: RhFigurinoCondition;
   purchase_date: string | null;
-  purchase_price: number | null;
   maintenance_reason: string | null;
   maintenance_entered_at: string | null;
+  maintenance_entered_by: string | null;
   discarded_at: string | null;
   discard_reason: string | null;
+  discarded_by: string | null;
   created_at: string;
   updated_at: string;
 }

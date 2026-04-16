@@ -8,23 +8,31 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import type { Operadora } from "../../../types";
 import type {
+  RhFigurinoCondition,
   RhFigurinoEmprestimo,
   RhFigurinoPeca,
   RhFigurinoStatus,
   RhFigurinoStatusHist,
-  RhReturnCondition,
 } from "./types";
 import { BarcodeBlock } from "./BarcodeBlock";
 import { ScannerPanel } from "./ScannerPanel";
 
-import { CATEGORIAS, TAMANHOS, emptyMsgAba, labelAba, labelStatusPeca } from "./figurinosConstants";
+import {
+  CATEGORIAS,
+  TAMANHOS,
+  emptyMsgAba,
+  labelAba,
+  labelStatusHistorico,
+  labelStatusPeca,
+  TIPOS_MANUTENCAO,
+  type RhFigurinoTipoManutencao,
+} from "./figurinosConstants";
 
 type Aba = RhFigurinoStatus;
 
@@ -43,15 +51,77 @@ function fmtDataHora(iso: string | null | undefined): string {
   }
 }
 
+function fmtDataSóDia(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR");
+  } catch {
+    return "—";
+  }
+}
+
+function labelCondicaoPeca(c: RhFigurinoCondition): string {
+  if (c === "good") return "Boa";
+  if (c === "damaged") return "Avariada";
+  return "Limpeza";
+}
+
 function actorLabel(user: { name: string; email: string } | null): string {
   if (!user) return "—";
   return (user.name || "").trim() || user.email;
 }
 
+function pecaSlugsOperadoras(p: RhFigurinoPeca): string[] {
+  const r = p.rh_figurino_peca_operadoras;
+  if (!r || !Array.isArray(r)) return [];
+  return [...new Set(r.map((x) => x.operadora_slug))];
+}
+
+function labelOperadorasPeca(p: RhFigurinoPeca, slugParaNome: (slug: string) => string): string {
+  const slugs = pecaSlugsOperadoras(p);
+  if (slugs.length === 0) return "—";
+  return slugs.map(slugParaNome).join(" · ");
+}
+
+function BlocoResumoPecaBasico({
+  peca,
+  operadorasTexto,
+  t,
+}: {
+  peca: RhFigurinoPeca;
+  operadorasTexto: string;
+  t: ReturnType<typeof useApp>["theme"];
+}) {
+  const row = (label: string, value: string) => (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: `1px solid ${t.cardBorder}` }}>
+      <span style={{ color: t.textMuted, fontSize: 12 }}>{label}</span>
+      <span style={{ color: t.text, fontSize: 13, fontWeight: 600, textAlign: "right" }}>{value}</span>
+    </div>
+  );
+  return (
+    <div
+      style={{
+        padding: "12px 14px",
+        borderRadius: 12,
+        border: `1px solid ${t.cardBorder}`,
+        marginBottom: 14,
+        fontFamily: FONT.body,
+      }}
+    >
+      {row("Código", peca.code)}
+      {row("Operadora", operadorasTexto)}
+      {row("Categoria", peca.category)}
+      {row("Tamanho", peca.size)}
+      {row("Data de aquisição", fmtDataSóDia(peca.purchase_date))}
+      {row("Condição", labelCondicaoPeca(peca.condition))}
+    </div>
+  );
+}
+
 export default function FigurinosPage() {
   const { theme: t, user, podeVerOperadora } = useApp();
   const brand = useDashboardBrand();
-  const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
+  const { operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("rh_figurinos");
 
   const [pecas, setPecas] = useState<RhFigurinoPeca[]>([]);
@@ -68,7 +138,6 @@ export default function FigurinosPage() {
   const [modalScanner, setModalScanner] = useState(false);
   const [pecaNova, setPecaNova] = useState<RhFigurinoPeca | null>(null);
   const [detalhe, setDetalhe] = useState<RhFigurinoPeca | null>(null);
-  const [histEmp, setHistEmp] = useState<RhFigurinoEmprestimo[]>([]);
   const [histStatus, setHistStatus] = useState<RhFigurinoStatusHist[]>([]);
   const [loadingHist, setLoadingHist] = useState(false);
 
@@ -87,9 +156,16 @@ export default function FigurinosPage() {
   const carregar = useCallback(async () => {
     setLoading(true);
     setErroGlobal(null);
-    let q = supabase.from("rh_figurino_pecas").select("*").order("created_at", { ascending: false });
+    const selEmbed =
+      user?.role === "operador" && operadoraSlugsForcado?.length
+        ? "*, rh_figurino_peca_operadoras!inner(operadora_slug)"
+        : "*, rh_figurino_peca_operadoras(operadora_slug)";
+    let q = supabase.from("rh_figurino_pecas").select(selEmbed).order("created_at", { ascending: false });
     if (user?.role === "operador" && operadoraSlugsForcado?.length) {
-      q = q.in("operadora_slug", operadoraSlugsForcado);
+      q = q.or(
+        operadoraSlugsForcado.map((s) => `operadora_slug.eq.${s}`).join(","),
+        { foreignTable: "rh_figurino_peca_operadoras" },
+      );
     }
     const [pr, er, or] = await Promise.all([
       q,
@@ -123,48 +199,61 @@ export default function FigurinosPage() {
     [operadoras],
   );
 
-  const pecasFiltradas = useMemo(() => {
-    const b = busca.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
-    return pecas.filter((p) => {
-      if (p.status !== aba) return false;
-      if (filtroOp !== "todas" && p.operadora_slug !== filtroOp) return false;
+  const operadorasVisiveis = useMemo(() => operadoras.filter((o) => podeVerOperadora(o.slug)), [operadoras, podeVerOperadora]);
+
+  const passaFiltroBloco = useCallback(
+    (p: RhFigurinoPeca) => {
+      if (filtroOp !== "todas" && !pecaSlugsOperadoras(p).includes(filtroOp)) return false;
       if (filtroCat !== "todas" && p.category !== filtroCat) return false;
       if (filtroTam !== "todas" && p.size !== filtroTam) return false;
-      if (!b) return true;
-      const hay = `${p.code} ${p.name} ${p.operadora_slug} ${p.barcode}`
+      return true;
+    },
+    [filtroOp, filtroCat, filtroTam],
+  );
+
+  const pecasComFiltroTopo = useMemo(() => pecas.filter(passaFiltroBloco), [pecas, passaFiltroBloco]);
+
+  const kpis = useMemo(() => {
+    const tot = pecasComFiltroTopo.length;
+    const av = pecasComFiltroTopo.filter((p) => p.status === "available").length;
+    const bo = pecasComFiltroTopo.filter((p) => p.status === "borrowed").length;
+    const ma = pecasComFiltroTopo.filter((p) => p.status === "maintenance").length;
+    return { tot, av, bo, ma };
+  }, [pecasComFiltroTopo]);
+
+  const buscaNorm = useMemo(
+    () => busca.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, ""),
+    [busca],
+  );
+
+  const pecasFiltradas = useMemo(() => {
+    return pecasComFiltroTopo.filter((p) => {
+      if (p.status !== aba) return false;
+      if (!buscaNorm) return true;
+      const emp = empPorItem[p.id];
+      const opNames = labelOperadorasPeca(p, operadoraNome);
+      const hay = `${p.code} ${p.category} ${opNames} ${emp?.borrower_name ?? ""} ${emp?.borrower_ref ?? ""}`
         .toLowerCase()
         .normalize("NFD")
         .replace(/\p{M}/gu, "");
-      return hay.includes(b);
+      return hay.includes(buscaNorm);
     });
-  }, [pecas, aba, filtroOp, filtroCat, filtroTam, busca]);
+  }, [pecasComFiltroTopo, aba, buscaNorm, empPorItem, operadoraNome]);
 
-  const kpis = useMemo(() => {
-    const tot = pecas.length;
-    const av = pecas.filter((p) => p.status === "available").length;
-    const bo = pecas.filter((p) => p.status === "borrowed").length;
-    const ma = pecas.filter((p) => p.status === "maintenance").length;
-    return { tot, av, bo, ma };
-  }, [pecas]);
+  const pecasNaAbaComFiltroTopo = useMemo(
+    () => pecasComFiltroTopo.filter((p) => p.status === aba),
+    [pecasComFiltroTopo, aba],
+  );
 
   const abrirDetalhe = async (p: RhFigurinoPeca) => {
     setDetalhe(p);
     setLoadingHist(true);
-    const [e1, e2] = await Promise.all([
-      supabase
-        .from("rh_figurino_emprestimos")
-        .select("*")
-        .eq("item_id", p.id)
-        .order("loaned_at", { ascending: false })
-        .limit(80),
-      supabase
-        .from("rh_figurino_status_history")
-        .select("*")
-        .eq("item_id", p.id)
-        .order("changed_at", { ascending: false })
-        .limit(80),
-    ]);
-    setHistEmp((e1.data ?? []) as RhFigurinoEmprestimo[]);
+    const e2 = await supabase
+      .from("rh_figurino_status_history")
+      .select("*")
+      .eq("item_id", p.id)
+      .order("changed_at", { ascending: false })
+      .limit(80);
     setHistStatus((e2.data ?? []) as RhFigurinoStatusHist[]);
     setLoadingHist(false);
   };
@@ -172,10 +261,11 @@ export default function FigurinosPage() {
   const resolverCodigo = async (texto: string): Promise<RhFigurinoPeca | null> => {
     const raw = texto.trim();
     if (!raw) return null;
-    const byBar = await supabase.from("rh_figurino_pecas").select("*").eq("barcode", raw).maybeSingle();
+    const emb = "*, rh_figurino_peca_operadoras(operadora_slug)";
+    const byBar = await supabase.from("rh_figurino_pecas").select(emb).eq("barcode", raw).maybeSingle();
     if (byBar.data) return byBar.data as RhFigurinoPeca;
     const upper = raw.toUpperCase();
-    const byCode = await supabase.from("rh_figurino_pecas").select("*").eq("code", upper).maybeSingle();
+    const byCode = await supabase.from("rh_figurino_pecas").select(emb).eq("code", upper).maybeSingle();
     if (byCode.data) return byCode.data as RhFigurinoPeca;
     return null;
   };
@@ -212,6 +302,27 @@ export default function FigurinosPage() {
 
   const podeCriar = perm.canCriarOk;
   const podeEditar = perm.canEditarOk;
+
+  const renderCodigoClicavel = (p: RhFigurinoPeca) => (
+    <button
+      type="button"
+      onClick={() => void abrirDetalhe(p)}
+      aria-label={`Ver detalhes da peça ${p.code}`}
+      style={{
+        fontWeight: 700,
+        color: brand.accent,
+        textDecoration: "underline",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        fontFamily: FONT.body,
+        padding: 0,
+        textAlign: "left",
+      }}
+    >
+      {p.code}
+    </button>
+  );
 
   return (
     <div className="app-page-shell">
@@ -297,39 +408,19 @@ export default function FigurinosPage() {
         </div>
       ) : null}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
-          gap: 14,
-          marginBottom: 20,
-        }}
-      >
-        {[
-          { label: "Total de peças", value: kpis.tot, cor: t.text },
-          { label: "Disponíveis", value: kpis.av, cor: "#22c55e" },
-          { label: "Emprestadas", value: kpis.bo, cor: "#f59e0b" },
-          { label: "Em manutenção", value: kpis.ma, cor: "#a78bfa" },
-        ].map((k) => (
-          <div
-            key={k.label}
-            style={{
-              borderRadius: 14,
-              border: `1px solid ${t.cardBorder}`,
-              background: brand.blockBg,
-              padding: "16px 18px",
-              boxShadow: cardShadow,
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.06em" }}>
-              {k.label.toUpperCase()}
-            </div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: k.cor, fontFamily: FONT_TITLE, marginTop: 6 }}>{k.value}</div>
-          </div>
-        ))}
-      </div>
-
       <div style={{ marginBottom: 20 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            letterSpacing: "0.08em",
+            marginBottom: 8,
+          }}
+        >
+          FILTROS
+        </div>
         <div
           style={{
             borderRadius: 14,
@@ -338,8 +429,8 @@ export default function FigurinosPage() {
             padding: "12px 20px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-            {showFiltroOperadora ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 10, flexWrap: "wrap" }}>
+            {operadorasVisiveis.length > 0 ? (
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <span
                   style={{
@@ -377,35 +468,14 @@ export default function FigurinosPage() {
                   }}
                 >
                   <option value="todas">Todas as operadoras</option>
-                  {operadoras
-                    .filter((o) => podeVerOperadora(o.slug))
-                    .map((o) => (
-                      <option key={o.slug} value={o.slug}>
-                        {o.nome}
-                      </option>
-                    ))}
+                  {operadorasVisiveis.map((o) => (
+                    <option key={o.slug} value={o.slug}>
+                      {o.nome}
+                    </option>
+                  ))}
                 </select>
               </div>
             ) : null}
-            <input
-              type="search"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar por nome, código ou barcode…"
-              aria-label="Buscar peças"
-              style={{
-                minWidth: 200,
-                flex: "1 1 200px",
-                maxWidth: 360,
-                padding: "8px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontFamily: FONT.body,
-                fontSize: 13,
-              }}
-            />
             <select
               value={filtroCat}
               onChange={(e) => setFiltroCat(e.target.value)}
@@ -454,6 +524,108 @@ export default function FigurinosPage() {
         </div>
       </div>
 
+      <div style={{ marginBottom: 20 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            letterSpacing: "0.08em",
+            marginBottom: 8,
+          }}
+        >
+          CONSOLIDADO
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
+            gap: 14,
+          }}
+        >
+          {[
+            { label: "Total de peças", value: kpis.tot, cor: t.text },
+            { label: "Disponíveis", value: kpis.av, cor: "#22c55e" },
+            { label: "Emprestadas", value: kpis.bo, cor: "#f59e0b" },
+            { label: "Em manutenção", value: kpis.ma, cor: "#a78bfa" },
+          ].map((k) => (
+            <div
+              key={k.label}
+              style={{
+                borderRadius: 14,
+                border: `1px solid ${t.cardBorder}`,
+                background: brand.blockBg,
+                padding: "16px 18px",
+                boxShadow: cardShadow,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, letterSpacing: "0.06em" }}>
+                {k.label.toUpperCase()}
+              </div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: k.cor, fontFamily: FONT_TITLE, marginTop: 6 }}>{k.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            letterSpacing: "0.08em",
+            marginBottom: 8,
+          }}
+        >
+          PESQUISA
+        </div>
+        <div
+          style={{
+            borderRadius: 14,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg ?? t.cardBg,
+            padding: "12px 16px",
+          }}
+        >
+          <input
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por código, categoria, operadora ou emprestado para…"
+            aria-label="Buscar peças na aba atual"
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.cardBg,
+              color: t.text,
+              fontFamily: FONT.body,
+              fontSize: 13,
+            }}
+          />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 8 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            letterSpacing: "0.08em",
+            marginBottom: 10,
+          }}
+        >
+          INVENTÁRIO
+        </div>
+      </div>
+
       <div role="tablist" aria-label="Status do inventário" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {(["available", "borrowed", "maintenance", "discarded"] as Aba[]).map((a) => (
           <button
@@ -494,7 +666,7 @@ export default function FigurinosPage() {
           </div>
         ) : pecasFiltradas.length === 0 ? (
           <div style={{ padding: "36px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            {emptyMsgAba(aba)}
+            {pecasNaAbaComFiltroTopo.length > 0 ? "Nenhuma peça corresponde à pesquisa nesta aba." : emptyMsgAba(aba)}
           </div>
         ) : (
           <div className="app-table-wrap">
@@ -517,16 +689,16 @@ export default function FigurinosPage() {
                         Código
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Nome
+                        Operadora
                       </th>
                       <th scope="col" style={getThStyle(t)}>
                         Categoria
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Tam.
+                        Tamanho
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Operadora
+                        Data de aquisição
                       </th>
                       <th scope="col" style={getThStyle(t)}>
                         Condição
@@ -542,22 +714,28 @@ export default function FigurinosPage() {
                         Código
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Nome
+                        Operadora
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Tam.
+                        Categoria
+                      </th>
+                      <th scope="col" style={getThStyle(t)}>
+                        Tamanho
+                      </th>
+                      <th scope="col" style={getThStyle(t)}>
+                        Condição
+                      </th>
+                      <th scope="col" style={getThStyle(t)}>
+                        Data de empréstimo
                       </th>
                       <th scope="col" style={getThStyle(t)}>
                         Emprestado para
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Data
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Por
+                        Registrado por
                       </th>
                       <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
-                        Ações
+                        Ação
                       </th>
                     </>
                   ) : null}
@@ -567,16 +745,22 @@ export default function FigurinosPage() {
                         Código
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Nome
+                        Operadora
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Tam.
+                        Categoria
+                      </th>
+                      <th scope="col" style={getThStyle(t)}>
+                        Tamanho
                       </th>
                       <th scope="col" style={getThStyle(t)}>
                         Motivo
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Entrada
+                        Data de envio
+                      </th>
+                      <th scope="col" style={getThStyle(t)}>
+                        Registrado por
                       </th>
                       <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                         Ações
@@ -589,19 +773,22 @@ export default function FigurinosPage() {
                         Código
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Nome
+                        Operadora
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Tam.
+                        Categoria
                       </th>
                       <th scope="col" style={getThStyle(t)}>
-                        Data descarte
+                        Tamanho
                       </th>
                       <th scope="col" style={getThStyle(t)}>
                         Motivo
                       </th>
-                      <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
-                        Ações
+                      <th scope="col" style={getThStyle(t)}>
+                        Data de descarte
+                      </th>
+                      <th scope="col" style={getThStyle(t)}>
+                        Registrado por
                       </th>
                     </>
                   ) : null}
@@ -611,37 +798,23 @@ export default function FigurinosPage() {
                 {pecasFiltradas.map((p, i) => {
                   const emp = empPorItem[p.id];
                   const zebra = { background: zebraStripe(i) };
+                  const emprestadoPara =
+                    emp?.borrower_name != null || emp?.borrower_ref
+                      ? `${emp?.borrower_name ?? ""}${emp?.borrower_ref ? ` (${emp.borrower_ref})` : ""}`.trim() || "—"
+                      : "—";
                   return (
                     <tr key={p.id} style={{ borderBottom: `1px solid ${t.cardBorder}`, ...zebra }}>
                       {aba === "available" ? (
                         <>
-                          <td style={getTdStyle(t)}>{p.code}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={p.name}>
-                            {p.name}
+                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                            {labelOperadorasPeca(p, operadoraNome)}
                           </td>
                           <td style={getTdStyle(t)}>{p.category}</td>
                           <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={getTdStyle(t)}>{operadoraNome(p.operadora_slug)}</td>
-                          <td style={getTdStyle(t)}>{p.condition === "good" ? "Boa" : p.condition === "damaged" ? "Avariada" : "Limpeza"}</td>
+                          <td style={getTdStyle(t)}>{fmtDataSóDia(p.purchase_date)}</td>
+                          <td style={getTdStyle(t)}>{labelCondicaoPeca(p.condition)}</td>
                           <td style={{ ...getTdStyle(t), textAlign: "right", whiteSpace: "nowrap" }}>
-                            <button
-                              type="button"
-                              onClick={() => void abrirDetalhe(p)}
-                              style={{
-                                padding: "4px 10px",
-                                marginRight: 6,
-                                borderRadius: 8,
-                                border: `1px solid ${t.cardBorder}`,
-                                background: "transparent",
-                                color: brand.accent,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                fontFamily: FONT.body,
-                              }}
-                            >
-                              Detalhes
-                            </button>
                             {podeEditar ? (
                               <>
                                 <button
@@ -667,7 +840,6 @@ export default function FigurinosPage() {
                                   onClick={() => setManutPeca(p)}
                                   style={{
                                     padding: "4px 10px",
-                                    marginRight: 6,
                                     borderRadius: 8,
                                     border: `1px solid rgba(167,139,250,0.4)`,
                                     background: "rgba(167,139,250,0.12)",
@@ -680,57 +852,28 @@ export default function FigurinosPage() {
                                 >
                                   Manutenção
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setDescPeca(p)}
-                                  style={{
-                                    padding: "4px 10px",
-                                    borderRadius: 8,
-                                    border: "1px solid rgba(107,114,128,0.45)",
-                                    background: "rgba(107,114,128,0.1)",
-                                    color: "#6b7280",
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    fontFamily: FONT.body,
-                                  }}
-                                >
-                                  Descartar
-                                </button>
                               </>
-                            ) : null}
+                            ) : (
+                              "—"
+                            )}
                           </td>
                         </>
                       ) : null}
                       {aba === "borrowed" ? (
                         <>
-                          <td style={getTdStyle(t)}>{p.code}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={p.name}>
-                            {p.name}
+                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                            {labelOperadorasPeca(p, operadoraNome)}
                           </td>
+                          <td style={getTdStyle(t)}>{p.category}</td>
                           <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={getTdStyle(t)}>{emp?.borrower_name ?? "—"}</td>
+                          <td style={getTdStyle(t)}>{labelCondicaoPeca(p.condition)}</td>
                           <td style={getTdStyle(t)}>{fmtDataHora(emp?.loaned_at)}</td>
-                          <td style={getTdStyle(t)}>{emp?.loaned_by ?? "—"}</td>
+                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={emprestadoPara}>
+                            {emprestadoPara}
+                          </td>
+                          <td style={getTdStyle(t)}>{emp?.loaned_by?.trim() ? emp.loaned_by : "—"}</td>
                           <td style={{ ...getTdStyle(t), textAlign: "right", whiteSpace: "nowrap" }}>
-                            <button
-                              type="button"
-                              onClick={() => void abrirDetalhe(p)}
-                              style={{
-                                padding: "4px 10px",
-                                marginRight: 6,
-                                borderRadius: 8,
-                                border: `1px solid ${t.cardBorder}`,
-                                background: "transparent",
-                                color: brand.accent,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                fontFamily: FONT.body,
-                              }}
-                            >
-                              Detalhes
-                            </button>
                             {podeEditar ? (
                               <button
                                 type="button"
@@ -747,42 +890,28 @@ export default function FigurinosPage() {
                                   fontFamily: FONT.body,
                                 }}
                               >
-                                Devolver
+                                Devolução
                               </button>
-                            ) : null}
+                            ) : (
+                              "—"
+                            )}
                           </td>
                         </>
                       ) : null}
                       {aba === "maintenance" ? (
                         <>
-                          <td style={getTdStyle(t)}>{p.code}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={p.name}>
-                            {p.name}
+                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                            {labelOperadorasPeca(p, operadoraNome)}
                           </td>
+                          <td style={getTdStyle(t)}>{p.category}</td>
                           <td style={getTdStyle(t)}>{p.size}</td>
                           <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={p.maintenance_reason ?? ""}>
                             {p.maintenance_reason ?? "—"}
                           </td>
                           <td style={getTdStyle(t)}>{fmtDataHora(p.maintenance_entered_at)}</td>
+                          <td style={getTdStyle(t)}>{p.maintenance_entered_by?.trim() ? p.maintenance_entered_by : "—"}</td>
                           <td style={{ ...getTdStyle(t), textAlign: "right", whiteSpace: "nowrap" }}>
-                            <button
-                              type="button"
-                              onClick={() => void abrirDetalhe(p)}
-                              style={{
-                                padding: "4px 10px",
-                                marginRight: 6,
-                                borderRadius: 8,
-                                border: `1px solid ${t.cardBorder}`,
-                                background: "transparent",
-                                color: brand.accent,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                fontFamily: FONT.body,
-                              }}
-                            >
-                              Detalhes
-                            </button>
                             {podeEditar ? (
                               <>
                                 <button
@@ -821,40 +950,25 @@ export default function FigurinosPage() {
                                   Descartar
                                 </button>
                               </>
-                            ) : null}
+                            ) : (
+                              "—"
+                            )}
                           </td>
                         </>
                       ) : null}
                       {aba === "discarded" ? (
                         <>
-                          <td style={getTdStyle(t)}>{p.code}</td>
-                          <td style={{ ...getTdStyle(t), maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }} title={p.name}>
-                            {p.name}
+                          <td style={getTdStyle(t)}>{renderCodigoClicavel(p)}</td>
+                          <td style={{ ...getTdStyle(t), maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelOperadorasPeca(p, operadoraNome)}>
+                            {labelOperadorasPeca(p, operadoraNome)}
                           </td>
+                          <td style={getTdStyle(t)}>{p.category}</td>
                           <td style={getTdStyle(t)}>{p.size}</td>
-                          <td style={getTdStyle(t)}>{fmtDataHora(p.discarded_at)}</td>
                           <td style={{ ...getTdStyle(t), maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }} title={p.discard_reason ?? ""}>
                             {p.discard_reason ?? "—"}
                           </td>
-                          <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                            <button
-                              type="button"
-                              onClick={() => void abrirDetalhe(p)}
-                              style={{
-                                padding: "4px 10px",
-                                borderRadius: 8,
-                                border: `1px solid ${t.cardBorder}`,
-                                background: "transparent",
-                                color: brand.accent,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                fontFamily: FONT.body,
-                              }}
-                            >
-                              Detalhes
-                            </button>
-                          </td>
+                          <td style={getTdStyle(t)}>{fmtDataHora(p.discarded_at)}</td>
+                          <td style={getTdStyle(t)}>{p.discarded_by?.trim() ? p.discarded_by : "—"}</td>
                         </>
                       ) : null}
                     </tr>
@@ -873,8 +987,13 @@ export default function FigurinosPage() {
           podeVerOperadora={podeVerOperadora}
           operadoraSlugsForcado={operadoraSlugsForcado}
           actor={actorLabel(user)}
-          onCreated={(row) => {
-            setPecaNova(row);
+          onCreated={async (row) => {
+            const { data } = await supabase
+              .from("rh_figurino_pecas")
+              .select("*, rh_figurino_peca_operadoras(operadora_slug)")
+              .eq("id", row.id)
+              .maybeSingle();
+            setPecaNova((data ?? row) as RhFigurinoPeca);
             setModalCadastro(false);
             void carregar();
           }}
@@ -884,7 +1003,7 @@ export default function FigurinosPage() {
       {pecaNova ? (
         <ModalSucessoCadastro
           peca={pecaNova}
-          operadoraNome={operadoraNome(pecaNova.operadora_slug)}
+          operadorasTexto={labelOperadorasPeca(pecaNova, operadoraNome)}
           onClose={() => setPecaNova(null)}
         />
       ) : null}
@@ -900,6 +1019,7 @@ export default function FigurinosPage() {
       {empPeca ? (
         <ModalEmprestimo
           peca={empPeca}
+          resumoOperadoras={labelOperadorasPeca(empPeca, operadoraNome)}
           actor={actorLabel(user)}
           onClose={() => setEmpPeca(null)}
           onOk={async () => {
@@ -912,6 +1032,7 @@ export default function FigurinosPage() {
       {devPeca ? (
         <ModalDevolucao
           peca={devPeca}
+          resumoOperadoras={labelOperadorasPeca(devPeca, operadoraNome)}
           emprestimo={empPorItem[devPeca.id]}
           actor={actorLabel(user)}
           onClose={() => setDevPeca(null)}
@@ -926,7 +1047,7 @@ export default function FigurinosPage() {
         <ModalBase onClose={() => setAvisoPeca(null)} maxWidth={420}>
           <ModalHeader title="Peça indisponível para empréstimo/devolução" onClose={() => setAvisoPeca(null)} />
           <p style={{ fontFamily: FONT.body, fontSize: 14, color: t.text, lineHeight: 1.5, margin: "0 0 12px" }}>
-            {avisoPeca.name} ({avisoPeca.code}) está como <strong>{labelStatusPeca(avisoPeca.status)}</strong>.
+            {avisoPeca.category} · {avisoPeca.size} ({avisoPeca.code}) está como <strong>{labelStatusPeca(avisoPeca.status)}</strong>.
           </p>
           <button
             type="button"
@@ -951,18 +1072,12 @@ export default function FigurinosPage() {
       ) : null}
 
       {manutPeca ? (
-        <ModalMotivo
-          titulo="Enviar para manutenção"
-          label="Motivo"
-          confirmLabel="Confirmar"
+        <ModalManutencaoPeca
+          peca={manutPeca}
+          resumoOperadoras={labelOperadorasPeca(manutPeca, operadoraNome)}
+          actor={actorLabel(user)}
           onClose={() => setManutPeca(null)}
-          onConfirm={async (motivo) => {
-            const { error } = await supabase.rpc("rh_figurino_enviar_manutencao", {
-              p_item_id: manutPeca.id,
-              p_motivo: motivo,
-              p_actor: actorLabel(user),
-            });
-            if (error) throw new Error(error.message);
+          onOk={async () => {
             setManutPeca(null);
             await carregar();
           }}
@@ -970,19 +1085,12 @@ export default function FigurinosPage() {
       ) : null}
 
       {descPeca ? (
-        <ModalMotivo
-          titulo="Descartar peça"
-          label="Motivo do descarte"
-          confirmLabel="Descartar"
-          destructive
+        <ModalDescartarPeca
+          peca={descPeca}
+          resumoOperadoras={labelOperadorasPeca(descPeca, operadoraNome)}
+          actor={actorLabel(user)}
           onClose={() => setDescPeca(null)}
-          onConfirm={async (motivo) => {
-            const { error } = await supabase.rpc("rh_figurino_descartar", {
-              p_item_id: descPeca.id,
-              p_motivo: motivo,
-              p_actor: actorLabel(user),
-            });
-            if (error) throw new Error(error.message);
+          onOk={async () => {
             setDescPeca(null);
             await carregar();
           }}
@@ -1047,8 +1155,7 @@ export default function FigurinosPage() {
       {detalhe ? (
         <ModalDetalhe
           peca={detalhe}
-          operadoraNome={operadoraNome(detalhe.operadora_slug)}
-          histEmp={histEmp}
+          operadorasTexto={labelOperadorasPeca(detalhe, operadoraNome)}
           histStatus={histStatus}
           loadingHist={loadingHist}
           empAtivo={empPorItem[detalhe.id]}
@@ -1093,45 +1200,59 @@ function ModalCadastroPeca({
   podeVerOperadora: (s: string) => boolean;
   operadoraSlugsForcado: string[] | null;
   actor: string;
-  onCreated: (row: RhFigurinoPeca) => void;
+  onCreated: (row: RhFigurinoPeca) => void | Promise<void>;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [op, setOp] = useState<string>(() => {
-    if (operadoraSlugsForcado?.length === 1) return operadoraSlugsForcado[0];
-    return "";
+  const [previewCode, setPreviewCode] = useState<string>("…");
+  const [slugsSel, setSlugsSel] = useState<Set<string>>(() => {
+    if (operadoraSlugsForcado?.length) return new Set(operadoraSlugsForcado);
+    return new Set();
   });
-  const [nome, setNome] = useState("");
   const [cat, setCat] = useState<string>(CATEGORIAS[0]);
   const [tam, setTam] = useState<string>(TAMANHOS[3]);
-  const [cor, setCor] = useState("");
   const [desc, setDesc] = useState("");
-  const [dataCompra, setDataCompra] = useState("");
-  const [preco, setPreco] = useState("");
+  const [dataEntrada, setDataEntrada] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      const { data, error } = await supabase.rpc("rh_figurino_preview_proximo_code");
+      if (!cancel && !error && typeof data === "string") setPreviewCode(data);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+  const toggleSlug = (slug: string) => {
+    setSlugsSel((prev) => {
+      const n = new Set(prev);
+      if (n.has(slug)) n.delete(slug);
+      else n.add(slug);
+      return n;
+    });
+  };
+
   const salvar = async () => {
     setErr(null);
-    if (!op) {
-      setErr("Selecione a operadora.");
+    if (slugsSel.size === 0) {
+      setErr("Selecione ao menos uma operadora.");
       return;
     }
-    if (!nome.trim()) {
-      setErr("Informe o nome da peça.");
+    if (!dataEntrada.trim()) {
+      setErr("Informe a data de entrada.");
       return;
     }
     setLoading(true);
-    const precoNum = preco.trim() === "" ? null : Number(preco.replace(/\./g, "").replace(",", "."));
     const { data, error } = await supabase.rpc("rh_figurino_criar_peca", {
-      p_operadora_slug: op,
-      p_name: nome.trim(),
+      p_operadora_slugs: [...slugsSel],
       p_category: cat,
       p_size: tam,
-      p_color: cor,
+      p_purchase_date: dataEntrada,
       p_description: desc,
-      p_purchase_date: dataCompra.trim() === "" ? null : dataCompra,
-      p_purchase_price: precoNum !== null && !Number.isFinite(precoNum) ? null : precoNum,
       p_actor: actor,
     });
     setLoading(false);
@@ -1139,46 +1260,21 @@ function ModalCadastroPeca({
       setErr(error.message);
       return;
     }
-    onCreated(data as RhFigurinoPeca);
+    await onCreated(data as RhFigurinoPeca);
   };
+
+  const opsVis = operadoras.filter((o) => podeVerOperadora(o.slug));
 
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
       <ModalHeader title="Cadastrar peça" onClose={onClose} />
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-          Operadora *
-          <select
-            value={op}
-            onChange={(e) => setOp(e.target.value)}
-            required
-            style={{
-              display: "block",
-              width: "100%",
-              marginTop: 6,
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg,
-              color: t.text,
-              fontFamily: FONT.body,
-            }}
-          >
-            <option value="">Selecione…</option>
-            {operadoras
-              .filter((o) => podeVerOperadora(o.slug))
-              .map((o) => (
-                <option key={o.slug} value={o.slug}>
-                  {o.nome}
-                </option>
-              ))}
-          </select>
-        </label>
-        <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-          Nome da peça *
+          Código (pré-visualização)
           <input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
+            readOnly
+            value={previewCode}
+            aria-readonly="true"
             style={{
               display: "block",
               width: "100%",
@@ -1186,12 +1282,60 @@ function ModalCadastroPeca({
               padding: "10px 12px",
               borderRadius: 10,
               border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg ?? t.cardBg,
+              background: t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
               color: t.text,
               fontFamily: FONT.body,
+              fontWeight: 700,
             }}
           />
         </label>
+        <fieldset style={{ border: "none", margin: 0, padding: 0 }}>
+          <legend style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>
+            Operadoras * <span style={{ fontWeight: 400 }}>(pode marcar várias)</span>
+          </legend>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              maxHeight: 200,
+              overflowY: "auto",
+              padding: "4px 0",
+            }}
+          >
+            {opsVis.map((o) => {
+              const ativo = slugsSel.has(o.slug);
+              return (
+                <button
+                  key={o.slug}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={ativo}
+                  aria-label={`Operadora ${o.nome}`}
+                  onClick={() => toggleSlug(o.slug)}
+                  style={{
+                    textAlign: "left",
+                    padding: "8px 12px",
+                    borderRadius: 10,
+                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                    background: ativo
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-accent) 12%, transparent)"
+                        : "rgba(124,58,237,0.12)"
+                      : (t.inputBg ?? t.cardBg),
+                    color: ativo ? brand.accent : t.text,
+                    fontFamily: FONT.body,
+                    fontSize: 13,
+                    fontWeight: ativo ? 700 : 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  {o.nome}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
             Categoria *
@@ -1243,10 +1387,12 @@ function ModalCadastroPeca({
           </label>
         </div>
         <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-          Cor
+          Data de entrada * <span style={{ fontWeight: 400, color: t.textMuted }}>(data de aquisição)</span>
           <input
-            value={cor}
-            onChange={(e) => setCor(e.target.value)}
+            type="date"
+            required
+            value={dataEntrada}
+            onChange={(e) => setDataEntrada(e.target.value)}
             style={{
               display: "block",
               width: "100%",
@@ -1260,47 +1406,6 @@ function ModalCadastroPeca({
             }}
           />
         </label>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-            Data de compra
-            <input
-              type="date"
-              value={dataCompra}
-              onChange={(e) => setDataCompra(e.target.value)}
-              style={{
-                display: "block",
-                width: "100%",
-                marginTop: 6,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontFamily: FONT.body,
-              }}
-            />
-          </label>
-          <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-            Valor (R$)
-            <input
-              inputMode="decimal"
-              value={preco}
-              onChange={(e) => setPreco(e.target.value)}
-              placeholder="0,00"
-              style={{
-                display: "block",
-                width: "100%",
-                marginTop: 6,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontFamily: FONT.body,
-              }}
-            />
-          </label>
-        </div>
         <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
           Observações
           <textarea
@@ -1371,11 +1476,11 @@ function ModalCadastroPeca({
 
 function ModalSucessoCadastro({
   peca,
-  operadoraNome,
+  operadorasTexto,
   onClose,
 }: {
   peca: RhFigurinoPeca;
-  operadoraNome: string;
+  operadorasTexto: string;
   onClose: () => void;
 }) {
   const { theme: t } = useApp();
@@ -1400,7 +1505,7 @@ function ModalSucessoCadastro({
         </div>
         <p style={{ fontFamily: FONT_TITLE, fontSize: 20, fontWeight: 800, color: brand.primary, margin: "8px 0" }}>{peca.code}</p>
         <p style={{ fontFamily: FONT.body, fontSize: 14, color: t.text, margin: "4px 0 16px" }}>
-          {peca.name} · {peca.size} · {operadoraNome}
+          {peca.category} · {peca.size} · {operadorasTexto}
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <button
@@ -1409,7 +1514,7 @@ function ModalSucessoCadastro({
             onClick={async () => {
               setPdfLoading(true);
               try {
-                await baixarEtiquetaFigurinoPdf(peca, operadoraNome);
+                await baixarEtiquetaFigurinoPdf(peca, operadorasTexto);
               } finally {
                 setPdfLoading(false);
               }
@@ -1509,11 +1614,13 @@ function ModalScanner({
 
 function ModalEmprestimo({
   peca,
+  resumoOperadoras,
   actor,
   onClose,
   onOk,
 }: {
   peca: RhFigurinoPeca;
+  resumoOperadoras: string;
   actor: string;
   onClose: () => void;
   onOk: () => void | Promise<void>;
@@ -1521,10 +1628,10 @@ function ModalEmprestimo({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [nome, setNome] = useState("");
-  const [ref, setRef] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const agoraIso = useMemo(() => new Date().toISOString(), []);
 
   useEffect(() => {
     const id = window.setTimeout(() => inputRef.current?.focus(), 100);
@@ -1534,14 +1641,14 @@ function ModalEmprestimo({
   const confirmar = async () => {
     setErr(null);
     if (!nome.trim()) {
-      setErr("Informe o nome de quem retira a peça.");
+      setErr("Informe o nome da pessoa para quem a peça será emprestada.");
       return;
     }
     setLoading(true);
     const { error } = await supabase.rpc("rh_figurino_registrar_emprestimo", {
       p_item_id: peca.id,
       p_borrower_name: nome.trim(),
-      p_borrower_ref: ref.trim(),
+      p_borrower_ref: "",
       p_actor: actor,
     });
     setLoading(false);
@@ -1553,34 +1660,16 @@ function ModalEmprestimo({
   };
 
   return (
-    <ModalBase onClose={onClose} maxWidth={440}>
-      <ModalHeader title="Registrar empréstimo" onClose={onClose} />
-      <div
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: `1px solid ${t.cardBorder}`,
-          marginBottom: 14,
-          fontFamily: FONT.body,
-          fontSize: 13,
-          color: t.text,
-        }}
-      >
-        <strong>{peca.code}</strong> — {peca.name}
-        <div style={{ marginTop: 6, color: t.textMuted, fontSize: 12 }}>
-          {peca.category} · {peca.size}
-        </div>
-        <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <CheckCircle2 size={14} color="#22c55e" aria-hidden />
-          <span style={{ color: "#22c55e", fontWeight: 700 }}>Disponível</span>
-        </div>
-      </div>
+    <ModalBase onClose={onClose} maxWidth={480}>
+      <ModalHeader title="Emprestar peça" onClose={onClose} />
+      <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
       <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 10 }}>
-        Nome completo *
+        Nome da pessoa que receberá o empréstimo *
         <input
           ref={inputRef}
           value={nome}
           onChange={(e) => setNome(e.target.value)}
+          aria-required="true"
           style={{
             display: "block",
             width: "100%",
@@ -1594,28 +1683,21 @@ function ModalEmprestimo({
           }}
         />
       </label>
-      <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 10 }}>
-        Matrícula / ID (opcional)
-        <input
-          value={ref}
-          onChange={(e) => setRef(e.target.value)}
-          style={{
-            display: "block",
-            width: "100%",
-            marginTop: 6,
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg,
-            color: t.text,
-            fontFamily: FONT.body,
-          }}
-        />
-      </label>
-      <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
+      <div
+        style={{
+          fontSize: 12,
+          color: t.textMuted,
+          marginBottom: 12,
+          fontFamily: FONT.body,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: `1px dashed ${t.cardBorder}`,
+          background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
+        }}
+      >
         Registrado por: <strong style={{ color: t.text }}>{actor}</strong>
         <br />
-        Data/hora: <strong style={{ color: t.text }}>{fmtDataHora(new Date().toISOString())}</strong>
+        Data/hora do registro: <strong style={{ color: t.text }}>{fmtDataHora(agoraIso)}</strong>
       </div>
       {err ? (
         <div role="alert" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 10 }}>
@@ -1657,21 +1739,25 @@ function ModalEmprestimo({
             opacity: loading ? 0.8 : 1,
           }}
         >
-          {loading ? "Salvando…" : "Confirmar empréstimo"}
+          {loading ? "Salvando…" : "Confirmar Empréstimo"}
         </button>
       </div>
     </ModalBase>
   );
 }
 
+type FluxoDevolucaoUi = "boa" | "possivel_descarte" | "manutencao";
+
 function ModalDevolucao({
   peca,
+  resumoOperadoras,
   emprestimo,
   actor,
   onClose,
   onOk,
 }: {
   peca: RhFigurinoPeca;
+  resumoOperadoras: string;
   emprestimo: RhFigurinoEmprestimo | undefined;
   actor: string;
   onClose: () => void;
@@ -1679,22 +1765,38 @@ function ModalDevolucao({
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [cond, setCond] = useState<RhReturnCondition>("good");
-  const [notes, setNotes] = useState("");
+  const [fluxo, setFluxo] = useState<FluxoDevolucaoUi | null>(null);
+  const [observacoes, setObservacoes] = useState("");
+  const [tipoManut, setTipoManut] = useState<RhFigurinoTipoManutencao | "">("");
+  const [motivoManut, setMotivoManut] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const agoraIso = useMemo(() => new Date().toISOString(), []);
 
   const confirmar = async () => {
     setErr(null);
-    if (cond !== "good" && !notes.trim()) {
-      setErr("Descreva o ocorrido nas observações.");
+    if (!fluxo) {
+      setErr("Selecione a condição da devolução.");
       return;
     }
+    if (fluxo === "manutencao") {
+      if (!tipoManut || !motivoManut.trim()) {
+        setErr("Informe o tipo e o motivo.");
+        return;
+      }
+    }
+    let pFluxo: string;
+    if (fluxo === "boa") pFluxo = "disponivel_bom";
+    else if (fluxo === "possivel_descarte") pFluxo = "disponivel_possivel_descarte";
+    else pFluxo = "manutencao";
+
     setLoading(true);
     const { error } = await supabase.rpc("rh_figurino_registrar_devolucao", {
       p_item_id: peca.id,
-      p_return_condition: cond,
-      p_notes: notes.trim(),
+      p_fluxo: pFluxo,
+      p_observacoes: observacoes.trim(),
+      p_manut_tipo: fluxo === "manutencao" ? tipoManut : "",
+      p_manut_motivo: fluxo === "manutencao" ? motivoManut.trim() : "",
       p_actor: actor,
     });
     setLoading(false);
@@ -1705,60 +1807,41 @@ function ModalDevolucao({
     await onOk();
   };
 
-  const opts: { key: RhReturnCondition; label: string; cor: string; Icon: typeof CheckCircle2 }[] = [
-    { key: "good", label: "Boa condição", cor: "#22c55e", Icon: CheckCircle2 },
-    { key: "needs_cleaning", label: "Precisa de limpeza", cor: "#f59e0b", Icon: Wrench },
-    { key: "damaged", label: "Avariada", cor: "#e84025", Icon: XCircle },
+  const opts: { key: FluxoDevolucaoUi; label: string; cor: string; Icon: typeof CheckCircle2 }[] = [
+    { key: "boa", label: "Boa condição", cor: "#22c55e", Icon: CheckCircle2 },
+    { key: "possivel_descarte", label: "Possível descarte", cor: "#f59e0b", Icon: Wrench },
+    { key: "manutencao", label: "Manutenção", cor: "#a78bfa", Icon: XCircle },
   ];
 
   return (
-    <ModalBase onClose={onClose} maxWidth={460}>
-      <ModalHeader title="Registrar devolução" onClose={onClose} />
-      <div
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          border: `1px solid ${t.cardBorder}`,
-          marginBottom: 14,
-          fontFamily: FONT.body,
-          fontSize: 13,
-          color: t.text,
-        }}
-      >
-        <strong>{peca.code}</strong> — {peca.name}
-        <div style={{ marginTop: 8, color: "#f59e0b", fontWeight: 700 }}>Emprestada</div>
-        {emprestimo ? (
-          <div style={{ marginTop: 8, fontSize: 12, color: t.textMuted }}>
-            Para: <strong style={{ color: t.text }}>{emprestimo.borrower_name}</strong>
-            <br />
-            Em: {fmtDataHora(emprestimo.loaned_at)}
-            <br />
-            Por: {emprestimo.loaned_by}
-          </div>
-        ) : (
-          <div style={{ marginTop: 8, fontSize: 12, color: t.textMuted }}>Dados do empréstimo não encontrados.</div>
-        )}
-      </div>
-      <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>
-        Condição na devolução
-      </div>
+    <ModalBase onClose={onClose} maxWidth={500}>
+      <ModalHeader title="Devolução" onClose={onClose} />
+      <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
+      {emprestimo ? (
+        <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 12px" }}>
+          Empréstimo ativo: <strong style={{ color: t.text }}>{emprestimo.borrower_name}</strong> desde {fmtDataHora(emprestimo.loaned_at)}
+        </p>
+      ) : (
+        <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 12px" }}>Dados do empréstimo não encontrados.</p>
+      )}
+      <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>Condição da devolução</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
         {opts.map((o) => (
           <button
             key={o.key}
             type="button"
-            aria-pressed={cond === o.key}
-            onClick={() => setCond(o.key)}
+            aria-pressed={fluxo === o.key}
+            onClick={() => setFluxo(o.key)}
             style={{
               display: "flex",
               alignItems: "center",
               gap: 10,
               padding: "10px 12px",
               borderRadius: 10,
-              border: `1px solid ${cond === o.key ? o.cor : t.cardBorder}`,
-              background: cond === o.key ? `${o.cor}18` : "transparent",
-              color: cond === o.key ? o.cor : t.textMuted,
-              fontWeight: cond === o.key ? 700 : 500,
+              border: `1px solid ${fluxo === o.key ? o.cor : t.cardBorder}`,
+              background: fluxo === o.key ? `${o.cor}18` : "transparent",
+              color: fluxo === o.key ? o.cor : t.textMuted,
+              fontWeight: fluxo === o.key ? 700 : 500,
               fontFamily: FONT.body,
               cursor: "pointer",
               textAlign: "left",
@@ -1769,28 +1852,93 @@ function ModalDevolucao({
           </button>
         ))}
       </div>
-      <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 12 }}>
-        Observações {cond !== "good" ? "(obrigatório)" : ""}
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          style={{
-            display: "block",
-            width: "100%",
-            marginTop: 6,
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg,
-            color: t.text,
-            fontFamily: FONT.body,
-            resize: "vertical",
-          }}
-        />
-      </label>
-      <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
+      {fluxo === "boa" || fluxo === "possivel_descarte" ? (
+        <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 12 }}>
+          Observações
+          <textarea
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+            rows={3}
+            style={{
+              display: "block",
+              width: "100%",
+              marginTop: 6,
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg ?? t.cardBg,
+              color: t.text,
+              fontFamily: FONT.body,
+              resize: "vertical",
+            }}
+          />
+        </label>
+      ) : null}
+      {fluxo === "manutencao" ? (
+        <>
+          <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 10 }}>
+            Tipo *
+            <select
+              value={tipoManut}
+              onChange={(e) => setTipoManut(e.target.value as RhFigurinoTipoManutencao | "")}
+              aria-label="Tipo de manutenção ou destino"
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: 6,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontFamily: FONT.body,
+              }}
+            >
+              <option value="">Selecione…</option>
+              {TIPOS_MANUTENCAO.map((x) => (
+                <option key={x.value} value={x.value}>
+                  {x.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 12 }}>
+            Motivo *
+            <textarea
+              value={motivoManut}
+              onChange={(e) => setMotivoManut(e.target.value)}
+              rows={3}
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: 6,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontFamily: FONT.body,
+                resize: "vertical",
+              }}
+            />
+          </label>
+        </>
+      ) : null}
+      <div
+        style={{
+          fontSize: 12,
+          color: t.textMuted,
+          marginBottom: 12,
+          fontFamily: FONT.body,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: `1px dashed ${t.cardBorder}`,
+          background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
+        }}
+      >
         Registrado por: <strong style={{ color: t.text }}>{actor}</strong>
+        <br />
+        Data/hora: <strong style={{ color: t.text }}>{fmtDataHora(agoraIso)}</strong>
       </div>
       {err ? (
         <div role="alert" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 10 }}>
@@ -1839,31 +1987,87 @@ function ModalDevolucao({
   );
 }
 
-function ModalMotivo({
-  titulo,
-  label,
-  confirmLabel,
-  destructive,
+function ModalManutencaoPeca({
+  peca,
+  resumoOperadoras,
+  actor,
   onClose,
-  onConfirm,
+  onOk,
 }: {
-  titulo: string;
-  label: string;
-  confirmLabel: string;
-  destructive?: boolean;
+  peca: RhFigurinoPeca;
+  resumoOperadoras: string;
+  actor: string;
   onClose: () => void;
-  onConfirm: (motivo: string) => Promise<void>;
+  onOk: () => void | Promise<void>;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const [tipo, setTipo] = useState<RhFigurinoTipoManutencao | "">("");
   const [motivo, setMotivo] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const agoraIso = useMemo(() => new Date().toISOString(), []);
+
+  const confirmar = async () => {
+    setErr(null);
+    if (!tipo) {
+      setErr("Selecione o tipo.");
+      return;
+    }
+    if (!motivo.trim()) {
+      setErr("Informe o motivo.");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.rpc("rh_figurino_enviar_manutencao", {
+      p_item_id: peca.id,
+      p_tipo: tipo,
+      p_motivo: motivo.trim(),
+      p_actor: actor,
+    });
+    setLoading(false);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    await onOk();
+  };
 
   return (
-    <ModalBase onClose={onClose} maxWidth={420}>
-      <ModalHeader title={titulo} onClose={onClose} />
+    <ModalBase onClose={onClose} maxWidth={500}>
+      <ModalHeader title="Manutenção" onClose={onClose} />
+      <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
+      <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 10 }}>
+        Tipo *
+        <select
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value as RhFigurinoTipoManutencao | "")}
+          aria-label="Tipo"
+          style={{
+            display: "block",
+            width: "100%",
+            marginTop: 6,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg ?? t.cardBg,
+            color: t.text,
+            fontFamily: FONT.body,
+          }}
+        >
+          <option value="">Selecione…</option>
+          {TIPOS_MANUTENCAO.map((x) => (
+            <option key={x.value} value={x.value}>
+              {x.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 10px", lineHeight: 1.45 }}>
+        Costura ou Lavagem enviam a peça para manutenção. Perda ou Descarte alteram o status para descartada.
+      </p>
       <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 12 }}>
-        {label} *
+        Motivo *
         <textarea
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
@@ -1882,6 +2086,22 @@ function ModalMotivo({
           }}
         />
       </label>
+      <div
+        style={{
+          fontSize: 12,
+          color: t.textMuted,
+          marginBottom: 12,
+          fontFamily: FONT.body,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: `1px dashed ${t.cardBorder}`,
+          background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
+        }}
+      >
+        Registrado por: <strong style={{ color: t.text }}>{actor}</strong>
+        <br />
+        Data/hora: <strong style={{ color: t.text }}>{fmtDataHora(agoraIso)}</strong>
+      </div>
       {err ? (
         <div role="alert" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 10 }}>
           {err}
@@ -1908,27 +2128,13 @@ function ModalMotivo({
         <button
           type="button"
           disabled={loading}
-          onClick={async () => {
-            setErr(null);
-            if (!motivo.trim()) {
-              setErr("Preencha o motivo.");
-              return;
-            }
-            setLoading(true);
-            try {
-              await onConfirm(motivo.trim());
-            } catch (e) {
-              setErr(e instanceof Error ? e.message : "Erro ao salvar.");
-            } finally {
-              setLoading(false);
-            }
-          }}
+          onClick={() => void confirmar()}
           style={{
             flex: 1,
             padding: 12,
             borderRadius: 10,
             border: "none",
-            background: destructive ? "#ef4444" : `linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))`,
+            background: ctaGradient(brand),
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,
@@ -1936,17 +2142,145 @@ function ModalMotivo({
             opacity: loading ? 0.8 : 1,
           }}
         >
-          {loading ? "Aguarde…" : confirmLabel}
+          {loading ? "Salvando…" : "Confirmar"}
         </button>
       </div>
     </ModalBase>
   );
 }
 
+function ModalDescartarPeca({
+  peca,
+  resumoOperadoras,
+  actor,
+  onClose,
+  onOk,
+}: {
+  peca: RhFigurinoPeca;
+  resumoOperadoras: string;
+  actor: string;
+  onClose: () => void;
+  onOk: () => void | Promise<void>;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const [motivo, setMotivo] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const agoraIso = useMemo(() => new Date().toISOString(), []);
+
+  const confirmar = async () => {
+    setErr(null);
+    if (!motivo.trim()) {
+      setErr("Informe o motivo do descarte.");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.rpc("rh_figurino_descartar", {
+      p_item_id: peca.id,
+      p_motivo: motivo.trim(),
+      p_actor: actor,
+    });
+    setLoading(false);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    await onOk();
+  };
+
+  return (
+    <ModalBase onClose={onClose} maxWidth={500}>
+      <ModalHeader title="Descartar peça" onClose={onClose} />
+      <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
+      <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 12 }}>
+        Motivo *
+        <textarea
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          rows={3}
+          style={{
+            display: "block",
+            width: "100%",
+            marginTop: 6,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg ?? t.cardBg,
+            color: t.text,
+            fontFamily: FONT.body,
+            resize: "vertical",
+          }}
+        />
+      </label>
+      <div
+        style={{
+          fontSize: 12,
+          color: t.textMuted,
+          marginBottom: 12,
+          fontFamily: FONT.body,
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: `1px dashed ${t.cardBorder}`,
+          background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
+        }}
+      >
+        Registrado por: <strong style={{ color: t.text }}>{actor}</strong>
+        <br />
+        Data/hora: <strong style={{ color: t.text }}>{fmtDataHora(agoraIso)}</strong>
+      </div>
+      {err ? (
+        <div role="alert" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 10 }}>
+          {err}
+        </div>
+      ) : null}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+            color: t.textMuted,
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void confirmar()}
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 10,
+            border: "none",
+            background: "#ef4444",
+            color: "#fff",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.8 : 1,
+          }}
+        >
+          {loading ? "Salvando…" : "Confirmar descarte"}
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
+
+type AbaDetalheFig = "detalhes" | "historico";
+
 function ModalDetalhe({
   peca,
-  operadoraNome,
-  histEmp,
+  operadorasTexto,
   histStatus,
   loadingHist,
   empAtivo,
@@ -1959,8 +2293,7 @@ function ModalDetalhe({
   onDescartar,
 }: {
   peca: RhFigurinoPeca;
-  operadoraNome: string;
-  histEmp: RhFigurinoEmprestimo[];
+  operadorasTexto: string;
   histStatus: RhFigurinoStatusHist[];
   loadingHist: boolean;
   empAtivo: RhFigurinoEmprestimo | undefined;
@@ -1975,215 +2308,260 @@ function ModalDetalhe({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [abaDet, setAbaDet] = useState<AbaDetalheFig>("detalhes");
+
+  const registroCadastro = useMemo(() => {
+    if (!histStatus.length) return null;
+    const asc = [...histStatus].sort((a, b) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime());
+    return asc.find((h) => h.previous_status == null) ?? asc[0] ?? null;
+  }, [histStatus]);
+
+  const linhaLeitura = (label: string, value: string) => (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "8px 0", borderBottom: `1px solid ${t.cardBorder}` }}>
+      <span style={{ color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>{label}</span>
+      <span style={{ color: t.text, fontSize: 13, fontWeight: 600, textAlign: "right", fontFamily: FONT.body }}>{value}</span>
+    </div>
+  );
 
   return (
-    <ModalBase onClose={onClose} maxWidth={560}>
+    <ModalBase onClose={onClose} maxWidth={640}>
       <ModalHeader title={peca.code} onClose={onClose} />
-      <div style={{ fontFamily: FONT.body, fontSize: 13, color: t.text, marginBottom: 12 }}>
-        <strong>{peca.name}</strong>
-        <div style={{ color: t.textMuted, marginTop: 6 }}>
-          {peca.category} · {peca.size}
-          {peca.color ? ` · ${peca.color}` : ""}
-        </div>
-        <div style={{ marginTop: 6 }}>Operadora: {operadoraNome}</div>
-        <div style={{ marginTop: 6 }}>
-          Status: <strong>{labelStatusPeca(peca.status)}</strong>
-        </div>
-        {peca.purchase_price != null ? <div style={{ marginTop: 6 }}>Valor compra: {fmtBRL(Number(peca.purchase_price))}</div> : null}
-        {peca.description ? (
-          <div style={{ marginTop: 8, fontSize: 12, color: t.textMuted }}>{peca.description}</div>
-        ) : null}
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-        <button
-          type="button"
-          disabled={pdfLoading}
-          onClick={async () => {
-            setPdfLoading(true);
-            try {
-              await baixarEtiquetaFigurinoPdf(peca, operadoraNome);
-            } finally {
-              setPdfLoading(false);
-            }
-          }}
-          style={{
-            padding: "8px 14px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-            color: t.text,
-          }}
-        >
-          {pdfLoading ? "PDF…" : "Baixar etiqueta"}
-        </button>
-        {podeEditar && peca.status === "available" ? (
-          <>
-            <button
-              type="button"
-              onClick={onEmprestar}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: `1px solid rgba(34,197,94,0.35)`,
-                background: "rgba(34,197,94,0.12)",
-                color: "#22c55e",
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              Emprestar
-            </button>
-            <button
-              type="button"
-              onClick={onManutencao}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: `1px solid rgba(167,139,250,0.4)`,
-                background: "rgba(167,139,250,0.12)",
-                color: "#a78bfa",
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              Manutenção
-            </button>
-            <button
-              type="button"
-              onClick={onDescartar}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "1px solid rgba(107,114,128,0.45)",
-                background: "rgba(107,114,128,0.1)",
-                color: "#6b7280",
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              Descartar
-            </button>
-          </>
-        ) : null}
-        {podeEditar && peca.status === "borrowed" ? (
+      <div role="tablist" aria-label="Seções do detalhe" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {(["detalhes", "historico"] as const).map((a) => (
           <button
+            key={a}
             type="button"
-            onClick={onDevolver}
+            role="tab"
+            aria-selected={abaDet === a}
+            id={`tab-fig-detalhe-${a}`}
+            aria-controls={`panel-fig-detalhe-${a}`}
+            onClick={() => setAbaDet(a)}
             style={{
               padding: "8px 14px",
-              borderRadius: 10,
-              border: `1px solid rgba(245,158,11,0.4)`,
-              background: "rgba(245,158,11,0.12)",
-              color: "#f59e0b",
-              fontWeight: 700,
-              fontFamily: FONT.body,
+              borderRadius: 999,
               cursor: "pointer",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              border: `1px solid ${abaDet === a ? brand.accent : t.cardBorder}`,
+              background:
+                abaDet === a
+                  ? brand.useBrand
+                    ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                    : "rgba(124,58,237,0.15)"
+                  : "transparent",
+              color: abaDet === a ? brand.accent : t.textMuted,
+              fontWeight: abaDet === a ? 700 : 500,
             }}
           >
-            Devolver
+            {a === "detalhes" ? "Detalhes" : "Histórico"}
           </button>
-        ) : null}
-        {podeEditar && peca.status === "maintenance" ? (
-          <>
+        ))}
+      </div>
+
+      {abaDet === "detalhes" ? (
+        <div role="tabpanel" id="panel-fig-detalhe-detalhes" aria-labelledby="tab-fig-detalhe-detalhes">
+          <div style={{ marginBottom: 16 }}>
+            {linhaLeitura("Operadora", operadorasTexto)}
+            {linhaLeitura("Categoria", peca.category)}
+            {linhaLeitura("Tamanho", peca.size)}
+            {linhaLeitura("Data de aquisição", fmtDataSóDia(peca.purchase_date))}
+            {linhaLeitura("Condição", labelCondicaoPeca(peca.condition))}
+            {linhaLeitura("Status", labelStatusPeca(peca.status))}
+          </div>
+          {empAtivo ? (
+            <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "0 0 14px" }}>
+              Empréstimo ativo: <strong style={{ color: t.text }}>{empAtivo.borrower_name}</strong> desde {fmtDataHora(empAtivo.loaned_at)}
+            </p>
+          ) : null}
+          <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+            <BarcodeBlock value={peca.barcode} />
             <button
               type="button"
-              onClick={onConcluirManut}
+              disabled={pdfLoading}
+              onClick={async () => {
+                setPdfLoading(true);
+                try {
+                  await baixarEtiquetaFigurinoPdf(peca, operadorasTexto);
+                } finally {
+                  setPdfLoading(false);
+                }
+              }}
               style={{
-                padding: "8px 14px",
+                padding: "10px 18px",
                 borderRadius: 10,
-                border: `1px solid rgba(34,197,94,0.35)`,
-                background: "rgba(34,197,94,0.12)",
-                color: "#22c55e",
+                border: "none",
+                background: ctaGradient(brand),
+                color: "#fff",
                 fontWeight: 700,
                 fontFamily: FONT.body,
-                cursor: "pointer",
+                cursor: pdfLoading ? "not-allowed" : "pointer",
               }}
             >
-              Disponibilizar
+              {pdfLoading ? "Gerando…" : "Baixar etiqueta"}
             </button>
-            <button
-              type="button"
-              onClick={onDescartar}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "1px solid rgba(107,114,128,0.45)",
-                background: "rgba(107,114,128,0.1)",
-                color: "#6b7280",
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              Descartar
-            </button>
-          </>
-        ) : null}
-      </div>
-      <div style={{ marginBottom: 10, display: "flex", justifyContent: "center" }}>
-        <BarcodeBlock value={peca.barcode} />
-      </div>
-      {empAtivo ? (
-        <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 12 }}>
-          Empréstimo ativo: <strong style={{ color: t.text }}>{empAtivo.borrower_name}</strong> desde {fmtDataHora(empAtivo.loaned_at)}
-        </p>
-      ) : null}
-      <h3 style={{ fontSize: 13, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: "16px 0 8px" }}>
-        HISTÓRICO DE EMPRÉSTIMOS
-      </h3>
-      {loadingHist ? (
-        <Loader2 className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" size={18} aria-hidden />
-      ) : (
-        <div className="app-table-wrap">
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 12, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
-            <caption style={{ display: "none" }}>Empréstimos da peça</caption>
-            <thead>
-              <tr>
-                <th scope="col" style={getThStyle(t)}>
-                  De/Para
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  Empréstimo
-                </th>
-                <th scope="col" style={getThStyle(t)}>
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              paddingTop: 12,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+          >
+            Cadastrado por <strong style={{ color: t.text }}>{registroCadastro?.changed_by ?? "—"}</strong>
+            {" · "}
+            {registroCadastro ? fmtDataHora(registroCadastro.changed_at) : fmtDataHora(peca.created_at)}
+          </div>
+          {podeEditar ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
+              {peca.status === "available" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={onEmprestar}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: `1px solid rgba(34,197,94,0.35)`,
+                      background: "rgba(34,197,94,0.12)",
+                      color: "#22c55e",
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Emprestar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onManutencao}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: `1px solid rgba(167,139,250,0.4)`,
+                      background: "rgba(167,139,250,0.12)",
+                      color: "#a78bfa",
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Manutenção
+                  </button>
+                </>
+              ) : null}
+              {peca.status === "borrowed" ? (
+                <button
+                  type="button"
+                  onClick={onDevolver}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    border: `1px solid rgba(245,158,11,0.4)`,
+                    background: "rgba(245,158,11,0.12)",
+                    color: "#f59e0b",
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                  }}
+                >
                   Devolução
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {histEmp.map((e, i) => (
-                <tr key={e.id} style={{ background: zebraStripe(i), borderBottom: `1px solid ${t.cardBorder}` }}>
-                  <td style={getTdStyle(t)}>
-                    {e.borrower_name}
-                    {e.borrower_ref ? ` (${e.borrower_ref})` : ""}
-                  </td>
-                  <td style={getTdStyle(t)}>{fmtDataHora(e.loaned_at)}</td>
-                  <td style={getTdStyle(t)}>{e.returned_at ? fmtDataHora(e.returned_at) : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </button>
+              ) : null}
+              {peca.status === "maintenance" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={onConcluirManut}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: `1px solid rgba(34,197,94,0.35)`,
+                      background: "rgba(34,197,94,0.12)",
+                      color: "#22c55e",
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Disponibilizar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onDescartar}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(107,114,128,0.45)",
+                      background: "rgba(107,114,128,0.1)",
+                      color: "#6b7280",
+                      fontWeight: 700,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Descartar
+                  </button>
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </div>
-      )}
-      <h3 style={{ fontSize: 13, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: "16px 0 8px" }}>
-        HISTÓRICO DE STATUS
-      </h3>
-      {loadingHist ? null : (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0, fontFamily: FONT.body, fontSize: 12, color: t.textMuted }}>
-          {histStatus.map((h) => (
-            <li key={h.id} style={{ padding: "8px 0", borderBottom: `1px solid ${t.cardBorder}` }}>
-              <strong style={{ color: t.text }}>{fmtDataHora(h.changed_at)}</strong> — {h.previous_status ?? "—"} → {h.new_status}
-              {h.notes ? ` · ${h.notes}` : ""}
-              <div>Por {h.changed_by}</div>
-            </li>
-          ))}
-        </ul>
+      ) : (
+        <div role="tabpanel" id="panel-fig-detalhe-historico" aria-labelledby="tab-fig-detalhe-historico">
+          {loadingHist ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "24px 0", color: t.textMuted }}>
+              <Loader2 className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" size={18} aria-hidden />
+              <span style={{ fontFamily: FONT.body, fontSize: 13 }}>Carregando histórico…</span>
+            </div>
+          ) : histStatus.length === 0 ? (
+            <div style={{ padding: "28px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+              Sem histórico de alterações de status.
+            </div>
+          ) : (
+            <div className="app-table-wrap">
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "separate",
+                  borderSpacing: 0,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  border: `1px solid ${t.cardBorder}`,
+                }}
+              >
+                <caption style={{ display: "none" }}>Histórico de alterações de status da peça</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" style={getThStyle(t)}>
+                      Data/Hora
+                    </th>
+                    <th scope="col" style={getThStyle(t)}>
+                      Status
+                    </th>
+                    <th scope="col" style={getThStyle(t)}>
+                      Registrado por
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...histStatus]
+                    .sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())
+                    .map((h, i) => (
+                      <tr key={h.id} style={{ background: zebraStripe(i), borderBottom: `1px solid ${t.cardBorder}` }}>
+                        <td style={getTdStyle(t)}>{fmtDataHora(h.changed_at)}</td>
+                        <td style={getTdStyle(t)}>
+                          {labelStatusHistorico(h.previous_status)} → {labelStatusHistorico(h.new_status)}
+                        </td>
+                        <td style={getTdStyle(t)}>{h.changed_by}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
     </ModalBase>
   );
