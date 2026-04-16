@@ -35,6 +35,7 @@ export type PageKey =
   | "roteiro_mesa"
   | "playbook_influencers"
   | "links_materiais"
+  | "rh_figurinos"
   | "configuracoes"
   | "ajuda";
 
@@ -155,10 +156,16 @@ export interface RolePermission {
 // "influencer"   → scope_ref = UUID do influencer
 // "operadora"    → scope_ref = slug da operadora (ex: "blaze")
 // "agencia_par"  → scope_ref = "uuid_influencer:slug_operadora" (ex: "abc-123:blaze")
-// "gestor_tipo"  → scope_ref = operacoes | marketing | afiliados | geral
+// "gestor_tipo"  → scope_ref = operacoes | marketing | afiliados | geral | figurino | recursos_humanos
 export type ScopeType = "influencer" | "operadora" | "agencia_par" | "gestor_tipo";
 
-export type GestorTipoSlug = "operacoes" | "marketing" | "afiliados" | "geral";
+export type GestorTipoSlug =
+  | "operacoes"
+  | "marketing"
+  | "afiliados"
+  | "geral"
+  | "figurino"
+  | "recursos_humanos";
 
 export interface UserScope {
   id:          string;

@@ -17,7 +17,14 @@ interface AtualizarPerfilRequest {
 
 const ROLES_BLOQUEADOS = ['admin', 'gestor']
 
-const GESTOR_TIPO_SLUGS = ['operacoes', 'marketing', 'afiliados', 'geral'] as const
+const GESTOR_TIPO_SLUGS = [
+  'operacoes',
+  'marketing',
+  'afiliados',
+  'geral',
+  'figurino',
+  'recursos_humanos',
+] as const
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },

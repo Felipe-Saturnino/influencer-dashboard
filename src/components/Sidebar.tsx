@@ -20,6 +20,7 @@ const DEFAULT_OPEN: Record<string, boolean> = {
   Dashboards: true,
   Lives: true,
   Operações: true,
+  RH: true,
   Conteúdo: true,
   Plataforma: true,
 };

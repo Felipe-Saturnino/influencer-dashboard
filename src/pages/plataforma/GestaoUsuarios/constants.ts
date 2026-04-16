@@ -14,6 +14,8 @@ export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "marketing", label: "Marketing" },
   { slug: "afiliados", label: "Afiliados" },
   { slug: "geral", label: "Geral" },
+  { slug: "figurino", label: "Figurino" },
+  { slug: "recursos_humanos", label: "Recursos Humanos" },
 ];
 
 export const ROLES: { value: Role; label: string }[] = [
@@ -47,6 +49,7 @@ export const PAGES: {
   { key: "gestao_links", label: "Gestão de Links", secao: "Marketing", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "campanhas", label: "Campanhas", secao: "Marketing", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "rh_figurinos", label: "Figurinos (RH)", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   {
     key: "central_notificacoes",
     label: "Central de Notificações",
