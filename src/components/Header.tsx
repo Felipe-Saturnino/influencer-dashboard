@@ -18,13 +18,14 @@ const HEADER_EXTRA_LABELS: Record<string, string> = {
   ajuda: "AJUDA",
 };
 
+/** Título da barra superior: nome da seção do menu (ex.: Lives, Operações), não o nome da página. */
 function getHeaderLabel(pageKey: string): string | null {
   if (pageKey === "home") return "Bem-vindo";
   const extra = HEADER_EXTRA_LABELS[pageKey];
   if (extra) return extra;
   for (const sec of MENU) {
     const item = sec.items.find((i) => i.key === pageKey);
-    if (item) return item.label.toUpperCase();
+    if (item) return sec.section;
   }
   return null;
 }
