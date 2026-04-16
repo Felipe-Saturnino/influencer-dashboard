@@ -5,7 +5,6 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
   contarGerenciasAtivasFilhasDeDiretoria,
   contarTimesAtivosFilhosDeGerencia,
@@ -521,7 +520,7 @@ export default function RhOrganogramaPage() {
             countsPorTimeId={countsMap}
             podeEditar={podeEditar}
             onEditDiretoria={abrirEditDiretoria}
-            onEditGerencia={(g, d) => abrirEditGerencia(g)}
+            onEditGerencia={(g, _d) => abrirEditGerencia(g)}
             onEditTime={(ti) => abrirEditTime(ti)}
           />
         ) : (

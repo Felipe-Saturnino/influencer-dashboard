@@ -5,7 +5,7 @@ import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos, RhOrgTime } from 
 
 type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string; isDark: boolean };
 
-function badgeSemResp(t: Theme) {
+function badgeSemResp() {
   return (
     <span
       style={{
@@ -82,7 +82,7 @@ export function OrgTreeVisual({
             <div>
               <span style={{ fontWeight: 700, color: t.text, fontSize: 13 }}>{ti.nome}</span>
               {ti.status === "inativo" ? badgeInativo() : null}
-              {!nr ? badgeSemResp(t) : null}
+              {!nr ? badgeSemResp() : null}
             </div>
             {podeEditar ? (
               <button
@@ -121,7 +121,7 @@ export function OrgTreeVisual({
             <div>
               <span style={{ fontWeight: 700, color: t.text, fontSize: 14 }}>{g.nome}</span>
               {g.status === "inativo" ? badgeInativo() : null}
-              {!nr ? badgeSemResp(t) : null}
+              {!nr ? badgeSemResp() : null}
             </div>
             {podeEditar ? (
               <button
@@ -180,7 +180,7 @@ export function OrgTreeVisual({
                 <div>
                   <span style={{ fontWeight: 800, color: t.text, fontSize: 15 }}>{d.nome}</span>
                   {d.status === "inativo" ? badgeInativo() : null}
-                  {!nr ? badgeSemResp(t) : null}
+                  {!nr ? badgeSemResp() : null}
                 </div>
                 {podeEditar ? (
                   <button
