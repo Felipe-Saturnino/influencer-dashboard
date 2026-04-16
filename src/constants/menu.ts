@@ -20,6 +20,7 @@ import {
   GiNotebook,
   GiOpenBook,
   GiRingingBell,
+  GiShirt,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -59,6 +60,10 @@ export const MENU: MenuSection[] = [
       { key: "gestao_dealers", label: "Gestão de Dealers", icon: GiCardRandom  },
       { key: "central_notificacoes", label: "Central de Notificações", icon: GiRingingBell },
     ],
+  },
+  {
+    section: "RH",
+    items: [{ key: "rh_figurinos", label: "Figurinos", icon: GiShirt }],
   },
   {
     section: "Marketing",

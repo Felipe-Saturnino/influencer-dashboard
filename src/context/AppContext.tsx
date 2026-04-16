@@ -14,6 +14,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "roteiro_mesa",
   "playbook_influencers",
   "links_materiais",
+  "rh_figurinos",
   "configuracoes", "ajuda",
 ];
 
