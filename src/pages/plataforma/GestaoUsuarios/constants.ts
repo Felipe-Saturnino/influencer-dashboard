@@ -51,6 +51,7 @@ export const PAGES: {
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_figurinos", label: "Figurinos (RH)", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_funcionarios", label: "Funcionários (RH)", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "rh_organograma", label: "Organograma (RH)", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   {
     key: "central_notificacoes",
     label: "Central de Notificações",

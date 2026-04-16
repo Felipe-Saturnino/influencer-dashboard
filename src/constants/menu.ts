@@ -22,6 +22,7 @@ import {
   GiRingingBell,
   GiShirt,
   GiPerson,
+  GiOrganigram,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -67,6 +68,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "rh_figurinos", label: "Figurinos", icon: GiShirt },
       { key: "rh_funcionarios", label: "Funcionários", icon: GiPerson },
+      { key: "rh_organograma", label: "Organograma", icon: GiOrganigram },
     ],
   },
   {

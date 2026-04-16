@@ -32,6 +32,8 @@ import {
   validarEmail,
 } from "../../../lib/rhFuncionarioValidators";
 import type { RhFuncionario, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
+import type { RhOrgTimeOpcao } from "../../../types/rhOrganograma";
+import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { SkeletonTableRow } from "../../../components/dashboard/SkeletonCard";
@@ -66,6 +68,7 @@ type FormState = {
   endereco_residencial: string;
   contato_emergencia: string;
   setor: string;
+  org_time_id: string | null;
   cargo: string;
   nivel: string;
   salarioCentavos: string;
@@ -91,6 +94,7 @@ function estadoVazioForm(): FormState {
     endereco_residencial: "",
     contato_emergencia: "",
     setor: "",
+    org_time_id: null,
     cargo: "",
     nivel: "Pleno",
     salarioCentavos: "",
@@ -118,6 +122,7 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     endereco_residencial: f.endereco_residencial,
     contato_emergencia: f.contato_emergencia,
     setor: f.setor,
+    org_time_id: f.org_time_id ?? null,
     cargo: f.cargo,
     nivel: f.nivel,
     salarioCentavos: cents,
@@ -175,9 +180,9 @@ export default function RhFuncionariosPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_funcionarios");
+  const permOrg = usePermission("rh_organograma");
 
   const podeVerDadosSensiveis = user?.role === "admin" || perm.canEditarOk;
-
   const [lista, setLista] = useState<RhFuncionario[]>([]);
   const [loading, setLoading] = useState(true);
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
@@ -197,7 +202,26 @@ export default function RhFuncionariosPage() {
   const [desativarRow, setDesativarRow] = useState<RhFuncionario | null>(null);
   const [desativando, setDesativando] = useState(false);
 
+  const [opcoesTimes, setOpcoesTimes] = useState<RhOrgTimeOpcao[]>([]);
+
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
+  useEffect(() => {
+    if (permOrg.loading || permOrg.canView === "nao") {
+      setOpcoesTimes([]);
+      return;
+    }
+    let cancel = false;
+    void (async () => {
+      const { opcoes, error } = await carregarOpcoesTimesOrganograma();
+      if (cancel) return;
+      if (error) setOpcoesTimes([]);
+      else setOpcoesTimes(opcoes);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [permOrg.loading, permOrg.canView]);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -225,6 +249,16 @@ export default function RhFuncionariosPage() {
     });
     return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [lista]);
+
+  const usarSelectTime = useMemo(
+    () => permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0,
+    [permOrg.canView, permOrg.loading, opcoesTimes.length],
+  );
+
+  const opcaoTimeSelecionada = useMemo(
+    () => (form.org_time_id ? opcoesTimes.find((o) => o.timeId === form.org_time_id) ?? null : null),
+    [form.org_time_id, opcoesTimes],
+  );
 
   const filtrada = useMemo(() => {
     const b = busca.trim().toLowerCase();
@@ -275,7 +309,17 @@ export default function RhFuncionariosPage() {
     req("email", "E-mail", form.email);
     req("endereco_residencial", "Endereço residencial", form.endereco_residencial);
     req("contato_emergencia", "Contato de emergência", form.contato_emergencia);
-    req("setor", "Setor", form.setor);
+    const usarSelectTime = permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0;
+    if (usarSelectTime) {
+      if (modalForm === "novo" && !form.org_time_id) {
+        e.org_time_id = "Selecione o time no organograma.";
+      }
+      if (!form.org_time_id && !form.setor.trim()) {
+        e.setor = "Informe o setor ou selecione um time.";
+      }
+    } else {
+      req("setor", "Setor", form.setor);
+    }
     req("cargo", "Cargo", form.cargo);
     req("data_inicio", "Data de início", form.data_inicio);
     req("escala", "Escala", form.escala);
@@ -324,6 +368,7 @@ export default function RhFuncionariosPage() {
       endereco_residencial: form.endereco_residencial.trim(),
       contato_emergencia: form.contato_emergencia.trim(),
       setor: form.setor.trim(),
+      org_time_id: form.org_time_id || null,
       cargo: form.cargo.trim(),
       nivel: form.nivel.trim(),
       salario: sal,
@@ -906,14 +951,87 @@ export default function RhFuncionariosPage() {
 
           <SecaoForm titulo="Dados profissionais" t={t}>
             <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-setor", "Setor")}
-                <input id="f-setor" disabled={desabilitarCampos} value={form.setor} onChange={(e) => setForm((s) => ({ ...s, setor: e.target.value }))} style={inputStyle} list="lista-setores" />
-                <datalist id="lista-setores">
-                  {setoresUnicos.map((s) => (
-                    <option key={s} value={s} />
-                  ))}
-                </datalist>
+              <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                {usarSelectTime ? (
+                  <>
+                    {lbl("f-org-time", "Time (organograma)")}
+                    <select
+                      id="f-org-time"
+                      disabled={desabilitarCampos}
+                      value={form.org_time_id ?? ""}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        if (!id) {
+                          setForm((s) => ({ ...s, org_time_id: null, setor: "" }));
+                          return;
+                        }
+                        const op = opcoesTimes.find((x) => x.timeId === id);
+                        if (op) setForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
+                      }}
+                      aria-label="Time no organograma"
+                      style={inputStyle}
+                    >
+                      <option value="">— Selecione —</option>
+                      {opcoesTimes.map((o) => (
+                        <option key={o.timeId} value={o.timeId}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErr.org_time_id ? (
+                      <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div>
+                    ) : null}
+                    {opcaoTimeSelecionada ? (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border: `1px solid ${t.cardBorder}`,
+                          background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)",
+                          fontSize: 12,
+                          color: t.textMuted,
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        <div>
+                          <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoTimeSelecionada.diretoriaNome}
+                        </div>
+                        <div>
+                          <strong style={{ color: t.text }}>Gerência:</strong> {opcaoTimeSelecionada.gerenciaNome}
+                        </div>
+                        <div>
+                          <strong style={{ color: t.text }}>Gestor imediato:</strong> {opcaoTimeSelecionada.gestorNome}
+                        </div>
+                        <div>
+                          <strong style={{ color: t.text }}>Setor (nome do time):</strong> {opcaoTimeSelecionada.timeNome}
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    {lbl("f-setor", "Setor")}
+                    <input
+                      id="f-setor"
+                      disabled={desabilitarCampos}
+                      value={form.setor}
+                      onChange={(e) => setForm((s) => ({ ...s, setor: e.target.value, org_time_id: null }))}
+                      style={inputStyle}
+                      list="lista-setores"
+                    />
+                    <datalist id="lista-setores">
+                      {setoresUnicos.map((s) => (
+                        <option key={s} value={s} />
+                      ))}
+                    </datalist>
+                    {permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length === 0 ? (
+                      <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6 }}>
+                        Nenhum time ativo no organograma. Cadastre a estrutura em RH → Organograma ou informe o setor manualmente.
+                      </div>
+                    ) : null}
+                  </>
+                )}
                 {fieldErr.setor ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.setor}</div> : null}
               </div>
               <div style={{ marginBottom: 10 }}>

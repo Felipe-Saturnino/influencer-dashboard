@@ -14,6 +14,8 @@ export interface RhFuncionario {
   endereco_residencial: string;
   contato_emergencia: string;
   setor: string;
+  /** Time do organograma (RH); preenche `setor` com o nome do time. */
+  org_time_id?: string | null;
   cargo: string;
   nivel: string;
   salario: number;
