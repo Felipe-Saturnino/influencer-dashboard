@@ -23,13 +23,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "Lives",
         definicao:
           'Total de transmissões ao vivo realizadas pelo influencer no período. Só são contabilizadas lives com status "Realizada" no sistema.',
-        referencia: "Agenda · Feedback",
+        referencia: "Agenda · Feedback · Streamers → Overview · Overview Influencer",
       },
       {
         termo: "Horas Realizadas",
         definicao:
           "Soma total de horas de transmissão ao vivo no período. Calculado a partir da duração individual de cada live. Exibido no formato HH:MM.",
-        referencia: "Overview · Feedback",
+        referencia: "Streamers → Overview · Feedback · Overview Influencer",
       },
       {
         termo: "Validação de Live",
@@ -43,7 +43,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "Influencers Ativos",
         definicao:
           "Número de influencers que realizaram ao menos uma live no período. Influencers cadastrados sem live no período não são contabilizados.",
-        referencia: "Overview",
+        referencia: "Streamers → Overview",
       },
       {
         termo: "Link da Live",
@@ -66,23 +66,84 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Média de visualizações simultâneas por live no período. Lives sem dado de views são excluídas do cálculo.",
         nota:
-          "Diferente do Máx Views (pico): a Média representa a audiência sustentada ao longo da transmissão, enquanto o Máx representa o momento de maior audiência.\n\nUm influencer com média alta e pico próximo da média manteve a audiência de forma consistente. Um influencer com pico muito acima da média teve um momento específico de destaque.",
-        referencia: "Overview · Feedback · Overview Influencer",
+          "Diferente de Máx Views: a Média representa a audiência sustentada ao longo da transmissão, enquanto Máx Views é o pico de audiência.\n\nUm influencer com média alta e pico próximo da média manteve a audiência de forma consistente. Um influencer com pico muito acima da média teve um momento específico de destaque.",
+        referencia: "Streamers → Overview · Feedback · Overview Influencer",
       },
       {
-        termo: "Máx Views (Pico de Views)",
+        termo: "Máx Views",
         definicao:
-          "Número máximo de espectadores simultâneos registrado em uma live. Representa o pico de audiência da transmissão, em contraste com a Média de Views, que suaviza as variações ao longo da live.",
+          "Pico máximo de espectadores simultâneos alcançado durante uma live. Diferente de Média de Views, que é a média ao longo da transmissão.",
         nota:
-          "Picos altos com média baixa indicam que o influencer teve um momento de destaque durante a transmissão, mas a audiência não se manteve. Quando ambos são altos, a live sustentou a audiência do início ao fim.\n\nExibido na coluna 'Máx Views' da tabela Comparativo Diário / Mensal no Overview Influencer.",
+          "Picos altos com média baixa indicam um momento de destaque sem audiência sustentada; quando ambos são altos, a live manteve audiência do início ao fim.\n\nExibido na coluna 'Máx Views' da tabela Detalhamento Diário / Detalhamento Mensal no Overview Influencer.",
         referencia: "Overview Influencer",
       },
       {
-        termo: "MTD (Month To Date)",
+        termo: "Duração Live",
         definicao:
-          "Acumulado do mês corrente desde o dia 1 até a data atual. O comparativo é feito contra o mesmo número de dias no mês anterior.",
-        nota: "Ex: se hoje é dia 15, compara 1–15 do mês atual contra 1–15 do mês anterior.",
-        referencia: "Todos os dashboards",
+          "Tempo de duração de uma transmissão individual, em horas e minutos. Diferente de Horas Realizadas, que é o acumulado total do período.",
+        referencia: "Overview Influencer",
+      },
+    ],
+  },
+  {
+    key: "cadastro_influencers",
+    label: "Gestão de Influencers",
+    accentColor: "#22c55e",
+    termos: [
+      {
+        termo: "Status do Influencer",
+        definicao:
+          "Classificação do estado do relacionamento comercial com o influencer na plataforma.",
+        nota:
+          "Ativo: influencer com parceria vigente, habilitado para agendar lives e gerar links.\nInativo: parceria pausada — o influencer continua cadastrado mas não pode ser agendado.\nCancelado: parceria encerrada definitivamente.\n\nAlterações de status são restritas a Admin e Gestor. A data da última alteração de status é registrada automaticamente e pode ser consultada na aba Histórico do modal de visualização.",
+        referencia: "Influencers",
+      },
+      {
+        termo: "Cachê por Hora",
+        definicao:
+          "Valor de remuneração do influencer por hora de live transmitida. Base de cálculo dos pagamentos no módulo Financeiro.",
+        nota:
+          "Alterações do cachê por hora são restritas a Admin e Gestor. O campo aparece bloqueado no formulário de edição para outros perfis.\n\nNo Scout, o campo correspondente é 'Cachê Negociado' — ao fechar a parceria, o valor é sincronizado automaticamente com o cachê por hora no cadastro do influencer em Influencers.",
+        referencia: "Influencers · Operações → Financeiro",
+      },
+      {
+        termo: "Perfil Incompleto",
+        definicao:
+          "Indicação de que um influencer ativo possui dados obrigatórios não preenchidos no cadastro. Um perfil incompleto bloqueia o agendamento de novas lives e a emissão de links de rastreamento.",
+        nota:
+          "Os dados obrigatórios que geram o alerta incluem: nome artístico, pelo menos um canal com link e dados bancários para pagamento.\n\nO quadro 'Perfil Incompleto' no topo da página Influencers lista os nomes clicáveis — clique no nome para abrir diretamente o formulário de edição. O badge 'Perfil incompleto' também aparece no card da lista.",
+        referencia: "Influencers · Agenda",
+      },
+    ],
+  },
+  {
+    key: "prospeccao_scout",
+    label: "Prospecção e Scout",
+    accentColor: "#6b7280",
+    termos: [
+      {
+        termo: "Funil de Prospecção",
+        definicao:
+          "Etapas do processo de negociação com um candidato a parceiro, desde o primeiro contato até o fechamento.",
+        nota:
+          "Visualizado → Contato → Negociação → Fechado.\n\nCada etapa representa um avanço na negociação. Ao marcar como Fechado com todos os dados obrigatórios preenchidos, a plataforma cria automaticamente o usuário do influencer.",
+        referencia: "Scout",
+      },
+      {
+        termo: "Live Cassino",
+        definicao:
+          "Indicação de que o prospecto realiza ou tem histórico de lives de cassino ao vivo. Campo informativo cadastrado na aba Contato do Scout.",
+        nota:
+          "Quando marcado como 'Sim', o badge 'Live Cassino' aparece no card do prospecto na lista, facilitando a identificação visual de candidatos com experiência nesse formato.",
+        referencia: "Scout",
+      },
+      {
+        termo: "Categorias de Conteúdo",
+        definicao:
+          "Classificação do tipo de conteúdo que o prospecto produz, usada para segmentar e identificar candidatos por perfil de audiência.",
+        nota:
+          "Opções disponíveis: Vida Real, Jogos Populares, Variedades, Esportes, Cassino. Multi-seleção — um prospecto pode ter mais de uma categoria.",
+        referencia: "Scout",
       },
     ],
   },
@@ -95,19 +156,19 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "Views",
         definicao:
           "Média de visualizações simultâneas das lives do influencer. Utilizada como topo do funil para calcular a taxa de clique no link.",
-        referencia: "Conversão · Overview",
+        referencia: "Streamers → Conversão · Streamers → Overview",
       },
       {
         termo: "Acessos",
         definicao:
           "Número de visitas ao link de afiliado do influencer no período. Representa o tráfego gerado pelas lives e conteúdos publicados.",
-        referencia: "Conversão",
+        referencia: "Streamers → Conversão · Overview Influencer",
       },
       {
         termo: "Registros",
         definicao:
           "Número de novos cadastros realizados via link do influencer. Um acesso que resulta em cadastro completo conta como 1 registro.",
-        referencia: "Conversão · Overview",
+        referencia: "Streamers → Conversão · Streamers → Overview · Overview Influencer · Mídias Sociais",
       },
       {
         termo: "FTD (First Time Deposit)",
@@ -149,8 +210,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Percentual de acessos ao link que resultaram em primeiro depósito, pulando a etapa de registro.",
         formula: "FTDs ÷ Acessos × 100",
-        nota: "Útil para avaliar eficiência de campanhas onde o usuário já tinha cadastro.",
-        referencia: "Conversão",
+        nota:
+          "Útil para avaliar eficiência quando o usuário já tinha cadastro. Não consta como coluna na tabela Comparativo de Taxas (Streamers → Conversão), que exibe View→Acesso, Acesso→Registro, Registro→FTD e Visita→FTD.",
+        referencia: "Streamers → Conversão",
       },
       {
         termo: "FTD/Hora",
@@ -159,7 +221,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         formula: "FTDs ÷ Horas Realizadas",
         nota:
           "Influencers sem horas registradas são excluídos do Ranking FTD/Hora na aba Conversão. O ranking exibe os três primeiros em pódio e os demais em lista paginada.",
-        referencia: "Streamers → Conversão",
+        referencia: "Streamers → Conversão · Overview Influencer",
       },
       {
         termo: "Ação de Conversão",
@@ -200,45 +262,50 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         formula: "Total de Depósitos − Total de Saques",
         nota:
           "O GGR é sempre calculado pelo canal de aquisição. Nas páginas de influencers, considera apenas jogadores captados via influencers. Em Overview Spin, considera todos os canais.",
-        referencia: "Overview · Financeiro",
+        referencia:
+          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Overview Spin · Mídias Sociais · Operações → Financeiro",
       },
       {
         termo: "R$ FTD (Valor Total de FTDs)",
         definicao:
           "Soma dos valores dos primeiros depósitos no período. Mede o volume financeiro de entrada dos jogadores novos captados.",
-        referencia: "Financeiro",
+        referencia: "Streamers → Financeiro · Overview Influencer",
       },
       {
         termo: "Ticket Médio FTD",
         definicao:
           "Valor médio do primeiro depósito. Indica o perfil de investimento inicial dos jogadores captados.",
         formula: "R$ FTD ÷ Quantidade de FTDs",
-        referencia: "Financeiro",
+        referencia: "Streamers → Financeiro · Overview Influencer",
       },
       {
-        termo: "Depósitos (Volume)",
+        termo: "Depósitos",
         definicao:
           "Soma de todos os depósitos realizados pelos jogadores captados no período, incluindo depósitos subsequentes ao primeiro.",
-        referencia: "Financeiro",
+        nota:
+          "Nos dashboards, o mesmo rótulo pode aparecer junto à quantidade de depósitos (#) no detalhamento ou em cards com subvalor.",
+        referencia: "Streamers → Financeiro · Streamers → Overview · Overview Influencer · Mídias Sociais",
       },
       {
         termo: "Ticket Médio Depósito",
         definicao:
           "Valor médio por depósito. Um ticket médio alto indica jogadores de maior valor.",
         formula: "Total Depósitos ÷ Quantidade de Depósitos",
-        referencia: "Financeiro",
+        referencia: "Streamers → Financeiro · Overview Influencer",
       },
       {
-        termo: "Saques (Volume)",
+        termo: "Saques",
         definicao:
           "Soma de todos os saques realizados pelos jogadores captados no período. Um volume alto de saques reduz o GGR.",
-        referencia: "Financeiro",
+        nota:
+          "Nos dashboards, o mesmo rótulo pode aparecer junto à quantidade de saques (#) no detalhamento ou em cards com subvalor.",
+        referencia: "Streamers → Financeiro · Overview Influencer",
       },
       {
         termo: "Ticket Médio Saque",
         definicao: "Valor médio por saque.",
         formula: "Total Saques ÷ Quantidade de Saques",
-        referencia: "Financeiro",
+        referencia: "Streamers → Financeiro · Overview Influencer",
       },
       {
         termo: "WD Ratio (Withdrawal/Deposit Ratio)",
@@ -247,20 +314,21 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         formula: "Saques ÷ Depósitos × 100",
         nota:
           "Abaixo de 60%: saudável · 60% a 80%: atenção · Acima de 80%: risco — jogadores retirando mais do que a média",
-        referencia: "Financeiro",
+        referencia: "Streamers → Financeiro",
       },
       {
         termo: "GGR por Jogador",
         definicao:
           "Receita bruta média gerada por jogador captado. Indica o valor médio de cada jogador trazido pelo influencer.",
         formula: "GGR ÷ FTDs",
-        referencia: "Financeiro",
+        referencia: "Streamers → Financeiro · Overview Influencer",
       },
       {
         termo: "Investimento",
         definicao:
           "Valor total pago ao influencer no período (cachê por hora de live + bônus por performance, quando aplicável). Base para cálculo de ROI e custos unitários.",
-        referencia: "Overview · Financeiro · Financeiro (Operações)",
+        referencia:
+          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Operações → Financeiro",
       },
       {
         termo: "ROI (Return on Investment)",
@@ -268,21 +336,21 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         formula: "(GGR − Investimento) ÷ Investimento × 100",
         nota:
           "Rentável: ROI > 0% · Atenção: ROI entre −20% e 0% · Não Rentável: ROI < −20% · Bônus: sem investimento registrado mas com GGR positivo",
-        referencia: "Overview",
+        referencia: "Streamers → Overview · Streamers → Financeiro · Overview Influencer",
       },
       {
         termo: "Custo por FTD",
         definicao:
           "Quanto custa em investimento cada novo jogador que realizou o primeiro depósito. Métrica de eficiência de aquisição.",
         formula: "Investimento ÷ FTDs",
-        referencia: "Overview",
+        referencia: "Streamers → Overview",
       },
       {
         termo: "Custo por Registro",
         definicao:
           "Quanto custa em investimento cada cadastro realizado. Complementa o Custo por FTD para identificar onde o funil perde eficiência.",
         formula: "Investimento ÷ Registros",
-        referencia: "Overview",
+        referencia: "Streamers → Overview",
       },
     ],
   },
@@ -297,7 +365,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Score sintético de 0 a 100 que mede a qualidade média dos jogadores captados pelo influencer. Não é um percentual — é um índice de 0 a 100 pontos.",
         formula:
           "Ticket Médio Depósito (40%) + GGR por Jogador (40%) + WD Ratio invertido (20%)",
-        referencia: "Financeiro",
+        referencia: "Streamers → Financeiro",
       },
       {
         termo: "Perfil de Jogador",
@@ -305,7 +373,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Classificação automática do tipo de jogador captado pelo influencer, baseada no PVI.",
         nota:
           "Whales (PVI ≥ 80): alto valor, apostas elevadas, baixa retirada · Core (PVI ≥ 60): regulares com bom equilíbrio · Recreativos (PVI ≥ 15): casuais, comportamento de entretenimento · Caçadores de Bônus (PVI < 15): foco em promoções, alta taxa de saque",
-        referencia: "Financeiro",
+        referencia: "Streamers → Financeiro",
       },
       {
         termo: "Status ROI",
@@ -340,9 +408,10 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Overview Spin",
       },
       {
-        termo: "Apostas (Quantidade)",
+        termo: "Apostas",
         definicao:
           "Número total de apostas realizadas nas mesas no período. Combinado com o Turnover, gera a Aposta Média.",
+        nota: "Nos dados exportados ou em documentação técnica pode aparecer como quantidade de apostas.",
         referencia: "Overview Spin",
       },
       {
@@ -355,9 +424,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Overview Spin",
       },
       {
-        termo: "Aposta Média (Bet Size)",
+        termo: "Aposta Média",
         definicao:
-          "Valor médio por aposta. Indica o perfil de aposta dos jogadores ativos nas mesas — quanto cada apostador coloca, em média, por rodada.",
+          "Valor médio por aposta (bet size). Indica o perfil de aposta dos jogadores ativos nas mesas — quanto cada apostador coloca, em média, por rodada.",
         formula: "Turnover ÷ Quantidade de Apostas",
         referencia: "Overview Spin",
       },
@@ -404,6 +473,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Número total de vezes que qualquer conteúdo publicado foi exibido para alguém, incluindo múltiplas exibições para o mesmo usuário.",
         referencia: "Mídias Sociais",
+      },
+      {
+        termo: "Engajamento médio",
+        definicao:
+          "KPI agregado na aba Alcance que resume a intensidade de interação em relação às impressões do período selecionado.",
+        nota:
+          "Em geral segue a lógica Engajamentos ÷ Impressões. Quando as impressões são zero (por exemplo, YouTube sem dado de impressões na API), o valor pode aparecer como '—'.",
+        referencia: "Mídias Sociais → Alcance",
       },
       {
         termo: "Alcance",

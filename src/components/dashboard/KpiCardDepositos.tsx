@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PlayCircle } from "lucide-react";
+import { ArrowDownToLine } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { FONT } from "../../constants/theme";
 import { BRAND } from "../../lib/dashboardConstants";
@@ -12,7 +12,7 @@ interface Props {
   isHistorico?: boolean;
   /** Padrão: Depósitos (Overview Streamers). */
   label?: string;
-  /** Padrão: ícone PlayCircle. */
+  /** Padrão: ícone de depósitos (entrada). */
   icon?: ReactNode;
   /** Quando true, aumento no período usa cor de alerta (ex.: saques). */
   invertMom?: boolean;
@@ -77,7 +77,7 @@ export default function KpiCardDepositos({
               color: iconBoxColor,
             }}
           >
-            {icon ?? <PlayCircle size={16} aria-hidden />}
+            {icon ?? <ArrowDownToLine size={16} aria-hidden />}
           </span>
           <span
             style={{

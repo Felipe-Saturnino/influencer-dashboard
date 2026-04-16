@@ -8,7 +8,7 @@ import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import {
   fmt,
   fmtBRL,
@@ -26,10 +26,17 @@ import {
   RateCard,
   SkeletonKpiCard,
 } from "../../../components/dashboard";
-import { getThStyle, getTdStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
+import {
+  getThStyle,
+  getThStyleBrandAction,
+  getTdStyle,
+  zebraStripe,
+  zebraStripeBrandContrast,
+} from "../../../lib/tableStyles";
 import {
   AlertTriangle,
-  Banknote,
+  ArrowDownToLine,
+  ArrowUpFromLine,
   BarChart2,
   Calendar,
   CalendarDays,
@@ -41,8 +48,7 @@ import {
   Eye,
   Filter,
   Gauge,
-  Percent,
-  PlayCircle,
+  Loader2,
   Shield,
   Table2,
   TrendingUp,
@@ -560,7 +566,7 @@ export default function DashboardOverviewInfluencer() {
         setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
       }
 
-      // Bloco 5: Comparativo Mensal (histórico) ou Comparativo Diário (mês no carrossel)
+      // Bloco 5: Detalhamento Mensal (histórico) ou Detalhamento Diário (mês no carrossel)
       if (historico) {
         const ymSet = new Set<string>();
         rows.forEach((m) => ymSet.add(m.data.slice(0, 7)));
@@ -925,13 +931,15 @@ export default function DashboardOverviewInfluencer() {
     ? brand.primaryTransparentBg
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)";
   const kpiChartPillActiveColor = brand.useBrand ? brand.primary : "var(--brand-action, #7c3aed)";
+  const tabelaGraficoToggleActiveBg = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
+    : "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)";
+  const tabelaGraficoToggleActiveColor = brand.useBrand ? brand.accent : "var(--brand-action, #7c3aed)";
   const card: React.CSSProperties = { background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 18, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.18)" };
   const btnNav: React.CSSProperties = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
-  const thStyle = getThStyle(t, {
-    fontSize: 11,
-    letterSpacing: "0.08em",
-    fontWeight: 700,
-  });
+  const thDetalhamentoExtra = { fontSize: 11, letterSpacing: "0.08em", fontWeight: 700 } as const;
+  const thStyle = brand.useBrand ? getThStyleBrandAction(t, thDetalhamentoExtra) : getThStyle(t, thDetalhamentoExtra);
+  const zebraTabelaDetalhamento = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
   const tdStyle = getTdStyle(t, { borderBottom: `1px solid ${t.cardBorder}` });
 
   const isPrimeiro = idxMes === 0;
@@ -943,13 +951,51 @@ export default function DashboardOverviewInfluencer() {
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: brand.primaryIconBg,
+              border: brand.primaryIconBorder,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              color: brand.primaryIconColor,
+            }}
+          >
+            <BarChart2 size={14} aria-hidden="true" />
+          </div>
+          <div>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: brand.primary,
+                fontFamily: FONT_TITLE,
+                margin: 0,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+              }}
+            >
+              Overview Influencer
+            </h1>
+            <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
+              Visão executiva da performance do canal de influencers.
+            </p>
+          </div>
+        </div>
+      </div>
 
-      {/* ─── BLOCO 1: Filtros — primária transparente ───────────────────────────── */}
+      {/* ─── BLOCO 1: Filtros (mesmo padrão visual dos cards) ───────────────────── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
@@ -1025,8 +1071,9 @@ export default function DashboardOverviewInfluencer() {
             )}
 
             {loading && (
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 4 }}>
-                <Clock size={12} aria-hidden /> Carregando...
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
+                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                Carregando…
               </span>
             )}
           </div>
@@ -1084,7 +1131,7 @@ export default function DashboardOverviewInfluencer() {
           <>
             <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
               <KpiCard
-                label="GGR Total"
+                label="GGR"
                 value={fmtBRL(totais.ggr)}
                 icon={<TrendingUp size={16} aria-hidden="true" />}
                 accentColor={totais.ggr >= 0 ? BRAND.verde : BRAND.vermelho}
@@ -1107,7 +1154,7 @@ export default function DashboardOverviewInfluencer() {
               <KpiCard
                 label="ROI"
                 value={totais.investimento > 0 ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%` : "—"}
-                icon={<Percent size={16} aria-hidden="true" />}
+                icon={<BarChart2 size={16} aria-hidden="true" />}
                 accentColor={
                   totais.investimento > 0 ? (totais.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde
                 }
@@ -1118,7 +1165,7 @@ export default function DashboardOverviewInfluencer() {
             </div>
             <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
               <KpiCard
-                label="Qtd de Lives"
+                label="Lives"
                 value={totais.lives.toLocaleString("pt-BR")}
                 icon={<Video size={16} aria-hidden="true" />}
                 accentVar="--brand-contrast"
@@ -1174,7 +1221,7 @@ export default function DashboardOverviewInfluencer() {
               <KpiCard
                 label="Depósitos"
                 value={totais.depositos_qtd.toLocaleString("pt-BR")}
-                icon={<PlayCircle size={16} aria-hidden="true" />}
+                icon={<ArrowDownToLine size={16} aria-hidden="true" />}
                 accentVar="--brand-icon-color"
                 accentColor={BRAND.amarelo}
                 atual={totais.depositos_qtd}
@@ -1185,7 +1232,7 @@ export default function DashboardOverviewInfluencer() {
               <KpiCard
                 label="Saques"
                 value={totais.saques_qtd.toLocaleString("pt-BR")}
-                icon={<Banknote size={16} aria-hidden="true" />}
+                icon={<ArrowUpFromLine size={16} aria-hidden="true" />}
                 accentColor={BRAND.amarelo}
                 atual={totais.saques_qtd}
                 anterior={totaisAnt.saques_qtd}
@@ -1225,29 +1272,26 @@ export default function DashboardOverviewInfluencer() {
         </div>
       </div>
 
-      {/* ─── BLOCO 5: Comparativo Mensal (histórico) / Comparativo Diário (mês) ─ */}
+      {/* ─── BLOCO 5: Detalhamento Mensal (histórico) / Detalhamento Diário (mês) ─ */}
       {(historico || mesSelecionado) && diasData.length > 0 && (
-        <div style={{ ...card, padding: 0, overflow: "hidden", marginBottom: 0 }}>
-          <div style={{ padding: "20px 20px 16px" }}>
-            <SectionTitle
-              icon={<CalendarDays size={14} aria-hidden="true" />}
-              sub={historico ? "mês a mês" : undefined}
-            >
-              {historico ? "Comparativo Mensal" : "Comparativo Diário"}
-            </SectionTitle>
-          </div>
+        <div style={{ ...card, marginBottom: 14 }}>
+          <SectionTitle
+            icon={<CalendarDays size={14} aria-hidden="true" />}
+            sub={historico ? "mês a mês" : undefined}
+          >
+            {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
+          </SectionTitle>
 
-          <div style={{ padding: "0 20px 16px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: 10,
-                marginBottom: 16,
-              }}
-            >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 10,
+              marginBottom: 16,
+            }}
+          >
               <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 200px", minWidth: 0 }}>
                 {modoVisualizacaoComparativo === "grafico" && (
                   <>
@@ -1329,8 +1373,8 @@ export default function DashboardOverviewInfluencer() {
                       fontSize: 11,
                       fontWeight: modoVisualizacaoComparativo === modo ? 700 : 400,
                       background:
-                        modoVisualizacaoComparativo === modo ? kpiChartPillActiveBg : "transparent",
-                      color: modoVisualizacaoComparativo === modo ? kpiChartPillActiveColor : t.textMuted,
+                        modoVisualizacaoComparativo === modo ? tabelaGraficoToggleActiveBg : "transparent",
+                      color: modoVisualizacaoComparativo === modo ? tabelaGraficoToggleActiveColor : t.textMuted,
                       transition: "all 0.15s",
                       borderRight: modo === "tabela" ? `1px solid ${t.cardBorder}` : "none",
                     }}
@@ -1340,7 +1384,6 @@ export default function DashboardOverviewInfluencer() {
                 ))}
               </div>
             </div>
-          </div>
 
           {modoVisualizacaoComparativo === "tabela" ? (
             <div className="app-table-wrap">
@@ -1359,8 +1402,8 @@ export default function DashboardOverviewInfluencer() {
                   }}
                 >
                   {historico
-                    ? "Comparativo mensal — todo o período"
-                    : `Comparativo diário — ${mesSelecionado?.label ?? ""}`}
+                    ? "Detalhamento mensal — todo o período"
+                    : `Detalhamento diário — ${mesSelecionado?.label ?? ""}`}
                 </caption>
                 <thead>
                   <tr>
@@ -1387,7 +1430,7 @@ export default function DashboardOverviewInfluencer() {
                 </thead>
                 <tbody>
                   {diasDataComparativoExibicao.map((d, i) => (
-                    <tr key={d.data} style={{ background: zebraStripe(i) }}>
+                    <tr key={d.data} style={{ background: zebraTabelaDetalhamento(i) }}>
                       <td style={tdStyle}>
                         {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
                       </td>
@@ -1413,74 +1456,13 @@ export default function DashboardOverviewInfluencer() {
                       </td>
                     </tr>
                   ))}
-                  {diasData.length > 0 &&
-                    (() => {
-                      const tot = diasDataComparativoExibicao.reduce(
-                        (acc, d) => ({
-                          duracao: acc.duracao + d.duracao,
-                          acessos: acc.acessos + d.acessos,
-                          registros: acc.registros + d.registros,
-                          ftd_count: acc.ftd_count + d.ftd_count,
-                          ftd_total: acc.ftd_total + d.ftd_total,
-                          deposit_count: acc.deposit_count + d.deposit_count,
-                          deposit_total: acc.deposit_total + d.deposit_total,
-                          withdrawal_count: acc.withdrawal_count + d.withdrawal_count,
-                          withdrawal_total: acc.withdrawal_total + d.withdrawal_total,
-                          ggr: acc.ggr + d.ggr,
-                        }),
-                        {
-                          duracao: 0,
-                          acessos: 0,
-                          registros: 0,
-                          ftd_count: 0,
-                          ftd_total: 0,
-                          deposit_count: 0,
-                          deposit_total: 0,
-                          withdrawal_count: 0,
-                          withdrawal_total: 0,
-                          ggr: 0,
-                        },
-                      );
-                      return (
-                        <tr
-                          key="total"
-                          style={{
-                            background: TOTAL_ROW_BG,
-                            fontWeight: 700,
-                            borderTop: `2px solid ${t.cardBorder}`,
-                          }}
-                        >
-                          <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>Total</td>
-                          <td style={tdStyle}>{tot.duracao > 0 ? fmtHorasTotal(tot.duracao) : "—"}</td>
-                          <td style={tdStyle}>—</td>
-                          <td style={tdStyle}>—</td>
-                          <td style={tdStyle}>{cel(tot.acessos)}</td>
-                          <td style={tdStyle}>{cel(tot.registros)}</td>
-                          <td style={tdStyle}>{cel(tot.ftd_count)}</td>
-                          <td style={tdStyle}>{cel(tot.ftd_total, true)}</td>
-                          <td style={tdStyle}>{cel(tot.deposit_count)}</td>
-                          <td style={tdStyle}>{cel(tot.deposit_total, true)}</td>
-                          <td style={tdStyle}>{cel(tot.withdrawal_count)}</td>
-                          <td style={tdStyle}>{cel(tot.withdrawal_total, true)}</td>
-                          <td
-                            style={{
-                              ...tdStyle,
-                              color: tot.ggr > 0 ? BRAND.verde : tot.ggr < 0 ? BRAND.vermelho : t.text,
-                              fontWeight: 700,
-                            }}
-                          >
-                            {cel(tot.ggr, true)}
-                          </td>
-                        </tr>
-                      );
-                    })()}
                 </tbody>
               </table>
             </div>
           ) : dadosGraficoComparativo.length === 0 ? (
             <div
               style={{
-                padding: "24px 20px 32px",
+                padding: "24px 0 8px",
                 textAlign: "center",
                 color: t.textMuted,
                 fontSize: 12,
@@ -1490,7 +1472,7 @@ export default function DashboardOverviewInfluencer() {
               {MSG_SEM_DADOS_FILTRO}
             </div>
           ) : (
-            <div style={{ padding: "0 20px 24px" }}>
+            <div>
               <p
                 style={{
                   fontSize: 11,

@@ -15,11 +15,11 @@ A plataforma transmite credibilidade de dado com energia de marca. Nunca fria, n
 
 ## Marca da operadora vs semântica de dado
 
-O `AppContext` chama `aplicarBrandguide()` e injeta no `document.documentElement` as variáveis `--brand-primary`, `--brand-secondary`, `--brand-accent`, `--brand-icon`, `--brand-success`, etc., com fallbacks em `src/styles/global.css` (`:root`). Quando o perfil é **operador** e há `operadoraBrand`, o guia da operadora passa a valer nessas variáveis — **sem lógica condicional por página**: basta usar `var(--brand-*, fallback)`.
+O `AppContext` chama `aplicarBrandguide()` e injeta no `document.documentElement` variáveis de marca, com fallbacks em `src/styles/global.css` (`:root`). Existem tokens **legados** (`--brand-primary`, `--brand-secondary`, `--brand-accent`, `--brand-icon`, `--brand-success`, …) e tokens **canónicos de dashboard** (`--brand-action`, `--brand-contrast`, `--brand-icon-color`, `--brand-surface`, …). Quando o perfil é **operador** e há `operadoraBrand`, o guia da operadora passa a valer — **sem lógica condicional por página**: basta usar `var(--brand-*, fallback)`.
 
-- **Marca / whitelabel** (identidade, destaques que devem seguir a operadora): usar `var(--brand-primary, #7c3aed)`, `var(--brand-secondary, #4a2082)`, `var(--brand-accent, #1e36f8)`, `var(--brand-icon, #70cae4)`, etc., em vez de hex fixo só da Spin. Detalhes de foco, CTA e spinners: ver a regra `brand-css-variables.mdc`.
-- **Semântica de dado** (bom/ruim/atenção com significado analítico fixo — ex. Rentável / Não rentável, faixas de WD Ratio, paleta de badges de ROI): manter os hex acordados na seção **Paleta semântica** abaixo; **não** substituir por `--brand-primary` só para “ficar roxo da operadora”, senão o usuário perde o significado compartilhado dos indicadores.
-- **Dashboards com operador:** usar `useDashboardBrand()` para `blockBg`, `primary`, `accent`, `primaryTransparentBg`, `primaryTransparentBorder`, etc.; o hook já aponta para `var(--brand-*)` quando `brand.useBrand` é true.
+- **Marca / whitelabel** na app em geral: `var(--brand-primary, #7c3aed)`, `var(--brand-secondary, …)`, `var(--brand-accent, …)`, `var(--brand-icon, …)`, etc. Detalhes de foco, CTA e spinners: ver `brand-css-variables.mdc`.
+- **`src/pages/dashboards/**`:** seguir `.cursor/rules/dashboards.mdc` — preferir **`--brand-action` / `--brand-contrast` / `--brand-icon-color`** (e derivados) em KPIs, funil, comparativos e pills; o hook `useDashboardBrand()` já expõe `primary`/`accent` mapeados para esses tokens quando `brand.useBrand` é true.
+- **Semântica de dado** (Rentável / Não rentável, WD Ratio, badges de ROI, vermelho/verde de GGR): manter hex da **Paleta semântica** abaixo; **não** substituir por tokens de marca só por estética.
 - Demais páginas (`lives/`, `operacoes/`, `marketing/`, `financeiro/`, `plataforma/`, `conteudo/`, `geral/`): tokens de UI (`t.*` via `useApp`) para fundo, texto e bordas neutras; onde o elemento é **destaque de marca** (badge de seção, ícone institucional, barra de destaque), preferir `--brand-*` com fallback.
 
 ## Estrutura de Arquivos
@@ -52,7 +52,7 @@ src/
 - Sempre usar `const { theme: t } = useApp()` para tokens de tema (t.bg, t.text, t.cardBorder, t.textMuted, t.cardBg, t.inputBg).
 - Evitar hex solto para **superfícies de UI** (fundo de página, texto principal, borda de card): preferir `t.*` ou, em dashboards com operador, `useDashboardBrand()`.
 - Para páginas de operadora nos dashboards: sempre `useDashboardBrand()` → `brand.blockBg`, `brand.primary`, `brand.accent`, `brand.useBrand`.
-- Quando `brand.useBrand` for true, usar `color-mix(in srgb, var(--brand-accent) X%, transparent)` (ou a cor de marca relevante) em vez de hex RGBA fixo da Spin.
+- Quando `brand.useBrand` for true, usar `color-mix(in srgb, var(--brand-action) X%, transparent)` ou `var(--brand-contrast)` conforme o bloco (ver `dashboards.mdc`) em vez de hex RGBA fixo da Spin.
 
 **Paleta semântica de dados (imutável — não sobrescrever com cor de marca):**
 

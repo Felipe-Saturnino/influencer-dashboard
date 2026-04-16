@@ -17,34 +17,105 @@ alwaysApply: false
 | Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
 | Overview Spin | `src/pages/dashboards/OverviewSpin/` (rota `mesas_spin`) |
-| Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard` |
+| Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |
 
-**Marca:** estrutura e FilterBar usam `useDashboardBrand()`. **`BRAND`** (hex de leitura analítica e fallbacks) vem de `src/lib/dashboardConstants.ts` — import centralizado; **não** duplicar objeto `BRAND` local nas páginas. Cores de UI whitelabel: `var(--brand-primary, …)`, `color-mix(in srgb, var(--brand-primary) …, transparent)`, etc. (ver `brand-css-variables.mdc`). Badges de **semântica analítica** (Rentável, WD Ratio, FTDs no funil, Caçadores de Bônus) usam hex fixos onde o handoff o define — não substituir por `--brand-*` só por consistência visual.
+**Marca:** estrutura e FilterBar usam `useDashboardBrand()`. **`BRAND`** (hex de leitura analítica e fallbacks) vem de `src/lib/dashboardConstants.ts` — import centralizado; **não** duplicar objeto `BRAND` local nas páginas.
+
+**Tokens CSS de marca (nomes canônicos em código novo de dashboard — com fallback):**
+
+| Token | Papel |
+|---|---|
+| `var(--brand-action, #7c3aed)` | Cor de ação principal: CTAs, títulos de seção, item ativo no menu, bordas de destaque |
+| `var(--brand-contrast, #1e36f8)` | Cor de suporte: comparativos A/B, badges secundários |
+| `var(--brand-bg, #ffffff)` | Fundo da aplicação (tema claro padrão; dark ajusta via brandguide) |
+| `var(--brand-text, #18181b)` | Texto e ícones principais |
+| `var(--brand-icon-color, #70cae4)` | Ícones estruturais |
+| `var(--brand-action-12)` / `var(--brand-action-20)` / `var(--brand-action-30)` | Transparências derivadas de ação |
+| `var(--brand-action-border)` | Borda de destaque |
+| `var(--brand-contrast-12)` / `var(--brand-contrast-30)` | Transparências derivadas de contraste |
+| `var(--brand-surface)` / `var(--brand-surface-hi)` | Superfícies de card e hover |
+
+**Tokens legados (`:root` ainda expõe):** `--brand-primary`, `--brand-secondary`, `--brand-accent`, `--brand-icon`, `--brand-success`, `--brand-extra1`… — **fora dos dashboards** continuam válidos (login, shell). **Dentro de `src/pages/dashboards/**`**, em KPIs, funil, comparativos A/B e pills ativas, **preferir sempre** `action` / `contrast` / `icon-color` com fallback em vez de `primary`/`accent` soltos, para alinhar ao `useDashboardBrand()` e ao whitelabel operador.
+
+**Em `KpiCard` (`accentVar`):** usar apenas `"--brand-action"` | `"--brand-contrast"` | `"--brand-icon-color"` quando precisar de token whitelabel. **Proibido:** `--brand-extra*`, `--brand-primary`, `--brand-accent`, `--brand-icon` (sem `-color`), `--brand-secondary`, `--brand-success` — inconsistentes ou inexistentes no resolver de accent.
+
+Badges de **semântica analítica** (Rentável, WD Ratio, FTDs no funil, Caçadores de Bônus) usam hex fixos definidos em `BRAND` ou na tabela deste ficheiro — não substituir por `--brand-*` só por consistência visual.
+
+---
 
 ## Streamers — página unificada
 
 - Uma permissão/rota; **três abas** (Overview, Conversão, Financeiro) com **filtros partilhados** (mês, Histórico, influencer, operadora). Alterações nos filtros aplicam-se à aba visível e mantêm-se ao mudar de aba.
-- **Loading na FilterBar (modo embed):** cada aba chama `setIsLoading(true/false)` no `StreamersFiltrosContext` durante o fetch; o container (`Streamers/index.tsx`) mostra o indicador (ex.: `Clock`) quando `sf.isLoading`.
+- **Loading na FilterBar (modo embed):** cada aba chama `setIsLoading(true/false)` no `StreamersFiltrosContext` durante o fetch; o container (`Streamers/index.tsx`) mostra o indicador quando `sf.isLoading`.
 - **Tabs:** `role="tablist"` / `role="tab"` / `aria-selected`; `tabIndex={ativo ? 0 : -1}` nas abas inativas; **setas ← →** mudam de aba e devolvem foco ao botão da aba destino.
 - **Imports:** ficheiros dentro de `Streamers/*` usam caminhos `../../../../` para `lib/`, `context/`, `components/`, etc.
+
+---
 
 ## Personas por Página
 
 | Página | Persona (resumo) | Primeiro bloco após filtros |
 |---|---|---|
-| Streamers → Overview | Gestor / Executivo; Operador; Agência; Influencer (próprios dados) | KPIs Financeiros (GGR, Investimento, ROI) |
+| Streamers → Overview | Gestor / Executivo; Operador; Agência; Influencer (próprios dados) | KPIs Executivos (GGR, Investimento, ROI) |
 | Streamers → Conversão | Idem | Comparativo de Funil |
 | Streamers → Financeiro | Idem | KPIs Financeiros |
-| Social Media | Gestor de Marketing | KPIs de Mídias Sociais |
+| Social Media | Gestor de Marketing | KPIs Consolidados (GGR, Registros, GGR por Jogador) |
 | Overview Spin (`mesas_spin`) | Gerente de Operações; Operador (escopo mesa) | KPIs Consolidados das Mesas |
 | Overview Influencer | Influencer; Agência; Executivo (escopo); Admin / Gestor | KPIs Executivos (GGR, Investimento, ROI) |
+
+---
+
+## Cabeçalho de Página — Obrigatório em Todas as Páginas
+
+**Toda** página de dashboard exibe um bloco de cabeçalho **antes** da FilterBar, com ícone (Lucide, coerente com a página) + **h1** em uppercase com `FONT_TITLE` + parágrafo descritivo com `FONT.body`. Nunca omitir.
+
+```tsx
+<div style={{ marginBottom: 18, textAlign: "center" }}>
+  <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+    <span style={{ color: brand.primary, display: "flex" }} aria-hidden>
+      <BarChart2 size={28} />
+    </span>
+    <h1 style={{ fontFamily: FONT_TITLE, fontSize: 22, fontWeight: 800, color: t.text, margin: 0, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+      Nome da Página
+    </h1>
+  </div>
+  <p style={{ fontFamily: FONT.body, fontSize: 13, color: t.textMuted, margin: 0, maxWidth: 560, marginLeft: "auto", marginRight: "auto", lineHeight: 1.45 }}>
+    Descrição curta do propósito da página.
+  </p>
+</div>
+```
+
+**Referência de títulos e subtítulos canônicos:**
+
+| Página | h1 | Subtítulo |
+|---|---|---|
+| Overview Spin | `Overview Spin` | `Resultados consolidados das mesas ao vivo — Baccarat, Roleta e Blackjack.` |
+| Streamers | `Streamers` | `Performance do canal de influencers — financeiro, conversão e operação.` |
+| Mídias Sociais | `Mídias Sociais` | `Alcance orgânico, conversão por campanha e KPIs consolidados de UTMs mapeadas.` |
+| Overview Influencer | `Overview Influencer` | `Visão executiva da performance do canal de influencers.` |
+
+---
+
+## Nomenclatura Canônica de Seções
+
+| Contexto | Nome correto | Observação |
+|---|---|---|
+| Série temporal — mês corrente | **Detalhamento Diário** | Sub: `"dia a dia"` |
+| Série temporal — modo histórico | **Detalhamento Mensal** | Sub: `"mês a mês"` |
+| Comparação de duas entidades (A vs B) | **Comparativo de [X]** | Ex.: `Comparativo de Funil`, `Comparativo de Mesa`, `Comparativo de Jogo` |
+| KPIs de uma seção da plataforma | **KPIs [Contexto]** | Ex.: `KPIs Executivos`, `KPIs Consolidados`, `KPIs Financeiros`, `KPIs de Mídias Sociais` |
+
+**Proibido:** usar `"Comparativo Diário"` ou `"Comparativo Mensal"` para série temporal — `"Comparativo"` é reservado para blocos A vs B.
+
+---
 
 ## Estrutura Obrigatória de Toda Página de Dashboard
 
 ```tsx
 <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+  {/* CABEÇALHO DE PÁGINA — sempre primeiro (ver secção acima) */}
 
-  {/* BLOCO 1 — FilterBar: sempre primeiro, sempre centralizada */}
+  {/* BLOCO — FilterBar: logo após o cabeçalho, sempre centralizada */}
   <div style={{ marginBottom: 14 }}>
     <div style={{
       borderRadius: 14,
@@ -63,9 +134,10 @@ alwaysApply: false
     <SectionTitle ...>Nome da Seção</SectionTitle>
     {/* conteúdo */}
   </div>
-
 </div>
 ```
+
+---
 
 ## Card (bloco de conteúdo)
 
@@ -81,162 +153,212 @@ const card: React.CSSProperties = {
 
 Nunca declarar `card` com valores diferentes. Nunca inline sem usar esta constante.
 
+---
+
 ## FilterBar — Navegação de Período
 
 ```tsx
-// Botões de navegação
-<button
-  aria-label="Mês anterior"
-  style={{
-    width: 30, height: 30, borderRadius: "50%",
-    border: `1px solid ${t.cardBorder}`,
-    background: "transparent", color: t.text,
-    cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.35 : 1,
-    display: "flex", alignItems: "center", justifyContent: "center",
-  }}
-  onClick={irMesAnterior}
-  disabled={historico || isPrimeiro}
->
-  <ChevronLeft size={14} aria-hidden="true" />
+{/* Botões de navegação */}
+<button type="button" aria-label="Mês anterior" /* ... */ disabled={historico || isPrimeiro}>
+  <ChevronLeft size={14} aria-hidden />
 </button>
 
-// Label do período — em FilterBars apertadas (mobile + filtros), preferir clamp + trio ← label → com flexShrink: 0
+{/* Label do período — FONT.body (não FONT_TITLE) */}
 <span style={{ fontSize: 18, fontWeight: 800, color: t.text, fontFamily: FONT.body, minWidth: "clamp(120px, 40vw, 180px)", textAlign: "center" }}>
   {historico ? "Todo o período" : mesSelecionado?.label}
 </span>
 
-// Botão Histórico
+{/* Botão Histórico — fundo ativo com token de ação, nunca rgba(124,58,237,0.15) fixo */}
 <button
+  type="button"
   aria-label={historico ? "Desativar modo histórico" : "Ver todo o período"}
   aria-pressed={historico}
-  onClick={toggleHistorico}
   style={{
     display: "flex", alignItems: "center", gap: 6,
     padding: "6px 14px", borderRadius: 999, cursor: "pointer",
     fontFamily: FONT.body, fontSize: 13,
-    border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
+    border: historico
+      ? `1px solid ${brand.useBrand ? "var(--brand-action)" : "var(--brand-action, #7c3aed)"}`
+      : `1px solid ${t.cardBorder}`,
     background: historico
-      ? (brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)" : "rgba(124,58,237,0.15)")
+      ? (brand.useBrand
+          ? "color-mix(in srgb, var(--brand-action) 15%, transparent)"
+          : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)")
       : "transparent",
-    color: historico ? brand.accent : t.textMuted,
+    color: historico ? brand.primary : t.textMuted,
     fontWeight: historico ? 700 : 400,
     transition: "all 0.15s",
   }}
 >
-  <GiCalendar size={15} aria-hidden="true" /> Histórico
+  <GiCalendar size={15} aria-hidden /> Histórico
 </button>
 ```
 
+`Calendar` (Lucide) é preferível; **`GiCalendar`** (`react-icons/gi`) permanece aceite **apenas** neste botão Histórico.
+
 **Selects na FilterBar:** sempre via `SelectComIcone` de `src/components/dashboard/`. Nunca `<div style="relative"> + <span>ícone + <select>` inline.
 
-**Loading indicator na FilterBar:** sempre o último item da barra, sem bloquear os controles.
-
-- **Página com FilterBar local:** usar o `loading` do próprio fetch (ex.: `Clock` + texto).
-- **Streamers (FilterBar partilhada):** o estado `isLoading` / `setIsLoading` vem do `StreamersFiltrosContext`; cada aba atualiza ao iniciar/terminar o carregamento; o container mostra o indicador quando `sf.isLoading`.
+**Loading indicator na FilterBar:** sempre o último item da barra, sem bloquear os controles. Usar exclusivamente neste contexto:
 
 ```tsx
 {(loading /* ou sf.isLoading em Streamers */) && (
   <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }} aria-live="polite">
-    <Clock size={12} aria-hidden="true" /> Carregando…
+    <Clock size={12} aria-hidden /> Carregando…
   </span>
 )}
 ```
 
+`Clock` é **exclusivo da FilterBar** como indicador secundário. Para loading de seções de conteúdo, usar `Loader2` com `className="app-lucide-spin"` (ver secção de KPI Cards).
+
+---
+
 ## KPI Cards — Agrupamento Semântico
 
 Nunca colocar mais de 4 KpiCards em sequência sem separador semântico.
-
 Quando um bloco tem múltiplos grids de KPI, separar com label de grupo:
 
 ```tsx
-<div style={{
-  fontSize: 10, color: t.textMuted, fontFamily: FONT.body,
-  fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase",
-  marginBottom: 8,
-}}>
+<div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
   Financeiro
 </div>
-<div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-  {/* KPIs financeiros */}
-</div>
+{/* KPIs financeiros */}
 
-<div style={{
-  borderTop: `1px solid ${t.cardBorder}`,
-  margin: "16px 0 8px",
-  paddingTop: 12,
-  fontSize: 10, color: t.textMuted, fontFamily: FONT.body,
-  fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase",
-}}>
+<div style={{ borderTop: `1px solid ${t.cardBorder}`, margin: "16px 0 8px", paddingTop: 12, fontSize: 10, color: t.textMuted, fontFamily: FONT.body, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
   Operação
 </div>
-<div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
-  {/* KPIs operacionais */}
-</div>
+{/* KPIs operacionais */}
 ```
+
+---
 
 ## KpiCard — Props e Regras
 
 ```typescript
-// SEMPRE usar KpiCard de src/components/dashboard/KpiCard (não duplicar componente na página)
+// SEMPRE usar KpiCard de src/components/dashboard/KpiCard (não duplicar na página)
+
 // Props obrigatórias:
-label        // string — nomenclatura do glossário (ver abaixo)
+label        // string — exatamente do glossário canônico abaixo
 value        // string formatada
-icon         // ReactNode decorativo: Lucide size 14–16, sempre aria-hidden="true"
+icon         // ReactNode: Lucide size 14–16, aria-hidden (ver dicionário canônico)
 accentColor  // BRAND.* ou hex semântico coerente com o KPI
 atual        // number — valor atual
 anterior     // number — valor do período anterior (MoM)
 isHistorico  // boolean — oculta MoM quando true
 
 // Props opcionais:
-accentVar    // APENAS tokens reais: "--brand-primary" | "--brand-accent" | "--brand-icon"
-             // Omitir quando a cor é 100% semântica (ex.: GGR pos/neg, ROI, Saques com isInverso)
+accentVar    // APENAS: "--brand-action" | "--brand-contrast" | "--brand-icon-color"
+             // Omitir quando a cor é 100% semântica (GGR pos/neg, ROI, Saques com isInverso)
 subValue     // { label: string, value: string }
 isInverso    // boolean — Saques, WD Ratio (queda = bom)
 isBRL        // boolean — formata referência MoM como BRL
 ```
 
-**Proibido:** `accentVar="--brand-extra1"` (ou extra2/3/4) — variáveis inexistentes; gera aviso e não reflete whitelabel.
+**Proibido:** `accentVar` com tokens inexistentes ou legados não mapeados no resolver de whitelabel dos dashboards.
 
-**Loading e valores iniciais:** enquanto `loading === true`, **não** mostrar KpiCards alimentados com estado inicial `{ 0, … }` (ex.: `"R$ 0,00"`). Usar **`SkeletonKpiCard`** (de `components/dashboard`) em grids com o **mesmo layout** que os KPIs reais (`app-grid-kpi-3` / `app-grid-kpi-4`), para não sugerir resultado falso ao utilizador.
+**Loading e valores iniciais:** enquanto `loading === true`, **não** mostrar KpiCards com estado inicial `{ 0, … }`. Usar `SkeletonKpiCard` (de `components/dashboard`) em grids com o **mesmo layout** que os KPIs reais. Para seções de conteúdo (listas, tabelas, gráficos), usar `Loader2`:
 
-**Ícones nos dashboards:** preferir **Lucide** em filtros, `SectionTitle` e ícones dos `KpiCard`. **Exceção aceite:** `GiCalendar` apenas no **botão Histórico** da FilterBar — não usar GameIcons noutros botões de navegação funcional.
-
-**Labels padronizados de KPI (usar exatamente):**
-
-```
-"GGR Total"              → receita bruta do jogo
-"Investimento"           → custo total com influencers
-"ROI Geral" / "ROI"      → retorno sobre investimento
-"FTDs"                   → quantidade de primeiros depósitos
-"R$ FTD"                 → valor total dos primeiros depósitos
-"Lives"                  → transmissões realizadas
-"Horas Realizadas"       → tempo total de live
-"Influencers Ativos"     → influencers com ao menos 1 live
-"Registros"              → cadastros realizados
-"Custo por FTD"          → investimento ÷ FTDs
-"Custo por Registro"     → investimento ÷ Registros
-"Depósitos"              → volume total de depósitos
-"Saques"                 → volume total de saques
-"WD Ratio"               → razão saques/depósitos em %
-"GGR por Jogador"        → GGR ÷ FTDs
-"PVI"                    → Player Value Index (0–100 pts)
-"Turnover"               → volume apostado nas mesas
-"Apostas"                → quantidade de apostas
-"Margem"                 → GGR ÷ Turnover em %
-"Aposta média"           → turnover ÷ apostas
-"UAP"                    → jogadores únicos ativos
-"ARPU"                   → GGR ÷ UAP
-"Seguidores totais"      → total de seguidores/inscritos
-"Impressões totais"      → total de exibições de conteúdo
-"Engajamento médio"      → engajamentos ÷ impressões em %
+```tsx
+<div className="app-lucide-spin" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: 24, color: t.textMuted, fontFamily: FONT.body }}>
+  <Loader2 size={20} aria-hidden />
+  <span>Carregando…</span>
+</div>
 ```
 
-**PVI nunca usa "%"** — sempre `"${v} pts"` ou `"${v} / 100"`.
+Ícones Lucide: usar o **`strokeWidth` por defeito (2)** — não passar `strokeWidth` explícito nos KPIs/`SectionTitle`, salvo exceção pontual do cabeçalho de página (ícone maior).
+
+---
+
+## Dicionário Canônico de Ícones — KPI Cards
+
+Usar **exatamente** o ícone abaixo para cada conceito em **todas** as páginas e abas. Lucide; **`size={16}`** nos cards, **`size={15}`** nos `SectionTitle`; **`aria-hidden`** nos decorativos.
+
+| Conceito | Ícone Lucide | Import |
+|---|---|---|
+| **GGR** | `TrendingUp` | `import { TrendingUp } from "lucide-react"` |
+| **Turnover** | `ArrowUpDown` | `import { ArrowUpDown }` |
+| **Margem** | `Percent` | `import { Percent }` |
+| **ROI** | `BarChart2` | `import { BarChart2 }` |
+| **Apostas** | `Hash` | `import { Hash }` |
+| **Aposta Média** | `ChartColumnBig` | `import { ChartColumnBig }` |
+| **UAP** | `Users` | `import { Users }` |
+| **ARPU** | `CircleDollarSign` | `import { CircleDollarSign }` |
+| **GGR por Jogador** | `CircleDollarSign` | — |
+| **Investimento** | `Coins` | `import { Coins }` |
+| **Lives** | `Video` | `import { Video }` |
+| **Horas Realizadas** | `Clock` | `import { Clock }` |
+| **Influencers Ativos** | `Users` | — |
+| **Média de Views** | `Eye` | `import { Eye }` |
+| **Registros** | `UserPlus` | `import { UserPlus }` |
+| **Custo por Registro** | `Receipt` | `import { Receipt }` |
+| **FTDs** | `Trophy` | `import { Trophy }` |
+| **Custo por FTD** | `Wallet` | `import { Wallet }` |
+| **Depósitos** | `ArrowDownToLine` | `import { ArrowDownToLine }` |
+| **Saques** | `ArrowUpFromLine` | `import { ArrowUpFromLine }` |
+| **WD Ratio** | `Scale` | `import { Scale }` |
+| **PVI** | `Gauge` | `import { Gauge }` |
+| **Postagens** | `Bookmark` | `import { Bookmark }` |
+| **Seguidores Totais** | `Mic` | `import { Mic }` |
+| **Impressões Totais** | `Sparkles` | `import { Sparkles }` |
+| **Engajamento Médio** | `Percent` | — |
+
+**Proibido em KPI cards e SectionTitle:** qualquer ícone de `react-icons/gi` (`GiXxx`). A única exceção de GameIcons na seção Dashboards é **`GiCalendar`** no botão Histórico da FilterBar (ou equivalente Lucide `Calendar`).
+
+**Ícones de SectionTitle:**
+
+| Seção | Ícone |
+|---|---|
+| KPIs Executivos / KPIs Consolidados / KPIs Financeiros / KPIs de Mídias Sociais | `BarChart2` |
+| Detalhamento Diário / Detalhamento Mensal | `CalendarDays` |
+| Funil de Conversão | `Filter` |
+| Comparativo de Funil | `Filter` |
+| Eficiência | `Gauge` |
+| Ranking de Influencers / Ranking FTD/Hora | `Trophy` |
+| Comparativo de Jogo | `Dice6` |
+| Comparativo de Mesa | `Target` |
+| Dados por Mesa | `Table2` |
+| Investimento por Influencer | `Coins` |
+| Ranking Financeiro | `ListOrdered` |
+| Comparativo de Taxas | `TrendingUp` |
+| Engajamento por Formato | `Layers` |
+| Postagens Recentes | `Video` |
+
+**Critérios de aceite (ícones):** GGR → `TrendingUp`; ROI → `BarChart2` (nunca `Trophy`/`TrendingUp`); FTDs → `Trophy`; Depósitos/Saques → `ArrowDownToLine` / `ArrowUpFromLine` (nunca `PlayCircle`, `GiCardPlay`, `GiCash`, `Banknote`, `Landmark`); Registros → `UserPlus` (nunca `GiPlayerNext`/`GiPerson`).
+
+---
+
+## KPI Labels — Glossário Canônico
+
+Usar **exatamente** estas strings no prop `label` de `KpiCard` e nos headers de tabela equivalentes:
+
+- `"GGR"` — receita bruta do jogo (nunca `"GGR Total"`)
+- `"Investimento"` — custo total com influencers
+- `"ROI"` — retorno sobre investimento (nunca `"ROI Geral"`)
+- `"FTDs"` — quantidade de primeiros depósitos
+- `"R$ FTD"` — valor total dos primeiros depósitos
+- `"Lives"` — transmissões realizadas (nunca `"Qtd de Lives"`)
+- `"Horas Realizadas"` — tempo total de live
+- `"Influencers Ativos"` — influencers com ao menos 1 live
+- `"Média de Views"` — média de espectadores por live
+- `"Registros"` — cadastros realizados
+- `"Custo por FTD"` — investimento ÷ FTDs
+- `"Custo por Registro"` — investimento ÷ Registros
+- `"Depósitos"` / `"Saques"` — volumes (`KpiCardDepositos`: usar componente partilhado)
+- `"WD Ratio"` — razão saques/depósitos em %
+- `"GGR por Jogador"` — GGR ÷ FTDs
+- `"PVI"` — Player Value Index (0–100 pts)
+- `"Turnover"`, `"Apostas"`, `"Margem"`, `"Aposta Média"`, `"UAP"`, `"ARPU"` — mesas / jogador
+- `"Postagens"`, `"Seguidores Totais"`, `"Impressões Totais"`, `"Engajamento Médio"` — social
+
+**PVI nunca usa "%"** — sempre `"${v} pts"`.
+**ROI** e **Margem** têm ícones diferentes (`BarChart2` vs `Percent`) — não trocar.
+
+---
 
 ## SectionTitle
 
-Importar **`SectionTitle`** de `src/components/dashboard/` — **não** declarar componente local duplicado nas páginas.
+Importar **`SectionTitle`** de `src/components/dashboard/` — **não** declarar componente local duplicado nas páginas. Mesmo para Mídias Sociais.
+
+---
 
 ## SectionTitle — Sub-títulos Padronizados
 
@@ -244,16 +366,43 @@ Importar **`SectionTitle`** de `src/components/dashboard/` — **não** declarar
 // Bloco com comparativo MoM:
 sub={!historico ? "· comparativo MTD vs mesmo período do mês anterior" : undefined}
 
-// Bloco com período específico:
-sub={historico ? "acumulado" : mesSelecionado?.label}
+// Bloco com período específico (Comparativo de Jogo):
+sub={historico ? "mês a mês" : mesSelecionado?.label}
 
-// Bloco com granularidade:
+// Bloco com granularidade temporal (Detalhamento):
 sub={historico ? "mês a mês" : "dia a dia"}
+
+// Bloco sem variação de período:
+sub={historico ? "acumulado" : undefined}
 ```
+
+---
+
+## Componentes Aninhados — Proibição
+
+**Nunca** declarar componentes funcionais dentro de outros componentes. Um componente declarado dentro de outro é recriado a cada re-render do pai, causando re-mount completo, perda de estado e regressões de performance.
+
+```tsx
+// PROIBIDO:
+export default function MinhaPage() {
+  function TooltipCustom() { /* ... */ }
+  return <TooltipCustom />;
+}
+
+// CORRETO:
+function TooltipCustom() { /* ... */ }
+export default function MinhaPage() {
+  return <TooltipCustom />;
+}
+```
+
+Isso inclui: Tooltips customizados, sub-componentes de sorting (`ThRankingSort`), helpers de renderização de seções, funções `render*` que retornam JSX com hooks ou estado interno.
+
+---
 
 ## Tabelas de Dashboard
 
-Importar de `lib/tableStyles` (ajustar níveis `../` conforme a pasta do ficheiro):
+Importar de `lib/tableStyles`:
 
 ```typescript
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe, TOTAL_ROW_BG } from "../../../lib/tableStyles";
@@ -261,230 +410,159 @@ const thStyle = getThStyle(t);
 const tdStyle = getTdStyle(t);
 ```
 
-**Zebrado:** usar sempre **`zebraStripe(i)`** nas linhas do corpo — **não** `i % 2 === 0 ? "transparent" : "rgba(74,32,130,0.06)"` ou equivalente hardcoded.
+**Zebrado:** usar sempre `zebraStripe(i)` — nunca `i % 2 === 0 ? ...` hardcoded.
 
-**Scroll e acessibilidade:** tabelas largas envolver com **`app-table-wrap`** e, quando aplicável, `<div style={{ overflowX: "auto" }}>` por dentro. Incluir **`<caption>`** visualmente oculto (sr-only) com texto descritivo do período/bloco.
-
-**Ordenação:** em cabeçalhos clicáveis, usar ícones **Lucide** (`ChevronDown`, `ChevronUp`, `ChevronsUpDown`) — **não** caracteres Unicode `↓` `↑` `↕`.
-
-**Filtros de estado em tabela** (ex.: badges de Status ROI): botões com **`type="button"`** e **`aria-pressed={ativo}`**.
-
-**Quando a tabela tem linha de total:**
+**Linha de Total:** toda tabela de detalhamento/série temporal deve ter linha de total no final do `<tbody>`:
 
 ```tsx
 <tr style={{ background: TOTAL_ROW_BG, fontWeight: 700, borderTop: `2px solid ${t.cardBorder}` }}>
   <td style={{ ...tdStyle, fontWeight: 700, fontSize: 14, color: brand.primary }}>
-    ∑ Total
+    Total
   </td>
+  {/* células de total */}
+</tr>
 ```
 
-**Nomenclatura de headers de tabela:**
+**Scroll e acessibilidade:** tabelas largas envolver com `app-table-wrap` e, quando aplicável, `<div style={{ overflowX: "auto" }}>` por dentro. Incluir `<caption>` visualmente oculto (sr-only) com texto descritivo do período/bloco.
 
-```
-"Influencer"    → nome do influencer
-"Lives"         → quantidade de transmissões
-"Horas"         → tempo no formato HH:MM
-"Views"         → média de views por live
-"Acessos"       → visitas ao link
-"Registros"     → cadastros
-"FTDs"          → primeiros depósitos (quantidade)
-"GGR"           → receita bruta (R$)
-"Invest."       → investimento (R$, abreviado na coluna)
-"ROI"           → retorno (badge colorido)
-"Status"        → classificação (badge colorido)
-"Turnover"      → volume apostado (R$)
-"Apostas"       → quantidade
-"Margem"        → margem da casa (badge colorido)
-"Aposta média"  → valor médio (R$)
-"UAP"           → jogadores únicos
-"ARPU"          → receita por jogador (R$)
-"Performance"   → unifica ROI numérico + Status label em um único badge
-```
+**Ordenação:** cabeçalhos clicáveis usam ícones Lucide (`ChevronDown`, `ChevronUp`, `ChevronsUpDown`) com `aria-sort` — nunca caracteres Unicode `↓ ↑ ↕`.
+
+**Filtros de estado em tabela** (ex.: badges de Status ROI): botões com `type="button"` e `aria-pressed={ativo}`.
+
+**Nomenclatura de headers de tabela:** `Influencer`, `Lives`, `Horas`, `Views`, `Acessos`, `Registros`, `FTDs`, `GGR`, `Invest.`, `ROI`, `Turnover`, `Apostas`, `Margem`, `Aposta Média`, `UAP`, `ARPU`, `Performance` (ROI + status num único badge), `Data` (DD/MM no mês corrente), `Mês` (Mmm/YYYY no histórico).
+
+---
 
 ## Comparativos Duais (A vs B)
 
-Usar **variáveis de marca** para os lados do comparativo (com fallbacks iguais ao tema Spin padrão em `global.css`):
+Usar variáveis canónicas com fallbacks:
 
-- **Lado A:** `accent: "var(--brand-primary, #7c3aed)"`, `bg: "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)"`, `border: "color-mix(in srgb, var(--brand-primary, #7c3aed) 35%, transparent)"`
-- **Lado B:** `accent: "var(--brand-accent, #1e36f8)"`, `bg: "color-mix(in srgb, var(--brand-accent, #1e36f8) 10%, transparent)"`, `border: "color-mix(in srgb, var(--brand-accent, #1e36f8) 35%, transparent)"`
-- **Badge VS:** `border: color-mix(in srgb, var(--brand-secondary, #4a2082) 35%, transparent)`, `background: color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, transparent)`, `fontSize: 12, fontWeight: 800` (texto: `var(--brand-secondary, #4a2082)` ou `t.text` conforme contraste)
-- Divider vertical: `width: 1, background: t.cardBorder, flexShrink: 0`
-- Usar classe `app-conversao-vs-row` para o row de seletores
-- Usar classe `app-conversao-funil-duo` para o container lado a lado
+- **Lado A:** `accent: "var(--brand-action, #7c3aed)"`, `bg: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)"`, `border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)"`
+- **Lado B:** `accent: "var(--brand-contrast, #1e36f8)"`, `bg: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)"`, `border: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)"`
+- **Badge VS:** `border: "color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)"`, `background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)"`, `color: "var(--brand-action, #7c3aed)"`, `fontSize: 12`, `fontWeight: 800`
+- Divider vertical: `width: 1`, `background: t.cardBorder`, `flexShrink: 0`
+- Classes `app-conversao-vs-row` e `app-conversao-funil-duo` onde já existem no CSS.
+
+---
 
 ## Badges de Classificação — Cores Exatas
 
-**Status ROI do influencer:**
+**Status ROI do influencer:** Rentável `#22c55e`; Atenção `#f59e0b`; Não Rentável `#e84025`; Bônus `#a855f7`; Sem dados `#6b7280` — com `bg`/`border` rgba como no handoff de design.
 
-```
-Rentável      → #22c55e  bg: rgba(34,197,94,0.10)    border: rgba(34,197,94,0.28)
-Atenção       → #f59e0b  bg: rgba(245,158,11,0.10)   border: rgba(245,158,11,0.28)
-Não Rentável  → #e84025  bg: rgba(232,64,37,0.10)    border: rgba(232,64,37,0.28)
-Bônus         → #a855f7  bg: rgba(168,85,247,0.10)   border: rgba(168,85,247,0.28)
-Sem dados     → #6b7280  bg: rgba(107,114,128,0.10)  border: rgba(107,114,128,0.22)
-```
+**Ação de conversão (Comparativo de Taxas):** Divulgar o link `#f59e0b`; Converter visita `#a855f7`; Ativar cadastro `#1e36f8`; Em dia `#22c55e`.
 
-**Ação de conversão:**
+**Perfil do jogador (PVI) — cores semânticas fixas, nunca brand tokens de identidade:**
 
-```
-Divulgar o link   → #f59e0b  (pctViewAcesso < 10%)
-Converter visita  → #a855f7  (pctAcessoReg < 10%)
-Ativar cadastro   → var(--brand-accent, #1e36f8)  (pctRegFTD < 60%)
-Em dia            → #22c55e  (todos os thresholds OK)
-```
+- Whales `#a78bfa` (PVI ≥ 80); Core `#22c55e` (≥ 60); Recreativos `#f59e0b` (≥ 15); Caçadores de Bônus `#e84025` (< 15) — com fundos/bordas rgba discretos conforme handoff.
 
-**Perfil do jogador (PVI):**
+**WD Ratio:** `< 60%` verde `#22c55e`; `60–80%` `#f59e0b`; `> 80%` `#e84025`.
 
-```
-Whales             → var(--brand-primary, #7c3aed)  PVI ≥ 80
-Core               → var(--brand-accent, #1e36f8)  PVI ≥ 60
-Recreativos        → var(--brand-icon, #70cae4)    PVI ≥ 15
-Caçadores de Bônus → #e84025  PVI < 15
-```
+**Margem das mesas (MarginBadge):** `> 10%` verde; `0–10%` `var(--brand-action, #7c3aed)`; `< 0%` vermelho.
 
-**WD Ratio (cor contextual na tabela):**
-
-```
-< 60%    → #22c55e verde
-60–80%   → #f59e0b amarelo
-> 80%    → #e84025 vermelho
-```
-
-**Margem das mesas (MarginBadge):**
-
-```
-> 10%   → #22c55e verde
-0–10%   → var(--brand-primary, #7c3aed)
-< 0%    → #e84025 vermelho
-```
+---
 
 ## SVG de Funil
 
-Cores por nível (de cima para baixo). **Primeiros níveis** seguem marca (`--brand-*`); FTDs permanece verde de leitura (`--brand-success` alinha operadoras ao verde padrão):
+Cores por nível (de cima para baixo) — primeiros níveis seguem marca; FTDs é cor semântica fixa:
 
-```
-Views:     var(--brand-primary, #7c3aed)
-Acessos:   var(--brand-accent, #1e36f8)
-Registros: var(--brand-icon, #70cae4)
-FTDs:      var(--brand-success, #22c55e)
-```
+- Views: `var(--brand-action, #7c3aed)`
+- Acessos: `var(--brand-contrast, #1e36f8)`
+- Registros: `var(--brand-icon-color, #70cae4)`
+- FTDs: `#22c55e` (fixo; não usar `var(--brand-success)` só por conveniência)
 
-Sempre responsivo:
+Funil de 3 níveis (Mídias Sociais — sem Views): Visitas → action; Registros → contrast; FTDs → `#22c55e`.
+
+Usar o componente partilhado **`FunilVisual`** de `src/components/dashboard/` nas páginas que já migraram; **não** declarar funil SVG duplicado ao adicionar novos fluxos.
 
 ```tsx
 <svg
   role="img"
-  aria-label="Funil de conversão: ..."
+  aria-label="Funil de conversão: …"
   viewBox="0 0 220 230"
   width="100%"
   style={{ maxWidth: 280, display: "block" }}
 >
-  <defs>
-    {/* TODOS os gradientes em um único bloco <defs>, nunca dentro do .map() */}
-  </defs>
+  <defs>{/* gradientes num único bloco; nunca dentro de .map() */}</defs>
+</svg>
 ```
+
+---
 
 ## GGR — Definição de Cálculo
 
-GGR = Total de Depósitos − Total de Saques em TODAS as páginas.
-A diferença entre páginas é o canal de origem dos dados:
+GGR = Total de Depósitos − Total de Saques em **todas** as páginas. A diferença entre páginas é o **canal de origem** dos dados:
 
-- Streamers (abas executivas) / Overview Influencer → canal: influencers
+- Streamers / Overview Influencer → canal: influencers
 - Mídias Sociais → canal: campanhas de social media (UTM)
-- Overview Spin → todos os canais de aquisição
+- Overview Spin → canal: **mesas ao vivo** (escopo mesa)
 
 O cálculo é o mesmo. O número difere por design — não é inconsistência.
+
+---
 
 ## Modo Histórico
 
 Quando `historico === true`:
 
 - Desabilitar botões ← → com `opacity: 0.35` e `cursor: not-allowed`
-- Exibir "Todo o período" no lugar do mês
+- Exibir `"Todo o período"` no lugar do mês
 - Ocultar comparativo MoM nos KpiCards (`isHistorico={true}`)
-- Se algum bloco não suporta histórico, exibir mensagem explicativa (não sumir silenciosamente):
+- Se algum bloco não suporta histórico, exibir mensagem explicativa (não sumir silenciosamente) — ver exemplo na versão anterior deste ficheiro ou usar texto equivalente centrado com `FONT.body`.
 
-```tsx
-{historico && (
-  <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-    Este bloco está disponível apenas para meses específicos.
-    <br />
-    <span style={{ fontSize: 11 }}>Selecione um mês no navegador acima.</span>
-  </div>
-)}
-```
+---
 
 ## Paginação
 
-Quando houver paginação interna em um bloco, sempre exibir contexto:
+Sempre contexto `{inicio + 1}–{fim} de {total} itens`; resetar página ao mudar dados.
 
-```tsx
-<div style={{ textAlign: "center", fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginBottom: 6 }}>
-  {inicio + 1}–{fim} de {total} itens
-</div>
-```
-
-Resetar página ativa (`useState(0)`) sempre que os dados do bloco mudarem.
+---
 
 ## Carrossel de Posts (Mídias Sociais)
 
-- Renderizar apenas a janela visível (máx. 5 cards simultâneos no DOM)
-- Sempre exibir indicador de posição: `"X / Y"` + dots (máx. 8, depois `…`)
-- Thumbnail em proporção 16:9 via `paddingTop: "56.25%"` + `position: relative`
-- `will-change: transform` no container de animação
+- Janela visível (ex.: máx. 5 cards no DOM)
+- Indicador `"X–Y / Z"` + dots (máx. 8, depois `…`)
+- Thumbnail 16:9 (`paddingTop: "56.25%"` + `position: relative`)
+- `will-change: transform` no container animado
+
+---
 
 ## Notificações Inline
 
-Para alertas não-bloqueantes dentro da página (ex.: filtro resetado automaticamente): **`role="status"`**, conteúdo legível, e ícone **Lucide** — **não** usar o carácter `⚠` no DOM.
+`role="status"`, ícone Lucide (`AlertTriangle`), sem carácter `⚠` no DOM. Auto-dismiss com `setTimeout` quando fizer sentido.
 
-```tsx
-import { AlertTriangle } from "lucide-react";
-
-<div
-  role="status"
-  style={{
-    margin: "0 0 14px",
-    padding: "10px 16px",
-    borderRadius: 10,
-    background: "rgba(245,158,11,0.10)",
-    border: "1px solid rgba(245,158,11,0.35)",
-    color: "#f59e0b",
-    fontSize: 12,
-    fontFamily: FONT.body,
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  }}
->
-  <AlertTriangle size={14} aria-hidden="true" />
-  Mensagem de aviso aqui.
-</div>
-```
-
-Auto-dismiss com `setTimeout(() => setAviso(false), 4000)` quando fizer sentido.
+---
 
 ## Gráficos Recharts (linhas / barras)
 
-Envolver **`ResponsiveContainer`** num pai com **`role="img"`** e **`aria-label`** descritivo (KPI + período ou “todo o período”). Altura responsável: preferir **`height: "clamp(220px, 35vh, 420px)"`** em vez de `320` fixo. Séries sem cor definida: fallback **`"var(--brand-primary, #7c3aed)"`**, não `BRAND.roxoVivo` solto.
+Envolver `ResponsiveContainer` num pai com `role="img"` e `aria-label` descritivo (KPI + período). Altura: `height: "clamp(220px, 35vh, 420px)"` em preferência a valor fixo. Séries sem cor: fallback `"var(--brand-action, #7c3aed)"`.
 
-## Pills e toggles (KPI do gráfico, Tabela / Gráfico)
+---
 
-Estado ativo deve respeitar whitelabel: com **`brand.useBrand`**, usar `brand.primary` + `brand.primaryTransparentBg` onde o hook for coerente; fora de operador, preferir **`var(--brand-primary, #7c3aed)`** + **`color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)`** em vez de `rgba(124,58,237,0.12)` e hex roxo fixo.
+## Pills e Toggles (KPI do gráfico, Tabela / Gráfico)
+
+Estado ativo respeita whitelabel com `brand.useBrand` e `color-mix(in srgb, var(--brand-action…) …)` — nunca `rgba(124,58,237,0.12)` ou `#7c3aed` hardcoded para estado ativo.
+
+---
 
 ## O Que Nunca Fazer em Dashboards
 
-- Nunca declarar `thStyle`, `tdStyle`, `zebraStripe` localmente — sempre importar de `lib/tableStyles`
-- Nunca declarar `card` com valores diferentes do padrão estabelecido
-- Nunca duplicar **`SectionTitle`** ou **`KpiCard`** localmente — usar os de `components/dashboard`
-- Nunca usar `accentVar="--brand-extra*"` nos KpiCards
-- Nunca usar `width` fixo em pixels em SVGs de funil
-- Nunca colocar `<defs>` de gradiente SVG dentro de `.map()`
-- Nunca usar `"%"` para PVI — usar `"pts"` ou `"/ 100"`
-- Nunca deixar estado vazio sem mensagem — nem vazio nem apenas spinner; mensagem vazia: **`MSG_SEM_DADOS_FILTRO`** de `dashboardConstants`
-- Nunca mostrar KPIs com **zeros iniciais** durante `loading` — usar **`SkeletonKpiCard`**
-- Nunca esconder bloco silenciosamente em modo histórico — sempre explicar
-- Nunca renderizar lista completa de posts/itens sem virtualização quando > 50 itens
-- Nunca usar `"Carregando..."` como único loading state para conteúdo principal (combinar com skeleton / `aria-busy` onde fizer sentido)
-- Nunca usar `"Nenhum dado encontrado"` — usar `"Sem dados para o período selecionado."`
-- Nunca hardcodar `#7c3aed` / `#1e36f8` em **comparativo A vs B** ou **primeiros estágios do funil** se puder usar `var(--brand-primary)` / `var(--brand-accent)` com fallback (ver seções acima)
-- Nunca usar **`useEffect` com estado de loading** antes da declaração **`useState(loading)`** — ordem dos hooks
+- Nunca declarar componentes funcionais (Tooltips, sub-tabs, `render*`) **dentro** do componente da página
+- Nunca declarar `thStyle`/`tdStyle`/`zebraStripe` localmente — importar de `lib/tableStyles`
+- Nunca declarar `card` com valores diferentes do padrão
+- Nunca duplicar `SectionTitle`, `KpiCard`, `FunilVisual` localmente
+- Nunca usar `accentVar` com tokens proibidos na secção KpiCard
+- Nunca usar `width` fixo em px em SVGs de funil
+- Nunca colocar `<defs>` dentro de `.map()`
+- Nunca usar `"%"` para PVI
+- Nunca deixar estado vazio sem mensagem — usar `MSG_SEM_DADOS_FILTRO` de `dashboardConstants`
+- Nunca mostrar KPIs com zeros iniciais durante `loading` — usar `SkeletonKpiCard`
+- Nunca usar `Clock` como spinner em **seções de conteúdo** — usar `Loader2` + `app-lucide-spin`
+- Nunca esconder bloco silenciosamente em modo histórico
+- Nunca listas enormes sem virtualização quando > 50 itens
+- Nunca `"Nenhum dado encontrado"` / `"N/A"` / `"Loading..."` — mensagens canónicas e `MSG_SEM_DADOS_FILTRO`
+- Nunca `rgba(124,58,237,0.15)` em estados ativos — usar `color-mix` com `var(--brand-action, #7c3aed)`
+- Nunca `"Comparativo Diário"` / `"Comparativo Mensal"` para série temporal
+- Nunca omitir cabeçalho de página (ícone + h1 + subtítulo)
+- Nunca `GiXxx` em KPI cards ou SectionTitle — exceto `GiCalendar` no Histórico (ou Lucide `Calendar`)
+- Nunca `FONT_TITLE` no label do mês na FilterBar — usar `FONT.body`
+- Nunca `useEffect` de loading antes da declaração `useState(loading)` — ordem dos hooks

@@ -10,7 +10,7 @@ import { Live, LiveResultado, LiveStatus } from "../../../types";
 // Dívida técnica (B6): migrar para InfluencerDropdown na refatoração de filtros.
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { SelectComIcone } from "../../../components/dashboard";
+import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
 import {
   AlertTriangle,
   Shield,
@@ -647,36 +647,23 @@ export default function Resultados() {
   }
 
   return (
-    <div className="app-page-shell">
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ── HEADER — cor primária ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
-        <span style={{
-          width: 32, height: 32, borderRadius: 9,
-          background: brand.primaryIconBg,
-          border: brand.primaryIconBorder,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: brand.primaryIconColor, flexShrink: 0,
-        }}>
-          <ClipboardList size={16} aria-hidden="true" />
-        </span>
-        <div>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Resultado de Lives
-          </h1>
-          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
-            Lives agendadas cujo horário já passou há mais de 5 horas, pendentes de validação.
-          </p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        icon={<ClipboardList size={14} aria-hidden="true" />}
+        title="Resultado de Lives"
+        subtitle="Lives agendadas cujo horário já passou há mais de 5 horas, pendentes de validação."
+        brand={brand}
+        t={t}
+      />
 
       {/* ── FILTROS (padrão Dashboards) ── */}
       {(showFiltroInfluencer || showFiltroOperadora) && (
         <div style={{ marginBottom: 14 }}>
           <div style={{
             borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
+            border: `1px solid ${t.cardBorder}`,
+            background: brand.blockBg,
             padding: "12px 20px",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>

@@ -56,8 +56,8 @@ function StreamersFiltrosEUAbas({
       <div
         style={{
           borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}
       >
@@ -132,11 +132,11 @@ function StreamersFiltrosEUAbas({
               fontFamily: FONT.body,
               fontSize: 13,
               border: sf.historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
-              background: sf.historico
-                ? brand.useBrand
-                  ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                  : "rgba(124,58,237,0.15)"
-                : "transparent",
+                background: sf.historico
+                  ? brand.useBrand
+                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                  : "transparent",
               color: sf.historico ? brand.accent : t.textMuted,
               fontWeight: sf.historico ? 700 : 400,
               transition: "all 0.15s",
@@ -243,7 +243,7 @@ function StreamersFiltrosEUAbas({
                   background: ativo
                     ? brand.useBrand
                       ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                      : "rgba(124,58,237,0.15)"
+                      : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                     : (t.inputBg ?? t.cardBg),
                   color: ativo ? brand.accent : t.textMuted,
                   fontWeight: ativo ? 700 : 500,

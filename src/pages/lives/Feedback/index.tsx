@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { InfluencerDropdown } from "../../../components/InfluencerDropdown";
-import { SelectComIcone } from "../../../components/dashboard";
+import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
 
 import { PLAT_COLOR } from "../../../constants/platforms";
 
@@ -479,35 +479,22 @@ export default function Feedback() {
   }
 
   return (
-    <div className="app-page-shell">
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ── HEADER — cor primária ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
-        <span style={{
-          width: 32, height: 32, borderRadius: 9,
-          background: brand.primaryIconBg,
-          border: brand.primaryIconBorder,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: brand.primaryIconColor, flexShrink: 0,
-        }}>
-          <MessageSquare size={16} aria-hidden="true" />
-        </span>
-        <div>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Feedback de Lives
-          </h1>
-          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
-            Resultado final das lives validadas em Resultados. O Financeiro consome operadora, período e influencer das realizadas para o cálculo de pagamento.
-          </p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        icon={<MessageSquare size={14} aria-hidden="true" />}
+        title="Feedback de Lives"
+        subtitle="Resultado final das lives validadas em Resultados."
+        brand={brand}
+        t={t}
+      />
 
       {/* ── BLOCO DE FILTROS (carrossel de semanas + Histórico + Status padrão Agenda) ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={{
           borderRadius: 14,
-          border: brand.primaryTransparentBorder,
-          background: brand.primaryTransparentBg,
+          border: `1px solid ${t.cardBorder}`,
+          background: brand.blockBg,
           padding: "12px 20px",
         }}>
           {/* Linha 1: Carrossel de semanas, Histórico, Influencer e Operadora — alinhado ao Overview Influencer */}
@@ -554,9 +541,13 @@ export default function Feedback() {
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
                 transition: "all 0.15s",
+                lineHeight: 1,
               }}
             >
-              <Calendar size={15} aria-hidden="true" /> Histórico
+              <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}>
+                <Calendar size={15} aria-hidden="true" />
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center" }}>Histórico</span>
             </button>
 
             {showFiltroInfluencer && influencers.length > 0 && (
@@ -614,11 +605,12 @@ export default function Feedback() {
                     background: active ? `${color}22` : "transparent",
                     color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
                     fontFamily: FONT.body, transition: "all 0.15s",
+                    lineHeight: 1,
                   }}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                  {STATUS_LABEL[status]}
-                  {active && <X size={9} aria-hidden="true" />}
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
+                  <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[status]}</span>
+                  {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
                 </button>
               );
             })}
@@ -910,7 +902,6 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
           </div>
         </div>
 
-        {/* Operadora — obrigatória para realizada (Financeiro) */}
         {operadorasList.length > 0 && (
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>
@@ -929,11 +920,6 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
               <option value="">Selecione a operadora...</option>
               {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
             </select>
-            {showResultFields && (
-              <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
-                Obrigatório para o Financeiro considerar a live no cálculo de pagamentos.
-              </span>
-            )}
           </div>
         )}
 

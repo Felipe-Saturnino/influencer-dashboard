@@ -4,32 +4,39 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { FONT } from "../../../constants/theme";
-import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
 import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
-import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
+  getThStyle,
+  getThStyleBrandAction,
+  getTdStyle,
+  getTdNumStyle,
+  zebraStripe,
+  zebraStripeBrandContrast,
+} from "../../../lib/tableStyles";
+import {
+  ArrowUpDown,
   Calendar,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clock,
+  CircleDollarSign,
   Dice6,
   LayoutGrid,
+  Loader2,
   Shield,
   Table2,
   Target,
-  Wallet,
   TrendingUp,
   ListOrdered,
   Percent,
   ChartColumnBig,
   Users,
-  Coins,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -114,6 +121,8 @@ type UapPorJogoPlanRow = { data: string; jogo: string; uap: number | null };
 interface PorTabelaRow {
   data_relatorio: string;
   nome_tabela: string;
+  /** Valor de `relatorio_por_tabela.mesa` — usado para classificar jogo quando o prefixo de `operadoras.nome` ≠ texto em `nome_tabela`. */
+  mesaRaw?: string;
   operadora: string | null;
   ggr_d1: number | null;
   turnover_d1: number | null;
@@ -185,9 +194,11 @@ function mapPorTabelaV2(r: {
     r.operadora_slug != null && String(r.operadora_slug).trim().length > 0
       ? String(r.operadora_slug).trim()
       : slugFromRelatorioOperadora(r.operadora);
+  const mesaRaw = String(r.mesa ?? "").trim();
   return {
     data_relatorio: r.dia,
     nome_tabela: nome,
+    ...(mesaRaw.length > 0 ? { mesaRaw } : {}),
     operadora: slug,
     ggr_d1: r.ggr != null ? Number(r.ggr) : null,
     turnover_d1: r.turnover != null ? Number(r.turnover) : null,
@@ -239,6 +250,10 @@ function nomeMesaParaExibicao(
   slug: string,
   operadorasList: { slug: string; nome: string }[],
 ): string {
+  if (row.mesaRaw != null && row.mesaRaw.length > 0) {
+    const fromCol = canonicalMesasSpinFromMesaColumn(row.mesaRaw);
+    if (fromCol != null) return fromCol;
+  }
   const canon = canonicalMesaCasaAposta(row.nome_tabela);
   if (canon != null) return canon;
 
@@ -255,6 +270,19 @@ function nomeMesaParaExibicao(
 }
 
 const LABELS_BLACKJACK_COMPARATIVO = new Set(["Blackjack 1", "Blackjack 2", "Blackjack VIP"]);
+
+/** Alinha ao inventário canónico de mesas Spin (coluna `mesa` no banco). */
+function canonicalMesasSpinFromMesaColumn(mesa: string): string | null {
+  const m = mesa.trim();
+  if (!m) return null;
+  const ml = m.toLowerCase();
+  if (ml === "blackjack 1") return "Blackjack 1";
+  if (ml === "blackjack 2") return "Blackjack 2";
+  if (ml === "blackjack vip") return "Blackjack VIP";
+  if (ml === "roleta" || ml === "roulette") return "Roleta";
+  if (ml === "speed baccarat") return "Speed Baccarat";
+  return null;
+}
 
 function labelMesaCda(
   row: PorTabelaRow,
@@ -346,6 +374,16 @@ function sumComparableGameBets(bucket: PorTabelaGameBucket): number {
  * Alguns lotes gravam `relatorio_por_tabela.dia` com calendário deslocado em ±1 dia em relação a
  * `relatorio_daily_summary.data`. Escolhe o shift que melhor alinha soma(BJ+Roleta+Bacc) ao total de apostas.
  */
+/**
+ * Penalidade quando há apostas no resumo diário mas nenhuma mesa comparável no bucket.
+ * Precisa ser maior que a penalidade de “soma de mesas > total” (duplicados / ruído no por_tabela),
+ * senão o shift ±1 que esvazia um dia civil (ex.: 10/04) ainda vence o shift 0.
+ */
+const POR_SHIFT_PENALTY_DIA_SEM_BREAKDOWN = 3e12;
+
+/** Excesso de apostas nas mesas vs resumo diário — valor alto mas abaixo de `POR_SHIFT_PENALTY_DIA_SEM_BREAKDOWN`. */
+const POR_SHIFT_PENALTY_SOMA_MESAS_ACIMA_TOTAL = 8e11;
+
 function pickPorTabelaOperDayShift(
   dailyRows: DailyRow[],
   porRows: PorTabelaRow[],
@@ -363,9 +401,13 @@ function pickPorTabelaOperDayShift(
       const b = byDate.get(key) ?? { bj: [], roleta: [], baccarat: [] };
       const sumG = sumComparableGameBets(b);
       const off = dr.bets != null ? Number(dr.bets) : null;
-      if (off == null || off <= 0 || sumG <= 0) continue;
+      if (off == null || off <= 0) continue;
       n++;
-      if (sumG > off * 1.0005) penalty += 1e12;
+      if (sumG <= 0) {
+        penalty += POR_SHIFT_PENALTY_DIA_SEM_BREAKDOWN;
+        continue;
+      }
+      if (sumG > off * 1.0005) penalty += POR_SHIFT_PENALTY_SOMA_MESAS_ACIMA_TOTAL;
       penalty += (sumG - off) ** 2;
     }
     const sc = n === 0 ? 1e18 : penalty;
@@ -1135,7 +1177,7 @@ export default function OverviewSpin() {
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
   const [kpisSelecionados, setKpisSelecionados] = useState<Set<KpiJogoKey>>(
-    () => new Set<KpiJogoKey>(["ggr", "turnover", "bets", "margin_pct", "bet_size", "uap"]),
+    () => new Set<KpiJogoKey>(["ggr", "turnover", "uap"]),
   );
   const [kpiGrafico, setKpiGrafico] = useState<KpiJogoKey>("ggr");
   const [dailyRawUnmerged, setDailyRawUnmerged] = useState<DailyRawRow[]>([]);
@@ -1895,9 +1937,9 @@ export default function OverviewSpin() {
     () =>
       brand.useBrand
         ? {
-            accent: "var(--brand-action)",
-            bg: "color-mix(in srgb, var(--brand-action) 10%, transparent)",
-            border: "color-mix(in srgb, var(--brand-action) 35%, transparent)",
+            accent: "var(--brand-contrast)",
+            bg: "color-mix(in srgb, var(--brand-contrast) 10%, transparent)",
+            border: "color-mix(in srgb, var(--brand-contrast) 35%, transparent)",
           }
         : COR_MESA_A,
     [brand.useBrand],
@@ -1939,7 +1981,55 @@ export default function OverviewSpin() {
     boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.35)" : "0 4px 20px rgba(0,0,0,0.08)",
   };
 
-  const thStyle = getThStyle(t, { verticalAlign: "middle" });
+  const thStyle = brand.useBrand
+    ? getThStyleBrandAction(t, { verticalAlign: "middle" })
+    : getThStyle(t, { verticalAlign: "middle" });
+  const zebraTabelaSpin = brand.useBrand ? zebraStripeBrandContrast : zebraStripe;
+  const stripeMesaLinha = brand.useBrand
+    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 6%, transparent)"
+    : null;
+
+  const tituloMesaDadosContrasteOp: React.CSSProperties = {
+    marginBottom: 10,
+    padding: "6px 10px",
+    borderRadius: 10,
+    background: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 10%, transparent)",
+    border: "1px solid color-mix(in srgb, var(--brand-contrast, #1e36f8) 35%, transparent)",
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: 700,
+    color: "var(--brand-contrast, #1e36f8)",
+    fontFamily: FONT.body,
+  };
+  const tituloMesaSpeedBaccarat: React.CSSProperties = brand.useBrand
+    ? tituloMesaDadosContrasteOp
+    : {
+        marginBottom: 10,
+        padding: "6px 10px",
+        borderRadius: 10,
+        background: "color-mix(in srgb, var(--brand-icon-color, #70cae4) 10%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--brand-icon-color, #70cae4) 35%, transparent)",
+        textAlign: "center",
+        fontSize: 13,
+        fontWeight: 700,
+        color: "var(--brand-icon-color, #70cae4)",
+        fontFamily: FONT.body,
+      };
+  const tituloMesaRoleta: React.CSSProperties = brand.useBrand
+    ? tituloMesaDadosContrasteOp
+    : {
+        marginBottom: 10,
+        padding: "6px 10px",
+        borderRadius: 10,
+        background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)",
+        textAlign: "center",
+        fontSize: 13,
+        fontWeight: 700,
+        color: "var(--brand-action, #7c3aed)",
+        fontFamily: FONT.body,
+      };
+
   const tdStyle = getTdStyle(t, { padding: "9px 12px" });
   const tdNum = getTdNumStyle(t, { padding: "9px 12px" });
 
@@ -2048,7 +2138,9 @@ export default function OverviewSpin() {
     position: "sticky",
     left: 0,
     zIndex: 3,
-    background: brand.blockBg,
+    background: brand.useBrand
+      ? "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)"
+      : brand.blockBg,
     boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
   };
 
@@ -2058,8 +2150,9 @@ export default function OverviewSpin() {
     left: 0,
     zIndex: 2,
     fontWeight: 600,
-    background:
-      i % 2 === 1
+    background: brand.useBrand
+      ? zebraStripeBrandContrast(i)
+      : i % 2 === 1
         ? `color-mix(in srgb, ${brand.blockBg} 92%, var(--brand-contrast, #4a2082) 8%)`
         : brand.blockBg,
     boxShadow: "2px 0 6px -2px rgba(0,0,0,0.25)",
@@ -2435,7 +2528,7 @@ export default function OverviewSpin() {
                   <Fragment key={rowKey}>
                     <tr
                       style={{
-                        background: zebraStripe(i),
+                        background: zebraTabelaSpin(i),
                       }}
                     >
                       <td style={{ ...tdStyle, fontWeight: 600 }}>
@@ -2511,8 +2604,9 @@ export default function OverviewSpin() {
                           <tr
                             key={`${rowKey}-${sl.operadora_slug}`}
                             style={{
-                              background:
-                                j % 2 === 1
+                              background: brand.useBrand
+                                ? zebraStripeBrandContrast(j)
+                                : j % 2 === 1
                                   ? "color-mix(in srgb, var(--brand-contrast, #4a2082) 4%, transparent)"
                                   : "color-mix(in srgb, var(--brand-contrast, #4a2082) 2%, transparent)",
                               borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
@@ -2583,7 +2677,11 @@ export default function OverviewSpin() {
           >
             Exibindo <strong style={{ color: t.text }}>{kpiGraficoDetalheConfig.label}</strong> por operadora
           </p>
-          <div style={{ width: "100%", height: 320 }}>
+          <div
+            role="img"
+            aria-label={`Gráfico de ${kpiGraficoDetalheConfig.label} por operadora — ${historico ? "todo o período" : mesSelecionado?.label ?? ""}`}
+            style={{ width: "100%", height: "clamp(220px, 35vh, 420px)", minHeight: 220 }}
+          >
             <ResponsiveContainer width="100%" height="100%">
               {kpiGraficoDetalheConfig.tipoGrafico === "barra" ? (
                 <BarChart
@@ -2729,14 +2827,19 @@ export default function OverviewSpin() {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 5,
-                    padding: "4px 12px",
-                    borderRadius: 999,
+                    padding: "8px 14px",
+                    minHeight: 40,
+                    borderRadius: 10,
                     cursor: "pointer",
                     fontFamily: FONT.body,
-                    fontSize: 11,
-                    fontWeight: ativo ? 700 : 400,
+                    fontSize: 12,
+                    fontWeight: ativo ? 700 : 500,
                     border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                    background: ativo ? `color-mix(in srgb, ${brand.accent} 12%, transparent)` : "transparent",
+                    background: ativo
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                      : (t.inputBg ?? t.cardBg),
                     color: ativo ? brand.accent : t.textMuted,
                     transition: "all 0.15s",
                   }}
@@ -2882,7 +2985,7 @@ export default function OverviewSpin() {
                     <tr
                       key={row.dataIso}
                       style={{
-                        background: zebraStripe(i),
+                        background: zebraTabelaSpin(i),
                       }}
                     >
                       <th scope="row" style={tdStickyComparativo(i)}>
@@ -2980,7 +3083,11 @@ export default function OverviewSpin() {
           >
             Exibindo <strong style={{ color: t.text }}>{kpiGraficoConfig.label}</strong> por jogo
           </p>
-          <div style={{ width: "100%", height: 320 }}>
+          <div
+            role="img"
+            aria-label={`Gráfico de ${kpiGraficoConfig.label} por jogo — ${historico ? "todo o período" : mesSelecionado?.label ?? ""}`}
+            style={{ width: "100%", height: "clamp(220px, 35vh, 420px)", minHeight: 220 }}
+          >
             <ResponsiveContainer width="100%" height="100%">
               {kpiGraficoConfig.tipoGrafico === "barra" ? (
                 <BarChart
@@ -3092,12 +3199,51 @@ export default function OverviewSpin() {
       className="app-page-shell app-page-shell--pb64"
       style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}
     >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: brand.primaryIconBg,
+              border: brand.primaryIconBorder,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              color: brand.primaryIconColor,
+            }}
+          >
+            <LayoutGrid size={14} aria-hidden />
+          </div>
+          <div>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: brand.primary,
+                fontFamily: FONT_TITLE,
+                margin: 0,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+              }}
+            >
+              Overview Spin
+            </h1>
+            <p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0" }}>
+              Resultados consolidados das mesas ao vivo — Baccarat, Roleta e Blackjack.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div style={{ marginBottom: 14 }}>
         <div
           style={{
             borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
+            border: `1px solid ${t.cardBorder}`,
+            background: brand.blockBg,
             padding: "12px 20px",
           }}
         >
@@ -3166,8 +3312,8 @@ export default function OverviewSpin() {
                 border: historico ? `1px solid ${brand.accent}` : `1px solid ${t.cardBorder}`,
                 background: historico
                   ? brand.useBrand
-                    ? "color-mix(in srgb, var(--brand-contrast) 15%, transparent)"
-                    : `color-mix(in srgb, ${brand.accent} 12%, transparent)`
+                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
                   : "transparent",
                 color: historico ? brand.accent : t.textMuted,
                 fontWeight: historico ? 700 : 400,
@@ -3204,10 +3350,11 @@ export default function OverviewSpin() {
                   fontFamily: FONT.body,
                   display: "flex",
                   alignItems: "center",
-                  gap: 4,
+                  gap: 6,
                 }}
               >
-                <Clock size={12} /> Carregando...
+                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                Carregando…
               </span>
             )}
           </div>
@@ -3269,7 +3416,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="Turnover"
                   value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
-                  icon={<Wallet size={16} />}
+                  icon={<ArrowUpDown size={16} />}
                   accentVar="--brand-contrast"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.turnover)}
@@ -3312,7 +3459,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="ARPU"
                   value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
-                  icon={<Coins size={16} />}
+                  icon={<CircleDollarSign size={16} />}
                   accentVar="--brand-icon-color"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.arpu)}
@@ -3338,7 +3485,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="Turnover"
                   value={kpiExibir?.turnover != null ? fmtBRL(kpiExibir.turnover) : "—"}
-                  icon={<Wallet size={16} />}
+                  icon={<ArrowUpDown size={16} />}
                   accentVar="--brand-contrast"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.turnover)}
@@ -3391,7 +3538,7 @@ export default function OverviewSpin() {
                 <KpiCard
                   label="ARPU"
                   value={kpiExibir?.arpu != null ? fmtBRL(kpiExibir.arpu) : "—"}
-                  icon={<Coins size={16} />}
+                  icon={<CircleDollarSign size={16} />}
                   accentVar="--brand-icon-color"
                   accentColor={BRAND.roxoVivo}
                   atual={nKpi(kpiExibir?.arpu)}
@@ -3406,13 +3553,23 @@ export default function OverviewSpin() {
 
       <div style={{ ...card, marginBottom: 14 }}>
         <SectionTitle icon={<Calendar size={15} />} sub={historico ? "mês a mês" : "dia a dia"}>
-          {historico ? "Comparativo Mensal" : "Detalhamento Diário"}
+          {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
         </SectionTitle>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-            <Clock size={16} style={{ marginBottom: 8 }} />
-            <div>Carregando...</div>
+          <div
+            style={{
+              padding: 40,
+              textAlign: "center",
+              color: t.textMuted,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+            <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
           </div>
         ) : tabelaRows.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
@@ -3431,9 +3588,19 @@ export default function OverviewSpin() {
                 <SectionTitle icon={<Dice6 size={15} />} sub={mesSelecionado?.label}>
                   Comparativo de Jogo
                 </SectionTitle>
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
+                <div
+                  style={{
+                    padding: 24,
+                    textAlign: "center",
+                    color: t.textMuted,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                  <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                 </div>
               </div>
               {!modoAgregadoTodasOperadoras && (
@@ -3442,18 +3609,38 @@ export default function OverviewSpin() {
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
-                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                      <Clock size={16} style={{ marginBottom: 8 }} />
-                      Carregando…
+                    <div
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: t.textMuted,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
                     <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
                       Dados por mesa
                     </SectionTitle>
-                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                      <Clock size={16} style={{ marginBottom: 8 }} />
-                      Carregando…
+                    <div
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: t.textMuted,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
                 </>
@@ -3622,14 +3809,14 @@ export default function OverviewSpin() {
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaA, ZEBRA_MESA_STRIPE_PRIMARY)}
+                        {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY)}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {renderMesaDiaTabela(linhasMesaB, ZEBRA_MESA_STRIPE_ACCENT)}
+                        {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT)}
                       </div>
                     </div>
                   </>
@@ -3643,46 +3830,20 @@ export default function OverviewSpin() {
 
                 <div className="app-conversao-funil-duo">
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        marginBottom: 10,
-                        padding: "6px 10px",
-                        borderRadius: 10,
-                        background: "color-mix(in srgb, var(--brand-icon-color, #70cae4) 10%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--brand-icon-color, #70cae4) 35%, transparent)",
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "var(--brand-icon-color, #70cae4)",
-                        fontFamily: FONT.body,
-                      }}
-                    >
+                    <div style={tituloMesaSpeedBaccarat}>
                       Speed Baccarat
                     </div>
-                    {renderMesaDiaTabela(linhasSpeedBaccarat, ZEBRA_MESA_STRIPE_SECONDARY)}
+                    {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY)}
                   </div>
                   <div
                     className="app-conversao-funil-divider"
                     style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        marginBottom: 10,
-                        padding: "6px 10px",
-                        borderRadius: 10,
-                        background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)",
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "var(--brand-action, #7c3aed)",
-                        fontFamily: FONT.body,
-                      }}
-                    >
+                    <div style={tituloMesaRoleta}>
                       Roleta
                     </div>
-                    {renderMesaDiaTabela(linhasRoleta, ZEBRA_MESA_STRIPE_SECONDARY)}
+                    {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY)}
                   </div>
                 </div>
               </div>
@@ -3701,9 +3862,19 @@ export default function OverviewSpin() {
                 <SectionTitle icon={<Dice6 size={15} />} sub="mês a mês">
                   Comparativo de Jogo
                 </SectionTitle>
-                <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                  <Clock size={16} style={{ marginBottom: 8 }} />
-                  Carregando…
+                <div
+                  style={{
+                    padding: 24,
+                    textAlign: "center",
+                    color: t.textMuted,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                  <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                 </div>
               </div>
               {!modoAgregadoTodasOperadoras && (
@@ -3712,18 +3883,38 @@ export default function OverviewSpin() {
                     <SectionTitle icon={<Target size={15} />} sub="Blackjack">
                       Comparativo de mesa
                     </SectionTitle>
-                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                      <Clock size={16} style={{ marginBottom: 8 }} />
-                      Carregando…
+                    <div
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: t.textMuted,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
                   <div style={{ ...card, marginBottom: 14 }}>
                     <SectionTitle icon={<Table2 size={15} />} sub="Baccarat e Roleta">
                       Dados por mesa
                     </SectionTitle>
-                    <div style={{ padding: 24, textAlign: "center", color: t.textMuted }}>
-                      <Clock size={16} style={{ marginBottom: 8 }} />
-                      Carregando…
+                    <div
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: t.textMuted,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
                 </>
@@ -3894,14 +4085,14 @@ export default function OverviewSpin() {
 
                         <div className="app-conversao-funil-duo">
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaA, ZEBRA_MESA_STRIPE_PRIMARY, "Mês")}
+                            {renderMesaDiaTabela(linhasMesaA, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_PRIMARY, "Mês")}
                           </div>
                           <div
                             className="app-conversao-funil-divider"
                             style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {renderMesaDiaTabela(linhasMesaB, ZEBRA_MESA_STRIPE_ACCENT, "Mês")}
+                            {renderMesaDiaTabela(linhasMesaB, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_ACCENT, "Mês")}
                           </div>
                         </div>
                       </>
@@ -3915,46 +4106,20 @@ export default function OverviewSpin() {
 
                     <div className="app-conversao-funil-duo">
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            marginBottom: 10,
-                            padding: "6px 10px",
-                            borderRadius: 10,
-                            background: "color-mix(in srgb, var(--brand-icon-color, #70cae4) 10%, transparent)",
-                            border: "1px solid color-mix(in srgb, var(--brand-icon-color, #70cae4) 35%, transparent)",
-                            textAlign: "center",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: "var(--brand-icon-color, #70cae4)",
-                            fontFamily: FONT.body,
-                          }}
-                        >
+                        <div style={tituloMesaSpeedBaccarat}>
                           Speed Baccarat
                         </div>
-                        {renderMesaDiaTabela(linhasSpeedBaccarat, ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
+                        {renderMesaDiaTabela(linhasSpeedBaccarat, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
                       </div>
                       <div
                         className="app-conversao-funil-divider"
                         style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            marginBottom: 10,
-                            padding: "6px 10px",
-                            borderRadius: 10,
-                            background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-                            border: "1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 30%, transparent)",
-                            textAlign: "center",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: "var(--brand-action, #7c3aed)",
-                            fontFamily: FONT.body,
-                          }}
-                        >
+                        <div style={tituloMesaRoleta}>
                           Roleta
                         </div>
-                        {renderMesaDiaTabela(linhasRoleta, ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
+                        {renderMesaDiaTabela(linhasRoleta, stripeMesaLinha ?? ZEBRA_MESA_STRIPE_SECONDARY, "Mês")}
                       </div>
                     </div>
                   </div>

@@ -16,7 +16,7 @@ import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { SelectComIcone } from "../../../components/dashboard";
+import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
@@ -395,29 +395,15 @@ export default function Influencers() {
   }
 
   return (
-    <div className="app-page-shell">
+    <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
 
-      {/* ── HEADER — primária ── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: brand.primaryIconBg, border: brand.primaryIconBorder,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: brand.primaryIconColor, flexShrink: 0,
-          }}>
-            <Mic size={16} aria-hidden="true" />
-          </span>
-          <div>
-            <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-              Influencers
-            </h1>
-            <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, margin: "2px 0 0" }}>
-              {showManagementUI ? "Gerencie o cadastro completo dos influencers parceiros." : "Seu perfil completo na plataforma."}
-            </p>
-          </div>
-        </div>
-      </div>
+      <DashboardPageHeader
+        icon={<Mic size={14} aria-hidden="true" />}
+        title="Influencers"
+        subtitle={showManagementUI ? "Gerencie o cadastro completo dos influencers parceiros." : "Seu perfil completo na plataforma."}
+        brand={brand}
+        t={t}
+      />
 
       {/* Quadros resumo (quem gerencia múltiplos) */}
       {showManagementUI && (
@@ -429,7 +415,7 @@ export default function Influencers() {
             <div style={{ fontSize: 36, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
               {listNoEscopo.length}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "12px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
               {STATUS_OPTS.map((s) => (
                 <div key={s} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{STATUS_LABEL[s]}</span>
@@ -437,21 +423,6 @@ export default function Influencers() {
                 </div>
               ))}
             </div>
-            {Object.keys(porPlat).length > 0 && (
-              <div style={{ borderTop: `1px solid ${t.cardBorder}`, paddingTop: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, letterSpacing: "1px", textTransform: "uppercase", fontFamily: FONT.body, marginBottom: 6 }}>
-                  Por Plataforma
-                </div>
-                {Object.entries(porPlat).sort((a, b) => b[1] - a[1]).map(([plat, n]) => (
-                  <div key={plat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: PLAT_COLOR[plat as Plataforma], fontFamily: FONT.body }}>
-                      <PlatLogo plataforma={plat} size={12} isDark={isDark ?? false} /> {plat}
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT.body }}>{n}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <div style={{ background: brand.blockBg, border: `1px solid ${BRAND.vermelho}33`, borderRadius: 18, padding: 20, boxShadow: cardShadow }}>
@@ -489,8 +460,8 @@ export default function Influencers() {
         <div style={{ marginBottom: 20 }}>
           <div style={{
             borderRadius: 14,
-            border: brand.primaryTransparentBorder,
-            background: brand.primaryTransparentBg,
+            border: `1px solid ${t.cardBorder}`,
+            background: brand.blockBg,
             padding: "12px 20px",
           }}>
             {/* Linha 1: Status / Operadora */}
@@ -508,11 +479,12 @@ export default function Influencers() {
                       background: active ? `${color}22` : "transparent",
                       color: active ? color : t.textMuted, fontSize: 12, fontWeight: active ? 700 : 400,
                       fontFamily: FONT.body, transition: "all 0.15s",
+                      lineHeight: 1,
                     }}
                   >
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                    {STATUS_LABEL[s]}
-                    {active && <X size={9} aria-hidden="true" />}
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, alignSelf: "center" }} />
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>{STATUS_LABEL[s]}</span>
+                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
                   </button>
                 );
               })}
@@ -554,6 +526,7 @@ export default function Influencers() {
               {PLATAFORMAS.map((plat) => {
                 const active = filterPlat === plat;
                 const color = PLAT_COLOR[plat as Plataforma] ?? "#94a3b8";
+                const nPlat = porPlat[plat] ?? 0;
                 return (
                   <button key={plat} type="button" onClick={() => setFilterPlat(active ? "todas" : plat)}
                     style={{
@@ -564,11 +537,16 @@ export default function Influencers() {
                       color: active ? color : color + "cc",
                       fontSize: 12, fontWeight: active ? 700 : 500,
                       fontFamily: FONT.body, transition: "all 0.15s",
+                      lineHeight: 1,
                     }}
                   >
                     <PlatLogo plataforma={plat} size={13} isDark={isDark ?? false} />
-                    {plat}
-                    {active && <X size={9} aria-hidden="true" />}
+                    <span style={{ whiteSpace: "nowrap", display: "inline-flex", alignItems: "center" }}>{plat}</span>
+                    <span style={{ width: 1, height: 10, background: `${color}44`, flexShrink: 0, alignSelf: "center" }} aria-hidden />
+                    <span style={{ fontSize: 12, fontWeight: 800, color: nPlat > 0 ? t.text : t.textMuted, fontFamily: FONT_TITLE, flexShrink: 0, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>
+                      {nPlat}
+                    </span>
+                    {active && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><X size={9} aria-hidden="true" /></span>}
                   </button>
                 );
               })}
@@ -743,9 +721,10 @@ export default function Influencers() {
                       {canais.map((c) => {
                         const link = p?.[`link_${c.toLowerCase()}` as keyof Perfil] as string;
                         const content = (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: PLAT_COLOR[c], fontFamily: FONT.body }}>
-                            <PlatLogo plataforma={c} size={12} isDark={isDark ?? false} /> {c}
-                            {link && <span style={{ fontSize: 10, opacity: 0.7 }}>↗</span>}
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: PLAT_COLOR[c], fontFamily: FONT.body, lineHeight: 1 }}>
+                            <PlatLogo plataforma={c} size={12} isDark={isDark ?? false} />
+                            <span style={{ display: "inline-flex", alignItems: "center" }}>{c}</span>
+                            {link && <span style={{ fontSize: 10, opacity: 0.7, display: "inline-flex", alignItems: "center" }}>↗</span>}
                           </span>
                         );
                         return link ? (
@@ -788,9 +767,11 @@ export default function Influencers() {
                     padding: "8px 14px", borderRadius: 10,
                     border: `1px solid ${t.cardBorder}`, background: t.inputBg ?? t.cardBg,
                     color: t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer",
+                    lineHeight: 1,
                   }}
                 >
-                  <Eye size={13} aria-hidden="true" /> Ver
+                  <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><Eye size={13} aria-hidden="true" /></span>
+                  <span style={{ display: "inline-flex", alignItems: "center" }}>Ver</span>
                 </button>
                 {podeEditarInf(inf.id) && (
                   <button
@@ -802,9 +783,11 @@ export default function Influencers() {
                       padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer",
                       background: ctaGradient,
                       color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: FONT.body,
+                      lineHeight: 1,
                     }}
                   >
-                    <Pencil size={13} aria-hidden="true" /> Editar
+                    <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}><Pencil size={13} aria-hidden="true" /></span>
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>Editar</span>
                   </button>
                 )}
               </div>
@@ -951,9 +934,10 @@ function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
                 (p?.canais ?? []).map((c) => {
                   const link = p?.[`link_${c.toLowerCase()}` as keyof Perfil] as string;
                   const inner = (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 12px", borderRadius: 20, border: `2px solid ${PLAT_COLOR[c]}`, background: `${PLAT_COLOR[c]}18`, color: PLAT_COLOR[c], fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
-                      <PlatLogo plataforma={c} size={13} isDark={isDark ?? false} /> {c}
-                      {link && <span style={{ fontSize: 10, opacity: 0.7 }}>↗</span>}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 12px", borderRadius: 20, border: `2px solid ${PLAT_COLOR[c]}`, background: `${PLAT_COLOR[c]}18`, color: PLAT_COLOR[c], fontSize: 12, fontWeight: 700, fontFamily: FONT.body, lineHeight: 1 }}>
+                      <PlatLogo plataforma={c} size={13} isDark={isDark ?? false} />
+                      <span style={{ display: "inline-flex", alignItems: "center" }}>{c}</span>
+                      {link && <span style={{ fontSize: 10, opacity: 0.7, display: "inline-flex", alignItems: "center" }}>↗</span>}
                     </span>
                   );
                   return link ? (
@@ -1263,8 +1247,9 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
                   const ativo = (form.canais ?? []).includes(p);
                   return (
                     <button key={p} type="button" onClick={() => toggleCanal(p)}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 20, cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : (t.inputBg ?? t.cardBg), color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>
-                      <PlatLogo plataforma={p} size={13} isDark={isDark ?? false} /> {p}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 20, cursor: "pointer", border: `2px solid ${ativo ? PLAT_COLOR[p] : t.cardBorder}`, background: ativo ? `${PLAT_COLOR[p]}22` : (t.inputBg ?? t.cardBg), color: ativo ? PLAT_COLOR[p] : t.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, lineHeight: 1 }}>
+                      <PlatLogo plataforma={p} size={13} isDark={isDark ?? false} />
+                      <span style={{ display: "inline-flex", alignItems: "center" }}>{p}</span>
                     </button>
                   );
                 })}
