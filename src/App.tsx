@@ -57,6 +57,7 @@ const GestaoUsuarios = lazyWithRetry(() => import("./pages/plataforma/GestaoUsua
 const GestaoOperadoras = lazyWithRetry(() => import("./pages/plataforma/GestaoOperadoras"));
 const StatusTecnico = lazyWithRetry(() => import("./pages/plataforma/StatusTecnico"));
 const Figurinos = lazyWithRetry(() => import("./pages/rh/Figurinos"));
+const RhFuncionarios = lazyWithRetry(() => import("./pages/rh/Funcionarios"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
@@ -83,6 +84,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   gestao_operadoras: GestaoOperadoras,
   status_tecnico:   StatusTecnico,
   rh_figurinos:     Figurinos,
+  rh_funcionarios:  RhFuncionarios,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
 };
