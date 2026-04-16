@@ -18,7 +18,14 @@ interface CriarUsuarioRequest {
 
 const ROLES_BLOQUEADOS = ['admin', 'gestor']  // Admin sem escopo; gestor usa tipos
 
-const GESTOR_TIPO_SLUGS = ['operacoes', 'marketing', 'afiliados', 'geral'] as const
+const GESTOR_TIPO_SLUGS = [
+  'operacoes',
+  'marketing',
+  'afiliados',
+  'geral',
+  'figurino',
+  'recursos_humanos',
+] as const
 
 /** Evita timers/listeners de Auth no cliente service_role (comum em Edge Functions travarem o isolate). */
 const supabaseServiceOptions = {

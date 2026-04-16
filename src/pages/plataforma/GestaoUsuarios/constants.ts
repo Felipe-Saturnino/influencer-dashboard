@@ -14,6 +14,8 @@ export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "marketing", label: "Marketing" },
   { slug: "afiliados", label: "Afiliados" },
   { slug: "geral", label: "Geral" },
+  { slug: "figurino", label: "Figurino" },
+  { slug: "recursos_humanos", label: "Recursos Humanos" },
 ];
 
 export const ROLES: { value: Role; label: string }[] = [
