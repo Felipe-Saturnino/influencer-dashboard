@@ -14,7 +14,6 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
@@ -84,6 +83,18 @@ type FormState = {
   pix: string;
 };
 
+type AbaFuncModal =
+  | "pessoais"
+  | "contratacao"
+  | "empresa"
+  | "bancarios"
+  | "documentos"
+  | "contratos"
+  | "historico";
+
+/** CNPJ válido genérico para persistir quando o contrato não é PJ (aba de empresa oculta). */
+const CNPJ_CONTEXTO_NAO_PJ = "00000000000191";
+
 function estadoVazioForm(): FormState {
   return {
     nome: "",
@@ -139,43 +150,6 @@ function formDeFuncionario(f: RhFuncionario): FormState {
   };
 }
 
-function SecaoForm({
-  titulo,
-  children,
-  t,
-}: {
-  titulo: string;
-  children: React.ReactNode;
-  t: ReturnType<typeof useApp>["theme"];
-}) {
-  return (
-    <fieldset
-      style={{
-        border: `1px solid ${t.cardBorder}`,
-        borderRadius: 12,
-        padding: "14px 16px",
-        marginBottom: 14,
-        fontFamily: FONT.body,
-      }}
-    >
-      <legend
-        style={{
-          padding: "0 8px",
-          fontSize: 12,
-          fontWeight: 700,
-          color: t.textMuted,
-          fontFamily: FONT_TITLE,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-        }}
-      >
-        {titulo}
-      </legend>
-      {children}
-    </fieldset>
-  );
-}
-
 export default function RhFuncionariosPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
@@ -203,6 +177,7 @@ export default function RhFuncionariosPage() {
   const [desativando, setDesativando] = useState(false);
 
   const [opcoesTimes, setOpcoesTimes] = useState<RhOrgTimeOpcao[]>([]);
+  const [abaModal, setAbaModal] = useState<AbaFuncModal>("pessoais");
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -260,6 +235,28 @@ export default function RhFuncionariosPage() {
     [form.org_time_id, opcoesTimes],
   );
 
+  const ehPJ = form.tipo_contrato === "PJ";
+
+  const abasModalDef = useMemo(() => {
+    const tabs: { key: AbaFuncModal; label: string }[] = [
+      { key: "pessoais", label: "Dados pessoais" },
+      { key: "contratacao", label: "Dados de contratação" },
+    ];
+    if (ehPJ) tabs.push({ key: "empresa", label: "Dados da empresa" });
+    tabs.push({ key: "bancarios", label: "Dados bancários" });
+    if (modalForm === "editar" || modalForm === "ver") {
+      tabs.push({ key: "documentos", label: "Documentos" }, { key: "contratos", label: "Contratos" });
+    }
+    if (modalForm === "ver") tabs.push({ key: "historico", label: "Histórico" });
+    return tabs;
+  }, [ehPJ, modalForm]);
+
+  useEffect(() => {
+    if (modalForm === "fechado") return;
+    const keys = abasModalDef.map((x) => x.key);
+    if (!keys.includes(abaModal)) setAbaModal(keys[0] ?? "pessoais");
+  }, [modalForm, abasModalDef, abaModal]);
+
   const filtrada = useMemo(() => {
     const b = busca.trim().toLowerCase();
     const digits = somenteDigitos(busca);
@@ -280,6 +277,7 @@ export default function RhFuncionariosPage() {
     setForm(estadoVazioForm());
     setFieldErr({});
     setEditId(null);
+    setAbaModal("pessoais");
     setModalForm("novo");
   };
 
@@ -287,6 +285,7 @@ export default function RhFuncionariosPage() {
     setForm(formDeFuncionario(row));
     setFieldErr({});
     setEditId(row.id);
+    setAbaModal("pessoais");
     setModalForm("editar");
   };
 
@@ -294,6 +293,7 @@ export default function RhFuncionariosPage() {
     setForm(formDeFuncionario(row));
     setFieldErr({});
     setEditId(row.id);
+    setAbaModal("pessoais");
     setModalForm("ver");
   };
 
@@ -323,8 +323,10 @@ export default function RhFuncionariosPage() {
     req("cargo", "Cargo", form.cargo);
     req("data_inicio", "Data de início", form.data_inicio);
     req("escala", "Escala", form.escala);
-    req("nome_empresa", "Nome da empresa", form.nome_empresa);
-    req("endereco_empresa", "Endereço da empresa", form.endereco_empresa);
+    if (form.tipo_contrato === "PJ") {
+      req("nome_empresa", "Nome da empresa", form.nome_empresa);
+      req("endereco_empresa", "Endereço da empresa", form.endereco_empresa);
+    }
     if (podeVerDadosSensiveis) {
       req("banco", "Banco", form.banco);
       req("agencia", "Agência", form.agencia);
@@ -335,9 +337,11 @@ export default function RhFuncionariosPage() {
     if (cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
     else if (!validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
 
-    const cnpjD = somenteDigitos(form.cnpj);
-    if (cnpjD.length !== 14) e.cnpj = "CNPJ deve ter 14 dígitos.";
-    else if (!validarCnpjDigitos(cnpjD)) e.cnpj = "CNPJ inválido.";
+    if (form.tipo_contrato === "PJ") {
+      const cnpjD = somenteDigitos(form.cnpj);
+      if (cnpjD.length !== 14) e.cnpj = "CNPJ deve ter 14 dígitos.";
+      else if (!validarCnpjDigitos(cnpjD)) e.cnpj = "CNPJ inválido.";
+    }
 
     if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
 
@@ -358,6 +362,8 @@ export default function RhFuncionariosPage() {
     data_desligamento?: string | null;
   } => {
     const sal = podeVerDadosSensiveis ? numeroDeCentavosStr(form.salarioCentavos) : 0;
+    const isPj = form.tipo_contrato === "PJ";
+    const cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
     return {
       status: "ativo",
       nome: form.nome.trim(),
@@ -375,9 +381,9 @@ export default function RhFuncionariosPage() {
       data_inicio: form.data_inicio,
       escala: form.escala.trim(),
       tipo_contrato: form.tipo_contrato,
-      nome_empresa: form.nome_empresa.trim(),
-      cnpj: somenteDigitos(form.cnpj),
-      endereco_empresa: form.endereco_empresa.trim(),
+      nome_empresa: isPj ? form.nome_empresa.trim() : form.nome_empresa.trim() || "—",
+      cnpj: cnpjFinal,
+      endereco_empresa: isPj ? form.endereco_empresa.trim() : form.endereco_empresa.trim() || "—",
       banco: form.banco.trim(),
       agencia: somenteDigitos(form.agencia),
       conta_corrente: form.conta_corrente.trim(),
@@ -409,8 +415,10 @@ export default function RhFuncionariosPage() {
       if (cadastrarOutro) {
         setForm(estadoVazioForm());
         setFieldErr({});
+        setAbaModal("pessoais");
       } else {
         setModalForm("fechado");
+        setAbaModal("pessoais");
       }
       return;
     }
@@ -441,6 +449,7 @@ export default function RhFuncionariosPage() {
       }
       setSucessoMsg("Dados atualizados.");
       setModalForm("fechado");
+      setAbaModal("pessoais");
       await carregar();
     }
   };
@@ -535,6 +544,16 @@ export default function RhFuncionariosPage() {
 
   const leitura = modalForm === "ver";
   const desabilitarCampos = leitura || salvando;
+  const tabActiveBgModal = brand.useBrand
+    ? "var(--brand-action-12)"
+    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
+  const idTabModal = (k: AbaFuncModal) => `rh-func-tab-${k}`;
+  const idPanelModal = (k: AbaFuncModal) => `rh-func-panel-${k}`;
+  const fecharModalFuncionario = () => {
+    if (salvando) return;
+    setModalForm("fechado");
+    setAbaModal("pessoais");
+  };
 
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
@@ -852,357 +871,412 @@ export default function RhFuncionariosPage() {
       </div>
 
       {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && (
-        <ModalBase maxWidth={720} onClose={() => !salvando && setModalForm("fechado")}>
+        <ModalBase maxWidth={720} onClose={fecharModalFuncionario}>
           <ModalHeader
             title={modalForm === "novo" ? "Novo funcionário" : modalForm === "editar" ? "Editar funcionário" : "Detalhes do funcionário"}
-            onClose={() => !salvando && setModalForm("fechado")}
+            onClose={fecharModalFuncionario}
           />
 
-          <SecaoForm titulo="Dados pessoais" t={t}>
-            <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-nome", "Nome completo")}
-                <input
-                  id="f-nome"
-                  disabled={desabilitarCampos}
-                  value={form.nome}
-                  onChange={(e) => setForm((s) => ({ ...s, nome: e.target.value }))}
-                  style={inputStyle}
-                />
-                {fieldErr.nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-rg", "RG")}
-                <input
-                  id="f-rg"
-                  disabled={desabilitarCampos}
-                  value={form.rg}
-                  onChange={(e) => setForm((s) => ({ ...s, rg: formatarRgInput(e.target.value) }))}
-                  placeholder="00.000.000-0"
-                  style={inputStyle}
-                />
-                {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-cpf", "CPF")}
-                <input
-                  id="f-cpf"
-                  disabled={desabilitarCampos || modalForm === "editar"}
-                  value={form.cpf}
-                  onChange={(e) => setForm((s) => ({ ...s, cpf: formatarCpfDigitos(e.target.value) }))}
-                  placeholder="000.000.000-00"
-                  style={inputStyle}
-                  title={modalForm === "editar" ? "CPF não pode ser alterado" : undefined}
-                />
-                {fieldErr.cpf ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cpf}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-tel", "Telefone")}
-                <input
-                  id="f-tel"
-                  disabled={desabilitarCampos}
-                  value={form.telefone}
-                  onChange={(e) => setForm((s) => ({ ...s, telefone: formatarTelefoneBr(e.target.value) }))}
-                  placeholder="(00) 00000-0000"
-                  style={inputStyle}
-                />
-                {fieldErr.telefone ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.telefone}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                {lbl("f-email", "E-mail")}
-                <input
-                  id="f-email"
-                  type="email"
-                  disabled={desabilitarCampos}
-                  value={form.email}
-                  onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))}
-                  style={inputStyle}
-                />
-                {fieldErr.email ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                {lbl("f-end", "Endereço residencial")}
-                <input
-                  id="f-end"
-                  disabled={desabilitarCampos}
-                  value={form.endereco_residencial}
-                  onChange={(e) => setForm((s) => ({ ...s, endereco_residencial: e.target.value }))}
-                  style={inputStyle}
-                />
-                {fieldErr.endereco_residencial ? (
-                  <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.endereco_residencial}</div>
-                ) : null}
-              </div>
-              <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                {lbl("f-emerg", "Contato de emergência (nome e telefone)")}
-                <input
-                  id="f-emerg"
-                  disabled={desabilitarCampos}
-                  value={form.contato_emergencia}
-                  onChange={(e) => setForm((s) => ({ ...s, contato_emergencia: e.target.value }))}
-                  style={inputStyle}
-                />
-                {fieldErr.contato_emergencia ? (
-                  <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.contato_emergencia}</div>
-                ) : null}
-              </div>
-            </div>
-          </SecaoForm>
-
-          <SecaoForm titulo="Dados profissionais" t={t}>
-            <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
-              <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                {usarSelectTime ? (
-                  <>
-                    {lbl("f-org-time", "Time (organograma)")}
-                    <select
-                      id="f-org-time"
-                      disabled={desabilitarCampos}
-                      value={form.org_time_id ?? ""}
-                      onChange={(e) => {
-                        const id = e.target.value;
-                        if (!id) {
-                          setForm((s) => ({ ...s, org_time_id: null, setor: "" }));
-                          return;
-                        }
-                        const op = opcoesTimes.find((x) => x.timeId === id);
-                        if (op) setForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
-                      }}
-                      aria-label="Time no organograma"
-                      style={inputStyle}
-                    >
-                      <option value="">— Selecione —</option>
-                      {opcoesTimes.map((o) => (
-                        <option key={o.timeId} value={o.timeId}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    {fieldErr.org_time_id ? (
-                      <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div>
-                    ) : null}
-                    {opcaoTimeSelecionada ? (
-                      <div
-                        style={{
-                          marginTop: 10,
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          border: `1px solid ${t.cardBorder}`,
-                          background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)",
-                          fontSize: 12,
-                          color: t.textMuted,
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        <div>
-                          <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoTimeSelecionada.diretoriaNome}
-                        </div>
-                        <div>
-                          <strong style={{ color: t.text }}>Gerência:</strong> {opcaoTimeSelecionada.gerenciaNome}
-                        </div>
-                        <div>
-                          <strong style={{ color: t.text }}>Gestor imediato:</strong> {opcaoTimeSelecionada.gestorNome}
-                        </div>
-                        <div>
-                          <strong style={{ color: t.text }}>Setor (nome do time):</strong> {opcaoTimeSelecionada.timeNome}
-                        </div>
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    {lbl("f-setor", "Setor")}
-                    <input
-                      id="f-setor"
-                      disabled={desabilitarCampos}
-                      value={form.setor}
-                      onChange={(e) => setForm((s) => ({ ...s, setor: e.target.value, org_time_id: null }))}
-                      style={inputStyle}
-                      list="lista-setores"
-                    />
-                    <datalist id="lista-setores">
-                      {setoresUnicos.map((s) => (
-                        <option key={s} value={s} />
-                      ))}
-                    </datalist>
-                    {permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length === 0 ? (
-                      <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6 }}>
-                        Nenhum time ativo no organograma. Cadastre a estrutura em RH → Organograma ou informe o setor manualmente.
-                      </div>
-                    ) : null}
-                  </>
-                )}
-                {fieldErr.setor ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.setor}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-cargo", "Cargo")}
-                <input id="f-cargo" disabled={desabilitarCampos} value={form.cargo} onChange={(e) => setForm((s) => ({ ...s, cargo: e.target.value }))} style={inputStyle} />
-                {fieldErr.cargo ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cargo}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-nivel", "Nível")}
-                <select
-                  id="f-nivel"
-                  disabled={desabilitarCampos}
-                  value={form.nivel}
-                  onChange={(e) => setForm((s) => ({ ...s, nivel: e.target.value }))}
-                  style={inputStyle}
-                  aria-label="Nível profissional"
+          <div
+            role="tablist"
+            aria-label="Seções do cadastro"
+            style={{
+              display: "flex",
+              gap: 6,
+              marginBottom: 16,
+              flexWrap: "nowrap",
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
+              paddingBottom: 2,
+            }}
+          >
+            {abasModalDef.map((tb) => {
+              const ativa = abaModal === tb.key;
+              return (
+                <button
+                  key={tb.key}
+                  type="button"
+                  role="tab"
+                  id={idTabModal(tb.key)}
+                  aria-selected={ativa}
+                  aria-controls={idPanelModal(tb.key)}
+                  tabIndex={ativa ? 0 : -1}
+                  onClick={() => setAbaModal(tb.key)}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: 20,
+                    flexShrink: 0,
+                    border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
+                    background: ativa ? tabActiveBgModal : (t.inputBg ?? t.cardBg),
+                    color: ativa ? brand.primary : t.textMuted,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                  }}
                 >
-                  {NIVEIS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-tipo", "Tipo de contrato")}
-                <select
-                  id="f-tipo"
-                  disabled={desabilitarCampos}
-                  value={form.tipo_contrato}
-                  onChange={(e) => setForm((s) => ({ ...s, tipo_contrato: e.target.value as RhFuncionarioTipoContrato }))}
-                  style={inputStyle}
-                  aria-label="Tipo de contrato"
-                >
-                  {TIPOS_CONTRATO.map((x) => (
-                    <option key={x.value} value={x.value}>
-                      {x.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {podeVerDadosSensiveis ? (
-                <div style={{ marginBottom: 10 }}>
-                  {lbl("f-sal", "Salário")}
-                  <input
-                    id="f-sal"
-                    disabled={desabilitarCampos}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={form.salarioCentavos ? formatarMoedaDigitos(form.salarioCentavos) : ""}
-                    onChange={(e) => setForm((s) => ({ ...s, salarioCentavos: centavosDeStringMoeda(e.target.value) }))}
-                    placeholder="R$ 0,00"
-                    style={inputStyle}
-                  />
-                  {fieldErr.salarioCentavos ? (
-                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.salarioCentavos}</div>
-                  ) : null}
-                </div>
-              ) : (
-                <div style={{ marginBottom: 10, padding: 10, borderRadius: 10, background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 8%, transparent)", fontSize: 12, color: t.textMuted }}>
-                  Salário e dados bancários: visíveis apenas para administrador ou quem tem permissão de edição nesta página.
-                </div>
-              )}
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-ini", "Data de início")}
-                <input
-                  id="f-ini"
-                  type="date"
-                  disabled={desabilitarCampos}
-                  value={form.data_inicio}
-                  onChange={(e) => setForm((s) => ({ ...s, data_inicio: e.target.value }))}
-                  style={inputStyle}
-                />
-                {fieldErr.data_inicio ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_inicio}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-escala", "Escala")}
-                <input id="f-escala" disabled={desabilitarCampos} value={form.escala} onChange={(e) => setForm((s) => ({ ...s, escala: e.target.value }))} style={inputStyle} list="lista-escalas" />
-                <datalist id="lista-escalas">
-                  {ESCALAS_SUGEST.map((x) => (
-                    <option key={x} value={x} />
-                  ))}
-                </datalist>
-                {fieldErr.escala ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.escala}</div> : null}
-              </div>
-            </div>
-          </SecaoForm>
+                  {tb.label}
+                </button>
+              );
+            })}
+          </div>
 
-          <SecaoForm titulo="Empresa contratante" t={t}>
-            <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
-              <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                {lbl("f-empnome", "Nome da empresa")}
-                <input
-                  id="f-empnome"
-                  disabled={desabilitarCampos}
-                  value={form.nome_empresa}
-                  onChange={(e) => setForm((s) => ({ ...s, nome_empresa: e.target.value }))}
-                  style={inputStyle}
-                />
-                {fieldErr.nome_empresa ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome_empresa}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                {lbl("f-cnpj", "CNPJ")}
-                <input
-                  id="f-cnpj"
-                  disabled={desabilitarCampos}
-                  value={form.cnpj}
-                  onChange={(e) => setForm((s) => ({ ...s, cnpj: formatarCnpjDigitos(e.target.value) }))}
-                  placeholder="00.000.000/0000-00"
-                  style={inputStyle}
-                />
-                {fieldErr.cnpj ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cnpj}</div> : null}
-              </div>
-              <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                {lbl("f-empend", "Endereço da empresa")}
-                <input
-                  id="f-empend"
-                  disabled={desabilitarCampos}
-                  value={form.endereco_empresa}
-                  onChange={(e) => setForm((s) => ({ ...s, endereco_empresa: e.target.value }))}
-                  style={inputStyle}
-                />
-                {fieldErr.endereco_empresa ? (
-                  <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.endereco_empresa}</div>
-                ) : null}
-              </div>
-            </div>
-          </SecaoForm>
-
-          <SecaoForm titulo="Dados bancários" t={t}>
-            {podeVerDadosSensiveis ? (
+          <div
+            role="tabpanel"
+            id={idPanelModal(abaModal)}
+            aria-labelledby={idTabModal(abaModal)}
+            style={{ minHeight: 100 }}
+          >
+            {abaModal === "pessoais" ? (
               <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-banco", "Banco")}
-                  <input id="f-banco" disabled={desabilitarCampos} value={form.banco} onChange={(e) => setForm((s) => ({ ...s, banco: e.target.value }))} style={inputStyle} />
-                  {fieldErr.banco ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.banco}</div> : null}
+                  {lbl("f-nome", "Nome completo")}
+                  <input
+                    id="f-nome"
+                    disabled={desabilitarCampos}
+                    value={form.nome}
+                    onChange={(e) => setForm((s) => ({ ...s, nome: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  {fieldErr.nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-ag", "Agência")}
+                  {lbl("f-rg", "RG")}
                   <input
-                    id="f-ag"
+                    id="f-rg"
                     disabled={desabilitarCampos}
-                    value={form.agencia}
-                    onChange={(e) => setForm((s) => ({ ...s, agencia: formatarAgencia(e.target.value) }))}
-                    placeholder="0000-0"
+                    value={form.rg}
+                    onChange={(e) => setForm((s) => ({ ...s, rg: formatarRgInput(e.target.value) }))}
+                    placeholder="00.000.000-0"
                     style={inputStyle}
                   />
-                  {fieldErr.agencia ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.agencia}</div> : null}
+                  {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-cpf", "CPF")}
+                  <input
+                    id="f-cpf"
+                    disabled={desabilitarCampos || modalForm === "editar"}
+                    value={form.cpf}
+                    onChange={(e) => setForm((s) => ({ ...s, cpf: formatarCpfDigitos(e.target.value) }))}
+                    placeholder="000.000.000-00"
+                    style={inputStyle}
+                    title={modalForm === "editar" ? "CPF não pode ser alterado" : undefined}
+                  />
+                  {fieldErr.cpf ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cpf}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-tel", "Telefone")}
+                  <input
+                    id="f-tel"
+                    disabled={desabilitarCampos}
+                    value={form.telefone}
+                    onChange={(e) => setForm((s) => ({ ...s, telefone: formatarTelefoneBr(e.target.value) }))}
+                    placeholder="(00) 00000-0000"
+                    style={inputStyle}
+                  />
+                  {fieldErr.telefone ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.telefone}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-cc", "Conta corrente")}
+                  {lbl("f-email", "E-mail")}
                   <input
-                    id="f-cc"
+                    id="f-email"
+                    type="email"
                     disabled={desabilitarCampos}
-                    value={form.conta_corrente}
-                    onChange={(e) => setForm((s) => ({ ...s, conta_corrente: e.target.value }))}
+                    value={form.email}
+                    onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))}
                     style={inputStyle}
                   />
-                  {fieldErr.conta_corrente ? (
-                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.conta_corrente}</div>
+                  {fieldErr.email ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lbl("f-end", "Endereço residencial")}
+                  <input
+                    id="f-end"
+                    disabled={desabilitarCampos}
+                    value={form.endereco_residencial}
+                    onChange={(e) => setForm((s) => ({ ...s, endereco_residencial: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  {fieldErr.endereco_residencial ? (
+                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.endereco_residencial}</div>
                   ) : null}
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-pix", "PIX (opcional)")}
-                  <input id="f-pix" disabled={desabilitarCampos} value={form.pix} onChange={(e) => setForm((s) => ({ ...s, pix: e.target.value }))} style={inputStyle} />
+                  {lbl("f-emerg", "Contato de emergência (nome e telefone)")}
+                  <input
+                    id="f-emerg"
+                    disabled={desabilitarCampos}
+                    value={form.contato_emergencia}
+                    onChange={(e) => setForm((s) => ({ ...s, contato_emergencia: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  {fieldErr.contato_emergencia ? (
+                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.contato_emergencia}</div>
+                  ) : null}
                 </div>
               </div>
-            ) : (
-              <p style={{ margin: "8px 0 0", fontSize: 13, color: t.textMuted }}>Dados bancários ocultos para o seu perfil.</p>
-            )}
-          </SecaoForm>
+            ) : null}
+
+            {abaModal === "contratacao" ? (
+              <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {usarSelectTime ? (
+                    <>
+                      {lbl("f-org-time", "Time (organograma)")}
+                      <select
+                        id="f-org-time"
+                        disabled={desabilitarCampos}
+                        value={form.org_time_id ?? ""}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          if (!id) {
+                            setForm((s) => ({ ...s, org_time_id: null, setor: "" }));
+                            return;
+                          }
+                          const op = opcoesTimes.find((x) => x.timeId === id);
+                          if (op) setForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
+                        }}
+                        aria-label="Time no organograma"
+                        style={inputStyle}
+                      >
+                        <option value="">— Selecione —</option>
+                        {opcoesTimes.map((o) => (
+                          <option key={o.timeId} value={o.timeId}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {fieldErr.org_time_id ? (
+                        <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div>
+                      ) : null}
+                      {opcaoTimeSelecionada ? (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            padding: "10px 12px",
+                            borderRadius: 10,
+                            border: `1px solid ${t.cardBorder}`,
+                            background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)",
+                            fontSize: 12,
+                            color: t.textMuted,
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          <div>
+                            <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoTimeSelecionada.diretoriaNome}
+                          </div>
+                          <div>
+                            <strong style={{ color: t.text }}>Gerência:</strong> {opcaoTimeSelecionada.gerenciaNome}
+                          </div>
+                          <div>
+                            <strong style={{ color: t.text }}>Gestor imediato:</strong> {opcaoTimeSelecionada.gestorNome}
+                          </div>
+                          <div>
+                            <strong style={{ color: t.text }}>Setor (nome do time):</strong> {opcaoTimeSelecionada.timeNome}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      {lbl("f-setor", "Setor")}
+                      <input
+                        id="f-setor"
+                        disabled={desabilitarCampos}
+                        value={form.setor}
+                        onChange={(e) => setForm((s) => ({ ...s, setor: e.target.value, org_time_id: null }))}
+                        style={inputStyle}
+                        list="lista-setores"
+                      />
+                      <datalist id="lista-setores">
+                        {setoresUnicos.map((s) => (
+                          <option key={s} value={s} />
+                        ))}
+                      </datalist>
+                      {permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length === 0 ? (
+                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6 }}>
+                          Nenhum time ativo no organograma. Cadastre a estrutura em RH → Organograma ou informe o setor manualmente.
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                  {fieldErr.setor ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.setor}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-cargo", "Cargo")}
+                  <input id="f-cargo" disabled={desabilitarCampos} value={form.cargo} onChange={(e) => setForm((s) => ({ ...s, cargo: e.target.value }))} style={inputStyle} />
+                  {fieldErr.cargo ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cargo}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-nivel", "Nível")}
+                  <select
+                    id="f-nivel"
+                    disabled={desabilitarCampos}
+                    value={form.nivel}
+                    onChange={(e) => setForm((s) => ({ ...s, nivel: e.target.value }))}
+                    style={inputStyle}
+                    aria-label="Nível profissional"
+                  >
+                    {NIVEIS.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-tipo", "Tipo de contrato")}
+                  <select
+                    id="f-tipo"
+                    disabled={desabilitarCampos}
+                    value={form.tipo_contrato}
+                    onChange={(e) => setForm((s) => ({ ...s, tipo_contrato: e.target.value as RhFuncionarioTipoContrato }))}
+                    style={inputStyle}
+                    aria-label="Tipo de contrato"
+                  >
+                    {TIPOS_CONTRATO.map((x) => (
+                      <option key={x.value} value={x.value}>
+                        {x.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {podeVerDadosSensiveis ? (
+                  <div style={{ marginBottom: 10 }}>
+                    {lbl("f-sal", "Salário")}
+                    <input
+                      id="f-sal"
+                      disabled={desabilitarCampos}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={form.salarioCentavos ? formatarMoedaDigitos(form.salarioCentavos) : ""}
+                      onChange={(e) => setForm((s) => ({ ...s, salarioCentavos: centavosDeStringMoeda(e.target.value) }))}
+                      placeholder="R$ 0,00"
+                      style={inputStyle}
+                    />
+                    {fieldErr.salarioCentavos ? (
+                      <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.salarioCentavos}</div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: 10, padding: 10, borderRadius: 10, background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 8%, transparent)", fontSize: 12, color: t.textMuted }}>
+                    Salário e dados bancários: visíveis apenas para administrador ou quem tem permissão de edição nesta página.
+                  </div>
+                )}
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-ini", "Data de início")}
+                  <input
+                    id="f-ini"
+                    type="date"
+                    disabled={desabilitarCampos}
+                    value={form.data_inicio}
+                    onChange={(e) => setForm((s) => ({ ...s, data_inicio: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  {fieldErr.data_inicio ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_inicio}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-escala", "Escala")}
+                  <input id="f-escala" disabled={desabilitarCampos} value={form.escala} onChange={(e) => setForm((s) => ({ ...s, escala: e.target.value }))} style={inputStyle} list="lista-escalas" />
+                  <datalist id="lista-escalas">
+                    {ESCALAS_SUGEST.map((x) => (
+                      <option key={x} value={x} />
+                    ))}
+                  </datalist>
+                  {fieldErr.escala ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.escala}</div> : null}
+                </div>
+              </div>
+            ) : null}
+
+            {abaModal === "empresa" && ehPJ ? (
+              <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lbl("f-empnome", "Nome da empresa")}
+                  <input
+                    id="f-empnome"
+                    disabled={desabilitarCampos}
+                    value={form.nome_empresa}
+                    onChange={(e) => setForm((s) => ({ ...s, nome_empresa: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  {fieldErr.nome_empresa ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome_empresa}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-cnpj", "CNPJ")}
+                  <input
+                    id="f-cnpj"
+                    disabled={desabilitarCampos}
+                    value={form.cnpj}
+                    onChange={(e) => setForm((s) => ({ ...s, cnpj: formatarCnpjDigitos(e.target.value) }))}
+                    placeholder="00.000.000/0000-00"
+                    style={inputStyle}
+                  />
+                  {fieldErr.cnpj ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cnpj}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lbl("f-empend", "Endereço da empresa")}
+                  <input
+                    id="f-empend"
+                    disabled={desabilitarCampos}
+                    value={form.endereco_empresa}
+                    onChange={(e) => setForm((s) => ({ ...s, endereco_empresa: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  {fieldErr.endereco_empresa ? (
+                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.endereco_empresa}</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {abaModal === "bancarios" ? (
+              podeVerDadosSensiveis ? (
+                <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
+                  <div style={{ marginBottom: 10 }}>
+                    {lbl("f-banco", "Banco")}
+                    <input id="f-banco" disabled={desabilitarCampos} value={form.banco} onChange={(e) => setForm((s) => ({ ...s, banco: e.target.value }))} style={inputStyle} />
+                    {fieldErr.banco ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.banco}</div> : null}
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    {lbl("f-ag", "Agência")}
+                    <input
+                      id="f-ag"
+                      disabled={desabilitarCampos}
+                      value={form.agencia}
+                      onChange={(e) => setForm((s) => ({ ...s, agencia: formatarAgencia(e.target.value) }))}
+                      placeholder="0000-0"
+                      style={inputStyle}
+                    />
+                    {fieldErr.agencia ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.agencia}</div> : null}
+                  </div>
+                  <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                    {lbl("f-cc", "Conta corrente")}
+                    <input
+                      id="f-cc"
+                      disabled={desabilitarCampos}
+                      value={form.conta_corrente}
+                      onChange={(e) => setForm((s) => ({ ...s, conta_corrente: e.target.value }))}
+                      style={inputStyle}
+                    />
+                    {fieldErr.conta_corrente ? (
+                      <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.conta_corrente}</div>
+                    ) : null}
+                  </div>
+                  <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                    {lbl("f-pix", "PIX (opcional)")}
+                    <input id="f-pix" disabled={desabilitarCampos} value={form.pix} onChange={(e) => setForm((s) => ({ ...s, pix: e.target.value }))} style={inputStyle} />
+                  </div>
+                </div>
+              ) : (
+                <p style={{ margin: "8px 0 0", fontSize: 13, color: t.textMuted }}>Dados bancários ocultos para o seu perfil.</p>
+              )
+            ) : null}
+
+            {abaModal === "documentos" || abaModal === "contratos" || abaModal === "historico" ? (
+              <div style={{ minHeight: 120 }} aria-hidden />
+            ) : null}
+          </div>
 
           {!leitura ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
