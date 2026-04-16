@@ -2203,7 +2203,6 @@ function ModalDescartarPeca({
   onOk: () => void | Promise<void>;
 }) {
   const { theme: t } = useApp();
-  const brand = useDashboardBrand();
   const [motivo, setMotivo] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
