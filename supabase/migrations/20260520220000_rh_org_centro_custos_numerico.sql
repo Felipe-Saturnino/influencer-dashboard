@@ -1,20 +1,15 @@
--- RH Organograma: código hierárquico de centro de custos (Diretoria > Gerência > Time).
+-- Renumerar centro_custos para padrão só dígitos (3 + 3 + 3), por created_at.
+-- Idempotente; substitui formatos anteriores (RH.D…, D.xxx hex, etc.).
 
 BEGIN;
-
-ALTER TABLE public.rh_org_diretorias ADD COLUMN IF NOT EXISTS centro_custos text;
-ALTER TABLE public.rh_org_gerencias ADD COLUMN IF NOT EXISTS centro_custos text;
-ALTER TABLE public.rh_org_times ADD COLUMN IF NOT EXISTS centro_custos text;
 
 UPDATE public.rh_org_diretorias d
 SET centro_custos = x.c
 FROM (
   SELECT id, lpad((row_number() OVER (ORDER BY created_at ASC, id ASC))::text, 3, '0') AS c
   FROM public.rh_org_diretorias
-  WHERE centro_custos IS NULL OR btrim(centro_custos) = ''
 ) x
-WHERE x.id = d.id
-  AND (d.centro_custos IS NULL OR btrim(d.centro_custos) = '');
+WHERE x.id = d.id;
 
 UPDATE public.rh_org_gerencias g
 SET centro_custos = x.c
@@ -23,10 +18,8 @@ FROM (
     (d.centro_custos || lpad((row_number() OVER (PARTITION BY g2.diretoria_id ORDER BY g2.created_at ASC, g2.id ASC))::text, 3, '0')) AS c
   FROM public.rh_org_gerencias g2
   INNER JOIN public.rh_org_diretorias d ON d.id = g2.diretoria_id
-  WHERE g2.centro_custos IS NULL OR btrim(g2.centro_custos) = ''
 ) x
-WHERE x.id = g.id
-  AND (g.centro_custos IS NULL OR btrim(g.centro_custos) = '');
+WHERE x.id = g.id;
 
 UPDATE public.rh_org_times t
 SET centro_custos = x.c
@@ -35,14 +28,8 @@ FROM (
     (gr.centro_custos || lpad((row_number() OVER (PARTITION BY t2.gerencia_id ORDER BY t2.created_at ASC, t2.id ASC))::text, 3, '0')) AS c
   FROM public.rh_org_times t2
   INNER JOIN public.rh_org_gerencias gr ON gr.id = t2.gerencia_id
-  WHERE t2.centro_custos IS NULL OR btrim(t2.centro_custos) = ''
 ) x
-WHERE x.id = t.id
-  AND (t.centro_custos IS NULL OR btrim(t.centro_custos) = '');
-
-ALTER TABLE public.rh_org_diretorias ALTER COLUMN centro_custos SET NOT NULL;
-ALTER TABLE public.rh_org_gerencias ALTER COLUMN centro_custos SET NOT NULL;
-ALTER TABLE public.rh_org_times ALTER COLUMN centro_custos SET NOT NULL;
+WHERE x.id = t.id;
 
 COMMENT ON COLUMN public.rh_org_diretorias.centro_custos IS 'Centro de custos numérico 3 dígitos (ordem de criação), ex.: 001.';
 COMMENT ON COLUMN public.rh_org_gerencias.centro_custos IS 'Numérico: código da diretoria (3) + ordem na diretoria (3), ex.: 001002.';

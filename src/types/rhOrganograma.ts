@@ -7,7 +7,7 @@ export interface RhOrgDiretoria {
   diretor_nome_livre: string | null;
   diretor_foto_url: string | null;
   diretor_sobre: string;
-  /** Código fixo hierárquico (ex.: RH.D.XXXXXXXX). */
+  /** Código numérico 3 dígitos (ex.: 001). */
   centro_custos: string;
   status: RhOrgStatus;
   created_at: string;
@@ -21,7 +21,7 @@ export interface RhOrgGerencia {
   gerente_funcionario_id: string | null;
   gerente_nome_livre: string | null;
   sobre_gerencia: string;
-  /** Sufixo hierárquico sobre a diretoria (… .G.XXXXXX). */
+  /** Código numérico: diretoria (3) + ordem na diretoria (3), ex.: 001002. */
   centro_custos: string;
   status: RhOrgStatus;
   created_at: string;
@@ -34,7 +34,7 @@ export interface RhOrgTime {
   nome: string;
   lider_funcionario_id: string | null;
   lider_nome_livre: string | null;
-  /** Sufixo hierárquico sobre a gerência (… .T.XXXXXX). */
+  /** Código numérico: gerência (6) + ordem na gerência (3), ex.: 001002003. */
   centro_custos: string;
   status: RhOrgStatus;
   created_at: string;
