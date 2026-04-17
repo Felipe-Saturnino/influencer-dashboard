@@ -4,6 +4,7 @@ import type {
   RhOrgDiretoriaComFilhos,
   RhOrgGerencia,
   RhOrgGerenciaComFilhos,
+  RhOrgOrganogramaGrupoPrestador,
   RhOrgTime,
   RhOrgTimeOpcao,
 } from "../types/rhOrganograma";
@@ -36,25 +37,47 @@ export function montarArvoreOrganograma(
   });
 }
 
-/** Times ativos cuja diretoria e gerência estão ativas — para vínculo no funcionário. */
-export function flattenTimesAtivosParaSelect(
+function nomeLivreOuFuncMap(
+  nomePorFuncionarioId: Map<string, string>,
+  fid: string | null | undefined,
+  livre: string | null | undefined,
+): string {
+  if (fid && nomePorFuncionarioId.has(fid)) return nomePorFuncionarioId.get(fid)!;
+  return (livre ?? "").trim();
+}
+
+/**
+ * Toda a estrutura ativa (diretoria › gerência) para o cadastro de prestador.
+ * Ramos sem time ativo aparecem com `times` vazio (optgroup + opção desabilitada na UI).
+ */
+export function buildGruposOrganogramaPrestador(
   arvore: RhOrgDiretoriaComFilhos[],
   nomePorFuncionarioId: Map<string, string>,
-): RhOrgTimeOpcao[] {
-  const out: RhOrgTimeOpcao[] = [];
-  const nomeLivreOuFunc = (fid: string | null | undefined, livre: string | null | undefined) => {
-    if (fid && nomePorFuncionarioId.has(fid)) return nomePorFuncionarioId.get(fid)!;
-    return (livre ?? "").trim();
-  };
+): RhOrgOrganogramaGrupoPrestador[] {
+  const grupos: RhOrgOrganogramaGrupoPrestador[] = [];
+  const emptyGer = "Nenhuma gerência cadastrada — inclua em RH → Organograma.";
+  const emptyTime = "Nenhum time ativo — cadastre um time em RH → Organograma.";
 
   arvore.forEach((d) => {
     if (d.status !== "ativo") return;
+    if (d.gerencias.length === 0) {
+      grupos.push({
+        key: `d-${d.id}-sem-ger`,
+        label: d.nome,
+        times: [],
+        emptyLabel: emptyGer,
+      });
+      return;
+    }
     d.gerencias.forEach((g) => {
       if (g.status !== "ativo") return;
+      const times: RhOrgTimeOpcao[] = [];
       g.times.forEach((ti) => {
         if (ti.status !== "ativo") return;
-        const gestor = nomeLiderImediatoTime(d, g, ti, nomeLivreOuFunc).trim() || "—";
-        out.push({
+        const gestor = nomeLiderImediatoTime(d, g, ti, (fid, livre) =>
+          nomeLivreOuFuncMap(nomePorFuncionarioId, fid, livre),
+        ).trim() || "—";
+        times.push({
           timeId: ti.id,
           timeNome: ti.nome,
           gerenciaNome: g.nome,
@@ -63,9 +86,25 @@ export function flattenTimesAtivosParaSelect(
           gestorNome: gestor,
         });
       });
+      grupos.push({
+        key: `d-${d.id}-g-${g.id}`,
+        label: `${d.nome} › ${g.nome}`,
+        times,
+        emptyLabel: emptyTime,
+      });
     });
   });
-  return out.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+
+  return grupos.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+}
+
+/** Times ativos cuja diretoria e gerência estão ativas — lista flat (filtros, buscas). */
+export function flattenTimesAtivosParaSelect(
+  arvore: RhOrgDiretoriaComFilhos[],
+  nomePorFuncionarioId: Map<string, string>,
+): RhOrgTimeOpcao[] {
+  const flat = buildGruposOrganogramaPrestador(arvore, nomePorFuncionarioId).flatMap((gr) => gr.times);
+  return flat.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 }
 
 export function contarTimesAtivosFilhosDeGerencia(arvore: RhOrgDiretoriaComFilhos[], gerenciaId: string): number {

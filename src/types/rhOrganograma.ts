@@ -58,3 +58,12 @@ export interface RhOrgTimeOpcao {
   label: string;
   gestorNome: string;
 }
+
+/** Agrupamento Diretoria › Gerência para select na Gestão de Prestadores (inclui ramos sem time). */
+export interface RhOrgOrganogramaGrupoPrestador {
+  key: string;
+  label: string;
+  times: RhOrgTimeOpcao[];
+  /** Opção desabilitada quando `times` está vazio. */
+  emptyLabel: string;
+}

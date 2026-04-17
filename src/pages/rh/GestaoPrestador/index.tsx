@@ -48,8 +48,9 @@ import type {
   RhHistoricoAcaoTipo,
 } from "../../../types/rhFuncionario";
 import { uploadAnexosAcaoRh } from "../../../lib/rhPrestadorAcaoFiles";
-import type { RhOrgTimeOpcao } from "../../../types/rhOrganograma";
+import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
+import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
 import { SkeletonTableRow } from "../../../components/dashboard/SkeletonCard";
@@ -394,7 +395,7 @@ function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean):
   const tel = somenteDigitos(r.telefone);
   if (tel.length < 10 || tel.length > 11) return true;
   if (!r.rg?.trim()) return true;
-  if (!r.res_logradouro?.trim() || !r.res_cidade?.trim()) return true;
+  if (!r.res_logradouro?.trim() || !r.res_numero?.trim() || !r.res_cidade?.trim()) return true;
   const uf = (r.res_estado ?? "").trim().toUpperCase();
   if (uf.length !== 2 || !UFS_BR.includes(uf as (typeof UFS_BR)[number])) return true;
   const cep = somenteDigitos(r.res_cep ?? "");
@@ -410,7 +411,7 @@ function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean):
   if (r.tipo_contrato === "PJ") {
     const cnpj = somenteDigitos(r.cnpj);
     if (cnpj.length !== 14 || !validarCnpjDigitos(cnpj)) return true;
-    if (!r.nome_empresa?.trim() || !r.emp_logradouro?.trim() || !r.emp_cidade?.trim()) return true;
+    if (!r.nome_empresa?.trim() || !r.emp_logradouro?.trim() || !r.emp_numero?.trim() || !r.emp_cidade?.trim()) return true;
     const ufe = (r.emp_estado ?? "").trim().toUpperCase();
     if (ufe.length !== 2 || !UFS_BR.includes(ufe as (typeof UFS_BR)[number])) return true;
     const cepE = somenteDigitos(r.emp_cep ?? "");
@@ -812,6 +813,7 @@ export default function RhPrestadoresPage() {
   const [salvando, setSalvando] = useState(false);
 
   const [opcoesTimes, setOpcoesTimes] = useState<RhOrgTimeOpcao[]>([]);
+  const [organogramaGrupos, setOrganogramaGrupos] = useState<RhOrgOrganogramaGrupoPrestador[]>([]);
   const [abaModal, setAbaModal] = useState<AbaFuncModal>("pessoais");
   /** No modal Visualizar: false = dados sensíveis com blur (ocultar). */
   const [modalVerExibirSensiveis, setModalVerExibirSensiveis] = useState(false);
@@ -854,14 +856,20 @@ export default function RhPrestadoresPage() {
   useEffect(() => {
     if (permOrg.loading || permOrg.canView === "nao") {
       setOpcoesTimes([]);
+      setOrganogramaGrupos([]);
       return;
     }
     let cancel = false;
     void (async () => {
-      const { opcoes, error } = await carregarOpcoesTimesOrganograma();
+      const { opcoes, grupos, error } = await carregarOpcoesTimesOrganograma();
       if (cancel) return;
-      if (error) setOpcoesTimes([]);
-      else setOpcoesTimes(opcoes);
+      if (error) {
+        setOpcoesTimes([]);
+        setOrganogramaGrupos([]);
+      } else {
+        setOpcoesTimes(opcoes);
+        setOrganogramaGrupos(grupos);
+      }
     })();
     return () => {
       cancel = true;
@@ -922,18 +930,30 @@ export default function RhPrestadoresPage() {
 
   const diretoriasOpcoes = useMemo(() => {
     const u = new Set<string>();
+    organogramaGrupos.forEach((gr) => {
+      const parts = gr.label.split(" › ");
+      u.add(parts[0] ?? gr.label);
+    });
     opcoesTimes.forEach((o) => u.add(o.diretoriaNome));
     return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [opcoesTimes]);
+  }, [organogramaGrupos, opcoesTimes]);
 
   const gerenciasOpcoes = useMemo(() => {
     const u = new Set<string>();
+    organogramaGrupos.forEach((gr) => {
+      const parts = gr.label.split(" › ");
+      if (parts.length < 2) return;
+      const dir = parts[0]!;
+      const ger = parts.slice(1).join(" › ");
+      if (filtroDiretoria && dir !== filtroDiretoria) return;
+      u.add(ger);
+    });
     opcoesTimes.forEach((o) => {
       if (filtroDiretoria && o.diretoriaNome !== filtroDiretoria) return;
       u.add(o.gerenciaNome);
     });
     return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [opcoesTimes, filtroDiretoria]);
+  }, [organogramaGrupos, opcoesTimes, filtroDiretoria]);
 
   useEffect(() => {
     if (filtroGerencia && !gerenciasOpcoes.includes(filtroGerencia)) setFiltroGerencia("");
@@ -1290,7 +1310,6 @@ export default function RhPrestadoresPage() {
         setForm((s) => ({
           ...s,
           res_logradouro: s.res_logradouro.trim() || r.logradouro,
-          res_complemento: s.res_complemento.trim() || r.complemento,
           res_cidade: s.res_cidade.trim() || r.cidade,
           res_estado: (s.res_estado.trim() || r.uf).toUpperCase().slice(0, 2),
         }));
@@ -1298,7 +1317,6 @@ export default function RhPrestadoresPage() {
         setForm((s) => ({
           ...s,
           emp_logradouro: s.emp_logradouro.trim() || r.logradouro,
-          emp_complemento: s.emp_complemento.trim() || r.complemento,
           emp_cidade: s.emp_cidade.trim() || r.cidade,
           emp_estado: (s.emp_estado.trim() || r.uf).toUpperCase().slice(0, 2),
         }));
@@ -1317,6 +1335,7 @@ export default function RhPrestadoresPage() {
     req("telefone", "Telefone", form.telefone);
     req("email", "E-mail", form.email);
     req("res_logradouro", "Logradouro (residencial)", form.res_logradouro);
+    req("res_numero", "Número (residencial)", form.res_numero);
     req("res_cidade", "Cidade (residencial)", form.res_cidade);
     if (!form.res_estado.trim()) e.res_estado = "UF (residencial) é obrigatória.";
     else if (!UFS_BR.includes(form.res_estado.trim().toUpperCase() as (typeof UFS_BR)[number])) {
@@ -1343,6 +1362,7 @@ export default function RhPrestadoresPage() {
     if (form.tipo_contrato === "PJ") {
       req("nome_empresa", "Nome da empresa", form.nome_empresa);
       req("emp_logradouro", "Logradouro da empresa", form.emp_logradouro);
+      req("emp_numero", "Número da empresa", form.emp_numero);
       req("emp_cidade", "Cidade da empresa", form.emp_cidade);
       if (!form.emp_estado.trim()) e.emp_estado = "UF da empresa é obrigatória.";
       else if (!UFS_BR.includes(form.emp_estado.trim().toUpperCase() as (typeof UFS_BR)[number])) {
@@ -2557,7 +2577,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.res_logradouro ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_logradouro}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-res-num", "Número")}
+                  {lblReqCad("f-res-num", "Número")}
                   <input
                     id="f-res-num"
                     disabled={desabilitarCampos}
@@ -2565,6 +2585,7 @@ export default function RhPrestadoresPage() {
                     onChange={(e) => setForm((s) => ({ ...s, res_numero: e.target.value }))}
                     style={inputStyle}
                   />
+                  {fieldErr.res_numero ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_numero}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
                   {lbl("f-res-compl", "Complemento")}
@@ -2654,29 +2675,18 @@ export default function RhPrestadoresPage() {
                       {!leitura ? (
                         <>
                           {lblReqCad("f-org-time", "Organograma")}
-                          <select
+                          <SelectOrganogramaTimes
                             id="f-org-time"
                             disabled={desabilitarCampos || bloquearOrgEdit}
                             value={form.org_time_id ?? ""}
-                            onChange={(e) => {
-                              const id = e.target.value;
-                              if (!id) {
-                                setForm((s) => ({ ...s, org_time_id: null, setor: "" }));
-                                return;
-                              }
-                              const op = opcoesTimes.find((x) => x.timeId === id);
-                              if (op) setForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
+                            grupos={organogramaGrupos}
+                            onPick={(id, op) => {
+                              if (!id || !op) setForm((s) => ({ ...s, org_time_id: null, setor: "" }));
+                              else setForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
                             }}
                             aria-label="Organograma"
                             style={inputStyle}
-                          >
-                            <option value="">— Selecione —</option>
-                            {opcoesTimes.map((o) => (
-                              <option key={o.timeId} value={o.timeId}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
+                          />
                           {fieldErr.org_time_id ? (
                             <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div>
                           ) : null}
@@ -2734,9 +2744,15 @@ export default function RhPrestadoresPage() {
                           <option key={s} value={s} />
                         ))}
                       </datalist>
-                      {permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length === 0 ? (
+                      {permOrg.canView !== "nao" && !permOrg.loading && organogramaGrupos.length > 0 && opcoesTimes.length === 0 ? (
                         <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6 }}>
-                          Nenhum time ativo no organograma. Cadastre a estrutura em RH → Organograma ou informe o setor manualmente.
+                          Existem diretorias/gerências no organograma, mas nenhum time ativo para vincular. Cadastre times em RH →
+                          Organograma ou informe o setor manualmente.
+                        </div>
+                      ) : null}
+                      {permOrg.canView !== "nao" && !permOrg.loading && organogramaGrupos.length === 0 && opcoesTimes.length === 0 ? (
+                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6 }}>
+                          Nenhuma estrutura ativa no organograma. Cadastre diretorias em RH → Organograma ou informe o setor manualmente.
                         </div>
                       ) : null}
                     </>
@@ -2909,7 +2925,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.emp_logradouro ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_logradouro}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-emp-num", "Número")}
+                  {lblReqCad("f-emp-num", "Número")}
                   <input
                     id="f-emp-num"
                     disabled={desabilitarCampos}
@@ -2917,6 +2933,7 @@ export default function RhPrestadoresPage() {
                     onChange={(e) => setForm((s) => ({ ...s, emp_numero: e.target.value }))}
                     style={inputStyle}
                   />
+                  {fieldErr.emp_numero ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_numero}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
                   {lbl("f-emp-compl", "Complemento")}
@@ -3227,28 +3244,17 @@ export default function RhPrestadoresPage() {
                   {usarSelectTime ? (
                     <>
                       {lblReq("acao-org", "Organograma")}
-                      <select
+                      <SelectOrganogramaTimes
                         id="acao-org"
                         value={acaoForm.org_time_id ?? ""}
-                        onChange={(e) => {
-                          const id = e.target.value;
-                          if (!id) {
-                            setAcaoForm((s) => ({ ...s, org_time_id: null, setor: "" }));
-                            return;
-                          }
-                          const op = opcoesTimes.find((x) => x.timeId === id);
-                          if (op) setAcaoForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
+                        grupos={organogramaGrupos}
+                        onPick={(id, op) => {
+                          if (!id || !op) setAcaoForm((s) => ({ ...s, org_time_id: null, setor: "" }));
+                          else setAcaoForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
                         }}
                         aria-label="Organograma"
                         style={inputStyle}
-                      >
-                        <option value="">— Selecione —</option>
-                        {opcoesTimes.map((o) => (
-                          <option key={o.timeId} value={o.timeId}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                      />
                       {opcaoTimeAcaoForm ? (
                         <div
                           style={{
