@@ -48,7 +48,11 @@ export interface RhFuncionario {
   nivel: string;
   salario: number;
   data_inicio: string;
+  /** Data da função/cargo (YYYY-MM-DD). */
+  data_funcao?: string | null;
   data_desligamento: string | null;
+  /** Nota interna de RH (texto livre). Opcional até migração aplicada no banco. */
+  observacao_rh?: string | null;
   escala: string;
   tipo_contrato: RhFuncionarioTipoContrato;
   nome_empresa: string;
