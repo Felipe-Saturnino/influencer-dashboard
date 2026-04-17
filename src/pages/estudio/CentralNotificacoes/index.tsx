@@ -9,7 +9,7 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fmt, getMesesDisponiveis, getDatasDoMes, fmtDia } from "../../../lib/dashboardHelpers";
-import type { RoteiroCampanha } from "../../conteudo/RoteiroMesa";
+import type { RoteiroCampanha } from "../RoteiroMesa";
 import type { Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";

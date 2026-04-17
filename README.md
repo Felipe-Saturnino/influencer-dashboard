@@ -66,10 +66,13 @@ src/
 ├── lib/            # Supabase, dashboardConstants, dashboardHelpers, tableStyles, etc.
 ├── pages/          # Páginas por seção
 │   ├── dashboards/
-│   ├── conteudo/
+│   ├── conteudo/   # Playbook, Links (menu Conteúdo)
 │   ├── geral/
-│   ├── lives/      # Agenda, Resultados, Feedback, Influencers, Scout (alinha ao menu “Lives”)
-│   ├── operacoes/  # Dealers, notificações, financeiro operacional, banca, campanhas, links
+│   ├── lives/      # Agenda, Resultados, Feedback, Influencers, Scout (menu Lives)
+│   ├── estudio/    # Dealers, Central, Roteiro de Mesa, solicitações (menu Estúdio; Figurinos em rh/)
+│   ├── aquisicao/  # Financeiro, Banca de Jogo (menu Aquisição)
+│   ├── marketing/
+│   ├── rh/
 │   └── plataforma/
 ├── constants/      # Tema, menu, authScreen, platforms
 ├── styles/         # global.css, responsive.css

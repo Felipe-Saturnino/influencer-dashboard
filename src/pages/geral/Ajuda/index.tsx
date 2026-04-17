@@ -18,6 +18,8 @@ import {
   GiShare,
   GiCardRandom,
   GiRingingBell,
+  GiShirt,
+  GiNotebook,
 } from "react-icons/gi";
 
 type Aba = "conheca" | "troubleshooting" | "glossario";
@@ -48,11 +50,19 @@ const MENU_AJUDA = [
     ],
   },
   {
-    section: "Operações",
+    section: "Aquisição",
+    items: [
+      { key: "financeiro" as PageKey, label: "Financeiro", Icon: GiCash },
+      { key: "banca_jogo" as PageKey, label: "Banca de Jogo", Icon: GiPokerHand },
+    ],
+  },
+  {
+    section: "Estúdio",
     items: [
       { key: "gestao_dealers" as PageKey, label: "Gestão de Dealers", Icon: GiCardRandom },
       { key: "central_notificacoes" as PageKey, label: "Central de Notificações", Icon: GiRingingBell },
-      { key: "financeiro" as PageKey, label: "Financeiro", Icon: GiCash },
+      { key: "rh_figurinos" as PageKey, label: "Figurinos", Icon: GiShirt },
+      { key: "roteiro_mesa" as PageKey, label: "Roteiro de Mesa", Icon: GiNotebook },
     ],
   },
 ];
@@ -64,7 +74,7 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
     blocos: [
       {
         texto:
-          "Central de análise do canal de influencers. Reúne três visões complementares em abas — Overview, Conversão e Financeiro — com filtros de período, influencer e operadora compartilhados: mudanças nos filtros aplicam-se à aba atual e permanecem ao navegar entre elas.\n\nEsta aba Financeiro é o dashboard de métricas de jogadores captados; o menu Operações → Financeiro trata de ciclos de pagamento aos influencers.",
+          "Central de análise do canal de influencers. Reúne três visões complementares em abas — Overview, Conversão e Financeiro — com filtros de período, influencer e operadora compartilhados: mudanças nos filtros aplicam-se à aba atual e permanecem ao navegar entre elas.\n\nEsta aba Financeiro é o dashboard de métricas de jogadores captados; a página Financeiro em Aquisição trata de ciclos de pagamento aos influencers.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -468,12 +478,54 @@ const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtitulo?: s
       },
     ],
   },
+  rh_figurinos: {
+    titulo: "Figurinos",
+    blocos: [
+      {
+        texto:
+          "Gestão do acervo de figurinos do estúdio: cadastro de peças por categoria e cor, vinculação a operadoras, controle de estoque por status (disponível, em uso, manutenção, descartado) e rastreio de movimentações — entrega, devolução, descarte e ajustes.\n\nUse filtros por categoria, status e operadora, e a busca por nome ou código interno. Conforme permissão, é possível registrar movimentações em lote, anexar fotos e gerar etiquetas para identificação física das peças.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "O acesso é definido em Gestão de Usuários → Permissões para a página Figurinos. Sem permissão de edição, a área funciona em modo consulta — visualização de listagens e detalhes, sem alterar dados.",
+      },
+    ],
+  },
+  roteiro_mesa: {
+    titulo: "Roteiro de Mesa",
+    blocos: [
+      {
+        texto:
+          "Cadastro de blocos de roteiro ao vivo, materiais por operadora e campanhas com período de vigência. As campanhas vinculadas aparecem para operadores na Central de Notificações; dúvidas e ajustes seguem pelo fluxo de solicitações e threads entre operadora e estúdio.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "O acesso é controlado em Gestão de Usuários para a página Roteiro de Mesa. Sem permissão de edição, use a navegação em modo consulta quando disponível.",
+      },
+    ],
+  },
+  banca_jogo: {
+    titulo: "Banca de Jogo",
+    blocos: [
+      {
+        texto:
+          "Fluxo de solicitação, aprovação e liberação de valores de banca de jogo por influencer e ciclo, alinhado às regras da operação e ao escopo do usuário. Acompanhe status (solicitado, em análise, aprovado, liberado) e histórico por período.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "Quem pode criar, aprovar ou alterar status depende das permissões configuradas em Gestão de Usuários para a página Banca de Jogo.",
+      },
+    ],
+  },
   financeiro: {
     titulo: "Financeiro",
     blocos: [
       {
         texto:
-          "Central de gestão de pagamentos dos influencers parceiros. Acompanhe ciclos semanais, aprove valores, registre pagamentos e consulte o histórico financeiro de cada parceiro.",
+          "Central de gestão de pagamentos dos influencers parceiros (menu Aquisição). Acompanhe ciclos semanais, aprove valores, registre pagamentos e consulte o histórico financeiro de cada parceiro.",
       },
       {
         subtitulo: "KPIs",
@@ -943,6 +995,56 @@ const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtitulo: st
         subtitulo: "As solicitações concluídas não aparecem na seção de histórico?",
         texto:
           "A seção 'Solicitações concluídas' exibe itens com status 'resolvido' cuja data de resolução está dentro do período selecionado. Se o período estiver no mês atual e as resoluções ocorreram em meses anteriores, os itens não aparecerão — ative Histórico para ver o acumulado completo.\n\nA seção só é exibida para o perfil Operador. Para Gestores, os itens resolvidos aparecem dentro das próprias abas do inbox, mesclados com os abertos.",
+      },
+    ],
+  },
+  rh_figurinos: {
+    titulo: "Figurinos",
+    blocos: [
+      {
+        subtitulo: "Não encontro uma peça na listagem?",
+        texto:
+          "Verifique filtros ativos (categoria, status, operadora) e o texto de busca — eles se combinam. Limpe os filtros ou amplie a busca. Peças descartadas podem estar ocultas conforme o filtro de status.",
+      },
+      {
+        subtitulo: "Não consigo registrar uma movimentação?",
+        texto:
+          "Confirme permissão de edição para Figurinos em Gestão de Usuários. Alguns status de peça bloqueiam certas ações (por exemplo, descarte definitivo). Se aparecer mensagem de erro do servidor, verifique se todos os campos obrigatórios do formulário foram preenchidos.",
+      },
+      {
+        subtitulo: "A etiqueta PDF não gera ou fica em branco?",
+        texto:
+          "Verifique bloqueador de pop-ups no navegador. Confirme que a peça tem dados mínimos (nome/código) para o layout da etiqueta. Tente outro navegador ou recarregue a página.",
+      },
+    ],
+  },
+  roteiro_mesa: {
+    titulo: "Roteiro de Mesa",
+    blocos: [
+      {
+        subtitulo: "A campanha não aparece na Central de Notificações?",
+        texto:
+          "Confirme operadora, datas de início/fim e permissões. A Central filtra por escopo; campanhas fora do período podem exigir modo Histórico na Central.",
+      },
+      {
+        subtitulo: "Erro ao salvar bloco ou campanha?",
+        texto:
+          "Verifique campos obrigatórios e conexão. Se o erro persistir, copie a mensagem exibida e valide no Supabase (RLS, policies e RPC) com o administrador.",
+      },
+    ],
+  },
+  banca_jogo: {
+    titulo: "Banca de Jogo",
+    blocos: [
+      {
+        subtitulo: "Não consigo solicitar ou aprovar banca?",
+        texto:
+          "Verifique permissões na Gestão de Usuários e o ciclo/período selecionado. Alguns status só permitem transições específicas (ex.: não é possível liberar sem aprovação prévia).",
+      },
+      {
+        subtitulo: "O valor não bate com o esperado?",
+        texto:
+          "Confirme regras vigentes do ciclo, escopo de operadora e se há solicitações duplicadas ou canceladas no histórico.",
       },
     ],
   },

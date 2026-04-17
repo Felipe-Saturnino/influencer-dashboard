@@ -89,7 +89,17 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
     padding: "10px 14px",
   };
 
-  const ordemSecoes = ["Dashboards", "Lives", "Operações", "Marketing", "Financeiro", "Conteúdo", "Plataforma", "Geral"];
+  const ordemSecoes = [
+    "Dashboards",
+    "Lives",
+    "Aquisição",
+    "Marketing",
+    "Estúdio",
+    "RH",
+    "Conteúdo",
+    "Plataforma",
+    "Geral",
+  ];
   const secoes = [...new Set(PAGES.map((p) => p.secao))].sort(
     (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR")
   );

@@ -104,7 +104,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Valor de remuneração do influencer por hora de live transmitida. Base de cálculo dos pagamentos no módulo Financeiro.",
         nota:
           "Alterações do cachê por hora são restritas a Admin e Gestor. O campo aparece bloqueado no formulário de edição para outros perfis.\n\nNo Scout, o campo correspondente é 'Cachê Negociado' — ao fechar a parceria, o valor é sincronizado automaticamente com o cachê por hora no cadastro do influencer em Influencers.",
-        referencia: "Influencers · Operações → Financeiro",
+        referencia: "Influencers · Aquisição → Financeiro",
       },
       {
         termo: "Perfil Incompleto",
@@ -263,7 +263,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         nota:
           "O GGR é sempre calculado pelo canal de aquisição. Nas páginas de influencers, considera apenas jogadores captados via influencers. Em Overview Spin, considera todos os canais.",
         referencia:
-          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Overview Spin · Mídias Sociais · Operações → Financeiro",
+          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Overview Spin · Mídias Sociais · Aquisição → Financeiro",
       },
       {
         termo: "R$ FTD (Valor Total de FTDs)",
@@ -328,7 +328,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Valor total pago ao influencer no período (cachê por hora de live + bônus por performance, quando aplicável). Base para cálculo de ROI e custos unitários.",
         referencia:
-          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Operações → Financeiro",
+          "Streamers → Overview · Streamers → Financeiro · Overview Influencer · Aquisição → Financeiro",
       },
       {
         termo: "ROI (Return on Investment)",

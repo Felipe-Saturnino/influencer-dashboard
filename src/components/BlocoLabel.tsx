@@ -1,7 +1,7 @@
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { FONT } from "../constants/theme";
 
-/** Rótulo uppercase pequeno acima de blocos/tabelas (seção Operações). */
+/** Rótulo uppercase pequeno acima de blocos/tabelas (padrão de páginas operacionais / Estúdio). */
 export function BlocoLabel({ label }: { label: string }) {
   const brand = useDashboardBrand();
   return (

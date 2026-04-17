@@ -20,7 +20,7 @@ O `AppContext` chama `aplicarBrandguide()` e injeta no `document.documentElement
 - **Marca / whitelabel** na app em geral: `var(--brand-primary, #7c3aed)`, `var(--brand-secondary, …)`, `var(--brand-accent, …)`, `var(--brand-icon, …)`, etc. Detalhes de foco, CTA e spinners: ver `brand-css-variables.mdc`.
 - **`src/pages/dashboards/**`:** seguir `.cursor/rules/dashboards.mdc` — preferir **`--brand-action` / `--brand-contrast` / `--brand-icon-color`** (e derivados) em KPIs, funil, comparativos e pills; o hook `useDashboardBrand()` já expõe `primary`/`accent` mapeados para esses tokens quando `brand.useBrand` é true.
 - **Semântica de dado** (Rentável / Não rentável, WD Ratio, badges de ROI, vermelho/verde de GGR): manter hex da **Paleta semântica** abaixo; **não** substituir por tokens de marca só por estética.
-- Demais páginas (`lives/`, `operacoes/`, `marketing/`, `financeiro/`, `plataforma/`, `conteudo/`, `geral/`): tokens de UI (`t.*` via `useApp`) para fundo, texto e bordas neutras; onde o elemento é **destaque de marca** (badge de seção, ícone institucional, barra de destaque), preferir `--brand-*` com fallback.
+- Demais páginas (`lives/`, `estudio/`, `aquisicao/`, `marketing/`, `plataforma/`, `conteudo/`, `rh/`, `geral/`): tokens de UI (`t.*` via `useApp`) para fundo, texto e bordas neutras; onde o elemento é **destaque de marca** (badge de seção, ícone institucional, barra de destaque), preferir `--brand-*` com fallback.
 
 ## Estrutura de Arquivos
 
@@ -34,12 +34,13 @@ src/
 ├── lib/                # dashboardConstants, dashboardHelpers, tableStyles, supabase, investimentoPago
 ├── pages/              # Páginas por seção
 │   ├── dashboards/     # Streamers (abas), OverviewSpin, Mídias, Overview Influencer
-│   ├── conteudo/
+│   ├── conteudo/       # Playbook, Links e Materiais (menu Conteúdo)
 │   ├── geral/
 │   ├── lives/          # Agenda, Resultados, Feedback, Influencers, Scout
-│   ├── operacoes/      # Dealers, central de notificações, solicitações
+│   ├── estudio/        # Dealers, Central, solicitações, Roteiro de Mesa (menu Estúdio)
+│   ├── aquisicao/      # Financeiro, Banca de Jogo (menu Aquisição)
 │   ├── marketing/      # Campanhas, Gestão de Links
-│   ├── financeiro/     # Financeiro (ciclos), Banca de Jogo
+│   ├── rh/             # Figurinos (também no menu Estúdio), Prestadores, Organograma
 │   └── plataforma/
 ├── styles/
 │   ├── global.css      # Reset, temas dark/light, breakpoints, animações, --brand-*

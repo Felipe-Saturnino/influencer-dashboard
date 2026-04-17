@@ -158,7 +158,7 @@ export interface RolePermission {
 // "influencer"   → scope_ref = UUID do influencer
 // "operadora"    → scope_ref = slug da operadora (ex: "blaze")
 // "agencia_par"  → scope_ref = "uuid_influencer:slug_operadora" (ex: "abc-123:blaze")
-// "gestor_tipo"  → scope_ref = operacoes | marketing | afiliados | geral | figurino | recursos_humanos
+// "gestor_tipo"  → scope_ref = operacoes (rótulo UI: Estúdio) | marketing | afiliados | geral | figurino | recursos_humanos
 export type ScopeType = "influencer" | "operadora" | "agencia_par" | "gestor_tipo";
 
 export type GestorTipoSlug =
