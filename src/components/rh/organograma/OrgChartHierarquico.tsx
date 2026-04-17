@@ -1,9 +1,60 @@
-import type { CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
+import { Search } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { nomeLiderImediatoGerencia } from "../../../lib/rhOrganogramaLiderImediato";
+import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos } from "../../../types/rhOrganograma";
 import type { OrgTreeVisualAcaoCtx } from "./OrgTreeVisual";
+
+function normalizarBusca(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function textoContemBusca(haystack: string, needleRaw: string): boolean {
+  const needle = normalizarBusca(needleRaw);
+  if (!needle) return true;
+  return normalizarBusca(haystack).includes(needle);
+}
+
+type NomeResp = (funcId: string | null | undefined, nomeLivre: string | null | undefined) => string;
+
+function gerenciaCombinaBusca(
+  d: RhOrgDiretoriaComFilhos,
+  g: RhOrgGerenciaComFilhos,
+  q: string,
+  nomeResponsavel: NomeResp,
+): boolean {
+  if (!q.trim()) return true;
+  const liderG = nomeLiderImediatoGerencia(d, g, nomeResponsavel);
+  if (textoContemBusca(g.nome, q) || textoContemBusca(liderG, q)) return true;
+  return g.times.some((ti) => {
+    const lt = nomeLiderImediatoTime(d, g, ti, nomeResponsavel);
+    return textoContemBusca(ti.nome, q) || textoContemBusca(lt, q);
+  });
+}
+
+function filtrarArvoreOrganogramaVisual(
+  arvore: RhOrgDiretoriaComFilhos[],
+  q: string,
+  nomeResponsavel: NomeResp,
+): RhOrgDiretoriaComFilhos[] {
+  const needle = q.trim();
+  if (!needle) return arvore;
+  return arvore
+    .map((d) => {
+      const diretor = nomeResponsavel(d.diretor_funcionario_id, d.diretor_nome_livre);
+      const matchD = textoContemBusca(d.nome, needle) || textoContemBusca(diretor, needle);
+      const gerenciasFiltradas = d.gerencias.filter((g) => gerenciaCombinaBusca(d, g, needle, nomeResponsavel));
+      if (matchD) return { ...d, gerencias: d.gerencias };
+      if (gerenciasFiltradas.length > 0) return { ...d, gerencias: gerenciasFiltradas };
+      return null;
+    })
+    .filter((x): x is RhOrgDiretoriaComFilhos => x !== null);
+}
 
 type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string; isDark: boolean };
 
@@ -45,6 +96,12 @@ export function OrgChartHierarquico({
   onAbrirVagas: (ctx: OrgTreeVisualAcaoCtx) => void;
   onAbrirEstrutura: (ctx: OrgTreeVisualAcaoCtx) => void;
 }) {
+  const [busca, setBusca] = useState("");
+  const arvoreFiltrada = useMemo(
+    () => filtrarArvoreOrganogramaVisual(arvore, busca, nomeResponsavel),
+    [arvore, busca, nomeResponsavel],
+  );
+
   const linhaConectora: CSSProperties = {
     width: 2,
     minHeight: 18,
@@ -115,6 +172,9 @@ export function OrgChartHierarquico({
     );
   }
 
+  const buscaTrim = busca.trim();
+  const semResultadosBusca = buscaTrim.length > 0 && arvoreFiltrada.length === 0;
+
   return (
     <div style={{ fontFamily: FONT.body }}>
       <section aria-labelledby="org-hierarquia-titulo">
@@ -122,19 +182,56 @@ export function OrgChartHierarquico({
           id="org-hierarquia-titulo"
           style={{
             margin: "0 0 6px",
-            fontSize: 13,
+            fontSize: 18,
             fontWeight: 800,
-            color: t.textMuted,
+            color: t.text,
             fontFamily: FONT_TITLE,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
+            letterSpacing: "0.02em",
           }}
         >
-          Organograma hierárquico
+          Organograma
         </h2>
-        <p style={{ margin: "0 0 20px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
-          Visão em colunas: CEO, diretorias e gerências (nível de times omitido nesta vista).
+        <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
+          Visão em colunas: CEO, diretorias, gerências e times.
         </p>
+        <label htmlFor="org-hierarquia-busca" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
+          Pesquisar por nome de funcionário, diretoria, gerência ou time
+        </label>
+        <div style={{ position: "relative", maxWidth: 520, marginBottom: 20 }}>
+          <Search
+            size={16}
+            aria-hidden
+            style={{
+              position: "absolute",
+              left: 12,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: t.textMuted,
+              pointerEvents: "none",
+            }}
+          />
+          <input
+            id="org-hierarquia-busca"
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Ex.: Maria, Comercial, CX…"
+            autoComplete="off"
+            aria-label="Pesquisar organograma por funcionário, diretoria, gerência ou time"
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: "10px 12px 10px 38px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontSize: 14,
+              fontFamily: FONT.body,
+              outline: "none",
+            }}
+          />
+        </div>
 
         <div
           style={{
@@ -150,6 +247,21 @@ export function OrgChartHierarquico({
           </div>
           <div style={{ ...linhaConectora, marginTop: 10, marginBottom: 10 }} aria-hidden />
 
+          {semResultadosBusca ? (
+            <div
+              role="status"
+              style={{
+                padding: "24px 16px",
+                textAlign: "center",
+                color: t.textMuted,
+                fontSize: 14,
+                maxWidth: 420,
+                lineHeight: 1.5,
+              }}
+            >
+              Nenhum resultado para a pesquisa. Tente outro termo ou limpe o campo para ver o organograma completo.
+            </div>
+          ) : (
           <div
             role="list"
             style={{
@@ -161,7 +273,7 @@ export function OrgChartHierarquico({
               width: "100%",
             }}
           >
-            {arvore.map((d) => {
+            {arvoreFiltrada.map((d) => {
               const diretor = nomeResponsavel(d.diretor_funcionario_id, d.diretor_nome_livre);
               const ctxD: OrgTreeVisualAcaoCtx = { nivel: "diretoria", id: d.id, nome: d.nome };
               return (
@@ -235,6 +347,7 @@ export function OrgChartHierarquico({
               );
             })}
           </div>
+          )}
         </div>
       </section>
     </div>
