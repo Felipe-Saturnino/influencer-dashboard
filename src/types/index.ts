@@ -38,6 +38,7 @@ export type PageKey =
   | "rh_figurinos"
   | "rh_funcionarios"
   | "rh_organograma"
+  | "rh_vagas"
   | "configuracoes"
   | "ajuda";
 
