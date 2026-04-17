@@ -31,7 +31,8 @@ import {
   ORG_FILTRO_TODAS_DIRETORIAS,
   type FiltroDiretoriaOrganograma,
 } from "../../../components/rh/organograma/OrgFiltroBarDiretorias";
-import { OrgTreeVisual, type OrgTreeVisualAcaoCtx } from "../../../components/rh/organograma/OrgTreeVisual";
+import { OrgChartHierarquico } from "../../../components/rh/organograma/OrgChartHierarquico";
+import type { OrgTreeVisualAcaoCtx } from "../../../components/rh/organograma/OrgTreeVisual";
 import { OrgVisualizacaoDiretoriaUnica } from "../../../components/rh/organograma/OrgVisualizacaoDiretoriaUnica";
 import {
   proximoCentroCustosDiretoria,
@@ -185,6 +186,26 @@ export default function RhOrganogramaPage() {
     () => montarArvoreOrganograma(diretorias, gerencias, times),
     [diretorias, gerencias, times],
   );
+
+  /** No Gerenciamento com uma diretoria selecionada no filtro, mostrar só essa árvore. */
+  const arvoreGerenciamento = useMemo(() => {
+    if (modo !== "gerenciar" || filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS) return arvore;
+    const d = arvore.find((x) => x.id === filtroDiretoriaId);
+    return d ? [d] : [];
+  }, [arvore, modo, filtroDiretoriaId]);
+
+  useEffect(() => {
+    if (modo !== "gerenciar" || filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS) return;
+    const d = arvore.find((x) => x.id === filtroDiretoriaId);
+    if (!d) return;
+    setExpanded((prev) => {
+      const next = { ...prev, [`d-${d.id}`]: true };
+      d.gerencias.forEach((g) => {
+        next[`g-${g.id}`] = true;
+      });
+      return next;
+    });
+  }, [modo, filtroDiretoriaId, arvore]);
 
   const dirSelecionada = useMemo(() => {
     if (filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS) return null;
@@ -820,9 +841,9 @@ export default function RhOrganogramaPage() {
           </div>
         ) : modo === "visual" ? (
           filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS ? (
-            <OrgTreeVisual
+            <OrgChartHierarquico
               arvore={arvore}
-              t={t}
+              t={{ ...t, isDark }}
               nomeResponsavel={nomeResponsavel}
               onAbrirVagas={abrirVagasVisual}
               onAbrirEstrutura={abrirEstruturaVisual}
@@ -858,9 +879,33 @@ export default function RhOrganogramaPage() {
               </button>
             </div>
           )
+        ) : modo === "gerenciar" &&
+          filtroDiretoriaId !== ORG_FILTRO_TODAS_DIRETORIAS &&
+          arvoreGerenciamento.length === 0 &&
+          arvore.length > 0 ? (
+          <div style={{ padding: "32px 12px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+            <p style={{ margin: "0 0 12px" }}>Diretoria não encontrada ou removida.</p>
+            <button
+              type="button"
+              onClick={() => setFiltroDiretoriaId(ORG_FILTRO_TODAS_DIRETORIAS)}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                color: t.text,
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              Voltar para todas as diretorias
+            </button>
+          </div>
         ) : (
           <OrgAccordion
-            arvore={arvore}
+            arvore={arvoreGerenciamento}
             t={t}
             expanded={expanded}
             toggle={toggle}

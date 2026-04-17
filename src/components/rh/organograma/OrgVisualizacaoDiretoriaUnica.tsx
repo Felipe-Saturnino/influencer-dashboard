@@ -140,9 +140,6 @@ export function OrgVisualizacaoDiretoriaUnica({
                     </p>
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    <button type="button" style={btnAcao(t)} onClick={() => onAbrirVagas(ctxG)}>
-                      Vagas
-                    </button>
                     <button type="button" style={btnAcao(t)} onClick={() => onAbrirEstrutura(ctxG)}>
                       Estrutura
                     </button>
@@ -188,9 +185,6 @@ export function OrgVisualizacaoDiretoriaUnica({
                               <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>{q} prestador(es) ativo(s)</div>
                             </div>
                             <div style={{ display: "flex", gap: 8 }}>
-                              <button type="button" style={btnAcao(t)} onClick={() => onAbrirVagas(ctxT)}>
-                                Vagas
-                              </button>
                               <button type="button" style={btnAcao(t)} onClick={() => onAbrirEstrutura(ctxT)}>
                                 Estrutura
                               </button>
