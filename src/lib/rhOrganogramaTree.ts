@@ -1,3 +1,4 @@
+import { nomeLiderImediatoTime } from "./rhOrganogramaLiderImediato";
 import type {
   RhOrgDiretoria,
   RhOrgDiretoriaComFilhos,
@@ -41,7 +42,7 @@ export function flattenTimesAtivosParaSelect(
   nomePorFuncionarioId: Map<string, string>,
 ): RhOrgTimeOpcao[] {
   const out: RhOrgTimeOpcao[] = [];
-  const nomeLivreOuFunc = (fid: string | null, livre: string | null) => {
+  const nomeLivreOuFunc = (fid: string | null | undefined, livre: string | null | undefined) => {
     if (fid && nomePorFuncionarioId.has(fid)) return nomePorFuncionarioId.get(fid)!;
     return (livre ?? "").trim();
   };
@@ -52,7 +53,7 @@ export function flattenTimesAtivosParaSelect(
       if (g.status !== "ativo") return;
       g.times.forEach((ti) => {
         if (ti.status !== "ativo") return;
-        const gestor = nomeLivreOuFunc(ti.lider_funcionario_id, ti.lider_nome_livre) || "—";
+        const gestor = nomeLiderImediatoTime(d, g, ti, nomeLivreOuFunc).trim() || "—";
         out.push({
           timeId: ti.id,
           timeNome: ti.nome,
@@ -100,6 +101,24 @@ export function coletarIdsTimesDaGerencia(arvore: RhOrgDiretoriaComFilhos[], ger
 }
 
 /** Times e gerências sob a diretoria — ordem de delete: times → gerências → diretoria. */
+/** Diretoria que contém o nó (gerência ou time) — para navegação a partir da visão “todas”. */
+export function encontrarDiretoriaIdPorCtx(
+  arvore: RhOrgDiretoriaComFilhos[],
+  ctx: { nivel: "diretoria" | "gerencia" | "time"; id: string },
+): string | null {
+  if (ctx.nivel === "diretoria") return ctx.id;
+  for (const d of arvore) {
+    if (ctx.nivel === "gerencia") {
+      if (d.gerencias.some((g) => g.id === ctx.id)) return d.id;
+    } else {
+      for (const g of d.gerencias) {
+        if (g.times.some((ti) => ti.id === ctx.id)) return d.id;
+      }
+    }
+  }
+  return null;
+}
+
 export function coletarIdsTimesEGerenciasDaDiretoria(
   arvore: RhOrgDiretoriaComFilhos[],
   diretoriaId: string,

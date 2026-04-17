@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, UserX } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
 
 type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string };
@@ -168,11 +169,11 @@ export function OrgAccordion({
                 ) : null}
               </div>
             </div>
-            {respD ? (
-              <div style={{ padding: "6px 14px 0", fontSize: 12, color: t.textMuted }}>
-                Diretor(a): {respD}
-              </div>
-            ) : null}
+            <div style={{ padding: "6px 14px 0", fontSize: 12, color: t.textMuted }}>
+              {respD ? `Diretor(a): ${respD}` : `Diretor(a): —`}
+              <br />
+              Centro de Custos: {d.centro_custos}
+            </div>
             {openD ? (
               <div id={`panel-${kd}`} role="region" aria-labelledby={kd} style={{ padding: "10px 12px 12px" }}>
                 {d.gerencias.length === 0 ? (
@@ -181,7 +182,7 @@ export function OrgAccordion({
                   d.gerencias.map((g) => {
                     const kg = `g-${g.id}`;
                     const openG = !!expanded[kg];
-                    const respG = nomeResponsavel(g.gerente_funcionario_id, g.gerente_nome_livre);
+                    const respG = nomeLiderImediatoGerencia(d, g, nomeResponsavel);
                     return (
                       <div
                         key={g.id}
@@ -258,11 +259,11 @@ export function OrgAccordion({
                             ) : null}
                           </div>
                         </div>
-                        {respG ? (
-                          <div style={{ padding: "4px 12px 0", fontSize: 12, color: t.textMuted }}>
-                            Gerente: {respG}
-                          </div>
-                        ) : null}
+                        <div style={{ padding: "4px 12px 0", fontSize: 12, color: t.textMuted }}>
+                          Líder imediato: {respG.trim() ? respG : "—"}
+                          <br />
+                          Centro de Custos: {g.centro_custos}
+                        </div>
                         {openG ? (
                           <div id={`panel-${kg}`} role="region" aria-labelledby={kg} style={{ padding: "8px 10px 10px" }}>
                             {g.times.length === 0 ? (
@@ -270,7 +271,7 @@ export function OrgAccordion({
                             ) : (
                               <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
                                 {g.times.map((ti) => {
-                                  const respT = nomeResponsavel(ti.lider_funcionario_id, ti.lider_nome_livre);
+                                  const respT = nomeLiderImediatoTime(d, g, ti, nomeResponsavel);
                                   const q = countsPorTimeId[ti.id] ?? 0;
                                   return (
                                     <li
@@ -291,8 +292,15 @@ export function OrgAccordion({
                                         <strong style={{ color: t.text }}>{ti.nome}</strong>
                                         {ti.status === "inativo" ? <span style={{ color: t.textMuted, fontSize: 11 }}> (inativo)</span> : null}
                                         <div style={{ fontSize: 11, color: t.textMuted }}>
-                                          {respT ? `Líder: ${respT} · ` : ""}
-                                          {q} funcionário(s) ativo(s)
+                                          Líder imediato: {respT.trim() ? respT : "—"}
+                                          <br />
+                                          Centro de Custos: {ti.centro_custos}
+                                          {q > 0 ? (
+                                            <>
+                                              <br />
+                                              {q} funcionário(s) ativo(s)
+                                            </>
+                                          ) : null}
                                         </div>
                                       </div>
                                       {(podeEditar && ti.status === "ativo") || podeExcluir ? (
