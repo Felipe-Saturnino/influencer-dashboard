@@ -205,37 +205,6 @@ function ListaHistoricoRh({
                     <strong>Data do RH Talks:</strong> {fmtDataIsoPtBr(String(det.data_rh_talks))}
                   </div>
                 ) : null}
-                {Array.isArray(det.participantes) && (det.participantes as { nome?: string }[]).length > 0 ? (
-                  <div style={{ marginTop: 4 }}>
-                    <strong>Participantes:</strong>{" "}
-                    {(det.participantes as { nome?: string }[])
-                      .map((p) => String(p.nome ?? "—"))
-                      .filter(Boolean)
-                      .join(", ")}
-                  </div>
-                ) : null}
-                {det.ata ? (
-                  <div style={{ marginTop: 8 }}>
-                    <strong>Ata da reunião:</strong>
-                    <pre
-                      style={{
-                        margin: "6px 0 0",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        fontFamily: FONT.body,
-                        fontSize: 12,
-                        color: t.text,
-                        maxHeight: 220,
-                        overflow: "auto",
-                        padding: 8,
-                        borderRadius: 8,
-                        background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)",
-                      }}
-                    >
-                      {String(det.ata)}
-                    </pre>
-                  </div>
-                ) : null}
               </div>
             ) : null}
             {h.tipo === "anotacao_rh" ? (
@@ -998,13 +967,11 @@ export default function RhPrestadoresPage() {
 
   const sugestoesParticipantesRhTalks = useMemo(() => {
     const q = rtBusca.trim().toLowerCase();
+    if (!q) return [];
     const ids = new Set(rtParticipantes.map((p) => p.id));
     return lista
       .filter((f) => !ids.has(f.id))
-      .filter((f) => {
-        if (!q) return true;
-        return f.nome.toLowerCase().includes(q);
-      })
+      .filter((f) => f.nome.toLowerCase().includes(q))
       .slice(0, 12);
   }, [lista, rtBusca, rtParticipantes]);
 
@@ -1669,24 +1636,6 @@ export default function RhPrestadoresPage() {
     }
   };
 
-  const inputStyle: CSSProperties = {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    fontSize: 13,
-    fontFamily: FONT.body,
-    boxSizing: "border-box",
-  };
-
-  const lbl = (htmlFor: string, text: string) => (
-    <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
-      {text}
-    </label>
-  );
-
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
@@ -1733,6 +1682,38 @@ export default function RhPrestadoresPage() {
   const desabilitarCampos = leitura || salvando;
   const sensivelBlurDoc = leitura && !modalVerExibirSensiveis;
   const sensivelBlurFinanceiro = leitura && !modalVerExibirSensiveis && podeVerDadosSensiveis;
+
+  const inputStyle: CSSProperties = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg,
+    color: t.text,
+    fontSize: 13,
+    fontFamily: FONT.body,
+    boxSizing: "border-box",
+  };
+
+  const astReq = <span style={{ color: "#e84025", fontWeight: 700 }} aria-hidden> *</span>;
+  const lbl = (htmlFor: string, text: string) => (
+    <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
+      {text}
+    </label>
+  );
+  const lblReq = (htmlFor: string, text: string) => (
+    <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
+      {text}
+      {astReq}
+    </label>
+  );
+  const lblReqCad = (htmlFor: string, text: string) => (
+    <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
+      {text}
+      {!leitura ? astReq : null}
+    </label>
+  );
+
   const tabActiveBgModal = brand.useBrand
     ? "var(--brand-action-12)"
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
@@ -2302,7 +2283,7 @@ export default function RhPrestadoresPage() {
             {abaModal === "pessoais" ? (
               <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-nome", "Nome completo")}
+                  {lblReqCad("f-nome", "Nome completo")}
                   <input
                     id="f-nome"
                     disabled={desabilitarCampos}
@@ -2313,7 +2294,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-rg", "RG")}
+                  {lblReqCad("f-rg", "RG")}
                   <input
                     id="f-rg"
                     disabled={desabilitarCampos}
@@ -2325,7 +2306,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-cpf", "CPF")}
+                  {lblReqCad("f-cpf", "CPF")}
                   <input
                     id="f-cpf"
                     disabled={desabilitarCampos || modalForm === "editar"}
@@ -2338,7 +2319,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.cpf ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cpf}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-tel", "Telefone")}
+                  {lblReqCad("f-tel", "Telefone")}
                   <input
                     id="f-tel"
                     disabled={desabilitarCampos}
@@ -2350,7 +2331,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.telefone ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.telefone}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-email", "E-mail")}
+                  {lblReqCad("f-email", "E-mail")}
                   <input
                     id="f-email"
                     type="email"
@@ -2386,7 +2367,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.res_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cep}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-res-log", "Logradouro")}
+                  {lblReqCad("f-res-log", "Logradouro")}
                   <input
                     id="f-res-log"
                     disabled={desabilitarCampos}
@@ -2417,7 +2398,7 @@ export default function RhPrestadoresPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-res-cid", "Cidade")}
+                  {lblReqCad("f-res-cid", "Cidade")}
                   <input
                     id="f-res-cid"
                     disabled={desabilitarCampos}
@@ -2428,7 +2409,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.res_cidade ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cidade}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-res-uf", "Estado (UF)")}
+                  {lblReqCad("f-res-uf", "Estado (UF)")}
                   <select
                     id="f-res-uf"
                     disabled={desabilitarCampos}
@@ -2472,7 +2453,7 @@ export default function RhPrestadoresPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-emerg-tel", "Telefone")}
+                  {lblReqCad("f-emerg-tel", "Telefone")}
                   <input
                     id="f-emerg-tel"
                     disabled={desabilitarCampos}
@@ -2493,7 +2474,7 @@ export default function RhPrestadoresPage() {
                     <>
                       {!leitura ? (
                         <>
-                          {lbl("f-org-time", "Organograma")}
+                          {lblReqCad("f-org-time", "Organograma")}
                           <select
                             id="f-org-time"
                             disabled={desabilitarCampos || bloquearOrgEdit}
@@ -2560,7 +2541,7 @@ export default function RhPrestadoresPage() {
                     </>
                   ) : (
                     <>
-                      {lbl("f-setor", "Setor")}
+                      {lblReqCad("f-setor", "Setor")}
                       <input
                         id="f-setor"
                         disabled={desabilitarCampos || bloquearSetorManualEdit}
@@ -2584,12 +2565,12 @@ export default function RhPrestadoresPage() {
                   {fieldErr.setor ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.setor}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-cargo", "Função")}
+                  {lblReqCad("f-cargo", "Função")}
                   <input id="f-cargo" disabled={desabilitarCampos || bloquearCargoEdit} value={form.cargo} onChange={(e) => setForm((s) => ({ ...s, cargo: e.target.value }))} style={inputStyle} />
                   {fieldErr.cargo ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cargo}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-nivel", "Nível")}
+                  {lblReqCad("f-nivel", "Nível")}
                   <select
                     id="f-nivel"
                     disabled={desabilitarCampos || bloquearNivelEdit}
@@ -2606,7 +2587,7 @@ export default function RhPrestadoresPage() {
                   </select>
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-tipo", "Tipo de contrato")}
+                  {lblReqCad("f-tipo", "Tipo de contrato")}
                   <select
                     id="f-tipo"
                     disabled={desabilitarCampos || bloquearTipoContratoEdit}
@@ -2624,7 +2605,7 @@ export default function RhPrestadoresPage() {
                 </div>
                 {podeVerDadosSensiveis ? (
                   <div style={{ marginBottom: 10 }}>
-                    {lbl("f-sal", "Remuneração Mensal")}
+                    {lblReqCad("f-sal", "Remuneração Mensal")}
                     <input
                       id="f-sal"
                       disabled={desabilitarCampos || bloquearSalarioEdit}
@@ -2645,7 +2626,7 @@ export default function RhPrestadoresPage() {
                   </div>
                 )}
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-ini", "Data de início")}
+                  {lblReqCad("f-ini", "Data de início")}
                   <input
                     id="f-ini"
                     type="date"
@@ -2657,7 +2638,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.data_inicio ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_inicio}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-escala", "Escala")}
+                  {lblReqCad("f-escala", "Escala")}
                   <input id="f-escala" disabled={desabilitarCampos || bloquearEscalaEdit} value={form.escala} onChange={(e) => setForm((s) => ({ ...s, escala: e.target.value }))} style={inputStyle} list="lista-escalas" />
                   <datalist id="lista-escalas">
                     {ESCALAS_SUGEST.map((x) => (
@@ -2666,25 +2647,33 @@ export default function RhPrestadoresPage() {
                   </datalist>
                   {fieldErr.escala ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.escala}</div> : null}
                 </div>
-                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-obs-rh", "Observação (nota interna RH)")}
-                  <textarea
-                    id="f-obs-rh"
-                    disabled={desabilitarCampos}
-                    value={form.observacao_rh}
-                    onChange={(e) => setForm((s) => ({ ...s, observacao_rh: e.target.value }))}
-                    rows={3}
-                    placeholder="Opcional (uso interno de RH)."
-                    style={{ ...inputStyle, resize: "vertical" }}
-                  />
-                </div>
+                {!leitura ? (
+                  <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                    {lbl("f-dt-funcao", "Data da Função")}
+                    <input
+                      id="f-dt-funcao"
+                      type="date"
+                      disabled={desabilitarCampos}
+                      value={form.data_funcao}
+                      onChange={(e) => setForm((s) => ({ ...s, data_funcao: e.target.value }))}
+                      style={inputStyle}
+                      aria-label="Data da Função"
+                    />
+                  </div>
+                ) : null}
+                {leitura && form.data_funcao.trim() ? (
+                  <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                    <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>Data da Função</div>
+                    <div style={{ fontSize: 13, color: t.text, fontFamily: FONT.body }}>{fmtDataIsoPtBr(form.data_funcao)}</div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
             {abaModal === "empresa" && ehPJ ? (
               <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-empnome", "Nome da empresa")}
+                  {lblReqCad("f-empnome", "Nome da empresa")}
                   <input
                     id="f-empnome"
                     disabled={desabilitarCampos}
@@ -2695,7 +2684,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.nome_empresa ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome_empresa}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-cnpj", "CNPJ")}
+                  {lblReqCad("f-cnpj", "CNPJ")}
                   <input
                     id="f-cnpj"
                     disabled={desabilitarCampos}
@@ -2730,7 +2719,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.emp_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cep}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-emp-log", "Logradouro")}
+                  {lblReqCad("f-emp-log", "Logradouro")}
                   <input
                     id="f-emp-log"
                     disabled={desabilitarCampos}
@@ -2761,7 +2750,7 @@ export default function RhPrestadoresPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-emp-cid", "Cidade")}
+                  {lblReqCad("f-emp-cid", "Cidade")}
                   <input
                     id="f-emp-cid"
                     disabled={desabilitarCampos}
@@ -2772,7 +2761,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.emp_cidade ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cidade}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-emp-uf", "Estado (UF)")}
+                  {lblReqCad("f-emp-uf", "Estado (UF)")}
                   <select
                     id="f-emp-uf"
                     disabled={desabilitarCampos}
@@ -2797,7 +2786,7 @@ export default function RhPrestadoresPage() {
               podeVerDadosSensiveis ? (
                 <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                   <div style={{ marginBottom: 10 }}>
-                    {lbl("f-banco", "Banco")}
+                    {lblReqCad("f-banco", "Banco")}
                     <input
                       id="f-banco"
                       disabled={desabilitarCampos}
@@ -2808,7 +2797,7 @@ export default function RhPrestadoresPage() {
                     {fieldErr.banco ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.banco}</div> : null}
                   </div>
                   <div style={{ marginBottom: 10 }}>
-                    {lbl("f-ag", "Agência")}
+                    {lblReqCad("f-ag", "Agência")}
                     <input
                       id="f-ag"
                       disabled={desabilitarCampos}
@@ -2820,7 +2809,7 @@ export default function RhPrestadoresPage() {
                     {fieldErr.agencia ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.agencia}</div> : null}
                   </div>
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                    {lbl("f-cc", "Conta corrente")}
+                    {lblReqCad("f-cc", "Conta corrente")}
                     <input
                       id="f-cc"
                       disabled={desabilitarCampos}
@@ -2916,9 +2905,7 @@ export default function RhPrestadoresPage() {
               <strong style={{ color: t.text }}>{acaoModalRow.nome}</strong>
             </div>
             <div style={{ marginBottom: 12 }}>
-              <label htmlFor="acao-tipo" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-                Tipo de ação
-              </label>
+              {lblReq("acao-tipo", "Tipo de ação")}
               <select
                 id="acao-tipo"
                 value={acaoTipo}
@@ -2941,7 +2928,7 @@ export default function RhPrestadoresPage() {
             {acaoTipo === "periodo_indisponibilidade" ? (
               <div className="app-grid-2-tight">
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("acao-dt-saida", "Data de saída")}
+                  {lblReq("acao-dt-saida", "Data de saída")}
                   <input
                     id="acao-dt-saida"
                     type="date"
@@ -2955,7 +2942,7 @@ export default function RhPrestadoresPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("acao-dt-ret", "Data de retorno")}
+                  {lblReq("acao-dt-ret", "Data de retorno")}
                   <input
                     id="acao-dt-ret"
                     type="date"
@@ -2966,7 +2953,7 @@ export default function RhPrestadoresPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("acao-obs", "Observação")}
+                  {lblReq("acao-obs", "Observação")}
                   <textarea id="acao-obs" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
                 </div>
                 <div style={{ gridColumn: "1 / -1", marginBottom: 8 }}>
@@ -2988,7 +2975,7 @@ export default function RhPrestadoresPage() {
             {acaoTipo === "retorno_indisponibilidade" ? (
               <div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("acao-obs-r", "Observação")}
+                  {lblReq("acao-obs-r", "Observação")}
                   <textarea id="acao-obs-r" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
                 </div>
                 <div style={{ marginBottom: 8 }}>
@@ -3010,11 +2997,11 @@ export default function RhPrestadoresPage() {
             {acaoTipo === "termino_prestacao" ? (
               <div className="app-grid-2-tight">
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("acao-dt-term", "Data de término")}
+                  {lblReq("acao-dt-term", "Data de término")}
                   <input id="acao-dt-term" type="date" value={acaoDtTermino} onChange={(e) => setAcaoDtTermino(e.target.value)} style={inputStyle} />
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("acao-obs-t", "Observação")}
+                  {lblReq("acao-obs-t", "Observação")}
                   <textarea id="acao-obs-t" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
                 </div>
                 <div style={{ gridColumn: "1 / -1", marginBottom: 8 }}>
@@ -3036,7 +3023,7 @@ export default function RhPrestadoresPage() {
             {acaoTipo === "alinhamento_formal" ? (
               <div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("acao-obs-a", "Observação")}
+                  {lblReq("acao-obs-a", "Observação")}
                   <textarea id="acao-obs-a" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
                 </div>
                 <div style={{ marginBottom: 8 }}>
@@ -3060,7 +3047,7 @@ export default function RhPrestadoresPage() {
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                   {usarSelectTime ? (
                     <>
-                      {lbl("acao-org", "Organograma")}
+                      {lblReq("acao-org", "Organograma")}
                       <select
                         id="acao-org"
                         value={acaoForm.org_time_id ?? ""}
@@ -3113,7 +3100,7 @@ export default function RhPrestadoresPage() {
                     </>
                   ) : (
                     <>
-                      {lbl("acao-setor", "Setor")}
+                      {lblReq("acao-setor", "Setor")}
                       <input
                         id="acao-setor"
                         value={acaoForm.setor}
@@ -3124,7 +3111,7 @@ export default function RhPrestadoresPage() {
                   )}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("acao-cargo", "Função")}
+                  {lblReq("acao-cargo", "Função")}
                   <input
                     id="acao-cargo"
                     value={acaoForm.cargo}
@@ -3133,7 +3120,7 @@ export default function RhPrestadoresPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("acao-nivel", "Nível")}
+                  {lblReq("acao-nivel", "Nível")}
                   <select
                     id="acao-nivel"
                     value={acaoForm.nivel}
@@ -3149,7 +3136,7 @@ export default function RhPrestadoresPage() {
                   </select>
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("acao-tipo", "Tipo de contrato")}
+                  {lblReq("acao-tipo", "Tipo de contrato")}
                   <select
                     id="acao-tipo-ct"
                     value={acaoForm.tipo_contrato}
@@ -3166,7 +3153,7 @@ export default function RhPrestadoresPage() {
                 </div>
                 {podeVerDadosSensiveis ? (
                   <div style={{ marginBottom: 10 }}>
-                    {lbl("acao-sal", "Remuneração Mensal")}
+                    {lblReq("acao-sal", "Remuneração Mensal")}
                     <input
                       id="acao-sal"
                       inputMode="numeric"
@@ -3182,7 +3169,7 @@ export default function RhPrestadoresPage() {
                   </div>
                 )}
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("acao-escala", "Escala")}
+                  {lblReq("acao-escala", "Escala")}
                   <input
                     id="acao-escala"
                     value={acaoForm.escala}
@@ -3198,7 +3185,7 @@ export default function RhPrestadoresPage() {
                 </div>
                 {acaoTipo === "revisao_contrato" ? (
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                    {lbl("acao-dt-funcao", "Data da Função")}
+                    {lblReq("acao-dt-funcao", "Data da Função")}
                     <input
                       id="acao-dt-funcao"
                       type="date"
@@ -3210,7 +3197,7 @@ export default function RhPrestadoresPage() {
                 ) : null}
                 {acaoTipo === "reativacao_prestacao" ? (
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                    {lbl("acao-dt-ini", "Data de início")}
+                    {lblReq("acao-dt-ini", "Data de início")}
                     <input
                       id="acao-dt-ini"
                       type="date"
@@ -3222,7 +3209,7 @@ export default function RhPrestadoresPage() {
                 ) : null}
                 {acaoTipo === "reativacao_prestacao" ? (
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                    {lbl("acao-obs-rh", "Observação")}
+                    {lblReq("acao-obs-rh", "Observação")}
                     <textarea
                       id="acao-obs-rh"
                       value={acaoForm.observacao_rh}
@@ -3285,7 +3272,7 @@ export default function RhPrestadoresPage() {
           <ModalHeader title="RH Talks" onClose={fecharModalRhTalks} />
           <div style={{ padding: "0 4px 16px", fontFamily: FONT.body }}>
             <div style={{ marginBottom: 12 }}>
-              {lbl("rt-assunto", "Assunto do RH Talks")}
+              {lblReq("rt-assunto", "Assunto do RH Talks")}
               <input
                 id="rt-assunto"
                 value={rtAssunto}
@@ -3295,57 +3282,63 @@ export default function RhPrestadoresPage() {
               />
             </div>
             <div style={{ marginBottom: 12 }}>
-              {lbl("rt-data", "Data do RH Talks")}
+              {lblReq("rt-data", "Data do RH Talks")}
               <input id="rt-data" type="date" value={rtData} onChange={(e) => setRtData(e.target.value)} style={inputStyle} aria-label="Data do RH Talks" />
             </div>
             <div style={{ marginBottom: 10 }}>
-              {lbl("rt-busca", "Participantes")}
+              {lblReq("rt-busca", "Participantes")}
               <input
                 id="rt-busca"
                 type="search"
                 value={rtBusca}
                 onChange={(e) => setRtBusca(e.target.value)}
-                placeholder="Pesquisar por nome do funcionário"
+                placeholder="Digite o nome para buscar"
                 style={inputStyle}
                 aria-label="Pesquisar funcionários para adicionar como participantes"
               />
-              <div
-                style={{
-                  marginTop: 8,
-                  maxHeight: 200,
-                  overflow: "auto",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                }}
-              >
-                {sugestoesParticipantesRhTalks.length === 0 ? (
-                  <div style={{ padding: 12, fontSize: 12, color: t.textMuted }}>Nenhum resultado. Ajuste a pesquisa ou todos já foram adicionados.</div>
-                ) : (
-                  sugestoesParticipantesRhTalks.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setRtParticipantes((prev) => [...prev, f])}
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "10px 12px",
-                        border: "none",
-                        borderBottom: `1px solid ${t.cardBorder}`,
-                        background: "transparent",
-                        color: t.text,
-                        cursor: "pointer",
-                        fontSize: 13,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      {f.nome}
-                    </button>
-                  ))
-                )}
-              </div>
+              {rtBusca.trim() ? (
+                <div
+                  style={{
+                    marginTop: 8,
+                    maxHeight: 200,
+                    overflow: "auto",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                  }}
+                >
+                  {sugestoesParticipantesRhTalks.length === 0 ? (
+                    <div style={{ padding: 12, fontSize: 12, color: t.textMuted }}>Nenhum resultado para esta pesquisa.</div>
+                  ) : (
+                    sugestoesParticipantesRhTalks.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setRtParticipantes((prev) => [...prev, f])}
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "10px 12px",
+                          border: "none",
+                          borderBottom: `1px solid ${t.cardBorder}`,
+                          background: "transparent",
+                          color: t.text,
+                          cursor: "pointer",
+                          fontSize: 13,
+                          fontFamily: FONT.body,
+                        }}
+                      >
+                        {f.nome}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <div style={{ marginTop: 8, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                  Digite o nome para ver sugestões de participantes.
+                </div>
+              )}
               {rtParticipantes.length > 0 ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
                   {rtParticipantes.map((p) => (
@@ -3386,7 +3379,7 @@ export default function RhPrestadoresPage() {
               ) : null}
             </div>
             <div style={{ marginBottom: 12 }}>
-              {lbl("rt-ata", "Ata da reunião")}
+              {lblReq("rt-ata", "Ata da reunião")}
               <textarea
                 id="rt-ata"
                 value={rtAta}
@@ -3464,9 +3457,7 @@ export default function RhPrestadoresPage() {
               <strong style={{ color: t.text }}>{anotacaoModalRow.nome}</strong>
             </div>
             <div style={{ marginBottom: 12 }}>
-              <label htmlFor="an-tipo" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
-                Tipo
-              </label>
+              {lblReq("an-tipo", "Tipo")}
               <select
                 id="an-tipo"
                 value={anVisibilidade}
@@ -3479,11 +3470,11 @@ export default function RhPrestadoresPage() {
               </select>
             </div>
             <div style={{ marginBottom: 12 }}>
-              {lbl("an-assunto", "Assunto")}
+              {lblReq("an-assunto", "Assunto")}
               <input id="an-assunto" value={anAssunto} onChange={(e) => setAnAssunto(e.target.value)} style={inputStyle} aria-label="Assunto" />
             </div>
             <div style={{ marginBottom: 12 }}>
-              {lbl("an-data", "Data da conversa")}
+              {lblReq("an-data", "Data da conversa")}
               <input
                 id="an-data"
                 type="date"
@@ -3494,7 +3485,7 @@ export default function RhPrestadoresPage() {
               />
             </div>
             <div style={{ marginBottom: 12 }}>
-              {lbl("an-ata", "Ata da reunião")}
+              {lblReq("an-ata", "Ata da reunião")}
               <textarea
                 id="an-ata"
                 value={anAta}
@@ -3506,14 +3497,14 @@ export default function RhPrestadoresPage() {
             </div>
             <div style={{ marginBottom: 8 }}>
               <label htmlFor="an-anexo" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
-                Anexo (opcional)
+                Anexo
               </label>
               <input
                 id="an-anexo"
                 type="file"
                 onChange={(e) => setAnFiles(Array.from(e.target.files ?? []))}
                 style={{ fontSize: 12, width: "100%", color: t.textMuted }}
-                aria-label="Anexo opcional"
+                aria-label="Anexo"
               />
               {anFiles.length > 0 ? (
                 <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{anFiles.map((f) => f.name).join(", ")}</div>
