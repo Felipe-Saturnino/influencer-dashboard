@@ -13,6 +13,7 @@ import {
   Plus,
   StickyNote,
   UserCircle2,
+  Users,
   X,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
@@ -384,6 +385,42 @@ const UFS_BR = [
   "RR", "SC", "SP", "SE", "TO",
 ] as const;
 
+/** Cadastro considerado incompleto para o card de resumo (campos mínimos alinhados à validação de gravação). */
+function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean): boolean {
+  if (!r.nome?.trim()) return true;
+  const cpf = somenteDigitos(r.cpf);
+  if (cpf.length !== 11 || !validarCpfDigitos(cpf)) return true;
+  if (!r.email?.trim() || !validarEmail(r.email)) return true;
+  const tel = somenteDigitos(r.telefone);
+  if (tel.length < 10 || tel.length > 11) return true;
+  if (!r.rg?.trim()) return true;
+  if (!r.res_logradouro?.trim() || !r.res_cidade?.trim()) return true;
+  const uf = (r.res_estado ?? "").trim().toUpperCase();
+  if (uf.length !== 2 || !UFS_BR.includes(uf as (typeof UFS_BR)[number])) return true;
+  const cep = somenteDigitos(r.res_cep ?? "");
+  if (cep.length !== 8) return true;
+  if (!r.emerg_nome?.trim()) return true;
+  const telE = somenteDigitos(r.emerg_telefone ?? "");
+  if (telE.length < 10 || telE.length > 11) return true;
+  if (temOrganograma) {
+    if (!r.org_time_id && !r.setor?.trim()) return true;
+  } else if (!r.setor?.trim()) return true;
+  if (!r.cargo?.trim() || !r.nivel?.trim() || !r.escala?.trim()) return true;
+  if (!r.data_inicio?.trim()) return true;
+  if (r.tipo_contrato === "PJ") {
+    const cnpj = somenteDigitos(r.cnpj);
+    if (cnpj.length !== 14 || !validarCnpjDigitos(cnpj)) return true;
+    if (!r.nome_empresa?.trim() || !r.emp_logradouro?.trim() || !r.emp_cidade?.trim()) return true;
+    const ufe = (r.emp_estado ?? "").trim().toUpperCase();
+    if (ufe.length !== 2 || !UFS_BR.includes(ufe as (typeof UFS_BR)[number])) return true;
+    const cepE = somenteDigitos(r.emp_cep ?? "");
+    if (cepE.length !== 8) return true;
+  }
+  if (!r.banco?.trim() || !r.agencia?.trim() || !r.conta_corrente?.trim()) return true;
+  if (Number(r.salario) <= 0) return true;
+  return false;
+}
+
 const blurSensivel: CSSProperties = {
   filter: "blur(7px)",
   userSelect: "none",
@@ -439,8 +476,7 @@ type AbaFuncModal =
   | "contratacao"
   | "empresa"
   | "bancarios"
-  | "documentos"
-  | "contratos";
+  | "documentos";
 
 type AbaPaginaRhFunc = "headcount" | "acoes_rh" | "anotacoes";
 
@@ -928,7 +964,7 @@ export default function RhPrestadoresPage() {
     if (ehPJ) tabs.push({ key: "empresa", label: "Dados da empresa" });
     tabs.push({ key: "bancarios", label: "Dados bancários" });
     if (modalForm === "editar" || modalForm === "ver") {
-      tabs.push({ key: "documentos", label: "Documentos" }, { key: "contratos", label: "Contratos" });
+      tabs.push({ key: "documentos", label: "Documentos" });
     }
     return tabs;
   }, [ehPJ, modalForm]);
@@ -964,6 +1000,21 @@ export default function RhPrestadoresPage() {
       return false;
     });
   }, [lista, busca, filtroSetor, filtroContrato, filtroStatus, filtroDiretoria, filtroGerencia, opcoesTimes]);
+
+  const resumoPrestadoresCards = useMemo(() => {
+    const temOrganograma = permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0;
+    const total = filtrada.length;
+    let ativo = 0;
+    let indisponivel = 0;
+    let encerrado = 0;
+    for (const r of filtrada) {
+      if (r.status === "ativo") ativo += 1;
+      else if (r.status === "indisponivel") indisponivel += 1;
+      else encerrado += 1;
+    }
+    const incompletos = filtrada.filter((r) => prestadorCadastroIncompleto(r, temOrganograma));
+    return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos };
+  }, [filtrada, permOrg.canView, permOrg.loading, opcoesTimes.length]);
 
   const sugestoesParticipantesRhTalks = useMemo(() => {
     const q = rtBusca.trim().toLowerCase();
@@ -1931,6 +1982,134 @@ export default function RhPrestadoresPage() {
         </div>
       </div>
 
+      <div className="app-grid-2" style={{ gap: 16, marginBottom: 16 }}>
+        <div
+          style={{
+            background: brand.useBrand ? brand.blockBg : t.cardBg,
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: 18,
+            padding: 20,
+            boxShadow: cardShadow,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              color: brand.useBrand ? brand.secondary : t.textMuted,
+              letterSpacing: "1px",
+              textTransform: "uppercase",
+              fontFamily: FONT.body,
+              marginBottom: 6,
+            }}
+          >
+            <Users size={13} aria-hidden style={{ color: brand.useBrand ? brand.secondary : t.textMuted }} />
+            Total de Prestadores
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
+            {resumoPrestadoresCards.total}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Ativos</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("ativo"), fontFamily: FONT.body }}>
+                {resumoPrestadoresCards.porStatus.ativo}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Indisponíveis</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("indisponivel"), fontFamily: FONT.body }}>
+                {resumoPrestadoresCards.porStatus.indisponivel}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Encerrados</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("encerrado"), fontFamily: FONT.body }}>
+                {resumoPrestadoresCards.porStatus.encerrado}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: brand.useBrand ? brand.blockBg : t.cardBg,
+            border: "1px solid rgba(232, 64, 37, 0.25)",
+            borderRadius: 18,
+            padding: 20,
+            boxShadow: cardShadow,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#e84025",
+              letterSpacing: "1px",
+              textTransform: "uppercase",
+              fontFamily: FONT.body,
+              marginBottom: 6,
+            }}
+          >
+            <AlertCircle size={13} aria-hidden />
+            Cadastro incompleto
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 900, color: "#e84025", fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
+            {resumoPrestadoresCards.incompletos.length}
+          </div>
+          {resumoPrestadoresCards.incompletos.length === 0 ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#22c55e", fontFamily: FONT.body }}>
+              <CheckCircle2 size={14} aria-hidden />
+              Todos os cadastros filtrados estão completos.
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                maxHeight: 220,
+                overflow: "auto",
+              }}
+            >
+              {resumoPrestadoresCards.incompletos.map((row) =>
+                perm.canEditarOk ? (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => abrirEditar(row)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                      textAlign: "left",
+                      fontSize: 13,
+                      color: "var(--brand-action, #7c3aed)",
+                      fontFamily: FONT.body,
+                      textDecoration: "underline",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {row.nome}
+                  </button>
+                ) : (
+                  <span key={row.id} style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                    {row.nome}
+                  </span>
+                ),
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div
         role="tablist"
         aria-label="Módulos de gestão de colaboradores"
@@ -2837,7 +3016,7 @@ export default function RhPrestadoresPage() {
               )
             ) : null}
 
-            {abaModal === "documentos" || abaModal === "contratos" ? <div style={{ minHeight: 120 }} aria-hidden /> : null}
+            {abaModal === "documentos" ? <div style={{ minHeight: 120 }} aria-hidden /> : null}
           </div>
 
           {!leitura ? (
