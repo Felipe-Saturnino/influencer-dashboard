@@ -11,6 +11,7 @@ import {
   Paperclip,
   Pencil,
   Plus,
+  StickyNote,
   UserCircle2,
   X,
 } from "lucide-react";
@@ -73,6 +74,8 @@ const HIST_TIPO_LABEL: Record<string, string> = {
   alinhamento_formal: "Alinhamento Formal",
   termino_prestacao: "Término da Prestação",
   reativacao_prestacao: "Reativação da Prestação",
+  rh_talks: "RH Talks",
+  anotacao_rh: "Anotação do RH",
 };
 
 /** Fundo e borda suaves por tipo de ação (modal Histórico). */
@@ -83,6 +86,10 @@ const HIST_TIPO_SURFACE: Record<string, { bg: string; border: string }> = {
   alinhamento_formal: { bg: "rgba(249, 115, 22, 0.14)", border: "rgba(249, 115, 22, 0.4)" },
   termino_prestacao: { bg: "rgba(232, 64, 37, 0.1)", border: "rgba(232, 64, 37, 0.36)" },
   reativacao_prestacao: { bg: "rgba(59, 130, 246, 0.14)", border: "rgba(59, 130, 246, 0.4)" },
+  /** Cinza semântico (neutro) — RH Talks */
+  rh_talks: { bg: "rgba(107, 114, 128, 0.14)", border: "rgba(107, 114, 128, 0.42)" },
+  /** Tom próprio para anotações (diferente do cinza dos Talks) */
+  anotacao_rh: { bg: "rgba(100, 116, 139, 0.12)", border: "rgba(100, 116, 139, 0.38)" },
 };
 
 function cardStyleHistoricoPorTipo(tipo: string, t: { cardBorder: string; inputBg: string }): CSSProperties {
@@ -184,6 +191,92 @@ function ListaHistoricoRh({
             {h.tipo === "alinhamento_formal" && det.observacao ? (
               <div style={{ color: t.text, marginTop: 6 }}>
                 <strong>Observação:</strong> {String(det.observacao)}
+              </div>
+            ) : null}
+            {h.tipo === "rh_talks" ? (
+              <div style={{ color: t.text, marginTop: 6, lineHeight: 1.5 }}>
+                {det.assunto ? (
+                  <div>
+                    <strong>Assunto:</strong> {String(det.assunto)}
+                  </div>
+                ) : null}
+                {det.data_rh_talks ? (
+                  <div style={{ marginTop: 4 }}>
+                    <strong>Data do RH Talks:</strong> {fmtDataIsoPtBr(String(det.data_rh_talks))}
+                  </div>
+                ) : null}
+                {Array.isArray(det.participantes) && (det.participantes as { nome?: string }[]).length > 0 ? (
+                  <div style={{ marginTop: 4 }}>
+                    <strong>Participantes:</strong>{" "}
+                    {(det.participantes as { nome?: string }[])
+                      .map((p) => String(p.nome ?? "—"))
+                      .filter(Boolean)
+                      .join(", ")}
+                  </div>
+                ) : null}
+                {det.ata ? (
+                  <div style={{ marginTop: 8 }}>
+                    <strong>Ata da reunião:</strong>
+                    <pre
+                      style={{
+                        margin: "6px 0 0",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        fontFamily: FONT.body,
+                        fontSize: 12,
+                        color: t.text,
+                        maxHeight: 220,
+                        overflow: "auto",
+                        padding: 8,
+                        borderRadius: 8,
+                        background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)",
+                      }}
+                    >
+                      {String(det.ata)}
+                    </pre>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {h.tipo === "anotacao_rh" ? (
+              <div style={{ color: t.text, marginTop: 6, lineHeight: 1.5 }}>
+                {det.tipo_visibilidade ? (
+                  <div>
+                    <strong>Tipo:</strong> {String(det.tipo_visibilidade)}
+                  </div>
+                ) : null}
+                {det.assunto ? (
+                  <div style={{ marginTop: 4 }}>
+                    <strong>Assunto:</strong> {String(det.assunto)}
+                  </div>
+                ) : null}
+                {det.data_conversa ? (
+                  <div style={{ marginTop: 4 }}>
+                    <strong>Data da conversa:</strong> {fmtDataIsoPtBr(String(det.data_conversa))}
+                  </div>
+                ) : null}
+                {det.ata_reuniao ? (
+                  <div style={{ marginTop: 8 }}>
+                    <strong>Ata da reunião:</strong>
+                    <pre
+                      style={{
+                        margin: "6px 0 0",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        fontFamily: FONT.body,
+                        fontSize: 12,
+                        color: t.text,
+                        maxHeight: 220,
+                        overflow: "auto",
+                        padding: 8,
+                        borderRadius: 8,
+                        background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)",
+                      }}
+                    >
+                      {String(det.ata_reuniao)}
+                    </pre>
+                  </div>
+                ) : null}
               </div>
             ) : null}
             {anexos.length > 0 ? (
@@ -734,6 +827,23 @@ export default function RhPrestadoresPage() {
   const [histModalItems, setHistModalItems] = useState<RhFuncionarioHistorico[]>([]);
   const [histModalLoading, setHistModalLoading] = useState(false);
 
+  const [rhTalksOpen, setRhTalksOpen] = useState(false);
+  const [rtAssunto, setRtAssunto] = useState("");
+  const [rtData, setRtData] = useState("");
+  const [rtAta, setRtAta] = useState("");
+  const [rtBusca, setRtBusca] = useState("");
+  const [rtParticipantes, setRtParticipantes] = useState<RhFuncionario[]>([]);
+  const [rtFiles, setRtFiles] = useState<File[]>([]);
+  const [rtSalvando, setRtSalvando] = useState(false);
+
+  const [anotacaoModalRow, setAnotacaoModalRow] = useState<RhFuncionario | null>(null);
+  const [anVisibilidade, setAnVisibilidade] = useState<"Particular" | "Publico">("Publico");
+  const [anAssunto, setAnAssunto] = useState("");
+  const [anData, setAnData] = useState("");
+  const [anAta, setAnAta] = useState("");
+  const [anFiles, setAnFiles] = useState<File[]>([]);
+  const [anSalvando, setAnSalvando] = useState(false);
+
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   useEffect(() => {
@@ -886,6 +996,18 @@ export default function RhPrestadoresPage() {
     });
   }, [lista, busca, filtroSetor, filtroContrato, filtroStatus, filtroDiretoria, filtroGerencia, opcoesTimes]);
 
+  const sugestoesParticipantesRhTalks = useMemo(() => {
+    const q = rtBusca.trim().toLowerCase();
+    const ids = new Set(rtParticipantes.map((p) => p.id));
+    return lista
+      .filter((f) => !ids.has(f.id))
+      .filter((f) => {
+        if (!q) return true;
+        return f.nome.toLowerCase().includes(q);
+      })
+      .slice(0, 12);
+  }, [lista, rtBusca, rtParticipantes]);
+
   const abrirNovo = () => {
     setForm(estadoVazioForm());
     setFieldErr({});
@@ -933,7 +1055,7 @@ export default function RhPrestadoresPage() {
   const inserirHistorico = useCallback(
     async (
       funcionarioId: string,
-      tipo: RhHistoricoAcaoTipo,
+      tipo: string,
       detalhes: Record<string, unknown>,
       anexos: { name: string; path: string; publicUrl: string }[],
     ) => {
@@ -980,6 +1102,158 @@ export default function RhPrestadoresPage() {
 
   const abrirModalHistorico = (row: RhFuncionario) => {
     setHistModalRow(row);
+  };
+
+  const fecharModalRhTalks = () => {
+    if (rtSalvando) return;
+    setRhTalksOpen(false);
+    setRtAssunto("");
+    setRtData("");
+    setRtAta("");
+    setRtBusca("");
+    setRtParticipantes([]);
+    setRtFiles([]);
+  };
+
+  const abrirModalRhTalks = () => {
+    setRhTalksOpen(true);
+    setRtAssunto("");
+    setRtData("");
+    setRtAta("");
+    setRtBusca("");
+    setRtParticipantes([]);
+    setRtFiles([]);
+  };
+
+  const fecharModalRegistrarAnotacao = () => {
+    if (anSalvando) return;
+    setAnotacaoModalRow(null);
+    setAnVisibilidade("Publico");
+    setAnAssunto("");
+    setAnData("");
+    setAnAta("");
+    setAnFiles([]);
+  };
+
+  const abrirModalRegistrarAnotacao = (row: RhFuncionario) => {
+    setAnotacaoModalRow(row);
+    setAnVisibilidade("Publico");
+    setAnAssunto("");
+    setAnData("");
+    setAnAta("");
+    setAnFiles([]);
+  };
+
+  const salvarRhTalks = async () => {
+    if (!perm.canEditarOk) {
+      setErroGlobal("Sem permissão para registrar.");
+      return;
+    }
+    const assunto = rtAssunto.trim();
+    const ata = rtAta.trim();
+    if (!assunto) {
+      setErroGlobal("Informe o assunto do RH Talks.");
+      return;
+    }
+    if (!rtData.trim()) {
+      setErroGlobal("Informe a data do RH Talks.");
+      return;
+    }
+    if (rtParticipantes.length === 0) {
+      setErroGlobal("Adicione pelo menos um participante.");
+      return;
+    }
+    if (!ata) {
+      setErroGlobal("Informe a ata da reunião.");
+      return;
+    }
+    setRtSalvando(true);
+    setErroGlobal(null);
+    try {
+      let anexosDb: { name: string; path: string; publicUrl: string }[] = [];
+      if (rtFiles.length > 0) {
+        const firstId = rtParticipantes[0]!.id;
+        const up = await uploadAnexosAcaoRh(firstId, rtFiles);
+        if (!up.ok) {
+          setErroGlobal(up.message);
+          setRtSalvando(false);
+          return;
+        }
+        anexosDb = up.anexos;
+      }
+      const participantesPayload = rtParticipantes.map((p) => ({ id: p.id, nome: p.nome.trim() || p.nome }));
+      const detalhes: Record<string, unknown> = {
+        assunto,
+        data_rh_talks: rtData.trim().slice(0, 10),
+        ata,
+        participantes: participantesPayload,
+      };
+      for (const p of rtParticipantes) {
+        const err = await inserirHistorico(p.id, "rh_talks", detalhes, anexosDb);
+        if (err) throw err;
+      }
+      setSucessoMsg("RH Talks registrado para os participantes.");
+      fecharModalRhTalks();
+      await carregar();
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao salvar.";
+      setErroGlobal(msg);
+    } finally {
+      setRtSalvando(false);
+    }
+  };
+
+  const salvarAnotacaoRh = async () => {
+    if (!anotacaoModalRow || !perm.canEditarOk) {
+      setErroGlobal(anotacaoModalRow ? "Sem permissão para registrar." : "Selecione um prestador.");
+      return;
+    }
+    const assunto = anAssunto.trim();
+    const ata = anAta.trim();
+    if (!assunto) {
+      setErroGlobal("Informe o assunto.");
+      return;
+    }
+    if (!anData.trim()) {
+      setErroGlobal("Informe a data da conversa.");
+      return;
+    }
+    if (!ata) {
+      setErroGlobal("Informe a ata da reunião.");
+      return;
+    }
+    setAnSalvando(true);
+    setErroGlobal(null);
+    const fid = anotacaoModalRow.id;
+    try {
+      let anexosDb: { name: string; path: string; publicUrl: string }[] = [];
+      if (anFiles.length > 0) {
+        const up = await uploadAnexosAcaoRh(fid, anFiles);
+        if (!up.ok) {
+          setErroGlobal(up.message);
+          setAnSalvando(false);
+          return;
+        }
+        anexosDb = up.anexos;
+      }
+      const tipoLabel = anVisibilidade === "Particular" ? "Particular" : "Público";
+      const detalhes: Record<string, unknown> = {
+        tipo_visibilidade: tipoLabel,
+        assunto,
+        data_conversa: anData.trim().slice(0, 10),
+        ata_reuniao: ata,
+      };
+      const err = await inserirHistorico(fid, "anotacao_rh", detalhes, anexosDb);
+      if (err) throw err;
+      setSucessoMsg("Anotação registrada.");
+      fecharModalRegistrarAnotacao();
+      await carregar();
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao salvar.";
+      setErroGlobal(msg);
+    } finally {
+      setAnSalvando(false);
+    }
   };
 
   const handleCepBlur = (qual: "res" | "emp", cepRaw: string) => {
@@ -1484,7 +1758,9 @@ export default function RhPrestadoresPage() {
         : "Anotações RH — colaboradores filtrados";
   const preencherAcoesHeadcount = abaPagina === "headcount";
   const tabelaAcoesRh = abaPagina === "acoes_rh";
-  const colunasTabela = tabelaAcoesRh ? 7 : 8;
+  const tabelaAnotacoesRh = abaPagina === "anotacoes";
+  const tabelaSemSalario = tabelaAcoesRh || tabelaAnotacoesRh;
+  const colunasTabela = tabelaSemSalario ? 7 : 8;
 
   const btnIconTabela: CSSProperties = {
     padding: "6px 10px",
@@ -1741,24 +2017,23 @@ export default function RhPrestadoresPage() {
               Novo Prestador
             </button>
           ) : null}
-          {abaPagina === "anotacoes" ? (
+          {abaPagina === "anotacoes" && perm.canEditarOk ? (
             <button
               type="button"
-              onClick={() => undefined}
-              title="Em breve"
+              onClick={() => abrirModalRhTalks()}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
                 padding: "10px 16px",
                 borderRadius: 12,
-                border: `1px solid ${t.cardBorder}`,
+                border: "none",
                 cursor: "pointer",
-                color: t.text,
+                color: "#fff",
                 fontWeight: 700,
                 fontSize: 13,
                 fontFamily: FONT.body,
-                background: t.inputBg,
+                background: ctaGradient(brand),
               }}
             >
               RH Talks
@@ -1773,7 +2048,7 @@ export default function RhPrestadoresPage() {
               width: "100%",
               borderCollapse: "separate",
               borderSpacing: 0,
-              minWidth: tabelaAcoesRh ? 680 : 820,
+              minWidth: tabelaSemSalario ? 680 : 820,
             }}
           >
             <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
@@ -1794,7 +2069,7 @@ export default function RhPrestadoresPage() {
                 <th scope="col" style={getThStyle(t)}>
                   Líder imediato
                 </th>
-                {!tabelaAcoesRh ? (
+                {!tabelaSemSalario ? (
                   <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
                     <div
                       style={{
@@ -1882,7 +2157,7 @@ export default function RhPrestadoresPage() {
                       <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={lider}>
                         {lider}
                       </td>
-                      {!tabelaAcoesRh ? (
+                      {!tabelaSemSalario ? (
                         <td
                           style={getTdNumStyle(t, {
                             background: zebraStripe(i),
@@ -1896,7 +2171,7 @@ export default function RhPrestadoresPage() {
                         <span style={{ fontWeight: 700, color: corStatusPrestador(row.status) }}>{labelStatusPrestador(row.status)}</span>
                       </td>
                       <td style={{ ...getTdStyle(t, { textAlign: "right", background: zebraStripe(i) }) }}>
-                        {preencherAcoesHeadcount || tabelaAcoesRh ? (
+                        {preencherAcoesHeadcount || tabelaAcoesRh || tabelaAnotacoesRh ? (
                           <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                             <button
                               type="button"
@@ -1910,7 +2185,7 @@ export default function RhPrestadoresPage() {
                               type="button"
                               onClick={() => abrirModalHistorico(row)}
                               style={btnIconTabela}
-                              aria-label={`Histórico de ações de ${row.nome}`}
+                              aria-label={`Histórico de ${row.nome}`}
                             >
                               <History size={14} aria-hidden />
                             </button>
@@ -1927,6 +2202,16 @@ export default function RhPrestadoresPage() {
                                 aria-label={`Registrar ação de RH para ${row.nome}`}
                               >
                                 <ClipboardList size={14} aria-hidden />
+                              </button>
+                            ) : null}
+                            {tabelaAnotacoesRh && perm.canEditarOk ? (
+                              <button
+                                type="button"
+                                onClick={() => abrirModalRegistrarAnotacao(row)}
+                                style={btnIconTabelaCta}
+                                aria-label={`Registrar anotação de RH para ${row.nome}`}
+                              >
+                                <StickyNote size={14} aria-hidden />
                               </button>
                             ) : null}
                           </div>
@@ -2988,6 +3273,290 @@ export default function RhPrestadoresPage() {
                 }}
               >
                 {acaoSalvando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+                Salvar
+              </button>
+            </div>
+          </div>
+        </ModalBase>
+      ) : null}
+
+      {rhTalksOpen ? (
+        <ModalBase maxWidth={640} onClose={fecharModalRhTalks}>
+          <ModalHeader title="RH Talks" onClose={fecharModalRhTalks} />
+          <div style={{ padding: "0 4px 16px", fontFamily: FONT.body }}>
+            <div style={{ marginBottom: 12 }}>
+              {lbl("rt-assunto", "Assunto do RH Talks")}
+              <input
+                id="rt-assunto"
+                value={rtAssunto}
+                onChange={(e) => setRtAssunto(e.target.value)}
+                style={inputStyle}
+                aria-label="Assunto do RH Talks"
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              {lbl("rt-data", "Data do RH Talks")}
+              <input id="rt-data" type="date" value={rtData} onChange={(e) => setRtData(e.target.value)} style={inputStyle} aria-label="Data do RH Talks" />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              {lbl("rt-busca", "Participantes")}
+              <input
+                id="rt-busca"
+                type="search"
+                value={rtBusca}
+                onChange={(e) => setRtBusca(e.target.value)}
+                placeholder="Pesquisar por nome do funcionário"
+                style={inputStyle}
+                aria-label="Pesquisar funcionários para adicionar como participantes"
+              />
+              <div
+                style={{
+                  marginTop: 8,
+                  maxHeight: 200,
+                  overflow: "auto",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                }}
+              >
+                {sugestoesParticipantesRhTalks.length === 0 ? (
+                  <div style={{ padding: 12, fontSize: 12, color: t.textMuted }}>Nenhum resultado. Ajuste a pesquisa ou todos já foram adicionados.</div>
+                ) : (
+                  sugestoesParticipantesRhTalks.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setRtParticipantes((prev) => [...prev, f])}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "10px 12px",
+                        border: "none",
+                        borderBottom: `1px solid ${t.cardBorder}`,
+                        background: "transparent",
+                        color: t.text,
+                        cursor: "pointer",
+                        fontSize: 13,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      {f.nome}
+                    </button>
+                  ))
+                )}
+              </div>
+              {rtParticipantes.length > 0 ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                  {rtParticipantes.map((p) => (
+                    <span
+                      key={p.id}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "6px 10px",
+                        borderRadius: 20,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 8%, transparent)",
+                        fontSize: 12,
+                        color: t.text,
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      {p.nome}
+                      <button
+                        type="button"
+                        onClick={() => setRtParticipantes((prev) => prev.filter((x) => x.id !== p.id))}
+                        style={{
+                          border: "none",
+                          background: "none",
+                          cursor: "pointer",
+                          padding: 0,
+                          color: t.textMuted,
+                          lineHeight: 1,
+                        }}
+                        aria-label={`Remover ${p.nome} dos participantes`}
+                      >
+                        <X size={14} aria-hidden />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              {lbl("rt-ata", "Ata da reunião")}
+              <textarea
+                id="rt-ata"
+                value={rtAta}
+                onChange={(e) => setRtAta(e.target.value)}
+                rows={6}
+                style={{ ...inputStyle, resize: "vertical", minHeight: 120 }}
+                aria-label="Ata da reunião"
+              />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label htmlFor="rt-anexo" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
+                Anexo (opcional)
+              </label>
+              <input
+                id="rt-anexo"
+                type="file"
+                onChange={(e) => setRtFiles(Array.from(e.target.files ?? []))}
+                style={{ fontSize: 12, width: "100%", color: t.textMuted }}
+                aria-label="Anexo opcional"
+              />
+              {rtFiles.length > 0 ? (
+                <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{rtFiles.map((f) => f.name).join(", ")}</div>
+              ) : null}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+              <button
+                type="button"
+                disabled={rtSalvando}
+                onClick={fecharModalRhTalks}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  cursor: rtSalvando ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={rtSalvando}
+                onClick={() => void salvarRhTalks()}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: "none",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: rtSalvando ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  background: ctaGradient(brand),
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {rtSalvando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+                Salvar
+              </button>
+            </div>
+          </div>
+        </ModalBase>
+      ) : null}
+
+      {anotacaoModalRow ? (
+        <ModalBase maxWidth={640} onClose={fecharModalRegistrarAnotacao}>
+          <ModalHeader title="Registrar Anotação" onClose={fecharModalRegistrarAnotacao} />
+          <div style={{ padding: "0 4px 16px", fontFamily: FONT.body }}>
+            <div style={{ marginBottom: 12, fontSize: 13, color: t.textMuted }}>
+              <strong style={{ color: t.text }}>{anotacaoModalRow.nome}</strong>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label htmlFor="an-tipo" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
+                Tipo
+              </label>
+              <select
+                id="an-tipo"
+                value={anVisibilidade}
+                onChange={(e) => setAnVisibilidade(e.target.value as "Particular" | "Publico")}
+                style={inputStyle}
+                aria-label="Tipo da anotação"
+              >
+                <option value="Publico">Público</option>
+                <option value="Particular">Particular</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              {lbl("an-assunto", "Assunto")}
+              <input id="an-assunto" value={anAssunto} onChange={(e) => setAnAssunto(e.target.value)} style={inputStyle} aria-label="Assunto" />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              {lbl("an-data", "Data da conversa")}
+              <input
+                id="an-data"
+                type="date"
+                value={anData}
+                onChange={(e) => setAnData(e.target.value)}
+                style={inputStyle}
+                aria-label="Data da conversa"
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              {lbl("an-ata", "Ata da reunião")}
+              <textarea
+                id="an-ata"
+                value={anAta}
+                onChange={(e) => setAnAta(e.target.value)}
+                rows={6}
+                style={{ ...inputStyle, resize: "vertical", minHeight: 120 }}
+                aria-label="Ata da reunião"
+              />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label htmlFor="an-anexo" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
+                Anexo (opcional)
+              </label>
+              <input
+                id="an-anexo"
+                type="file"
+                onChange={(e) => setAnFiles(Array.from(e.target.files ?? []))}
+                style={{ fontSize: 12, width: "100%", color: t.textMuted }}
+                aria-label="Anexo opcional"
+              />
+              {anFiles.length > 0 ? (
+                <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{anFiles.map((f) => f.name).join(", ")}</div>
+              ) : null}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+              <button
+                type="button"
+                disabled={anSalvando}
+                onClick={fecharModalRegistrarAnotacao}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  cursor: anSalvando ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={anSalvando}
+                onClick={() => void salvarAnotacaoRh()}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: "none",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: anSalvando ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  background: ctaGradient(brand),
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {anSalvando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
                 Salvar
               </button>
             </div>

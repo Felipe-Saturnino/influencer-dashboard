@@ -7,7 +7,9 @@ export type RhHistoricoAcaoTipo =
   | "retorno_indisponibilidade"
   | "alinhamento_formal"
   | "termino_prestacao"
-  | "reativacao_prestacao";
+  | "reativacao_prestacao"
+  | "rh_talks"
+  | "anotacao_rh";
 
 /** Linha de `public.rh_funcionario_historico`. */
 export interface RhFuncionarioHistorico {
