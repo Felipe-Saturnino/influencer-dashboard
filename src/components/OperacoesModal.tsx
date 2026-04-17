@@ -13,7 +13,7 @@ import { FONT } from "../constants/theme";
 
 const DialogTitleIdContext = createContext<string>("");
 
-function useDialogTitleId() {
+export function useDialogTitleId() {
   return useContext(DialogTitleIdContext);
 }
 

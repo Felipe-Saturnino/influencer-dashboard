@@ -105,3 +105,10 @@ export function numeroDeCentavosStr(centsStr: string): number {
   const n = parseInt(d, 10) / 100;
   return Math.round(n * 100) / 100;
 }
+
+/** CEP brasileiro: até 8 dígitos com máscara 00000-000. */
+export function formatarCepDigitos(s: string): string {
+  const d = somenteDigitos(s).slice(0, 8);
+  if (d.length <= 5) return d;
+  return `${d.slice(0, 5)}-${d.slice(5)}`;
+}

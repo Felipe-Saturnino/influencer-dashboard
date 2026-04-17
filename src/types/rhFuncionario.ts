@@ -12,7 +12,16 @@ export interface RhFuncionario {
   telefone: string;
   email: string;
   endereco_residencial: string;
+  res_cep: string;
+  res_logradouro: string;
+  res_numero: string;
+  res_complemento: string;
+  res_cidade: string;
+  res_estado: string;
   contato_emergencia: string;
+  emerg_nome: string;
+  emerg_parentesco: string;
+  emerg_telefone: string;
   setor: string;
   /** Time do organograma (RH); preenche `setor` com o nome do time. */
   org_time_id?: string | null;
@@ -26,6 +35,12 @@ export interface RhFuncionario {
   nome_empresa: string;
   cnpj: string;
   endereco_empresa: string;
+  emp_cep: string;
+  emp_logradouro: string;
+  emp_numero: string;
+  emp_complemento: string;
+  emp_cidade: string;
+  emp_estado: string;
   banco: string;
   agencia: string;
   conta_corrente: string;

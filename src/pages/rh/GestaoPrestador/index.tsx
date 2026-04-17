@@ -2,23 +2,26 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import {
   AlertCircle,
   CheckCircle2,
+  Eye,
+  EyeOff,
   Loader2,
   Pencil,
   Plus,
   UserCircle2,
-  UserX,
-  Eye,
+  X,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   centavosDeStringMoeda,
   formatarAgencia,
+  formatarCepDigitos,
   formatarCnpjDigitos,
   formatarCpfDigitos,
   formatarMoedaDigitos,
@@ -30,11 +33,13 @@ import {
   validarCpfDigitos,
   validarEmail,
 } from "../../../lib/rhFuncionarioValidators";
+import { montarContatoEmergenciaLinha, montarEnderecoResumoLine } from "../../../lib/rhFuncionarioEndereco";
+import { buscarEnderecoPorCep } from "../../../lib/rhViaCep";
 import type { RhFuncionario, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
 import type { RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { PageHeader } from "../../../components/PageHeader";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
 import { SkeletonTableRow } from "../../../components/dashboard/SkeletonCard";
 
 const NIVEIS = ["Junior", "Pleno", "Senior", "Especialista", "Gestor"] as const;
@@ -48,9 +53,15 @@ const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }[] = [
 
 const ESCALAS_SUGEST = ["5x2", "6x1", "12x36", "12x48", "8x6", "Comercial"];
 
-function labelTipoContrato(v: RhFuncionarioTipoContrato): string {
-  return TIPOS_CONTRATO.find((x) => x.value === v)?.label ?? v;
-}
+const UFS_BR = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO",
+  "RR", "SC", "SP", "SE", "TO",
+] as const;
+
+const blurSensivel: CSSProperties = {
+  filter: "blur(7px)",
+  userSelect: "none",
+};
 
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
   return brand.useBrand
@@ -64,8 +75,15 @@ type FormState = {
   cpf: string;
   telefone: string;
   email: string;
-  endereco_residencial: string;
-  contato_emergencia: string;
+  res_cep: string;
+  res_logradouro: string;
+  res_numero: string;
+  res_complemento: string;
+  res_cidade: string;
+  res_estado: string;
+  emerg_nome: string;
+  emerg_parentesco: string;
+  emerg_telefone: string;
   setor: string;
   org_time_id: string | null;
   cargo: string;
@@ -76,7 +94,12 @@ type FormState = {
   tipo_contrato: RhFuncionarioTipoContrato;
   nome_empresa: string;
   cnpj: string;
-  endereco_empresa: string;
+  emp_cep: string;
+  emp_logradouro: string;
+  emp_numero: string;
+  emp_complemento: string;
+  emp_cidade: string;
+  emp_estado: string;
   banco: string;
   agencia: string;
   conta_corrente: string;
@@ -110,8 +133,15 @@ function estadoVazioForm(): FormState {
     cpf: "",
     telefone: "",
     email: "",
-    endereco_residencial: "",
-    contato_emergencia: "",
+    res_cep: "",
+    res_logradouro: "",
+    res_numero: "",
+    res_complemento: "",
+    res_cidade: "",
+    res_estado: "",
+    emerg_nome: "",
+    emerg_parentesco: "",
+    emerg_telefone: "",
     setor: "",
     org_time_id: null,
     cargo: "",
@@ -122,7 +152,12 @@ function estadoVazioForm(): FormState {
     tipo_contrato: "CLT",
     nome_empresa: "",
     cnpj: "",
-    endereco_empresa: "",
+    emp_cep: "",
+    emp_logradouro: "",
+    emp_numero: "",
+    emp_complemento: "",
+    emp_cidade: "",
+    emp_estado: "",
     banco: "",
     agencia: "",
     conta_corrente: "",
@@ -132,14 +167,24 @@ function estadoVazioForm(): FormState {
 
 function formDeFuncionario(f: RhFuncionario): FormState {
   const cents = Math.round(Number(f.salario) * 100).toString();
+  const resLog = (f.res_logradouro ?? "").trim() || f.endereco_residencial;
+  const empLog = (f.emp_logradouro ?? "").trim() || f.endereco_empresa;
+  const emergNome = (f.emerg_nome ?? "").trim() || f.contato_emergencia;
   return {
     nome: f.nome,
     rg: formatarRgInput(f.rg),
     cpf: formatarCpfDigitos(f.cpf),
     telefone: formatarTelefoneBr(f.telefone),
     email: f.email,
-    endereco_residencial: f.endereco_residencial,
-    contato_emergencia: f.contato_emergencia,
+    res_cep: formatarCepDigitos(f.res_cep ?? ""),
+    res_logradouro: resLog,
+    res_numero: f.res_numero ?? "",
+    res_complemento: f.res_complemento ?? "",
+    res_cidade: f.res_cidade ?? "",
+    res_estado: (f.res_estado ?? "").toUpperCase().slice(0, 2),
+    emerg_nome: emergNome,
+    emerg_parentesco: f.emerg_parentesco ?? "",
+    emerg_telefone: formatarTelefoneBr(f.emerg_telefone ?? ""),
     setor: f.setor,
     org_time_id: f.org_time_id ?? null,
     cargo: f.cargo,
@@ -150,7 +195,12 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     tipo_contrato: f.tipo_contrato,
     nome_empresa: f.nome_empresa,
     cnpj: formatarCnpjDigitos(f.cnpj),
-    endereco_empresa: f.endereco_empresa,
+    emp_cep: formatarCepDigitos(f.emp_cep ?? ""),
+    emp_logradouro: empLog,
+    emp_numero: f.emp_numero ?? "",
+    emp_complemento: f.emp_complemento ?? "",
+    emp_cidade: f.emp_cidade ?? "",
+    emp_estado: (f.emp_estado ?? "").toUpperCase().slice(0, 2),
     banco: f.banco,
     agencia: formatarAgencia(f.agencia),
     conta_corrente: f.conta_corrente,
@@ -158,7 +208,123 @@ function formDeFuncionario(f: RhFuncionario): FormState {
   };
 }
 
-export default function RhFuncionariosPage() {
+function RhFuncModalHeaderDetalhes({
+  t,
+  perm,
+  editId,
+  lista,
+  modalVerExibirSensiveis,
+  setModalVerExibirSensiveis,
+  abrirEditar,
+  fecharModalFuncionario,
+  ctaGradient,
+  brand,
+}: {
+  t: ReturnType<typeof useApp>["theme"];
+  perm: ReturnType<typeof usePermission>;
+  editId: string | null;
+  lista: RhFuncionario[];
+  modalVerExibirSensiveis: boolean;
+  setModalVerExibirSensiveis: (v: boolean) => void;
+  abrirEditar: (row: RhFuncionario) => void;
+  fecharModalFuncionario: () => void;
+  ctaGradient: (brand: ReturnType<typeof useDashboardBrand>) => string;
+  brand: ReturnType<typeof useDashboardBrand>;
+}) {
+  const titleId = useDialogTitleId();
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 12,
+        marginBottom: 20,
+      }}
+    >
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+        <h2
+          id={titleId}
+          style={{
+            margin: 0,
+            fontSize: 17,
+            fontWeight: 900,
+            color: t.text,
+            fontFamily: FONT_TITLE,
+          }}
+        >
+          Detalhes do Prestador
+        </h2>
+        <button
+          type="button"
+          onClick={() => setModalVerExibirSensiveis(!modalVerExibirSensiveis)}
+          aria-label={modalVerExibirSensiveis ? "Ocultar dados sensíveis" : "Exibir dados sensíveis"}
+          title={modalVerExibirSensiveis ? "Ocultar" : "Ver"}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 10px",
+            borderRadius: 10,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+            color: t.textMuted,
+            cursor: "pointer",
+            fontFamily: FONT.body,
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          {modalVerExibirSensiveis ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+          {modalVerExibirSensiveis ? "Ocultar" : "Ver"}
+        </button>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        {perm.canEditarOk && editId ? (
+          <button
+            type="button"
+            onClick={() => {
+              const row = lista.find((x) => x.id === editId);
+              if (row) abrirEditar(row);
+            }}
+            style={{
+              padding: "10px 18px",
+              borderRadius: 10,
+              border: "none",
+              color: "#fff",
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              background: ctaGradient(brand),
+            }}
+          >
+            Editar
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={fecharModalFuncionario}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: t.textMuted,
+          }}
+          aria-label="Fechar modal"
+        >
+          <X size={20} strokeWidth={2} aria-hidden />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function RhPrestadoresPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_funcionarios");
@@ -189,6 +355,10 @@ export default function RhFuncionariosPage() {
 
   const [opcoesTimes, setOpcoesTimes] = useState<RhOrgTimeOpcao[]>([]);
   const [abaModal, setAbaModal] = useState<AbaFuncModal>("pessoais");
+  /** No modal Visualizar: false = dados sensíveis com blur (ocultar). */
+  const [modalVerExibirSensiveis, setModalVerExibirSensiveis] = useState(false);
+  const [tabelaSalarioVisivel, setTabelaSalarioVisivel] = useState(false);
+  const [cepBuscaEmAndamento, setCepBuscaEmAndamento] = useState<null | "res" | "emp">(null);
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -316,6 +486,7 @@ export default function RhFuncionariosPage() {
     setFieldErr({});
     setEditId(null);
     setAbaModal("pessoais");
+    setModalVerExibirSensiveis(false);
     setModalForm("novo");
   };
 
@@ -324,6 +495,7 @@ export default function RhFuncionariosPage() {
     setFieldErr({});
     setEditId(row.id);
     setAbaModal("pessoais");
+    setModalVerExibirSensiveis(false);
     setModalForm("editar");
   };
 
@@ -332,7 +504,49 @@ export default function RhFuncionariosPage() {
     setFieldErr({});
     setEditId(row.id);
     setAbaModal("pessoais");
+    setModalVerExibirSensiveis(false);
     setModalForm("ver");
+  };
+
+  const orgMetaLinha = useCallback(
+    (row: RhFuncionario) => {
+      if (!row.org_time_id) return { diretoria: "—", gerencia: "—" };
+      const o = opcoesTimes.find((x) => x.timeId === row.org_time_id);
+      return { diretoria: o?.diretoriaNome ?? "—", gerencia: o?.gerenciaNome ?? "—" };
+    },
+    [opcoesTimes],
+  );
+
+  const handleCepBlur = (qual: "res" | "emp", cepRaw: string) => {
+    void (async () => {
+      const d = somenteDigitos(cepRaw);
+      if (d.length !== 8) return;
+      setCepBuscaEmAndamento(qual);
+      const r = await buscarEnderecoPorCep(cepRaw);
+      setCepBuscaEmAndamento(null);
+      if (!r.ok) {
+        setErroGlobal(r.message);
+        return;
+      }
+      setErroGlobal(null);
+      if (qual === "res") {
+        setForm((s) => ({
+          ...s,
+          res_logradouro: s.res_logradouro.trim() || r.logradouro,
+          res_complemento: s.res_complemento.trim() || r.complemento,
+          res_cidade: s.res_cidade.trim() || r.cidade,
+          res_estado: (s.res_estado.trim() || r.uf).toUpperCase().slice(0, 2),
+        }));
+      } else {
+        setForm((s) => ({
+          ...s,
+          emp_logradouro: s.emp_logradouro.trim() || r.logradouro,
+          emp_complemento: s.emp_complemento.trim() || r.complemento,
+          emp_cidade: s.emp_cidade.trim() || r.cidade,
+          emp_estado: (s.emp_estado.trim() || r.uf).toUpperCase().slice(0, 2),
+        }));
+      }
+    })();
   };
 
   function validarFormulario(): boolean {
@@ -345,8 +559,16 @@ export default function RhFuncionariosPage() {
     req("rg", "RG", form.rg);
     req("telefone", "Telefone", form.telefone);
     req("email", "E-mail", form.email);
-    req("endereco_residencial", "Endereço residencial", form.endereco_residencial);
-    req("contato_emergencia", "Contato de emergência", form.contato_emergencia);
+    req("res_logradouro", "Logradouro (residencial)", form.res_logradouro);
+    req("res_cidade", "Cidade (residencial)", form.res_cidade);
+    if (!form.res_estado.trim()) e.res_estado = "UF (residencial) é obrigatória.";
+    else if (!UFS_BR.includes(form.res_estado.trim().toUpperCase() as (typeof UFS_BR)[number])) {
+      e.res_estado = "UF inválida.";
+    }
+    const cepRes = somenteDigitos(form.res_cep);
+    if (cepRes.length > 0 && cepRes.length !== 8) e.res_cep = "CEP residencial deve ter 8 dígitos.";
+    req("emerg_nome", "Nome do contato de emergência", form.emerg_nome);
+    req("emerg_telefone", "Telefone do contato de emergência", form.emerg_telefone);
     const usarSelectTime = permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0;
     if (usarSelectTime) {
       if (modalForm === "novo" && !form.org_time_id) {
@@ -358,12 +580,19 @@ export default function RhFuncionariosPage() {
     } else {
       req("setor", "Setor", form.setor);
     }
-    req("cargo", "Cargo", form.cargo);
+    req("cargo", "Função", form.cargo);
     req("data_inicio", "Data de início", form.data_inicio);
     req("escala", "Escala", form.escala);
     if (form.tipo_contrato === "PJ") {
       req("nome_empresa", "Nome da empresa", form.nome_empresa);
-      req("endereco_empresa", "Endereço da empresa", form.endereco_empresa);
+      req("emp_logradouro", "Logradouro da empresa", form.emp_logradouro);
+      req("emp_cidade", "Cidade da empresa", form.emp_cidade);
+      if (!form.emp_estado.trim()) e.emp_estado = "UF da empresa é obrigatória.";
+      else if (!UFS_BR.includes(form.emp_estado.trim().toUpperCase() as (typeof UFS_BR)[number])) {
+        e.emp_estado = "UF inválida.";
+      }
+      const cepEmp = somenteDigitos(form.emp_cep);
+      if (cepEmp.length > 0 && cepEmp.length !== 8) e.emp_cep = "CEP da empresa deve ter 8 dígitos.";
     }
     if (podeVerDadosSensiveis) {
       req("banco", "Banco", form.banco);
@@ -386,9 +615,12 @@ export default function RhFuncionariosPage() {
     const telD = somenteDigitos(form.telefone);
     if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
 
+    const telEmerg = somenteDigitos(form.emerg_telefone);
+    if (telEmerg.length < 10 || telEmerg.length > 11) e.emerg_telefone = "Telefone de emergência inválido.";
+
     if (podeVerDadosSensiveis) {
       const sal = numeroDeCentavosStr(form.salarioCentavos);
-      if (sal <= 0) e.salarioCentavos = "Informe o salário.";
+      if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
     }
 
     setFieldErr(e);
@@ -402,6 +634,23 @@ export default function RhFuncionariosPage() {
     const sal = podeVerDadosSensiveis ? numeroDeCentavosStr(form.salarioCentavos) : 0;
     const isPj = form.tipo_contrato === "PJ";
     const cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
+    const endResLinha = montarEnderecoResumoLine({
+      cep: form.res_cep,
+      logradouro: form.res_logradouro,
+      numero: form.res_numero,
+      complemento: form.res_complemento,
+      cidade: form.res_cidade,
+      estado: form.res_estado,
+    });
+    const endEmpLinha = montarEnderecoResumoLine({
+      cep: form.emp_cep,
+      logradouro: form.emp_logradouro,
+      numero: form.emp_numero,
+      complemento: form.emp_complemento,
+      cidade: form.emp_cidade,
+      estado: form.emp_estado,
+    });
+    const emergLinha = montarContatoEmergenciaLinha(form.emerg_nome, form.emerg_parentesco, form.emerg_telefone);
     return {
       status: "ativo",
       nome: form.nome.trim(),
@@ -409,8 +658,17 @@ export default function RhFuncionariosPage() {
       cpf: somenteDigitos(form.cpf),
       telefone: somenteDigitos(form.telefone),
       email: form.email.trim().toLowerCase(),
-      endereco_residencial: form.endereco_residencial.trim(),
-      contato_emergencia: form.contato_emergencia.trim(),
+      endereco_residencial: endResLinha,
+      res_cep: somenteDigitos(form.res_cep),
+      res_logradouro: form.res_logradouro.trim(),
+      res_numero: form.res_numero.trim(),
+      res_complemento: form.res_complemento.trim(),
+      res_cidade: form.res_cidade.trim(),
+      res_estado: form.res_estado.trim().toUpperCase().slice(0, 2),
+      contato_emergencia: emergLinha,
+      emerg_nome: form.emerg_nome.trim(),
+      emerg_parentesco: form.emerg_parentesco.trim(),
+      emerg_telefone: somenteDigitos(form.emerg_telefone),
       setor: form.setor.trim(),
       org_time_id: form.org_time_id || null,
       cargo: form.cargo.trim(),
@@ -421,7 +679,13 @@ export default function RhFuncionariosPage() {
       tipo_contrato: form.tipo_contrato,
       nome_empresa: isPj ? form.nome_empresa.trim() : form.nome_empresa.trim() || "—",
       cnpj: cnpjFinal,
-      endereco_empresa: isPj ? form.endereco_empresa.trim() : form.endereco_empresa.trim() || "—",
+      endereco_empresa: isPj ? endEmpLinha : "—",
+      emp_cep: isPj ? somenteDigitos(form.emp_cep) : "",
+      emp_logradouro: isPj ? form.emp_logradouro.trim() : "",
+      emp_numero: isPj ? form.emp_numero.trim() : "",
+      emp_complemento: isPj ? form.emp_complemento.trim() : "",
+      emp_cidade: isPj ? form.emp_cidade.trim() : "",
+      emp_estado: isPj ? form.emp_estado.trim().toUpperCase().slice(0, 2) : "",
       banco: form.banco.trim(),
       agencia: somenteDigitos(form.agencia),
       conta_corrente: form.conta_corrente.trim(),
@@ -511,20 +775,8 @@ export default function RhFuncionariosPage() {
     }
     setSucessoMsg("Funcionário desativado.");
     setDesativarRow(null);
-    await carregar();
-  };
-
-  const reativar = async (row: RhFuncionario) => {
-    setErroGlobal(null);
-    const { error } = await supabase
-      .from("rh_funcionarios")
-      .update({ status: "ativo", data_desligamento: null })
-      .eq("id", row.id);
-    if (error) {
-      setErroGlobal(error.message);
-      return;
-    }
-    setSucessoMsg("Funcionário reativado.");
+    setModalForm("fechado");
+    setAbaModal("pessoais");
     await carregar();
   };
 
@@ -551,10 +803,10 @@ export default function RhFuncionariosPage() {
       <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
         <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden", boxShadow: cardShadow }}>
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-            <caption style={{ display: "none" }}>Carregando gestão de funcionários</caption>
+            <caption style={{ display: "none" }}>Carregando gestão de prestadores</caption>
             <thead>
               <tr>
-                {["Nome", "Setor", "Cargo", "Contrato", "Início", "Status", "Salário", "Ações"].map((h) => (
+                {["Nome", "Diretoria", "Gerência", "Função", "Remuneração Mensal", "Status", "Ações"].map((h) => (
                   <th key={h} scope="col" style={getThStyle(t)}>
                     {h}
                   </th>
@@ -562,9 +814,9 @@ export default function RhFuncionariosPage() {
               </tr>
             </thead>
             <tbody>
-              <SkeletonTableRow cols={8} />
-              <SkeletonTableRow cols={8} />
-              <SkeletonTableRow cols={8} />
+              <SkeletonTableRow cols={7} />
+              <SkeletonTableRow cols={7} />
+              <SkeletonTableRow cols={7} />
             </tbody>
           </table>
         </div>
@@ -582,6 +834,8 @@ export default function RhFuncionariosPage() {
 
   const leitura = modalForm === "ver";
   const desabilitarCampos = leitura || salvando;
+  const sensivelBlurDoc = leitura && !modalVerExibirSensiveis;
+  const sensivelBlurFinanceiro = leitura && !modalVerExibirSensiveis && podeVerDadosSensiveis;
   const tabActiveBgModal = brand.useBrand
     ? "var(--brand-action-12)"
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
@@ -591,6 +845,7 @@ export default function RhFuncionariosPage() {
     if (salvando) return;
     setModalForm("fechado");
     setAbaModal("pessoais");
+    setModalVerExibirSensiveis(false);
   };
 
   const tabActiveBgPagina = brand.useBrand
@@ -610,7 +865,7 @@ export default function RhFuncionariosPage() {
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
         icon={<UserCircle2 size={16} aria-hidden />}
-        title="Gestão de Funcionários"
+        title="Gestão de Prestadores"
         subtitle="Cadastro, head count e fluxos de RH (base para outros módulos)."
       />
 
@@ -836,7 +1091,7 @@ export default function RhFuncionariosPage() {
               }}
             >
               <Plus size={16} aria-hidden />
-              Novo funcionário
+              Novo Prestador
             </button>
           ) : null}
           {abaPagina === "acoes_rh" ? (
@@ -904,25 +1159,54 @@ export default function RhFuncionariosPage() {
                   Nome
                 </th>
                 <th scope="col" style={getThStyle(t)}>
-                  Setor
+                  Diretoria
                 </th>
                 <th scope="col" style={getThStyle(t)}>
-                  Cargo
+                  Gerência
                 </th>
                 <th scope="col" style={getThStyle(t)}>
-                  Contrato
+                  Função
                 </th>
                 <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
-                  Início
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      gap: 8,
+                      width: "100%",
+                    }}
+                  >
+                    <span>Remuneração Mensal</span>
+                    {podeVerDadosSensiveis ? (
+                      <button
+                        type="button"
+                        onClick={() => setTabelaSalarioVisivel((v) => !v)}
+                        aria-label={
+                          tabelaSalarioVisivel
+                            ? "Ocultar valores de remuneração mensal na tabela"
+                            : "Exibir valores de remuneração mensal na tabela"
+                        }
+                        title={tabelaSalarioVisivel ? "Ocultar" : "Ver"}
+                        style={{
+                          padding: 4,
+                          borderRadius: 8,
+                          border: `1px solid ${t.cardBorder}`,
+                          background: t.inputBg,
+                          cursor: "pointer",
+                          color: t.textMuted,
+                          display: "inline-flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        {tabelaSalarioVisivel ? <EyeOff size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
+                      </button>
+                    ) : null}
+                  </div>
                 </th>
                 <th scope="col" style={getThStyle(t)}>
                   Status
                 </th>
-                {podeVerDadosSensiveis ? (
-                  <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
-                    Salário
-                  </th>
-                ) : null}
                 <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
                   Ações
                 </th>
@@ -931,69 +1215,59 @@ export default function RhFuncionariosPage() {
             <tbody>
               {loading ? (
                 <>
-                  <SkeletonTableRow cols={podeVerDadosSensiveis ? 8 : 7} />
-                  <SkeletonTableRow cols={podeVerDadosSensiveis ? 8 : 7} />
+                  <SkeletonTableRow cols={7} />
+                  <SkeletonTableRow cols={7} />
                 </>
               ) : filtrada.length === 0 ? (
                 <tr>
-                  <td colSpan={podeVerDadosSensiveis ? 8 : 7} style={{ ...getTdStyle(t), textAlign: "center", padding: "40px 16px", color: t.textMuted }}>
+                  <td colSpan={7} style={{ ...getTdStyle(t), textAlign: "center", padding: "40px 16px", color: t.textMuted }}>
                     Sem dados para o período selecionado.
                   </td>
                 </tr>
               ) : (
-                filtrada.map((row, i) => (
-                  <tr key={row.id}>
-                    <td
-                      style={{
-                        ...getTdStyle(t),
-                        textAlign: "left",
-                        maxWidth: 200,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        background: zebraStripe(i),
-                      }}
-                      title={row.nome}
-                    >
-                      {row.nome}
-                    </td>
-                    <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{row.setor}</td>
-                    <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{row.cargo}</td>
-                    <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{labelTipoContrato(row.tipo_contrato)}</td>
-                    <td style={{ ...getTdNumStyle(t, { background: zebraStripe(i) }) }}>
-                      {row.data_inicio ? new Date(`${row.data_inicio}T12:00:00`).toLocaleDateString("pt-BR") : "—"}
-                    </td>
-                    <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>
-                      <span style={{ fontWeight: 700, color: row.status === "ativo" ? "#22c55e" : t.textMuted }}>
-                        {row.status === "ativo" ? "Ativo" : "Inativo"}
-                      </span>
-                    </td>
-                    {podeVerDadosSensiveis ? (
-                      <td style={{ ...getTdNumStyle(t, { background: zebraStripe(i) }) }}>{fmtBRL(Number(row.salario))}</td>
-                    ) : null}
-                    <td style={{ ...getTdStyle(t, { textAlign: "right", background: zebraStripe(i) }) }}>
-                      {preencherAcoes ? (
-                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                          <button
-                            type="button"
-                            onClick={() => abrirVer(row)}
-                            style={{
-                              padding: "6px 10px",
-                              borderRadius: 8,
-                              border: `1px solid ${t.cardBorder}`,
-                              background: t.inputBg,
-                              color: t.text,
-                              cursor: "pointer",
-                              fontSize: 12,
-                              fontFamily: FONT.body,
-                            }}
-                            aria-label={`Visualizar ${row.nome}`}
-                          >
-                            <Eye size={14} style={{ verticalAlign: "middle" }} aria-hidden />
-                          </button>
-                          {perm.canEditarOk ? (
+                filtrada.map((row, i) => {
+                  const { diretoria, gerencia } = orgMetaLinha(row);
+                  return (
+                    <tr key={row.id}>
+                      <td
+                        style={{
+                          ...getTdStyle(t),
+                          textAlign: "left",
+                          maxWidth: 200,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          background: zebraStripe(i),
+                        }}
+                        title={row.nome}
+                      >
+                        {row.nome}
+                      </td>
+                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={diretoria}>
+                        {diretoria}
+                      </td>
+                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={gerencia}>
+                        {gerencia}
+                      </td>
+                      <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{row.cargo}</td>
+                      <td
+                        style={getTdNumStyle(t, {
+                          background: zebraStripe(i),
+                          ...(podeVerDadosSensiveis && !tabelaSalarioVisivel ? blurSensivel : {}),
+                        })}
+                      >
+                        {podeVerDadosSensiveis ? fmtBRL(Number(row.salario)) : "—"}
+                      </td>
+                      <td style={{ ...getTdStyle(t, { background: zebraStripe(i) }) }}>
+                        <span style={{ fontWeight: 700, color: row.status === "ativo" ? "#22c55e" : t.textMuted }}>
+                          {row.status === "ativo" ? "Ativo" : "Inativo"}
+                        </span>
+                      </td>
+                      <td style={{ ...getTdStyle(t, { textAlign: "right", background: zebraStripe(i) }) }}>
+                        {preencherAcoes ? (
+                          <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                             <button
                               type="button"
-                              onClick={() => abrirEditar(row)}
+                              onClick={() => abrirVer(row)}
                               style={{
                                 padding: "6px 10px",
                                 borderRadius: 8,
@@ -1004,54 +1278,35 @@ export default function RhFuncionariosPage() {
                                 fontSize: 12,
                                 fontFamily: FONT.body,
                               }}
-                              aria-label={`Editar ${row.nome}`}
+                              aria-label={`Visualizar ${row.nome}`}
                             >
-                              <Pencil size={14} style={{ verticalAlign: "middle" }} aria-hidden />
+                              <Eye size={14} style={{ verticalAlign: "middle" }} aria-hidden />
                             </button>
-                          ) : null}
-                          {perm.canEditarOk && row.status === "ativo" ? (
-                            <button
-                              type="button"
-                              onClick={() => setDesativarRow(row)}
-                              style={{
-                                padding: "6px 10px",
-                                borderRadius: 8,
-                                border: `1px solid rgba(232,64,37,0.4)`,
-                                background: "rgba(232,64,37,0.08)",
-                                color: "#e84025",
-                                cursor: "pointer",
-                                fontSize: 12,
-                                fontFamily: FONT.body,
-                              }}
-                              aria-label={`Desativar ${row.nome}`}
-                            >
-                              <UserX size={14} style={{ verticalAlign: "middle" }} aria-hidden />
-                            </button>
-                          ) : null}
-                          {perm.canEditarOk && row.status === "inativo" ? (
-                            <button
-                              type="button"
-                              onClick={() => void reativar(row)}
-                              style={{
-                                padding: "6px 10px",
-                                borderRadius: 8,
-                                border: `1px solid ${t.cardBorder}`,
-                                background: t.inputBg,
-                                color: t.text,
-                                cursor: "pointer",
-                                fontSize: 12,
-                                fontFamily: FONT.body,
-                              }}
-                              aria-label={`Reativar ${row.nome}`}
-                            >
-                              Reativar
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))
+                            {perm.canEditarOk ? (
+                              <button
+                                type="button"
+                                onClick={() => abrirEditar(row)}
+                                style={{
+                                  padding: "6px 10px",
+                                  borderRadius: 8,
+                                  border: `1px solid ${t.cardBorder}`,
+                                  background: t.inputBg,
+                                  color: t.text,
+                                  cursor: "pointer",
+                                  fontSize: 12,
+                                  fontFamily: FONT.body,
+                                }}
+                                aria-label={`Editar ${row.nome}`}
+                              >
+                                <Pencil size={14} style={{ verticalAlign: "middle" }} aria-hidden />
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -1061,10 +1316,25 @@ export default function RhFuncionariosPage() {
 
       {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && (
         <ModalBase maxWidth={720} onClose={fecharModalFuncionario}>
-          <ModalHeader
-            title={modalForm === "novo" ? "Novo funcionário" : modalForm === "editar" ? "Editar funcionário" : "Detalhes do funcionário"}
-            onClose={fecharModalFuncionario}
-          />
+          {modalForm === "ver" ? (
+            <RhFuncModalHeaderDetalhes
+              t={t}
+              perm={perm}
+              editId={editId}
+              lista={lista}
+              modalVerExibirSensiveis={modalVerExibirSensiveis}
+              setModalVerExibirSensiveis={setModalVerExibirSensiveis}
+              abrirEditar={abrirEditar}
+              fecharModalFuncionario={fecharModalFuncionario}
+              ctaGradient={ctaGradient}
+              brand={brand}
+            />
+          ) : (
+            <ModalHeader
+              title={modalForm === "novo" ? "Novo Prestador" : "Editar Prestador"}
+              onClose={fecharModalFuncionario}
+            />
+          )}
 
           <div
             role="tablist"
@@ -1137,7 +1407,7 @@ export default function RhFuncionariosPage() {
                     value={form.rg}
                     onChange={(e) => setForm((s) => ({ ...s, rg: formatarRgInput(e.target.value) }))}
                     placeholder="00.000.000-0"
-                    style={inputStyle}
+                    style={{ ...inputStyle, ...(sensivelBlurDoc ? blurSensivel : {}) }}
                   />
                   {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}
                 </div>
@@ -1149,7 +1419,7 @@ export default function RhFuncionariosPage() {
                     value={form.cpf}
                     onChange={(e) => setForm((s) => ({ ...s, cpf: formatarCpfDigitos(e.target.value) }))}
                     placeholder="000.000.000-00"
-                    style={inputStyle}
+                    style={{ ...inputStyle, ...(sensivelBlurDoc ? blurSensivel : {}) }}
                     title={modalForm === "editar" ? "CPF não pode ser alterado" : undefined}
                   />
                   {fieldErr.cpf ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cpf}</div> : null}
@@ -1178,31 +1448,127 @@ export default function RhFuncionariosPage() {
                   />
                   {fieldErr.email ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email}</div> : null}
                 </div>
-                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-end", "Endereço residencial")}
-                  <input
-                    id="f-end"
-                    disabled={desabilitarCampos}
-                    value={form.endereco_residencial}
-                    onChange={(e) => setForm((s) => ({ ...s, endereco_residencial: e.target.value }))}
-                    style={inputStyle}
-                  />
-                  {fieldErr.endereco_residencial ? (
-                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.endereco_residencial}</div>
-                  ) : null}
+                <div style={{ marginBottom: 6, gridColumn: "1 / -1", fontSize: 12, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body }}>
+                  Endereço residencial
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-res-cep", "CEP")}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      id="f-res-cep"
+                      disabled={desabilitarCampos}
+                      value={form.res_cep}
+                      onChange={(e) => setForm((s) => ({ ...s, res_cep: formatarCepDigitos(e.target.value) }))}
+                      onBlur={(e) => handleCepBlur("res", e.target.value)}
+                      placeholder="00000-000"
+                      inputMode="numeric"
+                      autoComplete="postal-code"
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    {cepBuscaEmAndamento === "res" ? <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ color: t.textMuted }} /> : null}
+                  </div>
+                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
+                    Com 8 dígitos, logradouro e cidade são sugeridos via ViaCEP (Correios); você pode editar.
+                  </div>
+                  {fieldErr.res_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cep}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-emerg", "Contato de emergência (nome e telefone)")}
+                  {lbl("f-res-log", "Logradouro")}
                   <input
-                    id="f-emerg"
+                    id="f-res-log"
                     disabled={desabilitarCampos}
-                    value={form.contato_emergencia}
-                    onChange={(e) => setForm((s) => ({ ...s, contato_emergencia: e.target.value }))}
+                    value={form.res_logradouro}
+                    onChange={(e) => setForm((s) => ({ ...s, res_logradouro: e.target.value }))}
                     style={inputStyle}
                   />
-                  {fieldErr.contato_emergencia ? (
-                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.contato_emergencia}</div>
-                  ) : null}
+                  {fieldErr.res_logradouro ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_logradouro}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-res-num", "Número")}
+                  <input
+                    id="f-res-num"
+                    disabled={desabilitarCampos}
+                    value={form.res_numero}
+                    onChange={(e) => setForm((s) => ({ ...s, res_numero: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-res-compl", "Complemento")}
+                  <input
+                    id="f-res-compl"
+                    disabled={desabilitarCampos}
+                    value={form.res_complemento}
+                    onChange={(e) => setForm((s) => ({ ...s, res_complemento: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-res-cid", "Cidade")}
+                  <input
+                    id="f-res-cid"
+                    disabled={desabilitarCampos}
+                    value={form.res_cidade}
+                    onChange={(e) => setForm((s) => ({ ...s, res_cidade: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  {fieldErr.res_cidade ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cidade}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-res-uf", "Estado (UF)")}
+                  <select
+                    id="f-res-uf"
+                    disabled={desabilitarCampos}
+                    value={form.res_estado}
+                    onChange={(e) => setForm((s) => ({ ...s, res_estado: e.target.value.toUpperCase().slice(0, 2) }))}
+                    style={inputStyle}
+                    aria-label="UF residencial"
+                  >
+                    <option value="">—</option>
+                    {UFS_BR.map((uf) => (
+                      <option key={uf} value={uf}>
+                        {uf}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldErr.res_estado ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_estado}</div> : null}
+                </div>
+                <div style={{ marginBottom: 6, gridColumn: "1 / -1", fontSize: 12, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body }}>
+                  Contato de emergência
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-emerg-nome", "Nome")}
+                  <input
+                    id="f-emerg-nome"
+                    disabled={desabilitarCampos}
+                    value={form.emerg_nome}
+                    onChange={(e) => setForm((s) => ({ ...s, emerg_nome: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  {fieldErr.emerg_nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emerg_nome}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-emerg-parent", "Parentesco")}
+                  <input
+                    id="f-emerg-parent"
+                    disabled={desabilitarCampos}
+                    value={form.emerg_parentesco}
+                    onChange={(e) => setForm((s) => ({ ...s, emerg_parentesco: e.target.value }))}
+                    placeholder="Ex.: Cônjuge, irmã(o)"
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-emerg-tel", "Telefone")}
+                  <input
+                    id="f-emerg-tel"
+                    disabled={desabilitarCampos}
+                    value={form.emerg_telefone}
+                    onChange={(e) => setForm((s) => ({ ...s, emerg_telefone: formatarTelefoneBr(e.target.value) }))}
+                    placeholder="(00) 00000-0000"
+                    style={inputStyle}
+                  />
+                  {fieldErr.emerg_telefone ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emerg_telefone}</div> : null}
                 </div>
               </div>
             ) : null}
@@ -1293,7 +1659,7 @@ export default function RhFuncionariosPage() {
                   {fieldErr.setor ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.setor}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lbl("f-cargo", "Cargo")}
+                  {lbl("f-cargo", "Função")}
                   <input id="f-cargo" disabled={desabilitarCampos} value={form.cargo} onChange={(e) => setForm((s) => ({ ...s, cargo: e.target.value }))} style={inputStyle} />
                   {fieldErr.cargo ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cargo}</div> : null}
                 </div>
@@ -1333,7 +1699,7 @@ export default function RhFuncionariosPage() {
                 </div>
                 {podeVerDadosSensiveis ? (
                   <div style={{ marginBottom: 10 }}>
-                    {lbl("f-sal", "Salário")}
+                    {lbl("f-sal", "Remuneração Mensal")}
                     <input
                       id="f-sal"
                       disabled={desabilitarCampos}
@@ -1342,7 +1708,7 @@ export default function RhFuncionariosPage() {
                       value={form.salarioCentavos ? formatarMoedaDigitos(form.salarioCentavos) : ""}
                       onChange={(e) => setForm((s) => ({ ...s, salarioCentavos: centavosDeStringMoeda(e.target.value) }))}
                       placeholder="R$ 0,00"
-                      style={inputStyle}
+                      style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
                     />
                     {fieldErr.salarioCentavos ? (
                       <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.salarioCentavos}</div>
@@ -1350,7 +1716,7 @@ export default function RhFuncionariosPage() {
                   </div>
                 ) : (
                   <div style={{ marginBottom: 10, padding: 10, borderRadius: 10, background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 8%, transparent)", fontSize: 12, color: t.textMuted }}>
-                    Salário e dados bancários: visíveis apenas para administrador ou quem tem permissão de edição nesta página.
+                    Remuneração mensal e dados bancários: visíveis apenas para administrador ou quem tem permissão de edição nesta página.
                   </div>
                 )}
                 <div style={{ marginBottom: 10 }}>
@@ -1403,18 +1769,86 @@ export default function RhFuncionariosPage() {
                   />
                   {fieldErr.cnpj ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cnpj}</div> : null}
                 </div>
+                <div style={{ marginBottom: 6, gridColumn: "1 / -1", fontSize: 12, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body }}>
+                  Endereço da empresa
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-emp-cep", "CEP")}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      id="f-emp-cep"
+                      disabled={desabilitarCampos}
+                      value={form.emp_cep}
+                      onChange={(e) => setForm((s) => ({ ...s, emp_cep: formatarCepDigitos(e.target.value) }))}
+                      onBlur={(e) => handleCepBlur("emp", e.target.value)}
+                      placeholder="00000-000"
+                      inputMode="numeric"
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    {cepBuscaEmAndamento === "emp" ? <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ color: t.textMuted }} /> : null}
+                  </div>
+                  {fieldErr.emp_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cep}</div> : null}
+                </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lbl("f-empend", "Endereço da empresa")}
+                  {lbl("f-emp-log", "Logradouro")}
                   <input
-                    id="f-empend"
+                    id="f-emp-log"
                     disabled={desabilitarCampos}
-                    value={form.endereco_empresa}
-                    onChange={(e) => setForm((s) => ({ ...s, endereco_empresa: e.target.value }))}
+                    value={form.emp_logradouro}
+                    onChange={(e) => setForm((s) => ({ ...s, emp_logradouro: e.target.value }))}
                     style={inputStyle}
                   />
-                  {fieldErr.endereco_empresa ? (
-                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.endereco_empresa}</div>
-                  ) : null}
+                  {fieldErr.emp_logradouro ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_logradouro}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-emp-num", "Número")}
+                  <input
+                    id="f-emp-num"
+                    disabled={desabilitarCampos}
+                    value={form.emp_numero}
+                    onChange={(e) => setForm((s) => ({ ...s, emp_numero: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-emp-compl", "Complemento")}
+                  <input
+                    id="f-emp-compl"
+                    disabled={desabilitarCampos}
+                    value={form.emp_complemento}
+                    onChange={(e) => setForm((s) => ({ ...s, emp_complemento: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-emp-cid", "Cidade")}
+                  <input
+                    id="f-emp-cid"
+                    disabled={desabilitarCampos}
+                    value={form.emp_cidade}
+                    onChange={(e) => setForm((s) => ({ ...s, emp_cidade: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  {fieldErr.emp_cidade ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cidade}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-emp-uf", "Estado (UF)")}
+                  <select
+                    id="f-emp-uf"
+                    disabled={desabilitarCampos}
+                    value={form.emp_estado}
+                    onChange={(e) => setForm((s) => ({ ...s, emp_estado: e.target.value.toUpperCase().slice(0, 2) }))}
+                    style={inputStyle}
+                    aria-label="UF da empresa"
+                  >
+                    <option value="">—</option>
+                    {UFS_BR.map((uf) => (
+                      <option key={uf} value={uf}>
+                        {uf}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldErr.emp_estado ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_estado}</div> : null}
                 </div>
               </div>
             ) : null}
@@ -1424,7 +1858,13 @@ export default function RhFuncionariosPage() {
                 <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                   <div style={{ marginBottom: 10 }}>
                     {lbl("f-banco", "Banco")}
-                    <input id="f-banco" disabled={desabilitarCampos} value={form.banco} onChange={(e) => setForm((s) => ({ ...s, banco: e.target.value }))} style={inputStyle} />
+                    <input
+                      id="f-banco"
+                      disabled={desabilitarCampos}
+                      value={form.banco}
+                      onChange={(e) => setForm((s) => ({ ...s, banco: e.target.value }))}
+                      style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
+                    />
                     {fieldErr.banco ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.banco}</div> : null}
                   </div>
                   <div style={{ marginBottom: 10 }}>
@@ -1435,7 +1875,7 @@ export default function RhFuncionariosPage() {
                       value={form.agencia}
                       onChange={(e) => setForm((s) => ({ ...s, agencia: formatarAgencia(e.target.value) }))}
                       placeholder="0000-0"
-                      style={inputStyle}
+                      style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
                     />
                     {fieldErr.agencia ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.agencia}</div> : null}
                   </div>
@@ -1446,7 +1886,7 @@ export default function RhFuncionariosPage() {
                       disabled={desabilitarCampos}
                       value={form.conta_corrente}
                       onChange={(e) => setForm((s) => ({ ...s, conta_corrente: e.target.value }))}
-                      style={inputStyle}
+                      style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
                     />
                     {fieldErr.conta_corrente ? (
                       <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.conta_corrente}</div>
@@ -1454,7 +1894,13 @@ export default function RhFuncionariosPage() {
                   </div>
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                     {lbl("f-pix", "PIX (opcional)")}
-                    <input id="f-pix" disabled={desabilitarCampos} value={form.pix} onChange={(e) => setForm((s) => ({ ...s, pix: e.target.value }))} style={inputStyle} />
+                    <input
+                      id="f-pix"
+                      disabled={desabilitarCampos}
+                      value={form.pix}
+                      onChange={(e) => setForm((s) => ({ ...s, pix: e.target.value }))}
+                      style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
+                    />
                   </div>
                 </div>
               ) : (
@@ -1468,71 +1914,84 @@ export default function RhFuncionariosPage() {
           </div>
 
           {!leitura ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-              {modalForm === "novo" ? (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: 8,
+              }}
+            >
+              <div>
+                {modalForm === "editar" && perm.canEditarOk && editId && lista.find((x) => x.id === editId)?.status === "ativo" ? (
+                  <button
+                    type="button"
+                    disabled={salvando}
+                    onClick={() => {
+                      const rr = lista.find((x) => x.id === editId);
+                      if (rr) setDesativarRow(rr);
+                    }}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(232,64,37,0.45)",
+                      background: "rgba(232,64,37,0.08)",
+                      color: "#e84025",
+                      fontWeight: 700,
+                      cursor: salvando ? "not-allowed" : "pointer",
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                    }}
+                  >
+                    Desativar colaborador
+                  </button>
+                ) : null}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end" }}>
+                {modalForm === "novo" ? (
+                  <button
+                    type="button"
+                    disabled={salvando}
+                    onClick={() => void salvar({ outro: true })}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg,
+                      color: t.text,
+                      cursor: salvando ? "wait" : "pointer",
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                    }}
+                  >
+                    Salvar e cadastrar outro
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   disabled={salvando}
-                  onClick={() => void salvar({ outro: true })}
+                  onClick={() => void salvar({ outro: false })}
                   style={{
-                    padding: "10px 14px",
+                    padding: "10px 18px",
                     borderRadius: 10,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.inputBg,
-                    color: t.text,
+                    border: "none",
+                    color: "#fff",
+                    fontWeight: 700,
                     cursor: salvando ? "wait" : "pointer",
                     fontFamily: FONT.body,
                     fontSize: 13,
+                    background: ctaGradient(brand),
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
                   }}
                 >
-                  Salvar e cadastrar outro
+                  {salvando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+                  Salvar
                 </button>
-              ) : null}
-              <button
-                type="button"
-                disabled={salvando}
-                onClick={() => void salvar({ outro: false })}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: "none",
-                  color: "#fff",
-                  fontWeight: 700,
-                  cursor: salvando ? "wait" : "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  background: ctaGradient(brand),
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                {salvando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
-                Salvar
-              </button>
-            </div>
-          ) : perm.canEditarOk && editId ? (
-            <div style={{ marginTop: 12 }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const row = lista.find((x) => x.id === editId);
-                  if (row) abrirEditar(row);
-                }}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: "none",
-                  color: "#fff",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  background: ctaGradient(brand),
-                }}
-              >
-                Editar
-              </button>
+              </div>
             </div>
           ) : null}
         </ModalBase>
