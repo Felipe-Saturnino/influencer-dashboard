@@ -10,7 +10,7 @@ export async function carregarOpcoesTimesOrganograma(): Promise<{
     supabase.from("rh_org_diretorias").select("*").order("nome"),
     supabase.from("rh_org_gerencias").select("*").order("nome"),
     supabase.from("rh_org_times").select("*").order("nome"),
-    supabase.from("rh_funcionarios").select("id, nome").eq("status", "ativo").order("nome"),
+    supabase.from("rh_funcionarios").select("id, nome").in("status", ["ativo", "indisponivel"]).order("nome"),
   ]);
   const err = dr.error?.message ?? gr.error?.message ?? tr.error?.message ?? fr.error?.message ?? null;
   if (err) return { opcoes: [], error: err };

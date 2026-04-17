@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   AlertCircle,
   CheckCircle2,
   Eye,
   EyeOff,
+  ExternalLink,
   Loader2,
+  Paperclip,
   Pencil,
   Plus,
   UserCircle2,
@@ -35,7 +37,13 @@ import {
 } from "../../../lib/rhFuncionarioValidators";
 import { montarContatoEmergenciaLinha, montarEnderecoResumoLine } from "../../../lib/rhFuncionarioEndereco";
 import { buscarEnderecoPorCep } from "../../../lib/rhViaCep";
-import type { RhFuncionario, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
+import type {
+  RhFuncionario,
+  RhFuncionarioHistorico,
+  RhFuncionarioTipoContrato,
+  RhHistoricoAcaoTipo,
+} from "../../../types/rhFuncionario";
+import { uploadAnexosAcaoRh } from "../../../lib/rhPrestadorAcaoFiles";
 import type { RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { PageHeader } from "../../../components/PageHeader";
@@ -52,6 +60,97 @@ const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }[] = [
 ];
 
 const ESCALAS_SUGEST = ["5x2", "6x1", "12x36", "12x48", "8x6", "Comercial"];
+
+type FiltroStatusPrestador = "exc_encerrado" | "todos" | RhFuncionario["status"];
+
+const HIST_TIPO_LABEL: Record<string, string> = {
+  revisao_contrato: "Revisão de Contrato",
+  periodo_indisponibilidade: "Período de Indisponibilidade",
+  retorno_indisponibilidade: "Retorno de Indisponibilidade",
+  alinhamento_formal: "Alinhamento Formal",
+  termino_prestacao: "Término da Prestação",
+  reativacao_prestacao: "Reativação da Prestação",
+};
+
+function labelStatusPrestador(s: RhFuncionario["status"]): string {
+  if (s === "ativo") return "Ativo";
+  if (s === "indisponivel") return "Indisponível";
+  return "Encerrado";
+}
+
+function corStatusPrestador(s: RhFuncionario["status"]): string {
+  if (s === "ativo") return "#22c55e";
+  if (s === "indisponivel") return "#f59e0b";
+  return "#e84025";
+}
+
+type SliceContratacao = {
+  org_time_id: string | null;
+  setor: string;
+  cargo: string;
+  nivel: string;
+  salarioCentavos: string;
+  tipo_contrato: RhFuncionarioTipoContrato;
+  escala: string;
+};
+
+function sliceContratacaoDeForm(f: FormState): SliceContratacao {
+  return {
+    org_time_id: f.org_time_id,
+    setor: f.setor.trim(),
+    cargo: f.cargo.trim(),
+    nivel: f.nivel.trim(),
+    salarioCentavos: f.salarioCentavos,
+    tipo_contrato: f.tipo_contrato,
+    escala: f.escala.trim(),
+  };
+}
+
+function sliceContratacaoDeRow(r: RhFuncionario): SliceContratacao {
+  const cents = Math.round(Number(r.salario) * 100).toString();
+  return {
+    org_time_id: r.org_time_id ?? null,
+    setor: r.setor.trim(),
+    cargo: r.cargo.trim(),
+    nivel: r.nivel.trim(),
+    salarioCentavos: cents,
+    tipo_contrato: r.tipo_contrato,
+    escala: r.escala.trim(),
+  };
+}
+
+function labelTimeOrganograma(id: string | null, opcoes: RhOrgTimeOpcao[]): string {
+  if (!id) return "—";
+  return opcoes.find((o) => o.timeId === id)?.label ?? id;
+}
+
+function diffContratacaoSlices(
+  antes: SliceContratacao,
+  depois: SliceContratacao,
+  opcoes: RhOrgTimeOpcao[],
+  fmtSal: (cents: string) => string,
+): { campo: string; antes: string; depois: string }[] {
+  const out: { campo: string; antes: string; depois: string }[] = [];
+  const orgAntes = labelTimeOrganograma(antes.org_time_id, opcoes) || antes.setor || "—";
+  const orgDepois = labelTimeOrganograma(depois.org_time_id, opcoes) || depois.setor || "—";
+  if (orgAntes !== orgDepois || antes.setor !== depois.setor) {
+    out.push({ campo: "Organograma", antes: orgAntes, depois: orgDepois });
+  }
+  if (antes.cargo !== depois.cargo) out.push({ campo: "Função", antes: antes.cargo || "—", depois: depois.cargo || "—" });
+  if (antes.nivel !== depois.nivel) out.push({ campo: "Nível", antes: antes.nivel, depois: depois.nivel });
+  if (antes.salarioCentavos !== depois.salarioCentavos) {
+    out.push({
+      campo: "Remuneração mensal",
+      antes: fmtSal(antes.salarioCentavos),
+      depois: fmtSal(depois.salarioCentavos),
+    });
+  }
+  if (antes.tipo_contrato !== depois.tipo_contrato) {
+    out.push({ campo: "Tipo de contrato", antes: antes.tipo_contrato, depois: depois.tipo_contrato });
+  }
+  if (antes.escala !== depois.escala) out.push({ campo: "Escala", antes: antes.escala, depois: depois.escala });
+  return out;
+}
 
 const UFS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO",
@@ -208,6 +307,93 @@ function formDeFuncionario(f: RhFuncionario): FormState {
   };
 }
 
+function tiposAcaoDisponiveis(status: RhFuncionario["status"]): { value: RhHistoricoAcaoTipo; label: string }[] {
+  const out: { value: RhHistoricoAcaoTipo; label: string }[] = [{ value: "revisao_contrato", label: "Revisão de Contrato" }];
+  if (status === "ativo") {
+    out.push({ value: "periodo_indisponibilidade", label: "Período de Indisponibilidade" });
+    out.push({ value: "termino_prestacao", label: "Término da Prestação" });
+  }
+  if (status === "indisponivel") {
+    out.push({ value: "retorno_indisponibilidade", label: "Retorno de Indisponibilidade" });
+    out.push({ value: "termino_prestacao", label: "Término da Prestação" });
+  }
+  if (status === "encerrado") {
+    out.push({ value: "reativacao_prestacao", label: "Reativação da Prestação" });
+  }
+  out.push({ value: "alinhamento_formal", label: "Alinhamento Formal" });
+  return out;
+}
+
+function buildRhFuncionarioPayloadFromState(
+  form: FormState,
+  statusPrestador: RhFuncionario["status"],
+  podeVerDadosSensiveis: boolean,
+): Omit<RhFuncionario, "id" | "created_at" | "updated_at" | "created_by" | "updated_by" | "data_desligamento"> & {
+  status: RhFuncionario["status"];
+  data_desligamento?: string | null;
+} {
+  const sal = podeVerDadosSensiveis ? numeroDeCentavosStr(form.salarioCentavos) : 0;
+  const isPj = form.tipo_contrato === "PJ";
+  const cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
+  const endResLinha = montarEnderecoResumoLine({
+    cep: form.res_cep,
+    logradouro: form.res_logradouro,
+    numero: form.res_numero,
+    complemento: form.res_complemento,
+    cidade: form.res_cidade,
+    estado: form.res_estado,
+  });
+  const endEmpLinha = montarEnderecoResumoLine({
+    cep: form.emp_cep,
+    logradouro: form.emp_logradouro,
+    numero: form.emp_numero,
+    complemento: form.emp_complemento,
+    cidade: form.emp_cidade,
+    estado: form.emp_estado,
+  });
+  const emergLinha = montarContatoEmergenciaLinha(form.emerg_nome, form.emerg_parentesco, form.emerg_telefone);
+  return {
+    status: statusPrestador,
+    nome: form.nome.trim(),
+    rg: form.rg.trim(),
+    cpf: somenteDigitos(form.cpf),
+    telefone: somenteDigitos(form.telefone),
+    email: form.email.trim().toLowerCase(),
+    endereco_residencial: endResLinha,
+    res_cep: somenteDigitos(form.res_cep),
+    res_logradouro: form.res_logradouro.trim(),
+    res_numero: form.res_numero.trim(),
+    res_complemento: form.res_complemento.trim(),
+    res_cidade: form.res_cidade.trim(),
+    res_estado: form.res_estado.trim().toUpperCase().slice(0, 2),
+    contato_emergencia: emergLinha,
+    emerg_nome: form.emerg_nome.trim(),
+    emerg_parentesco: form.emerg_parentesco.trim(),
+    emerg_telefone: somenteDigitos(form.emerg_telefone),
+    setor: form.setor.trim(),
+    org_time_id: form.org_time_id || null,
+    cargo: form.cargo.trim(),
+    nivel: form.nivel.trim(),
+    salario: sal,
+    data_inicio: form.data_inicio,
+    escala: form.escala.trim(),
+    tipo_contrato: form.tipo_contrato,
+    nome_empresa: isPj ? form.nome_empresa.trim() : form.nome_empresa.trim() || "—",
+    cnpj: cnpjFinal,
+    endereco_empresa: isPj ? endEmpLinha : "—",
+    emp_cep: isPj ? somenteDigitos(form.emp_cep) : "",
+    emp_logradouro: isPj ? form.emp_logradouro.trim() : "",
+    emp_numero: isPj ? form.emp_numero.trim() : "",
+    emp_complemento: isPj ? form.emp_complemento.trim() : "",
+    emp_cidade: isPj ? form.emp_cidade.trim() : "",
+    emp_estado: isPj ? form.emp_estado.trim().toUpperCase().slice(0, 2) : "",
+    banco: form.banco.trim(),
+    agencia: somenteDigitos(form.agencia),
+    conta_corrente: form.conta_corrente.trim(),
+    pix: form.pix.trim() || null,
+  };
+}
+
 function RhFuncModalHeaderDetalhes({
   t,
   perm,
@@ -341,7 +527,7 @@ export default function RhPrestadoresPage() {
   const [filtroGerencia, setFiltroGerencia] = useState("");
   const [filtroSetor, setFiltroSetor] = useState("");
   const [filtroContrato, setFiltroContrato] = useState<RhFuncionarioTipoContrato | "todos">("todos");
-  const [filtroStatus, setFiltroStatus] = useState<"todos" | "ativo" | "inativo">("todos");
+  const [filtroStatus, setFiltroStatus] = useState<FiltroStatusPrestador>("exc_encerrado");
   const [abaPagina, setAbaPagina] = useState<AbaPaginaRhFunc>("headcount");
 
   const [modalForm, setModalForm] = useState<"fechado" | "novo" | "editar" | "ver">("fechado");
@@ -350,15 +536,25 @@ export default function RhPrestadoresPage() {
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
 
-  const [desativarRow, setDesativarRow] = useState<RhFuncionario | null>(null);
-  const [desativando, setDesativando] = useState(false);
-
   const [opcoesTimes, setOpcoesTimes] = useState<RhOrgTimeOpcao[]>([]);
   const [abaModal, setAbaModal] = useState<AbaFuncModal>("pessoais");
   /** No modal Visualizar: false = dados sensíveis com blur (ocultar). */
   const [modalVerExibirSensiveis, setModalVerExibirSensiveis] = useState(false);
   const [tabelaSalarioVisivel, setTabelaSalarioVisivel] = useState(false);
   const [cepBuscaEmAndamento, setCepBuscaEmAndamento] = useState<null | "res" | "emp">(null);
+
+  const [acaoModalRow, setAcaoModalRow] = useState<RhFuncionario | null>(null);
+  const [acaoTipo, setAcaoTipo] = useState<"" | RhHistoricoAcaoTipo>("");
+  const [acaoSalvando, setAcaoSalvando] = useState(false);
+  const [acaoForm, setAcaoForm] = useState<FormState>(estadoVazioForm);
+  const acaoBaselineRef = useRef<SliceContratacao | null>(null);
+  const [acaoDtSaida, setAcaoDtSaida] = useState("");
+  const [acaoDtRetorno, setAcaoDtRetorno] = useState("");
+  const [acaoDtTermino, setAcaoDtTermino] = useState("");
+  const [acaoObs, setAcaoObs] = useState("");
+  const [acaoFiles, setAcaoFiles] = useState<File[]>([]);
+  const [histRows, setHistRows] = useState<RhFuncionarioHistorico[]>([]);
+  const [histLoading, setHistLoading] = useState(false);
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -398,6 +594,31 @@ export default function RhPrestadoresPage() {
     return () => window.clearTimeout(id);
   }, [sucessoMsg]);
 
+  useEffect(() => {
+    if (modalForm !== "ver" || abaModal !== "historico" || !editId) {
+      setHistRows([]);
+      return;
+    }
+    setHistLoading(true);
+    void (async () => {
+      const { data, error } = await supabase
+        .from("rh_funcionario_historico")
+        .select("*")
+        .eq("rh_funcionario_id", editId)
+        .order("created_at", { ascending: false });
+      if (error) setHistRows([]);
+      else setHistRows((data ?? []) as RhFuncionarioHistorico[]);
+      setHistLoading(false);
+    })();
+  }, [modalForm, abaModal, editId]);
+
+  useEffect(() => {
+    if (!acaoModalRow) return;
+    if (acaoTipo !== "revisao_contrato" && acaoTipo !== "reativacao_prestacao") return;
+    setAcaoForm(formDeFuncionario(acaoModalRow));
+    acaoBaselineRef.current = sliceContratacaoDeRow(acaoModalRow);
+  }, [acaoTipo, acaoModalRow]);
+
   const setoresUnicos = useMemo(() => {
     const s = new Set<string>();
     lista.forEach((r) => {
@@ -435,6 +656,11 @@ export default function RhPrestadoresPage() {
     [form.org_time_id, opcoesTimes],
   );
 
+  const opcaoTimeAcaoForm = useMemo(
+    () => (acaoForm.org_time_id ? opcoesTimes.find((o) => o.timeId === acaoForm.org_time_id) ?? null : null),
+    [acaoForm.org_time_id, opcoesTimes],
+  );
+
   const ehPJ = form.tipo_contrato === "PJ";
 
   const abasModalDef = useMemo(() => {
@@ -461,7 +687,11 @@ export default function RhPrestadoresPage() {
     const b = busca.trim().toLowerCase();
     const digits = somenteDigitos(busca);
     return lista.filter((r) => {
-      if (filtroStatus !== "todos" && r.status !== filtroStatus) return false;
+      if (filtroStatus === "exc_encerrado") {
+        if (r.status === "encerrado") return false;
+      } else if (filtroStatus === "todos") {
+        // inclui encerrados
+      } else if (r.status !== filtroStatus) return false;
       if (filtroContrato !== "todos" && r.tipo_contrato !== filtroContrato) return false;
       if (filtroSetor && r.setor.trim() !== filtroSetor) return false;
       if (filtroDiretoria) {
@@ -516,6 +746,57 @@ export default function RhPrestadoresPage() {
     },
     [opcoesTimes],
   );
+
+  const liderImediatoLinha = useCallback(
+    (row: RhFuncionario) => {
+      if (!row.org_time_id) return "—";
+      return opcoesTimes.find((x) => x.timeId === row.org_time_id)?.gestorNome ?? "—";
+    },
+    [opcoesTimes],
+  );
+
+  const inserirHistorico = useCallback(
+    async (
+      funcionarioId: string,
+      tipo: RhHistoricoAcaoTipo,
+      detalhes: Record<string, unknown>,
+      anexos: { name: string; path: string; publicUrl: string }[],
+    ) => {
+      const { error } = await supabase.from("rh_funcionario_historico").insert({
+        rh_funcionario_id: funcionarioId,
+        tipo,
+        detalhes: { ...detalhes, usuario_label: user?.email ?? String(user?.id ?? "—") },
+        anexos,
+      });
+      return error;
+    },
+    [user?.email, user?.id],
+  );
+
+  const fecharModalRegistrarAcao = () => {
+    if (acaoSalvando) return;
+    setAcaoModalRow(null);
+    setAcaoTipo("");
+    setAcaoDtSaida("");
+    setAcaoDtRetorno("");
+    setAcaoDtTermino("");
+    setAcaoObs("");
+    setAcaoFiles([]);
+    acaoBaselineRef.current = null;
+    setAcaoForm(estadoVazioForm());
+  };
+
+  const abrirModalRegistrarAcao = (row: RhFuncionario) => {
+    setAcaoModalRow(row);
+    setAcaoTipo("");
+    setAcaoDtSaida("");
+    setAcaoDtRetorno("");
+    setAcaoDtTermino("");
+    setAcaoObs("");
+    setAcaoFiles([]);
+    acaoBaselineRef.current = null;
+    setAcaoForm(formDeFuncionario(row));
+  };
 
   const handleCepBlur = (qual: "res" | "emp", cepRaw: string) => {
     void (async () => {
@@ -572,7 +853,7 @@ export default function RhPrestadoresPage() {
     const usarSelectTime = permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0;
     if (usarSelectTime) {
       if (modalForm === "novo" && !form.org_time_id) {
-        e.org_time_id = "Selecione o time no organograma.";
+        e.org_time_id = "Selecione o organograma.";
       }
       if (!form.org_time_id && !form.setor.trim()) {
         e.setor = "Informe o setor ou selecione um time.";
@@ -627,78 +908,15 @@ export default function RhPrestadoresPage() {
     return Object.keys(e).length === 0;
   }
 
-  const montarPayload = (): Omit<RhFuncionario, "id" | "created_at" | "updated_at" | "created_by" | "updated_by" | "data_desligamento"> & {
-    status: RhFuncionario["status"];
-    data_desligamento?: string | null;
-  } => {
-    const sal = podeVerDadosSensiveis ? numeroDeCentavosStr(form.salarioCentavos) : 0;
-    const isPj = form.tipo_contrato === "PJ";
-    const cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
-    const endResLinha = montarEnderecoResumoLine({
-      cep: form.res_cep,
-      logradouro: form.res_logradouro,
-      numero: form.res_numero,
-      complemento: form.res_complemento,
-      cidade: form.res_cidade,
-      estado: form.res_estado,
-    });
-    const endEmpLinha = montarEnderecoResumoLine({
-      cep: form.emp_cep,
-      logradouro: form.emp_logradouro,
-      numero: form.emp_numero,
-      complemento: form.emp_complemento,
-      cidade: form.emp_cidade,
-      estado: form.emp_estado,
-    });
-    const emergLinha = montarContatoEmergenciaLinha(form.emerg_nome, form.emerg_parentesco, form.emerg_telefone);
-    return {
-      status: "ativo",
-      nome: form.nome.trim(),
-      rg: form.rg.trim(),
-      cpf: somenteDigitos(form.cpf),
-      telefone: somenteDigitos(form.telefone),
-      email: form.email.trim().toLowerCase(),
-      endereco_residencial: endResLinha,
-      res_cep: somenteDigitos(form.res_cep),
-      res_logradouro: form.res_logradouro.trim(),
-      res_numero: form.res_numero.trim(),
-      res_complemento: form.res_complemento.trim(),
-      res_cidade: form.res_cidade.trim(),
-      res_estado: form.res_estado.trim().toUpperCase().slice(0, 2),
-      contato_emergencia: emergLinha,
-      emerg_nome: form.emerg_nome.trim(),
-      emerg_parentesco: form.emerg_parentesco.trim(),
-      emerg_telefone: somenteDigitos(form.emerg_telefone),
-      setor: form.setor.trim(),
-      org_time_id: form.org_time_id || null,
-      cargo: form.cargo.trim(),
-      nivel: form.nivel.trim(),
-      salario: sal,
-      data_inicio: form.data_inicio,
-      escala: form.escala.trim(),
-      tipo_contrato: form.tipo_contrato,
-      nome_empresa: isPj ? form.nome_empresa.trim() : form.nome_empresa.trim() || "—",
-      cnpj: cnpjFinal,
-      endereco_empresa: isPj ? endEmpLinha : "—",
-      emp_cep: isPj ? somenteDigitos(form.emp_cep) : "",
-      emp_logradouro: isPj ? form.emp_logradouro.trim() : "",
-      emp_numero: isPj ? form.emp_numero.trim() : "",
-      emp_complemento: isPj ? form.emp_complemento.trim() : "",
-      emp_cidade: isPj ? form.emp_cidade.trim() : "",
-      emp_estado: isPj ? form.emp_estado.trim().toUpperCase().slice(0, 2) : "",
-      banco: form.banco.trim(),
-      agencia: somenteDigitos(form.agencia),
-      conta_corrente: form.conta_corrente.trim(),
-      pix: form.pix.trim() || null,
-    };
-  };
+  const montarPayload = (statusPrestador: RhFuncionario["status"]) =>
+    buildRhFuncionarioPayloadFromState(form, statusPrestador, podeVerDadosSensiveis);
 
   const salvar = async (opts?: { outro?: boolean }) => {
     if (modalForm === "ver") return;
     if (!validarFormulario()) return;
     setSalvando(true);
     setErroGlobal(null);
-    const payload = montarPayload();
+    const payload = montarPayload("ativo");
     const cadastrarOutro = opts?.outro === true;
 
     if (modalForm === "novo") {
@@ -727,18 +945,19 @@ export default function RhPrestadoresPage() {
 
     if (modalForm === "editar" && editId) {
       const atual = lista.find((x) => x.id === editId);
-      const salarioFinal = podeVerDadosSensiveis ? payload.salario : (atual?.salario ?? 0);
+      const payloadEdit = montarPayload(atual?.status ?? "ativo");
+      const salarioFinal = podeVerDadosSensiveis ? payloadEdit.salario : (atual?.salario ?? 0);
       const mesclado =
         !podeVerDadosSensiveis && atual
           ? {
-              ...payload,
+              ...payloadEdit,
               salario: salarioFinal,
               banco: atual.banco,
               agencia: atual.agencia,
               conta_corrente: atual.conta_corrente,
               pix: atual.pix,
             }
-          : { ...payload, salario: salarioFinal };
+          : { ...payloadEdit, salario: salarioFinal };
       const { error } = await supabase.from("rh_funcionarios").update(mesclado).eq("id", editId);
       setSalvando(false);
       if (error) {
@@ -756,28 +975,135 @@ export default function RhPrestadoresPage() {
     }
   };
 
-  const confirmarDesativar = async () => {
-    if (!desativarRow) return;
-    setDesativando(true);
-    setErroGlobal(null);
-    const hoje = new Date().toISOString().slice(0, 10);
-    const { error } = await supabase
-      .from("rh_funcionarios")
-      .update({
-        status: "inativo",
-        data_desligamento: hoje,
-      })
-      .eq("id", desativarRow.id);
-    setDesativando(false);
-    if (error) {
-      setErroGlobal(error.message);
+  const salvarAcaoRh = async () => {
+    if (!acaoModalRow || !acaoTipo) {
+      setErroGlobal("Selecione o tipo de ação.");
       return;
     }
-    setSucessoMsg("Funcionário desativado.");
-    setDesativarRow(null);
-    setModalForm("fechado");
-    setAbaModal("pessoais");
-    await carregar();
+    setAcaoSalvando(true);
+    setErroGlobal(null);
+    const fid = acaoModalRow.id;
+    let anexosDb: { name: string; path: string; publicUrl: string }[] = [];
+    if (acaoFiles.length > 0) {
+      const up = await uploadAnexosAcaoRh(fid, acaoFiles);
+      if (!up.ok) {
+        setErroGlobal(up.message);
+        setAcaoSalvando(false);
+        return;
+      }
+      anexosDb = up.anexos;
+    }
+    const fmtSal = (c: string) => fmtBRL(numeroDeCentavosStr(c));
+    try {
+      switch (acaoTipo) {
+        case "revisao_contrato": {
+          const antes = acaoBaselineRef.current ?? sliceContratacaoDeRow(acaoModalRow);
+          const depois = sliceContratacaoDeForm(acaoForm);
+          const diff = diffContratacaoSlices(antes, depois, opcoesTimes, fmtSal);
+          if (diff.length === 0) {
+            setErroGlobal("Nenhuma alteração para registrar.");
+            setAcaoSalvando(false);
+            return;
+          }
+          const sal = podeVerDadosSensiveis ? numeroDeCentavosStr(acaoForm.salarioCentavos) : acaoModalRow.salario;
+          const { error: eUp } = await supabase
+            .from("rh_funcionarios")
+            .update({
+              org_time_id: acaoForm.org_time_id || null,
+              setor: acaoForm.setor.trim(),
+              cargo: acaoForm.cargo.trim(),
+              nivel: acaoForm.nivel.trim(),
+              salario: sal,
+              tipo_contrato: acaoForm.tipo_contrato,
+              escala: acaoForm.escala.trim(),
+            })
+            .eq("id", fid);
+          if (eUp) throw eUp;
+          const errH = await inserirHistorico(fid, "revisao_contrato", { alteracoes: diff }, anexosDb);
+          if (errH) throw errH;
+          break;
+        }
+        case "periodo_indisponibilidade": {
+          if (!acaoDtSaida.trim()) {
+            setErroGlobal("Informe a data de saída.");
+            setAcaoSalvando(false);
+            return;
+          }
+          const { error: eUp } = await supabase.from("rh_funcionarios").update({ status: "indisponivel" }).eq("id", fid);
+          if (eUp) throw eUp;
+          const det: Record<string, unknown> = { data_saida: acaoDtSaida, data_retorno: acaoDtRetorno.trim() || null };
+          if (acaoObs.trim()) det.observacao = acaoObs.trim();
+          const errH = await inserirHistorico(fid, "periodo_indisponibilidade", det, anexosDb);
+          if (errH) throw errH;
+          break;
+        }
+        case "retorno_indisponibilidade": {
+          const { error: eUp } = await supabase.from("rh_funcionarios").update({ status: "ativo" }).eq("id", fid);
+          if (eUp) throw eUp;
+          const det: Record<string, unknown> = {};
+          if (acaoObs.trim()) det.observacao = acaoObs.trim();
+          const errH = await inserirHistorico(fid, "retorno_indisponibilidade", det, anexosDb);
+          if (errH) throw errH;
+          break;
+        }
+        case "termino_prestacao": {
+          if (!acaoDtTermino.trim()) {
+            setErroGlobal("Informe a data de término.");
+            setAcaoSalvando(false);
+            return;
+          }
+          const { error: eUp } = await supabase
+            .from("rh_funcionarios")
+            .update({ status: "encerrado", data_desligamento: acaoDtTermino })
+            .eq("id", fid);
+          if (eUp) throw eUp;
+          const det: Record<string, unknown> = { data_termino: acaoDtTermino };
+          if (acaoObs.trim()) det.observacao = acaoObs.trim();
+          const errH = await inserirHistorico(fid, "termino_prestacao", det, anexosDb);
+          if (errH) throw errH;
+          break;
+        }
+        case "alinhamento_formal": {
+          const det: Record<string, unknown> = {};
+          if (acaoObs.trim()) det.observacao = acaoObs.trim();
+          const errH = await inserirHistorico(fid, "alinhamento_formal", det, anexosDb);
+          if (errH) throw errH;
+          break;
+        }
+        case "reativacao_prestacao": {
+          const base = buildRhFuncionarioPayloadFromState(acaoForm, "ativo", podeVerDadosSensiveis);
+          const mesclado =
+            !podeVerDadosSensiveis && acaoModalRow
+              ? {
+                  ...base,
+                  salario: acaoModalRow.salario,
+                  banco: acaoModalRow.banco,
+                  agencia: acaoModalRow.agencia,
+                  conta_corrente: acaoModalRow.conta_corrente,
+                  pix: acaoModalRow.pix,
+                }
+              : base;
+          const antes = acaoBaselineRef.current ?? sliceContratacaoDeRow(acaoModalRow);
+          const depois = sliceContratacaoDeForm(acaoForm);
+          const diff = diffContratacaoSlices(antes, depois, opcoesTimes, fmtSal);
+          const { error: eUp } = await supabase.from("rh_funcionarios").update({ ...mesclado, data_desligamento: null }).eq("id", fid);
+          if (eUp) throw eUp;
+          const errH = await inserirHistorico(fid, "reativacao_prestacao", { alteracoes: diff }, anexosDb);
+          if (errH) throw errH;
+          break;
+        }
+        default:
+          break;
+      }
+      setSucessoMsg("Ação registrada.");
+      fecharModalRegistrarAcao();
+      await carregar();
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao salvar.";
+      setErroGlobal(msg);
+    } finally {
+      setAcaoSalvando(false);
+    }
   };
 
   const inputStyle: CSSProperties = {
@@ -806,7 +1132,7 @@ export default function RhPrestadoresPage() {
             <caption style={{ display: "none" }}>Carregando gestão de prestadores</caption>
             <thead>
               <tr>
-                {["Nome", "Diretoria", "Gerência", "Função", "Remuneração Mensal", "Status", "Ações"].map((h) => (
+                {["Nome", "Diretoria", "Gerência", "Função", "Líder imediato", "Remuneração Mensal", "Status", "Ações"].map((h) => (
                   <th key={h} scope="col" style={getThStyle(t)}>
                     {h}
                   </th>
@@ -814,9 +1140,9 @@ export default function RhPrestadoresPage() {
               </tr>
             </thead>
             <tbody>
-              <SkeletonTableRow cols={7} />
-              <SkeletonTableRow cols={7} />
-              <SkeletonTableRow cols={7} />
+              <SkeletonTableRow cols={8} />
+              <SkeletonTableRow cols={8} />
+              <SkeletonTableRow cols={8} />
             </tbody>
           </table>
         </div>
@@ -833,6 +1159,14 @@ export default function RhPrestadoresPage() {
   }
 
   const leitura = modalForm === "ver";
+  const snapshotEdicao = modalForm === "editar" && editId ? lista.find((x) => x.id === editId) ?? null : null;
+  const bloquearOrgEdit = Boolean(usarSelectTime && snapshotEdicao?.org_time_id);
+  const bloquearSetorManualEdit = Boolean(!usarSelectTime && snapshotEdicao && snapshotEdicao.setor.trim());
+  const bloquearCargoEdit = Boolean(snapshotEdicao?.cargo.trim());
+  const bloquearNivelEdit = Boolean(snapshotEdicao?.nivel.trim());
+  const bloquearSalarioEdit = Boolean(podeVerDadosSensiveis && snapshotEdicao && Number(snapshotEdicao.salario) > 0);
+  const bloquearTipoContratoEdit = Boolean(snapshotEdicao && String(snapshotEdicao.tipo_contrato).length > 0);
+  const bloquearEscalaEdit = Boolean(snapshotEdicao?.escala.trim());
   const desabilitarCampos = leitura || salvando;
   const sensivelBlurDoc = leitura && !modalVerExibirSensiveis;
   const sensivelBlurFinanceiro = leitura && !modalVerExibirSensiveis && podeVerDadosSensiveis;
@@ -859,7 +1193,9 @@ export default function RhPrestadoresPage() {
       : abaPagina === "acoes_rh"
         ? "Ações de RH — colaboradores filtrados"
         : "Anotações RH — colaboradores filtrados";
-  const preencherAcoes = abaPagina === "headcount";
+  const preencherAcoesHeadcount = abaPagina === "headcount";
+  const tabelaAcoesRh = abaPagina === "acoes_rh";
+  const colunasTabela = tabelaAcoesRh ? 7 : 8;
 
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
@@ -1003,13 +1339,15 @@ export default function RhPrestadoresPage() {
             <select
               id="rh-func-status"
               value={filtroStatus}
-              onChange={(ev) => setFiltroStatus(ev.target.value as typeof filtroStatus)}
+              onChange={(ev) => setFiltroStatus(ev.target.value as FiltroStatusPrestador)}
               aria-label="Filtrar por status"
               style={inputStyle}
             >
-              <option value="todos">Todos</option>
+              <option value="exc_encerrado">Ativos e indisponíveis</option>
               <option value="ativo">Ativo</option>
-              <option value="inativo">Inativo</option>
+              <option value="indisponivel">Indisponível</option>
+              <option value="encerrado">Encerrado</option>
+              <option value="todos">Todos (incl. encerrados)</option>
             </select>
           </div>
         </div>
@@ -1094,29 +1432,6 @@ export default function RhPrestadoresPage() {
               Novo Prestador
             </button>
           ) : null}
-          {abaPagina === "acoes_rh" ? (
-            <button
-              type="button"
-              onClick={() => undefined}
-              title="Em breve"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: `1px solid ${t.cardBorder}`,
-                cursor: "pointer",
-                color: t.text,
-                fontWeight: 700,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                background: t.inputBg,
-              }}
-            >
-              Ação em Massa
-            </button>
-          ) : null}
           {abaPagina === "anotacoes" ? (
             <button
               type="button"
@@ -1149,7 +1464,7 @@ export default function RhPrestadoresPage() {
               width: "100%",
               borderCollapse: "separate",
               borderSpacing: 0,
-              minWidth: 720,
+              minWidth: tabelaAcoesRh ? 680 : 820,
             }}
           >
             <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
@@ -1167,43 +1482,48 @@ export default function RhPrestadoresPage() {
                 <th scope="col" style={getThStyle(t)}>
                   Função
                 </th>
-                <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                      gap: 8,
-                      width: "100%",
-                    }}
-                  >
-                    <span>Remuneração Mensal</span>
-                    {podeVerDadosSensiveis ? (
-                      <button
-                        type="button"
-                        onClick={() => setTabelaSalarioVisivel((v) => !v)}
-                        aria-label={
-                          tabelaSalarioVisivel
-                            ? "Ocultar valores de remuneração mensal na tabela"
-                            : "Exibir valores de remuneração mensal na tabela"
-                        }
-                        title={tabelaSalarioVisivel ? "Ocultar" : "Ver"}
-                        style={{
-                          padding: 4,
-                          borderRadius: 8,
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.inputBg,
-                          cursor: "pointer",
-                          color: t.textMuted,
-                          display: "inline-flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        {tabelaSalarioVisivel ? <EyeOff size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
-                      </button>
-                    ) : null}
-                  </div>
+                <th scope="col" style={getThStyle(t)}>
+                  Líder imediato
                 </th>
+                {!tabelaAcoesRh ? (
+                  <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        gap: 8,
+                        width: "100%",
+                      }}
+                    >
+                      <span>Remuneração Mensal</span>
+                      {podeVerDadosSensiveis ? (
+                        <button
+                          type="button"
+                          onClick={() => setTabelaSalarioVisivel((v) => !v)}
+                          aria-label={
+                            tabelaSalarioVisivel
+                              ? "Ocultar valores de remuneração mensal na tabela"
+                              : "Exibir valores de remuneração mensal na tabela"
+                          }
+                          title={tabelaSalarioVisivel ? "Ocultar" : "Ver"}
+                          style={{
+                            padding: 4,
+                            borderRadius: 8,
+                            border: `1px solid ${t.cardBorder}`,
+                            background: t.inputBg,
+                            cursor: "pointer",
+                            color: t.textMuted,
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          {tabelaSalarioVisivel ? <EyeOff size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
+                        </button>
+                      ) : null}
+                    </div>
+                  </th>
+                ) : null}
                 <th scope="col" style={getThStyle(t)}>
                   Status
                 </th>
@@ -1215,18 +1535,19 @@ export default function RhPrestadoresPage() {
             <tbody>
               {loading ? (
                 <>
-                  <SkeletonTableRow cols={7} />
-                  <SkeletonTableRow cols={7} />
+                  <SkeletonTableRow cols={colunasTabela} />
+                  <SkeletonTableRow cols={colunasTabela} />
                 </>
               ) : filtrada.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ ...getTdStyle(t), textAlign: "center", padding: "40px 16px", color: t.textMuted }}>
+                  <td colSpan={colunasTabela} style={{ ...getTdStyle(t), textAlign: "center", padding: "40px 16px", color: t.textMuted }}>
                     Sem dados para o período selecionado.
                   </td>
                 </tr>
               ) : (
                 filtrada.map((row, i) => {
                   const { diretoria, gerencia } = orgMetaLinha(row);
+                  const lider = liderImediatoLinha(row);
                   return (
                     <tr key={row.id}>
                       <td
@@ -1249,21 +1570,24 @@ export default function RhPrestadoresPage() {
                         {gerencia}
                       </td>
                       <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{row.cargo}</td>
-                      <td
-                        style={getTdNumStyle(t, {
-                          background: zebraStripe(i),
-                          ...(podeVerDadosSensiveis && !tabelaSalarioVisivel ? blurSensivel : {}),
-                        })}
-                      >
-                        {podeVerDadosSensiveis ? fmtBRL(Number(row.salario)) : "—"}
+                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={lider}>
+                        {lider}
                       </td>
+                      {!tabelaAcoesRh ? (
+                        <td
+                          style={getTdNumStyle(t, {
+                            background: zebraStripe(i),
+                            ...(podeVerDadosSensiveis && !tabelaSalarioVisivel ? blurSensivel : {}),
+                          })}
+                        >
+                          {podeVerDadosSensiveis ? fmtBRL(Number(row.salario)) : "—"}
+                        </td>
+                      ) : null}
                       <td style={{ ...getTdStyle(t, { background: zebraStripe(i) }) }}>
-                        <span style={{ fontWeight: 700, color: row.status === "ativo" ? "#22c55e" : t.textMuted }}>
-                          {row.status === "ativo" ? "Ativo" : "Inativo"}
-                        </span>
+                        <span style={{ fontWeight: 700, color: corStatusPrestador(row.status) }}>{labelStatusPrestador(row.status)}</span>
                       </td>
                       <td style={{ ...getTdStyle(t, { textAlign: "right", background: zebraStripe(i) }) }}>
-                        {preencherAcoes ? (
+                        {preencherAcoesHeadcount ? (
                           <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                             <button
                               type="button"
@@ -1302,6 +1626,24 @@ export default function RhPrestadoresPage() {
                               </button>
                             ) : null}
                           </div>
+                        ) : tabelaAcoesRh && perm.canEditarOk ? (
+                          <button
+                            type="button"
+                            onClick={() => abrirModalRegistrarAcao(row)}
+                            style={{
+                              padding: "6px 10px",
+                              borderRadius: 8,
+                              border: "none",
+                              color: "#fff",
+                              cursor: "pointer",
+                              fontSize: 12,
+                              fontFamily: FONT.body,
+                              fontWeight: 700,
+                              background: ctaGradient(brand),
+                            }}
+                          >
+                            Registrar Ação
+                          </button>
                         ) : null}
                       </td>
                     </tr>
@@ -1468,7 +1810,7 @@ export default function RhPrestadoresPage() {
                     {cepBuscaEmAndamento === "res" ? <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ color: t.textMuted }} /> : null}
                   </div>
                   <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
-                    Com 8 dígitos, logradouro e cidade são sugeridos via ViaCEP (Correios); você pode editar.
+                    Insira o CEP para preencher o endereço
                   </div>
                   {fieldErr.res_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cep}</div> : null}
                 </div>
@@ -1578,37 +1920,41 @@ export default function RhPrestadoresPage() {
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                   {usarSelectTime ? (
                     <>
-                      {lbl("f-org-time", "Time (organograma)")}
-                      <select
-                        id="f-org-time"
-                        disabled={desabilitarCampos}
-                        value={form.org_time_id ?? ""}
-                        onChange={(e) => {
-                          const id = e.target.value;
-                          if (!id) {
-                            setForm((s) => ({ ...s, org_time_id: null, setor: "" }));
-                            return;
-                          }
-                          const op = opcoesTimes.find((x) => x.timeId === id);
-                          if (op) setForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
-                        }}
-                        aria-label="Time no organograma"
-                        style={inputStyle}
-                      >
-                        <option value="">— Selecione —</option>
-                        {opcoesTimes.map((o) => (
-                          <option key={o.timeId} value={o.timeId}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                      {fieldErr.org_time_id ? (
-                        <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div>
+                      {!leitura ? (
+                        <>
+                          {lbl("f-org-time", "Organograma")}
+                          <select
+                            id="f-org-time"
+                            disabled={desabilitarCampos || bloquearOrgEdit}
+                            value={form.org_time_id ?? ""}
+                            onChange={(e) => {
+                              const id = e.target.value;
+                              if (!id) {
+                                setForm((s) => ({ ...s, org_time_id: null, setor: "" }));
+                                return;
+                              }
+                              const op = opcoesTimes.find((x) => x.timeId === id);
+                              if (op) setForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
+                            }}
+                            aria-label="Organograma"
+                            style={inputStyle}
+                          >
+                            <option value="">— Selecione —</option>
+                            {opcoesTimes.map((o) => (
+                              <option key={o.timeId} value={o.timeId}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+                          {fieldErr.org_time_id ? (
+                            <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div>
+                          ) : null}
+                        </>
                       ) : null}
-                      {opcaoTimeSelecionada ? (
+                      {opcaoTimeSelecionada || (leitura && form.setor.trim()) ? (
                         <div
                           style={{
-                            marginTop: 10,
+                            marginTop: leitura ? 0 : 10,
                             padding: "10px 12px",
                             borderRadius: 10,
                             border: `1px solid ${t.cardBorder}`,
@@ -1618,18 +1964,26 @@ export default function RhPrestadoresPage() {
                             lineHeight: 1.6,
                           }}
                         >
-                          <div>
-                            <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoTimeSelecionada.diretoriaNome}
-                          </div>
-                          <div>
-                            <strong style={{ color: t.text }}>Gerência:</strong> {opcaoTimeSelecionada.gerenciaNome}
-                          </div>
-                          <div>
-                            <strong style={{ color: t.text }}>Gestor imediato:</strong> {opcaoTimeSelecionada.gestorNome}
-                          </div>
-                          <div>
-                            <strong style={{ color: t.text }}>Setor (nome do time):</strong> {opcaoTimeSelecionada.timeNome}
-                          </div>
+                          {opcaoTimeSelecionada ? (
+                            <>
+                              <div>
+                                <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoTimeSelecionada.diretoriaNome}
+                              </div>
+                              <div>
+                                <strong style={{ color: t.text }}>Gerência:</strong> {opcaoTimeSelecionada.gerenciaNome}
+                              </div>
+                              <div>
+                                <strong style={{ color: t.text }}>Time:</strong> {opcaoTimeSelecionada.timeNome}
+                              </div>
+                              <div>
+                                <strong style={{ color: t.text }}>Líder imediato:</strong> {opcaoTimeSelecionada.gestorNome}
+                              </div>
+                            </>
+                          ) : (
+                            <div>
+                              <strong style={{ color: t.text }}>Time:</strong> {form.setor}
+                            </div>
+                          )}
                         </div>
                       ) : null}
                     </>
@@ -1638,7 +1992,7 @@ export default function RhPrestadoresPage() {
                       {lbl("f-setor", "Setor")}
                       <input
                         id="f-setor"
-                        disabled={desabilitarCampos}
+                        disabled={desabilitarCampos || bloquearSetorManualEdit}
                         value={form.setor}
                         onChange={(e) => setForm((s) => ({ ...s, setor: e.target.value, org_time_id: null }))}
                         style={inputStyle}
@@ -1660,14 +2014,14 @@ export default function RhPrestadoresPage() {
                 </div>
                 <div style={{ marginBottom: 10 }}>
                   {lbl("f-cargo", "Função")}
-                  <input id="f-cargo" disabled={desabilitarCampos} value={form.cargo} onChange={(e) => setForm((s) => ({ ...s, cargo: e.target.value }))} style={inputStyle} />
+                  <input id="f-cargo" disabled={desabilitarCampos || bloquearCargoEdit} value={form.cargo} onChange={(e) => setForm((s) => ({ ...s, cargo: e.target.value }))} style={inputStyle} />
                   {fieldErr.cargo ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cargo}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
                   {lbl("f-nivel", "Nível")}
                   <select
                     id="f-nivel"
-                    disabled={desabilitarCampos}
+                    disabled={desabilitarCampos || bloquearNivelEdit}
                     value={form.nivel}
                     onChange={(e) => setForm((s) => ({ ...s, nivel: e.target.value }))}
                     style={inputStyle}
@@ -1684,7 +2038,7 @@ export default function RhPrestadoresPage() {
                   {lbl("f-tipo", "Tipo de contrato")}
                   <select
                     id="f-tipo"
-                    disabled={desabilitarCampos}
+                    disabled={desabilitarCampos || bloquearTipoContratoEdit}
                     value={form.tipo_contrato}
                     onChange={(e) => setForm((s) => ({ ...s, tipo_contrato: e.target.value as RhFuncionarioTipoContrato }))}
                     style={inputStyle}
@@ -1702,7 +2056,7 @@ export default function RhPrestadoresPage() {
                     {lbl("f-sal", "Remuneração Mensal")}
                     <input
                       id="f-sal"
-                      disabled={desabilitarCampos}
+                      disabled={desabilitarCampos || bloquearSalarioEdit}
                       inputMode="numeric"
                       autoComplete="off"
                       value={form.salarioCentavos ? formatarMoedaDigitos(form.salarioCentavos) : ""}
@@ -1733,7 +2087,7 @@ export default function RhPrestadoresPage() {
                 </div>
                 <div style={{ marginBottom: 10 }}>
                   {lbl("f-escala", "Escala")}
-                  <input id="f-escala" disabled={desabilitarCampos} value={form.escala} onChange={(e) => setForm((s) => ({ ...s, escala: e.target.value }))} style={inputStyle} list="lista-escalas" />
+                  <input id="f-escala" disabled={desabilitarCampos || bloquearEscalaEdit} value={form.escala} onChange={(e) => setForm((s) => ({ ...s, escala: e.target.value }))} style={inputStyle} list="lista-escalas" />
                   <datalist id="lista-escalas">
                     {ESCALAS_SUGEST.map((x) => (
                       <option key={x} value={x} />
@@ -1786,6 +2140,9 @@ export default function RhPrestadoresPage() {
                       style={{ ...inputStyle, flex: 1 }}
                     />
                     {cepBuscaEmAndamento === "emp" ? <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ color: t.textMuted }} /> : null}
+                  </div>
+                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>
+                    Insira o CEP para preencher o endereço
                   </div>
                   {fieldErr.emp_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cep}</div> : null}
                 </div>
@@ -1908,8 +2265,124 @@ export default function RhPrestadoresPage() {
               )
             ) : null}
 
-            {abaModal === "documentos" || abaModal === "contratos" || abaModal === "historico" ? (
-              <div style={{ minHeight: 120 }} aria-hidden />
+            {abaModal === "documentos" || abaModal === "contratos" ? <div style={{ minHeight: 120 }} aria-hidden /> : null}
+
+            {abaModal === "historico" ? (
+              <div style={{ marginTop: 8 }}>
+                {histLoading ? (
+                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                    <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
+                    Carregando histórico…
+                  </div>
+                ) : histRows.length === 0 ? (
+                  <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+                    Sem dados para o período selecionado.
+                  </div>
+                ) : (
+                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                    {histRows.map((h) => {
+                      const anexos = Array.isArray(h.anexos)
+                        ? (h.anexos as { name?: string; publicUrl: string }[]).filter((a) => a?.publicUrl)
+                        : [];
+                      const det = h.detalhes ?? {};
+                      const titulo = HIST_TIPO_LABEL[h.tipo] ?? h.tipo;
+                      const quando = new Date(h.created_at).toLocaleString("pt-BR");
+                      return (
+                        <li
+                          key={h.id}
+                          style={{
+                            marginBottom: 14,
+                            padding: "12px 14px",
+                            borderRadius: 12,
+                            border: `1px solid ${t.cardBorder}`,
+                            background: t.inputBg,
+                            fontFamily: FONT.body,
+                            fontSize: 13,
+                          }}
+                        >
+                          <div style={{ fontWeight: 800, color: t.text, marginBottom: 6 }}>{titulo}</div>
+                          <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
+                            {quando}
+                            {det.usuario_label ? ` · ${String(det.usuario_label)}` : ""}
+                          </div>
+                          {"alteracoes" in det && Array.isArray(det.alteracoes) ? (
+                            <ul style={{ margin: "6px 0 0", paddingLeft: 18, color: t.text }}>
+                              {(det.alteracoes as { campo: string; antes: string; depois: string }[]).map((alt, j) => (
+                                <li key={j} style={{ marginBottom: 4 }}>
+                                  <strong>{alt.campo}:</strong> {alt.antes} → {alt.depois}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                          {h.tipo === "periodo_indisponibilidade" && "data_saida" in det ? (
+                            <div style={{ color: t.text, marginTop: 6 }}>
+                              <div>
+                                <strong>Data de saída:</strong> {String(det.data_saida ?? "—")}
+                              </div>
+                              {det.data_retorno ? (
+                                <div>
+                                  <strong>Data de retorno:</strong> {String(det.data_retorno)}
+                                </div>
+                              ) : null}
+                              {det.observacao ? (
+                                <div style={{ marginTop: 4 }}>
+                                  <strong>Observação:</strong> {String(det.observacao)}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                          {h.tipo === "termino_prestacao" && "data_termino" in det ? (
+                            <div style={{ color: t.text, marginTop: 6 }}>
+                              <div>
+                                <strong>Data de término:</strong> {String(det.data_termino ?? "—")}
+                              </div>
+                              {det.observacao ? (
+                                <div style={{ marginTop: 4 }}>
+                                  <strong>Observação:</strong> {String(det.observacao)}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                          {h.tipo === "retorno_indisponibilidade" && det.observacao ? (
+                            <div style={{ color: t.text, marginTop: 6 }}>
+                              <strong>Observação:</strong> {String(det.observacao)}
+                            </div>
+                          ) : null}
+                          {h.tipo === "alinhamento_formal" && det.observacao ? (
+                            <div style={{ color: t.text, marginTop: 6 }}>
+                              <strong>Observação:</strong> {String(det.observacao)}
+                            </div>
+                          ) : null}
+                          {anexos.length > 0 ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10, alignItems: "center" }}>
+                              {anexos.map((a, k) => (
+                                <a
+                                  key={k}
+                                  href={a.publicUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    fontSize: 12,
+                                    color: "var(--brand-action, #7c3aed)",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  <Paperclip size={14} aria-hidden />
+                                  {a.name || "Anexo"}
+                                  <ExternalLink size={12} aria-hidden />
+                                </a>
+                              ))}
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             ) : null}
           </div>
 
@@ -1919,37 +2392,11 @@ export default function RhPrestadoresPage() {
                 display: "flex",
                 flexWrap: "wrap",
                 gap: 10,
-                justifyContent: "space-between",
+                justifyContent: "flex-end",
                 alignItems: "center",
                 marginTop: 8,
               }}
             >
-              <div>
-                {modalForm === "editar" && perm.canEditarOk && editId && lista.find((x) => x.id === editId)?.status === "ativo" ? (
-                  <button
-                    type="button"
-                    disabled={salvando}
-                    onClick={() => {
-                      const rr = lista.find((x) => x.id === editId);
-                      if (rr) setDesativarRow(rr);
-                    }}
-                    style={{
-                      padding: "10px 14px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(232,64,37,0.45)",
-                      background: "rgba(232,64,37,0.08)",
-                      color: "#e84025",
-                      fontWeight: 700,
-                      cursor: salvando ? "not-allowed" : "pointer",
-                      fontFamily: FONT.body,
-                      fontSize: 13,
-                    }}
-                  >
-                    Desativar colaborador
-                  </button>
-                ) : null}
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end" }}>
                 {modalForm === "novo" ? (
                   <button
                     type="button"
@@ -1991,56 +2438,348 @@ export default function RhPrestadoresPage() {
                   {salvando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
                   Salvar
                 </button>
-              </div>
             </div>
           ) : null}
         </ModalBase>
       )}
 
-      {desativarRow ? (
-        <ModalBase maxWidth={420} onClose={() => !desativando && setDesativarRow(null)}>
-          <ModalHeader title="Desativar funcionário" onClose={() => !desativando && setDesativarRow(null)} />
-          <p style={{ color: t.text, fontSize: 14, fontFamily: FONT.body, marginTop: 0 }}>
-            Confirma a desativação de <strong>{desativarRow.nome}</strong>? O registro permanece no sistema como inativo.
-          </p>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-            <button
-              type="button"
-              disabled={desativando}
-              onClick={() => setDesativarRow(null)}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg,
-                color: t.text,
-                cursor: desativando ? "not-allowed" : "pointer",
-                fontFamily: FONT.body,
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              disabled={desativando}
-              onClick={() => void confirmarDesativar()}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 10,
-                border: "none",
-                background: "#e84025",
-                color: "#fff",
-                fontWeight: 700,
-                cursor: desativando ? "wait" : "pointer",
-                fontFamily: FONT.body,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              {desativando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
-              Desativar
-            </button>
+      {acaoModalRow ? (
+        <ModalBase maxWidth={680} onClose={fecharModalRegistrarAcao}>
+          <ModalHeader title="Registrar Ação" onClose={fecharModalRegistrarAcao} />
+          <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
+            <div style={{ marginBottom: 12, fontSize: 13, color: t.textMuted }}>
+              <strong style={{ color: t.text }}>{acaoModalRow.nome}</strong>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label htmlFor="acao-tipo" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
+                Tipo de ação
+              </label>
+              <select
+                id="acao-tipo"
+                value={acaoTipo}
+                onChange={(e) => setAcaoTipo((e.target.value || "") as "" | RhHistoricoAcaoTipo)}
+                style={inputStyle}
+                aria-label="Tipo de ação"
+              >
+                <option value="">— Selecione —</option>
+                {tiposAcaoDisponiveis(acaoModalRow.status).map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {acaoTipo === "periodo_indisponibilidade" ? (
+              <div className="app-grid-2-tight">
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("acao-dt-saida", "Data de saída")}
+                  <input id="acao-dt-saida" type="date" value={acaoDtSaida} onChange={(e) => setAcaoDtSaida(e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("acao-dt-ret", "Data de retorno")}
+                  <input id="acao-dt-ret" type="date" value={acaoDtRetorno} onChange={(e) => setAcaoDtRetorno(e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lbl("acao-obs", "Observação")}
+                  <textarea id="acao-obs" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+                </div>
+                <div style={{ gridColumn: "1 / -1", marginBottom: 8 }}>
+                  <label style={{ fontSize: 12, color: t.textMuted, display: "block", marginBottom: 4 }}>Anexos (opcional)</label>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => setAcaoFiles(Array.from(e.target.files ?? []))}
+                    style={{ fontSize: 12, width: "100%", color: t.textMuted }}
+                    aria-label="Anexos opcionais"
+                  />
+                  {acaoFiles.length > 0 ? (
+                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{acaoFiles.map((f) => f.name).join(", ")}</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {acaoTipo === "retorno_indisponibilidade" ? (
+              <div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("acao-obs-r", "Observação")}
+                  <textarea id="acao-obs-r" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ fontSize: 12, color: t.textMuted, display: "block", marginBottom: 4 }}>Anexos (opcional)</label>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => setAcaoFiles(Array.from(e.target.files ?? []))}
+                    style={{ fontSize: 12, width: "100%", color: t.textMuted }}
+                    aria-label="Anexos opcionais"
+                  />
+                  {acaoFiles.length > 0 ? (
+                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{acaoFiles.map((f) => f.name).join(", ")}</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {acaoTipo === "termino_prestacao" ? (
+              <div className="app-grid-2-tight">
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lbl("acao-dt-term", "Data de término")}
+                  <input id="acao-dt-term" type="date" value={acaoDtTermino} onChange={(e) => setAcaoDtTermino(e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lbl("acao-obs-t", "Observação")}
+                  <textarea id="acao-obs-t" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+                </div>
+                <div style={{ gridColumn: "1 / -1", marginBottom: 8 }}>
+                  <label style={{ fontSize: 12, color: t.textMuted, display: "block", marginBottom: 4 }}>Anexos (opcional)</label>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => setAcaoFiles(Array.from(e.target.files ?? []))}
+                    style={{ fontSize: 12, width: "100%", color: t.textMuted }}
+                    aria-label="Anexos opcionais"
+                  />
+                  {acaoFiles.length > 0 ? (
+                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{acaoFiles.map((f) => f.name).join(", ")}</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {acaoTipo === "alinhamento_formal" ? (
+              <div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("acao-obs-a", "Observação")}
+                  <textarea id="acao-obs-a" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ fontSize: 12, color: t.textMuted, display: "block", marginBottom: 4 }}>Anexos (opcional)</label>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => setAcaoFiles(Array.from(e.target.files ?? []))}
+                    style={{ fontSize: 12, width: "100%", color: t.textMuted }}
+                    aria-label="Anexos opcionais"
+                  />
+                  {acaoFiles.length > 0 ? (
+                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{acaoFiles.map((f) => f.name).join(", ")}</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {acaoTipo === "revisao_contrato" || acaoTipo === "reativacao_prestacao" ? (
+              <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {usarSelectTime ? (
+                    <>
+                      {lbl("acao-org", "Organograma")}
+                      <select
+                        id="acao-org"
+                        value={acaoForm.org_time_id ?? ""}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          if (!id) {
+                            setAcaoForm((s) => ({ ...s, org_time_id: null, setor: "" }));
+                            return;
+                          }
+                          const op = opcoesTimes.find((x) => x.timeId === id);
+                          if (op) setAcaoForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
+                        }}
+                        aria-label="Organograma"
+                        style={inputStyle}
+                      >
+                        <option value="">— Selecione —</option>
+                        {opcoesTimes.map((o) => (
+                          <option key={o.timeId} value={o.timeId}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      {opcaoTimeAcaoForm ? (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            padding: "10px 12px",
+                            borderRadius: 10,
+                            border: `1px solid ${t.cardBorder}`,
+                            background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)",
+                            fontSize: 12,
+                            color: t.textMuted,
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          <div>
+                            <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoTimeAcaoForm.diretoriaNome}
+                          </div>
+                          <div>
+                            <strong style={{ color: t.text }}>Gerência:</strong> {opcaoTimeAcaoForm.gerenciaNome}
+                          </div>
+                          <div>
+                            <strong style={{ color: t.text }}>Time:</strong> {opcaoTimeAcaoForm.timeNome}
+                          </div>
+                          <div>
+                            <strong style={{ color: t.text }}>Líder imediato:</strong> {opcaoTimeAcaoForm.gestorNome}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      {lbl("acao-setor", "Setor")}
+                      <input
+                        id="acao-setor"
+                        value={acaoForm.setor}
+                        onChange={(e) => setAcaoForm((s) => ({ ...s, setor: e.target.value, org_time_id: null }))}
+                        style={inputStyle}
+                      />
+                    </>
+                  )}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("acao-cargo", "Função")}
+                  <input
+                    id="acao-cargo"
+                    value={acaoForm.cargo}
+                    onChange={(e) => setAcaoForm((s) => ({ ...s, cargo: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("acao-nivel", "Nível")}
+                  <select
+                    id="acao-nivel"
+                    value={acaoForm.nivel}
+                    onChange={(e) => setAcaoForm((s) => ({ ...s, nivel: e.target.value }))}
+                    style={inputStyle}
+                    aria-label="Nível"
+                  >
+                    {NIVEIS.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("acao-tipo", "Tipo de contrato")}
+                  <select
+                    id="acao-tipo-ct"
+                    value={acaoForm.tipo_contrato}
+                    onChange={(e) => setAcaoForm((s) => ({ ...s, tipo_contrato: e.target.value as RhFuncionarioTipoContrato }))}
+                    style={inputStyle}
+                    aria-label="Tipo de contrato"
+                  >
+                    {TIPOS_CONTRATO.map((x) => (
+                      <option key={x.value} value={x.value}>
+                        {x.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {podeVerDadosSensiveis ? (
+                  <div style={{ marginBottom: 10 }}>
+                    {lbl("acao-sal", "Remuneração Mensal")}
+                    <input
+                      id="acao-sal"
+                      inputMode="numeric"
+                      value={acaoForm.salarioCentavos ? formatarMoedaDigitos(acaoForm.salarioCentavos) : ""}
+                      onChange={(e) => setAcaoForm((s) => ({ ...s, salarioCentavos: centavosDeStringMoeda(e.target.value) }))}
+                      placeholder="R$ 0,00"
+                      style={inputStyle}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: 10, padding: 10, borderRadius: 10, background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 8%, transparent)", fontSize: 12, color: t.textMuted }}>
+                    Remuneração mensal: visível apenas para quem tem permissão de edição.
+                  </div>
+                )}
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("acao-escala", "Escala")}
+                  <input
+                    id="acao-escala"
+                    value={acaoForm.escala}
+                    onChange={(e) => setAcaoForm((s) => ({ ...s, escala: e.target.value }))}
+                    style={inputStyle}
+                    list="lista-escalas-acao"
+                  />
+                  <datalist id="lista-escalas-acao">
+                    {ESCALAS_SUGEST.map((x) => (
+                      <option key={x} value={x} />
+                    ))}
+                  </datalist>
+                </div>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lbl("acao-dt-ini", "Data de início")}
+                  <input
+                    id="acao-dt-ini"
+                    type="date"
+                    value={acaoForm.data_inicio}
+                    onChange={(e) => setAcaoForm((s) => ({ ...s, data_inicio: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+                {acaoTipo === "reativacao_prestacao" ? (
+                  <div style={{ gridColumn: "1 / -1", marginBottom: 8 }}>
+                    <label style={{ fontSize: 12, color: t.textMuted, display: "block", marginBottom: 4 }}>Anexos (opcional)</label>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => setAcaoFiles(Array.from(e.target.files ?? []))}
+                      style={{ fontSize: 12, width: "100%", color: t.textMuted }}
+                      aria-label="Anexos opcionais"
+                    />
+                    {acaoFiles.length > 0 ? (
+                      <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{acaoFiles.map((f) => f.name).join(", ")}</div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+              <button
+                type="button"
+                disabled={acaoSalvando}
+                onClick={fecharModalRegistrarAcao}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  cursor: acaoSalvando ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={acaoSalvando || !acaoTipo}
+                onClick={() => void salvarAcaoRh()}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: "none",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: acaoSalvando || !acaoTipo ? "not-allowed" : "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  background: ctaGradient(brand),
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {acaoSalvando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+                Salvar
+              </button>
+            </div>
           </div>
         </ModalBase>
       ) : null}

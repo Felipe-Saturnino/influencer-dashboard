@@ -1,5 +1,24 @@
 /** Linha de `public.rh_funcionarios` (Supabase). CPF/CNPJ só dígitos. */
-export type RhFuncionarioStatus = "ativo" | "inativo";
+export type RhFuncionarioStatus = "ativo" | "indisponivel" | "encerrado";
+
+export type RhHistoricoAcaoTipo =
+  | "revisao_contrato"
+  | "periodo_indisponibilidade"
+  | "retorno_indisponibilidade"
+  | "alinhamento_formal"
+  | "termino_prestacao"
+  | "reativacao_prestacao";
+
+/** Linha de `public.rh_funcionario_historico`. */
+export interface RhFuncionarioHistorico {
+  id: string;
+  rh_funcionario_id: string;
+  tipo: RhHistoricoAcaoTipo | string;
+  detalhes: Record<string, unknown>;
+  anexos: unknown;
+  created_at: string;
+  created_by: string | null;
+}
 
 export type RhFuncionarioTipoContrato = "CLT" | "PJ" | "Estagio" | "Temporario";
 

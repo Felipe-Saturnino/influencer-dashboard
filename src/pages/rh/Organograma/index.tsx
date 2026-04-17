@@ -80,7 +80,7 @@ export default function RhOrganogramaPage() {
       supabase.from("rh_org_diretorias").select("*").order("nome"),
       supabase.from("rh_org_gerencias").select("*").order("nome"),
       supabase.from("rh_org_times").select("*").order("nome"),
-      supabase.from("rh_funcionarios").select("id, nome").eq("status", "ativo").order("nome"),
+      supabase.from("rh_funcionarios").select("id, nome").in("status", ["ativo", "indisponivel"]).order("nome"),
     ]);
     if (dr.error) setErroGlobal(dr.error.message);
     else if (gr.error) setErroGlobal(gr.error.message);
@@ -118,7 +118,7 @@ export default function RhOrganogramaPage() {
 
   useEffect(() => {
     void (async () => {
-      const { data, error } = await supabase.from("rh_funcionarios").select("org_time_id").eq("status", "ativo");
+      const { data, error } = await supabase.from("rh_funcionarios").select("org_time_id").in("status", ["ativo", "indisponivel"]);
       if (error) return;
       const acc: Record<string, number> = {};
       (data ?? []).forEach((r: { org_time_id: string | null }) => {
