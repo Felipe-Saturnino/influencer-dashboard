@@ -50,7 +50,7 @@ export const PAGES: {
   { key: "campanhas", label: "Campanhas", secao: "Marketing", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Operações", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_figurinos", label: "Figurinos (RH)", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_funcionarios", label: "Funcionários (RH)", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "rh_funcionarios", label: "Gestão de Funcionários (RH)", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_organograma", label: "Organograma (RH)", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   {
     key: "central_notificacoes",

@@ -67,7 +67,7 @@ export const MENU: MenuSection[] = [
     section: "RH",
     items: [
       { key: "rh_figurinos", label: "Figurinos", icon: GiShirt },
-      { key: "rh_funcionarios", label: "Funcionários", icon: GiPerson },
+      { key: "rh_funcionarios", label: "Gestão de Funcionários", icon: GiPerson },
       { key: "rh_organograma", label: "Organograma", icon: GiOrganigram },
     ],
   },

@@ -92,6 +92,14 @@ type AbaFuncModal =
   | "contratos"
   | "historico";
 
+type AbaPaginaRhFunc = "headcount" | "acoes_rh" | "anotacoes";
+
+const ABAS_PAGINA_RH_FUNC: { key: AbaPaginaRhFunc; label: string }[] = [
+  { key: "headcount", label: "Head Count" },
+  { key: "acoes_rh", label: "Ações de RH" },
+  { key: "anotacoes", label: "Anotações RH" },
+];
+
 /** CNPJ válido genérico para persistir quando o contrato não é PJ (aba de empresa oculta). */
 const CNPJ_CONTEXTO_NAO_PJ = "00000000000191";
 
@@ -163,9 +171,12 @@ export default function RhFuncionariosPage() {
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
 
   const [busca, setBusca] = useState("");
+  const [filtroDiretoria, setFiltroDiretoria] = useState("");
+  const [filtroGerencia, setFiltroGerencia] = useState("");
   const [filtroSetor, setFiltroSetor] = useState("");
   const [filtroContrato, setFiltroContrato] = useState<RhFuncionarioTipoContrato | "todos">("todos");
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "ativo" | "inativo">("todos");
+  const [abaPagina, setAbaPagina] = useState<AbaPaginaRhFunc>("headcount");
 
   const [modalForm, setModalForm] = useState<"fechado" | "novo" | "editar" | "ver">("fechado");
   const [editId, setEditId] = useState<string | null>(null);
@@ -225,6 +236,25 @@ export default function RhFuncionariosPage() {
     return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [lista]);
 
+  const diretoriasOpcoes = useMemo(() => {
+    const u = new Set<string>();
+    opcoesTimes.forEach((o) => u.add(o.diretoriaNome));
+    return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [opcoesTimes]);
+
+  const gerenciasOpcoes = useMemo(() => {
+    const u = new Set<string>();
+    opcoesTimes.forEach((o) => {
+      if (filtroDiretoria && o.diretoriaNome !== filtroDiretoria) return;
+      u.add(o.gerenciaNome);
+    });
+    return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [opcoesTimes, filtroDiretoria]);
+
+  useEffect(() => {
+    if (filtroGerencia && !gerenciasOpcoes.includes(filtroGerencia)) setFiltroGerencia("");
+  }, [filtroGerencia, gerenciasOpcoes]);
+
   const usarSelectTime = useMemo(
     () => permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0,
     [permOrg.canView, permOrg.loading, opcoesTimes.length],
@@ -264,6 +294,14 @@ export default function RhFuncionariosPage() {
       if (filtroStatus !== "todos" && r.status !== filtroStatus) return false;
       if (filtroContrato !== "todos" && r.tipo_contrato !== filtroContrato) return false;
       if (filtroSetor && r.setor.trim() !== filtroSetor) return false;
+      if (filtroDiretoria) {
+        const o = r.org_time_id ? opcoesTimes.find((x) => x.timeId === r.org_time_id) : undefined;
+        if (!o || o.diretoriaNome !== filtroDiretoria) return false;
+      }
+      if (filtroGerencia) {
+        const o = r.org_time_id ? opcoesTimes.find((x) => x.timeId === r.org_time_id) : undefined;
+        if (!o || o.gerenciaNome !== filtroGerencia) return false;
+      }
       if (!b) return true;
       if (digits.length === 11 && r.cpf === digits) return true;
       if (r.nome.toLowerCase().includes(b)) return true;
@@ -271,7 +309,7 @@ export default function RhFuncionariosPage() {
       if (r.cpf.includes(digits) && digits.length >= 3) return true;
       return false;
     });
-  }, [lista, busca, filtroSetor, filtroContrato, filtroStatus]);
+  }, [lista, busca, filtroSetor, filtroContrato, filtroStatus, filtroDiretoria, filtroGerencia, opcoesTimes]);
 
   const abrirNovo = () => {
     setForm(estadoVazioForm());
@@ -513,7 +551,7 @@ export default function RhFuncionariosPage() {
       <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
         <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden", boxShadow: cardShadow }}>
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-            <caption style={{ display: "none" }}>Carregando funcionários</caption>
+            <caption style={{ display: "none" }}>Carregando gestão de funcionários</caption>
             <thead>
               <tr>
                 {["Nome", "Setor", "Cargo", "Contrato", "Início", "Status", "Salário", "Ações"].map((h) => (
@@ -555,37 +593,25 @@ export default function RhFuncionariosPage() {
     setAbaModal("pessoais");
   };
 
+  const tabActiveBgPagina = brand.useBrand
+    ? "var(--brand-action-12)"
+    : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
+  const idTabPagina = (k: AbaPaginaRhFunc) => `rh-gest-func-pag-${k}`;
+  const panelPaginaRhId = "rh-gest-func-panel-pag";
+  const legendaTabelaPorAba =
+    abaPagina === "headcount"
+      ? "Head count — colaboradores filtrados"
+      : abaPagina === "acoes_rh"
+        ? "Ações de RH — colaboradores filtrados"
+        : "Anotações RH — colaboradores filtrados";
+  const preencherAcoes = abaPagina === "headcount";
+
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
         icon={<UserCircle2 size={16} aria-hidden />}
-        title="Funcionários"
-        subtitle="Cadastro e controle de colaboradores (base para outros módulos de RH)."
-        actions={
-          perm.canCriarOk && podeVerDadosSensiveis ? (
-            <button
-              type="button"
-              onClick={abrirNovo}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                background: ctaGradient(brand),
-              }}
-            >
-              <Plus size={16} aria-hidden />
-              Novo funcionário
-            </button>
-          ) : null
-        }
+        title="Gestão de Funcionários"
+        subtitle="Cadastro, head count e fluxos de RH (base para outros módulos)."
       />
 
       {erroGlobal ? (
@@ -632,76 +658,236 @@ export default function RhFuncionariosPage() {
 
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 10,
+          borderRadius: 14,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.cardBg,
+          padding: "14px 16px",
           marginBottom: 16,
-          alignItems: "flex-end",
+          boxShadow: cardShadow,
         }}
       >
-        <div style={{ flex: "1 1 200px", minWidth: 160 }}>
-          {lbl("rh-func-busca", "Buscar por nome, e-mail ou CPF")}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: 12,
+            alignItems: "flex-end",
+          }}
+        >
+          <div style={{ flex: "1 1 140px", minWidth: 120 }}>
+            {lbl("rh-filtro-dir", "Diretoria")}
+            <select
+              id="rh-filtro-dir"
+              value={filtroDiretoria}
+              onChange={(ev) => setFiltroDiretoria(ev.target.value)}
+              aria-label="Filtrar por diretoria"
+              style={inputStyle}
+            >
+              <option value="">Todas</option>
+              {diretoriasOpcoes.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: "1 1 140px", minWidth: 120 }}>
+            {lbl("rh-filtro-ger", "Gerência")}
+            <select
+              id="rh-filtro-ger"
+              value={filtroGerencia}
+              onChange={(ev) => setFiltroGerencia(ev.target.value)}
+              aria-label="Filtrar por gerência"
+              style={inputStyle}
+            >
+              <option value="">Todas</option>
+              {gerenciasOpcoes.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: "1 1 140px", minWidth: 120 }}>
+            {lbl("rh-func-setor", "Setor")}
+            <select
+              id="rh-func-setor"
+              value={filtroSetor}
+              onChange={(ev) => setFiltroSetor(ev.target.value)}
+              aria-label="Filtrar por setor"
+              style={inputStyle}
+            >
+              <option value="">Todos</option>
+              {setoresUnicos.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: "1 1 130px", minWidth: 110 }}>
+            {lbl("rh-func-contrato", "Tipo de contrato")}
+            <select
+              id="rh-func-contrato"
+              value={filtroContrato}
+              onChange={(ev) => setFiltroContrato(ev.target.value as typeof filtroContrato)}
+              aria-label="Filtrar por tipo de contrato"
+              style={inputStyle}
+            >
+              <option value="todos">Todos</option>
+              {TIPOS_CONTRATO.map((x) => (
+                <option key={x.value} value={x.value}>
+                  {x.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: "0 1 120px", minWidth: 100 }}>
+            {lbl("rh-func-status", "Status")}
+            <select
+              id="rh-func-status"
+              value={filtroStatus}
+              onChange={(ev) => setFiltroStatus(ev.target.value as typeof filtroStatus)}
+              aria-label="Filtrar por status"
+              style={inputStyle}
+            >
+              <option value="todos">Todos</option>
+              <option value="ativo">Ativo</option>
+              <option value="inativo">Inativo</option>
+            </select>
+          </div>
+        </div>
+        <div style={{ width: "100%" }}>
+          {lbl("rh-func-busca", "Pesquisar por nome, CPF ou e-mail")}
           <input
             id="rh-func-busca"
             type="search"
             value={busca}
             onChange={(ev) => setBusca(ev.target.value)}
-            placeholder="Nome, e-mail ou CPF"
-            aria-label="Buscar por nome, e-mail ou CPF"
+            placeholder="Nome, CPF ou e-mail"
+            aria-label="Pesquisar por nome, CPF ou e-mail"
             style={inputStyle}
           />
         </div>
-        <div style={{ flex: "0 1 160px" }}>
-          {lbl("rh-func-setor", "Setor")}
-          <select
-            id="rh-func-setor"
-            value={filtroSetor}
-            onChange={(ev) => setFiltroSetor(ev.target.value)}
-            aria-label="Filtrar por setor"
-            style={inputStyle}
-          >
-            <option value="">Todos</option>
-            {setoresUnicos.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={{ flex: "0 1 160px" }}>
-          {lbl("rh-func-contrato", "Tipo de contrato")}
-          <select
-            id="rh-func-contrato"
-            value={filtroContrato}
-            onChange={(ev) => setFiltroContrato(ev.target.value as typeof filtroContrato)}
-            aria-label="Filtrar por tipo de contrato"
-            style={inputStyle}
-          >
-            <option value="todos">Todos</option>
-            {TIPOS_CONTRATO.map((x) => (
-              <option key={x.value} value={x.value}>
-                {x.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={{ flex: "0 1 140px" }}>
-          {lbl("rh-func-status", "Status")}
-          <select
-            id="rh-func-status"
-            value={filtroStatus}
-            onChange={(ev) => setFiltroStatus(ev.target.value as typeof filtroStatus)}
-            aria-label="Filtrar por status"
-            style={inputStyle}
-          >
-            <option value="todos">Todos</option>
-            <option value="ativo">Ativo</option>
-            <option value="inativo">Inativo</option>
-          </select>
-        </div>
       </div>
 
-      <div className="app-table-wrap">
+      <div
+        role="tablist"
+        aria-label="Módulos de gestão de colaboradores"
+        style={{
+          display: "flex",
+          gap: 6,
+          marginBottom: 12,
+          flexWrap: "wrap",
+          paddingBottom: 2,
+        }}
+      >
+        {ABAS_PAGINA_RH_FUNC.map((tb) => {
+          const ativa = abaPagina === tb.key;
+          return (
+            <button
+              key={tb.key}
+              type="button"
+              role="tab"
+              id={idTabPagina(tb.key)}
+              aria-selected={ativa}
+              aria-controls={panelPaginaRhId}
+              tabIndex={ativa ? 0 : -1}
+              onClick={() => setAbaPagina(tb.key)}
+              style={{
+                padding: "7px 14px",
+                borderRadius: 20,
+                flexShrink: 0,
+                border: `1px solid ${ativa ? brand.primary : t.cardBorder}`,
+                background: ativa ? tabActiveBgPagina : (t.inputBg ?? t.cardBg),
+                color: ativa ? brand.primary : t.textMuted,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: FONT.body,
+              }}
+            >
+              {tb.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div role="tabpanel" id={panelPaginaRhId} aria-labelledby={idTabPagina(abaPagina)}>
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
+          {abaPagina === "headcount" && perm.canCriarOk && podeVerDadosSensiveis ? (
+            <button
+              type="button"
+              onClick={abrirNovo}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 13,
+                fontFamily: FONT.body,
+                background: ctaGradient(brand),
+              }}
+            >
+              <Plus size={16} aria-hidden />
+              Novo funcionário
+            </button>
+          ) : null}
+          {abaPagina === "acoes_rh" ? (
+            <button
+              type="button"
+              onClick={() => undefined}
+              title="Em breve"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 16px",
+                borderRadius: 12,
+                border: `1px solid ${t.cardBorder}`,
+                cursor: "pointer",
+                color: t.text,
+                fontWeight: 700,
+                fontSize: 13,
+                fontFamily: FONT.body,
+                background: t.inputBg,
+              }}
+            >
+              Ação em Massa
+            </button>
+          ) : null}
+          {abaPagina === "anotacoes" ? (
+            <button
+              type="button"
+              onClick={() => undefined}
+              title="Em breve"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 16px",
+                borderRadius: 12,
+                border: `1px solid ${t.cardBorder}`,
+                cursor: "pointer",
+                color: t.text,
+                fontWeight: 700,
+                fontSize: 13,
+                fontFamily: FONT.body,
+                background: t.inputBg,
+              }}
+            >
+              RH Talks
+            </button>
+          ) : null}
+        </div>
+
+        <div className="app-table-wrap">
         <div style={{ borderRadius: 14, border: `1px solid ${t.cardBorder}`, overflow: "hidden", boxShadow: cardShadow }}>
           <table
             style={{
@@ -711,7 +897,7 @@ export default function RhFuncionariosPage() {
               minWidth: 720,
             }}
           >
-            <caption style={{ display: "none" }}>Funcionários cadastrados</caption>
+            <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
             <thead>
               <tr>
                 <th scope="col" style={getThStyle(t)}>
@@ -785,28 +971,11 @@ export default function RhFuncionariosPage() {
                       <td style={{ ...getTdNumStyle(t, { background: zebraStripe(i) }) }}>{fmtBRL(Number(row.salario))}</td>
                     ) : null}
                     <td style={{ ...getTdStyle(t, { textAlign: "right", background: zebraStripe(i) }) }}>
-                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          onClick={() => abrirVer(row)}
-                          style={{
-                            padding: "6px 10px",
-                            borderRadius: 8,
-                            border: `1px solid ${t.cardBorder}`,
-                            background: t.inputBg,
-                            color: t.text,
-                            cursor: "pointer",
-                            fontSize: 12,
-                            fontFamily: FONT.body,
-                          }}
-                          aria-label={`Visualizar ${row.nome}`}
-                        >
-                          <Eye size={14} style={{ verticalAlign: "middle" }} aria-hidden />
-                        </button>
-                        {perm.canEditarOk ? (
+                      {preencherAcoes ? (
+                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                           <button
                             type="button"
-                            onClick={() => abrirEditar(row)}
+                            onClick={() => abrirVer(row)}
                             style={{
                               padding: "6px 10px",
                               borderRadius: 8,
@@ -817,50 +986,69 @@ export default function RhFuncionariosPage() {
                               fontSize: 12,
                               fontFamily: FONT.body,
                             }}
-                            aria-label={`Editar ${row.nome}`}
+                            aria-label={`Visualizar ${row.nome}`}
                           >
-                            <Pencil size={14} style={{ verticalAlign: "middle" }} aria-hidden />
+                            <Eye size={14} style={{ verticalAlign: "middle" }} aria-hidden />
                           </button>
-                        ) : null}
-                        {perm.canEditarOk && row.status === "ativo" ? (
-                          <button
-                            type="button"
-                            onClick={() => setDesativarRow(row)}
-                            style={{
-                              padding: "6px 10px",
-                              borderRadius: 8,
-                              border: `1px solid rgba(232,64,37,0.4)`,
-                              background: "rgba(232,64,37,0.08)",
-                              color: "#e84025",
-                              cursor: "pointer",
-                              fontSize: 12,
-                              fontFamily: FONT.body,
-                            }}
-                            aria-label={`Desativar ${row.nome}`}
-                          >
-                            <UserX size={14} style={{ verticalAlign: "middle" }} aria-hidden />
-                          </button>
-                        ) : null}
-                        {perm.canEditarOk && row.status === "inativo" ? (
-                          <button
-                            type="button"
-                            onClick={() => void reativar(row)}
-                            style={{
-                              padding: "6px 10px",
-                              borderRadius: 8,
-                              border: `1px solid ${t.cardBorder}`,
-                              background: t.inputBg,
-                              color: t.text,
-                              cursor: "pointer",
-                              fontSize: 12,
-                              fontFamily: FONT.body,
-                            }}
-                            aria-label={`Reativar ${row.nome}`}
-                          >
-                            Reativar
-                          </button>
-                        ) : null}
-                      </div>
+                          {perm.canEditarOk ? (
+                            <button
+                              type="button"
+                              onClick={() => abrirEditar(row)}
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: 8,
+                                border: `1px solid ${t.cardBorder}`,
+                                background: t.inputBg,
+                                color: t.text,
+                                cursor: "pointer",
+                                fontSize: 12,
+                                fontFamily: FONT.body,
+                              }}
+                              aria-label={`Editar ${row.nome}`}
+                            >
+                              <Pencil size={14} style={{ verticalAlign: "middle" }} aria-hidden />
+                            </button>
+                          ) : null}
+                          {perm.canEditarOk && row.status === "ativo" ? (
+                            <button
+                              type="button"
+                              onClick={() => setDesativarRow(row)}
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: 8,
+                                border: `1px solid rgba(232,64,37,0.4)`,
+                                background: "rgba(232,64,37,0.08)",
+                                color: "#e84025",
+                                cursor: "pointer",
+                                fontSize: 12,
+                                fontFamily: FONT.body,
+                              }}
+                              aria-label={`Desativar ${row.nome}`}
+                            >
+                              <UserX size={14} style={{ verticalAlign: "middle" }} aria-hidden />
+                            </button>
+                          ) : null}
+                          {perm.canEditarOk && row.status === "inativo" ? (
+                            <button
+                              type="button"
+                              onClick={() => void reativar(row)}
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: 8,
+                                border: `1px solid ${t.cardBorder}`,
+                                background: t.inputBg,
+                                color: t.text,
+                                cursor: "pointer",
+                                fontSize: 12,
+                                fontFamily: FONT.body,
+                              }}
+                              aria-label={`Reativar ${row.nome}`}
+                            >
+                              Reativar
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </td>
                   </tr>
                 ))
@@ -868,6 +1056,7 @@ export default function RhFuncionariosPage() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && (
