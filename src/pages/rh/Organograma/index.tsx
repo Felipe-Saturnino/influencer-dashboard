@@ -6,12 +6,20 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import {
+  coletarIdsTimesDaGerencia,
+  coletarIdsTimesEGerenciasDaDiretoria,
   contarGerenciasAtivasFilhasDeDiretoria,
   contarTimesAtivosFilhosDeGerencia,
   contarTimesAtivosSobDiretoria,
   montarArvoreOrganograma,
 } from "../../../lib/rhOrganogramaTree";
-import type { RhOrgDiretoria, RhOrgDiretoriaComFilhos, RhOrgGerencia, RhOrgGerenciaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
+import type {
+  RhOrgDiretoria,
+  RhOrgDiretoriaComFilhos,
+  RhOrgGerencia,
+  RhOrgGerenciaComFilhos,
+  RhOrgTime,
+} from "../../../types/rhOrganograma";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { OrgAccordion } from "../../../components/rh/organograma/OrgAccordion";
@@ -27,6 +35,27 @@ type ModalOff =
       titulo: string;
       corpo: string;
     };
+
+type ModalExcluir =
+  | null
+  | {
+      tipo: "diretoria" | "gerencia" | "time";
+      row: RhOrgDiretoria | RhOrgGerencia | RhOrgTime;
+      titulo: string;
+      corpo: string;
+    };
+
+const DELETE_CHUNK = 200;
+
+async function deleteIdsInChunks(tabela: "rh_org_times" | "rh_org_gerencias", ids: string[]): Promise<string | null> {
+  if (ids.length === 0) return null;
+  for (let i = 0; i < ids.length; i += DELETE_CHUNK) {
+    const slice = ids.slice(i, i + DELETE_CHUNK);
+    const { error } = await supabase.from(tabela).delete().in("id", slice);
+    if (error) return error.message;
+  }
+  return null;
+}
 
 function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
   return brand.useBrand
@@ -51,6 +80,8 @@ export default function RhOrganogramaPage() {
 
   const [modalOff, setModalOff] = useState<ModalOff>(null);
   const [desativando, setDesativando] = useState(false);
+  const [modalExcluir, setModalExcluir] = useState<ModalExcluir>(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   /** Diretoria: null | new | edit row */
   const [mdDir, setMdDir] = useState<null | "new" | RhOrgDiretoria>(null);
@@ -359,6 +390,112 @@ export default function RhOrganogramaPage() {
     await carregar();
   };
 
+  const prepararExcluirTime = (ti: RhOrgTime) => {
+    const q = countsMap[ti.id] ?? 0;
+    setModalExcluir({
+      tipo: "time",
+      row: ti,
+      titulo: "Excluir time",
+      corpo: `O time "${ti.nome}" será removido definitivamente do organograma.${
+        q > 0
+          ? ` ${q} funcionário(s) ativo(s) com vínculo a este time ficarão sem time (campo esvaziado automaticamente).`
+          : ""
+      } Esta ação não pode ser desfeita.`,
+    });
+  };
+
+  const prepararExcluirGerencia = (g: RhOrgGerenciaComFilhos) => {
+    const nTimes = g.times.length;
+    let nFunc = 0;
+    g.times.forEach((ti) => {
+      nFunc += countsMap[ti.id] ?? 0;
+    });
+    setModalExcluir({
+      tipo: "gerencia",
+      row: g,
+      titulo: "Excluir gerência",
+      corpo: `A gerência "${g.nome}" e ${nTimes} time(s) abaixo dela serão removidos definitivamente.${
+        nFunc > 0 ? ` ${nFunc} funcionário(s) ativo(s) perderão o vínculo de time.` : ""
+      } Esta ação não pode ser desfeita.`,
+    });
+  };
+
+  const prepararExcluirDiretoria = (d: RhOrgDiretoriaComFilhos) => {
+    const { timeIds, gerenciaIds } = coletarIdsTimesEGerenciasDaDiretoria(arvore, d.id);
+    let nFunc = 0;
+    d.gerencias.forEach((g) => {
+      g.times.forEach((ti) => {
+        nFunc += countsMap[ti.id] ?? 0;
+      });
+    });
+    setModalExcluir({
+      tipo: "diretoria",
+      row: d,
+      titulo: "Excluir diretoria",
+      corpo: `A diretoria "${d.nome}", ${gerenciaIds.length} gerência(s) e ${timeIds.length} time(s) serão removidos definitivamente.${
+        nFunc > 0 ? ` ${nFunc} funcionário(s) ativo(s) perderão o vínculo de time.` : ""
+      } Esta ação não pode ser desfeita.`,
+    });
+  };
+
+  const executarExcluir = async () => {
+    if (!modalExcluir) return;
+    setExcluindo(true);
+    setErroGlobal(null);
+    const { tipo, row } = modalExcluir;
+    try {
+      if (tipo === "time") {
+        const { error } = await supabase.from("rh_org_times").delete().eq("id", row.id);
+        if (error) {
+          setErroGlobal(error.message);
+          return;
+        }
+        setSucessoMsg("Time excluído.");
+        setModalExcluir(null);
+        await carregar();
+        return;
+      }
+      if (tipo === "gerencia") {
+        const timeIds = coletarIdsTimesDaGerencia(arvore, row.id);
+        const errT = await deleteIdsInChunks("rh_org_times", timeIds);
+        if (errT) {
+          setErroGlobal(errT);
+          return;
+        }
+        const { error } = await supabase.from("rh_org_gerencias").delete().eq("id", row.id);
+        if (error) {
+          setErroGlobal(error.message);
+          return;
+        }
+        setSucessoMsg("Gerência excluída.");
+        setModalExcluir(null);
+        await carregar();
+        return;
+      }
+      const { timeIds, gerenciaIds } = coletarIdsTimesEGerenciasDaDiretoria(arvore, row.id);
+      const errT = await deleteIdsInChunks("rh_org_times", timeIds);
+      if (errT) {
+        setErroGlobal(errT);
+        return;
+      }
+      const errG = await deleteIdsInChunks("rh_org_gerencias", gerenciaIds);
+      if (errG) {
+        setErroGlobal(errG);
+        return;
+      }
+      const { error } = await supabase.from("rh_org_diretorias").delete().eq("id", row.id);
+      if (error) {
+        setErroGlobal(error.message);
+        return;
+      }
+      setSucessoMsg("Diretoria excluída.");
+      setModalExcluir(null);
+      await carregar();
+    } finally {
+      setExcluindo(false);
+    }
+  };
+
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
@@ -376,6 +513,7 @@ export default function RhOrganogramaPage() {
   }
 
   const podeEditar = perm.canEditarOk;
+  const podeExcluir = perm.canExcluirOk;
 
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
@@ -532,6 +670,7 @@ export default function RhOrganogramaPage() {
             nomeResponsavel={nomeResponsavel}
             countsPorTimeId={countsMap}
             podeEditar={podeEditar}
+            podeExcluir={podeExcluir}
             onEditDiretoria={abrirEditDiretoria}
             onEditGerencia={abrirEditGerencia}
             onEditTime={abrirEditTime}
@@ -540,6 +679,9 @@ export default function RhOrganogramaPage() {
             onDeactivateDiretoria={prepararDesativarDiretoria}
             onDeactivateGerencia={prepararDesativarGerencia}
             onDeactivateTime={prepararDesativarTime}
+            onExcluirDiretoria={prepararExcluirDiretoria}
+            onExcluirGerencia={prepararExcluirGerencia}
+            onExcluirTime={prepararExcluirTime}
           />
         )}
       </div>
@@ -720,6 +862,40 @@ export default function RhOrganogramaPage() {
             >
               {desativando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
               Desativar
+            </button>
+          </div>
+        </ModalBase>
+      ) : null}
+
+      {modalExcluir ? (
+        <ModalBase maxWidth={480} onClose={() => !excluindo && setModalExcluir(null)}>
+          <ModalHeader title={modalExcluir.titulo} onClose={() => !excluindo && setModalExcluir(null)} />
+          <p style={{ color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>{modalExcluir.corpo}</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+            <button
+              type="button"
+              disabled={excluindo}
+              onClick={() => setModalExcluir(null)}
+              style={{ ...inputStyle, width: "auto", cursor: "pointer" }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={excluindo}
+              onClick={() => void executarExcluir()}
+              style={{
+                ...inputStyle,
+                width: "auto",
+                border: "none",
+                background: "#e84025",
+                color: "#fff",
+                fontWeight: 700,
+                cursor: excluindo ? "wait" : "pointer",
+              }}
+            >
+              {excluindo ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+              Excluir definitivamente
             </button>
           </div>
         </ModalBase>

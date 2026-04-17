@@ -89,3 +89,28 @@ export function contarTimesAtivosSobDiretoria(arvore: RhOrgDiretoriaComFilhos[],
   });
   return n;
 }
+
+/** Todos os times (ativos ou inativos) sob a gerência — para exclusão em cascata no cliente. */
+export function coletarIdsTimesDaGerencia(arvore: RhOrgDiretoriaComFilhos[], gerenciaId: string): string[] {
+  for (const d of arvore) {
+    const g = d.gerencias.find((x) => x.id === gerenciaId);
+    if (g) return g.times.map((t) => t.id);
+  }
+  return [];
+}
+
+/** Times e gerências sob a diretoria — ordem de delete: times → gerências → diretoria. */
+export function coletarIdsTimesEGerenciasDaDiretoria(
+  arvore: RhOrgDiretoriaComFilhos[],
+  diretoriaId: string,
+): { timeIds: string[]; gerenciaIds: string[] } {
+  const d = arvore.find((x) => x.id === diretoriaId);
+  if (!d) return { timeIds: [], gerenciaIds: [] };
+  const gerenciaIds: string[] = [];
+  const timeIds: string[] = [];
+  for (const g of d.gerencias) {
+    gerenciaIds.push(g.id);
+    for (const ti of g.times) timeIds.push(ti.id);
+  }
+  return { timeIds, gerenciaIds };
+}

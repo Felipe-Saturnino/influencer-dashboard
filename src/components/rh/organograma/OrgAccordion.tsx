@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { ChevronDown, ChevronRight, Pencil, Plus, UserX } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, UserX } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
@@ -14,6 +14,7 @@ export function OrgAccordion({
   nomeResponsavel,
   countsPorTimeId,
   podeEditar,
+  podeExcluir,
   onEditDiretoria,
   onEditGerencia,
   onEditTime,
@@ -22,6 +23,9 @@ export function OrgAccordion({
   onDeactivateDiretoria,
   onDeactivateGerencia,
   onDeactivateTime,
+  onExcluirDiretoria,
+  onExcluirGerencia,
+  onExcluirTime,
 }: {
   arvore: RhOrgDiretoriaComFilhos[];
   t: Theme;
@@ -30,6 +34,7 @@ export function OrgAccordion({
   nomeResponsavel: (funcId: string | null | undefined, nomeLivre: string | null | undefined) => string;
   countsPorTimeId: Record<string, number>;
   podeEditar: boolean;
+  podeExcluir: boolean;
   onEditDiretoria: (d: RhOrgDiretoriaComFilhos) => void;
   onEditGerencia: (g: RhOrgGerenciaComFilhos) => void;
   onEditTime: (ti: RhOrgTime) => void;
@@ -38,6 +43,9 @@ export function OrgAccordion({
   onDeactivateDiretoria: (d: RhOrgDiretoriaComFilhos) => void;
   onDeactivateGerencia: (g: RhOrgGerenciaComFilhos) => void;
   onDeactivateTime: (ti: RhOrgTime) => void;
+  onExcluirDiretoria: (d: RhOrgDiretoriaComFilhos) => void;
+  onExcluirGerencia: (g: RhOrgGerenciaComFilhos) => void;
+  onExcluirTime: (ti: RhOrgTime) => void;
 }) {
   const rowBtn: CSSProperties = {
     padding: "6px 10px",
@@ -48,6 +56,12 @@ export function OrgAccordion({
     cursor: "pointer",
     fontSize: 12,
     fontFamily: FONT.body,
+  };
+
+  const rowBtnExcluir: CSSProperties = {
+    ...rowBtn,
+    borderColor: "rgba(232,64,37,0.45)",
+    color: "#e84025",
   };
 
   if (arvore.length === 0) {
@@ -142,6 +156,16 @@ export function OrgAccordion({
                     </button>
                   </>
                 ) : null}
+                {podeExcluir ? (
+                  <button
+                    type="button"
+                    style={rowBtnExcluir}
+                    aria-label={`Excluir definitivamente a diretoria ${d.nome}`}
+                    onClick={() => onExcluirDiretoria(d)}
+                  >
+                    <Trash2 size={14} aria-hidden />
+                  </button>
+                ) : null}
               </div>
             </div>
             {respD ? (
@@ -215,11 +239,22 @@ export function OrgAccordion({
                                 <button
                                   type="button"
                                   style={{ ...rowBtn, borderColor: "rgba(232,64,37,0.35)", color: "#e84025" }}
+                                  aria-label={`Desativar ${g.nome}`}
                                   onClick={() => onDeactivateGerencia(g)}
                                 >
                                   <UserX size={14} aria-hidden />
                                 </button>
                               </>
+                            ) : null}
+                            {podeExcluir ? (
+                              <button
+                                type="button"
+                                style={rowBtnExcluir}
+                                aria-label={`Excluir definitivamente a gerência ${g.nome}`}
+                                onClick={() => onExcluirGerencia(g)}
+                              >
+                                <Trash2 size={14} aria-hidden />
+                              </button>
                             ) : null}
                           </div>
                         </div>
@@ -260,18 +295,33 @@ export function OrgAccordion({
                                           {q} funcionário(s) ativo(s)
                                         </div>
                                       </div>
-                                      {podeEditar && ti.status === "ativo" ? (
-                                        <div style={{ display: "flex", gap: 6 }}>
-                                          <button type="button" style={rowBtn} aria-label={`Editar ${ti.nome}`} onClick={() => onEditTime(ti)}>
-                                            <Pencil size={14} aria-hidden />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            style={{ ...rowBtn, borderColor: "rgba(232,64,37,0.35)", color: "#e84025" }}
-                                            onClick={() => onDeactivateTime(ti)}
-                                          >
-                                            <UserX size={14} aria-hidden />
-                                          </button>
+                                      {(podeEditar && ti.status === "ativo") || podeExcluir ? (
+                                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                          {podeEditar && ti.status === "ativo" ? (
+                                            <>
+                                              <button type="button" style={rowBtn} aria-label={`Editar ${ti.nome}`} onClick={() => onEditTime(ti)}>
+                                                <Pencil size={14} aria-hidden />
+                                              </button>
+                                              <button
+                                                type="button"
+                                                style={{ ...rowBtn, borderColor: "rgba(232,64,37,0.35)", color: "#e84025" }}
+                                                aria-label={`Desativar ${ti.nome}`}
+                                                onClick={() => onDeactivateTime(ti)}
+                                              >
+                                                <UserX size={14} aria-hidden />
+                                              </button>
+                                            </>
+                                          ) : null}
+                                          {podeExcluir ? (
+                                            <button
+                                              type="button"
+                                              style={rowBtnExcluir}
+                                              aria-label={`Excluir definitivamente o time ${ti.nome}`}
+                                              onClick={() => onExcluirTime(ti)}
+                                            >
+                                              <Trash2 size={14} aria-hidden />
+                                            </button>
+                                          ) : null}
                                         </div>
                                       ) : null}
                                     </li>
