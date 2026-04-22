@@ -55,7 +55,7 @@ import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch"
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
-import { SkeletonTableRow } from "../../../components/dashboard/SkeletonCard";
+import { SkeletonTableRow, SortTableTh, type SortDir } from "../../../components/dashboard";
 
 const NIVEIS = ["Junior", "Pleno", "Senior", "Especialista", "Gestor"] as const;
 
@@ -521,6 +521,9 @@ type AbaFuncModal =
 
 type AbaPaginaRhFunc = "headcount" | "acoes_rh" | "anotacoes";
 
+/** Colunas ordenáveis da tabela principal (todas as abas). */
+type PrestadoresSortCol = "nome" | "diretoria" | "gerencia" | "cargo" | "lider" | "salario" | "status";
+
 const ABAS_PAGINA_RH_FUNC: { key: AbaPaginaRhFunc; label: string }[] = [
   { key: "headcount", label: "Head Count" },
   { key: "acoes_rh", label: "Ações de RH" },
@@ -851,6 +854,7 @@ export default function RhPrestadoresPage() {
   const [filtroContrato, setFiltroContrato] = useState<RhFuncionarioTipoContrato | "todos">("todos");
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatusPrestador>("disponiveis");
   const [abaPagina, setAbaPagina] = useState<AbaPaginaRhFunc>("headcount");
+  const [sortPrestadores, setSortPrestadores] = useState<{ col: PrestadoresSortCol; dir: SortDir }>({ col: "nome", dir: "asc" });
 
   const [modalForm, setModalForm] = useState<"fechado" | "novo" | "editar" | "ver">("fechado");
   const [editId, setEditId] = useState<string | null>(null);
@@ -934,6 +938,10 @@ export default function RhPrestadoresPage() {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    setSortPrestadores({ col: "nome", dir: "asc" });
+  }, [abaPagina]);
 
   useEffect(() => {
     if (!sucessoMsg) return;
@@ -1153,6 +1161,48 @@ export default function RhPrestadoresPage() {
     },
     [opcoesTimes, opcoesVinculoFlat],
   );
+
+  const onSortPrestadores = useCallback((col: PrestadoresSortCol) => {
+    setSortPrestadores((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
+  }, []);
+
+  const filtradaOrdenada = useMemo(() => {
+    const { col, dir } = sortPrestadores;
+    const mult = dir === "asc" ? 1 : -1;
+    const rows = [...filtrada];
+    rows.sort((a, b) => {
+      switch (col) {
+        case "nome":
+          return mult * a.nome.localeCompare(b.nome, "pt-BR");
+        case "diretoria": {
+          const ad = orgMetaLinha(a).diretoria;
+          const bd = orgMetaLinha(b).diretoria;
+          return mult * ad.localeCompare(bd, "pt-BR");
+        }
+        case "gerencia": {
+          const ag = orgMetaLinha(a).gerencia;
+          const bg = orgMetaLinha(b).gerencia;
+          return mult * ag.localeCompare(bg, "pt-BR");
+        }
+        case "cargo":
+          return mult * a.cargo.localeCompare(b.cargo, "pt-BR");
+        case "lider":
+          return mult * liderImediatoLinha(a).localeCompare(liderImediatoLinha(b), "pt-BR");
+        case "salario":
+          return mult * (Number(a.salario) - Number(b.salario));
+        case "status": {
+          const ord: Record<string, number> = { ativo: 0, indisponivel: 1, encerrado: 2 };
+          const oa = ord[a.status] ?? 99;
+          const ob = ord[b.status] ?? 99;
+          if (oa !== ob) return mult * (oa - ob);
+          return mult * a.nome.localeCompare(b.nome, "pt-BR");
+        }
+        default:
+          return 0;
+      }
+    });
+    return rows;
+  }, [filtrada, sortPrestadores, orgMetaLinha, liderImediatoLinha]);
 
   const inserirHistorico = useCallback(
     async (
@@ -1896,6 +1946,8 @@ export default function RhPrestadoresPage() {
   const tabelaAnotacoesRh = abaPagina === "anotacoes";
   const tabelaSemSalario = tabelaAcoesRh || tabelaAnotacoesRh;
   const colunasTabela = tabelaSemSalario ? 7 : 8;
+  const thStyleSort = getThStyle(t);
+  const thStyleSortRight = getThStyle(t, { textAlign: "right" });
 
   const btnIconTabela: CSSProperties = {
     padding: "6px 10px",
@@ -2317,37 +2369,68 @@ export default function RhPrestadoresPage() {
             <caption style={{ display: "none" }}>{legendaTabelaPorAba}</caption>
             <thead>
               <tr>
-                <th scope="col" style={getThStyle(t)}>
-                  Nome
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  Diretoria
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  Gerência
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  Função
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  Líder imediato
-                </th>
+                <SortTableTh<PrestadoresSortCol>
+                  label="Nome"
+                  col="nome"
+                  sortCol={sortPrestadores.col}
+                  sortDir={sortPrestadores.dir}
+                  onSort={onSortPrestadores}
+                  thStyle={thStyleSort}
+                  align="left"
+                />
+                <SortTableTh<PrestadoresSortCol>
+                  label="Diretoria"
+                  col="diretoria"
+                  sortCol={sortPrestadores.col}
+                  sortDir={sortPrestadores.dir}
+                  onSort={onSortPrestadores}
+                  thStyle={thStyleSort}
+                  align="left"
+                />
+                <SortTableTh<PrestadoresSortCol>
+                  label="Gerência"
+                  col="gerencia"
+                  sortCol={sortPrestadores.col}
+                  sortDir={sortPrestadores.dir}
+                  onSort={onSortPrestadores}
+                  thStyle={thStyleSort}
+                  align="left"
+                />
+                <SortTableTh<PrestadoresSortCol>
+                  label="Função"
+                  col="cargo"
+                  sortCol={sortPrestadores.col}
+                  sortDir={sortPrestadores.dir}
+                  onSort={onSortPrestadores}
+                  thStyle={thStyleSort}
+                  align="left"
+                />
+                <SortTableTh<PrestadoresSortCol>
+                  label="Líder imediato"
+                  col="lider"
+                  sortCol={sortPrestadores.col}
+                  sortDir={sortPrestadores.dir}
+                  onSort={onSortPrestadores}
+                  thStyle={thStyleSort}
+                  align="left"
+                />
                 {!tabelaSemSalario ? (
-                  <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "flex-end",
-                        gap: 8,
-                        width: "100%",
-                      }}
-                    >
-                      <span>Remuneração Mensal</span>
-                      {podeVerDadosSensiveis ? (
+                  <SortTableTh<PrestadoresSortCol>
+                    label="Remuneração Mensal"
+                    col="salario"
+                    sortCol={sortPrestadores.col}
+                    sortDir={sortPrestadores.dir}
+                    onSort={onSortPrestadores}
+                    thStyle={thStyleSortRight}
+                    align="right"
+                    endAdornment={
+                      podeVerDadosSensiveis ? (
                         <button
                           type="button"
-                          onClick={() => setTabelaSalarioVisivel((v) => !v)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTabelaSalarioVisivel((v) => !v);
+                          }}
                           aria-label={
                             tabelaSalarioVisivel
                               ? "Ocultar valores de remuneração mensal na tabela"
@@ -2367,14 +2450,20 @@ export default function RhPrestadoresPage() {
                         >
                           {tabelaSalarioVisivel ? <EyeOff size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
                         </button>
-                      ) : null}
-                    </div>
-                  </th>
+                      ) : null
+                    }
+                  />
                 ) : null}
-                <th scope="col" style={getThStyle(t)}>
-                  Status
-                </th>
-                <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
+                <SortTableTh<PrestadoresSortCol>
+                  label="Status"
+                  col="status"
+                  sortCol={sortPrestadores.col}
+                  sortDir={sortPrestadores.dir}
+                  onSort={onSortPrestadores}
+                  thStyle={thStyleSort}
+                  align="left"
+                />
+                <th scope="col" style={thStyleSortRight}>
                   Ações
                 </th>
               </tr>
@@ -2392,7 +2481,7 @@ export default function RhPrestadoresPage() {
                   </td>
                 </tr>
               ) : (
-                filtrada.map((row, i) => {
+                filtradaOrdenada.map((row, i) => {
                   const { diretoria, gerencia } = orgMetaLinha(row);
                   const liderCompleto = liderImediatoLinha(row);
                   const lider = nomeLiderDoisPrimeirosParaTabela(liderCompleto);

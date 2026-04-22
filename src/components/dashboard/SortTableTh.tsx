@@ -1,4 +1,4 @@
-import type { CSSProperties, KeyboardEvent } from "react";
+import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 
 export type SortDir = "asc" | "desc";
@@ -12,6 +12,8 @@ type SortTableThProps<T extends string> = {
   thStyle: CSSProperties;
   align?: "left" | "right" | "center";
   rowSpan?: number;
+  /** Conteúdo após o ícone de ordenação (ex.: botão); use stopPropagation no clique para não ordenar. */
+  endAdornment?: ReactNode;
 };
 
 /**
@@ -27,6 +29,7 @@ export function SortTableTh<T extends string>({
   thStyle,
   align = "left",
   rowSpan,
+  endAdornment,
 }: SortTableThProps<T>) {
   const ativo = sortCol === col;
   const ariaSort = ativo ? (sortDir === "desc" ? "descending" : "ascending") : "none";
@@ -69,6 +72,7 @@ export function SortTableTh<T extends string>({
             <ChevronsUpDown size={11} aria-hidden />
           )}
         </span>
+        {endAdornment != null ? <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center" }}>{endAdornment}</span> : null}
       </span>
     </th>
   );
