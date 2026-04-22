@@ -476,8 +476,7 @@ export default function RhOrganogramaPage() {
         .insert({ id: newId, ...payload, diretoria_id: mdGer.diretoriaId, status: "ativo", centro_custos });
       setSalvandoGer(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é líder imediato de outra gerência ativa.");
-        else setErroGlobal(error.message);
+        setErroGlobal(error.message);
         return;
       }
       setSucessoMsg("Gerência criada.");
@@ -485,8 +484,7 @@ export default function RhOrganogramaPage() {
       const { error } = await supabase.from("rh_org_gerencias").update(payload).eq("id", mdGer.row.id);
       setSalvandoGer(false);
       if (error) {
-        if (error.code === "23505") setErroGlobal("Este funcionário já é líder imediato de outra gerência ativa.");
-        else setErroGlobal(error.message);
+        setErroGlobal(error.message);
         return;
       }
       setSucessoMsg("Gerência atualizada.");

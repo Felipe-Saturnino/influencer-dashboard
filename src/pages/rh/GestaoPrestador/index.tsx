@@ -50,6 +50,7 @@ import type {
 import { uploadAnexosAcaoRh } from "../../../lib/rhPrestadorAcaoFiles";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
+import { nomeLiderDoisPrimeirosParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { PageHeader } from "../../../components/PageHeader";
@@ -2393,7 +2394,8 @@ export default function RhPrestadoresPage() {
               ) : (
                 filtrada.map((row, i) => {
                   const { diretoria, gerencia } = orgMetaLinha(row);
-                  const lider = liderImediatoLinha(row);
+                  const liderCompleto = liderImediatoLinha(row);
+                  const lider = nomeLiderDoisPrimeirosParaTabela(liderCompleto);
                   return (
                     <tr key={row.id}>
                       <td
@@ -2416,7 +2418,10 @@ export default function RhPrestadoresPage() {
                         {gerencia}
                       </td>
                       <td style={{ ...getTdStyle(t), background: zebraStripe(i) }}>{row.cargo}</td>
-                      <td style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }} title={lider}>
+                      <td
+                        style={{ ...getTdStyle(t), background: zebraStripe(i), maxWidth: 140 }}
+                        title={liderCompleto !== "—" ? liderCompleto : undefined}
+                      >
                         {lider}
                       </td>
                       {!tabelaSemSalario ? (
@@ -3932,6 +3937,7 @@ export default function RhPrestadoresPage() {
           </div>
         </ModalBase>
       ) : null}
+
     </div>
   );
 }

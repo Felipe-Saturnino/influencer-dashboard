@@ -42,7 +42,7 @@ Política adotada neste repositório:
 
 1. **Fonte de verdade para schema aplicável ao Git:** `supabase/migrations/`.
 2. **`docs/*.sql` (raiz):** *playbooks* e scripts ainda referenciados na documentação operacional.
-3. **`docs/archive/*.sql`:** diagnósticos, *one-run*, *fixes* pontuais e limpezas — ver `docs/archive/README.md` e `docs/SQL-LEGADO.md`.
+3. **`docs/archive/*.sql`:** diagnósticos, *one-run*, *fixes* pontuais e limpezas — ver `docs/archive/README.md`.
 
 Guia humano único: `SETUP.md` (índice) + `ESTRUTURA-DATABASE.md` + `database-health-check.sql` + este ficheiro.
 

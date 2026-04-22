@@ -5,7 +5,6 @@
 | Documento | Conteúdo |
 |-----------|----------|
 | [MIGRACOES-E-DOCS.md](./MIGRACOES-E-DOCS.md) | Regras sobre `supabase/migrations/` (não fundir migrações antigas; nomes com data). |
-| [SQL-LEGADO.md](./SQL-LEGADO.md) | Como interpretar `docs/*.sql` vs migrações formais. |
 | [ESTRUTURA-DATABASE.md](./ESTRUTURA-DATABASE.md) | Visão das tabelas e referências a scripts. |
 | [database-health-check.sql](./database-health-check.sql) | Queries de verificação no SQL Editor. |
 | [SUPABASE-CHECKLIST-NAO-TECNICO.md](./SUPABASE-CHECKLIST-NAO-TECNICO.md) | Passos simples no painel Supabase. |

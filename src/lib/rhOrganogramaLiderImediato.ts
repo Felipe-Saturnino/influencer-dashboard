@@ -20,3 +20,12 @@ export function nomeLiderImediatoTime(
   if (local) return local;
   return nomeLiderImediatoGerencia(d, g, nomeResponsavel);
 }
+
+/** Dois primeiros vocábulos do nome (tabela Gestão de Prestadores — coluna Líder imediato). */
+export function nomeLiderDoisPrimeirosParaTabela(nome: string | null | undefined): string {
+  const t = String(nome ?? "").trim();
+  if (!t || t === "—") return "—";
+  const parts = t.split(/\s+/).filter(Boolean);
+  if (parts.length <= 2) return parts.join(" ");
+  return `${parts[0]} ${parts[1]}`;
+}
