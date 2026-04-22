@@ -29,6 +29,7 @@ export type PageKey =
   | "campanhas"
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
+  | "gestao_mesas"
   | "gestao_dealers"
   | "central_notificacoes"
   | "status_tecnico"

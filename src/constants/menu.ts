@@ -24,6 +24,7 @@ import {
   GiPerson,
   GiOrganigram,
   GiBriefcase,
+  GiRoundTable,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -101,6 +102,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "gestao_usuarios", label: "Gestão de Usuários", icon: GiShield },
       { key: "gestao_operadoras", label: "Gestão de Operadoras", icon: GiFactory },
+      { key: "gestao_mesas", label: "Gestão de Mesas", icon: GiRoundTable },
       { key: "status_tecnico", label: "Status Técnico", icon: GiRadarSweep },
     ],
   },

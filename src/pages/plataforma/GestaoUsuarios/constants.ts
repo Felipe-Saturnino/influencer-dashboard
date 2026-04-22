@@ -63,6 +63,7 @@ export const PAGES: {
   },
   { key: "gestao_usuarios", label: "Gestão de Usuários", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "gestao_operadoras", label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "gestao_mesas", label: "Gestão de Mesas", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "status_tecnico", label: "Status Técnico", secao: "Plataforma", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "playbook_influencers", label: "Playbook Influencers", secao: "Conteúdo", hasCriar: true, hasEditar: true, hasExcluir: false },

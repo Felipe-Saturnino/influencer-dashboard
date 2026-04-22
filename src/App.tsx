@@ -55,6 +55,7 @@ const PlaybookInfluencers = lazyWithRetry(() => import("./pages/conteudo/Playboo
 const LinksMateriais = lazyWithRetry(() => import("./pages/conteudo/LinksMateriais"));
 const GestaoUsuarios = lazyWithRetry(() => import("./pages/plataforma/GestaoUsuarios"));
 const GestaoOperadoras = lazyWithRetry(() => import("./pages/plataforma/GestaoOperadoras"));
+const GestaoMesas = lazyWithRetry(() => import("./pages/plataforma/GestaoMesas"));
 const StatusTecnico = lazyWithRetry(() => import("./pages/plataforma/StatusTecnico"));
 const Figurinos = lazyWithRetry(() => import("./pages/rh/Figurinos"));
 const RhPrestadores = lazyWithRetry(() => import("./pages/rh/GestaoPrestador"));
@@ -84,6 +85,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   links_materiais:  LinksMateriais,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
+  gestao_mesas:     GestaoMesas,
   status_tecnico:   StatusTecnico,
   rh_figurinos:     Figurinos,
   rh_funcionarios:  RhPrestadores,

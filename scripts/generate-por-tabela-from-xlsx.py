@@ -2,6 +2,7 @@
 
 Colunas esperadas: DATA, filter (nome da mesa), Turnover, GGR, Apostas.
 Operadora fixa: Casa de Apostas (planilha não traz operadora).
+Cadastro canónico de mesas (nome, tipo, número, ID): tabela `mesas_spin_cadastro` (Gestão de Mesas).
 """
 from pathlib import Path
 
