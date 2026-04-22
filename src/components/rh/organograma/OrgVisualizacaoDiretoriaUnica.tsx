@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
-import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
+import type { RhOrgDiretoriaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
 import { OrgBlocoVagasPlaceholder } from "./OrgBlocoVagasPlaceholder";
 import type { OrgTreeVisualAcaoCtx } from "./OrgTreeVisual";
 
