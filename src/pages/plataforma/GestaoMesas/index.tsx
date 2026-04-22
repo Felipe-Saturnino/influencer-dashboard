@@ -11,6 +11,15 @@ import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/
 
 const TIPOS_JOGO = ["Blackjack", "Roleta", "Baccarat", "Poker", "Game Show", "Outro"] as const;
 
+/** Asterisco obrigatório (semântica vermelha de formulário). */
+function CampoObrigatorioMark() {
+  return (
+    <span style={{ color: "#e84025" }} aria-hidden>
+      {" *"}
+    </span>
+  );
+}
+
 type MesaSpinCadastroRow = {
   id: string;
   operadora_slug: string;
@@ -128,7 +137,7 @@ export default function GestaoMesas() {
             Gestão de Mesas
           </h1>
           <p style={{ color: t.textMuted, marginTop: 5, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0", maxWidth: 560, lineHeight: 1.45 }}>
-            Cadastro de mesas ao vivo por operadora — nome, tipo de jogo, número e identificação (Table ID) para alinhar relatórios e cargas manuais.
+            Cadastro de mesas por operadora.
           </p>
         </div>
       </div>
@@ -199,9 +208,7 @@ export default function GestaoMesas() {
           </div>
         ) : rowsFiltradas.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-            {rows.length === 0
-              ? "Nenhuma mesa cadastrada. Use «Nova mesa» para incluir a primeira."
-              : "Nenhuma mesa para o filtro selecionado."}
+            {rows.length === 0 ? "Nenhuma mesa cadastrada." : "Nenhuma mesa para o filtro selecionado."}
           </div>
         ) : (
           <div className="app-table-wrap">
@@ -214,7 +221,7 @@ export default function GestaoMesas() {
                 overflow: "hidden",
               }}
             >
-              <caption style={{ display: "none" }}>Cadastro de mesas ao vivo por operadora</caption>
+              <caption style={{ display: "none" }}>Cadastro de mesas por operadora</caption>
               <thead>
                 <tr>
                   <th scope="col" style={getThStyle(t)}>
@@ -424,6 +431,10 @@ function ModalMesa({
       setErro("Informe o tipo de jogo.");
       return;
     }
+    if (!numeroMesa.trim()) {
+      setErro("Informe o número da mesa.");
+      return;
+    }
     if (!mesaIdentificacao.trim()) {
       setErro("Informe a identificação da mesa (Table ID).");
       return;
@@ -435,7 +446,7 @@ function ModalMesa({
         operadora_slug: operadoraSlug.trim(),
         nome_mesa: nomeMesa.trim(),
         tipo_jogo: tipoJogoEfetivo,
-        numero_mesa: numeroMesa.trim() ? numeroMesa.trim() : null,
+        numero_mesa: numeroMesa.trim(),
         mesa_identificacao: mesaIdentificacao.trim(),
       };
       if (editando) {
@@ -489,10 +500,11 @@ function ModalMesa({
         <div>
           <label htmlFor={`${baseId}-op`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
             Operadora
+            <CampoObrigatorioMark />
           </label>
           <select
             id={`${baseId}-op`}
-            aria-label="Operadora"
+            aria-label="Operadora (obrigatório)"
             value={operadoraSlug}
             disabled={desabilitaOperadora}
             onChange={(e) => setOperadoraSlug(e.target.value)}
@@ -518,6 +530,7 @@ function ModalMesa({
         <div>
           <label htmlFor={`${baseId}-nome`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
             Nome da mesa
+            <CampoObrigatorioMark />
           </label>
           <input
             id={`${baseId}-nome`}
@@ -525,6 +538,7 @@ function ModalMesa({
             value={nomeMesa}
             onChange={(e) => setNomeMesa(e.target.value)}
             placeholder="Ex.: Blackjack VIP"
+            aria-label="Nome da mesa (obrigatório)"
             autoComplete="off"
             style={{
               width: "100%",
@@ -542,10 +556,11 @@ function ModalMesa({
         <div>
           <label htmlFor={`${baseId}-tipo`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
             Tipo de jogo
+            <CampoObrigatorioMark />
           </label>
           <select
             id={`${baseId}-tipo`}
-            aria-label="Tipo de jogo"
+            aria-label="Tipo de jogo (obrigatório)"
             value={(TIPOS_JOGO as readonly string[]).includes(tipoJogo) ? tipoJogo : "Outro"}
             onChange={(e) => setTipoJogo(e.target.value)}
             style={{
@@ -566,32 +581,39 @@ function ModalMesa({
             ))}
           </select>
           {tipoJogo === "Outro" && (
-            <input
-              id={`${baseId}-tipo-outro`}
-              type="text"
-              value={tipoJogoOutro}
-              onChange={(e) => {
-                setTipoJogoOutro(e.target.value);
-              }}
-              placeholder="Descreva o tipo de jogo"
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                marginTop: 8,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg,
-                color: t.text,
-                fontFamily: FONT.body,
-                fontSize: 13,
-              }}
-            />
+            <>
+              <label htmlFor={`${baseId}-tipo-outro`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginTop: 10, marginBottom: 6 }}>
+                Especificar tipo
+                <CampoObrigatorioMark />
+              </label>
+              <input
+                id={`${baseId}-tipo-outro`}
+                type="text"
+                value={tipoJogoOutro}
+                onChange={(e) => {
+                  setTipoJogoOutro(e.target.value);
+                }}
+                placeholder="Descreva o tipo de jogo"
+                aria-label="Especificar tipo de jogo (obrigatório)"
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                }}
+              />
+            </>
           )}
         </div>
         <div>
           <label htmlFor={`${baseId}-num`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
-            Número da mesa <span style={{ fontWeight: 400 }}>(opcional)</span>
+            Número da mesa
+            <CampoObrigatorioMark />
           </label>
           <input
             id={`${baseId}-num`}
@@ -599,6 +621,7 @@ function ModalMesa({
             value={numeroMesa}
             onChange={(e) => setNumeroMesa(e.target.value)}
             placeholder="Ex.: 01"
+            aria-label="Número da mesa (obrigatório)"
             autoComplete="off"
             style={{
               width: "100%",
@@ -616,6 +639,7 @@ function ModalMesa({
         <div>
           <label htmlFor={`${baseId}-id`} style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 6 }}>
             Identificação da mesa (Table ID)
+            <CampoObrigatorioMark />
           </label>
           <input
             id={`${baseId}-id`}
@@ -624,6 +648,7 @@ function ModalMesa({
             onChange={(e) => setMesaIdentificacao(e.target.value)}
             disabled={Boolean(editando)}
             placeholder="Identificador único no fornecedor"
+            aria-label="Identificação da mesa Table ID (obrigatório)"
             autoComplete="off"
             style={{
               width: "100%",
