@@ -1,5 +1,32 @@
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../types/rhVaga";
 
+export function hojeIsoDate(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function dataIsoDateOnly(v: string | null | undefined): string {
+  if (!v?.trim()) return "";
+  return v.slice(0, 10);
+}
+
+export function checkboxesFromTipoVaga(tipo: RhVagaTipo): { interna: boolean; externa: boolean } {
+  if (tipo === "mista") return { interna: true, externa: true };
+  if (tipo === "externa") return { interna: false, externa: true };
+  return { interna: true, externa: false };
+}
+
+/** Pelo menos uma opção deve estar ativa. */
+export function tipoVagaDeCheckboxes(interna: boolean, externa: boolean): RhVagaTipo | null {
+  if (interna && externa) return "mista";
+  if (interna) return "interna";
+  if (externa) return "externa";
+  return null;
+}
+
 export function normalizarBuscaVaga(s: string): string {
   return s
     .trim()

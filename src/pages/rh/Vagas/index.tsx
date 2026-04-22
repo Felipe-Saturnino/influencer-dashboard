@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, Loader2, Plus, Search } from "lucide-react";
+import { Briefcase, CheckCircle2, Loader2, Plus, Search } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -18,6 +18,8 @@ import type { RhVagaRow, RhVagaStatus, RhVagaTipo, RhVagasAba } from "../../../t
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar";
+import { ModalNovaVaga } from "../../../components/rh/vagas/ModalNovaVaga";
+import { ModalAtualizarVaga } from "../../../components/rh/vagas/ModalAtualizarVaga";
 
 const RH_VAGAS_SELECT = `
   *,
@@ -86,12 +88,15 @@ export default function RhVagasPage() {
   const [busca, setBusca] = useState("");
   const [filtroStatusGestao, setFiltroStatusGestao] = useState<RhVagaStatus | "todos">("todos");
   const [modalStub, setModalStub] = useState<ModalStub>(null);
+  const [modalNovaVagaAberto, setModalNovaVagaAberto] = useState(false);
+  const [vagaAtualizar, setVagaAtualizar] = useState<RhVagaRow | null>(null);
+  const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
 
   const podeGerenciarAba = perm.canCriarOk;
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
-  const carregar = useCallback(async () => {
-    setLoading(true);
+  const carregar = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     setErro(null);
     const { data, error } = await supabase.from("rh_vagas").select(RH_VAGAS_SELECT).order("data_abertura", { ascending: false });
     if (error) {
@@ -100,7 +105,7 @@ export default function RhVagasPage() {
     } else {
       setVagas((data ?? []) as unknown as RhVagaRow[]);
     }
-    setLoading(false);
+    if (!opts?.silent) setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -111,6 +116,12 @@ export default function RhVagasPage() {
   useEffect(() => {
     if (!podeGerenciarAba && aba === "gerenciamento") setAba("abertas");
   }, [podeGerenciarAba, aba]);
+
+  useEffect(() => {
+    if (!sucessoMsg) return;
+    const id = window.setTimeout(() => setSucessoMsg(null), 4000);
+    return () => window.clearTimeout(id);
+  }, [sucessoMsg]);
 
   const vagasAbertas = useMemo(
     () => vagas.filter((v) => v.status === "aberta" && vagaPassaBuscaNomeOuDiretoria(v, busca)),
@@ -281,6 +292,27 @@ export default function RhVagasPage() {
         </div>
       ) : null}
 
+      {sucessoMsg ? (
+        <div
+          role="status"
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            marginBottom: 12,
+            background: "rgba(34,197,94,0.12)",
+            border: "1px solid rgba(34,197,94,0.35)",
+            color: "#166534",
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <CheckCircle2 size={14} color="#22c55e" aria-hidden />
+          {sucessoMsg}
+        </div>
+      ) : null}
+
       <RhVagasFiltroBar
         aba={aba}
         setAba={setAba}
@@ -405,7 +437,7 @@ export default function RhVagasPage() {
                 <div style={{ flex: 1 }} />
                 <button
                   type="button"
-                  onClick={() => abrirModalStub("Nova vaga")}
+                  onClick={() => setModalNovaVagaAberto(true)}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -483,7 +515,7 @@ export default function RhVagasPage() {
                       <CampoVaga k="Motivo do cancelamento" v={textoMultilinha(v.motivo_cancelamento ?? "")} t={t} />
                       <div style={{ marginTop: 4 }}>
                         {btnSec("Ver candidaturas", () => abrirModalStub("Ver candidaturas", v.titulo))}
-                        {btnPrim("Atualizar vaga", () => abrirModalStub("Atualizar vaga", v.titulo))}
+                        {btnPrim("Atualizar vaga", () => setVagaAtualizar(v))}
                       </div>
                     </article>
                   );
@@ -492,7 +524,7 @@ export default function RhVagasPage() {
                   v,
                   <div style={{ marginTop: 4 }}>
                     {btnSec("Ver candidaturas", () => abrirModalStub("Ver candidaturas", v.titulo))}
-                    {btnPrim("Atualizar vaga", () => abrirModalStub("Atualizar vaga", v.titulo))}
+                    {btnPrim("Atualizar vaga", () => setVagaAtualizar(v))}
                   </div>,
                   { statusLabel: labelStatusVaga(st) },
                 );
@@ -501,6 +533,27 @@ export default function RhVagasPage() {
           </>
         )}
       </div>
+
+      <ModalNovaVaga
+        open={modalNovaVagaAberto}
+        onClose={() => setModalNovaVagaAberto(false)}
+        onSalvo={() => {
+          void carregar({ silent: true });
+          setSucessoMsg("Vaga criada com status Aberta.");
+        }}
+        t={t}
+      />
+
+      <ModalAtualizarVaga
+        open={vagaAtualizar !== null}
+        vaga={vagaAtualizar}
+        onClose={() => setVagaAtualizar(null)}
+        onSalvo={() => {
+          void carregar({ silent: true });
+          setSucessoMsg("Vaga atualizada com sucesso.");
+        }}
+        t={t}
+      />
 
       {modalStub ? (
         <ModalBase maxWidth={440} onClose={() => setModalStub(null)}>
