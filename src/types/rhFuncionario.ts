@@ -44,7 +44,10 @@ export interface RhFuncionario {
   emerg_parentesco: string;
   emerg_telefone: string;
   setor: string;
-  /** Time do organograma (RH); preenche `setor` com o nome do time. */
+  /** Vínculo ao organograma (níveis mutuamente exclusivos no banco). */
+  org_diretoria_id?: string | null;
+  org_gerencia_id?: string | null;
+  /** Time do organograma (RH); preenche `setor` com o nome do time quando aplicável. */
   org_time_id?: string | null;
   cargo: string;
   nivel: string;

@@ -470,6 +470,7 @@ export function ModalAtualizarVaga({
                   value={orgTimeId ?? ""}
                   disabled={carregandoOrg || grupos.length === 0}
                   grupos={grupos}
+                  acceptLevels={["time"]}
                   onPick={(id) => setOrgTimeId(id)}
                   style={inputStyle}
                 />

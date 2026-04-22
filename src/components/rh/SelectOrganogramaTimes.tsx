@@ -1,8 +1,16 @@
 import type { CSSProperties } from "react";
-import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../types/rhOrganograma";
+import type {
+  RhOrgOrganogramaGrupoPrestador,
+  RhOrgPrestadorVinculoNivel,
+  RhOrgPrestadorVinculoOpcao,
+} from "../../types/rhOrganograma";
+import { encontrarVinculoPorSelectValue, vinculoParaSelectValue } from "../../lib/rhOrganogramaTree";
+
+const DEFAULT_LEVELS: RhOrgPrestadorVinculoNivel[] = ["diretoria", "gerencia", "time"];
 
 /**
- * Select com optgroup por Diretoria › Gerência; ramos sem time mostram opção desabilitada.
+ * Select com optgroup por Diretoria ou Diretoria › Gerência.
+ * Por padrão aceita vínculo na diretoria, na gerência ou no time; use `acceptLevels` para restringir (ex.: só time em vagas).
  */
 export function SelectOrganogramaTimes({
   id,
@@ -11,6 +19,7 @@ export function SelectOrganogramaTimes({
   disabled,
   grupos,
   onPick,
+  acceptLevels = DEFAULT_LEVELS,
   style,
 }: {
   id: string;
@@ -18,9 +27,12 @@ export function SelectOrganogramaTimes({
   value: string;
   disabled?: boolean;
   grupos: RhOrgOrganogramaGrupoPrestador[];
-  onPick: (timeId: string | null, opcao: RhOrgTimeOpcao | null) => void;
+  onPick: (selectValue: string | null, opcao: RhOrgPrestadorVinculoOpcao | null) => void;
+  /** Quando omitido, diretoria + gerência + time. */
+  acceptLevels?: RhOrgPrestadorVinculoNivel[];
   style: CSSProperties;
 }) {
+  const allow = new Set(acceptLevels);
   return (
     <select
       id={id}
@@ -33,33 +45,36 @@ export function SelectOrganogramaTimes({
           onPick(null, null);
           return;
         }
-        for (const gr of grupos) {
-          const op = gr.times.find((t) => t.timeId === idSel);
-          if (op) {
-            onPick(idSel, op);
-            return;
-          }
+        const flat = grupos.flatMap((gr) => gr.vinculos);
+        const op = encontrarVinculoPorSelectValue(flat, idSel);
+        if (op && allow.has(op.nivel)) {
+          onPick(idSel, op);
+          return;
         }
         onPick(null, null);
       }}
       style={style}
     >
       <option value="">— Selecione —</option>
-      {grupos.map((gr) => (
-        <optgroup key={gr.key} label={gr.label}>
-          {gr.times.length > 0 ? (
-            gr.times.map((o) => (
-              <option key={o.timeId} value={o.timeId}>
-                {o.timeNome}
+      {grupos.map((gr) => {
+        const filtrados = gr.vinculos.filter((v) => allow.has(v.nivel));
+        const placeholder = gr.emptyTimesPlaceholder ?? "Nenhuma opção neste ramo.";
+        return (
+          <optgroup key={gr.key} label={gr.label}>
+            {filtrados.length > 0 ? (
+              filtrados.map((o) => (
+                <option key={`${gr.key}-${o.nivel}-${vinculoParaSelectValue(o)}`} value={vinculoParaSelectValue(o)}>
+                  {o.nivel === "time" ? o.timeNome : o.label}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>
+                {placeholder}
               </option>
-            ))
-          ) : (
-            <option value="" disabled>
-              {gr.emptyLabel}
-            </option>
-          )}
-        </optgroup>
-      ))}
+            )}
+          </optgroup>
+        );
+      })}
     </select>
   );
 }

@@ -48,7 +48,8 @@ import type {
   RhHistoricoAcaoTipo,
 } from "../../../types/rhFuncionario";
 import { uploadAnexosAcaoRh } from "../../../lib/rhPrestadorAcaoFiles";
-import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
+import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
+import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { PageHeader } from "../../../components/PageHeader";
@@ -64,7 +65,20 @@ const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }[] = [
   { value: "Temporario", label: "Temporário" },
 ];
 
-const ESCALAS_SUGEST = ["5x2", "6x1", "12x36", "12x48", "8x6", "Comercial"];
+/** Valores permitidos para o campo Escala (cadastro de prestador). */
+const ESCALAS_PERMITIDAS = ["5x2", "3x3", "4x2", "5x1"] as const;
+
+function escalaEhPermitida(s: string): s is (typeof ESCALAS_PERMITIDAS)[number] {
+  return (ESCALAS_PERMITIDAS as readonly string[]).includes(s.trim());
+}
+
+/** Valor do `<select>`: opção válida, placeholder de legado ou vazio (— Selecione —). */
+function valorSelectEscala(raw: string): string | "__legacy__" {
+  const t = raw.trim();
+  if (escalaEhPermitida(raw)) return t;
+  if (t) return "__legacy__";
+  return "";
+}
 
 /** Ativos + indisponíveis (exclui encerrados). */
 type FiltroStatusPrestador = "disponiveis" | RhFuncionario["status"];
@@ -303,6 +317,8 @@ function fmtDataIsoPtBr(iso: string | null | undefined): string {
 }
 
 type SliceContratacao = {
+  org_diretoria_id: string | null;
+  org_gerencia_id: string | null;
   org_time_id: string | null;
   setor: string;
   cargo: string;
@@ -315,6 +331,8 @@ type SliceContratacao = {
 
 function sliceContratacaoDeForm(f: FormState): SliceContratacao {
   return {
+    org_diretoria_id: f.org_diretoria_id,
+    org_gerencia_id: f.org_gerencia_id,
     org_time_id: f.org_time_id,
     setor: f.setor.trim(),
     cargo: f.cargo.trim(),
@@ -330,6 +348,8 @@ function sliceContratacaoDeRow(r: RhFuncionario): SliceContratacao {
   const cents = Math.round(Number(r.salario) * 100).toString();
   const df = r.data_funcao ? String(r.data_funcao).slice(0, 10) : "";
   return {
+    org_diretoria_id: r.org_diretoria_id ?? null,
+    org_gerencia_id: r.org_gerencia_id ?? null,
     org_time_id: r.org_time_id ?? null,
     setor: r.setor.trim(),
     cargo: r.cargo.trim(),
@@ -341,20 +361,36 @@ function sliceContratacaoDeRow(r: RhFuncionario): SliceContratacao {
   };
 }
 
-function labelTimeOrganograma(id: string | null, opcoes: RhOrgTimeOpcao[]): string {
-  if (!id) return "—";
-  return opcoes.find((o) => o.timeId === id)?.label ?? id;
+function labelSliceOrganograma(
+  slice: SliceContratacao,
+  vinculos: RhOrgPrestadorVinculoOpcao[],
+  opcoesTimes: RhOrgTimeOpcao[],
+): string {
+  const v = encontrarVinculoParaFuncionarioRow(
+    {
+      org_time_id: slice.org_time_id,
+      org_gerencia_id: slice.org_gerencia_id,
+      org_diretoria_id: slice.org_diretoria_id,
+    },
+    vinculos,
+  );
+  if (v) return v.label;
+  if (slice.org_time_id) {
+    return opcoesTimes.find((o) => o.timeId === slice.org_time_id)?.label || slice.setor.trim() || "—";
+  }
+  return slice.setor.trim() || "—";
 }
 
 function diffContratacaoSlices(
   antes: SliceContratacao,
   depois: SliceContratacao,
-  opcoes: RhOrgTimeOpcao[],
+  vinculos: RhOrgPrestadorVinculoOpcao[],
+  opcoesTimes: RhOrgTimeOpcao[],
   fmtSal: (cents: string) => string,
 ): { campo: string; antes: string; depois: string }[] {
   const out: { campo: string; antes: string; depois: string }[] = [];
-  const orgAntes = labelTimeOrganograma(antes.org_time_id, opcoes) || antes.setor || "—";
-  const orgDepois = labelTimeOrganograma(depois.org_time_id, opcoes) || depois.setor || "—";
+  const orgAntes = labelSliceOrganograma(antes, vinculos, opcoesTimes) || antes.setor || "—";
+  const orgDepois = labelSliceOrganograma(depois, vinculos, opcoesTimes) || depois.setor || "—";
   if (orgAntes !== orgDepois || antes.setor !== depois.setor) {
     out.push({ campo: "Organograma", antes: orgAntes, depois: orgDepois });
   }
@@ -404,9 +440,10 @@ function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean):
   const telE = somenteDigitos(r.emerg_telefone ?? "");
   if (telE.length < 10 || telE.length > 11) return true;
   if (temOrganograma) {
-    if (!r.org_time_id && !r.setor?.trim()) return true;
+    if (!r.org_time_id && !r.org_gerencia_id && !r.org_diretoria_id && !r.setor?.trim()) return true;
   } else if (!r.setor?.trim()) return true;
   if (!r.cargo?.trim() || !r.nivel?.trim() || !r.escala?.trim()) return true;
+  if (!escalaEhPermitida(r.escala)) return true;
   if (!r.data_inicio?.trim()) return true;
   if (r.tipo_contrato === "PJ") {
     const cnpj = somenteDigitos(r.cnpj);
@@ -449,6 +486,8 @@ type FormState = {
   emerg_parentesco: string;
   emerg_telefone: string;
   setor: string;
+  org_diretoria_id: string | null;
+  org_gerencia_id: string | null;
   org_time_id: string | null;
   cargo: string;
   nivel: string;
@@ -507,13 +546,15 @@ function estadoVazioForm(): FormState {
     emerg_parentesco: "",
     emerg_telefone: "",
     setor: "",
+    org_diretoria_id: null,
+    org_gerencia_id: null,
     org_time_id: null,
     cargo: "",
     nivel: "Pleno",
     salarioCentavos: "",
     data_inicio: "",
     data_funcao: "",
-    escala: "5x2",
+    escala: "",
     tipo_contrato: "CLT",
     nome_empresa: "",
     cnpj: "",
@@ -552,6 +593,8 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     emerg_parentesco: f.emerg_parentesco ?? "",
     emerg_telefone: formatarTelefoneBr(f.emerg_telefone ?? ""),
     setor: f.setor,
+    org_diretoria_id: f.org_diretoria_id ?? null,
+    org_gerencia_id: f.org_gerencia_id ?? null,
     org_time_id: f.org_time_id ?? null,
     cargo: f.cargo,
     nivel: f.nivel,
@@ -645,6 +688,8 @@ function buildRhFuncionarioPayloadFromState(
     emerg_parentesco: form.emerg_parentesco.trim(),
     emerg_telefone: somenteDigitos(form.emerg_telefone),
     setor: form.setor.trim(),
+    org_diretoria_id: form.org_diretoria_id || null,
+    org_gerencia_id: form.org_gerencia_id || null,
     org_time_id: form.org_time_id || null,
     cargo: form.cargo.trim(),
     nivel: form.nivel.trim(),
@@ -928,50 +973,57 @@ export default function RhPrestadoresPage() {
     return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [lista]);
 
+  const opcoesVinculoFlat = useMemo(() => flattenVinculosDeGrupos(organogramaGrupos), [organogramaGrupos]);
+
   const diretoriasOpcoes = useMemo(() => {
     const u = new Set<string>();
-    organogramaGrupos.forEach((gr) => {
-      const parts = gr.label.split(" › ");
-      u.add(parts[0] ?? gr.label);
-    });
-    opcoesTimes.forEach((o) => u.add(o.diretoriaNome));
+    opcoesVinculoFlat.forEach((v) => u.add(v.diretoriaNome));
     return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [organogramaGrupos, opcoesTimes]);
+  }, [opcoesVinculoFlat]);
 
   const gerenciasOpcoes = useMemo(() => {
     const u = new Set<string>();
-    organogramaGrupos.forEach((gr) => {
-      const parts = gr.label.split(" › ");
-      if (parts.length < 2) return;
-      const dir = parts[0]!;
-      const ger = parts.slice(1).join(" › ");
-      if (filtroDiretoria && dir !== filtroDiretoria) return;
-      u.add(ger);
-    });
-    opcoesTimes.forEach((o) => {
-      if (filtroDiretoria && o.diretoriaNome !== filtroDiretoria) return;
-      u.add(o.gerenciaNome);
+    opcoesVinculoFlat.forEach((v) => {
+      if (!v.gerenciaNome) return;
+      if (filtroDiretoria && v.diretoriaNome !== filtroDiretoria) return;
+      u.add(v.gerenciaNome);
     });
     return [...u].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [organogramaGrupos, opcoesTimes, filtroDiretoria]);
+  }, [opcoesVinculoFlat, filtroDiretoria]);
 
   useEffect(() => {
     if (filtroGerencia && !gerenciasOpcoes.includes(filtroGerencia)) setFiltroGerencia("");
   }, [filtroGerencia, gerenciasOpcoes]);
 
-  const usarSelectTime = useMemo(
-    () => permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0,
-    [permOrg.canView, permOrg.loading, opcoesTimes.length],
+  const usarSelectOrganograma = useMemo(
+    () => permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0,
+    [permOrg.canView, permOrg.loading, opcoesVinculoFlat.length],
   );
 
-  const opcaoTimeSelecionada = useMemo(
-    () => (form.org_time_id ? opcoesTimes.find((o) => o.timeId === form.org_time_id) ?? null : null),
-    [form.org_time_id, opcoesTimes],
+  const opcaoOrgSelecionada = useMemo(
+    () =>
+      encontrarVinculoParaFuncionarioRow(
+        {
+          org_time_id: form.org_time_id,
+          org_gerencia_id: form.org_gerencia_id,
+          org_diretoria_id: form.org_diretoria_id,
+        },
+        opcoesVinculoFlat,
+      ),
+    [form.org_diretoria_id, form.org_gerencia_id, form.org_time_id, opcoesVinculoFlat],
   );
 
-  const opcaoTimeAcaoForm = useMemo(
-    () => (acaoForm.org_time_id ? opcoesTimes.find((o) => o.timeId === acaoForm.org_time_id) ?? null : null),
-    [acaoForm.org_time_id, opcoesTimes],
+  const opcaoOrgAcaoForm = useMemo(
+    () =>
+      encontrarVinculoParaFuncionarioRow(
+        {
+          org_time_id: acaoForm.org_time_id,
+          org_gerencia_id: acaoForm.org_gerencia_id,
+          org_diretoria_id: acaoForm.org_diretoria_id,
+        },
+        opcoesVinculoFlat,
+      ),
+    [acaoForm.org_diretoria_id, acaoForm.org_gerencia_id, acaoForm.org_time_id, opcoesVinculoFlat],
   );
 
   const ehPJ = form.tipo_contrato === "PJ";
@@ -1005,11 +1057,11 @@ export default function RhPrestadoresPage() {
       if (filtroContrato !== "todos" && r.tipo_contrato !== filtroContrato) return false;
       if (filtroSetor && r.setor.trim() !== filtroSetor) return false;
       if (filtroDiretoria) {
-        const o = r.org_time_id ? opcoesTimes.find((x) => x.timeId === r.org_time_id) : undefined;
+        const o = encontrarVinculoParaFuncionarioRow(r, opcoesVinculoFlat);
         if (!o || o.diretoriaNome !== filtroDiretoria) return false;
       }
       if (filtroGerencia) {
-        const o = r.org_time_id ? opcoesTimes.find((x) => x.timeId === r.org_time_id) : undefined;
+        const o = encontrarVinculoParaFuncionarioRow(r, opcoesVinculoFlat);
         if (!o || o.gerenciaNome !== filtroGerencia) return false;
       }
       if (!b) return true;
@@ -1019,10 +1071,10 @@ export default function RhPrestadoresPage() {
       if (r.cpf.includes(digits) && digits.length >= 3) return true;
       return false;
     });
-  }, [lista, busca, filtroSetor, filtroContrato, filtroStatus, filtroDiretoria, filtroGerencia, opcoesTimes]);
+  }, [lista, busca, filtroSetor, filtroContrato, filtroStatus, filtroDiretoria, filtroGerencia, opcoesVinculoFlat]);
 
   const resumoPrestadoresCards = useMemo(() => {
-    const temOrganograma = permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0;
+    const temOrganograma = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
     const total = filtrada.length;
     let ativo = 0;
     let indisponivel = 0;
@@ -1034,7 +1086,7 @@ export default function RhPrestadoresPage() {
     }
     const incompletos = filtrada.filter((r) => prestadorCadastroIncompleto(r, temOrganograma));
     return { total, porStatus: { ativo, indisponivel, encerrado }, incompletos };
-  }, [filtrada, permOrg.canView, permOrg.loading, opcoesTimes.length]);
+  }, [filtrada, permOrg.canView, permOrg.loading, opcoesVinculoFlat.length]);
 
   const sugestoesParticipantesRhTalks = useMemo(() => {
     const q = rtBusca.trim().toLowerCase();
@@ -1075,19 +1127,30 @@ export default function RhPrestadoresPage() {
 
   const orgMetaLinha = useCallback(
     (row: RhFuncionario) => {
-      if (!row.org_time_id) return { diretoria: "—", gerencia: "—" };
-      const o = opcoesTimes.find((x) => x.timeId === row.org_time_id);
-      return { diretoria: o?.diretoriaNome ?? "—", gerencia: o?.gerenciaNome ?? "—" };
+      const o = encontrarVinculoParaFuncionarioRow(row, opcoesVinculoFlat);
+      if (o) {
+        return {
+          diretoria: o.diretoriaNome,
+          gerencia: o.nivel === "diretoria" ? "—" : o.gerenciaNome || "—",
+        };
+      }
+      if (row.org_time_id) {
+        const t = opcoesTimes.find((x) => x.timeId === row.org_time_id);
+        if (t) return { diretoria: t.diretoriaNome, gerencia: t.gerenciaNome };
+      }
+      return { diretoria: "—", gerencia: "—" };
     },
-    [opcoesTimes],
+    [opcoesTimes, opcoesVinculoFlat],
   );
 
   const liderImediatoLinha = useCallback(
     (row: RhFuncionario) => {
-      if (!row.org_time_id) return "—";
-      return opcoesTimes.find((x) => x.timeId === row.org_time_id)?.gestorNome ?? "—";
+      const o = encontrarVinculoParaFuncionarioRow(row, opcoesVinculoFlat);
+      if (o) return o.gestorNome;
+      if (row.org_time_id) return opcoesTimes.find((x) => x.timeId === row.org_time_id)?.gestorNome ?? "—";
+      return "—";
     },
-    [opcoesTimes],
+    [opcoesTimes, opcoesVinculoFlat],
   );
 
   const inserirHistorico = useCallback(
@@ -1345,20 +1408,22 @@ export default function RhPrestadoresPage() {
     if (cepRes.length > 0 && cepRes.length !== 8) e.res_cep = "CEP residencial deve ter 8 dígitos.";
     req("emerg_nome", "Nome do contato de emergência", form.emerg_nome);
     req("emerg_telefone", "Telefone do contato de emergência", form.emerg_telefone);
-    const usarSelectTime = permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0;
-    if (usarSelectTime) {
-      if (modalForm === "novo" && !form.org_time_id) {
+    const usarOrg = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
+    const temOrgVinculo = Boolean(form.org_time_id || form.org_gerencia_id || form.org_diretoria_id);
+    if (usarOrg) {
+      if (modalForm === "novo" && !temOrgVinculo) {
         e.org_time_id = "Selecione o organograma.";
       }
-      if (!form.org_time_id && !form.setor.trim()) {
-        e.setor = "Informe o setor ou selecione um time.";
+      if (!temOrgVinculo && !form.setor.trim()) {
+        e.setor = "Informe o setor ou selecione um nível do organograma.";
       }
     } else {
       req("setor", "Setor", form.setor);
     }
     req("cargo", "Função", form.cargo);
     req("data_inicio", "Data de início", form.data_inicio);
-    req("escala", "Escala", form.escala);
+    if (!form.escala.trim()) e.escala = "Escala é obrigatória.";
+    else if (!escalaEhPermitida(form.escala)) e.escala = "Selecione uma escala: 5x2, 3x3, 4x2 ou 5x1.";
     if (form.tipo_contrato === "PJ") {
       req("nome_empresa", "Nome da empresa", form.nome_empresa);
       req("emp_logradouro", "Logradouro da empresa", form.emp_logradouro);
@@ -1493,8 +1558,9 @@ export default function RhPrestadoresPage() {
     try {
       switch (acaoTipo) {
         case "revisao_contrato": {
-          const usarST = permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0;
-          if (usarST && !acaoForm.org_time_id) {
+          const usarST = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
+          const temOrgAcao = Boolean(acaoForm.org_time_id || acaoForm.org_gerencia_id || acaoForm.org_diretoria_id);
+          if (usarST && !temOrgAcao) {
             setErroGlobal("Selecione o organograma.");
             setAcaoSalvando(false);
             return;
@@ -1506,6 +1572,11 @@ export default function RhPrestadoresPage() {
           }
           if (!acaoForm.cargo.trim() || !acaoForm.nivel.trim() || !acaoForm.escala.trim()) {
             setErroGlobal("Preencha função, nível e escala.");
+            setAcaoSalvando(false);
+            return;
+          }
+          if (!escalaEhPermitida(acaoForm.escala)) {
+            setErroGlobal("Selecione uma escala válida: 5x2, 3x3, 4x2 ou 5x1.");
             setAcaoSalvando(false);
             return;
           }
@@ -1521,7 +1592,7 @@ export default function RhPrestadoresPage() {
           }
           const antes = acaoBaselineRef.current ?? sliceContratacaoDeRow(acaoModalRow);
           const depois = sliceContratacaoDeForm(acaoForm);
-          const diff = diffContratacaoSlices(antes, depois, opcoesTimes, fmtSal);
+          const diff = diffContratacaoSlices(antes, depois, opcoesVinculoFlat, opcoesTimes, fmtSal);
           if (diff.length === 0) {
             setErroGlobal("Nenhuma alteração para registrar.");
             setAcaoSalvando(false);
@@ -1532,6 +1603,8 @@ export default function RhPrestadoresPage() {
           const { error: eUp } = await supabase
             .from("rh_funcionarios")
             .update({
+              org_diretoria_id: acaoForm.org_diretoria_id || null,
+              org_gerencia_id: acaoForm.org_gerencia_id || null,
               org_time_id: acaoForm.org_time_id || null,
               setor: acaoForm.setor.trim(),
               cargo: acaoForm.cargo.trim(),
@@ -1621,8 +1694,9 @@ export default function RhPrestadoresPage() {
           break;
         }
         case "reativacao_prestacao": {
-          const usarSTR = permOrg.canView !== "nao" && !permOrg.loading && opcoesTimes.length > 0;
-          if (usarSTR && !acaoForm.org_time_id) {
+          const usarSTR = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
+          const temOrgReat = Boolean(acaoForm.org_time_id || acaoForm.org_gerencia_id || acaoForm.org_diretoria_id);
+          if (usarSTR && !temOrgReat) {
             setErroGlobal("Selecione o organograma.");
             setAcaoSalvando(false);
             return;
@@ -1634,6 +1708,11 @@ export default function RhPrestadoresPage() {
           }
           if (!acaoForm.cargo.trim() || !acaoForm.nivel.trim() || !acaoForm.escala.trim() || !acaoForm.data_inicio.trim()) {
             setErroGlobal("Preencha função, nível, escala e data de início.");
+            setAcaoSalvando(false);
+            return;
+          }
+          if (!escalaEhPermitida(acaoForm.escala)) {
+            setErroGlobal("Selecione uma escala válida: 5x2, 3x3, 4x2 ou 5x1.");
             setAcaoSalvando(false);
             return;
           }
@@ -1662,7 +1741,7 @@ export default function RhPrestadoresPage() {
               : base;
           const antes = acaoBaselineRef.current ?? sliceContratacaoDeRow(acaoModalRow);
           const depois = sliceContratacaoDeForm(acaoForm);
-          const diffContrato = diffContratacaoSlices(antes, depois, opcoesTimes, fmtSal);
+          const diffContrato = diffContratacaoSlices(antes, depois, opcoesVinculoFlat, opcoesTimes, fmtSal);
           const obsAntes = (rowAntes.observacao_rh ?? "").trim();
           const obsDepois = (acaoForm.observacao_rh ?? "").trim();
           const alteracoesReativacao: { campo: string; antes: string; depois: string }[] = [
@@ -1743,8 +1822,11 @@ export default function RhPrestadoresPage() {
 
   const leitura = modalForm === "ver";
   const snapshotEdicao = modalForm === "editar" && editId ? lista.find((x) => x.id === editId) ?? null : null;
-  const bloquearOrgEdit = Boolean(usarSelectTime && snapshotEdicao?.org_time_id);
-  const bloquearSetorManualEdit = Boolean(!usarSelectTime && snapshotEdicao && snapshotEdicao.setor.trim());
+  const bloquearOrgEdit = Boolean(
+    usarSelectOrganograma &&
+      (snapshotEdicao?.org_time_id || snapshotEdicao?.org_gerencia_id || snapshotEdicao?.org_diretoria_id),
+  );
+  const bloquearSetorManualEdit = Boolean(!usarSelectOrganograma && snapshotEdicao && snapshotEdicao.setor.trim());
   const bloquearCargoEdit = Boolean(snapshotEdicao?.cargo.trim());
   const bloquearNivelEdit = Boolean(snapshotEdicao?.nivel.trim());
   const bloquearSalarioEdit = Boolean(podeVerDadosSensiveis && snapshotEdicao && Number(snapshotEdicao.salario) > 0);
@@ -2670,7 +2752,7 @@ export default function RhPrestadoresPage() {
             {abaModal === "contratacao" ? (
               <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {usarSelectTime ? (
+                  {usarSelectOrganograma ? (
                     <>
                       {!leitura ? (
                         <>
@@ -2678,11 +2760,38 @@ export default function RhPrestadoresPage() {
                           <SelectOrganogramaTimes
                             id="f-org-time"
                             disabled={desabilitarCampos || bloquearOrgEdit}
-                            value={form.org_time_id ?? ""}
+                            value={form.org_time_id ?? form.org_gerencia_id ?? form.org_diretoria_id ?? ""}
                             grupos={organogramaGrupos}
                             onPick={(id, op) => {
-                              if (!id || !op) setForm((s) => ({ ...s, org_time_id: null, setor: "" }));
-                              else setForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
+                              if (!id || !op) {
+                                setForm((s) => ({ ...s, org_diretoria_id: null, org_gerencia_id: null, org_time_id: null, setor: "" }));
+                                return;
+                              }
+                              if (op.nivel === "time") {
+                                setForm((s) => ({
+                                  ...s,
+                                  org_diretoria_id: null,
+                                  org_gerencia_id: null,
+                                  org_time_id: op.timeId,
+                                  setor: op.setorNome,
+                                }));
+                              } else if (op.nivel === "gerencia") {
+                                setForm((s) => ({
+                                  ...s,
+                                  org_diretoria_id: null,
+                                  org_gerencia_id: op.gerenciaId,
+                                  org_time_id: null,
+                                  setor: op.setorNome,
+                                }));
+                              } else {
+                                setForm((s) => ({
+                                  ...s,
+                                  org_diretoria_id: op.diretoriaId,
+                                  org_gerencia_id: null,
+                                  org_time_id: null,
+                                  setor: op.setorNome,
+                                }));
+                              }
                             }}
                             aria-label="Organograma"
                             style={inputStyle}
@@ -2692,7 +2801,7 @@ export default function RhPrestadoresPage() {
                           ) : null}
                         </>
                       ) : null}
-                      {opcaoTimeSelecionada || (leitura && form.setor.trim()) ? (
+                      {opcaoOrgSelecionada || (leitura && form.setor.trim()) ? (
                         <div
                           style={{
                             marginTop: leitura ? 0 : 10,
@@ -2705,24 +2814,28 @@ export default function RhPrestadoresPage() {
                             lineHeight: 1.6,
                           }}
                         >
-                          {opcaoTimeSelecionada ? (
+                          {opcaoOrgSelecionada ? (
                             <>
                               <div>
-                                <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoTimeSelecionada.diretoriaNome}
+                                <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoOrgSelecionada.diretoriaNome}
                               </div>
+                              {opcaoOrgSelecionada.nivel !== "diretoria" ? (
+                                <div>
+                                  <strong style={{ color: t.text }}>Gerência:</strong> {opcaoOrgSelecionada.gerenciaNome || "—"}
+                                </div>
+                              ) : null}
+                              {opcaoOrgSelecionada.nivel === "time" ? (
+                                <div>
+                                  <strong style={{ color: t.text }}>Time:</strong> {opcaoOrgSelecionada.timeNome}
+                                </div>
+                              ) : null}
                               <div>
-                                <strong style={{ color: t.text }}>Gerência:</strong> {opcaoTimeSelecionada.gerenciaNome}
-                              </div>
-                              <div>
-                                <strong style={{ color: t.text }}>Time:</strong> {opcaoTimeSelecionada.timeNome}
-                              </div>
-                              <div>
-                                <strong style={{ color: t.text }}>Líder imediato:</strong> {opcaoTimeSelecionada.gestorNome}
+                                <strong style={{ color: t.text }}>Líder imediato:</strong> {opcaoOrgSelecionada.gestorNome}
                               </div>
                             </>
                           ) : (
                             <div>
-                              <strong style={{ color: t.text }}>Time:</strong> {form.setor}
+                              <strong style={{ color: t.text }}>Setor:</strong> {form.setor}
                             </div>
                           )}
                         </div>
@@ -2735,7 +2848,15 @@ export default function RhPrestadoresPage() {
                         id="f-setor"
                         disabled={desabilitarCampos || bloquearSetorManualEdit}
                         value={form.setor}
-                        onChange={(e) => setForm((s) => ({ ...s, setor: e.target.value, org_time_id: null }))}
+                        onChange={(e) =>
+                          setForm((s) => ({
+                            ...s,
+                            setor: e.target.value,
+                            org_diretoria_id: null,
+                            org_gerencia_id: null,
+                            org_time_id: null,
+                          }))
+                        }
                         style={inputStyle}
                         list="lista-setores"
                       />
@@ -2744,13 +2865,7 @@ export default function RhPrestadoresPage() {
                           <option key={s} value={s} />
                         ))}
                       </datalist>
-                      {permOrg.canView !== "nao" && !permOrg.loading && organogramaGrupos.length > 0 && opcoesTimes.length === 0 ? (
-                        <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6 }}>
-                          Existem diretorias/gerências no organograma, mas nenhum time ativo para vincular. Cadastre times em RH →
-                          Organograma ou informe o setor manualmente.
-                        </div>
-                      ) : null}
-                      {permOrg.canView !== "nao" && !permOrg.loading && organogramaGrupos.length === 0 && opcoesTimes.length === 0 ? (
+                      {permOrg.canView !== "nao" && !permOrg.loading && organogramaGrupos.length === 0 && opcoesVinculoFlat.length === 0 ? (
                         <div style={{ fontSize: 12, color: t.textMuted, marginTop: 6 }}>
                           Nenhuma estrutura ativa no organograma. Cadastre diretorias em RH → Organograma ou informe o setor manualmente.
                         </div>
@@ -2834,12 +2949,29 @@ export default function RhPrestadoresPage() {
                 </div>
                 <div style={{ marginBottom: 10 }}>
                   {lblReqCad("f-escala", "Escala")}
-                  <input id="f-escala" disabled={desabilitarCampos || bloquearEscalaEdit} value={form.escala} onChange={(e) => setForm((s) => ({ ...s, escala: e.target.value }))} style={inputStyle} list="lista-escalas" />
-                  <datalist id="lista-escalas">
-                    {ESCALAS_SUGEST.map((x) => (
-                      <option key={x} value={x} />
+                  <select
+                    id="f-escala"
+                    disabled={desabilitarCampos || bloquearEscalaEdit}
+                    value={valorSelectEscala(form.escala)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setForm((s) => ({ ...s, escala: v === "__legacy__" ? s.escala : v }));
+                    }}
+                    style={inputStyle}
+                    aria-label="Escala de trabalho"
+                  >
+                    <option value="">— Selecione —</option>
+                    {valorSelectEscala(form.escala) === "__legacy__" ? (
+                      <option value="__legacy__">
+                        {form.escala.trim()} (cadastro antigo — escolha 5x2, 3x3, 4x2 ou 5x1)
+                      </option>
+                    ) : null}
+                    {ESCALAS_PERMITIDAS.map((x) => (
+                      <option key={x} value={x}>
+                        {x}
+                      </option>
                     ))}
-                  </datalist>
+                  </select>
                   {fieldErr.escala ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.escala}</div> : null}
                 </div>
                 {!leitura ? (
@@ -3241,21 +3373,48 @@ export default function RhPrestadoresPage() {
             {acaoTipo === "revisao_contrato" || acaoTipo === "reativacao_prestacao" ? (
               <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {usarSelectTime ? (
+                  {usarSelectOrganograma ? (
                     <>
                       {lblReq("acao-org", "Organograma")}
                       <SelectOrganogramaTimes
                         id="acao-org"
-                        value={acaoForm.org_time_id ?? ""}
+                        value={acaoForm.org_time_id ?? acaoForm.org_gerencia_id ?? acaoForm.org_diretoria_id ?? ""}
                         grupos={organogramaGrupos}
                         onPick={(id, op) => {
-                          if (!id || !op) setAcaoForm((s) => ({ ...s, org_time_id: null, setor: "" }));
-                          else setAcaoForm((s) => ({ ...s, org_time_id: id, setor: op.timeNome }));
+                          if (!id || !op) {
+                            setAcaoForm((s) => ({ ...s, org_diretoria_id: null, org_gerencia_id: null, org_time_id: null, setor: "" }));
+                            return;
+                          }
+                          if (op.nivel === "time") {
+                            setAcaoForm((s) => ({
+                              ...s,
+                              org_diretoria_id: null,
+                              org_gerencia_id: null,
+                              org_time_id: op.timeId,
+                              setor: op.setorNome,
+                            }));
+                          } else if (op.nivel === "gerencia") {
+                            setAcaoForm((s) => ({
+                              ...s,
+                              org_diretoria_id: null,
+                              org_gerencia_id: op.gerenciaId,
+                              org_time_id: null,
+                              setor: op.setorNome,
+                            }));
+                          } else {
+                            setAcaoForm((s) => ({
+                              ...s,
+                              org_diretoria_id: op.diretoriaId,
+                              org_gerencia_id: null,
+                              org_time_id: null,
+                              setor: op.setorNome,
+                            }));
+                          }
                         }}
                         aria-label="Organograma"
                         style={inputStyle}
                       />
-                      {opcaoTimeAcaoForm ? (
+                      {opcaoOrgAcaoForm ? (
                         <div
                           style={{
                             marginTop: 10,
@@ -3269,16 +3428,20 @@ export default function RhPrestadoresPage() {
                           }}
                         >
                           <div>
-                            <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoTimeAcaoForm.diretoriaNome}
+                            <strong style={{ color: t.text }}>Diretoria:</strong> {opcaoOrgAcaoForm.diretoriaNome}
                           </div>
+                          {opcaoOrgAcaoForm.nivel !== "diretoria" ? (
+                            <div>
+                              <strong style={{ color: t.text }}>Gerência:</strong> {opcaoOrgAcaoForm.gerenciaNome || "—"}
+                            </div>
+                          ) : null}
+                          {opcaoOrgAcaoForm.nivel === "time" ? (
+                            <div>
+                              <strong style={{ color: t.text }}>Time:</strong> {opcaoOrgAcaoForm.timeNome}
+                            </div>
+                          ) : null}
                           <div>
-                            <strong style={{ color: t.text }}>Gerência:</strong> {opcaoTimeAcaoForm.gerenciaNome}
-                          </div>
-                          <div>
-                            <strong style={{ color: t.text }}>Time:</strong> {opcaoTimeAcaoForm.timeNome}
-                          </div>
-                          <div>
-                            <strong style={{ color: t.text }}>Líder imediato:</strong> {opcaoTimeAcaoForm.gestorNome}
+                            <strong style={{ color: t.text }}>Líder imediato:</strong> {opcaoOrgAcaoForm.gestorNome}
                           </div>
                         </div>
                       ) : null}
@@ -3289,7 +3452,15 @@ export default function RhPrestadoresPage() {
                       <input
                         id="acao-setor"
                         value={acaoForm.setor}
-                        onChange={(e) => setAcaoForm((s) => ({ ...s, setor: e.target.value, org_time_id: null }))}
+                        onChange={(e) =>
+                          setAcaoForm((s) => ({
+                            ...s,
+                            setor: e.target.value,
+                            org_diretoria_id: null,
+                            org_gerencia_id: null,
+                            org_time_id: null,
+                          }))
+                        }
                         style={inputStyle}
                       />
                     </>
@@ -3355,18 +3526,28 @@ export default function RhPrestadoresPage() {
                 )}
                 <div style={{ marginBottom: 10 }}>
                   {lblReq("acao-escala", "Escala")}
-                  <input
+                  <select
                     id="acao-escala"
-                    value={acaoForm.escala}
-                    onChange={(e) => setAcaoForm((s) => ({ ...s, escala: e.target.value }))}
+                    value={valorSelectEscala(acaoForm.escala)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setAcaoForm((s) => ({ ...s, escala: v === "__legacy__" ? s.escala : v }));
+                    }}
                     style={inputStyle}
-                    list="lista-escalas-acao"
-                  />
-                  <datalist id="lista-escalas-acao">
-                    {ESCALAS_SUGEST.map((x) => (
-                      <option key={x} value={x} />
+                    aria-label="Escala de trabalho"
+                  >
+                    <option value="">— Selecione —</option>
+                    {valorSelectEscala(acaoForm.escala) === "__legacy__" ? (
+                      <option value="__legacy__">
+                        {acaoForm.escala.trim()} (cadastro antigo — escolha 5x2, 3x3, 4x2 ou 5x1)
+                      </option>
+                    ) : null}
+                    {ESCALAS_PERMITIDAS.map((x) => (
+                      <option key={x} value={x}>
+                        {x}
+                      </option>
                     ))}
-                  </datalist>
+                  </select>
                 </div>
                 {acaoTipo === "revisao_contrato" ? (
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>

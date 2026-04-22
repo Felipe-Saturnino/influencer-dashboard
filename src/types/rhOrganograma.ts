@@ -59,11 +59,28 @@ export interface RhOrgTimeOpcao {
   gestorNome: string;
 }
 
-/** Agrupamento Diretoria › Gerência para select na Gestão de Prestadores (inclui ramos sem time). */
+export type RhOrgPrestadorVinculoNivel = "diretoria" | "gerencia" | "time";
+
+/** Opção de vínculo ao organograma (diretoria, gerência ou time) no cadastro de prestador. */
+export interface RhOrgPrestadorVinculoOpcao {
+  nivel: RhOrgPrestadorVinculoNivel;
+  diretoriaId: string;
+  gerenciaId: string | null;
+  timeId: string | null;
+  diretoriaNome: string;
+  gerenciaNome: string;
+  timeNome: string;
+  label: string;
+  /** Valor gravado em `rh_funcionarios.setor` ao escolher o nó. */
+  setorNome: string;
+  gestorNome: string;
+}
+
+/** Agrupamento Diretoria › Gerência para select na Gestão de Prestadores. */
 export interface RhOrgOrganogramaGrupoPrestador {
   key: string;
   label: string;
-  times: RhOrgTimeOpcao[];
-  /** Opção desabilitada quando `times` está vazio. */
-  emptyLabel: string;
+  vinculos: RhOrgPrestadorVinculoOpcao[];
+  /** Quando o select aceita só times (ex.: vagas) e não há time ativo neste ramo. */
+  emptyTimesPlaceholder?: string;
 }

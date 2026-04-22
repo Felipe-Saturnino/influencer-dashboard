@@ -1,10 +1,11 @@
-import { nomeLiderImediatoTime } from "./rhOrganogramaLiderImediato";
+import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "./rhOrganogramaLiderImediato";
 import type {
   RhOrgDiretoria,
   RhOrgDiretoriaComFilhos,
   RhOrgGerencia,
   RhOrgGerenciaComFilhos,
   RhOrgOrganogramaGrupoPrestador,
+  RhOrgPrestadorVinculoOpcao,
   RhOrgTime,
   RhOrgTimeOpcao,
 } from "../types/rhOrganograma";
@@ -46,42 +47,120 @@ function nomeLivreOuFuncMap(
   return (livre ?? "").trim();
 }
 
+/** Valor do `<option value>` (id do nó: diretoria, gerência ou time). */
+export function vinculoParaSelectValue(v: RhOrgPrestadorVinculoOpcao): string {
+  if (v.nivel === "time") return v.timeId ?? "";
+  if (v.nivel === "gerencia") return v.gerenciaId ?? "";
+  return v.diretoriaId;
+}
+
+export function encontrarVinculoPorSelectValue(
+  vinculos: RhOrgPrestadorVinculoOpcao[],
+  value: string,
+): RhOrgPrestadorVinculoOpcao | null {
+  if (!value) return null;
+  return (
+    vinculos.find(
+      (x) =>
+        (x.nivel === "time" && x.timeId === value) ||
+        (x.nivel === "gerencia" && x.gerenciaId === value) ||
+        (x.nivel === "diretoria" && x.diretoriaId === value),
+    ) ?? null
+  );
+}
+
+/** Resolve opção de organograma a partir da linha persistida em `rh_funcionarios`. */
+export function encontrarVinculoParaFuncionarioRow(
+  row: { org_time_id?: string | null; org_gerencia_id?: string | null; org_diretoria_id?: string | null },
+  vinculos: RhOrgPrestadorVinculoOpcao[],
+): RhOrgPrestadorVinculoOpcao | null {
+  if (row.org_time_id) return vinculos.find((x) => x.nivel === "time" && x.timeId === row.org_time_id) ?? null;
+  if (row.org_gerencia_id) return vinculos.find((x) => x.nivel === "gerencia" && x.gerenciaId === row.org_gerencia_id) ?? null;
+  if (row.org_diretoria_id) return vinculos.find((x) => x.nivel === "diretoria" && x.diretoriaId === row.org_diretoria_id) ?? null;
+  return null;
+}
+
+/** Lista flat de todas as opções de vínculo (diretoria, gerência e time) para filtros e resolução de linha. */
+export function flattenVinculosDeGrupos(grupos: RhOrgOrganogramaGrupoPrestador[]): RhOrgPrestadorVinculoOpcao[] {
+  return [...grupos.flatMap((g) => g.vinculos)].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+}
+
+export function vinculoTimeParaOpcao(v: RhOrgPrestadorVinculoOpcao): RhOrgTimeOpcao | null {
+  if (v.nivel !== "time" || !v.timeId) return null;
+  return {
+    timeId: v.timeId,
+    timeNome: v.timeNome,
+    gerenciaNome: v.gerenciaNome,
+    diretoriaNome: v.diretoriaNome,
+    label: v.label,
+    gestorNome: v.gestorNome,
+  };
+}
+
 /**
- * Toda a estrutura ativa (diretoria › gerência) para o cadastro de prestador.
- * Ramos sem time ativo aparecem com `times` vazio (optgroup + opção desabilitada na UI).
+ * Toda a estrutura ativa para o cadastro de prestador: opções na diretoria (sem gerências),
+ * na gerência (sem exigir time) e nos times ativos.
  */
 export function buildGruposOrganogramaPrestador(
   arvore: RhOrgDiretoriaComFilhos[],
   nomePorFuncionarioId: Map<string, string>,
 ): RhOrgOrganogramaGrupoPrestador[] {
   const grupos: RhOrgOrganogramaGrupoPrestador[] = [];
-  const emptyGer = "Nenhuma gerência cadastrada — inclua em RH → Organograma.";
   const emptyTime = "Nenhum time ativo — cadastre um time em RH → Organograma.";
 
   arvore.forEach((d) => {
     if (d.status !== "ativo") return;
     if (d.gerencias.length === 0) {
+      const gestorDir = nomeLivreOuFuncMap(nomePorFuncionarioId, d.diretor_funcionario_id, d.diretor_nome_livre).trim() || "—";
+      const vDir: RhOrgPrestadorVinculoOpcao = {
+        nivel: "diretoria",
+        diretoriaId: d.id,
+        gerenciaId: null,
+        timeId: null,
+        diretoriaNome: d.nome,
+        gerenciaNome: "",
+        timeNome: "",
+        setorNome: d.nome,
+        label: `${d.nome} — Diretoria`,
+        gestorNome: gestorDir,
+      };
       grupos.push({
         key: `d-${d.id}-sem-ger`,
         label: d.nome,
-        times: [],
-        emptyLabel: emptyGer,
+        vinculos: [vDir],
       });
       return;
     }
     d.gerencias.forEach((g) => {
       if (g.status !== "ativo") return;
-      const times: RhOrgTimeOpcao[] = [];
+      const vinculos: RhOrgPrestadorVinculoOpcao[] = [];
+      const gestorGer =
+        nomeLiderImediatoGerencia(d, g, (fid, livre) => nomeLivreOuFuncMap(nomePorFuncionarioId, fid, livre)).trim() || "—";
+      vinculos.push({
+        nivel: "gerencia",
+        diretoriaId: d.id,
+        gerenciaId: g.id,
+        timeId: null,
+        diretoriaNome: d.nome,
+        gerenciaNome: g.nome,
+        timeNome: "",
+        setorNome: g.nome,
+        label: `${d.nome} › ${g.nome} — Gerência`,
+        gestorNome: gestorGer,
+      });
       g.times.forEach((ti) => {
         if (ti.status !== "ativo") return;
-        const gestor = nomeLiderImediatoTime(d, g, ti, (fid, livre) =>
-          nomeLivreOuFuncMap(nomePorFuncionarioId, fid, livre),
-        ).trim() || "—";
-        times.push({
+        const gestor =
+          nomeLiderImediatoTime(d, g, ti, (fid, livre) => nomeLivreOuFuncMap(nomePorFuncionarioId, fid, livre)).trim() || "—";
+        vinculos.push({
+          nivel: "time",
+          diretoriaId: d.id,
+          gerenciaId: g.id,
           timeId: ti.id,
-          timeNome: ti.nome,
-          gerenciaNome: g.nome,
           diretoriaNome: d.nome,
+          gerenciaNome: g.nome,
+          timeNome: ti.nome,
+          setorNome: ti.nome,
           label: `${d.nome} › ${g.nome} › ${ti.nome}`,
           gestorNome: gestor,
         });
@@ -89,8 +168,8 @@ export function buildGruposOrganogramaPrestador(
       grupos.push({
         key: `d-${d.id}-g-${g.id}`,
         label: `${d.nome} › ${g.nome}`,
-        times,
-        emptyLabel: emptyTime,
+        emptyTimesPlaceholder: emptyTime,
+        vinculos,
       });
     });
   });
@@ -98,12 +177,15 @@ export function buildGruposOrganogramaPrestador(
   return grupos.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 }
 
-/** Times ativos cuja diretoria e gerência estão ativas — lista flat (filtros, buscas). */
+/** Times ativos cuja diretoria e gerência estão ativas — lista flat (filtros, vagas). */
 export function flattenTimesAtivosParaSelect(
   arvore: RhOrgDiretoriaComFilhos[],
   nomePorFuncionarioId: Map<string, string>,
 ): RhOrgTimeOpcao[] {
-  const flat = buildGruposOrganogramaPrestador(arvore, nomePorFuncionarioId).flatMap((gr) => gr.times);
+  const flat = buildGruposOrganogramaPrestador(arvore, nomePorFuncionarioId)
+    .flatMap((gr) => gr.vinculos)
+    .filter((v) => v.nivel === "time")
+    .map((v) => vinculoTimeParaOpcao(v)!);
   return flat.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 }
 
