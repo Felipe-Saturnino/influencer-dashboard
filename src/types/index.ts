@@ -41,6 +41,7 @@ export type PageKey =
   | "rh_organograma"
   | "rh_vagas"
   | "rh_escala_mes"
+  | "rh_staff"
   | "configuracoes"
   | "ajuda";
 

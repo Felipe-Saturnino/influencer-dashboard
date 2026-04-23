@@ -9,7 +9,8 @@ export type RhHistoricoAcaoTipo =
   | "termino_prestacao"
   | "reativacao_prestacao"
   | "rh_talks"
-  | "anotacao_rh";
+  | "anotacao_rh"
+  | "staff_gestao_edicao";
 
 /** Linha de `public.rh_funcionario_historico`. */
 export interface RhFuncionarioHistorico {
@@ -73,6 +74,12 @@ export interface RhFuncionario {
   agencia: string;
   conta_corrente: string;
   pix: string | null;
+  /** Gestão de Staff — opcional até migration aplicada. */
+  staff_nickname?: string | null;
+  staff_operadora_slug?: string | null;
+  staff_barcode?: string | null;
+  /** JSON: baccarat | blackjack | vip | roleta | futebol_studio → ativo | treinamento | inativo */
+  staff_skills?: Record<string, string> | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;

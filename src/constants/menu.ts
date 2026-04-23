@@ -25,6 +25,7 @@ import {
   GiOrganigram,
   GiBriefcase,
   GiRoundTable,
+  GiThreeFriends,
 } from "react-icons/gi";
 
 export interface MenuItem {
@@ -89,6 +90,7 @@ export const MENU: MenuSection[] = [
       { key: "rh_organograma", label: "Organograma", icon: GiOrganigram },
       { key: "rh_vagas", label: "Vagas", icon: GiBriefcase },
       { key: "rh_escala_mes", label: "Escala do Mês", icon: GiCalendar },
+      { key: "rh_staff", label: "Gestão de Staff", icon: GiThreeFriends },
     ],
   },
   {

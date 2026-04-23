@@ -54,6 +54,7 @@ export const PAGES: {
   { key: "rh_organograma", label: "Organograma", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_vagas", label: "Vagas", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_escala_mes", label: "Escala do Mês", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "rh_staff", label: "Gestão de Staff", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
     key: "central_notificacoes",
     label: "Central de Notificações",
