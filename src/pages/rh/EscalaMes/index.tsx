@@ -10,8 +10,9 @@ import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
 import {
   escalaPrestadorTemTurnosOperacionais,
-  normalizarEscalaCadastro,
+  siglaGradeParaNomeTurno,
   staffTurnoCoerenteComEscala,
+  turnoOperacionalParaSiglaGrade,
   turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
 } from "../../../lib/rhEscalaTurnos";
 
@@ -30,8 +31,8 @@ type LinhaColaborador = {
   nickname: string;
   /** Padrão 4x2/3x3 etc. (Gestão de Prestadores) — define opções na aba Gerar. */
   escalaCadastro: string;
-  /** Turno operacional cadastrado na Gestão de Staff (exibição). */
-  turnoStaff: string;
+  /** Sigla do turno na Staff (MRN/AFT/NGT) para a grade; vazio se sem turno aplicável. */
+  siglaTurnoStaff: string;
 };
 
 /** Estado da geração de escala por valor de filtro (função). */
@@ -88,18 +89,33 @@ function cargoPassaNoFiltro(cargo: string | null | undefined, filtro: string): b
   return (cargo ?? "").trim() === filtro;
 }
 
-function opcoesSelectCelulaGerar(escalaCadastroColuna: string): { value: string; label: string }[] {
-  const turnos = [...turnosPermitidosCadastro(escalaCadastroColuna)];
-  return [{ value: "", label: "—" }, { value: "Folga", label: "Folga" }, ...turnos.map((t) => ({ value: t, label: t }))];
+function opcoesSelectCelulaGerar(siglaTurnoStaff: string): { value: string; label: string }[] {
+  const out: { value: string; label: string }[] = [
+    { value: "", label: "—" },
+    { value: "Folga", label: "Folga" },
+  ];
+  const sigla = siglaTurnoStaff.trim();
+  if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") {
+    out.push({ value: sigla, label: sigla });
+  }
+  return out;
 }
 
-/** Garante valor coerente com a escala (ex.: legado T/F ou Tarde em 3x3). */
-function sanitizarValorCelulaGerar(escalaCadastroColuna: string, valorArmazenado: string): string {
+/**
+ * Garante valor coerente: só Folga, vazio ou a sigla do turno configurado na Staff (MRN/AFT/NGT).
+ * Aceita legado Manhã/Tarde/Noite se coincidir com a sigla permitida.
+ */
+function sanitizarValorCelulaGerar(siglaTurnoStaff: string, valorArmazenado: string): string {
   const v = (valorArmazenado ?? "").trim();
-  const permit = new Set(opcoesSelectCelulaGerar(escalaCadastroColuna).map((o) => o.value));
+  const permit = new Set(opcoesSelectCelulaGerar(siglaTurnoStaff).map((o) => o.value));
   if (permit.has(v)) return v;
-  if (v === "T" && permit.has("Manhã")) return "Manhã";
-  if (v === "F" || v.toLowerCase() === "folga") return (permit.has("Folga") ? "Folga" : "");
+  const comoSigla = turnoOperacionalParaSiglaGrade(v);
+  if (comoSigla && permit.has(comoSigla)) return comoSigla;
+  if (v === "T") {
+    const mrn = turnoOperacionalParaSiglaGrade("Manhã");
+    if (mrn && permit.has(mrn)) return mrn;
+  }
+  if (v === "F" || v.toLowerCase() === "folga") return permit.has("Folga") ? "Folga" : "";
   return "";
 }
 
@@ -156,13 +172,13 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
   const nick = (r.staff_nickname ?? "").trim();
   const esc = (r.escala ?? "").trim();
   const co = staffTurnoCoerenteComEscala(r.escala, r.staff_turno);
-  const turnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? co || "—" : "—";
+  const siglaTurnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? turnoOperacionalParaSiglaGrade(co) : "";
   return {
     id: r.id,
     nome: (r.nome ?? "").trim() || "—",
     nickname: nick || "—",
     escalaCadastro: esc || "—",
-    turnoStaff,
+    siglaTurnoStaff,
   };
 }
 
@@ -343,23 +359,24 @@ export default function RhEscalaMesPage() {
     [prestadoresRaw, filtrarPorCargo],
   );
 
-  /** Sugestão: folga em fim de semana; dias úteis alternam entre os turnos permitidos pela escala do prestador. */
+  /** Sugestão: fim de semana Folga; dias úteis apenas na sigla do turno configurado na Staff (MRN/AFT/NGT). */
   const aplicarSugestaoGerar = useCallback(
     (filtroKey: string) => {
       const linhasF = linhasPorFiltroGerar(filtroKey);
       const next: Record<string, string> = {};
       for (const row of linhasF) {
-        const turnos = [...turnosPermitidosCadastro(row.escalaCadastro)];
-        let iDiaUtil = 0;
+        const turnosEscala = [...turnosPermitidosCadastro(row.escalaCadastro)];
+        const sigla = row.siglaTurnoStaff.trim();
         for (const dia of dias) {
           const key = chaveCelulaGerar(row.id, dia.iso);
-          if (turnos.length === 0) {
+          if (turnosEscala.length === 0) {
             next[key] = "";
           } else if (dia.isWeekend) {
             next[key] = "Folga";
+          } else if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") {
+            next[key] = sigla;
           } else {
-            next[key] = turnos[iDiaUtil % turnos.length] ?? "Manhã";
-            iDiaUtil += 1;
+            next[key] = "";
           }
         }
       }
@@ -386,7 +403,7 @@ export default function RhEscalaMesPage() {
         for (const row of linhasF) {
           for (const d of dias) {
             const k = chaveCelulaGerar(row.id, d.iso);
-            merged[k] = sanitizarValorCelulaGerar(row.escalaCadastro, cur.celulas[k] ?? "");
+            merged[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, cur.celulas[k] ?? "");
           }
         }
         const baseline = { ...merged };
@@ -399,9 +416,9 @@ export default function RhEscalaMesPage() {
     [dias, linhasPorFiltroGerar],
   );
 
-  const atualizarCelulaGerar = useCallback((filtroKey: string, rowId: string, iso: string, escalaCadastro: string, valor: string) => {
+  const atualizarCelulaGerar = useCallback((filtroKey: string, rowId: string, iso: string, siglaTurnoStaff: string, valor: string) => {
     const k = chaveCelulaGerar(rowId, iso);
-    const ok = sanitizarValorCelulaGerar(escalaCadastro, valor);
+    const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor);
     setGerarPorFiltro((prev) => {
       const cur = prev[filtroKey] ?? { celulas: {}, aprovado: false, baseline: null };
       return {
@@ -424,7 +441,7 @@ export default function RhEscalaMesPage() {
       const allFilled = linhasF.every((row) =>
         dias.every((d) => {
           const k = chaveCelulaGerar(row.id, d.iso);
-          return sanitizarValorCelulaGerar(row.escalaCadastro, celulas[k] ?? "").trim() !== "";
+          return sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "").trim() !== "";
         }),
       );
       if (estado?.aprovado && estado.baseline) {
@@ -432,7 +449,7 @@ export default function RhEscalaMesPage() {
         for (const row of linhasF) {
           for (const d of dias) {
             const k = chaveCelulaGerar(row.id, d.iso);
-            celSan[k] = sanitizarValorCelulaGerar(row.escalaCadastro, celulas[k] ?? "");
+            celSan[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "");
           }
         }
         if (celulasIguais(celSan, estado.baseline)) return null;
@@ -950,6 +967,7 @@ export default function RhEscalaMesPage() {
                       borderRight: `1px solid ${t.cardBorder}`,
                       boxShadow: sombraColFixa,
                     })}
+                    title="Turno na Gestão de Staff: MRN = Manhã, AFT = Tarde, NGT = Noite."
                   >
                     Turno
                   </th>
@@ -1023,15 +1041,19 @@ export default function RhEscalaMesPage() {
                             borderRight: `1px solid ${t.cardBorder}`,
                             boxShadow: sombraColFixa,
                           })}
-                          title={row.turnoStaff}
+                          title={
+                            row.siglaTurnoStaff
+                              ? `${row.siglaTurnoStaff} (${siglaGradeParaNomeTurno(row.siglaTurnoStaff)})`
+                              : "Sem turno configurado na Staff para esta escala."
+                          }
                         >
-                          {row.turnoStaff}
+                          {row.siglaTurnoStaff || "—"}
                         </td>
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);
                           const bruto = editarCelulasGerar ? (celulasGerarAtivas?.[ck] ?? "") : "";
-                          const val = editarCelulasGerar ? sanitizarValorCelulaGerar(row.escalaCadastro, bruto) : "";
-                          const opts = opcoesSelectCelulaGerar(row.escalaCadastro);
+                          const val = editarCelulasGerar ? sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto) : "";
+                          const opts = opcoesSelectCelulaGerar(row.siglaTurnoStaff);
                           return (
                             <td
                               key={`${row.id}-${dia.iso}`}
@@ -1043,10 +1065,10 @@ export default function RhEscalaMesPage() {
                             >
                               {editarCelulasGerar ? (
                                 <select
-                                  aria-label={`Turno do dia ${dia.dia} para ${row.nome}`}
+                                  aria-label={`Escala do dia ${dia.dia} para ${row.nome}`}
                                   value={val}
                                   onChange={(e) =>
-                                    atualizarCelulaGerar(filtroCargoGerar, row.id, dia.iso, row.escalaCadastro, e.target.value)
+                                    atualizarCelulaGerar(filtroCargoGerar, row.id, dia.iso, row.siglaTurnoStaff, e.target.value)
                                   }
                                   style={selectCelulaGerarStyle}
                                 >

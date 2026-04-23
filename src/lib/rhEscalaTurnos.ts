@@ -35,3 +35,20 @@ export function staffTurnoCoerenteComEscala(
   const allow = turnosPermitidosPorEscalaPrestador(escalaRaw ?? "");
   return allow.includes(v) ? v : "";
 }
+
+/** Siglas na grade da Escala do mês (conforme turno na Gestão de Staff). */
+export function turnoOperacionalParaSiglaGrade(turnoRaw: string): "MRN" | "AFT" | "NGT" | "" {
+  const t = turnoRaw.trim();
+  if (t === "Manhã") return "MRN";
+  if (t === "Tarde") return "AFT";
+  if (t === "Noite") return "NGT";
+  return "";
+}
+
+export function siglaGradeParaNomeTurno(sigla: string): string {
+  const s = sigla.trim();
+  if (s === "MRN") return "Manhã";
+  if (s === "AFT") return "Tarde";
+  if (s === "NGT") return "Noite";
+  return "";
+}
