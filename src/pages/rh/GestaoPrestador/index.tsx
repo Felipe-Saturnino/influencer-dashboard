@@ -5,10 +5,8 @@ import {
   ClipboardList,
   Eye,
   EyeOff,
-  ExternalLink,
   History,
   Loader2,
-  Paperclip,
   Pencil,
   Plus,
   StickyNote,
@@ -21,6 +19,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
+import { RH_BANCOS_BRASIL, rhBancoParaSelectValue } from "../../../constants/rhBancosBrasil";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -53,6 +52,7 @@ import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../
 import { nomeLiderDoisPrimeirosParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
+import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
 import { SkeletonTableRow, SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -84,218 +84,6 @@ function valorSelectEscala(raw: string): string | "__legacy__" {
 /** Ativos + indisponíveis (exclui encerrados). */
 type FiltroStatusPrestador = "disponiveis" | RhFuncionario["status"];
 
-const HIST_TIPO_LABEL: Record<string, string> = {
-  revisao_contrato: "Revisão de Contrato",
-  periodo_indisponibilidade: "Período de Indisponibilidade",
-  retorno_indisponibilidade: "Retorno de Indisponibilidade",
-  alinhamento_formal: "Alinhamento Formal",
-  termino_prestacao: "Término da Prestação",
-  reativacao_prestacao: "Reativação da Prestação",
-  rh_talks: "RH Talks",
-  anotacao_rh: "Anotação do RH",
-};
-
-/** Fundo e borda suaves por tipo de ação (modal Histórico). */
-const HIST_TIPO_SURFACE: Record<string, { bg: string; border: string }> = {
-  revisao_contrato: { bg: "rgba(34, 197, 94, 0.12)", border: "rgba(34, 197, 94, 0.38)" },
-  periodo_indisponibilidade: { bg: "rgba(245, 158, 11, 0.14)", border: "rgba(245, 158, 11, 0.42)" },
-  retorno_indisponibilidade: { bg: "rgba(167, 139, 250, 0.16)", border: "rgba(167, 139, 250, 0.42)" },
-  alinhamento_formal: { bg: "rgba(249, 115, 22, 0.14)", border: "rgba(249, 115, 22, 0.4)" },
-  termino_prestacao: { bg: "rgba(232, 64, 37, 0.1)", border: "rgba(232, 64, 37, 0.36)" },
-  reativacao_prestacao: { bg: "rgba(59, 130, 246, 0.14)", border: "rgba(59, 130, 246, 0.4)" },
-  /** Cinza semântico (neutro) — RH Talks */
-  rh_talks: { bg: "rgba(107, 114, 128, 0.14)", border: "rgba(107, 114, 128, 0.42)" },
-  /** Tom próprio para anotações (diferente do cinza dos Talks) */
-  anotacao_rh: { bg: "rgba(100, 116, 139, 0.12)", border: "rgba(100, 116, 139, 0.38)" },
-};
-
-function cardStyleHistoricoPorTipo(tipo: string, t: { cardBorder: string; inputBg: string }): CSSProperties {
-  const c = HIST_TIPO_SURFACE[tipo];
-  return {
-    marginBottom: 14,
-    padding: "12px 14px",
-    borderRadius: 12,
-    border: `1px solid ${c?.border ?? t.cardBorder}`,
-    background: c?.bg ?? t.inputBg,
-    fontFamily: FONT.body,
-    fontSize: 13,
-  };
-}
-
-function ListaHistoricoRh({
-  items,
-  loading,
-  t,
-}: {
-  items: RhFuncionarioHistorico[];
-  loading: boolean;
-  t: { text: string; textMuted: string; cardBorder: string; inputBg: string };
-}) {
-  if (loading) {
-    return (
-      <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-        <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
-        Carregando histórico…
-      </div>
-    );
-  }
-  if (items.length === 0) {
-    return (
-      <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-        Sem dados para o período selecionado.
-      </div>
-    );
-  }
-  return (
-    <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-      {items.map((h) => {
-        const anexos = Array.isArray(h.anexos)
-          ? (h.anexos as { name?: string; publicUrl: string }[]).filter((a) => a?.publicUrl)
-          : [];
-        const det = h.detalhes ?? {};
-        const titulo = HIST_TIPO_LABEL[h.tipo] ?? h.tipo;
-        const quando = new Date(h.created_at).toLocaleString("pt-BR");
-        return (
-          <li key={h.id} style={cardStyleHistoricoPorTipo(h.tipo, t)}>
-            <div style={{ fontWeight: 800, color: t.text, marginBottom: 6 }}>{titulo}</div>
-            <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
-              {quando}
-              {det.usuario_label ? ` · ${String(det.usuario_label)}` : ""}
-            </div>
-            {"alteracoes" in det && Array.isArray(det.alteracoes) ? (
-              <ul style={{ margin: "6px 0 0", paddingLeft: 18, color: t.text }}>
-                {(det.alteracoes as { campo: string; antes: string; depois: string }[]).map((alt, j) => (
-                  <li key={j} style={{ marginBottom: 4 }}>
-                    <strong>{alt.campo}:</strong> {alt.antes} → {alt.depois}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {h.tipo === "periodo_indisponibilidade" && "data_saida" in det ? (
-              <div style={{ color: t.text, marginTop: 6 }}>
-                <div>
-                  <strong>Data de saída:</strong> {String(det.data_saida ?? "—")}
-                </div>
-                {det.data_retorno ? (
-                  <div>
-                    <strong>Data de retorno:</strong> {String(det.data_retorno)}
-                  </div>
-                ) : null}
-                {det.observacao ? (
-                  <div style={{ marginTop: 4 }}>
-                    <strong>Observação:</strong> {String(det.observacao)}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            {h.tipo === "termino_prestacao" && "data_termino" in det ? (
-              <div style={{ color: t.text, marginTop: 6 }}>
-                <div>
-                  <strong>Data de término:</strong> {String(det.data_termino ?? "—")}
-                </div>
-                {det.observacao ? (
-                  <div style={{ marginTop: 4 }}>
-                    <strong>Observação:</strong> {String(det.observacao)}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            {h.tipo === "retorno_indisponibilidade" && det.observacao ? (
-              <div style={{ color: t.text, marginTop: 6 }}>
-                <strong>Observação:</strong> {String(det.observacao)}
-              </div>
-            ) : null}
-            {h.tipo === "alinhamento_formal" && det.observacao ? (
-              <div style={{ color: t.text, marginTop: 6 }}>
-                <strong>Observação:</strong> {String(det.observacao)}
-              </div>
-            ) : null}
-            {h.tipo === "rh_talks" ? (
-              <div style={{ color: t.text, marginTop: 6, lineHeight: 1.5 }}>
-                {det.assunto ? (
-                  <div>
-                    <strong>Assunto:</strong> {String(det.assunto)}
-                  </div>
-                ) : null}
-                {det.data_rh_talks ? (
-                  <div style={{ marginTop: 4 }}>
-                    <strong>Data do RH Talks:</strong> {fmtDataIsoPtBr(String(det.data_rh_talks))}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            {h.tipo === "anotacao_rh" ? (
-              <div style={{ color: t.text, marginTop: 6, lineHeight: 1.5 }}>
-                {det.tipo_visibilidade ? (
-                  <div>
-                    <strong>Tipo:</strong> {String(det.tipo_visibilidade)}
-                  </div>
-                ) : null}
-                {det.assunto ? (
-                  <div style={{ marginTop: 4 }}>
-                    <strong>Assunto:</strong> {String(det.assunto)}
-                  </div>
-                ) : null}
-                {det.data_conversa ? (
-                  <div style={{ marginTop: 4 }}>
-                    <strong>Data da conversa:</strong> {fmtDataIsoPtBr(String(det.data_conversa))}
-                  </div>
-                ) : null}
-                {det.ata_reuniao ? (
-                  <div style={{ marginTop: 8 }}>
-                    <strong>Ata da reunião:</strong>
-                    <pre
-                      style={{
-                        margin: "6px 0 0",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        fontFamily: FONT.body,
-                        fontSize: 12,
-                        color: t.text,
-                        maxHeight: 220,
-                        overflow: "auto",
-                        padding: 8,
-                        borderRadius: 8,
-                        background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)",
-                      }}
-                    >
-                      {String(det.ata_reuniao)}
-                    </pre>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            {anexos.length > 0 ? (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10, alignItems: "center" }}>
-                {anexos.map((a, k) => (
-                  <a
-                    key={k}
-                    href={a.publicUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 12,
-                      color: "var(--brand-action, #7c3aed)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    <Paperclip size={14} aria-hidden />
-                    {a.name || "Anexo"}
-                    <ExternalLink size={12} aria-hidden />
-                  </a>
-                ))}
-              </div>
-            ) : null}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 function labelStatusPrestador(s: RhFuncionario["status"]): string {
   if (s === "ativo") return "Ativo";
   if (s === "indisponivel") return "Indisponível";
@@ -306,15 +94,6 @@ function corStatusPrestador(s: RhFuncionario["status"]): string {
   if (s === "ativo") return "#22c55e";
   if (s === "indisponivel") return "#f59e0b";
   return "#e84025";
-}
-
-/** Formata `YYYY-MM-DD` ou ISO para exibição pt-BR; vazio → "—". */
-function fmtDataIsoPtBr(iso: string | null | undefined): string {
-  if (!iso || !String(iso).trim()) return "—";
-  const s = String(iso).slice(0, 10);
-  const p = s.split("-");
-  if (p.length === 3 && p[0].length === 4) return `${p[2]}/${p[1]}/${p[0]}`;
-  return s;
 }
 
 type SliceContratacao = {
@@ -437,7 +216,8 @@ function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean):
   if (uf.length !== 2 || !UFS_BR.includes(uf as (typeof UFS_BR)[number])) return true;
   const cep = somenteDigitos(r.res_cep ?? "");
   if (cep.length !== 8) return true;
-  if (!r.emerg_nome?.trim()) return true;
+  const en = (r.emerg_nome ?? "").trim();
+  if (!en || en === "—") return true;
   const telE = somenteDigitos(r.emerg_telefone ?? "");
   if (telE.length < 10 || telE.length > 11) return true;
   if (temOrganograma) {
@@ -449,13 +229,18 @@ function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean):
   if (r.tipo_contrato === "PJ") {
     const cnpj = somenteDigitos(r.cnpj);
     if (cnpj.length !== 14 || !validarCnpjDigitos(cnpj)) return true;
-    if (!r.nome_empresa?.trim() || !r.emp_logradouro?.trim() || !r.emp_numero?.trim() || !r.emp_cidade?.trim()) return true;
+    if (cnpj === CNPJ_CONTEXTO_NAO_PJ) return true;
+    const ne = (r.nome_empresa ?? "").trim();
+    if (!ne || ne.includes("completar")) return true;
+    if (!r.emp_logradouro?.trim() || !r.emp_numero?.trim() || !r.emp_cidade?.trim()) return true;
     const ufe = (r.emp_estado ?? "").trim().toUpperCase();
     if (ufe.length !== 2 || !UFS_BR.includes(ufe as (typeof UFS_BR)[number])) return true;
     const cepE = somenteDigitos(r.emp_cep ?? "");
     if (cepE.length !== 8) return true;
   }
-  if (!r.banco?.trim() || !r.agencia?.trim() || !r.conta_corrente?.trim()) return true;
+  const bancoT = (r.banco ?? "").trim();
+  if (!bancoT || bancoT === "—" || !r.agencia?.trim() || !r.conta_corrente?.trim() || r.conta_corrente.trim() === "0") return true;
+  if (!String(r.pix ?? "").trim()) return true;
   if (Number(r.salario) <= 0) return true;
   return false;
 }
@@ -649,14 +434,19 @@ function buildRhFuncionarioPayloadFromState(
   form: FormState,
   statusPrestador: RhFuncionario["status"],
   podeVerDadosSensiveis: boolean,
+  cadastroMinimoNovo = false,
 ): Omit<RhFuncionario, "id" | "created_at" | "updated_at" | "created_by" | "updated_by" | "data_desligamento"> & {
   status: RhFuncionario["status"];
   data_desligamento?: string | null;
 } {
   const sal = podeVerDadosSensiveis ? numeroDeCentavosStr(form.salarioCentavos) : 0;
   const isPj = form.tipo_contrato === "PJ";
-  const cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
-  const endResLinha = montarEnderecoResumoLine({
+  let cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
+  if (cadastroMinimoNovo && isPj && (cnpjFinal.length !== 14 || !validarCnpjDigitos(cnpjFinal))) {
+    cnpjFinal = CNPJ_CONTEXTO_NAO_PJ;
+  }
+
+  const endResLinhaRaw = montarEnderecoResumoLine({
     cep: form.res_cep,
     logradouro: form.res_logradouro,
     numero: form.res_numero,
@@ -664,7 +454,12 @@ function buildRhFuncionarioPayloadFromState(
     cidade: form.res_cidade,
     estado: form.res_estado,
   });
-  const endEmpLinha = montarEnderecoResumoLine({
+  let endResLinha = endResLinhaRaw;
+  if (cadastroMinimoNovo && (!form.res_logradouro.trim() || endResLinhaRaw === "—")) {
+    endResLinha = "Cadastro inicial — completar endereço residencial.";
+  }
+
+  let endEmpLinha = montarEnderecoResumoLine({
     cep: form.emp_cep,
     logradouro: form.emp_logradouro,
     numero: form.emp_numero,
@@ -672,7 +467,33 @@ function buildRhFuncionarioPayloadFromState(
     cidade: form.emp_cidade,
     estado: form.emp_estado,
   });
-  const emergLinha = montarContatoEmergenciaLinha(form.emerg_nome, form.emerg_parentesco, form.emerg_telefone);
+  if (cadastroMinimoNovo && isPj && (!form.emp_logradouro.trim() || endEmpLinha === "—")) {
+    endEmpLinha = "Cadastro inicial — dados da empresa a completar.";
+  }
+
+  let emergNome = form.emerg_nome.trim();
+  let emergTel = somenteDigitos(form.emerg_telefone);
+  if (cadastroMinimoNovo) {
+    if (!emergNome) emergNome = "—";
+    if (emergTel.length < 10) emergTel = somenteDigitos(form.telefone);
+  }
+  const emergLinha = montarContatoEmergenciaLinha(emergNome, form.emerg_parentesco, emergTel);
+
+  let nomeEmpresa = isPj ? form.nome_empresa.trim() : form.nome_empresa.trim() || "—";
+  if (cadastroMinimoNovo && isPj && !nomeEmpresa) {
+    nomeEmpresa = "Cadastro PJ — completar na Gestão de Prestadores.";
+  }
+
+  let bancoV = form.banco.trim();
+  let agenciaV = somenteDigitos(form.agencia);
+  let contaV = form.conta_corrente.trim();
+  let pixV = form.pix.trim() || null;
+  if (cadastroMinimoNovo && podeVerDadosSensiveis) {
+    if (!bancoV) bancoV = "—";
+    if (!agenciaV) agenciaV = "0";
+    if (!contaV) contaV = "0";
+  }
+
   return {
     status: statusPrestador,
     nome: form.nome.trim(),
@@ -688,9 +509,9 @@ function buildRhFuncionarioPayloadFromState(
     res_cidade: form.res_cidade.trim(),
     res_estado: form.res_estado.trim().toUpperCase().slice(0, 2),
     contato_emergencia: emergLinha,
-    emerg_nome: form.emerg_nome.trim(),
+    emerg_nome: emergNome,
     emerg_parentesco: form.emerg_parentesco.trim(),
-    emerg_telefone: somenteDigitos(form.emerg_telefone),
+    emerg_telefone: emergTel,
     setor: form.setor.trim(),
     org_diretoria_id: form.org_diretoria_id || null,
     org_gerencia_id: form.org_gerencia_id || null,
@@ -702,7 +523,7 @@ function buildRhFuncionarioPayloadFromState(
     data_funcao: form.data_funcao.trim() ? form.data_funcao.trim().slice(0, 10) : null,
     escala: form.escala.trim(),
     tipo_contrato: form.tipo_contrato,
-    nome_empresa: isPj ? form.nome_empresa.trim() : form.nome_empresa.trim() || "—",
+    nome_empresa: nomeEmpresa,
     cnpj: cnpjFinal,
     endereco_empresa: isPj ? endEmpLinha : "—",
     emp_cep: isPj ? somenteDigitos(form.emp_cep) : "",
@@ -711,10 +532,10 @@ function buildRhFuncionarioPayloadFromState(
     emp_complemento: isPj ? form.emp_complemento.trim() : "",
     emp_cidade: isPj ? form.emp_cidade.trim() : "",
     emp_estado: isPj ? form.emp_estado.trim().toUpperCase().slice(0, 2) : "",
-    banco: form.banco.trim(),
-    agencia: somenteDigitos(form.agencia),
-    conta_corrente: form.conta_corrente.trim(),
-    pix: form.pix.trim() || null,
+    banco: bancoV,
+    agencia: agenciaV,
+    conta_corrente: contaV,
+    pix: pixV,
     observacao_rh: form.observacao_rh.trim() || null,
   };
 }
@@ -1444,6 +1265,44 @@ export default function RhPrestadoresPage() {
       if (!v.trim()) e[k as string] = `${label} é obrigatório.`;
     };
 
+    const usarOrg = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
+    const temOrgVinculo = Boolean(form.org_time_id || form.org_gerencia_id || form.org_diretoria_id);
+
+    /** Novo prestador: só os campos mínimos; demais na edição posterior. */
+    if (modalForm === "novo") {
+      req("nome", "Nome completo", form.nome);
+      req("rg", "RG", form.rg);
+      req("telefone", "Telefone", form.telefone);
+      req("email", "E-mail", form.email);
+      if (usarOrg) {
+        if (!temOrgVinculo) e.org_time_id = "Selecione o organograma.";
+      } else {
+        req("setor", "Setor", form.setor);
+      }
+      req("cargo", "Função", form.cargo);
+      req("nivel", "Nível", form.nivel);
+      req("data_inicio", "Data de início", form.data_inicio);
+      if (!form.escala.trim()) e.escala = "Escala é obrigatória.";
+      else if (!escalaEhPermitida(form.escala)) e.escala = "Selecione uma escala: 5x2, 3x3, 4x2 ou 5x1.";
+
+      const cpfD = somenteDigitos(form.cpf);
+      if (cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
+      else if (!validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
+
+      if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
+
+      const telD = somenteDigitos(form.telefone);
+      if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
+
+      if (podeVerDadosSensiveis) {
+        const sal = numeroDeCentavosStr(form.salarioCentavos);
+        if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
+      }
+
+      setFieldErr(e);
+      return Object.keys(e).length === 0;
+    }
+
     req("nome", "Nome completo", form.nome);
     req("rg", "RG", form.rg);
     req("telefone", "Telefone", form.telefone);
@@ -1459,12 +1318,7 @@ export default function RhPrestadoresPage() {
     if (cepRes.length > 0 && cepRes.length !== 8) e.res_cep = "CEP residencial deve ter 8 dígitos.";
     req("emerg_nome", "Nome do contato de emergência", form.emerg_nome);
     req("emerg_telefone", "Telefone do contato de emergência", form.emerg_telefone);
-    const usarOrg = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
-    const temOrgVinculo = Boolean(form.org_time_id || form.org_gerencia_id || form.org_diretoria_id);
     if (usarOrg) {
-      if (modalForm === "novo" && !temOrgVinculo) {
-        e.org_time_id = "Selecione o organograma.";
-      }
       if (!temOrgVinculo && !form.setor.trim()) {
         e.setor = "Informe o setor ou selecione um nível do organograma.";
       }
@@ -1472,6 +1326,7 @@ export default function RhPrestadoresPage() {
       req("setor", "Setor", form.setor);
     }
     req("cargo", "Função", form.cargo);
+    req("nivel", "Nível", form.nivel);
     req("data_inicio", "Data de início", form.data_inicio);
     if (!form.escala.trim()) e.escala = "Escala é obrigatória.";
     else if (!escalaEhPermitida(form.escala)) e.escala = "Selecione uma escala: 5x2, 3x3, 4x2 ou 5x1.";
@@ -1491,6 +1346,7 @@ export default function RhPrestadoresPage() {
       req("banco", "Banco", form.banco);
       req("agencia", "Agência", form.agencia);
       req("conta_corrente", "Conta corrente", form.conta_corrente);
+      req("pix", "PIX", form.pix);
     }
 
     const cpfD = somenteDigitos(form.cpf);
@@ -1521,7 +1377,7 @@ export default function RhPrestadoresPage() {
   }
 
   const montarPayload = (statusPrestador: RhFuncionario["status"]) =>
-    buildRhFuncionarioPayloadFromState(form, statusPrestador, podeVerDadosSensiveis);
+    buildRhFuncionarioPayloadFromState(form, statusPrestador, podeVerDadosSensiveis, modalForm === "novo");
 
   const salvar = async (opts?: { outro?: boolean }) => {
     if (modalForm === "ver") return;
@@ -3068,7 +2924,7 @@ export default function RhPrestadoresPage() {
                   </select>
                   {fieldErr.escala ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.escala}</div> : null}
                 </div>
-                {!leitura ? (
+                {!leitura && modalForm !== "novo" ? (
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                     {lbl("f-dt-funcao", "Data da Função")}
                     <input
@@ -3209,13 +3065,30 @@ export default function RhPrestadoresPage() {
                 <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                   <div style={{ marginBottom: 10 }}>
                     {lblReqCad("f-banco", "Banco")}
-                    <input
+                    <select
                       id="f-banco"
                       disabled={desabilitarCampos}
-                      value={form.banco}
-                      onChange={(e) => setForm((s) => ({ ...s, banco: e.target.value }))}
+                      value={rhBancoParaSelectValue(form.banco)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "__legacy__") return;
+                        setForm((s) => ({ ...s, banco: v }));
+                      }}
                       style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
-                    />
+                      aria-label="Banco"
+                    >
+                      <option value="">— Selecione —</option>
+                      {rhBancoParaSelectValue(form.banco) === "__legacy__" ? (
+                        <option value="__legacy__">
+                          {form.banco.trim()} (cadastro fora da lista — selecione o banco equivalente)
+                        </option>
+                      ) : null}
+                      {RH_BANCOS_BRASIL.map((b) => (
+                        <option key={b.value} value={b.value}>
+                          {b.label}
+                        </option>
+                      ))}
+                    </select>
                     {fieldErr.banco ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.banco}</div> : null}
                   </div>
                   <div style={{ marginBottom: 10 }}>
@@ -3244,7 +3117,7 @@ export default function RhPrestadoresPage() {
                     ) : null}
                   </div>
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                    {lbl("f-pix", "PIX (opcional)")}
+                    {lblReqCad("f-pix", "PIX")}
                     <input
                       id="f-pix"
                       disabled={desabilitarCampos}
@@ -3252,6 +3125,7 @@ export default function RhPrestadoresPage() {
                       onChange={(e) => setForm((s) => ({ ...s, pix: e.target.value }))}
                       style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
                     />
+                    {fieldErr.pix ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.pix}</div> : null}
                   </div>
                 </div>
               ) : (

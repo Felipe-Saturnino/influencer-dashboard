@@ -38,6 +38,7 @@ export type PageKey =
   | "links_materiais"
   | "rh_figurinos"
   | "rh_funcionarios"
+  | "rh_dados_cadastro"
   | "rh_organograma"
   | "rh_vagas"
   | "rh_escala_mes"

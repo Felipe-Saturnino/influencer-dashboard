@@ -87,3 +87,17 @@ export interface RhFuncionario {
   created_by: string | null;
   updated_by: string | null;
 }
+
+export type RhFuncionarioSelfMediaKind = "documento" | "foto";
+
+/** Linha de `public.rh_funcionario_self_media` (uploads na página Dados de Cadastro). */
+export interface RhFuncionarioSelfMedia {
+  id: string;
+  rh_funcionario_id: string;
+  kind: RhFuncionarioSelfMediaKind;
+  storage_path: string;
+  file_name: string;
+  mime_type: string | null;
+  created_at: string;
+  created_by: string | null;
+}

@@ -59,6 +59,7 @@ const GestaoMesas = lazyWithRetry(() => import("./pages/plataforma/GestaoMesas")
 const StatusTecnico = lazyWithRetry(() => import("./pages/plataforma/StatusTecnico"));
 const Figurinos = lazyWithRetry(() => import("./pages/rh/Figurinos"));
 const RhPrestadores = lazyWithRetry(() => import("./pages/rh/GestaoPrestador"));
+const RhDadosCadastro = lazyWithRetry(() => import("./pages/rh/DadosCadastro"));
 const RhOrganograma = lazyWithRetry(() => import("./pages/rh/Organograma"));
 const RhVagas = lazyWithRetry(() => import("./pages/rh/Vagas"));
 const RhEscalaMes = lazyWithRetry(() => import("./pages/rh/EscalaMes"));
@@ -91,6 +92,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   status_tecnico:   StatusTecnico,
   rh_figurinos:     Figurinos,
   rh_funcionarios:  RhPrestadores,
+  rh_dados_cadastro: RhDadosCadastro,
   rh_organograma:    RhOrganograma,
   rh_vagas:          RhVagas,
   rh_escala_mes:     RhEscalaMes,
