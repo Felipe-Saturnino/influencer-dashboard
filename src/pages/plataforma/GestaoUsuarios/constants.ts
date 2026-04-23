@@ -51,7 +51,7 @@ export const PAGES: {
   { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_funcionarios", label: "Gestão de Prestadores", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_dados_cadastro", label: "Dados de Cadastro (próprio)", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "rh_dados_cadastro", label: "Dados de Cadastro", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "rh_organograma", label: "Organograma", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_vagas", label: "Vagas", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_escala_mes", label: "Escala do Mês", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: false },

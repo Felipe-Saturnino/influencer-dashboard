@@ -107,6 +107,7 @@ type SliceContratacao = {
   tipo_contrato: RhFuncionarioTipoContrato;
   escala: string;
   data_funcao: string;
+  email_spin: string;
 };
 
 function sliceContratacaoDeForm(f: FormState): SliceContratacao {
@@ -121,6 +122,7 @@ function sliceContratacaoDeForm(f: FormState): SliceContratacao {
     tipo_contrato: f.tipo_contrato,
     escala: f.escala.trim(),
     data_funcao: (f.data_funcao ?? "").trim().slice(0, 10),
+    email_spin: (f.email_spin ?? "").trim(),
   };
 }
 
@@ -138,6 +140,7 @@ function sliceContratacaoDeRow(r: RhFuncionario): SliceContratacao {
     tipo_contrato: r.tipo_contrato,
     escala: r.escala.trim(),
     data_funcao: df,
+    email_spin: (r.email_spin ?? "").trim(),
   };
 }
 
@@ -192,6 +195,13 @@ function diffContratacaoSlices(
       campo: "Data da Função",
       antes: fmtDataIsoPtBr(antes.data_funcao),
       depois: fmtDataIsoPtBr(depois.data_funcao),
+    });
+  }
+  if (antes.email_spin !== depois.email_spin) {
+    out.push({
+      campo: "E-mail Spin",
+      antes: antes.email_spin.trim() ? antes.email_spin : "—",
+      depois: depois.email_spin.trim() ? depois.email_spin : "—",
     });
   }
   return out;
@@ -262,6 +272,8 @@ type FormState = {
   cpf: string;
   telefone: string;
   email: string;
+  /** E-mail corporativo Spin (opcional). */
+  email_spin: string;
   res_cep: string;
   res_logradouro: string;
   res_numero: string;
@@ -325,6 +337,7 @@ function estadoVazioForm(): FormState {
     cpf: "",
     telefone: "",
     email: "",
+    email_spin: "",
     res_cep: "",
     res_logradouro: "",
     res_numero: "",
@@ -372,6 +385,7 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     cpf: formatarCpfDigitos(f.cpf),
     telefone: formatarTelefoneBr(f.telefone),
     email: f.email,
+    email_spin: (f.email_spin ?? "").trim(),
     res_cep: formatarCepDigitos(f.res_cep ?? ""),
     res_logradouro: resLog,
     res_numero: f.res_numero ?? "",
@@ -501,6 +515,7 @@ function buildRhFuncionarioPayloadFromState(
     cpf: somenteDigitos(form.cpf),
     telefone: somenteDigitos(form.telefone),
     email: form.email.trim().toLowerCase(),
+    email_spin: form.email_spin.trim() ? form.email_spin.trim().toLowerCase() : null,
     endereco_residencial: endResLinha,
     res_cep: somenteDigitos(form.res_cep),
     res_logradouro: form.res_logradouro.trim(),
@@ -1290,6 +1305,9 @@ export default function RhPrestadoresPage() {
       else if (!validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
 
       if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
+      if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
+        e.email_spin = "E-mail Spin inválido.";
+      }
 
       const telD = somenteDigitos(form.telefone);
       if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
@@ -1360,6 +1378,9 @@ export default function RhPrestadoresPage() {
     }
 
     if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
+    if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
+      e.email_spin = "E-mail Spin inválido.";
+    }
 
     const telD = somenteDigitos(form.telefone);
     if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
@@ -1497,6 +1518,11 @@ export default function RhPrestadoresPage() {
             setAcaoSalvando(false);
             return;
           }
+          if (acaoForm.email_spin.trim() && !validarEmail(acaoForm.email_spin.trim())) {
+            setErroGlobal("E-mail Spin inválido.");
+            setAcaoSalvando(false);
+            return;
+          }
           const antes = acaoBaselineRef.current ?? sliceContratacaoDeRow(acaoModalRow);
           const depois = sliceContratacaoDeForm(acaoForm);
           const diff = diffContratacaoSlices(antes, depois, opcoesVinculoFlat, opcoesTimes, fmtSal);
@@ -1520,6 +1546,7 @@ export default function RhPrestadoresPage() {
               tipo_contrato: acaoForm.tipo_contrato,
               escala: acaoForm.escala.trim(),
               data_funcao: df,
+              email_spin: acaoForm.email_spin.trim() ? acaoForm.email_spin.trim().toLowerCase() : null,
             })
             .eq("id", fid);
           if (eUp) throw eUp;
@@ -1767,10 +1794,11 @@ export default function RhPrestadoresPage() {
       {astReq}
     </label>
   );
-  const lblReqCad = (htmlFor: string, text: string) => (
+  /** `obrigatorioNoNovo`: no fluxo «Novo Prestador» (cadastro mínimo), asterisco só onde a validação exige. */
+  const lblReqCad = (htmlFor: string, text: string, obrigatorioNoNovo = true) => (
     <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
       {text}
-      {!leitura ? astReq : null}
+      {!leitura && (modalForm !== "novo" || obrigatorioNoNovo) ? astReq : null}
     </label>
   );
 
@@ -2598,7 +2626,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.res_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cep}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lblReqCad("f-res-log", "Logradouro")}
+                  {lblReqCad("f-res-log", "Logradouro", false)}
                   <input
                     id="f-res-log"
                     disabled={desabilitarCampos}
@@ -2609,7 +2637,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.res_logradouro ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_logradouro}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-res-num", "Número")}
+                  {lblReqCad("f-res-num", "Número", false)}
                   <input
                     id="f-res-num"
                     disabled={desabilitarCampos}
@@ -2630,7 +2658,7 @@ export default function RhPrestadoresPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-res-cid", "Cidade")}
+                  {lblReqCad("f-res-cid", "Cidade", false)}
                   <input
                     id="f-res-cid"
                     disabled={desabilitarCampos}
@@ -2641,7 +2669,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.res_cidade ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.res_cidade}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-res-uf", "Estado (UF)")}
+                  {lblReqCad("f-res-uf", "Estado (UF)", false)}
                   <select
                     id="f-res-uf"
                     disabled={desabilitarCampos}
@@ -2685,7 +2713,7 @@ export default function RhPrestadoresPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-emerg-tel", "Telefone")}
+                  {lblReqCad("f-emerg-tel", "Telefone", false)}
                   <input
                     id="f-emerg-tel"
                     disabled={desabilitarCampos}
@@ -2847,7 +2875,7 @@ export default function RhPrestadoresPage() {
                   </select>
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-tipo", "Tipo de contrato")}
+                  {lblReqCad("f-tipo", "Tipo de contrato", false)}
                   <select
                     id="f-tipo"
                     disabled={desabilitarCampos || bloquearTipoContratoEdit}
@@ -2862,6 +2890,24 @@ export default function RhPrestadoresPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lbl("f-email-spin", "E-mail Spin")}
+                  <input
+                    id="f-email-spin"
+                    type="email"
+                    disabled={desabilitarCampos}
+                    value={form.email_spin}
+                    onChange={(e) => setForm((s) => ({ ...s, email_spin: e.target.value }))}
+                    placeholder="corporativo@spin.com (opcional)"
+                    autoComplete="email"
+                    style={inputStyle}
+                    aria-label="E-mail corporativo Spin"
+                  />
+                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body, lineHeight: 1.45 }}>
+                    Opcional. Quando preenchido, o colaborador pode aceder a «Dados de Cadastro» com o e-mail de login igual a este endereço (por exemplo e-mail corporativo), mesmo que o e-mail pessoal no cadastro seja outro.
+                  </div>
+                  {fieldErr.email_spin ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email_spin}</div> : null}
                 </div>
                 {podeVerDadosSensiveis ? (
                   <div style={{ marginBottom: 10 }}>
@@ -2950,7 +2996,7 @@ export default function RhPrestadoresPage() {
             {abaModal === "empresa" && ehPJ ? (
               <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lblReqCad("f-empnome", "Nome da empresa")}
+                  {lblReqCad("f-empnome", "Nome da empresa", false)}
                   <input
                     id="f-empnome"
                     disabled={desabilitarCampos}
@@ -2961,7 +3007,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.nome_empresa ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome_empresa}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-cnpj", "CNPJ")}
+                  {lblReqCad("f-cnpj", "CNPJ", false)}
                   <input
                     id="f-cnpj"
                     disabled={desabilitarCampos}
@@ -2996,7 +3042,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.emp_cep ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cep}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                  {lblReqCad("f-emp-log", "Logradouro")}
+                  {lblReqCad("f-emp-log", "Logradouro", false)}
                   <input
                     id="f-emp-log"
                     disabled={desabilitarCampos}
@@ -3007,7 +3053,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.emp_logradouro ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_logradouro}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-emp-num", "Número")}
+                  {lblReqCad("f-emp-num", "Número", false)}
                   <input
                     id="f-emp-num"
                     disabled={desabilitarCampos}
@@ -3028,7 +3074,7 @@ export default function RhPrestadoresPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-emp-cid", "Cidade")}
+                  {lblReqCad("f-emp-cid", "Cidade", false)}
                   <input
                     id="f-emp-cid"
                     disabled={desabilitarCampos}
@@ -3039,7 +3085,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.emp_cidade ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.emp_cidade}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-emp-uf", "Estado (UF)")}
+                  {lblReqCad("f-emp-uf", "Estado (UF)", false)}
                   <select
                     id="f-emp-uf"
                     disabled={desabilitarCampos}
@@ -3064,7 +3110,7 @@ export default function RhPrestadoresPage() {
               podeVerDadosSensiveis ? (
                 <div className="app-grid-2-tight" style={{ marginTop: 4 }}>
                   <div style={{ marginBottom: 10 }}>
-                    {lblReqCad("f-banco", "Banco")}
+                    {lblReqCad("f-banco", "Banco", false)}
                     <select
                       id="f-banco"
                       disabled={desabilitarCampos}
@@ -3092,7 +3138,7 @@ export default function RhPrestadoresPage() {
                     {fieldErr.banco ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.banco}</div> : null}
                   </div>
                   <div style={{ marginBottom: 10 }}>
-                    {lblReqCad("f-ag", "Agência")}
+                    {lblReqCad("f-ag", "Agência", false)}
                     <input
                       id="f-ag"
                       disabled={desabilitarCampos}
@@ -3104,7 +3150,7 @@ export default function RhPrestadoresPage() {
                     {fieldErr.agencia ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.agencia}</div> : null}
                   </div>
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                    {lblReqCad("f-cc", "Conta corrente")}
+                    {lblReqCad("f-cc", "Conta corrente", false)}
                     <input
                       id="f-cc"
                       disabled={desabilitarCampos}
@@ -3117,7 +3163,7 @@ export default function RhPrestadoresPage() {
                     ) : null}
                   </div>
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
-                    {lblReqCad("f-pix", "PIX")}
+                    {lblReqCad("f-pix", "PIX", false)}
                     <input
                       id="f-pix"
                       disabled={desabilitarCampos}
@@ -3474,6 +3520,22 @@ export default function RhPrestadoresPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lbl("acao-email-spin", "E-mail Spin")}
+                  <input
+                    id="acao-email-spin"
+                    type="email"
+                    value={acaoForm.email_spin}
+                    onChange={(e) => setAcaoForm((s) => ({ ...s, email_spin: e.target.value }))}
+                    placeholder="corporativo@spin.com (opcional)"
+                    autoComplete="email"
+                    style={inputStyle}
+                    aria-label="E-mail corporativo Spin"
+                  />
+                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body, lineHeight: 1.45 }}>
+                    Opcional. Usado para vincular o login do utilizador ao cadastro em «Dados de Cadastro» quando for diferente do e-mail pessoal.
+                  </div>
                 </div>
                 {podeVerDadosSensiveis ? (
                   <div style={{ marginBottom: 10 }}>

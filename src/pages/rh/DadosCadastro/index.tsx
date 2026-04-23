@@ -46,6 +46,16 @@ const TIPOS_CONTRATO_LABEL: Record<RhFuncionarioTipoContrato, string> = {
   Temporario: "Temporário",
 };
 
+/** Prestadores cujo e-mail pessoal ou E-mail Spin coincide com o login (comparação normalizada). */
+function filtraFuncionariosParaLoginEmail(rows: RhFuncionario[], loginEmail: string): RhFuncionario[] {
+  const n = loginEmail.trim().toLowerCase();
+  return rows.filter((r) => {
+    const em = (r.email ?? "").trim().toLowerCase();
+    const sp = (r.email_spin ?? "").trim().toLowerCase();
+    return em === n || (sp.length > 0 && sp === n);
+  });
+}
+
 type AbaCadastro = "trabalho" | "cadastral" | "documentos" | "historico" | "fotos";
 
 type FormState = {
@@ -54,6 +64,7 @@ type FormState = {
   cpf: string;
   telefone: string;
   email: string;
+  email_spin: string;
   res_cep: string;
   res_logradouro: string;
   res_numero: string;
@@ -100,6 +111,7 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     cpf: formatarCpfDigitos(f.cpf),
     telefone: formatarTelefoneBr(f.telefone),
     email: f.email,
+    email_spin: (f.email_spin ?? "").trim(),
     res_cep: formatarCepDigitos(f.res_cep ?? ""),
     res_logradouro: resLog,
     res_numero: f.res_numero ?? "",
@@ -168,6 +180,7 @@ function buildPayloadFromForm(form: FormState, statusPrestador: RhFuncionario["s
     cpf: somenteDigitos(form.cpf),
     telefone: somenteDigitos(form.telefone),
     email: form.email.trim().toLowerCase(),
+    email_spin: form.email_spin.trim() ? form.email_spin.trim().toLowerCase() : null,
     endereco_residencial: endResLinha,
     res_cep: somenteDigitos(form.res_cep),
     res_logradouro: form.res_logradouro.trim(),
@@ -256,6 +269,9 @@ function validarCadastroSelf(form: FormState): Record<string, string> {
     else if (!validarCnpjDigitos(cnpjD)) e.cnpj = "CNPJ inválido.";
   }
   if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
+  if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
+    e.email_spin = "E-mail Spin inválido.";
+  }
   const telD = somenteDigitos(form.telefone);
   if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
   const telEmerg = somenteDigitos(form.emerg_telefone);
@@ -318,15 +334,24 @@ export default function RhDadosCadastroPage() {
     setLoading(true);
     setErroGlobal(null);
     const emailNorm = user.email.trim();
-    const { data, error } = await supabase.from("rh_funcionarios").select("*").ilike("email", emailNorm);
-    if (error) {
-      setErroGlobal(error.message);
+    const emailLc = emailNorm.toLowerCase();
+    const [byEmail, bySpin] = await Promise.all([
+      supabase.from("rh_funcionarios").select("*").ilike("email", emailNorm),
+      supabase.from("rh_funcionarios").select("*").not("email_spin", "is", null).ilike("email_spin", emailNorm),
+    ]);
+    const errMsg = byEmail.error?.message ?? bySpin.error?.message ?? null;
+    if (errMsg) {
+      setErroGlobal(errMsg);
       setRow(null);
       setForm(null);
       setLoading(false);
       return;
     }
-    const rows = (data ?? []) as RhFuncionario[];
+    const map = new Map<string, RhFuncionario>();
+    for (const r of [...(byEmail.data ?? []), ...(bySpin.data ?? [])] as RhFuncionario[]) {
+      map.set(r.id, r);
+    }
+    const rows = filtraFuncionariosParaLoginEmail([...map.values()], emailLc);
     if (rows.length === 0) {
       setRow(null);
       setForm(null);
@@ -334,9 +359,9 @@ export default function RhDadosCadastroPage() {
       return;
     }
     if (rows.length > 1) {
-      setErroGlobal("Há mais de um cadastro com o mesmo e-mail. Procure o RH para regularizar.");
+      setErroGlobal("Há mais de um cadastro associado ao seu e-mail de acesso. Procure o RH para regularizar.");
     }
-    const r = rows[0];
+    const r = rows[0]!;
     setRow(r);
     setForm(formDeFuncionario(r));
     setLoading(false);
@@ -680,6 +705,7 @@ export default function RhDadosCadastroPage() {
                 ["Função", form.cargo],
                 ["Nível", form.nivel],
                 ["Tipo de contrato", TIPOS_CONTRATO_LABEL[form.tipo_contrato]],
+                ["E-mail Spin", form.email_spin?.trim() || "—"],
                 ["Remuneração mensal", salarioFmt],
                 ["Data de início", form.data_inicio ? form.data_inicio.slice(0, 10).split("-").reverse().join("/") : "—"],
                 ["Escala", form.escala],
