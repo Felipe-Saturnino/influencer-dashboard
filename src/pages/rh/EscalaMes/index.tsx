@@ -8,6 +8,12 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
+import {
+  escalaPrestadorTemTurnosOperacionais,
+  normalizarEscalaCadastro,
+  staffTurnoCoerenteComEscala,
+  turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
+} from "../../../lib/rhEscalaTurnos";
 
 type EscalaAba = "minha" | "gerenciar" | "gerar";
 
@@ -22,7 +28,10 @@ type LinhaColaborador = {
   id: string;
   nome: string;
   nickname: string;
-  turno: string;
+  /** Padrão 4x2/3x3 etc. (Gestão de Prestadores) — define opções na aba Gerar. */
+  escalaCadastro: string;
+  /** Turno operacional cadastrado na Gestão de Staff (exibição). */
+  turnoStaff: string;
 };
 
 /** Estado da geração de escala por valor de filtro (função). */
@@ -49,6 +58,7 @@ type RpcPrestadorEscala = {
   nome: string;
   cargo: string | null;
   escala: string;
+  staff_turno?: string | null;
   email: string;
   org_time_id: string | null;
   nome_time: string;
@@ -78,14 +88,31 @@ function cargoPassaNoFiltro(cargo: string | null | undefined, filtro: string): b
   return (cargo ?? "").trim() === filtro;
 }
 
+function opcoesSelectCelulaGerar(escalaCadastroColuna: string): { value: string; label: string }[] {
+  const turnos = [...turnosPermitidosCadastro(escalaCadastroColuna)];
+  return [{ value: "", label: "—" }, { value: "Folga", label: "Folga" }, ...turnos.map((t) => ({ value: t, label: t }))];
+}
+
+/** Garante valor coerente com a escala (ex.: legado T/F ou Tarde em 3x3). */
+function sanitizarValorCelulaGerar(escalaCadastroColuna: string, valorArmazenado: string): string {
+  const v = (valorArmazenado ?? "").trim();
+  const permit = new Set(opcoesSelectCelulaGerar(escalaCadastroColuna).map((o) => o.value));
+  if (permit.has(v)) return v;
+  if (v === "T" && permit.has("Manhã")) return "Manhã";
+  if (v === "F" || v.toLowerCase() === "folga") return (permit.has("Folga") ? "Folga" : "");
+  return "";
+}
+
 const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
 
-/** Larguras fixas das 3 colunas fixas (sticky) — soma usada em `left`. */
+/** Larguras fixas das 4 colunas fixas (sticky) — soma usada em `left`. */
 const STICKY_W_NOME = 180;
 const STICKY_W_NICK = 130;
-const STICKY_W_TURNO = 110;
+const STICKY_W_ESCALA = 72;
+const STICKY_W_TURNO_STAFF = 100;
 const STICKY_LEFT_NICK = STICKY_W_NOME;
-const STICKY_LEFT_TURNO = STICKY_W_NOME + STICKY_W_NICK;
+const STICKY_LEFT_ESCALA = STICKY_W_NOME + STICKY_W_NICK;
+const STICKY_LEFT_TURNO_STAFF = STICKY_W_NOME + STICKY_W_NICK + STICKY_W_ESCALA;
 
 /** Navegação e escala consideram a partir de janeiro de 2026. */
 const ESCALA_ANO_MIN = 2026;
@@ -127,11 +154,15 @@ function labelMesAno(ano: number, mes0: number): string {
 
 function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
   const nick = (r.staff_nickname ?? "").trim();
+  const esc = (r.escala ?? "").trim();
+  const co = staffTurnoCoerenteComEscala(r.escala, r.staff_turno);
+  const turnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? co || "—" : "—";
   return {
     id: r.id,
     nome: (r.nome ?? "").trim() || "—",
     nickname: nick || "—",
-    turno: (r.escala ?? "").trim() || "—",
+    escalaCadastro: esc || "—",
+    turnoStaff,
   };
 }
 
@@ -312,14 +343,24 @@ export default function RhEscalaMesPage() {
     [prestadoresRaw, filtrarPorCargo],
   );
 
-  /** Sugestão automática (placeholder): F = folga em fins de semana, T = demais dias — substituir por regra de negócio quando existir. */
+  /** Sugestão: folga em fim de semana; dias úteis alternam entre os turnos permitidos pela escala do prestador. */
   const aplicarSugestaoGerar = useCallback(
     (filtroKey: string) => {
       const linhasF = linhasPorFiltroGerar(filtroKey);
       const next: Record<string, string> = {};
       for (const row of linhasF) {
+        const turnos = [...turnosPermitidosCadastro(row.escalaCadastro)];
+        let iDiaUtil = 0;
         for (const dia of dias) {
-          next[chaveCelulaGerar(row.id, dia.iso)] = dia.isWeekend ? "F" : "T";
+          const key = chaveCelulaGerar(row.id, dia.iso);
+          if (turnos.length === 0) {
+            next[key] = "";
+          } else if (dia.isWeekend) {
+            next[key] = "Folga";
+          } else {
+            next[key] = turnos[iDiaUtil % turnos.length] ?? "Manhã";
+            iDiaUtil += 1;
+          }
         }
       }
       setGerarPorFiltro((prev) => ({
@@ -335,27 +376,39 @@ export default function RhEscalaMesPage() {
     [dias, linhasPorFiltroGerar],
   );
 
-  const aprovarEscalaGerar = useCallback((filtroKey: string) => {
-    setGerarPorFiltro((prev) => {
-      const cur = prev[filtroKey];
-      if (!cur) return prev;
-      const baseline = { ...cur.celulas };
-      return {
-        ...prev,
-        [filtroKey]: { ...cur, aprovado: true, baseline },
-      };
-    });
-  }, []);
+  const aprovarEscalaGerar = useCallback(
+    (filtroKey: string) => {
+      const linhasF = linhasPorFiltroGerar(filtroKey);
+      setGerarPorFiltro((prev) => {
+        const cur = prev[filtroKey];
+        if (!cur) return prev;
+        const merged: Record<string, string> = { ...cur.celulas };
+        for (const row of linhasF) {
+          for (const d of dias) {
+            const k = chaveCelulaGerar(row.id, d.iso);
+            merged[k] = sanitizarValorCelulaGerar(row.escalaCadastro, cur.celulas[k] ?? "");
+          }
+        }
+        const baseline = { ...merged };
+        return {
+          ...prev,
+          [filtroKey]: { ...cur, celulas: merged, aprovado: true, baseline },
+        };
+      });
+    },
+    [dias, linhasPorFiltroGerar],
+  );
 
-  const atualizarCelulaGerar = useCallback((filtroKey: string, rowId: string, iso: string, valor: string) => {
+  const atualizarCelulaGerar = useCallback((filtroKey: string, rowId: string, iso: string, escalaCadastro: string, valor: string) => {
     const k = chaveCelulaGerar(rowId, iso);
+    const ok = sanitizarValorCelulaGerar(escalaCadastro, valor);
     setGerarPorFiltro((prev) => {
       const cur = prev[filtroKey] ?? { celulas: {}, aprovado: false, baseline: null };
       return {
         ...prev,
         [filtroKey]: {
           ...cur,
-          celulas: { ...cur.celulas, [k]: valor },
+          celulas: { ...cur.celulas, [k]: ok },
         },
       };
     });
@@ -363,13 +416,27 @@ export default function RhEscalaMesPage() {
 
   const acaoBotaoGerar = useCallback(
     (filtroKey: string): "sugestao" | "aprovar" | null => {
+      if (!filtroKey) return null;
       const estado = gerarPorFiltro[filtroKey];
       const linhasF = linhasPorFiltroGerar(filtroKey);
       if (linhasF.length === 0) return null;
-      const keys = linhasF.flatMap((row) => dias.map((d) => chaveCelulaGerar(row.id, d.iso)));
       const celulas = estado?.celulas ?? {};
-      const allFilled = keys.every((key) => (celulas[key] ?? "").trim() !== "");
-      if (estado?.aprovado && estado.baseline && celulasIguais(celulas, estado.baseline)) return null;
+      const allFilled = linhasF.every((row) =>
+        dias.every((d) => {
+          const k = chaveCelulaGerar(row.id, d.iso);
+          return sanitizarValorCelulaGerar(row.escalaCadastro, celulas[k] ?? "").trim() !== "";
+        }),
+      );
+      if (estado?.aprovado && estado.baseline) {
+        const celSan: Record<string, string> = {};
+        for (const row of linhasF) {
+          for (const d of dias) {
+            const k = chaveCelulaGerar(row.id, d.iso);
+            celSan[k] = sanitizarValorCelulaGerar(row.escalaCadastro, celulas[k] ?? "");
+          }
+        }
+        if (celulasIguais(celSan, estado.baseline)) return null;
+      }
       if (allFilled) return "aprovar";
       return "sugestao";
     },
@@ -393,10 +460,11 @@ export default function RhEscalaMesPage() {
 
   /** Cabeçalhos fixos à esquerda ficam acima das colunas de dia ao rolar horizontalmente. */
   const Z_STICKY_HEAD = 30;
-  /** Corpo: colunas fixas com z maior que as de dia; ordem Nome > Nick > Turno para empilhar entre si. */
-  const Z_BODY_NOME = 28;
-  const Z_BODY_NICK = 27;
-  const Z_BODY_TURNO = 26;
+  /** Corpo: colunas fixas com z maior que as de dia; ordem Nome > Nick > Escala > Turno (staff). */
+  const Z_BODY_NOME = 31;
+  const Z_BODY_NICK = 30;
+  const Z_BODY_ESCALA = 29;
+  const Z_BODY_TURNO_STAFF = 28;
   const Z_DIA = 0;
 
   const thSticky = (left: number, extra?: CSSProperties): CSSProperties => ({
@@ -471,9 +539,9 @@ export default function RhEscalaMesPage() {
       ? "Selecione uma função na lista acima."
       : "Sem dados para o período selecionado.";
 
-  const inputCelulaGerarStyle: CSSProperties = {
+  const selectCelulaGerarStyle: CSSProperties = {
     width: "100%",
-    maxWidth: 48,
+    maxWidth: 76,
     margin: "0 auto",
     display: "block",
     boxSizing: "border-box",
@@ -484,9 +552,12 @@ export default function RhEscalaMesPage() {
     background: t.inputBg ?? t.cardBg ?? "transparent",
     color: t.text,
     fontFamily: FONT.body,
-    fontSize: 11,
-    fontVariantNumeric: "tabular-nums",
+    fontSize: 10,
+    cursor: "pointer",
   };
+
+  const acaoGerarNoFiltroSelecionado =
+    aba === "gerar" && filtroCargoGerar ? acaoBotaoGerar(filtroCargoGerar) : null;
 
   if (perm.loading) {
     return (
@@ -667,7 +738,7 @@ export default function RhEscalaMesPage() {
             </div>
           ) : null}
 
-          {mostrarFiltroFuncao && aba === "gerenciar" ? (
+          {mostrarFiltroFuncao ? (
             <div
               style={{
                 marginTop: mostrarAbas ? 14 : 10,
@@ -681,7 +752,7 @@ export default function RhEscalaMesPage() {
               }}
             >
               <label
-                htmlFor="escala-filtro-funcao-gerenciar"
+                htmlFor={aba === "gerenciar" ? "escala-filtro-funcao-gerenciar" : "escala-filtro-funcao-gerar"}
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
@@ -693,166 +764,99 @@ export default function RhEscalaMesPage() {
               >
                 Função
               </label>
-              <select
-                id="escala-filtro-funcao-gerenciar"
-                aria-label="Filtrar por função"
-                value={filtroCargoGerenciar}
-                onChange={(e) => setFiltroCargoGerenciar(e.target.value)}
-                style={{
-                  minWidth: 260,
-                  maxWidth: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg ?? t.cardBg ?? "transparent",
-                  color: t.text,
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  cursor: "pointer",
-                }}
-              >
-                <option value="">Todas as funções</option>
-                {opcoesFuncao.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-                {temSemCargo ? (
-                  <option value={FILTRO_FUNCAO_SEM_CARGO}>Sem função cadastrada</option>
-                ) : null}
-              </select>
-            </div>
-          ) : null}
-
-          {mostrarFiltroFuncao && aba === "gerar" ? (
-            <div
-              style={{
-                marginTop: mostrarAbas ? 14 : 10,
-                paddingTop: mostrarAbas ? 14 : 0,
-                borderTop: mostrarAbas ? `1px solid ${t.cardBorder}` : "none",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "stretch",
-                gap: 10,
-                maxWidth: 560,
-                marginLeft: "auto",
-                marginRight: "auto",
-              }}
-            >
               <div
                 style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  textAlign: "center",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 12,
                 }}
               >
-                Função — sugestão e aprovação por função
-              </div>
-              {[
-                ...opcoesFuncao.map((o) => ({ key: o.value, label: o.label, ariaVer: `Ver escala da função ${o.label}` })),
-                ...(temSemCargo
-                  ? [
-                      {
-                        key: FILTRO_FUNCAO_SEM_CARGO,
-                        label: "Sem função cadastrada",
-                        ariaVer: "Ver escala sem função cadastrada",
-                      },
-                    ]
-                  : []),
-              ].map(({ key, label, ariaVer }) => {
-                const acao = acaoBotaoGerar(key);
-                const ativo = filtroCargoGerar === key;
-                return (
-                  <div
-                    key={key}
+                <select
+                  id={aba === "gerenciar" ? "escala-filtro-funcao-gerenciar" : "escala-filtro-funcao-gerar"}
+                  aria-label="Filtrar por função"
+                  value={aba === "gerenciar" ? filtroCargoGerenciar : filtroCargoGerar}
+                  onChange={(e) =>
+                    aba === "gerenciar"
+                      ? setFiltroCargoGerenciar(e.target.value)
+                      : setFiltroCargoGerar(e.target.value)
+                  }
+                  style={{
+                    minWidth: 260,
+                    maxWidth: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg ?? t.cardBg ?? "transparent",
+                    color: t.text,
+                    fontFamily: FONT.body,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  {aba === "gerenciar" ? (
+                    <option value="">Todas as funções</option>
+                  ) : (
+                    <option value="" disabled>
+                      Selecione uma função
+                    </option>
+                  )}
+                  {opcoesFuncao.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                  {temSemCargo ? (
+                    <option value={FILTRO_FUNCAO_SEM_CARGO}>Sem função cadastrada</option>
+                  ) : null}
+                </select>
+                {acaoGerarNoFiltroSelecionado === "sugestao" ? (
+                  <button
+                    type="button"
+                    onClick={() => aplicarSugestaoGerar(filtroCargoGerar)}
+                    aria-label="Gerar sugestão de escala para a função selecionada"
                     style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      padding: "10px 12px",
+                      padding: "10px 16px",
                       borderRadius: 10,
-                      border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                      background: ativo
-                        ? brand.useBrand
-                          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)"
-                          : "rgba(124,58,237,0.08)"
-                        : (t.inputBg ?? "transparent"),
+                      border: `1px solid ${brand.accent}`,
+                      background: brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                        : "rgba(124,58,237,0.12)",
+                      color: brand.accent,
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    <button
-                      type="button"
-                      aria-pressed={ativo}
-                      aria-label={ariaVer}
-                      onClick={() => setFiltroCargoGerar(key)}
-                      style={{
-                        border: "none",
-                        background: "transparent",
-                        color: ativo ? brand.accent : t.text,
-                        fontFamily: FONT.body,
-                        fontSize: 14,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        textAlign: "left",
-                        flex: "1 1 160px",
-                        padding: 0,
-                      }}
-                    >
-                      {label}
-                    </button>
-                    {acao === "sugestao" ? (
-                      <button
-                        type="button"
-                        onClick={() => aplicarSugestaoGerar(key)}
-                        aria-label={`Sugestão de escala para ${label}`}
-                        style={{
-                          padding: "8px 14px",
-                          borderRadius: 10,
-                          border: `1px solid ${brand.accent}`,
-                          background: brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
-                            : "rgba(124,58,237,0.12)",
-                          color: brand.accent,
-                          fontFamily: FONT.body,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Sugestão de Escala
-                      </button>
-                    ) : acao === "aprovar" ? (
-                      <button
-                        type="button"
-                        onClick={() => aprovarEscalaGerar(key)}
-                        aria-label={`Aprovar escala para ${label}`}
-                        style={{
-                          padding: "8px 14px",
-                          borderRadius: 10,
-                          border: `1px solid ${brand.accent}`,
-                          background: brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
-                            : "rgba(30,54,248,0.12)",
-                          color: brand.accent,
-                          fontFamily: FONT.body,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Aprovar Escala
-                      </button>
-                    ) : null}
-                  </div>
-                );
-              })}
+                    Sugestão de Escala
+                  </button>
+                ) : acaoGerarNoFiltroSelecionado === "aprovar" ? (
+                  <button
+                    type="button"
+                    onClick={() => aprovarEscalaGerar(filtroCargoGerar)}
+                    aria-label="Aprovar escala da função selecionada"
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: 10,
+                      border: `1px solid ${brand.accent}`,
+                      background: brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
+                        : "rgba(30,54,248,0.12)",
+                      color: brand.accent,
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Aprovar Escala
+                  </button>
+                ) : null}
+              </div>
             </div>
           ) : null}
         </div>
@@ -892,7 +896,8 @@ export default function RhEscalaMesPage() {
             <table
               style={{
                 width: "100%",
-                minWidth: STICKY_W_NOME + STICKY_W_NICK + STICKY_W_TURNO + dias.length * 56,
+                minWidth:
+                  STICKY_W_NOME + STICKY_W_NICK + STICKY_W_ESCALA + STICKY_W_TURNO_STAFF + dias.length * 56,
                 borderCollapse: "separate",
                 borderSpacing: 0,
                 borderRadius: 14,
@@ -926,10 +931,21 @@ export default function RhEscalaMesPage() {
                   </th>
                   <th
                     scope="col"
-                    style={thSticky(STICKY_LEFT_TURNO, {
-                      minWidth: STICKY_W_TURNO,
-                      maxWidth: STICKY_W_TURNO,
-                      width: STICKY_W_TURNO,
+                    style={thSticky(STICKY_LEFT_ESCALA, {
+                      minWidth: STICKY_W_ESCALA,
+                      maxWidth: STICKY_W_ESCALA,
+                      width: STICKY_W_ESCALA,
+                      verticalAlign: "middle",
+                    })}
+                  >
+                    Escala
+                  </th>
+                  <th
+                    scope="col"
+                    style={thSticky(STICKY_LEFT_TURNO_STAFF, {
+                      minWidth: STICKY_W_TURNO_STAFF,
+                      maxWidth: STICKY_W_TURNO_STAFF,
+                      width: STICKY_W_TURNO_STAFF,
                       verticalAlign: "middle",
                       borderRight: `1px solid ${t.cardBorder}`,
                       boxShadow: sombraColFixa,
@@ -949,7 +965,7 @@ export default function RhEscalaMesPage() {
                 {linhas.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={3 + dias.length}
+                      colSpan={4 + dias.length}
                       style={{
                         ...getTdStyle(t),
                         textAlign: "center",
@@ -988,29 +1004,58 @@ export default function RhEscalaMesPage() {
                           {row.nickname}
                         </td>
                         <td
-                          style={tdSticky(STICKY_LEFT_TURNO, bg, Z_BODY_TURNO, {
-                            minWidth: STICKY_W_TURNO,
-                            width: STICKY_W_TURNO,
-                            maxWidth: STICKY_W_TURNO,
+                          style={tdSticky(STICKY_LEFT_ESCALA, bg, Z_BODY_ESCALA, {
+                            minWidth: STICKY_W_ESCALA,
+                            width: STICKY_W_ESCALA,
+                            maxWidth: STICKY_W_ESCALA,
+                          })}
+                          title={row.escalaCadastro}
+                        >
+                          {row.escalaCadastro}
+                        </td>
+                        <td
+                          style={tdSticky(STICKY_LEFT_TURNO_STAFF, bg, Z_BODY_TURNO_STAFF, {
+                            minWidth: STICKY_W_TURNO_STAFF,
+                            width: STICKY_W_TURNO_STAFF,
+                            maxWidth: STICKY_W_TURNO_STAFF,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
                             borderRight: `1px solid ${t.cardBorder}`,
                             boxShadow: sombraColFixa,
                           })}
+                          title={row.turnoStaff}
                         >
-                          {row.turno}
+                          {row.turnoStaff}
                         </td>
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);
-                          const val = editarCelulasGerar ? (celulasGerarAtivas?.[ck] ?? "") : "";
+                          const bruto = editarCelulasGerar ? (celulasGerarAtivas?.[ck] ?? "") : "";
+                          const val = editarCelulasGerar ? sanitizarValorCelulaGerar(row.escalaCadastro, bruto) : "";
+                          const opts = opcoesSelectCelulaGerar(row.escalaCadastro);
                           return (
-                            <td key={`${row.id}-${dia.iso}`} style={{ ...tdDia, background: bg }}>
+                            <td
+                              key={`${row.id}-${dia.iso}`}
+                              style={{
+                                ...tdDia,
+                                background: bg,
+                                ...(editarCelulasGerar ? { minWidth: 72, maxWidth: 80 } : {}),
+                              }}
+                            >
                               {editarCelulasGerar ? (
-                                <input
-                                  aria-label={`Escala ${row.nome} dia ${dia.dia}`}
-                                  maxLength={8}
+                                <select
+                                  aria-label={`Turno do dia ${dia.dia} para ${row.nome}`}
                                   value={val}
-                                  onChange={(e) => atualizarCelulaGerar(filtroCargoGerar, row.id, dia.iso, e.target.value)}
-                                  style={inputCelulaGerarStyle}
-                                />
+                                  onChange={(e) =>
+                                    atualizarCelulaGerar(filtroCargoGerar, row.id, dia.iso, row.escalaCadastro, e.target.value)
+                                  }
+                                  style={selectCelulaGerarStyle}
+                                >
+                                  {opts.map((o) => (
+                                    <option key={o.value === "" ? "__empty" : o.value} value={o.value}>
+                                      {o.label}
+                                    </option>
+                                  ))}
+                                </select>
                               ) : (
                                 "—"
                               )}

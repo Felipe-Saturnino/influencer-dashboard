@@ -83,6 +83,8 @@ export interface RhFuncionario {
   staff_barcode?: string | null;
   /** ID de staff definido pela operação (não é o UUID da plataforma). */
   staff_id_operacional?: string | null;
+  /** Turno operacional (Gestão de Staff); distinto de `escala` (4x2/3x3 — Gestão de Prestadores). */
+  staff_turno?: string | null;
   /** JSON: baccarat | blackjack | vip | roleta | futebol_studio → ativo | treinamento | inativo */
   staff_skills?: Record<string, string> | null;
   created_at: string;
