@@ -316,6 +316,49 @@ type AbaFuncModal =
   | "bancarios"
   | "documentos";
 
+/** Aba do modal onde o campo aparece (para saltar à primeira com erro). */
+function abaDoCampoRhModal(campo: string, formEhPJ: boolean): AbaFuncModal {
+  const pessoal = new Set([
+    "nome",
+    "rg",
+    "cpf",
+    "telefone",
+    "email",
+    "res_cep",
+    "res_logradouro",
+    "res_numero",
+    "res_cidade",
+    "res_estado",
+    "emerg_nome",
+    "emerg_telefone",
+  ]);
+  if (pessoal.has(campo)) return "pessoais";
+  const contr = new Set([
+    "org_time_id",
+    "setor",
+    "cargo",
+    "nivel",
+    "email_spin",
+    "salarioCentavos",
+    "data_inicio",
+    "escala",
+  ]);
+  if (contr.has(campo)) return "contratacao";
+  const emp = new Set([
+    "nome_empresa",
+    "cnpj",
+    "emp_cep",
+    "emp_logradouro",
+    "emp_numero",
+    "emp_cidade",
+    "emp_estado",
+  ]);
+  if (formEhPJ && emp.has(campo)) return "empresa";
+  const banc = new Set(["banco", "agencia", "conta_corrente", "pix"]);
+  if (banc.has(campo)) return "bancarios";
+  return "pessoais";
+}
+
 type AbaPaginaRhFunc = "headcount" | "acoes_rh" | "anotacoes";
 
 /** Colunas ordenáveis da tabela principal (todas as abas). */
@@ -696,6 +739,7 @@ export default function RhPrestadoresPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(estadoVazioForm);
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
+  const [alertaValidacaoModal, setAlertaValidacaoModal] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   const [opcoesTimes, setOpcoesTimes] = useState<RhOrgTimeOpcao[]>([]);
@@ -892,6 +936,20 @@ export default function RhPrestadoresPage() {
     if (!keys.includes(abaModal)) setAbaModal(keys[0] ?? "pessoais");
   }, [modalForm, abasModalDef, abaModal]);
 
+  const errosPorAbaModal = useMemo(() => {
+    const c: Record<AbaFuncModal, number> = {
+      pessoais: 0,
+      contratacao: 0,
+      empresa: 0,
+      bancarios: 0,
+      documentos: 0,
+    };
+    for (const k of Object.keys(fieldErr)) {
+      c[abaDoCampoRhModal(k, ehPJ)] += 1;
+    }
+    return c;
+  }, [fieldErr, ehPJ]);
+
   const filtrada = useMemo(() => {
     const b = busca.trim().toLowerCase();
     const digits = somenteDigitos(busca);
@@ -946,6 +1004,7 @@ export default function RhPrestadoresPage() {
   const abrirNovo = () => {
     setForm(estadoVazioForm());
     setFieldErr({});
+    setAlertaValidacaoModal(null);
     setEditId(null);
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
@@ -955,6 +1014,7 @@ export default function RhPrestadoresPage() {
   const abrirEditar = (row: RhFuncionario) => {
     setForm(formDeFuncionario(row));
     setFieldErr({});
+    setAlertaValidacaoModal(null);
     setEditId(row.id);
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
@@ -964,6 +1024,7 @@ export default function RhPrestadoresPage() {
   const abrirVer = (row: RhFuncionario) => {
     setForm(formDeFuncionario(row));
     setFieldErr({});
+    setAlertaValidacaoModal(null);
     setEditId(row.id);
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
@@ -1274,7 +1335,13 @@ export default function RhPrestadoresPage() {
     })();
   };
 
-  function validarFormulario(): boolean {
+  /** Só quando há texto e a escala não está na lista permitida (cadastro legado). */
+  function msgEscalaLegadaInvalida(): string {
+    const leg = form.escala.trim();
+    return `A escala «${leg}» já não é aceita. Escolha 5x2, 3x3, 4x2 ou 5x1.`;
+  }
+
+  function obterErrosFormulario(): Record<string, string> {
     const e: Record<string, string> = {};
     const req = (k: keyof FormState, label: string, v: string) => {
       if (!v.trim()) e[k as string] = `${label} é obrigatório.`;
@@ -1298,7 +1365,7 @@ export default function RhPrestadoresPage() {
       req("nivel", "Nível", form.nivel);
       req("data_inicio", "Data de início", form.data_inicio);
       if (!form.escala.trim()) e.escala = "Escala é obrigatória.";
-      else if (!escalaEhPermitida(form.escala)) e.escala = "Selecione uma escala: 5x2, 3x3, 4x2 ou 5x1.";
+      else if (!escalaEhPermitida(form.escala)) e.escala = msgEscalaLegadaInvalida();
 
       const cpfD = somenteDigitos(form.cpf);
       if (cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
@@ -1317,8 +1384,7 @@ export default function RhPrestadoresPage() {
         if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
       }
 
-      setFieldErr(e);
-      return Object.keys(e).length === 0;
+      return e;
     }
 
     req("nome", "Nome completo", form.nome);
@@ -1347,7 +1413,7 @@ export default function RhPrestadoresPage() {
     req("nivel", "Nível", form.nivel);
     req("data_inicio", "Data de início", form.data_inicio);
     if (!form.escala.trim()) e.escala = "Escala é obrigatória.";
-    else if (!escalaEhPermitida(form.escala)) e.escala = "Selecione uma escala: 5x2, 3x3, 4x2 ou 5x1.";
+    else if (!escalaEhPermitida(form.escala)) e.escala = msgEscalaLegadaInvalida();
     if (form.tipo_contrato === "PJ") {
       req("nome_empresa", "Nome da empresa", form.nome_empresa);
       req("emp_logradouro", "Logradouro da empresa", form.emp_logradouro);
@@ -1393,8 +1459,7 @@ export default function RhPrestadoresPage() {
       if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
     }
 
-    setFieldErr(e);
-    return Object.keys(e).length === 0;
+    return e;
   }
 
   const montarPayload = (statusPrestador: RhFuncionario["status"]) =>
@@ -1402,7 +1467,25 @@ export default function RhPrestadoresPage() {
 
   const salvar = async (opts?: { outro?: boolean }) => {
     if (modalForm === "ver") return;
-    if (!validarFormulario()) return;
+    setAlertaValidacaoModal(null);
+    const errosVal = obterErrosFormulario();
+    if (Object.keys(errosVal).length > 0) {
+      setFieldErr(errosVal);
+      const ordemAbas = abasModalDef.map((tb) => tb.key);
+      for (const aba of ordemAbas) {
+        if (Object.keys(errosVal).some((k) => abaDoCampoRhModal(k, ehPJ) === aba)) {
+          setAbaModal(aba);
+          break;
+        }
+      }
+      const n = Object.keys(errosVal).length;
+      const linhas = Object.values(errosVal).map((msg) => `• ${msg}`);
+      setAlertaValidacaoModal(
+        `Não foi possível salvar (${n} ${n === 1 ? "pendência" : "pendências"}). Revise os campos destacados abaixo:\n${linhas.join("\n")}`,
+      );
+      return;
+    }
+    setFieldErr({});
     setSalvando(true);
     setErroGlobal(null);
     const payload = montarPayload("ativo");
@@ -1424,10 +1507,12 @@ export default function RhPrestadoresPage() {
       if (cadastrarOutro) {
         setForm(estadoVazioForm());
         setFieldErr({});
+        setAlertaValidacaoModal(null);
         setAbaModal("pessoais");
       } else {
         setModalForm("fechado");
         setAbaModal("pessoais");
+        setAlertaValidacaoModal(null);
       }
       return;
     }
@@ -1460,7 +1545,14 @@ export default function RhPrestadoresPage() {
       setSucessoMsg("Dados atualizados.");
       setModalForm("fechado");
       setAbaModal("pessoais");
+      setAlertaValidacaoModal(null);
       await carregar();
+      return;
+    }
+
+    setSalvando(false);
+    if (modalForm === "editar" && !editId) {
+      setErroGlobal("Não foi possível identificar o registo a atualizar. Feche o modal e abra novamente.");
     }
   };
 
@@ -1812,6 +1904,8 @@ export default function RhPrestadoresPage() {
     setModalForm("fechado");
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
+    setAlertaValidacaoModal(null);
+    setFieldErr({});
   };
 
   const tabActiveBgPagina = brand.useBrand
@@ -2514,6 +2608,11 @@ export default function RhPrestadoresPage() {
                   aria-controls={idPanelModal(tb.key)}
                   tabIndex={ativa ? 0 : -1}
                   onClick={() => setAbaModal(tb.key)}
+                  aria-label={
+                    modalForm !== "ver" && errosPorAbaModal[tb.key] > 0
+                      ? `${tb.label}, ${errosPorAbaModal[tb.key]} erro(s) nesta secção`
+                      : tb.label
+                  }
                   style={{
                     padding: "7px 14px",
                     borderRadius: 20,
@@ -2528,10 +2627,37 @@ export default function RhPrestadoresPage() {
                   }}
                 >
                   {tb.label}
+                  {modalForm !== "ver" && errosPorAbaModal[tb.key] > 0 ? (
+                    <span style={{ color: "#e84025", fontWeight: 800 }} aria-hidden>
+                      {" "}
+                      · {errosPorAbaModal[tb.key]}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
           </div>
+
+          {modalForm !== "ver" && alertaValidacaoModal ? (
+            <div
+              role="alert"
+              aria-live="assertive"
+              style={{
+                marginBottom: 14,
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: "rgba(232,64,37,0.12)",
+                border: "1px solid rgba(232,64,37,0.35)",
+                color: "#e84025",
+                fontSize: 12,
+                fontFamily: FONT.body,
+                whiteSpace: "pre-line",
+                lineHeight: 1.45,
+              }}
+            >
+              {alertaValidacaoModal}
+            </div>
+          ) : null}
 
           <div
             role="tabpanel"
@@ -2899,7 +3025,7 @@ export default function RhPrestadoresPage() {
                     disabled={desabilitarCampos}
                     value={form.email_spin}
                     onChange={(e) => setForm((s) => ({ ...s, email_spin: e.target.value }))}
-                    placeholder="corporativo@spin.com (opcional)"
+                    placeholder="exemplo@spingaming.com.br"
                     autoComplete="email"
                     style={inputStyle}
                     aria-label="E-mail corporativo Spin"
@@ -3525,7 +3651,7 @@ export default function RhPrestadoresPage() {
                     type="email"
                     value={acaoForm.email_spin}
                     onChange={(e) => setAcaoForm((s) => ({ ...s, email_spin: e.target.value }))}
-                    placeholder="corporativo@spin.com (opcional)"
+                    placeholder="exemplo@spingaming.com.br"
                     autoComplete="email"
                     style={inputStyle}
                     aria-label="E-mail corporativo Spin"
