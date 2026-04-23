@@ -6,7 +6,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
 
 type EscalaAba = "minha" | "gerenciar" | "gerar";
@@ -212,7 +212,10 @@ export default function RhEscalaMesPage() {
 
   /** Cabeçalhos fixos à esquerda ficam acima das colunas de dia ao rolar horizontalmente. */
   const Z_STICKY_HEAD = 30;
-  const Z_STICKY_BODY = 10;
+  /** Corpo: colunas fixas com z maior que as de dia; ordem Nome > Nick > Turno para empilhar entre si. */
+  const Z_BODY_NOME = 28;
+  const Z_BODY_NICK = 27;
+  const Z_BODY_TURNO = 26;
   const Z_DIA = 0;
 
   const thSticky = (left: number, extra?: CSSProperties): CSSProperties => ({
@@ -259,7 +262,7 @@ export default function RhEscalaMesPage() {
     }),
   };
 
-  const tdSticky = (left: number, rowBg: string, extra?: CSSProperties): CSSProperties => ({
+  const tdSticky = (left: number, rowBg: string, zBody: number, extra?: CSSProperties): CSSProperties => ({
     ...getTdStyle(t, {
       ...extra,
       background: rowBg,
@@ -267,12 +270,17 @@ export default function RhEscalaMesPage() {
     }),
     position: "sticky",
     left,
-    zIndex: Z_STICKY_BODY,
+    zIndex: zBody,
+    transform: "translateZ(0)",
   });
 
+  /** Fundo opaco por linha (zebra global usa color-mix transparente e deixa vazar as células de dia por baixo). */
   const zebraBgLinha = (i: number) => {
-    const z = zebraStripe(i);
-    return z === "transparent" ? (t.cardBg ?? t.bg ?? "#fff") : z;
+    const base = brand.blockBg ?? t.cardBg ?? t.bg ?? "#fff";
+    if (i % 2 === 0) return base;
+    return t.isDark
+      ? "color-mix(in srgb, var(--brand-secondary, #4a2082) 16%, #141118)"
+      : "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, #f2effa)";
   };
 
   if (perm.loading) {
@@ -562,9 +570,9 @@ export default function RhEscalaMesPage() {
                   linhas.map((row, i) => {
                     const bg = zebraBgLinha(i);
                     return (
-                      <tr key={row.id}>
+                      <tr key={row.id} style={{ isolation: "isolate" }}>
                         <td
-                          style={tdSticky(0, bg, {
+                          style={tdSticky(0, bg, Z_BODY_NOME, {
                             maxWidth: STICKY_W_NOME,
                             width: STICKY_W_NOME,
                             minWidth: STICKY_W_NOME,
@@ -576,7 +584,7 @@ export default function RhEscalaMesPage() {
                           {row.nome}
                         </td>
                         <td
-                          style={tdSticky(STICKY_LEFT_NICK, bg, {
+                          style={tdSticky(STICKY_LEFT_NICK, bg, Z_BODY_NICK, {
                             minWidth: STICKY_W_NICK,
                             width: STICKY_W_NICK,
                             maxWidth: STICKY_W_NICK,
@@ -585,7 +593,7 @@ export default function RhEscalaMesPage() {
                           {row.nickname}
                         </td>
                         <td
-                          style={tdSticky(STICKY_LEFT_TURNO, bg, {
+                          style={tdSticky(STICKY_LEFT_TURNO, bg, Z_BODY_TURNO, {
                             minWidth: STICKY_W_TURNO,
                             width: STICKY_W_TURNO,
                             maxWidth: STICKY_W_TURNO,
