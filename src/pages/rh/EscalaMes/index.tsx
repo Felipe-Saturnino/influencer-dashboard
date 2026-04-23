@@ -10,7 +10,6 @@ import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
 import {
   escalaPrestadorTemTurnosOperacionais,
-  siglaGradeParaNomeTurno,
   staffTurnoCoerenteComEscala,
   turnoOperacionalParaSiglaGrade,
   turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
@@ -33,9 +32,11 @@ type LinhaColaborador = {
   escalaCadastro: string;
   /** Sigla do turno na Staff (MRN/AFT/NGT) para a grade; vazio se sem turno aplicável. */
   siglaTurnoStaff: string;
+  /** Turno na Gestão de Staff (Manhã, Tarde ou Noite) — coluna fixa da tabela. */
+  turnoStaffNome: string;
 };
 
-/** Estado da geração de escala por valor de filtro (função). */
+/** Estado da geração de escala por área (time). */
 type EscalaGerarEstadoFiltro = {
   celulas: Record<string, string>;
   aprovado: boolean;
@@ -66,27 +67,69 @@ type RpcPrestadorEscala = {
   staff_nickname: string | null;
 };
 
-/** Valor do select para prestadores sem cargo preenchido. */
-const FILTRO_FUNCAO_SEM_CARGO = "__sem__";
-/** Game Presenter e Game Presenter VIP aparecem como uma única opção no filtro. */
-const FILTRO_FUNCAO_GAME_PRESENTER = "__game_presenter__";
+const AREA_ESCALA_KEYS = [
+  "game_presenter",
+  "shift_leader",
+  "shuffler",
+  "customer_service",
+  "service_manager",
+] as const;
 
-const GP_CARGO_LOWER = new Set(["game presenter", "game presenter vip"]);
+type AreaEscalaKey = (typeof AREA_ESCALA_KEYS)[number];
 
-function chaveOpcaoFiltroFuncao(cargoBruto: string): string {
-  const lower = cargoBruto.trim().toLowerCase();
-  if (GP_CARGO_LOWER.has(lower)) return FILTRO_FUNCAO_GAME_PRESENTER;
-  return cargoBruto.trim();
+const DEFAULT_AREA_ESCALA: AreaEscalaKey = "game_presenter";
+
+function normalizarNomeTimeRh(s: string | null | undefined): string {
+  return (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function cargoPassaNoFiltro(cargo: string | null | undefined, filtro: string): boolean {
-  if (filtro === "") return true;
-  if (filtro === FILTRO_FUNCAO_SEM_CARGO) return !(cargo ?? "").trim();
-  if (filtro === FILTRO_FUNCAO_GAME_PRESENTER) {
-    const lower = (cargo ?? "").trim().toLowerCase();
-    return GP_CARGO_LOWER.has(lower);
+function nomeTimePassaNaArea(nomeTimeRaw: string | null | undefined, area: AreaEscalaKey): boolean {
+  const nt = normalizarNomeTimeRh(nomeTimeRaw);
+  if (!nt) return false;
+  switch (area) {
+    case "game_presenter":
+      return nt.includes("game presenter");
+    case "shift_leader":
+      return nt.includes("shift leader");
+    case "shuffler":
+      return nt.includes("shuffler");
+    case "customer_service":
+      return nt.includes("customer service");
+    case "service_manager":
+      return nt.includes("service manager");
+    default:
+      return false;
   }
-  return (cargo ?? "").trim() === filtro;
+}
+
+function labelAreaEscala(area: AreaEscalaKey): string {
+  const m: Record<AreaEscalaKey, string> = {
+    game_presenter: "Game Presenter",
+    shift_leader: "Shift Leader",
+    shuffler: "Shuffler",
+    customer_service: "Customer Service",
+    service_manager: "Service Manager",
+  };
+  return m[area];
+}
+
+function filtrarPorArea(rows: RpcPrestadorEscala[], area: AreaEscalaKey): RpcPrestadorEscala[] {
+  return rows.filter((p) => nomeTimePassaNaArea(p.nome_time, area));
+}
+
+function contarCelulasComSigla(
+  linhas: LinhaColaborador[],
+  dias: DiaMes[],
+  celulas: Record<string, string> | undefined,
+  sigla: "MRN" | "AFT" | "NGT",
+): number[] {
+  return dias.map((dia) =>
+    linhas.reduce((acc, row) => {
+      const k = chaveCelulaGerar(row.id, dia.iso);
+      const v = (celulas?.[k] ?? "").trim();
+      return acc + (v === sigla ? 1 : 0);
+    }, 0),
+  );
 }
 
 function opcoesSelectCelulaGerar(siglaTurnoStaff: string): { value: string; label: string }[] {
@@ -125,7 +168,7 @@ const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
 const STICKY_W_NOME = 180;
 const STICKY_W_NICK = 130;
 const STICKY_W_ESCALA = 72;
-const STICKY_W_TURNO_STAFF = 100;
+const STICKY_W_TURNO_STAFF = 112;
 const STICKY_LEFT_NICK = STICKY_W_NOME;
 const STICKY_LEFT_ESCALA = STICKY_W_NOME + STICKY_W_NICK;
 const STICKY_LEFT_TURNO_STAFF = STICKY_W_NOME + STICKY_W_NICK + STICKY_W_ESCALA;
@@ -173,12 +216,14 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
   const esc = (r.escala ?? "").trim();
   const co = staffTurnoCoerenteComEscala(r.escala, r.staff_turno);
   const siglaTurnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? turnoOperacionalParaSiglaGrade(co) : "";
+  const turnoStaffNome = escalaPrestadorTemTurnosOperacionais(r.escala) ? co : "";
   return {
     id: r.id,
     nome: (r.nome ?? "").trim() || "—",
     nickname: nick || "—",
     escalaCadastro: esc || "—",
     siglaTurnoStaff,
+    turnoStaffNome,
   };
 }
 
@@ -208,11 +253,11 @@ export default function RhEscalaMesPage() {
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
-  /** Filtro por função na aba Gerenciar (permite “Todas as funções”). */
-  const [filtroCargoGerenciar, setFiltroCargoGerenciar] = useState("");
-  /** Função ativa na aba Gerar (tabela + destaque na lista; sem “Todas”). */
-  const [filtroCargoGerar, setFiltroCargoGerar] = useState("");
-  /** Por valor de filtro: células do mês e baseline após aprovação. */
+  /** Área (time) na aba Gerenciar. */
+  const [filtroAreaGerenciar, setFiltroAreaGerenciar] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
+  /** Área (time) na aba Gerar. */
+  const [filtroAreaGerar, setFiltroAreaGerar] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
+  /** Por área: células do mês e baseline após aprovação. */
   const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
 
   const carregarPrestadores = useCallback(async () => {
@@ -277,69 +322,21 @@ export default function RhEscalaMesPage() {
 
   const mostrarAbas = perm.canEditarOk || perm.canCriarOk;
 
-  const mostrarFiltroFuncao =
+  const mostrarFiltroArea =
     (aba === "gerenciar" && perm.canEditarOk) || (aba === "gerar" && perm.canCriarOk);
 
-  const opcoesFuncao = useMemo((): { value: string; label: string }[] => {
-    const map = new Map<string, string>();
-    prestadoresRaw.forEach((p) => {
-      const bruto = (p.cargo ?? "").trim();
-      if (!bruto) return;
-      const value = chaveOpcaoFiltroFuncao(bruto);
-      const label = value === FILTRO_FUNCAO_GAME_PRESENTER ? "Game Presenter" : value;
-      if (!map.has(value)) map.set(value, label);
-    });
-    return [...map.entries()]
-      .map(([value, label]) => ({ value, label }))
-      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
-  }, [prestadoresRaw]);
-
-  const temSemCargo = useMemo(
-    () => prestadoresRaw.some((p) => !(p.cargo ?? "").trim()),
-    [prestadoresRaw],
-  );
-
-  useEffect(() => {
-    if (filtroCargoGerenciar === FILTRO_FUNCAO_SEM_CARGO && !temSemCargo) setFiltroCargoGerenciar("");
-    else if (
-      filtroCargoGerenciar !== "" &&
-      filtroCargoGerenciar !== FILTRO_FUNCAO_SEM_CARGO &&
-      !opcoesFuncao.some((o) => o.value === filtroCargoGerenciar)
-    ) {
-      setFiltroCargoGerenciar("");
-    }
-  }, [filtroCargoGerenciar, opcoesFuncao, temSemCargo]);
-
-  useEffect(() => {
-    if (filtroCargoGerar === FILTRO_FUNCAO_SEM_CARGO && !temSemCargo) setFiltroCargoGerar("");
-    else if (
-      filtroCargoGerar !== "" &&
-      filtroCargoGerar !== FILTRO_FUNCAO_SEM_CARGO &&
-      !opcoesFuncao.some((o) => o.value === filtroCargoGerar)
-    ) {
-      setFiltroCargoGerar("");
-    }
-  }, [filtroCargoGerar, opcoesFuncao, temSemCargo]);
-
-  /** Novo mês: zera rascunhos/aprovações da aba Gerar e a seleção de função. */
+  /** Novo mês: zera rascunhos/aprovações da aba Gerar (mantém área selecionada). */
   useEffect(() => {
     setGerarPorFiltro({});
-    setFiltroCargoGerar("");
   }, [ano, mes]);
 
-  const filtrarPorCargo = useCallback((rows: RpcPrestadorEscala[], filtro: string) => {
-    if (filtro === "") return rows;
-    return rows.filter((p) => cargoPassaNoFiltro(p.cargo, filtro));
-  }, []);
-
   const linhasGerenciar = useMemo(() => {
-    return filtrarPorCargo(prestadoresRaw, filtroCargoGerenciar).map(mapLinhaPrestador);
-  }, [prestadoresRaw, filtroCargoGerenciar, filtrarPorCargo]);
+    return filtrarPorArea(prestadoresRaw, filtroAreaGerenciar).map(mapLinhaPrestador);
+  }, [prestadoresRaw, filtroAreaGerenciar]);
 
   const linhasGerar = useMemo(() => {
-    if (filtroCargoGerar === "") return [];
-    return filtrarPorCargo(prestadoresRaw, filtroCargoGerar).map(mapLinhaPrestador);
-  }, [prestadoresRaw, filtroCargoGerar, filtrarPorCargo]);
+    return filtrarPorArea(prestadoresRaw, filtroAreaGerar).map(mapLinhaPrestador);
+  }, [prestadoresRaw, filtroAreaGerar]);
 
   const linhas: LinhaColaborador[] = useMemo(() => {
     const mapped = (rows: RpcPrestadorEscala[]) => rows.map(mapLinhaPrestador);
@@ -355,14 +352,14 @@ export default function RhEscalaMesPage() {
   }, [aba, user?.email, prestadoresRaw, perm.canEditarOk, perm.canCriarOk, mostrarAbas, linhasGerenciar, linhasGerar]);
 
   const linhasPorFiltroGerar = useCallback(
-    (filtroKey: string) => filtrarPorCargo(prestadoresRaw, filtroKey).map(mapLinhaPrestador),
-    [prestadoresRaw, filtrarPorCargo],
+    (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador),
+    [prestadoresRaw],
   );
 
   /** Sugestão: fim de semana Folga; dias úteis apenas na sigla do turno configurado na Staff (MRN/AFT/NGT). */
   const aplicarSugestaoGerar = useCallback(
-    (filtroKey: string) => {
-      const linhasF = linhasPorFiltroGerar(filtroKey);
+    (areaKey: AreaEscalaKey) => {
+      const linhasF = linhasPorFiltroGerar(areaKey);
       const next: Record<string, string> = {};
       for (const row of linhasF) {
         const turnosEscala = [...turnosPermitidosCadastro(row.escalaCadastro)];
@@ -382,22 +379,22 @@ export default function RhEscalaMesPage() {
       }
       setGerarPorFiltro((prev) => ({
         ...prev,
-        [filtroKey]: {
+        [areaKey]: {
           celulas: next,
           aprovado: false,
           baseline: null,
         },
       }));
-      setFiltroCargoGerar(filtroKey);
+      setFiltroAreaGerar(areaKey);
     },
     [dias, linhasPorFiltroGerar],
   );
 
   const aprovarEscalaGerar = useCallback(
-    (filtroKey: string) => {
-      const linhasF = linhasPorFiltroGerar(filtroKey);
+    (areaKey: AreaEscalaKey) => {
+      const linhasF = linhasPorFiltroGerar(areaKey);
       setGerarPorFiltro((prev) => {
-        const cur = prev[filtroKey];
+        const cur = prev[areaKey];
         if (!cur) return prev;
         const merged: Record<string, string> = { ...cur.celulas };
         for (const row of linhasF) {
@@ -409,21 +406,21 @@ export default function RhEscalaMesPage() {
         const baseline = { ...merged };
         return {
           ...prev,
-          [filtroKey]: { ...cur, celulas: merged, aprovado: true, baseline },
+          [areaKey]: { ...cur, celulas: merged, aprovado: true, baseline },
         };
       });
     },
     [dias, linhasPorFiltroGerar],
   );
 
-  const atualizarCelulaGerar = useCallback((filtroKey: string, rowId: string, iso: string, siglaTurnoStaff: string, valor: string) => {
+  const atualizarCelulaGerar = useCallback((areaKey: AreaEscalaKey, rowId: string, iso: string, siglaTurnoStaff: string, valor: string) => {
     const k = chaveCelulaGerar(rowId, iso);
     const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor);
     setGerarPorFiltro((prev) => {
-      const cur = prev[filtroKey] ?? { celulas: {}, aprovado: false, baseline: null };
+      const cur = prev[areaKey] ?? { celulas: {}, aprovado: false, baseline: null };
       return {
         ...prev,
-        [filtroKey]: {
+        [areaKey]: {
           ...cur,
           celulas: { ...cur.celulas, [k]: ok },
         },
@@ -432,10 +429,9 @@ export default function RhEscalaMesPage() {
   }, []);
 
   const acaoBotaoGerar = useCallback(
-    (filtroKey: string): "sugestao" | "aprovar" | null => {
-      if (!filtroKey) return null;
-      const estado = gerarPorFiltro[filtroKey];
-      const linhasF = linhasPorFiltroGerar(filtroKey);
+    (areaKey: AreaEscalaKey): "sugestao" | "aprovar" | null => {
+      const estado = gerarPorFiltro[areaKey];
+      const linhasF = linhasPorFiltroGerar(areaKey);
       if (linhasF.length === 0) return null;
       const celulas = estado?.celulas ?? {};
       const allFilled = linhasF.every((row) =>
@@ -549,12 +545,21 @@ export default function RhEscalaMesPage() {
       : "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, #f2effa)";
   };
 
-  const celulasGerarAtivas = aba === "gerar" ? gerarPorFiltro[filtroCargoGerar]?.celulas : undefined;
+  const celulasGerarAtivas = aba === "gerar" ? gerarPorFiltro[filtroAreaGerar]?.celulas : undefined;
 
-  const msgTabelaVazia =
-    aba === "gerar" && filtroCargoGerar === ""
-      ? "Selecione uma função na lista acima."
-      : "Sem dados para o período selecionado.";
+  const resumoTurnoDias = useMemo(() => {
+    if (aba !== "gerenciar" && aba !== "gerar") return null;
+    const areaKey = aba === "gerenciar" ? filtroAreaGerenciar : filtroAreaGerar;
+    const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
+    const celulas = aba === "gerar" ? gerarPorFiltro[areaKey]?.celulas : undefined;
+    return {
+      manha: contarCelulasComSigla(linhasF, dias, celulas, "MRN"),
+      tarde: contarCelulasComSigla(linhasF, dias, celulas, "AFT"),
+      noite: contarCelulasComSigla(linhasF, dias, celulas, "NGT"),
+    };
+  }, [aba, filtroAreaGerenciar, filtroAreaGerar, prestadoresRaw, dias, gerarPorFiltro]);
+
+  const msgTabelaVazia = "Sem dados para o período selecionado.";
 
   const selectCelulaGerarStyle: CSSProperties = {
     width: "100%",
@@ -573,8 +578,7 @@ export default function RhEscalaMesPage() {
     cursor: "pointer",
   };
 
-  const acaoGerarNoFiltroSelecionado =
-    aba === "gerar" && filtroCargoGerar ? acaoBotaoGerar(filtroCargoGerar) : null;
+  const acaoGerarNoFiltroSelecionado = aba === "gerar" ? acaoBotaoGerar(filtroAreaGerar) : null;
 
   if (perm.loading) {
     return (
@@ -755,7 +759,7 @@ export default function RhEscalaMesPage() {
             </div>
           ) : null}
 
-          {mostrarFiltroFuncao ? (
+          {mostrarFiltroArea ? (
             <div
               style={{
                 marginTop: mostrarAbas ? 14 : 10,
@@ -769,7 +773,7 @@ export default function RhEscalaMesPage() {
               }}
             >
               <label
-                htmlFor={aba === "gerenciar" ? "escala-filtro-funcao-gerenciar" : "escala-filtro-funcao-gerar"}
+                htmlFor={aba === "gerenciar" ? "escala-filtro-area-gerenciar" : "escala-filtro-area-gerar"}
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
@@ -779,7 +783,7 @@ export default function RhEscalaMesPage() {
                   textTransform: "uppercase",
                 }}
               >
-                Função
+                Área
               </label>
               <div
                 style={{
@@ -791,16 +795,16 @@ export default function RhEscalaMesPage() {
                 }}
               >
                 <select
-                  id={aba === "gerenciar" ? "escala-filtro-funcao-gerenciar" : "escala-filtro-funcao-gerar"}
-                  aria-label="Filtrar por função"
-                  value={aba === "gerenciar" ? filtroCargoGerenciar : filtroCargoGerar}
-                  onChange={(e) =>
-                    aba === "gerenciar"
-                      ? setFiltroCargoGerenciar(e.target.value)
-                      : setFiltroCargoGerar(e.target.value)
-                  }
+                  id={aba === "gerenciar" ? "escala-filtro-area-gerenciar" : "escala-filtro-area-gerar"}
+                  aria-label="Filtrar por área (time)"
+                  value={aba === "gerenciar" ? filtroAreaGerenciar : filtroAreaGerar}
+                  onChange={(e) => {
+                    const v = e.target.value as AreaEscalaKey;
+                    if (aba === "gerenciar") setFiltroAreaGerenciar(v);
+                    else setFiltroAreaGerar(v);
+                  }}
                   style={{
-                    minWidth: 260,
+                    minWidth: 280,
                     maxWidth: "100%",
                     padding: "10px 12px",
                     borderRadius: 10,
@@ -812,27 +816,17 @@ export default function RhEscalaMesPage() {
                     cursor: "pointer",
                   }}
                 >
-                  {aba === "gerenciar" ? (
-                    <option value="">Todas as funções</option>
-                  ) : (
-                    <option value="" disabled>
-                      Selecione uma função
-                    </option>
-                  )}
-                  {opcoesFuncao.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
+                  {AREA_ESCALA_KEYS.map((key) => (
+                    <option key={key} value={key}>
+                      {labelAreaEscala(key)}
                     </option>
                   ))}
-                  {temSemCargo ? (
-                    <option value={FILTRO_FUNCAO_SEM_CARGO}>Sem função cadastrada</option>
-                  ) : null}
                 </select>
                 {acaoGerarNoFiltroSelecionado === "sugestao" ? (
                   <button
                     type="button"
-                    onClick={() => aplicarSugestaoGerar(filtroCargoGerar)}
-                    aria-label="Gerar sugestão de escala para a função selecionada"
+                    onClick={() => aplicarSugestaoGerar(filtroAreaGerar)}
+                    aria-label="Gerar sugestão de escala para a área selecionada"
                     style={{
                       padding: "10px 16px",
                       borderRadius: 10,
@@ -853,8 +847,8 @@ export default function RhEscalaMesPage() {
                 ) : acaoGerarNoFiltroSelecionado === "aprovar" ? (
                   <button
                     type="button"
-                    onClick={() => aprovarEscalaGerar(filtroCargoGerar)}
-                    aria-label="Aprovar escala da função selecionada"
+                    onClick={() => aprovarEscalaGerar(filtroAreaGerar)}
+                    aria-label="Aprovar escala da área selecionada"
                     style={{
                       padding: "10px 16px",
                       borderRadius: 10,
@@ -909,7 +903,128 @@ export default function RhEscalaMesPage() {
             <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando escala…</span>
           </div>
         ) : (
-          <div className="app-table-wrap">
+          <>
+            {resumoTurnoDias && mostrarFiltroArea && (aba === "gerenciar" || aba === "gerar") ? (
+              <div className="app-table-wrap" style={{ marginBottom: 16 }}>
+                <table
+                  style={{
+                    width: "100%",
+                    minWidth: 168 + dias.length * 44,
+                    borderCollapse: "separate",
+                    borderSpacing: 0,
+                    borderRadius: 14,
+                    border: `1px solid ${t.cardBorder}`,
+                  }}
+                >
+                  <caption style={{ display: "none" }}>
+                    Totais de pessoas por turno do dia e por data, conforme área selecionada
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th
+                        scope="col"
+                        style={{
+                          ...getThStyle(t),
+                          textAlign: "left",
+                          minWidth: 168,
+                          maxWidth: 200,
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        Turno
+                      </th>
+                      {dias.map((dia) => (
+                        <th key={`resumo-h-${dia.iso}`} scope="col" style={thDia(dia)} title={dia.iso}>
+                          <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
+                          <div style={{ fontWeight: 600, textTransform: "lowercase", opacity: 0.95 }}>{dia.dowShort}</div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
+                        Turno da Manhã
+                      </th>
+                      {resumoTurnoDias.manha.map((n, idx) => {
+                        const d = dias[idx]!;
+                        return (
+                          <td
+                            key={`resumo-m-${d.iso}`}
+                            style={getTdStyle(t, {
+                              textAlign: "center",
+                              fontVariantNumeric: "tabular-nums",
+                              fontWeight: 700,
+                              ...(d.isWeekend
+                                ? {
+                                    background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
+                                    color: "#f59e0b",
+                                  }
+                                : {}),
+                            })}
+                          >
+                            {n}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
+                        Turno da Tarde
+                      </th>
+                      {resumoTurnoDias.tarde.map((n, idx) => {
+                        const d = dias[idx]!;
+                        return (
+                          <td
+                            key={`resumo-t-${d.iso}`}
+                            style={getTdStyle(t, {
+                              textAlign: "center",
+                              fontVariantNumeric: "tabular-nums",
+                              fontWeight: 700,
+                              ...(d.isWeekend
+                                ? {
+                                    background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
+                                    color: "#f59e0b",
+                                  }
+                                : {}),
+                            })}
+                          >
+                            {n}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
+                        Turno da Noite
+                      </th>
+                      {resumoTurnoDias.noite.map((n, idx) => {
+                        const d = dias[idx]!;
+                        return (
+                          <td
+                            key={`resumo-n-${d.iso}`}
+                            style={getTdStyle(t, {
+                              textAlign: "center",
+                              fontVariantNumeric: "tabular-nums",
+                              fontWeight: 700,
+                              ...(d.isWeekend
+                                ? {
+                                    background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
+                                    color: "#f59e0b",
+                                  }
+                                : {}),
+                            })}
+                          >
+                            {n}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+            <div className="app-table-wrap">
             <table
               style={{
                 width: "100%",
@@ -967,7 +1082,7 @@ export default function RhEscalaMesPage() {
                       borderRight: `1px solid ${t.cardBorder}`,
                       boxShadow: sombraColFixa,
                     })}
-                    title="Turno na Gestão de Staff: MRN = Manhã, AFT = Tarde, NGT = Noite."
+                    title="Turno cadastrado na Gestão de Staff (Manhã, Tarde ou Noite)."
                   >
                     Turno
                   </th>
@@ -997,7 +1112,7 @@ export default function RhEscalaMesPage() {
                 ) : (
                   linhas.map((row, i) => {
                     const bg = zebraBgLinha(i);
-                    const editarCelulasGerar = aba === "gerar" && filtroCargoGerar !== "";
+                    const editarCelulasGerar = aba === "gerar";
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>
                         <td
@@ -1041,13 +1156,9 @@ export default function RhEscalaMesPage() {
                             borderRight: `1px solid ${t.cardBorder}`,
                             boxShadow: sombraColFixa,
                           })}
-                          title={
-                            row.siglaTurnoStaff
-                              ? `${row.siglaTurnoStaff} (${siglaGradeParaNomeTurno(row.siglaTurnoStaff)})`
-                              : "Sem turno configurado na Staff para esta escala."
-                          }
+                          title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
                         >
-                          {row.siglaTurnoStaff || "—"}
+                          {row.turnoStaffNome || "—"}
                         </td>
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);
@@ -1068,7 +1179,7 @@ export default function RhEscalaMesPage() {
                                   aria-label={`Escala do dia ${dia.dia} para ${row.nome}`}
                                   value={val}
                                   onChange={(e) =>
-                                    atualizarCelulaGerar(filtroCargoGerar, row.id, dia.iso, row.siglaTurnoStaff, e.target.value)
+                                    atualizarCelulaGerar(filtroAreaGerar, row.id, dia.iso, row.siglaTurnoStaff, e.target.value)
                                   }
                                   style={selectCelulaGerarStyle}
                                 >
@@ -1091,6 +1202,7 @@ export default function RhEscalaMesPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>
