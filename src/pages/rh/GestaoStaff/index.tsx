@@ -108,8 +108,6 @@ export default function RhGestaoStaffPage() {
 
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
-  const [salvandoTurnoId, setSalvandoTurnoId] = useState<string | null>(null);
-  const [erroTurnoTabela, setErroTurnoTabela] = useState<string | null>(null);
 
   const carregarTimes = useCallback(async () => {
     setLoadingTimes(true);
@@ -186,47 +184,6 @@ export default function RhGestaoStaffPage() {
     return rows;
   }, [prestadores, times, todosTimes, idxTime, timeIds]);
 
-  const onInlineStaffTurnoChange = useCallback(
-    async (row: RhFuncionario, valorSelect: string) => {
-      setErroTurnoTabela(null);
-      const allowed = [...turnosPermitidosPorEscalaPrestador(row.escala ?? "")];
-      if (allowed.length === 0) return;
-      const trimmed = valorSelect.trim();
-      const novo = trimmed && allowed.includes(trimmed) ? trimmed : null;
-      const antes = (row.staff_turno ?? "").trim();
-      const depois = (novo ?? "").trim();
-      if (antes === depois) return;
-
-      setSalvandoTurnoId(row.id);
-      const { data, error } = await supabase
-        .from("rh_funcionarios")
-        .update({ staff_turno: novo })
-        .eq("id", row.id)
-        .select("*")
-        .single();
-      if (error || !data) {
-        setErroTurnoTabela("Não foi possível atualizar o turno. Tente novamente.");
-        setSalvandoTurnoId(null);
-        return;
-      }
-      const updated = data as RhFuncionario;
-      await supabase.from("rh_funcionario_historico").insert({
-        rh_funcionario_id: row.id,
-        tipo: "staff_gestao_edicao",
-        detalhes: {
-          alteracoes: [{ campo: "Turno", antes: antes || "—", depois: depois || "—" }],
-          usuario_label: user?.email?.trim() || "—",
-        },
-        anexos: [],
-      });
-      setPrestadores((lista) => lista.map((p) => (p.id === row.id ? updated : p)));
-      setModalVer((m) => (m?.id === row.id ? updated : m));
-      setModalEditar((m) => (m?.id === row.id ? updated : m));
-      setSalvandoTurnoId(null);
-    },
-    [user?.email],
-  );
-
   const timeLabelCentro = useMemo(() => {
     if (times.length === 0) return "—";
     const row = times[idxTime];
@@ -290,23 +247,6 @@ export default function RhGestaoStaffPage() {
           }}
         >
           {erroTimes}
-        </div>
-      )}
-
-      {erroTurnoTabela && (
-        <div
-          role="alert"
-          style={{
-            marginBottom: 14,
-            padding: "10px 14px",
-            borderRadius: 10,
-            fontSize: 13,
-            color: "#e84025",
-            border: "1px solid rgba(232,64,37,0.35)",
-            background: "rgba(232,64,37,0.08)",
-          }}
-        >
-          {erroTurnoTabela}
         </div>
       )}
 
@@ -449,7 +389,7 @@ export default function RhGestaoStaffPage() {
                 <th
                   scope="col"
                   style={getThStyle(t)}
-                  title="Só para escalas 4x2, 5x1 ou 3x3. Outros formatos não têm turno na Staff."
+                  title="Só para escalas 4x2, 5x1 ou 3x3. Outros formatos não têm turno na Staff. Altere apenas em Editar."
                 >
                   Turno
                 </th>
@@ -488,47 +428,15 @@ export default function RhGestaoStaffPage() {
                       <td style={getTdStyle(t)} title="Gestão de Prestadores (somente leitura)">
                         {row.escala?.trim() || "—"}
                       </td>
-                      <td style={getTdStyle(t)}>
-                        {perm.canEditarOk && escalaPrestadorTemTurnosOperacionais(row.escala) ? (
-                          <select
-                            aria-label={`Turno de ${row.nome}`}
-                            value={staffTurnoCoerenteComEscala(row.escala, row.staff_turno)}
-                            onChange={(e) => void onInlineStaffTurnoChange(row, e.target.value)}
-                            disabled={salvandoTurnoId === row.id}
-                            style={{
-                              width: "100%",
-                              minWidth: 132,
-                              maxWidth: 200,
-                              padding: "8px 10px",
-                              borderRadius: 10,
-                              border: `1px solid ${t.cardBorder}`,
-                              background: t.inputBg ?? t.cardBg,
-                              color: t.text,
-                              fontFamily: FONT.body,
-                              fontSize: 13,
-                              boxSizing: "border-box",
-                              cursor: salvandoTurnoId === row.id ? "wait" : "pointer",
-                            }}
-                          >
-                            <option value="">—</option>
-                            {turnosPermitidosPorEscalaPrestador(row.escala ?? "").map((op) => (
-                              <option key={op} value={op}>
-                                {op}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span
-                            style={{ color: t.textMuted }}
-                            title={
-                              escalaPrestadorTemTurnosOperacionais(row.escala)
-                                ? undefined
-                                : "Esta escala não tem turno operacional na Staff (apenas 4x2, 5x1 ou 3x3)."
-                            }
-                          >
-                            {staffTurnoCoerenteComEscala(row.escala, row.staff_turno) || "—"}
-                          </span>
-                        )}
+                      <td
+                        style={getTdStyle(t)}
+                        title={
+                          escalaPrestadorTemTurnosOperacionais(row.escala)
+                            ? "Altere o turno em Editar."
+                            : "Esta escala não tem turno operacional na Staff (apenas 4x2, 5x1 ou 3x3)."
+                        }
+                      >
+                        {staffTurnoCoerenteComEscala(row.escala, row.staff_turno) || "—"}
                       </td>
                       <td style={getTdStyle(t)}>{labelStatusPrestador(row.status)}</td>
                       <td style={getTdStyle(t)}>{opNome}</td>
