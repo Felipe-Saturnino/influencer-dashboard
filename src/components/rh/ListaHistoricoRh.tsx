@@ -13,6 +13,7 @@ export const HIST_TIPO_LABEL: Record<string, string> = {
   rh_talks: "RH Talks",
   anotacao_rh: "Anotação do RH",
   staff_gestao_edicao: "Edição (Gestão de Staff)",
+  dados_cadastro_self: "Atualização — Dados de Cadastro",
 };
 
 const HIST_TIPO_SURFACE: Record<string, { bg: string; border: string }> = {
@@ -25,6 +26,7 @@ const HIST_TIPO_SURFACE: Record<string, { bg: string; border: string }> = {
   rh_talks: { bg: "rgba(107, 114, 128, 0.14)", border: "rgba(107, 114, 128, 0.42)" },
   anotacao_rh: { bg: "rgba(100, 116, 139, 0.12)", border: "rgba(100, 116, 139, 0.38)" },
   staff_gestao_edicao: { bg: "rgba(59, 130, 246, 0.12)", border: "rgba(59, 130, 246, 0.36)" },
+  dados_cadastro_self: { bg: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.34)" },
 };
 
 export function cardStyleHistoricoPorTipo(

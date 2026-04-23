@@ -25,6 +25,25 @@ type LinhaColaborador = {
   turno: string;
 };
 
+/** Estado da geração de escala por valor de filtro (função). */
+type EscalaGerarEstadoFiltro = {
+  celulas: Record<string, string>;
+  aprovado: boolean;
+  baseline: Record<string, string> | null;
+};
+
+function chaveCelulaGerar(rowId: string, iso: string): string {
+  return `${rowId}|${iso}`;
+}
+
+function celulasIguais(a: Record<string, string>, b: Record<string, string>): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) {
+    if ((a[k] ?? "").trim() !== (b[k] ?? "").trim()) return false;
+  }
+  return true;
+}
+
 type RpcPrestadorEscala = {
   id: string;
   nome: string;
@@ -142,8 +161,12 @@ export default function RhEscalaMesPage() {
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
-  /** Filtro por função (cargo) — só aplica em Gerenciar / Gerar. */
-  const [filtroCargo, setFiltroCargo] = useState("");
+  /** Filtro por função na aba Gerenciar (permite “Todas as funções”). */
+  const [filtroCargoGerenciar, setFiltroCargoGerenciar] = useState("");
+  /** Função ativa na aba Gerar (tabela + destaque na lista; sem “Todas”). */
+  const [filtroCargoGerar, setFiltroCargoGerar] = useState("");
+  /** Por valor de filtro: células do mês e baseline após aprovação. */
+  const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
 
   const carregarPrestadores = useCallback(async () => {
     setLoadingPrestadores(true);
@@ -230,23 +253,46 @@ export default function RhEscalaMesPage() {
   );
 
   useEffect(() => {
-    if (filtroCargo === FILTRO_FUNCAO_SEM_CARGO && !temSemCargo) setFiltroCargo("");
+    if (filtroCargoGerenciar === FILTRO_FUNCAO_SEM_CARGO && !temSemCargo) setFiltroCargoGerenciar("");
     else if (
-      filtroCargo !== "" &&
-      filtroCargo !== FILTRO_FUNCAO_SEM_CARGO &&
-      !opcoesFuncao.some((o) => o.value === filtroCargo)
+      filtroCargoGerenciar !== "" &&
+      filtroCargoGerenciar !== FILTRO_FUNCAO_SEM_CARGO &&
+      !opcoesFuncao.some((o) => o.value === filtroCargoGerenciar)
     ) {
-      setFiltroCargo("");
+      setFiltroCargoGerenciar("");
     }
-  }, [filtroCargo, opcoesFuncao, temSemCargo]);
+  }, [filtroCargoGerenciar, opcoesFuncao, temSemCargo]);
 
-  const filtrarPorCargo = useCallback(
-    (rows: RpcPrestadorEscala[]) => {
-      if (filtroCargo === "") return rows;
-      return rows.filter((p) => cargoPassaNoFiltro(p.cargo, filtroCargo));
-    },
-    [filtroCargo],
-  );
+  useEffect(() => {
+    if (filtroCargoGerar === FILTRO_FUNCAO_SEM_CARGO && !temSemCargo) setFiltroCargoGerar("");
+    else if (
+      filtroCargoGerar !== "" &&
+      filtroCargoGerar !== FILTRO_FUNCAO_SEM_CARGO &&
+      !opcoesFuncao.some((o) => o.value === filtroCargoGerar)
+    ) {
+      setFiltroCargoGerar("");
+    }
+  }, [filtroCargoGerar, opcoesFuncao, temSemCargo]);
+
+  /** Novo mês: zera rascunhos/aprovações da aba Gerar e a seleção de função. */
+  useEffect(() => {
+    setGerarPorFiltro({});
+    setFiltroCargoGerar("");
+  }, [ano, mes]);
+
+  const filtrarPorCargo = useCallback((rows: RpcPrestadorEscala[], filtro: string) => {
+    if (filtro === "") return rows;
+    return rows.filter((p) => cargoPassaNoFiltro(p.cargo, filtro));
+  }, []);
+
+  const linhasGerenciar = useMemo(() => {
+    return filtrarPorCargo(prestadoresRaw, filtroCargoGerenciar).map(mapLinhaPrestador);
+  }, [prestadoresRaw, filtroCargoGerenciar, filtrarPorCargo]);
+
+  const linhasGerar = useMemo(() => {
+    if (filtroCargoGerar === "") return [];
+    return filtrarPorCargo(prestadoresRaw, filtroCargoGerar).map(mapLinhaPrestador);
+  }, [prestadoresRaw, filtroCargoGerar, filtrarPorCargo]);
 
   const linhas: LinhaColaborador[] = useMemo(() => {
     const mapped = (rows: RpcPrestadorEscala[]) => rows.map(mapLinhaPrestador);
@@ -256,11 +302,79 @@ export default function RhEscalaMesPage() {
       if (!em) return [];
       return prestadoresRaw.filter((p) => (p.email ?? "").trim().toLowerCase() === em).map(mapLinhaPrestador);
     }
-    if ((aba === "gerenciar" && perm.canEditarOk) || (aba === "gerar" && perm.canCriarOk)) {
-      return mapped(filtrarPorCargo(prestadoresRaw));
-    }
+    if (aba === "gerenciar" && perm.canEditarOk) return linhasGerenciar;
+    if (aba === "gerar" && perm.canCriarOk) return linhasGerar;
     return [];
-  }, [aba, user?.email, prestadoresRaw, perm.canEditarOk, perm.canCriarOk, mostrarAbas, filtrarPorCargo]);
+  }, [aba, user?.email, prestadoresRaw, perm.canEditarOk, perm.canCriarOk, mostrarAbas, linhasGerenciar, linhasGerar]);
+
+  const linhasPorFiltroGerar = useCallback(
+    (filtroKey: string) => filtrarPorCargo(prestadoresRaw, filtroKey).map(mapLinhaPrestador),
+    [prestadoresRaw, filtrarPorCargo],
+  );
+
+  /** Sugestão automática (placeholder): F = folga em fins de semana, T = demais dias — substituir por regra de negócio quando existir. */
+  const aplicarSugestaoGerar = useCallback(
+    (filtroKey: string) => {
+      const linhasF = linhasPorFiltroGerar(filtroKey);
+      const next: Record<string, string> = {};
+      for (const row of linhasF) {
+        for (const dia of dias) {
+          next[chaveCelulaGerar(row.id, dia.iso)] = dia.isWeekend ? "F" : "T";
+        }
+      }
+      setGerarPorFiltro((prev) => ({
+        ...prev,
+        [filtroKey]: {
+          celulas: next,
+          aprovado: false,
+          baseline: null,
+        },
+      }));
+      setFiltroCargoGerar(filtroKey);
+    },
+    [dias, linhasPorFiltroGerar],
+  );
+
+  const aprovarEscalaGerar = useCallback((filtroKey: string) => {
+    setGerarPorFiltro((prev) => {
+      const cur = prev[filtroKey];
+      if (!cur) return prev;
+      const baseline = { ...cur.celulas };
+      return {
+        ...prev,
+        [filtroKey]: { ...cur, aprovado: true, baseline },
+      };
+    });
+  }, []);
+
+  const atualizarCelulaGerar = useCallback((filtroKey: string, rowId: string, iso: string, valor: string) => {
+    const k = chaveCelulaGerar(rowId, iso);
+    setGerarPorFiltro((prev) => {
+      const cur = prev[filtroKey] ?? { celulas: {}, aprovado: false, baseline: null };
+      return {
+        ...prev,
+        [filtroKey]: {
+          ...cur,
+          celulas: { ...cur.celulas, [k]: valor },
+        },
+      };
+    });
+  }, []);
+
+  const acaoBotaoGerar = useCallback(
+    (filtroKey: string): "sugestao" | "aprovar" | null => {
+      const estado = gerarPorFiltro[filtroKey];
+      const linhasF = linhasPorFiltroGerar(filtroKey);
+      if (linhasF.length === 0) return null;
+      const keys = linhasF.flatMap((row) => dias.map((d) => chaveCelulaGerar(row.id, d.iso)));
+      const celulas = estado?.celulas ?? {};
+      const allFilled = keys.every((key) => (celulas[key] ?? "").trim() !== "");
+      if (estado?.aprovado && estado.baseline && celulasIguais(celulas, estado.baseline)) return null;
+      if (allFilled) return "aprovar";
+      return "sugestao";
+    },
+    [gerarPorFiltro, linhasPorFiltroGerar, dias],
+  );
 
   const btnNavStyle: CSSProperties = {
     width: 32,
@@ -348,6 +462,30 @@ export default function RhEscalaMesPage() {
     return t.isDark
       ? "color-mix(in srgb, var(--brand-secondary, #4a2082) 16%, #141118)"
       : "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, #f2effa)";
+  };
+
+  const celulasGerarAtivas = aba === "gerar" ? gerarPorFiltro[filtroCargoGerar]?.celulas : undefined;
+
+  const msgTabelaVazia =
+    aba === "gerar" && filtroCargoGerar === ""
+      ? "Selecione uma função na lista acima."
+      : "Sem dados para o período selecionado.";
+
+  const inputCelulaGerarStyle: CSSProperties = {
+    width: "100%",
+    maxWidth: 48,
+    margin: "0 auto",
+    display: "block",
+    boxSizing: "border-box",
+    textAlign: "center",
+    padding: "4px 2px",
+    borderRadius: 6,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg ?? "transparent",
+    color: t.text,
+    fontFamily: FONT.body,
+    fontSize: 11,
+    fontVariantNumeric: "tabular-nums",
   };
 
   if (perm.loading) {
@@ -529,7 +667,7 @@ export default function RhEscalaMesPage() {
             </div>
           ) : null}
 
-          {mostrarFiltroFuncao ? (
+          {mostrarFiltroFuncao && aba === "gerenciar" ? (
             <div
               style={{
                 marginTop: mostrarAbas ? 14 : 10,
@@ -543,7 +681,7 @@ export default function RhEscalaMesPage() {
               }}
             >
               <label
-                htmlFor="escala-filtro-funcao"
+                htmlFor="escala-filtro-funcao-gerenciar"
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
@@ -556,10 +694,10 @@ export default function RhEscalaMesPage() {
                 Função
               </label>
               <select
-                id="escala-filtro-funcao"
+                id="escala-filtro-funcao-gerenciar"
                 aria-label="Filtrar por função"
-                value={filtroCargo}
-                onChange={(e) => setFiltroCargo(e.target.value)}
+                value={filtroCargoGerenciar}
+                onChange={(e) => setFiltroCargoGerenciar(e.target.value)}
                 style={{
                   minWidth: 260,
                   maxWidth: "100%",
@@ -583,6 +721,138 @@ export default function RhEscalaMesPage() {
                   <option value={FILTRO_FUNCAO_SEM_CARGO}>Sem função cadastrada</option>
                 ) : null}
               </select>
+            </div>
+          ) : null}
+
+          {mostrarFiltroFuncao && aba === "gerar" ? (
+            <div
+              style={{
+                marginTop: mostrarAbas ? 14 : 10,
+                paddingTop: mostrarAbas ? 14 : 0,
+                borderTop: mostrarAbas ? `1px solid ${t.cardBorder}` : "none",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "stretch",
+                gap: 10,
+                maxWidth: 560,
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  textAlign: "center",
+                }}
+              >
+                Função — sugestão e aprovação por função
+              </div>
+              {[
+                ...opcoesFuncao.map((o) => ({ key: o.value, label: o.label, ariaVer: `Ver escala da função ${o.label}` })),
+                ...(temSemCargo
+                  ? [
+                      {
+                        key: FILTRO_FUNCAO_SEM_CARGO,
+                        label: "Sem função cadastrada",
+                        ariaVer: "Ver escala sem função cadastrada",
+                      },
+                    ]
+                  : []),
+              ].map(({ key, label, ariaVer }) => {
+                const acao = acaoBotaoGerar(key);
+                const ativo = filtroCargoGerar === key;
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                      background: ativo
+                        ? brand.useBrand
+                          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)"
+                          : "rgba(124,58,237,0.08)"
+                        : (t.inputBg ?? "transparent"),
+                    }}
+                  >
+                    <button
+                      type="button"
+                      aria-pressed={ativo}
+                      aria-label={ariaVer}
+                      onClick={() => setFiltroCargoGerar(key)}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        color: ativo ? brand.accent : t.text,
+                        fontFamily: FONT.body,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        textAlign: "left",
+                        flex: "1 1 160px",
+                        padding: 0,
+                      }}
+                    >
+                      {label}
+                    </button>
+                    {acao === "sugestao" ? (
+                      <button
+                        type="button"
+                        onClick={() => aplicarSugestaoGerar(key)}
+                        aria-label={`Sugestão de escala para ${label}`}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: 10,
+                          border: `1px solid ${brand.accent}`,
+                          background: brand.useBrand
+                            ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                            : "rgba(124,58,237,0.12)",
+                          color: brand.accent,
+                          fontFamily: FONT.body,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Sugestão de Escala
+                      </button>
+                    ) : acao === "aprovar" ? (
+                      <button
+                        type="button"
+                        onClick={() => aprovarEscalaGerar(key)}
+                        aria-label={`Aprovar escala para ${label}`}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: 10,
+                          border: `1px solid ${brand.accent}`,
+                          background: brand.useBrand
+                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
+                            : "rgba(30,54,248,0.12)",
+                          color: brand.accent,
+                          fontFamily: FONT.body,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Aprovar Escala
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           ) : null}
         </div>
@@ -687,12 +957,13 @@ export default function RhEscalaMesPage() {
                         color: t.textMuted,
                       }}
                     >
-                      Sem dados para o período selecionado.
+                      {msgTabelaVazia}
                     </td>
                   </tr>
                 ) : (
                   linhas.map((row, i) => {
                     const bg = zebraBgLinha(i);
+                    const editarCelulasGerar = aba === "gerar" && filtroCargoGerar !== "";
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>
                         <td
@@ -727,11 +998,25 @@ export default function RhEscalaMesPage() {
                         >
                           {row.turno}
                         </td>
-                        {dias.map((dia) => (
-                          <td key={`${row.id}-${dia.iso}`} style={{ ...tdDia, background: bg }}>
-                            —
-                          </td>
-                        ))}
+                        {dias.map((dia) => {
+                          const ck = chaveCelulaGerar(row.id, dia.iso);
+                          const val = editarCelulasGerar ? (celulasGerarAtivas?.[ck] ?? "") : "";
+                          return (
+                            <td key={`${row.id}-${dia.iso}`} style={{ ...tdDia, background: bg }}>
+                              {editarCelulasGerar ? (
+                                <input
+                                  aria-label={`Escala ${row.nome} dia ${dia.dia}`}
+                                  maxLength={8}
+                                  value={val}
+                                  onChange={(e) => atualizarCelulaGerar(filtroCargoGerar, row.id, dia.iso, e.target.value)}
+                                  style={inputCelulaGerarStyle}
+                                />
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          );
+                        })}
                       </tr>
                     );
                   })

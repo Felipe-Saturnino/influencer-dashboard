@@ -10,7 +10,8 @@ export type RhHistoricoAcaoTipo =
   | "reativacao_prestacao"
   | "rh_talks"
   | "anotacao_rh"
-  | "staff_gestao_edicao";
+  | "staff_gestao_edicao"
+  | "dados_cadastro_self";
 
 /** Linha de `public.rh_funcionario_historico`. */
 export interface RhFuncionarioHistorico {

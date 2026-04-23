@@ -502,6 +502,7 @@ export default function RhDadosCadastroPage() {
     }
     setMsgOk("Dados atualizados.");
     await carregarFuncionario();
+    await carregarHistorico(row.id);
   };
 
   const uploadMidia = async (files: FileList | null, kind: "documento" | "foto") => {
