@@ -28,12 +28,16 @@ type LinhaColaborador = {
 type RpcPrestadorEscala = {
   id: string;
   nome: string;
+  cargo: string | null;
   escala: string;
   email: string;
   org_time_id: string | null;
   nome_time: string;
   staff_nickname: string | null;
 };
+
+/** Valor do select para prestadores sem cargo preenchido. */
+const FILTRO_FUNCAO_SEM_CARGO = "__sem__";
 
 const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
 
@@ -118,6 +122,8 @@ export default function RhEscalaMesPage() {
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
+  /** Filtro por função (cargo) — só aplica em Gerenciar / Gerar. */
+  const [filtroCargo, setFiltroCargo] = useState("");
 
   const carregarPrestadores = useCallback(async () => {
     setLoadingPrestadores(true);
@@ -181,19 +187,56 @@ export default function RhEscalaMesPage() {
 
   const mostrarAbas = perm.canEditarOk || perm.canCriarOk;
 
+  const mostrarFiltroFuncao =
+    (aba === "gerenciar" && perm.canEditarOk) || (aba === "gerar" && perm.canCriarOk);
+
+  const opcoesFuncao = useMemo(() => {
+    const s = new Set<string>();
+    prestadoresRaw.forEach((p) => {
+      const c = (p.cargo ?? "").trim();
+      if (c) s.add(c);
+    });
+    return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [prestadoresRaw]);
+
+  const temSemCargo = useMemo(
+    () => prestadoresRaw.some((p) => !(p.cargo ?? "").trim()),
+    [prestadoresRaw],
+  );
+
+  useEffect(() => {
+    if (filtroCargo === FILTRO_FUNCAO_SEM_CARGO && !temSemCargo) setFiltroCargo("");
+    else if (
+      filtroCargo !== "" &&
+      filtroCargo !== FILTRO_FUNCAO_SEM_CARGO &&
+      !opcoesFuncao.includes(filtroCargo)
+    ) {
+      setFiltroCargo("");
+    }
+  }, [filtroCargo, opcoesFuncao, temSemCargo]);
+
+  const filtrarPorCargo = useCallback(
+    (rows: RpcPrestadorEscala[]) => {
+      if (filtroCargo === "") return rows;
+      if (filtroCargo === FILTRO_FUNCAO_SEM_CARGO) return rows.filter((p) => !(p.cargo ?? "").trim());
+      return rows.filter((p) => (p.cargo ?? "").trim() === filtroCargo);
+    },
+    [filtroCargo],
+  );
+
   const linhas: LinhaColaborador[] = useMemo(() => {
-    const mapped = prestadoresRaw.map(mapLinhaPrestador);
-    if (!mostrarAbas) return mapped;
+    const mapped = (rows: RpcPrestadorEscala[]) => rows.map(mapLinhaPrestador);
+    if (!mostrarAbas) return mapped(prestadoresRaw);
     if (aba === "minha" && perm.canEditarOk) {
       const em = user?.email?.trim().toLowerCase();
       if (!em) return [];
       return prestadoresRaw.filter((p) => (p.email ?? "").trim().toLowerCase() === em).map(mapLinhaPrestador);
     }
     if ((aba === "gerenciar" && perm.canEditarOk) || (aba === "gerar" && perm.canCriarOk)) {
-      return mapped;
+      return mapped(filtrarPorCargo(prestadoresRaw));
     }
     return [];
-  }, [aba, user?.email, prestadoresRaw, perm.canEditarOk, perm.canCriarOk, mostrarAbas]);
+  }, [aba, user?.email, prestadoresRaw, perm.canEditarOk, perm.canCriarOk, mostrarAbas, filtrarPorCargo]);
 
   const btnNavStyle: CSSProperties = {
     width: 32,
@@ -459,6 +502,63 @@ export default function RhEscalaMesPage() {
                   Gerar Escala
                 </button>
               )}
+            </div>
+          ) : null}
+
+          {mostrarFiltroFuncao ? (
+            <div
+              style={{
+                marginTop: mostrarAbas ? 14 : 10,
+                paddingTop: mostrarAbas ? 14 : 0,
+                borderTop: mostrarAbas ? `1px solid ${t.cardBorder}` : "none",
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px 16px",
+              }}
+            >
+              <label
+                htmlFor="escala-filtro-funcao"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Função
+              </label>
+              <select
+                id="escala-filtro-funcao"
+                aria-label="Filtrar por função"
+                value={filtroCargo}
+                onChange={(e) => setFiltroCargo(e.target.value)}
+                style={{
+                  minWidth: 260,
+                  maxWidth: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg ?? t.cardBg ?? "transparent",
+                  color: t.text,
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                <option value="">Todas as funções</option>
+                {opcoesFuncao.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+                {temSemCargo ? (
+                  <option value={FILTRO_FUNCAO_SEM_CARGO}>Sem função cadastrada</option>
+                ) : null}
+              </select>
             </div>
           ) : null}
         </div>
