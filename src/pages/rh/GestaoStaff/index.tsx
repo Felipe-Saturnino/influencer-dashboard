@@ -933,12 +933,11 @@ function ModalStaffEditar({
               type="text"
               value={idOperacional}
               onChange={(e) => setIdOperacional(e.target.value)}
-              placeholder="Identificador operacional (não é o ID interno da plataforma)"
               style={inputStyle}
               aria-describedby="staff-id-op-hint"
             />
             <div id="staff-id-op-hint" style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-              Código ou número usado na operação. O ID interno do cadastro permanece apenas no banco de dados.
+              Código ou número usado na operação
             </div>
           </div>
         </div>

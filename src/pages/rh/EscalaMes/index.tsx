@@ -32,6 +32,7 @@ type RpcPrestadorEscala = {
   email: string;
   org_time_id: string | null;
   nome_time: string;
+  staff_nickname: string | null;
 };
 
 const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
@@ -82,10 +83,11 @@ function labelMesAno(ano: number, mes0: number): string {
 }
 
 function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
+  const nick = (r.staff_nickname ?? "").trim();
   return {
     id: r.id,
     nome: (r.nome ?? "").trim() || "—",
-    nickname: "—",
+    nickname: nick || "—",
     turno: (r.escala ?? "").trim() || "—",
   };
 }
@@ -122,7 +124,7 @@ export default function RhEscalaMesPage() {
     setErroPrestadores(null);
     const { data, error } = await supabase.rpc("rh_escala_prestadores_times");
     if (error) {
-      setErroPrestadores("Não foi possível carregar os prestadores. Verifique permissões e se a migration da função foi aplicada.");
+      setErroPrestadores("Não foi possível carregar o staff da escala. Verifique permissões e se a migration da função foi aplicada.");
       setPrestadoresRaw([]);
     } else {
       setPrestadoresRaw((data ?? []) as RpcPrestadorEscala[]);
@@ -208,12 +210,18 @@ export default function RhEscalaMesPage() {
 
   const thBase = getThStyle(t);
 
-  const thSticky = (left: number, zIndex: number, extra?: CSSProperties): CSSProperties => ({
+  /** Cabeçalhos fixos à esquerda ficam acima das colunas de dia ao rolar horizontalmente. */
+  const Z_STICKY_HEAD = 30;
+  const Z_STICKY_BODY = 10;
+  const Z_DIA = 0;
+
+  const thSticky = (left: number, extra?: CSSProperties): CSSProperties => ({
     ...thBase,
     position: "sticky",
     left,
-    zIndex,
+    zIndex: Z_STICKY_HEAD,
     boxSizing: "border-box",
+    background: brand.blockBg,
     ...extra,
   });
 
@@ -226,11 +234,13 @@ export default function RhEscalaMesPage() {
       lineHeight: 1.25,
       fontSize: 9,
       letterSpacing: 0,
+      zIndex: Z_DIA,
+      position: "relative",
       background: dia.isWeekend
         ? t.isDark
           ? "rgba(245,158,11,0.12)"
           : "rgba(245,158,11,0.14)"
-        : undefined,
+        : getThStyle(t).background,
       color: dia.isWeekend ? "#f59e0b" : undefined,
     }),
   });
@@ -238,10 +248,18 @@ export default function RhEscalaMesPage() {
   const sombraColFixa = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
 
   const tdDia: CSSProperties = {
-    ...getTdStyle(t, { textAlign: "center", minWidth: 52, maxWidth: 56, fontSize: 12, color: t.textMuted }),
+    ...getTdStyle(t, {
+      textAlign: "center",
+      minWidth: 52,
+      maxWidth: 56,
+      fontSize: 12,
+      color: t.textMuted,
+      zIndex: Z_DIA,
+      position: "relative",
+    }),
   };
 
-  const tdSticky = (left: number, zIndex: number, rowBg: string, extra?: CSSProperties): CSSProperties => ({
+  const tdSticky = (left: number, rowBg: string, extra?: CSSProperties): CSSProperties => ({
     ...getTdStyle(t, {
       ...extra,
       background: rowBg,
@@ -249,7 +267,7 @@ export default function RhEscalaMesPage() {
     }),
     position: "sticky",
     left,
-    zIndex,
+    zIndex: Z_STICKY_BODY,
   });
 
   const zebraBgLinha = (i: number) => {
@@ -278,7 +296,7 @@ export default function RhEscalaMesPage() {
       <PageHeader
         icon={<CalendarRange size={14} aria-hidden />}
         title="Escala do Mês"
-        subtitle="Visualização da escala por prestador e dia do mês."
+        subtitle="Visualização da escala por colaborador e dia do mês (mesma base da Gestão de Staff)."
       />
 
       <div style={{ marginBottom: 20 }}>
@@ -460,12 +478,12 @@ export default function RhEscalaMesPage() {
         role="tabpanel"
         id="panel-escala-mes"
         aria-labelledby={mostrarAbas ? `tab-escala-${aba}` : undefined}
-        aria-label={mostrarAbas ? undefined : "Escala do mês por prestador e dia"}
+        aria-label={mostrarAbas ? undefined : "Escala do mês por colaborador e dia"}
       >
         {loadingPrestadores ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 10 }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-            <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando prestadores…</span>
+            <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando escala…</span>
           </div>
         ) : (
           <div className="app-table-wrap">
@@ -484,7 +502,7 @@ export default function RhEscalaMesPage() {
                 <tr>
                   <th
                     scope="col"
-                    style={thSticky(0, 5, {
+                    style={thSticky(0, {
                       minWidth: STICKY_W_NOME,
                       maxWidth: STICKY_W_NOME,
                       width: STICKY_W_NOME,
@@ -495,7 +513,7 @@ export default function RhEscalaMesPage() {
                   </th>
                   <th
                     scope="col"
-                    style={thSticky(STICKY_LEFT_NICK, 5, {
+                    style={thSticky(STICKY_LEFT_NICK, {
                       minWidth: STICKY_W_NICK,
                       maxWidth: STICKY_W_NICK,
                       width: STICKY_W_NICK,
@@ -506,7 +524,7 @@ export default function RhEscalaMesPage() {
                   </th>
                   <th
                     scope="col"
-                    style={thSticky(STICKY_LEFT_TURNO, 5, {
+                    style={thSticky(STICKY_LEFT_TURNO, {
                       minWidth: STICKY_W_TURNO,
                       maxWidth: STICKY_W_TURNO,
                       width: STICKY_W_TURNO,
@@ -546,7 +564,7 @@ export default function RhEscalaMesPage() {
                     return (
                       <tr key={row.id}>
                         <td
-                          style={tdSticky(0, 2, bg, {
+                          style={tdSticky(0, bg, {
                             maxWidth: STICKY_W_NOME,
                             width: STICKY_W_NOME,
                             minWidth: STICKY_W_NOME,
@@ -558,7 +576,7 @@ export default function RhEscalaMesPage() {
                           {row.nome}
                         </td>
                         <td
-                          style={tdSticky(STICKY_LEFT_NICK, 2, bg, {
+                          style={tdSticky(STICKY_LEFT_NICK, bg, {
                             minWidth: STICKY_W_NICK,
                             width: STICKY_W_NICK,
                             maxWidth: STICKY_W_NICK,
@@ -567,7 +585,7 @@ export default function RhEscalaMesPage() {
                           {row.nickname}
                         </td>
                         <td
-                          style={tdSticky(STICKY_LEFT_TURNO, 2, bg, {
+                          style={tdSticky(STICKY_LEFT_TURNO, bg, {
                             minWidth: STICKY_W_TURNO,
                             width: STICKY_W_TURNO,
                             maxWidth: STICKY_W_TURNO,
