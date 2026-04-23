@@ -38,6 +38,26 @@ type RpcPrestadorEscala = {
 
 /** Valor do select para prestadores sem cargo preenchido. */
 const FILTRO_FUNCAO_SEM_CARGO = "__sem__";
+/** Game Presenter e Game Presenter VIP aparecem como uma única opção no filtro. */
+const FILTRO_FUNCAO_GAME_PRESENTER = "__game_presenter__";
+
+const GP_CARGO_LOWER = new Set(["game presenter", "game presenter vip"]);
+
+function chaveOpcaoFiltroFuncao(cargoBruto: string): string {
+  const lower = cargoBruto.trim().toLowerCase();
+  if (GP_CARGO_LOWER.has(lower)) return FILTRO_FUNCAO_GAME_PRESENTER;
+  return cargoBruto.trim();
+}
+
+function cargoPassaNoFiltro(cargo: string | null | undefined, filtro: string): boolean {
+  if (filtro === "") return true;
+  if (filtro === FILTRO_FUNCAO_SEM_CARGO) return !(cargo ?? "").trim();
+  if (filtro === FILTRO_FUNCAO_GAME_PRESENTER) {
+    const lower = (cargo ?? "").trim().toLowerCase();
+    return GP_CARGO_LOWER.has(lower);
+  }
+  return (cargo ?? "").trim() === filtro;
+}
 
 const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
 
@@ -190,13 +210,18 @@ export default function RhEscalaMesPage() {
   const mostrarFiltroFuncao =
     (aba === "gerenciar" && perm.canEditarOk) || (aba === "gerar" && perm.canCriarOk);
 
-  const opcoesFuncao = useMemo(() => {
-    const s = new Set<string>();
+  const opcoesFuncao = useMemo((): { value: string; label: string }[] => {
+    const map = new Map<string, string>();
     prestadoresRaw.forEach((p) => {
-      const c = (p.cargo ?? "").trim();
-      if (c) s.add(c);
+      const bruto = (p.cargo ?? "").trim();
+      if (!bruto) return;
+      const value = chaveOpcaoFiltroFuncao(bruto);
+      const label = value === FILTRO_FUNCAO_GAME_PRESENTER ? "Game Presenter" : value;
+      if (!map.has(value)) map.set(value, label);
     });
-    return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return [...map.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
   }, [prestadoresRaw]);
 
   const temSemCargo = useMemo(
@@ -209,7 +234,7 @@ export default function RhEscalaMesPage() {
     else if (
       filtroCargo !== "" &&
       filtroCargo !== FILTRO_FUNCAO_SEM_CARGO &&
-      !opcoesFuncao.includes(filtroCargo)
+      !opcoesFuncao.some((o) => o.value === filtroCargo)
     ) {
       setFiltroCargo("");
     }
@@ -218,8 +243,7 @@ export default function RhEscalaMesPage() {
   const filtrarPorCargo = useCallback(
     (rows: RpcPrestadorEscala[]) => {
       if (filtroCargo === "") return rows;
-      if (filtroCargo === FILTRO_FUNCAO_SEM_CARGO) return rows.filter((p) => !(p.cargo ?? "").trim());
-      return rows.filter((p) => (p.cargo ?? "").trim() === filtroCargo);
+      return rows.filter((p) => cargoPassaNoFiltro(p.cargo, filtroCargo));
     },
     [filtroCargo],
   );
@@ -550,9 +574,9 @@ export default function RhEscalaMesPage() {
                 }}
               >
                 <option value="">Todas as funções</option>
-                {opcoesFuncao.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {opcoesFuncao.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
                   </option>
                 ))}
                 {temSemCargo ? (
