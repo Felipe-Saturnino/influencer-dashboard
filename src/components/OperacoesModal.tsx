@@ -81,8 +81,9 @@ export function ModalBase({
           padding: "28px",
           width: "100%",
           maxWidth,
+          minWidth: 0,
           maxHeight: "90dvh",
-          overflowY: "auto",
+          overflow: "auto",
         }}
       >
         <DialogTitleIdContext.Provider value={titleId}>{children}</DialogTitleIdContext.Provider>

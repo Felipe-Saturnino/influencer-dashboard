@@ -78,6 +78,8 @@ export interface RhFuncionario {
   staff_nickname?: string | null;
   staff_operadora_slug?: string | null;
   staff_barcode?: string | null;
+  /** ID de staff definido pela operação (não é o UUID da plataforma). */
+  staff_id_operacional?: string | null;
   /** JSON: baccarat | blackjack | vip | roleta | futebol_studio → ativo | treinamento | inativo */
   staff_skills?: Record<string, string> | null;
   created_at: string;

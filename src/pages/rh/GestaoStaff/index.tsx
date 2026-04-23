@@ -66,6 +66,14 @@ function stringifySkills(s: Record<StaffSkillKey, StaffSkillStatus>): string {
   return JSON.stringify(skillsParaJson(s));
 }
 
+/** Títulos no histórico: novos saves já usam nome curto; entradas antigas são normalizadas na leitura. */
+function labelCampoHistorico(campo: string): string {
+  const c = campo.trim();
+  if (c === "Operadora (slug)") return "Operadora";
+  if (c === "Skills (JSON)") return "Skills";
+  return c;
+}
+
 type VerAba = "pessoal" | "funcao" | "skills" | "historico";
 
 function CampoLeitura({ k, v, t }: { k: string; v: string; t: { textMuted: string; text: string } }) {
@@ -375,6 +383,9 @@ export default function RhGestaoStaffPage() {
                 <th scope="col" style={getThStyle(t)}>
                   Operadora
                 </th>
+                <th scope="col" style={getThStyle(t)}>
+                  ID operacional
+                </th>
                 <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                   Ações
                 </th>
@@ -383,7 +394,7 @@ export default function RhGestaoStaffPage() {
             <tbody>
               {linhasTabela.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ ...getTdStyle(t), textAlign: "center", padding: "32px 16px", color: t.textMuted }}>
+                  <td colSpan={8} style={{ ...getTdStyle(t), textAlign: "center", padding: "32px 16px", color: t.textMuted }}>
                     Nenhum prestador neste filtro.
                   </td>
                 </tr>
@@ -401,6 +412,9 @@ export default function RhGestaoStaffPage() {
                       <td style={getTdStyle(t)}>{row.escala?.trim() || "—"}</td>
                       <td style={getTdStyle(t)}>{labelStatusPrestador(row.status)}</td>
                       <td style={getTdStyle(t)}>{opNome}</td>
+                      <td style={getTdStyle(t)} title={row.staff_id_operacional?.trim() || undefined}>
+                        {row.staff_id_operacional?.trim() || "—"}
+                      </td>
                       <td style={{ ...getTdStyle(t), textAlign: "right" }}>
                         <div style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
                           <button
@@ -606,7 +620,7 @@ function ModalStaffVer({
           <CampoLeitura k="Turno" v={row.escala} t={t} />
           <CampoLeitura k="Operadora" v={opNome} t={t} />
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
-          <CampoLeitura k="ID" v={row.id} t={t} />
+          <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
         </div>
       )}
 
@@ -639,7 +653,7 @@ function ModalStaffVer({
       )}
 
       {aba === "historico" && (
-        <div role="tabpanel">
+        <div role="tabpanel" style={{ minWidth: 0, maxWidth: "100%" }}>
           {histLoading ? (
             <div style={{ color: t.textMuted, fontSize: 13 }}>
               <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ marginRight: 8, verticalAlign: "middle" }} />
@@ -648,7 +662,16 @@ function ModalStaffVer({
           ) : hist.length === 0 ? (
             <div style={{ padding: "20px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Nenhum registro no histórico.</div>
           ) : (
-            <ul style={{ listStyle: "none", margin: 0, padding: 0, maxHeight: "50dvh", overflowY: "auto" }}>
+            <ul
+              style={{
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                maxHeight: "50dvh",
+                overflowY: "auto",
+                minWidth: 0,
+              }}
+            >
               {hist.map((h) => {
                 const det = h.detalhes ?? {};
                 const labelUser = det.usuario_label != null ? String(det.usuario_label).trim() : "";
@@ -665,6 +688,9 @@ function ModalStaffVer({
                       borderRadius: 12,
                       border: `1px solid ${t.cardBorder}`,
                       background: t.inputBg ?? "color-mix(in srgb, var(--brand-secondary, #4a2082) 6%, transparent)",
+                      minWidth: 0,
+                      maxWidth: "100%",
+                      boxSizing: "border-box",
                     }}
                   >
                     <div style={{ fontWeight: 800, color: t.text, fontSize: 13, marginBottom: 6 }}>{titulo}</div>
@@ -672,10 +698,34 @@ function ModalStaffVer({
                       {fmtDataHora(h.created_at)} · {autor}
                     </div>
                     {"alteracoes" in det && Array.isArray(det.alteracoes) ? (
-                      <ul style={{ margin: 0, paddingLeft: 18, color: t.text, fontSize: 13 }}>
+                      <ul
+                        style={{
+                          margin: 0,
+                          paddingInlineStart: 18,
+                          color: t.text,
+                          fontSize: 13,
+                          minWidth: 0,
+                          listStylePosition: "outside",
+                        }}
+                      >
                         {(det.alteracoes as { campo: string; antes: string; depois: string }[]).map((alt, j) => (
-                          <li key={j} style={{ marginBottom: 4 }}>
-                            <strong>{alt.campo}:</strong> {alt.antes} → {alt.depois}
+                          <li key={j} style={{ marginBottom: 10, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, marginBottom: 4, fontFamily: FONT.body }}>
+                              {labelCampoHistorico(alt.campo)}:
+                            </div>
+                            <div
+                              style={{
+                                fontFamily: FONT.body,
+                                lineHeight: 1.45,
+                                overflowWrap: "anywhere",
+                                wordBreak: "break-word",
+                                whiteSpace: "pre-wrap",
+                              }}
+                            >
+                              <span style={{ color: t.textMuted }}>{alt.antes}</span>
+                              {" → "}
+                              <span>{alt.depois}</span>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -717,6 +767,7 @@ function ModalStaffEditar({
   const [turno, setTurno] = useState(row.escala ?? "");
   const [opSlug, setOpSlug] = useState(row.staff_operadora_slug ?? "");
   const [barcode, setBarcode] = useState(row.staff_barcode ?? "");
+  const [idOperacional, setIdOperacional] = useState(row.staff_id_operacional ?? "");
   const [skills, setSkills] = useState<Record<StaffSkillKey, StaffSkillStatus>>(() => normalizarSkills(row.staff_skills as Record<string, unknown>));
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
@@ -749,6 +800,7 @@ function ModalStaffEditar({
       turno: (row.escala ?? "").trim(),
       op: (row.staff_operadora_slug ?? "").trim(),
       barcode: (row.staff_barcode ?? "").trim(),
+      idOp: (row.staff_id_operacional ?? "").trim(),
       skills: stringifySkills(normalizarSkills(row.staff_skills as Record<string, unknown>)),
     };
     const depois = {
@@ -756,20 +808,23 @@ function ModalStaffEditar({
       turno: turno.trim(),
       op: opSlug.trim(),
       barcode: barcode.trim(),
+      idOp: idOperacional.trim(),
       skills: stringifySkills(skills),
     };
     const alteracoes: { campo: string; antes: string; depois: string }[] = [];
     if (antes.nick !== depois.nick) alteracoes.push({ campo: "Nickname", antes: antes.nick || "—", depois: depois.nick || "—" });
     if (antes.turno !== depois.turno) alteracoes.push({ campo: "Turno", antes: antes.turno || "—", depois: depois.turno || "—" });
-    if (antes.op !== depois.op) alteracoes.push({ campo: "Operadora (slug)", antes: antes.op || "—", depois: depois.op || "—" });
+    if (antes.op !== depois.op) alteracoes.push({ campo: "Operadora", antes: antes.op || "—", depois: depois.op || "—" });
     if (antes.barcode !== depois.barcode) alteracoes.push({ campo: "Barcode", antes: antes.barcode || "—", depois: depois.barcode || "—" });
-    if (antes.skills !== depois.skills) alteracoes.push({ campo: "Skills (JSON)", antes: antes.skills, depois: depois.skills });
+    if (antes.idOp !== depois.idOp) alteracoes.push({ campo: "ID operacional", antes: antes.idOp || "—", depois: depois.idOp || "—" });
+    if (antes.skills !== depois.skills) alteracoes.push({ campo: "Skills", antes: antes.skills, depois: depois.skills });
 
     const patch = {
       staff_nickname: depois.nick || null,
       escala: depois.turno,
       staff_operadora_slug: depois.op || null,
       staff_barcode: depois.barcode || null,
+      staff_id_operacional: depois.idOp || null,
       staff_skills: skillsParaJson(skills),
     };
 
@@ -870,8 +925,21 @@ function ModalStaffEditar({
             <input id="staff-barcode" type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} style={inputStyle} />
           </div>
           <div style={{ marginBottom: 14 }}>
-            <span style={labelStyle}>ID</span>
-            <input type="text" readOnly value={row.id} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
+            <label style={labelStyle} htmlFor="staff-id-op">
+              ID operacional
+            </label>
+            <input
+              id="staff-id-op"
+              type="text"
+              value={idOperacional}
+              onChange={(e) => setIdOperacional(e.target.value)}
+              placeholder="Identificador operacional (não é o ID interno da plataforma)"
+              style={inputStyle}
+              aria-describedby="staff-id-op-hint"
+            />
+            <div id="staff-id-op-hint" style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+              Código ou número usado na operação. O ID interno do cadastro permanece apenas no banco de dados.
+            </div>
           </div>
         </div>
       )}
