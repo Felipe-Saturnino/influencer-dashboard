@@ -968,26 +968,20 @@ function ModalStaffEditar({
           <div style={{ marginBottom: 14 }}>
             <span style={labelStyle}>Turno</span>
             {escalaPrestadorTemTurnosOperacionais(row.escala) ? (
-              <>
-                <select
-                  id="staff-turno"
-                  value={turno}
-                  onChange={(e) => setTurno(e.target.value)}
-                  style={inputStyle}
-                  aria-label="Turno operacional"
-                >
-                  <option value="">—</option>
-                  {turnosPermitidosPorEscalaPrestador(row.escala ?? "").map((op) => (
-                    <option key={op} value={op}>
-                      {op}
-                    </option>
-                  ))}
-                </select>
-                <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-                  Escala 4x2 ou 5x1: Manhã, Tarde ou Noite. Escala 3x3: Manhã ou Noite. Outras escalas não têm turno na
-                  Staff. A escala cadastral altera na Gestão de Prestadores.
-                </div>
-              </>
+              <select
+                id="staff-turno"
+                value={turno}
+                onChange={(e) => setTurno(e.target.value)}
+                style={inputStyle}
+                aria-label="Turno operacional"
+              >
+                <option value="">—</option>
+                {turnosPermitidosPorEscalaPrestador(row.escala ?? "").map((op) => (
+                  <option key={op} value={op}>
+                    {op}
+                  </option>
+                ))}
+              </select>
             ) : (
               <div
                 style={{
