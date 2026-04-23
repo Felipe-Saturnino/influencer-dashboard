@@ -2904,9 +2904,6 @@ export default function RhPrestadoresPage() {
                     style={inputStyle}
                     aria-label="E-mail corporativo Spin"
                   />
-                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body, lineHeight: 1.45 }}>
-                    Opcional. Quando preenchido, o colaborador pode aceder a «Dados de Cadastro» com o e-mail de login igual a este endereço (por exemplo e-mail corporativo), mesmo que o e-mail pessoal no cadastro seja outro.
-                  </div>
                   {fieldErr.email_spin ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email_spin}</div> : null}
                 </div>
                 {podeVerDadosSensiveis ? (
