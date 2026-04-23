@@ -1005,6 +1005,7 @@ export default function RhPrestadoresPage() {
     setForm(estadoVazioForm());
     setFieldErr({});
     setAlertaValidacaoModal(null);
+    setErroGlobal(null);
     setEditId(null);
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
@@ -1015,6 +1016,7 @@ export default function RhPrestadoresPage() {
     setForm(formDeFuncionario(row));
     setFieldErr({});
     setAlertaValidacaoModal(null);
+    setErroGlobal(null);
     setEditId(row.id);
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
@@ -1025,6 +1027,7 @@ export default function RhPrestadoresPage() {
     setForm(formDeFuncionario(row));
     setFieldErr({});
     setAlertaValidacaoModal(null);
+    setErroGlobal(null);
     setEditId(row.id);
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
@@ -1906,6 +1909,7 @@ export default function RhPrestadoresPage() {
     setModalVerExibirSensiveis(false);
     setAlertaValidacaoModal(null);
     setFieldErr({});
+    setErroGlobal(null);
   };
 
   const tabActiveBgPagina = brand.useBrand
@@ -1956,7 +1960,7 @@ export default function RhPrestadoresPage() {
         subtitle="Cadastro, head count e fluxos de RH."
       />
 
-      {erroGlobal ? (
+      {erroGlobal && modalForm === "fechado" ? (
         <div
           role="alert"
           style={{
@@ -2637,6 +2641,30 @@ export default function RhPrestadoresPage() {
               );
             })}
           </div>
+
+          {(modalForm === "novo" || modalForm === "editar" || modalForm === "ver") && erroGlobal ? (
+            <div
+              role="alert"
+              aria-live="assertive"
+              style={{
+                marginBottom: 12,
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: "rgba(232,64,37,0.12)",
+                border: "1px solid rgba(232,64,37,0.35)",
+                color: "#e84025",
+                fontSize: 13,
+                fontFamily: FONT.body,
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+                lineHeight: 1.45,
+              }}
+            >
+              <AlertCircle size={16} color="#e84025" aria-hidden style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>{erroGlobal}</span>
+            </div>
+          ) : null}
 
           {modalForm !== "ver" && alertaValidacaoModal ? (
             <div
