@@ -13,6 +13,7 @@ import {
   turnosPermitidosPorEscalaPrestador,
 } from "../../../lib/rhEscalaTurnos";
 import { PageHeader } from "../../../components/PageHeader";
+import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import type { RhFuncionario, RhFuncionarioHistorico } from "../../../types/rhFuncionario";
 
@@ -81,6 +82,8 @@ function labelCampoHistorico(campo: string): string {
 
 type VerAba = "pessoal" | "funcao" | "skills" | "historico";
 
+type StaffTabelaSortCol = "nome" | "nickname" | "time" | "funcao" | "escala" | "turno" | "operadora" | "status" | "id_op";
+
 function CampoLeitura({ k, v, t }: { k: string; v: string; t: { textMuted: string; text: string } }) {
   return (
     <div style={{ marginBottom: 12 }}>
@@ -108,6 +111,9 @@ export default function RhGestaoStaffPage() {
 
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
+
+  const [sortCol, setSortCol] = useState<StaffTabelaSortCol>("nome");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const carregarTimes = useCallback(async () => {
     setLoadingTimes(true);
@@ -183,6 +189,67 @@ export default function RhGestaoStaffPage() {
     }
     return rows;
   }, [prestadores, times, todosTimes, idxTime, timeIds]);
+
+  const nomePorTimeId = useMemo(() => {
+    const m = new Map<string, string>();
+    times.forEach((x) => m.set(x.id, x.nome));
+    return m;
+  }, [times]);
+
+  const handleSortStaff = useCallback((col: StaffTabelaSortCol) => {
+    setSortCol((prev) => {
+      if (prev === col) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setSortDir("asc");
+      return col;
+    });
+  }, []);
+
+  const linhasTabelaOrdenadas = useMemo(() => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const nomeTime = (r: RhFuncionario) =>
+      (r.org_time_id ? nomePorTimeId.get(r.org_time_id) ?? "" : "").trim().toLowerCase();
+    const turnoStr = (r: RhFuncionario) =>
+      (staffTurnoCoerenteComEscala(r.escala, r.staff_turno) ?? "").trim().toLowerCase();
+    const opSlug = (r: RhFuncionario) => (r.staff_operadora_slug ?? "").trim().toLowerCase();
+    return [...linhasTabela].sort((a, b) => {
+      let cmp = 0;
+      switch (sortCol) {
+        case "nome":
+          cmp = (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR");
+          break;
+        case "nickname":
+          cmp = (a.staff_nickname ?? "").localeCompare(b.staff_nickname ?? "", "pt-BR");
+          break;
+        case "time":
+          cmp = nomeTime(a).localeCompare(nomeTime(b), "pt-BR");
+          break;
+        case "funcao":
+          cmp = (a.cargo ?? "").localeCompare(b.cargo ?? "", "pt-BR");
+          break;
+        case "escala":
+          cmp = (a.escala ?? "").localeCompare(b.escala ?? "", "pt-BR");
+          break;
+        case "turno":
+          cmp = turnoStr(a).localeCompare(turnoStr(b), "pt-BR");
+          break;
+        case "operadora":
+          cmp = opSlug(a).localeCompare(opSlug(b), "pt-BR");
+          break;
+        case "status":
+          cmp = a.status.localeCompare(b.status, "pt-BR");
+          break;
+        case "id_op":
+          cmp = (a.staff_id_operacional ?? "").localeCompare(b.staff_id_operacional ?? "", "pt-BR");
+          break;
+        default:
+          cmp = 0;
+      }
+      return cmp * dir;
+    });
+  }, [linhasTabela, sortCol, sortDir, nomePorTimeId]);
 
   const timeLabelCentro = useMemo(() => {
     if (times.length === 0) return "—";
@@ -370,38 +437,78 @@ export default function RhGestaoStaffPage() {
             <caption style={{ display: "none" }}>Staff por time</caption>
             <thead>
               <tr>
-                <th scope="col" style={getThStyle(t)}>
-                  Nome
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  Função
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  Nickname
-                </th>
-                <th
-                  scope="col"
-                  style={getThStyle(t)}
-                  title="Cadastrado na Gestão de Prestadores. Não pode ser alterado nesta página nem no modal Editar."
-                >
-                  Escala
-                </th>
-                <th
-                  scope="col"
-                  style={getThStyle(t)}
-                  title="Só para escalas 4x2, 5x1 ou 3x3. Outros formatos não têm turno na Staff. Altere apenas em Editar."
-                >
-                  Turno
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  Status
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  Operadora
-                </th>
-                <th scope="col" style={getThStyle(t)}>
-                  ID operacional
-                </th>
+                <SortTableTh
+                  label="Nome"
+                  col="nome"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={handleSortStaff}
+                  thStyle={getThStyle(t)}
+                />
+                <SortTableTh
+                  label="Nickname"
+                  col="nickname"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={handleSortStaff}
+                  thStyle={getThStyle(t)}
+                />
+                <SortTableTh
+                  label="Time"
+                  col="time"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={handleSortStaff}
+                  thStyle={getThStyle(t)}
+                />
+                <SortTableTh
+                  label="Função"
+                  col="funcao"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={handleSortStaff}
+                  thStyle={getThStyle(t)}
+                />
+                <SortTableTh
+                  label="Escala"
+                  col="escala"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={handleSortStaff}
+                  thStyle={getThStyle(t)}
+                />
+                <SortTableTh
+                  label="Turno"
+                  col="turno"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={handleSortStaff}
+                  thStyle={getThStyle(t)}
+                />
+                <SortTableTh
+                  label="Operadora"
+                  col="operadora"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={handleSortStaff}
+                  thStyle={getThStyle(t)}
+                />
+                <SortTableTh
+                  label="Status"
+                  col="status"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={handleSortStaff}
+                  thStyle={getThStyle(t)}
+                />
+                <SortTableTh
+                  label="ID operacional"
+                  col="id_op"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={handleSortStaff}
+                  thStyle={getThStyle(t)}
+                />
                 <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                   Ações
                 </th>
@@ -410,21 +517,28 @@ export default function RhGestaoStaffPage() {
             <tbody>
               {linhasTabela.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ ...getTdStyle(t), textAlign: "center", padding: "32px 16px", color: t.textMuted }}>
+                  <td colSpan={10} style={{ ...getTdStyle(t), textAlign: "center", padding: "32px 16px", color: t.textMuted }}>
                     Nenhum prestador neste filtro.
                   </td>
                 </tr>
               ) : (
-                linhasTabela.map((row, i) => {
+                linhasTabelaOrdenadas.map((row, i) => {
                   const opSlug = row.staff_operadora_slug?.trim();
                   const opNome = opSlug ? operadorasNome[opSlug] ?? opSlug : "—";
+                  const nomeTime =
+                    row.org_time_id && nomePorTimeId.has(row.org_time_id)
+                      ? nomePorTimeId.get(row.org_time_id) ?? "—"
+                      : "—";
                   return (
                     <tr key={row.id} style={{ background: zebraStripe(i) }}>
                       <td style={getTdStyle(t)} title={row.nome}>
                         {row.nome}
                       </td>
-                      <td style={getTdStyle(t)}>{row.cargo?.trim() || "—"}</td>
                       <td style={getTdStyle(t)}>{row.staff_nickname?.trim() || "—"}</td>
+                      <td style={getTdStyle(t)} title={nomeTime}>
+                        {nomeTime}
+                      </td>
+                      <td style={getTdStyle(t)}>{row.cargo?.trim() || "—"}</td>
                       <td style={getTdStyle(t)} title="Gestão de Prestadores (somente leitura)">
                         {row.escala?.trim() || "—"}
                       </td>
@@ -438,8 +552,8 @@ export default function RhGestaoStaffPage() {
                       >
                         {staffTurnoCoerenteComEscala(row.escala, row.staff_turno) || "—"}
                       </td>
-                      <td style={getTdStyle(t)}>{labelStatusPrestador(row.status)}</td>
                       <td style={getTdStyle(t)}>{opNome}</td>
+                      <td style={getTdStyle(t)}>{labelStatusPrestador(row.status)}</td>
                       <td style={getTdStyle(t)} title={row.staff_id_operacional?.trim() || undefined}>
                         {row.staff_id_operacional?.trim() || "—"}
                       </td>
