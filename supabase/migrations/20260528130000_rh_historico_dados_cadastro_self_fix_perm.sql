@@ -1,20 +1,8 @@
--- Histórico em rh_funcionario_historico para atualizações feitas pelo próprio prestador
--- na página «Dados de Cadastro» (quando o login coincide com o e-mail ou E-mail Spin do registo).
+-- Corrige rh_funcionarios_log_historico_dados_cadastro_self: quem tem permissão
+-- rh_funcionarios (edit) mas atualiza o próprio cadastro em «Dados de Cadastro»
+-- também deve gerar histórico (a versão anterior saía cedo e não inseria nada).
 
 BEGIN;
-
-CREATE OR REPLACE FUNCTION public._rh_hist_fmt_cell(val text)
-RETURNS text
-LANGUAGE sql
-IMMUTABLE
-AS $$
-  SELECT CASE
-    WHEN val IS NULL OR btrim(val) = '' THEN '—'
-    ELSE left(btrim(val), 400)
-  END;
-$$;
-
-REVOKE ALL ON FUNCTION public._rh_hist_fmt_cell(text) FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION public.rh_funcionarios_log_historico_dados_cadastro_self()
 RETURNS trigger
@@ -31,7 +19,6 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Só o próprio colaborador (antes do UPDATE); quem edita outro registo não passa aqui
   IF NOT EXISTS (
     SELECT 1
     FROM public.profiles p
@@ -57,7 +44,6 @@ BEGIN
     usuario_lbl := 'Utilizador';
   END IF;
 
-  -- Campos relevantes (exclui id, created_at, created_by, updated_at, updated_by)
   FOR rec IN
     SELECT * FROM (VALUES
       ('Status', OLD.status::text, NEW.status::text),
@@ -141,13 +127,7 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_rh_funcionarios_hist_dados_cadastro_self ON public.rh_funcionarios;
-CREATE TRIGGER trg_rh_funcionarios_hist_dados_cadastro_self
-  AFTER UPDATE ON public.rh_funcionarios
-  FOR EACH ROW
-  EXECUTE PROCEDURE public.rh_funcionarios_log_historico_dados_cadastro_self();
-
 COMMENT ON FUNCTION public.rh_funcionarios_log_historico_dados_cadastro_self() IS
-  'Regista em rh_funcionario_historico alterações ao cadastro quando o utilizador é o próprio colaborador (e-mail ou E-mail Spin), com ou sem permissão global rh_funcionarios.';
+  'Regista em rh_funcionario_historico alterações ao cadastro quando o utilizador autenticado é o próprio colaborador (e-mail ou E-mail Spin), incluindo quem tem permissão global rh_funcionarios.';
 
 COMMIT;
