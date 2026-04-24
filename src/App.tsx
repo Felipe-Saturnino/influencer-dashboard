@@ -44,19 +44,26 @@ const Resultados = lazyWithRetry(() => import("./pages/lives/Resultados"));
 const Feedback   = lazyWithRetry(() => import("./pages/lives/Feedback"));
 const Influencers = lazyWithRetry(() => import("./pages/lives/Influencers"));
 const Scout = lazyWithRetry(() => import("./pages/lives/Scout"));
-const Financeiro  = lazyWithRetry(() => import("./pages/financeiro/Financeiro"));
-const BancaJogo   = lazyWithRetry(() => import("./pages/financeiro/BancaJogo"));
+const Financeiro  = lazyWithRetry(() => import("./pages/aquisicao/Financeiro"));
+const BancaJogo   = lazyWithRetry(() => import("./pages/aquisicao/BancaJogo"));
 const GestaoLinks = lazyWithRetry(() => import("./pages/marketing/GestaoLinks"));
 const Campanhas = lazyWithRetry(() => import("./pages/marketing/Campanhas"));
-const GestaoDealers = lazyWithRetry(() => import("./pages/operacoes/GestaoDealers"));
-const CentralNotificacoes = lazyWithRetry(() => import("./pages/operacoes/CentralNotificacoes"));
-const RoteiroMesa = lazyWithRetry(() => import("./pages/conteudo/RoteiroMesa"));
+const GestaoDealers = lazyWithRetry(() => import("./pages/estudio/GestaoDealers"));
+const CentralNotificacoes = lazyWithRetry(() => import("./pages/estudio/CentralNotificacoes"));
+const RoteiroMesa = lazyWithRetry(() => import("./pages/estudio/RoteiroMesa"));
 const PlaybookInfluencers = lazyWithRetry(() => import("./pages/conteudo/PlaybookInfluencers"));
 const LinksMateriais = lazyWithRetry(() => import("./pages/conteudo/LinksMateriais"));
 const GestaoUsuarios = lazyWithRetry(() => import("./pages/plataforma/GestaoUsuarios"));
 const GestaoOperadoras = lazyWithRetry(() => import("./pages/plataforma/GestaoOperadoras"));
+const GestaoMesas = lazyWithRetry(() => import("./pages/plataforma/GestaoMesas"));
 const StatusTecnico = lazyWithRetry(() => import("./pages/plataforma/StatusTecnico"));
 const Figurinos = lazyWithRetry(() => import("./pages/rh/Figurinos"));
+const RhPrestadores = lazyWithRetry(() => import("./pages/rh/GestaoPrestador"));
+const RhDadosCadastro = lazyWithRetry(() => import("./pages/rh/DadosCadastro"));
+const RhOrganograma = lazyWithRetry(() => import("./pages/rh/Organograma"));
+const RhVagas = lazyWithRetry(() => import("./pages/rh/Vagas"));
+const RhEscalaMes = lazyWithRetry(() => import("./pages/rh/EscalaMes"));
+const RhGestaoStaff = lazyWithRetry(() => import("./pages/rh/GestaoStaff"));
 
 // ─── MAPA DE PÁGINAS ─────────────────────────────────────────────────────────
 const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
@@ -81,8 +88,15 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   links_materiais:  LinksMateriais,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
+  gestao_mesas:     GestaoMesas,
   status_tecnico:   StatusTecnico,
   rh_figurinos:     Figurinos,
+  rh_funcionarios:  RhPrestadores,
+  rh_dados_cadastro: RhDadosCadastro,
+  rh_organograma:    RhOrganograma,
+  rh_vagas:          RhVagas,
+  rh_escala_mes:     RhEscalaMes,
+  rh_staff:          RhGestaoStaff,
   configuracoes:    Configuracoes,
   ajuda:            Ajuda,
 };

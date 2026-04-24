@@ -8,7 +8,7 @@ alwaysApply: false
 
 # Seção Lives — Regras Específicas
 
-**Escopo (Cursor):** globs cobrem **tudo** em `src/pages/lives/` (Agenda com modais, Resultados, Feedback, Influencers, Scout). Não há pasta duplicada em `operacoes/` — Influencers e Scout foram movidos para `lives/`.
+**Escopo (Cursor):** globs cobrem **tudo** em `src/pages/lives/` (Agenda com modais, Resultados, Feedback, Influencers, Scout). Influencers e Scout estão em `lives/` (não em `estudio/`).
 
 Páginas: Agenda · Resultados · Feedback · Influencers · Scout
 

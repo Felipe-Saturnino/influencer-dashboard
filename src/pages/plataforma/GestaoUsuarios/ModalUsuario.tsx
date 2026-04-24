@@ -71,14 +71,15 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setScopeGestorTipos(scopes.filter((s) => s.scope_type === "gestor_tipo").map((s) => s.scope_ref));
   }, [editando]);
 
-  /** Só ao mudar o perfil no select: limpa escopos incompatíveis (não dispare junto com troca de `editando`). */
-  useEffect(() => {
-    if (editando && role === editando.role) return;
+  /** Troca explícita no select: limpa escopos incompatíveis (evita useEffect em [role] que conflita com sync de `editando`). */
+  const handleRoleChange = (next: Role) => {
+    if (next === role) return;
+    setRole(next);
     setScopeInfluencers([]);
     setScopeOperadoras([]);
     setScopePares([]);
     setScopeGestorTipos([]);
-  }, [role]);
+  };
 
   /** Novo usuário influencer: pré-preenche operadora a partir do Scout (parceria), alinhado ao criar-usuario na Edge. */
   useEffect(() => {
@@ -422,7 +423,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         )}
         <div style={field}>
           <label style={labelStyle}>Perfil</label>
-          <select style={selectStyle} value={role} onChange={(e) => setRole(e.target.value as Role)}>
+          <select style={selectStyle} value={role} onChange={(e) => handleRoleChange(e.target.value as Role)}>
             {[...ROLES].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}

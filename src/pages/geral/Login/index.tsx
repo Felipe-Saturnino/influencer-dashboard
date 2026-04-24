@@ -34,7 +34,9 @@ export default function Login({ onLogin }: Props) {
     if (authError) {
       const msg = authError.message?.toLowerCase() || "";
       if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
-        setError("Falha de conexão. Verifique sua internet e tente novamente.");
+        setError(
+          "Falha na conexão. Sua rede de internet pode estar bloqueando o acesso; tente novamente em outra rede ou dados móveis."
+        );
       } else if (msg.includes("email not confirmed")) {
         setError("E-mail ainda não confirmado. Verifique sua caixa de entrada.");
       } else {

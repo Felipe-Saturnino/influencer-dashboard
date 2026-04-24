@@ -1,5 +1,5 @@
 -- =============================================================================
--- Dealers: Tabelas para Gestão de Dealers (Operações)
+-- Dealers: Tabelas para Gestão de Dealers (menu Estúdio no app)
 -- Execute no SQL Editor do Supabase
 --
 -- IMPORTANTE: As permissões de acesso (quem pode ver, criar, editar, excluir)

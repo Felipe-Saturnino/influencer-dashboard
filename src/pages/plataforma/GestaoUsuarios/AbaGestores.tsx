@@ -91,9 +91,9 @@ export function AbaGestores({ t }: AbaGestoresProps) {
   const ordemSecoes = [
     "Dashboards",
     "Lives",
-    "Operações",
+    "Aquisição",
     "Marketing",
-    "Financeiro",
+    "Estúdio",
     "RH",
     "Conteúdo",
     "Plataforma",

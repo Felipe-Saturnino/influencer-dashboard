@@ -5,4 +5,4 @@ Ficheiros movidos para aqui são **histórico útil**, não a fonte de verdade d
 - **Schema oficial aplicado pelo Git / CLI:** `supabase/migrations/` (ordem pelo nome do ficheiro).
 - O que está em `docs/archive/`: diagnósticos, *one-off*, *fixes* pontuais e limpezas manuais que **não** devem ser reaplicados às cegas em produção sem rever o estado actual da base.
 
-Ver também: `docs/MIGRACOES-E-DOCS.md` e `docs/SQL-LEGADO.md`.
+Ver também: `docs/MIGRACOES-E-DOCS.md`.

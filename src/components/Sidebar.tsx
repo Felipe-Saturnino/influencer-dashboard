@@ -19,7 +19,9 @@ const LOGO_DEFAULT = "/Logo Spin Gaming White.png";
 const DEFAULT_OPEN: Record<string, boolean> = {
   Dashboards: true,
   Lives: true,
-  Operações: true,
+  Aquisição: true,
+  Marketing: true,
+  Estúdio: true,
   RH: true,
   Conteúdo: true,
   Plataforma: true,
@@ -50,7 +52,26 @@ export default function Sidebar({ activePage, onNavigate, isDrawer = false, draw
       if (raw) {
         const parsed = JSON.parse(raw) as Record<string, boolean>;
         if (parsed && typeof parsed === "object") {
-          setOpenSections({ ...DEFAULT_OPEN, ...parsed });
+          const normalized: Record<string, boolean> = { ...parsed };
+          let migrated = false;
+          if ("Operações" in normalized && !("Estúdio" in normalized)) {
+            normalized["Estúdio"] = normalized["Operações"];
+            delete normalized["Operações"];
+            migrated = true;
+          }
+          if ("Financeiro" in normalized && !("Aquisição" in normalized)) {
+            normalized["Aquisição"] = normalized["Financeiro"];
+            delete normalized["Financeiro"];
+            migrated = true;
+          }
+          if (migrated) {
+            try {
+              localStorage.setItem(storageKey(uid), JSON.stringify(normalized));
+            } catch {
+              /* ignore */
+            }
+          }
+          setOpenSections({ ...DEFAULT_OPEN, ...normalized });
           return;
         }
       }

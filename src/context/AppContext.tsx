@@ -10,11 +10,17 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "mesas_spin", "streamers", "dash_overview_influencer", "dash_midias_sociais",
   "agenda", "resultados", "feedback",
   "influencers", "scout", "financeiro", "banca_jogo", "gestao_links", "campanhas", "gestao_dealers", "central_notificacoes",
-  "gestao_usuarios", "gestao_operadoras", "status_tecnico",
+  "gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico",
   "roteiro_mesa",
   "playbook_influencers",
   "links_materiais",
   "rh_figurinos",
+  "rh_funcionarios",
+  "rh_dados_cadastro",
+  "rh_organograma",
+  "rh_vagas",
+  "rh_escala_mes",
+  "rh_staff",
   "configuracoes", "ajuda",
 ];
 

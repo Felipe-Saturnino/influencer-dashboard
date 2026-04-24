@@ -13,7 +13,7 @@ import { FONT } from "../constants/theme";
 
 const DialogTitleIdContext = createContext<string>("");
 
-function useDialogTitleId() {
+export function useDialogTitleId() {
   return useContext(DialogTitleIdContext);
 }
 
@@ -60,7 +60,9 @@ export function ModalBase({
         zIndex,
         padding: "20px",
       }}
-      onClick={(e) => {
+      onMouseDown={(e) => {
+        /* `click` no backdrop após selecionar texto (mousedown no input + mouseup no overlay)
+         * fechava o modal; `mousedown` só no fundo evita esse caso. */
         if (e.target === e.currentTarget) onClose();
       }}
       onKeyDown={(e) => {
@@ -73,6 +75,7 @@ export function ModalBase({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         style={{
           background: brand.blockBg,
@@ -81,8 +84,9 @@ export function ModalBase({
           padding: "28px",
           width: "100%",
           maxWidth,
+          minWidth: 0,
           maxHeight: "90dvh",
-          overflowY: "auto",
+          overflow: "auto",
         }}
       >
         <DialogTitleIdContext.Provider value={titleId}>{children}</DialogTitleIdContext.Provider>

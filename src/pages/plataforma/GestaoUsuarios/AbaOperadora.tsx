@@ -99,7 +99,17 @@ export function AbaOperadora({ t }: AbaOperadoraProps) {
     );
   }
 
-  const ordemSecoes = ["Dashboards", "Lives", "Operações", "Marketing", "Financeiro", "Conteúdo", "Plataforma", "Geral"];
+  const ordemSecoes = [
+    "Dashboards",
+    "Lives",
+    "Aquisição",
+    "Marketing",
+    "Estúdio",
+    "RH",
+    "Conteúdo",
+    "Plataforma",
+    "Geral",
+  ];
   const pagesDaOp = PAGES.filter((p) => p.key !== "gestao_usuarios");
   const secoes = [...new Set(pagesDaOp.map((p) => p.secao))].sort(
     (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR")

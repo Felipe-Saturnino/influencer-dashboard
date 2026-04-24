@@ -26,6 +26,7 @@ import {
   GiSpyglass,
   GiDiceSixFacesFour,
   GiShare,
+  GiRoundTable,
 } from "react-icons/gi";
 import { ArrowRight, AlertTriangle } from "lucide-react";
 
@@ -159,6 +160,7 @@ const PAGE_ICONS: Record<string, React.ComponentType<{ size?: number; color?: st
   roteiro_mesa: GiNotebook,
   gestao_usuarios: GiShield,
   gestao_operadoras: GiFactory,
+  gestao_mesas: GiRoundTable,
   status_tecnico: GiRadarSweep,
 };
 

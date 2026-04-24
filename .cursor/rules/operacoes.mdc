@@ -1,17 +1,17 @@
 ---
-description: Regras específicas para todas as páginas da seção de Operações. Complementa global.mdc e brand-css-variables.mdc.
+description: Regras para páginas operacionais (estúdio, aquisição, marketing). Pastas: estudio/, aquisicao/, marketing/. Complementa global.mdc e brand-css-variables.mdc.
 globs:
-  - src/pages/operacoes/**/*.tsx
-  - src/pages/operacoes/**/*.ts
+  - src/pages/estudio/**/*.tsx
+  - src/pages/estudio/**/*.ts
+  - src/pages/aquisicao/**/*.tsx
+  - src/pages/aquisicao/**/*.ts
   - src/pages/marketing/**/*.tsx
   - src/pages/marketing/**/*.ts
-  - src/pages/financeiro/**/*.tsx
-  - src/pages/financeiro/**/*.ts
 alwaysApply: false
 ---
-# Seção Operações — Regras Específicas
+# Estúdio / operações — Regras Específicas
 
-**Escopo (Cursor):** `operacoes/` (Dealers, Central de Notificações, solicitações), `marketing/` (Campanhas, Gestão de Links), `financeiro/` (Financeiro, Banca de Jogo). Mesmas regras de UI e fluxo operacional nas três pastas.
+**Escopo (Cursor):** `estudio/` (Dealers, Central, solicitações, Roteiro de Mesa — menu **Estúdio**), `aquisicao/` (Financeiro, Banca de Jogo — menu **Aquisição**), `marketing/`. Mesmas regras de UI e fluxo operacional.
 
 **Perfil de uso:** nível operacional multíperfil (gestor, operador, influencer, agência). Mais denso em dados que os Dashboards, menos executivo. O usuário realiza ações — não só lê métricas. Cada página tem fluxos de criação, aprovação, mapeamento ou validação.
 
@@ -525,7 +525,7 @@ const cardShadow = t.isDark
 
 ---
 
-### BancaJogo (`src/pages/financeiro/BancaJogo/index.tsx`)
+### BancaJogo (`src/pages/aquisicao/BancaJogo/index.tsx`)
 
 **Workflow de 3 etapas:** Solicitado (amarelo) → Aprovado (azul) → Liberado (verde). A progressão é sempre unidirecional. Nunca permitir pular etapas na UI.
 
@@ -614,7 +614,7 @@ boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07
 
 ---
 
-### CentralNotificacoes (`src/pages/operacoes/CentralNotificacoes/index.tsx`)
+### CentralNotificacoes (`src/pages/estudio/CentralNotificacoes/index.tsx`)
 
 **Cards de campanha — semântica correta:**
 ```tsx
@@ -660,7 +660,7 @@ const longo = texto.length > 280;
 
 ---
 
-### Financeiro (`src/pages/financeiro/Financeiro/index.tsx`)
+### Financeiro (`src/pages/aquisicao/Financeiro/index.tsx`)
 
 **Datas de ciclo — formato legível, nunca ISO:**
 ```tsx
@@ -728,7 +728,7 @@ import { AlertTriangle } from "lucide-react";
 
 ---
 
-### GestaoDealers (`src/pages/operacoes/GestaoDealers/index.tsx`)
+### GestaoDealers (`src/pages/estudio/GestaoDealers/index.tsx`)
 
 **Label de bio — nunca "Perfil do Influencer":**
 ```tsx

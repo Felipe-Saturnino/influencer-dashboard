@@ -10,8 +10,8 @@ import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check
 import { GiNotebook } from "react-icons/gi";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { BannerPendencias } from "../../operacoes/solicitacoes/BannerPendencias";
-import { ModalThreadSolicitacao } from "../../operacoes/solicitacoes/ModalThreadSolicitacao";
+import { BannerPendencias } from "../solicitacoes/BannerPendencias";
+import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";

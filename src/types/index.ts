@@ -29,6 +29,7 @@ export type PageKey =
   | "campanhas"
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
+  | "gestao_mesas"
   | "gestao_dealers"
   | "central_notificacoes"
   | "status_tecnico"
@@ -36,6 +37,12 @@ export type PageKey =
   | "playbook_influencers"
   | "links_materiais"
   | "rh_figurinos"
+  | "rh_funcionarios"
+  | "rh_dados_cadastro"
+  | "rh_organograma"
+  | "rh_vagas"
+  | "rh_escala_mes"
+  | "rh_staff"
   | "configuracoes"
   | "ajuda";
 
@@ -156,7 +163,7 @@ export interface RolePermission {
 // "influencer"   → scope_ref = UUID do influencer
 // "operadora"    → scope_ref = slug da operadora (ex: "blaze")
 // "agencia_par"  → scope_ref = "uuid_influencer:slug_operadora" (ex: "abc-123:blaze")
-// "gestor_tipo"  → scope_ref = operacoes | marketing | afiliados | geral | figurino | recursos_humanos
+// "gestor_tipo"  → scope_ref = operacoes (rótulo UI: Estúdio) | marketing | afiliados | geral | figurino | recursos_humanos
 export type ScopeType = "influencer" | "operadora" | "agencia_par" | "gestor_tipo";
 
 export type GestorTipoSlug =

@@ -1,7 +1,7 @@
 -- =============================================================================
 -- VERIFICAÇÃO DE SAÚDE DA BASE DE DADOS — INFLUENCER DASHBOARD
 -- Execute no Supabase SQL Editor para obter um diagnóstico completo
--- Contexto: docs/SQL-LEGADO.md, docs/MIGRACOES-E-DOCS.md | Schema versionado: supabase/migrations/
+-- Contexto: docs/MIGRACOES-E-DOCS.md | Schema versionado: supabase/migrations/
 -- =============================================================================
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ WITH tabelas_esperadas AS (
     'roteiro_mesa_campanhas', 'roteiro_mesa_sugestoes', 'banca_jogo_solicitacoes',
     'integrations', 'sync_logs', 'tech_logs', 'pipeline_runs', 'email_envios',
     'relatorio_daily_summary', 'relatorio_monthly_summary', 'relatorio_por_tabela',
-    'relatorio_uap_por_jogo',
+    'relatorio_uap_por_jogo', 'mesas_spin_cadastro',
     'kpi_daily', 'instagram_posts', 'facebook_posts', 'youtube_videos', 'linkedin_posts',
     'alert_config'
   ]) AS nome

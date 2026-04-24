@@ -8,7 +8,7 @@ alwaysApply: false
 
 # Seção Conteúdo — Regras Específicas
 
-**Escopo (Cursor):** globs cobrem tudo em `src/pages/conteudo/`. Páginas atuais: **LinksMateriais** · **PlaybookInfluencers** · **RoteiroMesa**.
+**Escopo (Cursor):** globs cobrem tudo em `src/pages/conteudo/`. Páginas atuais: **LinksMateriais** · **PlaybookInfluencers**. **Roteiro de Mesa** está em `src/pages/estudio/RoteiroMesa/` (menu Estúdio) — regras de UI densas em `operacoes.mdc`.
 
 **Perfil de uso:** fluxos críticos — emissão de link de rastreamento (gate de aquisição), confirmação de ciência do Playbook (gate de transmissão), e gestão de roteiros de mesa por bloco e operadora.
 
@@ -38,7 +38,7 @@ alwaysApply: false
 
 ## Header de Página — Padrão da Seção
 
-**Conteúdo** (e várias **Lives**) usam **`fontSize: 18`** no `h1` e ícone **32×32** — diferente de **Operações** (`PageHeader`: 28×28 + título 22). Até unificação explícita de produto, **manter 18 / 32 nesta seção**.
+**Conteúdo** (e várias **Lives**) usam **`fontSize: 18`** no `h1` e ícone **32×32** — diferente de páginas com **`PageHeader`** no Estúdio / marketing / financeiro (28×28 + título 22). Até unificação explícita de produto, **manter 18 / 32 nesta seção**.
 
 ```tsx
 // Padrão atual de Conteúdo (e várias Lives)
@@ -62,7 +62,7 @@ alwaysApply: false
 </div>
 ```
 
-*Opcional:* se a página for só título + ações e quiseres alinhar a Operações, podes usar `PageHeader` — aceita o padrão 28/22 e já inclui `useDashboardBrand`.
+*Opcional:* se a página for só título + ações e quiseres alinhar ao padrão Estúdio/marketing, podes usar `PageHeader` — aceita o padrão 28/22 e já inclui `useDashboardBrand`.
 
 ---
 
@@ -202,7 +202,7 @@ const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
 
 ## Modais — Padrão com Acessibilidade
 
-Alinhado a **Operações**: sem `backdropFilter: blur()`; overlay escuro; `role="dialog"`, `aria-modal="true"`, `aria-labelledby`; Escape + foco; `maxHeight: "90dvh"`.
+Alinhado ao padrão **Estúdio** (modais densos): sem `backdropFilter: blur()`; overlay escuro; `role="dialog"`, `aria-modal="true"`, `aria-labelledby`; Escape + foco; `maxHeight: "90dvh"`.
 
 ```tsx
 style={{
@@ -329,7 +329,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - Imagens: `width`/`height` no `<img>`.
 - Barra de progresso: branch `brand.useBrand` obrigatória.
 
-### RoteiroMesa (`src/pages/conteudo/RoteiroMesa/index.tsx`)
+### RoteiroMesa (`src/pages/estudio/RoteiroMesa/index.tsx`)
 
 - Exclusão: dois cliques, nunca `window.confirm()`; `aria-label` com identificador do item.
 - Modais: sem blur; ARIA + Escape + foco; Salvar brand-aware (sem `BRAND.azul` / `BRAND.ciano` hardcoded no primário).

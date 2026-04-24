@@ -39,7 +39,7 @@ Configura **o que cada perfil pode fazer em cada página**. Matriz:
 | Dashboards | Conversão | … | — | — | — |
 | Dashboards | Financeiro | … | — | — | — |
 | Dashboards | Overview Influencer | … | — | — | — |
-| Operações | Influencers | … | … | … | … |
+| Lives | Influencers | … | … | … | … |
 | … | … | … | … | … | … |
 
 - **Ver:** Sim = vê tudo na página | Não = não acessa | Próprios = vê só o que está no seu escopo
@@ -76,7 +76,7 @@ O escopo filtra os dados em **todas** as telas que mostram dados de influencers 
 - Conversão (dashboard)
 - Financeiro (dashboard)
 - Overview Influencer
-- Financeiro (operações)
+- Financeiro (página em Aquisição no menu)
 - Gestão de Links
 - Qualquer outra página que liste ou detalhe influencers/operadoras
 
