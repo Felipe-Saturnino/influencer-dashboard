@@ -56,6 +56,15 @@ function filtraFuncionariosParaLoginEmail(rows: RhFuncionario[], loginEmail: str
   });
 }
 
+/** Anotação do RH «Particular»: não listar na aba Histórico desta página (só no modal em Gestão de Prestadores). */
+function historicoVisivelAbaDadosCadastro(h: RhFuncionarioHistorico): boolean {
+  if (h.tipo !== "anotacao_rh") return true;
+  const d = h.detalhes;
+  if (!d || typeof d !== "object" || Array.isArray(d)) return true;
+  const tv = String((d as Record<string, unknown>).tipo_visibilidade ?? "").trim().toLowerCase();
+  return tv !== "particular";
+}
+
 type AbaCadastro = "trabalho" | "cadastral" | "documentos" | "historico" | "fotos";
 
 type FormState = {
@@ -397,7 +406,7 @@ export default function RhDadosCadastroPage() {
       setHistItems([]);
       return;
     }
-    setHistItems((data ?? []) as RhFuncionarioHistorico[]);
+    setHistItems(((data ?? []) as RhFuncionarioHistorico[]).filter(historicoVisivelAbaDadosCadastro));
   }, []);
 
   const carregarMedia = useCallback(async (fid: string) => {
