@@ -449,15 +449,11 @@ export default function RhOrganogramaPage() {
       setErroGlobal("Preencha o texto Sobre a Gerência.");
       return;
     }
-    if (!fidGer.trim()) {
-      setErroGlobal("Selecione o líder imediato cadastrado na Gestão de Prestadores.");
-      return;
-    }
     setSalvandoGer(true);
     setErroGlobal(null);
     const payload = {
       nome: nomeGer.trim(),
-      gerente_funcionario_id: fidGer,
+      gerente_funcionario_id: fidGer.trim() || null,
       gerente_nome_livre: null,
       sobre_gerencia: sobreGerencia.trim(),
     };
@@ -514,15 +510,11 @@ export default function RhOrganogramaPage() {
       setErroGlobal("Informe o nome do time.");
       return;
     }
-    if (!fidTime.trim()) {
-      setErroGlobal("Selecione o líder imediato cadastrado na Gestão de Prestadores.");
-      return;
-    }
     setSalvandoTime(true);
     setErroGlobal(null);
     const payload = {
       nome: nomeTime.trim(),
-      lider_funcionario_id: fidTime,
+      lider_funcionario_id: fidTime.trim() || null,
       lider_nome_livre: null,
     };
     if (mdTime?.mode === "new") {
@@ -1122,18 +1114,16 @@ export default function RhOrganogramaPage() {
           </div>
           <div style={{ marginBottom: 16 }}>
             <label htmlFor="org-fid-ger" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Líder imediato (Gestão de Prestadores)
-              {req}
+              Líder imediato (Gestão de Prestadores) — opcional
             </label>
             <select
               id="org-fid-ger"
               value={fidGer}
               onChange={(e) => setFidGer(e.target.value)}
               style={inputStyle}
-              aria-label="Líder imediato prestador"
-              aria-required
+              aria-label="Líder imediato da gerência (opcional; sem seleção usa o diretor da diretoria)"
             >
-              <option value="">Selecione o prestador</option>
+              <option value="">Nenhum — herda diretor(a) da diretoria</option>
               {optsFunc}
             </select>
           </div>
@@ -1216,18 +1206,16 @@ export default function RhOrganogramaPage() {
           </div>
           <div style={{ marginBottom: 16 }}>
             <label htmlFor="org-fid-time" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Líder imediato (Gestão de Prestadores)
-              {req}
+              Líder imediato (Gestão de Prestadores) — opcional
             </label>
             <select
               id="org-fid-time"
               value={fidTime}
               onChange={(e) => setFidTime(e.target.value)}
               style={inputStyle}
-              aria-label="Líder imediato prestador"
-              aria-required
+              aria-label="Líder imediato do time (opcional; sem seleção usa o líder da gerência ou da diretoria)"
             >
-              <option value="">Selecione o prestador</option>
+              <option value="">Nenhum — herda líder da gerência</option>
               {optsFunc}
             </select>
           </div>
