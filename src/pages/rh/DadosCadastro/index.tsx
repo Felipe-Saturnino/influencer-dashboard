@@ -25,7 +25,7 @@ import {
 } from "../../../lib/rhFuncionarioValidators";
 import type { RhFuncionario, RhFuncionarioHistorico, RhFuncionarioSelfMedia, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
-import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
+import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { ListaHistoricoRh } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";

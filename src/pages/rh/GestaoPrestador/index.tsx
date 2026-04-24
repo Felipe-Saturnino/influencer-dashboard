@@ -544,7 +544,7 @@ function buildRhFuncionarioPayloadFromState(
   let bancoV = form.banco.trim();
   let agenciaV = somenteDigitos(form.agencia);
   let contaV = form.conta_corrente.trim();
-  let pixV = form.pix.trim() || null;
+  const pixV = form.pix.trim() || null;
   if (cadastroMinimoNovo && podeVerDadosSensiveis) {
     if (!bancoV) bancoV = "—";
     if (!agenciaV) agenciaV = "0";
