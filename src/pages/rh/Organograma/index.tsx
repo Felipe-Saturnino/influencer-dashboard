@@ -102,7 +102,6 @@ export default function RhOrganogramaPage() {
   const [mdDir, setMdDir] = useState<null | "new" | RhOrgDiretoria>(null);
   const [nomeDir, setNomeDir] = useState("");
   const [fidDir, setFidDir] = useState("");
-  const [livreDir, setLivreDir] = useState("");
   const [salvandoDir, setSalvandoDir] = useState(false);
 
   const [mdGer, setMdGer] = useState<null | { mode: "new"; diretoriaId: string } | { mode: "edit"; row: RhOrgGerencia }>(null);
@@ -326,7 +325,6 @@ export default function RhOrganogramaPage() {
   const abrirNovaDiretoria = () => {
     setNomeDir("");
     setFidDir("");
-    setLivreDir("");
     setDiretorSobre("");
     setFotoDiretorFile(null);
     setDraftDirId(crypto.randomUUID());
@@ -337,7 +335,6 @@ export default function RhOrganogramaPage() {
     setDraftDirId(null);
     setNomeDir(row.nome);
     setFidDir(row.diretor_funcionario_id ?? "");
-    setLivreDir(row.diretor_nome_livre ?? "");
     setDiretorSobre(row.diretor_sobre ?? "");
     setFotoDiretorFile(null);
     setMdDir(row);
@@ -352,12 +349,17 @@ export default function RhOrganogramaPage() {
       setErroGlobal("Preencha o texto Sobre o Diretor(a).");
       return;
     }
+    if (!fidDir.trim()) {
+      setErroGlobal("Selecione o diretor(a).");
+      return;
+    }
     setSalvandoDir(true);
     setErroGlobal(null);
+    const diretor_nome_livre = mdDir === "new" ? null : typeof mdDir === "object" ? mdDir.diretor_nome_livre : null;
     const payloadBase = {
       nome: nomeDir.trim(),
-      diretor_funcionario_id: fidDir || null,
-      diretor_nome_livre: livreDir.trim() || null,
+      diretor_funcionario_id: fidDir.trim(),
+      diretor_nome_livre,
       diretor_sobre: diretorSobre.trim(),
     };
     if (mdDir === "new") {
@@ -950,7 +952,7 @@ export default function RhOrganogramaPage() {
           </div>
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-cc-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Centro de custos (automático)
+              Centro de custos
             </label>
             <input
               id="org-cc-dir"
@@ -969,18 +971,20 @@ export default function RhOrganogramaPage() {
           </div>
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-fid-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Diretor(a) (prestador cadastrado)
+              Diretor(a)
+              {req}
             </label>
-            <select id="org-fid-dir" value={fidDir} onChange={(e) => setFidDir(e.target.value)} style={inputStyle} aria-label="Diretor funcionário">
-              <option value="">— Nenhum —</option>
+            <select
+              id="org-fid-dir"
+              value={fidDir}
+              onChange={(e) => setFidDir(e.target.value)}
+              style={inputStyle}
+              aria-label="Diretor(a)"
+              aria-required
+            >
+              <option value="">Selecione o diretor(a)</option>
               {optsFunc}
             </select>
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label htmlFor="org-livre-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Nome livre (se ainda não houver cadastro)
-            </label>
-            <input id="org-livre-dir" value={livreDir} onChange={(e) => setLivreDir(e.target.value)} style={inputStyle} />
           </div>
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-foto-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
@@ -1083,7 +1087,7 @@ export default function RhOrganogramaPage() {
           </div>
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-cc-ger" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Centro de custos (automático)
+              Centro de custos
             </label>
             <input
               id="org-cc-ger"
@@ -1114,7 +1118,7 @@ export default function RhOrganogramaPage() {
           </div>
           <div style={{ marginBottom: 16 }}>
             <label htmlFor="org-fid-ger" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Líder imediato (Gestão de Prestadores) — opcional
+              Líder imediato
             </label>
             <select
               id="org-fid-ger"
@@ -1189,7 +1193,7 @@ export default function RhOrganogramaPage() {
           </div>
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-cc-time" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Centro de custos (automático)
+              Centro de custos
             </label>
             <input
               id="org-cc-time"
@@ -1206,7 +1210,7 @@ export default function RhOrganogramaPage() {
           </div>
           <div style={{ marginBottom: 16 }}>
             <label htmlFor="org-fid-time" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
-              Líder imediato (Gestão de Prestadores) — opcional
+              Líder imediato
             </label>
             <select
               id="org-fid-time"
