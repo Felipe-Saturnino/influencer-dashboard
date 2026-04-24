@@ -355,7 +355,7 @@ export default function RhOrganogramaPage() {
     }
     setSalvandoDir(true);
     setErroGlobal(null);
-    const diretor_nome_livre = mdDir === "new" ? null : typeof mdDir === "object" ? mdDir.diretor_nome_livre : null;
+    const diretor_nome_livre = mdDir === "new" || mdDir === null ? null : mdDir.diretor_nome_livre;
     const payloadBase = {
       nome: nomeDir.trim(),
       diretor_funcionario_id: fidDir.trim(),
