@@ -14,6 +14,7 @@ import {
   turnoOperacionalParaSiglaGrade,
   turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
 } from "../../../lib/rhEscalaTurnos";
+import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 
 type EscalaAba = "minha" | "gerenciar" | "gerar";
 
@@ -21,8 +22,16 @@ type DiaMes = {
   dia: number;
   dowShort: string;
   isWeekend: boolean;
+  /** Feriado nacional/municipal usual em São Paulo (capital) — mesma identificação visual do fim de semana. */
+  isFeriadoSP: boolean;
+  feriadoNome: string | null;
   iso: string;
 };
+
+/** Sábado, domingo ou feriado em SP (capital) para cor de cabeçalho / células. */
+function diaComDestaqueCalendario(dia: DiaMes): boolean {
+  return dia.isWeekend || dia.isFeriadoSP;
+}
 
 type LinhaColaborador = {
   id: string;
@@ -194,11 +203,15 @@ function diasDoMes(ano: number, mes0: number): DiaMes[] {
     const y = dt.getFullYear();
     const m = String(dt.getMonth() + 1).padStart(2, "0");
     const dd = String(day).padStart(2, "0");
+    const iso = `${y}-${m}-${dd}`;
+    const feriadoNome = feriadoLabelSaoPauloCapital(iso) ?? null;
     out.push({
       dia: day,
       dowShort: DOW_SHORT[dow] ?? "",
       isWeekend: dow === 0 || dow === 6,
-      iso: `${y}-${m}-${dd}`,
+      isFeriadoSP: feriadoNome !== null,
+      feriadoNome,
+      iso,
     });
   }
   return out;
@@ -356,7 +369,7 @@ export default function RhEscalaMesPage() {
     [prestadoresRaw],
   );
 
-  /** Sugestão: fim de semana Folga; dias úteis apenas na sigla do turno configurado na Staff (MRN/AFT/NGT). */
+  /** Sugestão: fim de semana e feriados (SP capital) como Folga; dias úteis na sigla do turno da Staff (MRN/AFT/NGT). */
   const aplicarSugestaoGerar = useCallback(
     (areaKey: AreaEscalaKey) => {
       const linhasF = linhasPorFiltroGerar(areaKey);
@@ -368,7 +381,7 @@ export default function RhEscalaMesPage() {
           const key = chaveCelulaGerar(row.id, dia.iso);
           if (turnosEscala.length === 0) {
             next[key] = "";
-          } else if (dia.isWeekend) {
+          } else if (diaComDestaqueCalendario(dia)) {
             next[key] = "Folga";
           } else if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") {
             next[key] = sigla;
@@ -501,14 +514,21 @@ export default function RhEscalaMesPage() {
       letterSpacing: 0,
       zIndex: Z_DIA,
       position: "relative",
-      background: dia.isWeekend
+      background: diaComDestaqueCalendario(dia)
         ? t.isDark
           ? "rgba(245,158,11,0.12)"
           : "rgba(245,158,11,0.14)"
         : getThStyle(t).background,
-      color: dia.isWeekend ? "#f59e0b" : undefined,
+      color: diaComDestaqueCalendario(dia) ? "#f59e0b" : undefined,
     }),
   });
+
+  const fundoColunaDia = (dia: DiaMes, rowBg: string): string => {
+    if (!diaComDestaqueCalendario(dia)) return rowBg;
+    return t.isDark
+      ? `color-mix(in srgb, rgba(245,158,11,0.22) 32%, ${rowBg})`
+      : `color-mix(in srgb, rgba(245,158,11,0.24) 34%, ${rowBg})`;
+  };
 
   const sombraColFixa = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
 
@@ -934,7 +954,12 @@ export default function RhEscalaMesPage() {
                         Turno
                       </th>
                       {dias.map((dia) => (
-                        <th key={`resumo-h-${dia.iso}`} scope="col" style={thDia(dia)} title={dia.iso}>
+                        <th
+                          key={`resumo-h-${dia.iso}`}
+                          scope="col"
+                          style={thDia(dia)}
+                          title={dia.feriadoNome ? `${dia.iso} · ${dia.feriadoNome}` : dia.iso}
+                        >
                           <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
                           <div style={{ fontWeight: 600, textTransform: "lowercase", opacity: 0.95 }}>{dia.dowShort}</div>
                         </th>
@@ -955,7 +980,7 @@ export default function RhEscalaMesPage() {
                               textAlign: "center",
                               fontVariantNumeric: "tabular-nums",
                               fontWeight: 700,
-                              ...(d.isWeekend
+                              ...(diaComDestaqueCalendario(d)
                                 ? {
                                     background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
                                     color: "#f59e0b",
@@ -981,7 +1006,7 @@ export default function RhEscalaMesPage() {
                               textAlign: "center",
                               fontVariantNumeric: "tabular-nums",
                               fontWeight: 700,
-                              ...(d.isWeekend
+                              ...(diaComDestaqueCalendario(d)
                                 ? {
                                     background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
                                     color: "#f59e0b",
@@ -1007,7 +1032,7 @@ export default function RhEscalaMesPage() {
                               textAlign: "center",
                               fontVariantNumeric: "tabular-nums",
                               fontWeight: 700,
-                              ...(d.isWeekend
+                              ...(diaComDestaqueCalendario(d)
                                 ? {
                                     background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
                                     color: "#f59e0b",
@@ -1087,7 +1112,12 @@ export default function RhEscalaMesPage() {
                     Turno
                   </th>
                   {dias.map((dia) => (
-                    <th key={dia.iso} scope="col" style={thDia(dia)} title={dia.iso}>
+                    <th
+                      key={dia.iso}
+                      scope="col"
+                      style={thDia(dia)}
+                      title={dia.feriadoNome ? `${dia.iso} · ${dia.feriadoNome}` : dia.iso}
+                    >
                       <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
                       <div style={{ fontWeight: 600, textTransform: "lowercase", opacity: 0.95 }}>{dia.dowShort}</div>
                     </th>
@@ -1170,7 +1200,7 @@ export default function RhEscalaMesPage() {
                               key={`${row.id}-${dia.iso}`}
                               style={{
                                 ...tdDia,
-                                background: bg,
+                                background: fundoColunaDia(dia, bg),
                                 ...(editarCelulasGerar ? { minWidth: 72, maxWidth: 80 } : {}),
                               }}
                             >
