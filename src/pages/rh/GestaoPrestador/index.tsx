@@ -2359,29 +2359,34 @@ export default function RhPrestadoresPage() {
             <Users size={13} aria-hidden style={{ color: brand.useBrand ? brand.secondary : t.textMuted }} />
             Total de Prestadores
           </div>
-          <div style={{ fontSize: 36, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
+          <div
+            style={{
+              fontSize: 36,
+              fontWeight: 900,
+              color: t.text,
+              fontFamily: FONT_TITLE,
+              marginBottom: filtroStatus === "disponiveis" ? 12 : 0,
+              lineHeight: 1,
+            }}
+          >
             {resumoPrestadoresCards.total}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Ativos</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("ativo"), fontFamily: FONT.body }}>
-                {resumoPrestadoresCards.porStatus.ativo}
-              </span>
+          {filtroStatus === "disponiveis" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Ativos</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("ativo"), fontFamily: FONT.body }}>
+                  {resumoPrestadoresCards.porStatus.ativo}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Indisponíveis</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("indisponivel"), fontFamily: FONT.body }}>
+                  {resumoPrestadoresCards.porStatus.indisponivel}
+                </span>
+              </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Indisponíveis</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("indisponivel"), fontFamily: FONT.body }}>
-                {resumoPrestadoresCards.porStatus.indisponivel}
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Encerrados</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("encerrado"), fontFamily: FONT.body }}>
-                {resumoPrestadoresCards.porStatus.encerrado}
-              </span>
-            </div>
-          </div>
+          ) : null}
         </div>
 
         <div
