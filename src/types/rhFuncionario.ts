@@ -97,6 +97,12 @@ export interface RhFuncionario {
   staff_turno?: string | null;
   /** JSON: baccarat | blackjack | vip | roleta | futebol_studio → ativo | treinamento | inativo */
   staff_skills?: Record<string, string> | null;
+  /** Gênero no dealer (Gestão de Staff > Gestão de dealer). */
+  staff_dealer_genero?: "feminino" | "masculino" | null;
+  /** Bio do dealer (`dealers.perfil_influencer`). */
+  staff_dealer_bio?: string | null;
+  /** URLs das fotos do dealer (JSON array). */
+  staff_dealer_fotos?: unknown;
   created_at: string;
   updated_at: string;
   created_by: string | null;

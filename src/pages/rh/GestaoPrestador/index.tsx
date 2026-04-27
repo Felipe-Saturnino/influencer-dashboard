@@ -55,6 +55,7 @@ import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao, RhOrgT
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { nomeLiderDoisPrimeirosParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
+import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
@@ -1597,7 +1598,7 @@ export default function RhPrestadoresPage() {
     const cadastrarOutro = opts?.outro === true;
 
     if (modalForm === "novo") {
-      const { error } = await supabase.from("rh_funcionarios").insert(payload);
+      const { data: criado, error } = await supabase.from("rh_funcionarios").insert(payload).select("*").single();
       setSalvando(false);
       if (error) {
         if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
@@ -1607,6 +1608,7 @@ export default function RhPrestadoresPage() {
         }
         return;
       }
+      if (criado) await syncGamePresenterDealerFromRhFuncionario(criado as RhFuncionario);
       setSucessoMsg("Funcionário cadastrado.");
       await carregar();
       if (cadastrarOutro) {
@@ -1640,7 +1642,7 @@ export default function RhPrestadoresPage() {
               pix: atual.pix,
             }
           : { ...payloadEdit, salario: salarioFinal };
-      const { error } = await supabase.from("rh_funcionarios").update(mesclado).eq("id", editId);
+      const { data: atualizadoRh, error } = await supabase.from("rh_funcionarios").update(mesclado).eq("id", editId).select("*").single();
       setSalvando(false);
       if (error) {
         if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
@@ -1650,6 +1652,7 @@ export default function RhPrestadoresPage() {
         }
         return;
       }
+      if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
       setSucessoMsg("Dados atualizados.");
       setModalForm("fechado");
       setAbaModal("pessoais");

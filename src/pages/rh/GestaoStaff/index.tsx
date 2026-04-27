@@ -1,11 +1,22 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
+import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Trash2, Upload, Users } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
+import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
+import {
+  labelTurnoDealerSync,
+  primeiroUltimoNome,
+  readStaffDealerBioForUi,
+  readStaffDealerFotosForUi,
+  readStaffDealerGeneroForUi,
+  staffSkillsParaJogosEVip,
+  staffTurnoTextoParaDealerTurno,
+  syncGamePresenterDealerFromRhFuncionario,
+} from "../../../lib/rhGamePresenterDealerSync";
+import type { DealerGenero } from "../../../types";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import { PageHeader } from "../../../components/PageHeader";
@@ -76,7 +87,14 @@ function labelCampoHistorico(campo: string): string {
   return c;
 }
 
-type VerAba = "pessoal" | "funcao" | "skills" | "historico";
+type VerAba = "pessoal" | "funcao" | "skills" | "dealer" | "historico";
+
+type EditarAba = "funcao" | "skills" | "dealer";
+
+const DEALER_GENERO_LABEL: Record<DealerGenero, string> = {
+  feminino: "Feminino",
+  masculino: "Masculino",
+};
 
 type StaffTabelaSortCol = "nome" | "nickname" | "time" | "funcao" | "escala" | "turno" | "operadora" | "status" | "id_op";
 
@@ -726,12 +744,13 @@ function ModalStaffVer({
   };
 
   return (
-    <ModalBase onClose={onClose} maxWidth={560}>
+    <ModalBase onClose={onClose} maxWidth={600}>
       <ModalHeader title={`Prestador — ${row.nome}`} onClose={onClose} />
       <div role="tablist" aria-label="Seções do prestador" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {tabBtn("pessoal", "Dados pessoais")}
         {tabBtn("funcao", "Dados de função")}
         {tabBtn("skills", "Dados de skills")}
+        {tabBtn("dealer", "Gestão de dealer")}
         {tabBtn("historico", "Histórico")}
       </div>
 
@@ -784,6 +803,68 @@ function ModalStaffVer({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {aba === "dealer" && (
+        <div role="tabpanel">
+          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14, lineHeight: 1.5 }}>
+            Espelho dos campos enviados à Gestão de Dealers quando o time do organograma é <strong style={{ color: t.text }}>Game Presenter</strong>. Somente
+            leitura aqui; edição na aba «Gestão de dealer» do modal Editar.
+          </p>
+          <CampoLeitura k="Nome Real" v={primeiroUltimoNome(row.nome) || "—"} t={t} />
+          <CampoLeitura k="Nickname" v={row.staff_nickname?.trim() || "—"} t={t} />
+          <CampoLeitura k="Gênero" v={DEALER_GENERO_LABEL[readStaffDealerGeneroForUi(row)]} t={t} />
+          <CampoLeitura
+            k="Turno"
+            v={labelTurnoDealerSync(staffTurnoTextoParaDealerTurno(row.staff_turno))}
+            t={t}
+          />
+          <CampoLeitura
+            k="Jogos (skills ativas + VIP)"
+            v={(() => {
+              const { jogos, vip } = staffSkillsParaJogosEVip(row.staff_skills as Record<string, unknown>);
+              const lab: Record<string, string> = {
+                blackjack: "Blackjack",
+                roleta: "Roleta",
+                baccarat: "Baccarat",
+              };
+              const parts = jogos.map((j) => lab[j] ?? j);
+              if (vip) parts.push("VIP");
+              return parts.length ? parts.join(", ") : "—";
+            })()}
+            t={t}
+          />
+          <CampoLeitura k="Operadora" v={opNome} t={t} />
+          <CampoLeitura k="Bio do Dealer" v={readStaffDealerBioForUi(row) || "—"} t={t} />
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>Fotos</div>
+            {(() => {
+              const urls = readStaffDealerFotosForUi(row);
+              if (urls.length === 0) {
+                return <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>—</div>;
+              }
+              return (
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {urls.map((url) => (
+                    <div
+                      key={url}
+                      style={{
+                        width: 88,
+                        height: 88,
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        border: `1px solid ${t.cardBorder}`,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
@@ -897,7 +978,7 @@ function ModalStaffEditar({
   t: ReturnType<typeof useApp>["theme"];
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
-  const [aba, setAba] = useState<"funcao" | "skills">("funcao");
+  const [aba, setAba] = useState<EditarAba>("funcao");
   const [nick, setNick] = useState(row.staff_nickname ?? "");
   const [turno, setTurno] = useState(row.staff_turno ?? "");
   const [opSlug, setOpSlug] = useState(row.staff_operadora_slug ?? "");
@@ -906,6 +987,10 @@ function ModalStaffEditar({
   const [skills, setSkills] = useState<Record<StaffSkillKey, StaffSkillStatus>>(() => normalizarSkills(row.staff_skills as Record<string, unknown>));
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
+  const [dealerGenero, setDealerGenero] = useState<DealerGenero>(() => readStaffDealerGeneroForUi(row));
+  const [dealerBio, setDealerBio] = useState(() => readStaffDealerBioForUi(row));
+  const [dealerFotos, setDealerFotos] = useState<string[]>(() => readStaffDealerFotosForUi(row));
+  const [dealerUploading, setDealerUploading] = useState(false);
 
   useEffect(() => {
     setNick(row.staff_nickname ?? "");
@@ -915,6 +1000,9 @@ function ModalStaffEditar({
     setIdOperacional(row.staff_id_operacional ?? "");
     setSkills(normalizarSkills(row.staff_skills as Record<string, unknown>));
     setAba("funcao");
+    setDealerGenero(readStaffDealerGeneroForUi(row));
+    setDealerBio(readStaffDealerBioForUi(row));
+    setDealerFotos(readStaffDealerFotosForUi(row));
     setErr("");
   }, [
     row.id,
@@ -925,7 +1013,17 @@ function ModalStaffEditar({
     row.staff_barcode,
     row.staff_id_operacional,
     row.staff_skills,
+    row.staff_dealer_genero,
+    row.staff_dealer_bio,
+    row.staff_dealer_fotos,
   ]);
+
+  useEffect(() => {
+    if (aba !== "dealer") return;
+    setDealerGenero(readStaffDealerGeneroForUi(row));
+    setDealerBio(readStaffDealerBioForUi(row));
+    setDealerFotos(readStaffDealerFotosForUi(row));
+  }, [aba, row.id, row.staff_dealer_genero, row.staff_dealer_bio, row.staff_dealer_fotos]);
 
   const labelStyle: CSSProperties = {
     display: "block",
@@ -947,8 +1045,61 @@ function ModalStaffEditar({
     boxSizing: "border-box",
   };
 
+  const handleDealerFotosUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    setDealerUploading(true);
+    setErr("");
+    try {
+      const novas: string[] = [];
+      for (const file of Array.from(files)) {
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${row.id}-${crypto.randomUUID()}.${ext}`;
+        const { data, error } = await supabase.storage.from("dealer-photos").upload(path, file, { upsert: true });
+        if (error) throw error;
+        const { data: urlData } = supabase.storage.from("dealer-photos").getPublicUrl(data.path);
+        novas.push(urlData.publicUrl);
+      }
+      setDealerFotos((prev) => [...prev, ...novas]);
+    } catch (uploadErr) {
+      setErr(
+        uploadErr instanceof Error
+          ? uploadErr.message
+          : "Erro ao enviar foto. Verifique se o bucket dealer-photos existe no Storage.",
+      );
+    } finally {
+      setDealerUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const salvar = async () => {
     setErr("");
+    if (aba === "dealer") {
+      setSaving(true);
+      try {
+        const { data: updatedRh, error } = await supabase
+          .from("rh_funcionarios")
+          .update({
+            staff_dealer_genero: dealerGenero,
+            staff_dealer_bio: dealerBio.trim() || null,
+            staff_dealer_fotos: dealerFotos,
+          })
+          .eq("id", row.id)
+          .select("*")
+          .single();
+        if (error) throw error;
+        const merged = (updatedRh ?? row) as RhFuncionario;
+        await syncGamePresenterDealerFromRhFuncionario(merged);
+        onSalvo(merged);
+      } catch (upErr) {
+        setErr(upErr instanceof Error ? upErr.message : "Não foi possível salvar os dados do dealer.");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     setSaving(true);
     const allowedTurnos = [...opcoesTurnoPorEscalaRh(row.escala ?? "")];
     const turnoStr = turno.trim();
@@ -1011,11 +1162,13 @@ function ModalStaffEditar({
         anexos: [],
       });
     }
-    onSalvo(updated as RhFuncionario);
+    const atualizado = updated as RhFuncionario;
+    await syncGamePresenterDealerFromRhFuncionario(atualizado);
+    onSalvo(atualizado);
     setSaving(false);
   };
 
-  const tabBtn = (key: "funcao" | "skills", label: string) => {
+  const tabBtn = (key: EditarAba, label: string) => {
     const ativo = aba === key;
     return (
       <button
@@ -1046,11 +1199,12 @@ function ModalStaffEditar({
   };
 
   return (
-    <ModalBase onClose={onClose} maxWidth={560}>
+    <ModalBase onClose={onClose} maxWidth={600}>
       <ModalHeader title={`Editar — ${row.nome}`} onClose={onClose} />
       <div role="tablist" aria-label="Seções editáveis" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {tabBtn("funcao", "Dados de função")}
         {tabBtn("skills", "Dados de skills")}
+        {tabBtn("dealer", "Gestão de dealer")}
       </div>
 
       {aba === "funcao" && (
@@ -1149,6 +1303,110 @@ function ModalStaffEditar({
               </select>
             </div>
           ))}
+        </div>
+      )}
+
+      {aba === "dealer" && (
+        <div role="tabpanel">
+          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14, lineHeight: 1.5 }}>
+            Estes campos gravam em <strong style={{ color: t.text }}>rh_funcionarios</strong> e sincronizam com a Gestão de Dealers quando o time do organograma é{" "}
+            <strong style={{ color: t.text }}>Game Presenter</strong>. Nome, nickname, turno, operadora e jogos (skills ativas + VIP) vêm das abas «Dados de
+            função» e «Dados de skills».
+          </p>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle} htmlFor="staff-dealer-genero">
+              Gênero
+            </label>
+            <select
+              id="staff-dealer-genero"
+              value={dealerGenero}
+              onChange={(e) => setDealerGenero(e.target.value as DealerGenero)}
+              style={inputStyle}
+              aria-label="Gênero do dealer"
+            >
+              {(Object.keys(DEALER_GENERO_LABEL) as DealerGenero[]).map((g) => (
+                <option key={g} value={g}>
+                  {DEALER_GENERO_LABEL[g]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle} htmlFor="staff-dealer-bio">
+              Bio do Dealer
+            </label>
+            <textarea
+              id="staff-dealer-bio"
+              value={dealerBio}
+              onChange={(e) => setDealerBio(e.target.value)}
+              placeholder="Descrição, carisma, estilo de jogo…"
+              rows={4}
+              style={{ ...inputStyle, resize: "vertical", minHeight: 96 }}
+            />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <span style={labelStyle}>Fotos</span>
+            <p style={{ margin: "0 0 10px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+              Mesmo fluxo de envio de imagens da Gestão de Dealers (bucket dealer-photos).
+            </p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+              {dealerFotos.map((url, idx) => (
+                <div
+                  key={`${url}-${idx}`}
+                  style={{
+                    position: "relative",
+                    width: 80,
+                    height: 80,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    border: `1px solid ${t.cardBorder}`,
+                  }}
+                >
+                  <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button
+                    type="button"
+                    aria-label="Remover foto"
+                    onClick={() => setDealerFotos((prev) => prev.filter((_, i) => i !== idx))}
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      background: BRAND.vermelho,
+                      border: "none",
+                      color: "#fff",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Trash2 size={12} aria-hidden />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: `1px dashed ${t.cardBorder}`,
+                cursor: dealerUploading ? "wait" : "pointer",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                color: t.textMuted,
+              }}
+            >
+              {dealerUploading ? <Loader2 size={14} className="app-lucide-spin" aria-hidden /> : <Upload size={16} aria-hidden />}
+              {dealerUploading ? "Enviando…" : "Adicionar fotos"}
+              <input type="file" accept="image/*" multiple hidden onChange={(ev) => void handleDealerFotosUpload(ev)} disabled={dealerUploading} />
+            </label>
+          </div>
         </div>
       )}
 
