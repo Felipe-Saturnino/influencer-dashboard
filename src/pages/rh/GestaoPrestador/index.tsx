@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   StickyNote,
+  Trash2,
   UserCircle2,
   Users,
   X,
@@ -780,6 +781,9 @@ export default function RhPrestadoresPage() {
   const [anAta, setAnAta] = useState("");
   const [anFiles, setAnFiles] = useState<File[]>([]);
   const [anSalvando, setAnSalvando] = useState(false);
+
+  const [prestadorExcluirConfirm, setPrestadorExcluirConfirm] = useState<RhFuncionario | null>(null);
+  const [excluindoPrestador, setExcluindoPrestador] = useState(false);
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -1912,6 +1916,26 @@ export default function RhPrestadoresPage() {
     setErroGlobal(null);
   };
 
+  const executarExclusaoPrestador = async () => {
+    if (!prestadorExcluirConfirm) return;
+    setExcluindoPrestador(true);
+    setErroGlobal(null);
+    const fid = prestadorExcluirConfirm.id;
+    try {
+      const { error } = await supabase.from("rh_funcionarios").delete().eq("id", fid);
+      if (error) throw error;
+      if (editId === fid) fecharModalFuncionario();
+      setPrestadorExcluirConfirm(null);
+      setSucessoMsg("Prestador excluído.");
+      await carregar();
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao excluir.";
+      setErroGlobal(msg);
+    } finally {
+      setExcluindoPrestador(false);
+    }
+  };
+
   const tabActiveBgPagina = brand.useBrand
     ? "var(--brand-action-12)"
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
@@ -1950,6 +1974,11 @@ export default function RhPrestadoresPage() {
     color: "#fff",
     fontWeight: 700,
     background: ctaGradient(brand),
+  };
+  const btnIconTabelaPerigo: CSSProperties = {
+    ...btnIconTabela,
+    border: "1px solid rgba(232,64,37,0.45)",
+    color: "#e84025",
   };
 
   return (
@@ -2550,6 +2579,16 @@ export default function RhPrestadoresPage() {
                                 aria-label={`Registrar anotação de RH para ${row.nome}`}
                               >
                                 <StickyNote size={14} aria-hidden />
+                              </button>
+                            ) : null}
+                            {perm.canExcluirOk ? (
+                              <button
+                                type="button"
+                                onClick={() => setPrestadorExcluirConfirm(row)}
+                                style={btnIconTabelaPerigo}
+                                aria-label={`Excluir ${row.nome}`}
+                              >
+                                <Trash2 size={14} aria-hidden />
                               </button>
                             ) : null}
                           </div>
@@ -4110,6 +4149,55 @@ export default function RhPrestadoresPage() {
               <strong style={{ color: t.text }}>{histModalRow.nome}</strong>
             </div>
             <ListaHistoricoRh items={histModalItems} loading={histModalLoading} t={t} />
+          </div>
+        </ModalBase>
+      ) : null}
+
+      {prestadorExcluirConfirm ? (
+        <ModalBase
+          maxWidth={440}
+          onClose={() => {
+            if (!excluindoPrestador) setPrestadorExcluirConfirm(null);
+          }}
+        >
+          <ModalHeader
+            title="Excluir prestador?"
+            onClose={() => {
+              if (!excluindoPrestador) setPrestadorExcluirConfirm(null);
+            }}
+          />
+          <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
+            <p style={{ margin: "0 0 12px", fontSize: 14, color: t.text, lineHeight: 1.5 }}>
+              Esta ação remove permanentemente o cadastro de{" "}
+              <strong>{prestadorExcluirConfirm.nome}</strong> (CPF {somenteDigitos(prestadorExcluirConfirm.cpf)}). Não é possível desfazer.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                disabled={excluindoPrestador}
+                onClick={() => setPrestadorExcluirConfirm(null)}
+                style={{ ...inputStyle, width: "auto", cursor: excluindoPrestador ? "not-allowed" : "pointer" }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={excluindoPrestador}
+                onClick={() => void executarExclusaoPrestador()}
+                style={{
+                  ...inputStyle,
+                  width: "auto",
+                  border: "none",
+                  background: "#e84025",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: excluindoPrestador ? "wait" : "pointer",
+                }}
+              >
+                {excluindoPrestador ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+                Excluir
+              </button>
+            </div>
           </div>
         </ModalBase>
       ) : null}
