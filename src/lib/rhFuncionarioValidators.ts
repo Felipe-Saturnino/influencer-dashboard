@@ -99,11 +99,25 @@ export function centavosDeStringMoeda(s: string): string {
   return somenteDigitos(s);
 }
 
+/**
+ * String só com dígitos (máscara de moeda por centavos acumulados) → **reais** (número decimal).
+ * Usado para `salario` e para `fmtBRL` a partir do buffer de dígitos do formulário.
+ */
 export function numeroDeCentavosStr(centsStr: string): number {
   const d = somenteDigitos(centsStr);
   if (!d) return 0;
   const n = parseInt(d, 10) / 100;
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * Mesmo buffer de dígitos da máscara → **centavos inteiros** (ex.: "1111" → 1111).
+ * Usar em colunas `*_centavos` no banco (ex.: `remuneracao_hora_centavos`).
+ */
+export function centavosInteirosDeStringMoeda(centsStr: string): number {
+  const d = somenteDigitos(centsStr);
+  if (!d) return 0;
+  return parseInt(d, 10);
 }
 
 /** CEP brasileiro: até 8 dígitos com máscara 00000-000. */

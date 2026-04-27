@@ -26,6 +26,7 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   centavosDeStringMoeda,
+  centavosInteirosDeStringMoeda,
   formatarAgencia,
   formatarCepDigitos,
   formatarCnpjDigitos,
@@ -573,7 +574,11 @@ function buildRhFuncionarioPayloadFromState(
   const isEstudio = area === "estudio";
   const sal = isEstudio ? 0 : podeVerDadosSensiveis ? numeroDeCentavosStr(form.salarioCentavos) : 0;
   const remuneracao_hora_centavos =
-    isEstudio && podeVerDadosSensiveis ? numeroDeCentavosStr(form.remuneracaoHoraCentavos) : isEstudio ? 0 : null;
+    isEstudio && podeVerDadosSensiveis
+      ? centavosInteirosDeStringMoeda(form.remuneracaoHoraCentavos)
+      : isEstudio
+        ? 0
+        : null;
   const staff_turno = isEstudio ? (form.staff_turno.trim() || null) : null;
   const isPj = form.tipo_contrato === "PJ";
   let cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
@@ -1475,7 +1480,7 @@ export default function RhPrestadoresPage() {
 
       if (podeVerDadosSensiveis) {
         if (form.area_atuacao === "estudio") {
-          const rh = numeroDeCentavosStr(form.remuneracaoHoraCentavos);
+          const rh = centavosInteirosDeStringMoeda(form.remuneracaoHoraCentavos);
           if (rh <= 0) e.remuneracaoHoraCentavos = "Informe a remuneração por hora.";
           if (!form.staff_turno.trim()) e.staff_turno = "Selecione o turno.";
         } else if (form.area_atuacao === "escritorio") {
@@ -1556,7 +1561,7 @@ export default function RhPrestadoresPage() {
 
     if (podeVerDadosSensiveis) {
       if (form.area_atuacao === "estudio") {
-        const rh = numeroDeCentavosStr(form.remuneracaoHoraCentavos);
+        const rh = centavosInteirosDeStringMoeda(form.remuneracaoHoraCentavos);
         if (rh <= 0) e.remuneracaoHoraCentavos = "Informe a remuneração por hora.";
         if (!form.staff_turno.trim()) e.staff_turno = "Selecione o turno.";
       } else {
@@ -1723,7 +1728,7 @@ export default function RhPrestadoresPage() {
           const isEstudioAc = areaAc === "estudio";
           if (podeVerDadosSensiveis) {
             if (isEstudioAc) {
-              if (numeroDeCentavosStr(acaoForm.remuneracaoHoraCentavos) <= 0) {
+              if (centavosInteirosDeStringMoeda(acaoForm.remuneracaoHoraCentavos) <= 0) {
                 setErroGlobal("Informe a remuneração por hora.");
                 setAcaoSalvando(false);
                 return;
@@ -1760,7 +1765,7 @@ export default function RhPrestadoresPage() {
           const remuneracao_hora_centavos = !podeVerDadosSensiveis
             ? acaoModalRow.remuneracao_hora_centavos ?? null
             : isEstudioAc
-              ? numeroDeCentavosStr(acaoForm.remuneracaoHoraCentavos)
+              ? centavosInteirosDeStringMoeda(acaoForm.remuneracaoHoraCentavos)
               : null;
           const staff_turno = !podeVerDadosSensiveis
             ? acaoModalRow.staff_turno ?? null
@@ -1908,7 +1913,7 @@ export default function RhPrestadoresPage() {
                 ? acaoForm.area_atuacao
                 : "escritorio";
             if (areaReat === "estudio") {
-              if (numeroDeCentavosStr(acaoForm.remuneracaoHoraCentavos) <= 0) {
+              if (centavosInteirosDeStringMoeda(acaoForm.remuneracaoHoraCentavos) <= 0) {
                 setErroGlobal("Informe a remuneração por hora.");
                 setAcaoSalvando(false);
                 return;
