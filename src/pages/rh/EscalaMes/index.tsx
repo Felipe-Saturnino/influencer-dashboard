@@ -10,6 +10,7 @@ import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
 import {
   escalaPrestadorTemTurnosOperacionais,
+  siglaGradeParaNomeTurno,
   staffTurnoCoerenteComEscala,
   turnoOperacionalParaSiglaGrade,
   turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
@@ -36,6 +37,8 @@ function diaComDestaqueCalendario(dia: DiaMes): boolean {
 type LinhaColaborador = {
   id: string;
   nome: string;
+  /** Nome completo do cadastro (Gestão de Prestadores) — título/aria-label. */
+  nomeCompletoCadastro: string;
   nickname: string;
   /** Padrão 4x2/3x3 etc. (Gestão de Prestadores) — define opções na aba Gerar. */
   escalaCadastro: string;
@@ -148,7 +151,8 @@ function opcoesSelectCelulaGerar(siglaTurnoStaff: string): { value: string; labe
   ];
   const sigla = siglaTurnoStaff.trim();
   if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") {
-    out.push({ value: sigla, label: sigla });
+    const label = siglaGradeParaNomeTurno(sigla) || sigla;
+    out.push({ value: sigla, label });
   }
   return out;
 }
@@ -224,15 +228,25 @@ function labelMesAno(ano: number, mes0: number): string {
   return `${capitalizado} ${ano}`;
 }
 
+/** Nome cadastrado na Gestão de Prestadores: apenas primeiro e último token (ex.: "Ana Paula Costa" → "Ana Costa"). */
+function primeiroEUltimoNomePrestador(nomeCompleto: string): string {
+  const partes = nomeCompleto.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "—";
+  if (partes.length === 1) return partes[0]!;
+  return `${partes[0]!} ${partes[partes.length - 1]!}`;
+}
+
 function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
   const nick = (r.staff_nickname ?? "").trim();
   const esc = (r.escala ?? "").trim();
   const co = staffTurnoCoerenteComEscala(r.escala, r.staff_turno);
   const siglaTurnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? turnoOperacionalParaSiglaGrade(co) : "";
   const turnoStaffNome = escalaPrestadorTemTurnosOperacionais(r.escala) ? co : "";
+  const nomeCadastro = (r.nome ?? "").trim();
   return {
     id: r.id,
-    nome: (r.nome ?? "").trim() || "—",
+    nome: nomeCadastro ? primeiroEUltimoNomePrestador(nomeCadastro) : "—",
+    nomeCompletoCadastro: nomeCadastro || "—",
     nickname: nick || "—",
     escalaCadastro: esc || "—",
     siglaTurnoStaff,
@@ -369,7 +383,7 @@ export default function RhEscalaMesPage() {
     [prestadoresRaw],
   );
 
-  /** Sugestão: fim de semana e feriados (SP capital) como Folga; dias úteis na sigla do turno da Staff (MRN/AFT/NGT). */
+  /** Sugestão: fim de semana e feriados oficiais (SP capital, sem ponto facultativo) como Folga; dias úteis na sigla do turno da Staff (MRN/AFT/NGT). */
   const aplicarSugestaoGerar = useCallback(
     (areaKey: AreaEscalaKey) => {
       const linhasF = linhasPorFiltroGerar(areaKey);
@@ -1153,7 +1167,7 @@ export default function RhEscalaMesPage() {
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                           })}
-                          title={row.nome}
+                          title={row.nomeCompletoCadastro}
                         >
                           {row.nome}
                         </td>
@@ -1206,7 +1220,7 @@ export default function RhEscalaMesPage() {
                             >
                               {editarCelulasGerar ? (
                                 <select
-                                  aria-label={`Escala do dia ${dia.dia} para ${row.nome}`}
+                                  aria-label={`Escala do dia ${dia.dia} para ${row.nomeCompletoCadastro}`}
                                   value={val}
                                   onChange={(e) =>
                                     atualizarCelulaGerar(filtroAreaGerar, row.id, dia.iso, row.siglaTurnoStaff, e.target.value)

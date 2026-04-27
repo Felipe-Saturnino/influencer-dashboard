@@ -1,8 +1,7 @@
 /**
  * Calendário de feriados para destaque na UI (cidade de São Paulo / SP capital).
- * Inclui feriados nacionais fixos, feriados municipais usuais da capital e feriados móveis
- * (Carnaval, Sexta-feira Santa, Corpus Christi) calculados a partir da Páscoa ocidental.
- * Pontos facultativos ou alterações pontuais do calendário oficial podem não estar aqui.
+ * Inclui feriados nacionais fixos, municipais/estaduais usuais da capital e Sexta-feira Santa (móvel).
+ * **Não** entram pontos facultativos (ex.: Carnaval, Corpus Christi) — não são tratados como feriado na escala.
  */
 
 function addDays(base: Date, delta: number): Date {
@@ -65,16 +64,8 @@ function buildMapaFeriadosAno(ano: number): Map<string, string> {
   addMd(10, 20, "Dia da Consciência Negra");
 
   const pascoa = domingoPascoa(ano);
-  const quartaCinzas = addDays(pascoa, -46);
-  const carnavalTerca = addDays(quartaCinzas, -1);
-  const carnavalSegunda = addDays(quartaCinzas, -2);
   const sextaSanta = addDays(pascoa, -2);
-  const corpusChristi = addDays(pascoa, 60);
-
-  add(carnavalSegunda, "Carnaval");
-  add(carnavalTerca, "Carnaval");
   add(sextaSanta, "Sexta-feira Santa");
-  add(corpusChristi, "Corpus Christi");
 
   return map;
 }
