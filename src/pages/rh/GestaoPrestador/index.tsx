@@ -54,7 +54,7 @@ import type {
 import { uploadAnexosAcaoRh } from "../../../lib/rhPrestadorAcaoFiles";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
-import { nomeLiderDoisPrimeirosParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
+import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
@@ -1228,6 +1228,8 @@ export default function RhPrestadoresPage() {
   };
 
   const abrirModalRegistrarAcao = (row: RhFuncionario) => {
+    setErroGlobal(null);
+    setSucessoMsg(null);
     setAcaoModalRow(row);
     setAcaoTipo("");
     setAcaoDtSaida("");
@@ -1261,6 +1263,8 @@ export default function RhPrestadoresPage() {
   };
 
   const abrirModalRhTalks = () => {
+    setErroGlobal(null);
+    setSucessoMsg(null);
     setRhTalksOpen(true);
     setRtAssunto("");
     setRtData("");
@@ -1281,6 +1285,8 @@ export default function RhPrestadoresPage() {
   };
 
   const abrirModalRegistrarAnotacao = (row: RhFuncionario) => {
+    setErroGlobal(null);
+    setSucessoMsg(null);
     setAnotacaoModalRow(row);
     setAnVisibilidade("Publico");
     setAnAssunto("");
@@ -1975,14 +1981,22 @@ export default function RhPrestadoresPage() {
           if (errH) throw errH;
           break;
         }
-        default:
-          break;
+        default: {
+          setErroGlobal("Tipo de ação não suportado neste formulário.");
+          setAcaoSalvando(false);
+          return;
+        }
       }
       setSucessoMsg("Ação registrada.");
       fecharModalRegistrarAcao();
       await carregar();
     } catch (e: unknown) {
-      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao salvar.";
+      let msg = "Erro ao salvar.";
+      if (e && typeof e === "object") {
+        const o = e as { message?: unknown; details?: unknown };
+        if (typeof o.message === "string" && o.message.trim()) msg = o.message;
+        else if (typeof o.details === "string" && o.details.trim()) msg = o.details;
+      }
       setErroGlobal(msg);
     } finally {
       setAcaoSalvando(false);
@@ -2159,7 +2173,7 @@ export default function RhPrestadoresPage() {
         subtitle="Cadastro, head count e fluxos de RH."
       />
 
-      {erroGlobal && modalForm === "fechado" ? (
+      {erroGlobal && modalForm === "fechado" && !acaoModalRow && !anotacaoModalRow && !rhTalksOpen ? (
         <div
           role="alert"
           style={{
@@ -2665,7 +2679,7 @@ export default function RhPrestadoresPage() {
                 filtradaOrdenada.map((row, i) => {
                   const { diretoria, gerencia } = orgMetaLinha(row);
                   const liderCompleto = liderImediatoLinha(row);
-                  const lider = nomeLiderDoisPrimeirosParaTabela(liderCompleto);
+                  const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
                   return (
                     <tr key={row.id}>
                       <td
@@ -3707,6 +3721,26 @@ export default function RhPrestadoresPage() {
             <div style={{ marginBottom: 12, fontSize: 13, color: t.textMuted }}>
               <strong style={{ color: t.text }}>{acaoModalRow.nome}</strong>
             </div>
+            {erroGlobal ? (
+              <div
+                role="alert"
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  background: "rgba(232,64,37,0.12)",
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  color: "#e84025",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <AlertCircle size={14} color="#e84025" aria-hidden />
+                {erroGlobal}
+              </div>
+            ) : null}
             <div style={{ marginBottom: 12 }}>
               {lblReq("acao-tipo", "Tipo de ação")}
               <select
@@ -4055,9 +4089,6 @@ export default function RhPrestadoresPage() {
                     style={inputStyle}
                     aria-label="E-mail corporativo Spin"
                   />
-                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body, lineHeight: 1.45 }}>
-                    Opcional. Usado para vincular o login do utilizador ao cadastro em «Dados de Cadastro» quando for diferente do e-mail pessoal.
-                  </div>
                 </div>
                 {podeVerDadosSensiveis ? (
                   acaoForm.area_atuacao === "estudio" ? (
@@ -4231,6 +4262,26 @@ export default function RhPrestadoresPage() {
         <ModalBase maxWidth={640} onClose={fecharModalRhTalks}>
           <ModalHeader title="RH Talks" onClose={fecharModalRhTalks} />
           <div style={{ padding: "0 4px 16px", fontFamily: FONT.body }}>
+            {erroGlobal ? (
+              <div
+                role="alert"
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  background: "rgba(232,64,37,0.12)",
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  color: "#e84025",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <AlertCircle size={14} color="#e84025" aria-hidden />
+                {erroGlobal}
+              </div>
+            ) : null}
             <div style={{ marginBottom: 12 }}>
               {lblReq("rt-assunto", "Assunto do RH Talks")}
               <input
@@ -4416,6 +4467,26 @@ export default function RhPrestadoresPage() {
             <div style={{ marginBottom: 12, fontSize: 13, color: t.textMuted }}>
               <strong style={{ color: t.text }}>{anotacaoModalRow.nome}</strong>
             </div>
+            {erroGlobal ? (
+              <div
+                role="alert"
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  background: "rgba(232,64,37,0.12)",
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  color: "#e84025",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <AlertCircle size={14} color="#e84025" aria-hidden />
+                {erroGlobal}
+              </div>
+            ) : null}
             <div style={{ marginBottom: 12 }}>
               {lblReq("an-tipo", "Tipo")}
               <select
