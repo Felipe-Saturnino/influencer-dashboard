@@ -635,7 +635,7 @@ export default function RhEscalaMesPage() {
       <PageHeader
         icon={<CalendarRange size={14} aria-hidden />}
         title="Escala do Mês"
-        subtitle="Visualização da escala por colaborador e dia do mês (mesma base da Gestão de Staff)."
+        subtitle="Visualização da escala por colaborador e dia do mês."
       />
 
       <div style={{ marginBottom: 20 }}>
