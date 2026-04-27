@@ -6,7 +6,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
+import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
 import {
   escalaPrestadorTemTurnosOperacionais,
@@ -586,11 +586,11 @@ export default function RhEscalaMesPage() {
     const areaKey = aba === "gerenciar" ? filtroAreaGerenciar : filtroAreaGerar;
     const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
     const celulas = aba === "gerar" ? gerarPorFiltro[areaKey]?.celulas : undefined;
-    return {
-      manha: contarCelulasComSigla(linhasF, dias, celulas, "MRN"),
-      tarde: contarCelulasComSigla(linhasF, dias, celulas, "AFT"),
-      noite: contarCelulasComSigla(linhasF, dias, celulas, "NGT"),
-    };
+    const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
+    const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
+    const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
+    const total = dias.map((_, i) => (manha[i] ?? 0) + (tarde[i] ?? 0) + (noite[i] ?? 0));
+    return { manha, tarde, noite, total };
   }, [aba, filtroAreaGerenciar, filtroAreaGerar, prestadoresRaw, dias, gerarPorFiltro]);
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
@@ -951,7 +951,8 @@ export default function RhEscalaMesPage() {
                   }}
                 >
                   <caption style={{ display: "none" }}>
-                    Totais de pessoas por turno do dia e por data, conforme área selecionada
+                    Totais de pessoas por turno do dia e por data, linha TOTAL somando os três turnos, conforme área
+                    selecionada
                   </caption>
                   <thead>
                     <tr>
@@ -1052,6 +1053,42 @@ export default function RhEscalaMesPage() {
                                     color: "#f59e0b",
                                   }
                                 : {}),
+                            })}
+                          >
+                            {n}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <th
+                        scope="row"
+                        style={{
+                          ...getThStyle(t),
+                          textAlign: "left",
+                          fontWeight: 800,
+                          borderTop: `2px solid ${t.cardBorder}`,
+                          background: TOTAL_ROW_BG,
+                        }}
+                      >
+                        TOTAL
+                      </th>
+                      {resumoTurnoDias.total.map((n, idx) => {
+                        const d = dias[idx]!;
+                        return (
+                          <td
+                            key={`resumo-tot-${d.iso}`}
+                            style={getTdStyle(t, {
+                              textAlign: "center",
+                              fontVariantNumeric: "tabular-nums",
+                              fontWeight: 800,
+                              borderTop: `2px solid ${t.cardBorder}`,
+                              background: diaComDestaqueCalendario(d)
+                                ? t.isDark
+                                  ? "rgba(245,158,11,0.14)"
+                                  : "rgba(245,158,11,0.16)"
+                                : TOTAL_ROW_BG,
+                              color: diaComDestaqueCalendario(d) ? "#f59e0b" : t.text,
                             })}
                           >
                             {n}

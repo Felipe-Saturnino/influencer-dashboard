@@ -32,6 +32,9 @@ jobs:
       - name: ESLint
         run: npm run lint
 
+      - name: Unit tests (Vitest)
+        run: npm test
+
       - name: Typecheck & production build
         run: npm run build
         env:
