@@ -7,11 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
-import {
-  escalaPrestadorTemTurnosOperacionais,
-  staffTurnoCoerenteComEscala,
-  turnosPermitidosPorEscalaPrestador,
-} from "../../../lib/rhEscalaTurnos";
+import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import { PageHeader } from "../../../components/PageHeader";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -212,7 +208,7 @@ export default function RhGestaoStaffPage() {
     const nomeTime = (r: RhFuncionario) =>
       (r.org_time_id ? nomePorTimeId.get(r.org_time_id) ?? "" : "").trim().toLowerCase();
     const turnoStr = (r: RhFuncionario) =>
-      (staffTurnoCoerenteComEscala(r.escala, r.staff_turno) ?? "").trim().toLowerCase();
+      (turnoRhCoerenteComEscala(r.escala, r.staff_turno) ?? "").trim().toLowerCase();
     const opSlug = (r: RhFuncionario) => (r.staff_operadora_slug ?? "").trim().toLowerCase();
     return [...linhasTabela].sort((a, b) => {
       let cmp = 0;
@@ -544,13 +540,9 @@ export default function RhGestaoStaffPage() {
                       </td>
                       <td
                         style={getTdStyle(t)}
-                        title={
-                          escalaPrestadorTemTurnosOperacionais(row.escala)
-                            ? "Altere o turno em Editar."
-                            : "Esta escala não tem turno operacional na Staff (apenas 4x2, 5x1 ou 3x3)."
-                        }
+                        title="Mesmo campo que na Gestão de Prestadores (Dados da contratação). Pode alterar em Editar."
                       >
-                        {staffTurnoCoerenteComEscala(row.escala, row.staff_turno) || "—"}
+                        {turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"}
                       </td>
                       <td style={getTdStyle(t)}>{opNome}</td>
                       <td style={getTdStyle(t)}>{labelStatusPrestador(row.status)}</td>
@@ -760,7 +752,7 @@ function ModalStaffVer({
           <CampoLeitura k="Função" v={row.cargo} t={t} />
           <CampoLeitura k="Nickname" v={row.staff_nickname ?? ""} t={t} />
           <CampoLeitura k="Escala" v={row.escala} t={t} />
-          <CampoLeitura k="Turno" v={staffTurnoCoerenteComEscala(row.escala, row.staff_turno) || "—"} t={t} />
+          <CampoLeitura k="Turno" v={turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"} t={t} />
           <CampoLeitura k="Operadora" v={opNome} t={t} />
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
           <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
@@ -917,7 +909,7 @@ function ModalStaffEditar({
 
   useEffect(() => {
     setNick(row.staff_nickname ?? "");
-    setTurno(staffTurnoCoerenteComEscala(row.escala, row.staff_turno));
+    setTurno(turnoRhCoerenteComEscala(row.escala, row.staff_turno));
     setOpSlug(row.staff_operadora_slug ?? "");
     setBarcode(row.staff_barcode ?? "");
     setIdOperacional(row.staff_id_operacional ?? "");
@@ -958,18 +950,16 @@ function ModalStaffEditar({
   const salvar = async () => {
     setErr("");
     setSaving(true);
-    const allowedTurnos = [...turnosPermitidosPorEscalaPrestador(row.escala ?? "")];
+    const allowedTurnos = [...opcoesTurnoPorEscalaRh(row.escala ?? "")];
+    const turnoStr = turno.trim();
     let turnoFinal: string | null = null;
-    if (allowedTurnos.length > 0) {
-      const turnoStr = turno.trim();
-      turnoFinal = turnoStr && allowedTurnos.includes(turnoStr) ? turnoStr : null;
-      if (turnoStr && turnoFinal === null) {
+    if (turnoStr) {
+      if (!allowedTurnos.includes(turnoStr)) {
         setErr("Turno inválido para a escala deste prestador.");
         setSaving(false);
         return;
       }
-    } else {
-      turnoFinal = null;
+      turnoFinal = turnoStr;
     }
     const antes = {
       nick: (row.staff_nickname ?? "").trim(),
@@ -1081,38 +1071,23 @@ function ModalStaffEditar({
           </div>
           <div style={{ marginBottom: 14 }}>
             <span style={labelStyle}>Turno</span>
-            {escalaPrestadorTemTurnosOperacionais(row.escala) ? (
-              <select
-                id="staff-turno"
-                value={turno}
-                onChange={(e) => setTurno(e.target.value)}
-                style={inputStyle}
-                aria-label="Turno operacional"
-              >
-                <option value="">—</option>
-                {turnosPermitidosPorEscalaPrestador(row.escala ?? "").map((op) => (
-                  <option key={op} value={op}>
-                    {op}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div
-                style={{
-                  fontSize: 13,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                  lineHeight: 1.5,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg ?? t.cardBg,
-                }}
-              >
-                Esta escala não tem turno operacional na Staff (apenas 4x2, 5x1 ou 3x3). Ao salvar, um valor incompatível
-                gravado será removido.
-              </div>
-            )}
+            <select
+              id="staff-turno"
+              value={turno}
+              onChange={(e) => setTurno(e.target.value)}
+              style={inputStyle}
+              aria-label="Turno (mesmo cadastro que na Gestão de Prestadores)"
+            >
+              <option value="">—</option>
+              {opcoesTurnoPorEscalaRh(row.escala ?? "").map((op) => (
+                <option key={op} value={op}>
+                  {op}
+                </option>
+              ))}
+            </select>
+            <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body, lineHeight: 1.45 }}>
+              O mesmo turno definido na Gestão de Prestadores (contratação em estúdio); alterações aqui refletem lá ao reabrir o cadastro.
+            </div>
           </div>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-op">

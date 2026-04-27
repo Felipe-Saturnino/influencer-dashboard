@@ -41,7 +41,7 @@ import {
 } from "../../../lib/rhFuncionarioValidators";
 import { montarContatoEmergenciaLinha, montarEnderecoResumoLine } from "../../../lib/rhFuncionarioEndereco";
 import { buscarEnderecoPorCep } from "../../../lib/rhViaCep";
-import { turnosPermitidosPorEscalaPrestador } from "../../../lib/rhEscalaTurnos";
+import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import type {
   RhAreaAtuacao,
   RhFuncionario,
@@ -72,20 +72,6 @@ const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }[] = [
 
 /** Valores permitidos para o campo Escala (cadastro de prestador). */
 const ESCALAS_PERMITIDAS = ["5x2", "3x3", "4x2", "5x1"] as const;
-
-const OP_TURNO_ESTUDIO_PADRAO = ["Manhã", "Tarde", "Noite"] as const;
-
-function opcoesTurnoContratacao(escalaRaw: string): readonly string[] {
-  const t = turnosPermitidosPorEscalaPrestador(escalaRaw);
-  return t.length > 0 ? t : OP_TURNO_ESTUDIO_PADRAO;
-}
-
-/** Valor seguro para `<select>` de turno na aba de contratação (alinhado a `opcoesTurnoContratacao`). */
-function turnoContratacaoCoerente(escalaRaw: string, staffTurnoRaw: string | null | undefined): string {
-  const v = (staffTurnoRaw ?? "").trim();
-  const opts = opcoesTurnoContratacao(escalaRaw);
-  return opts.includes(v) ? v : "";
-}
 
 function labelAreaAtuacao(a: RhAreaAtuacao | "" | null | undefined): string {
   if (a === "estudio") return "Estúdio";
@@ -3392,7 +3378,7 @@ export default function RhPrestadoresPage() {
                         return {
                           ...s,
                           escala: escalaNova,
-                          staff_turno: turnoContratacaoCoerente(escalaNova, s.staff_turno),
+                          staff_turno: turnoRhCoerenteComEscala(escalaNova, s.staff_turno),
                         };
                       });
                     }}
@@ -3419,14 +3405,14 @@ export default function RhPrestadoresPage() {
                     <select
                       id="f-turno-estudio"
                       disabled={desabilitarCampos}
-                      value={turnoContratacaoCoerente(form.escala, form.staff_turno)}
+                      value={turnoRhCoerenteComEscala(form.escala, form.staff_turno)}
                       onChange={(e) => setForm((s) => ({ ...s, staff_turno: e.target.value }))}
                       style={inputStyle}
                       aria-label="Turno"
                       aria-required={!leitura}
                     >
                       <option value="">— Selecione —</option>
-                      {opcoesTurnoContratacao(form.escala).map((tn) => (
+                      {opcoesTurnoPorEscalaRh(form.escala).map((tn) => (
                         <option key={tn} value={tn}>
                           {tn}
                         </option>
@@ -4110,7 +4096,7 @@ export default function RhPrestadoresPage() {
                         return {
                           ...s,
                           escala: escalaNova,
-                          staff_turno: turnoContratacaoCoerente(escalaNova, s.staff_turno),
+                          staff_turno: turnoRhCoerenteComEscala(escalaNova, s.staff_turno),
                         };
                       });
                     }}
@@ -4135,13 +4121,13 @@ export default function RhPrestadoresPage() {
                     {lblReq("acao-turno-estudio", "Turno")}
                     <select
                       id="acao-turno-estudio"
-                      value={turnoContratacaoCoerente(acaoForm.escala, acaoForm.staff_turno)}
+                      value={turnoRhCoerenteComEscala(acaoForm.escala, acaoForm.staff_turno)}
                       onChange={(e) => setAcaoForm((s) => ({ ...s, staff_turno: e.target.value }))}
                       style={inputStyle}
                       aria-label="Turno"
                     >
                       <option value="">— Selecione —</option>
-                      {opcoesTurnoContratacao(acaoForm.escala).map((tn) => (
+                      {opcoesTurnoPorEscalaRh(acaoForm.escala).map((tn) => (
                         <option key={tn} value={tn}>
                           {tn}
                         </option>

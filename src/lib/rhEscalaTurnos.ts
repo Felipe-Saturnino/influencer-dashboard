@@ -25,6 +25,26 @@ export function escalaPrestadorTemTurnosOperacionais(escalaRaw: string | null | 
   return turnosPermitidosPorEscalaPrestador(escalaRaw ?? "").length > 0;
 }
 
+/**
+ * Opções de `staff_turno` compartilhadas entre Gestão de Prestadores (contratação estúdio)
+ * e Gestão de Staff: mesma lista que `turnosPermitidosPorEscalaPrestador` quando a escala
+ * é 3x3 / 4x2 / 5x1; para outras escalas cadastradas (ex. 5x2) usa Manhã / Tarde / Noite.
+ */
+export function opcoesTurnoPorEscalaRh(escalaRaw: string): readonly string[] {
+  const t = turnosPermitidosPorEscalaPrestador(escalaRaw);
+  return t.length > 0 ? t : TURNOS_M_T_N;
+}
+
+/** Valor seguro para selects de turno alinhado a `opcoesTurnoPorEscalaRh` (Prestadores + Staff). */
+export function turnoRhCoerenteComEscala(
+  escalaRaw: string | null | undefined,
+  staffTurnoRaw: string | null | undefined,
+): string {
+  const v = (staffTurnoRaw ?? "").trim();
+  const allow = opcoesTurnoPorEscalaRh(escalaRaw ?? "");
+  return allow.includes(v) ? v : "";
+}
+
 /** Valor seguro para `<select>` de `staff_turno` (vazio se o valor gravado não é permitido para a escala). */
 export function staffTurnoCoerenteComEscala(
   escalaRaw: string | null | undefined,

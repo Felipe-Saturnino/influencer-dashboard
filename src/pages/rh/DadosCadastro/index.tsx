@@ -27,6 +27,7 @@ import type { RhFuncionario, RhFuncionarioHistorico, RhFuncionarioSelfMedia, RhF
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
+import { turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import { ListaHistoricoRh } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
 
@@ -719,6 +720,7 @@ export default function RhDadosCadastroPage() {
                 ["Remuneração mensal", salarioFmt],
                 ["Data de início", form.data_inicio ? form.data_inicio.slice(0, 10).split("-").reverse().join("/") : "—"],
                 ["Escala", form.escala],
+                ["Turno", turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"],
               ] as const
             ).map(([k, v]) => (
               <div key={k} style={{ marginBottom: 12 }}>
