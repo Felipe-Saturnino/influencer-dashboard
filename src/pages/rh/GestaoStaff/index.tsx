@@ -312,7 +312,7 @@ export default function RhGestaoStaffPage() {
       <PageHeader
         icon={<Users size={14} aria-hidden />}
         title="Gestão de Staff"
-        subtitle="Prestadores dos times de Studio Operations e Customer Service."
+        subtitle="Prestadores dos times de Game Floor e Operation Management."
       />
 
       {erroTimes && (
@@ -434,7 +434,7 @@ export default function RhGestaoStaffPage() {
         </div>
       ) : times.length === 0 ? (
         <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Nenhum time encontrado para as gerências Studio Operations ou Customer Service. Ajuste os nomes no organograma ou
+          Nenhum time encontrado para as gerências Game Floor ou Operation Management. Ajuste os nomes no organograma ou
           contacte o RH.
         </div>
       ) : (
