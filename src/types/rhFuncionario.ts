@@ -13,6 +13,9 @@ export type RhHistoricoAcaoTipo =
   | "staff_gestao_edicao"
   | "dados_cadastro_self";
 
+/** Histórico da ação «Término da Prestação» (`detalhes.tipo_termino`). */
+export type RhTipoTerminoPrestacao = "voluntario" | "nao_voluntario";
+
 /** Linha de `public.rh_funcionario_historico`. */
 export interface RhFuncionarioHistorico {
   id: string;
@@ -25,6 +28,9 @@ export interface RhFuncionarioHistorico {
 }
 
 export type RhFuncionarioTipoContrato = "CLT" | "PJ" | "Estagio" | "Temporario";
+
+/** Contratação: Estúdio (hora + escala + turno) vs Escritório (mensal + escala). */
+export type RhAreaAtuacao = "estudio" | "escritorio";
 
 export interface RhFuncionario {
   id: string;
@@ -55,6 +61,10 @@ export interface RhFuncionario {
   org_time_id?: string | null;
   cargo: string;
   nivel: string;
+  /** Estúdio vs Escritório (Gestão de Prestadores — Dados de contratação). */
+  area_atuacao?: RhAreaAtuacao | null;
+  /** Centavos por hora quando `area_atuacao` = estudio. */
+  remuneracao_hora_centavos?: number | null;
   salario: number;
   data_inicio: string;
   /** Data da função/cargo (YYYY-MM-DD). */

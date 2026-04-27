@@ -54,6 +54,12 @@ export function fmtDataIsoPtBr(iso: string | null | undefined): string {
   return s;
 }
 
+function labelTipoTerminoPrestacaoDet(v: unknown): string {
+  if (v === "voluntario") return "Voluntário";
+  if (v === "nao_voluntario") return "Não voluntário";
+  return "—";
+}
+
 export function ListaHistoricoRh({
   items,
   loading,
@@ -124,6 +130,9 @@ export function ListaHistoricoRh({
               <div style={{ color: t.text, marginTop: 6 }}>
                 <div>
                   <strong>Data de término:</strong> {String(det.data_termino ?? "—")}
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  <strong>Tipo de término:</strong> {labelTipoTerminoPrestacaoDet(det.tipo_termino)}
                 </div>
                 {det.observacao ? (
                   <div style={{ marginTop: 4 }}>
