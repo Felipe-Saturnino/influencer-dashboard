@@ -7,6 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
+  isGamePresenterTimeNome,
   labelTurnoDealerSync,
   primeiroUltimoNome,
   readStaffDealerBioForUi,
@@ -629,6 +630,7 @@ export default function RhGestaoStaffPage() {
       {modalVer ? (
         <ModalStaffVer
           row={modalVer}
+          nomeTimeOrganograma={modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : ""}
           operadorasNome={operadorasNome}
           onClose={() => setModalVer(null)}
           t={t}
@@ -639,6 +641,7 @@ export default function RhGestaoStaffPage() {
       {modalEditar ? (
         <ModalStaffEditar
           row={modalEditar}
+          nomeTimeOrganograma={modalEditar.org_time_id ? nomePorTimeId.get(modalEditar.org_time_id) ?? "" : ""}
           operadorasNome={operadorasNome}
           operadoraSlugs={Object.keys(operadorasNome).sort((a, b) =>
             (operadorasNome[a] ?? a).localeCompare(operadorasNome[b] ?? b, "pt-BR"),
@@ -660,17 +663,21 @@ export default function RhGestaoStaffPage() {
 
 function ModalStaffVer({
   row,
+  nomeTimeOrganograma,
   operadorasNome,
   onClose,
   t,
   brand,
 }: {
   row: RhFuncionario;
+  /** Nome do time no organograma (rh_org_times), mesma regra que na tabela. */
+  nomeTimeOrganograma: string;
   operadorasNome: Record<string, string>;
   onClose: () => void;
   t: ReturnType<typeof useApp>["theme"];
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
+  const staffEhGamePresenter = useMemo(() => isGamePresenterTimeNome(nomeTimeOrganograma), [nomeTimeOrganograma]);
   const [aba, setAba] = useState<VerAba>("pessoal");
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
   const [histLoading, setHistLoading] = useState(false);
@@ -708,6 +715,10 @@ function ModalStaffVer({
       setHistLoading(false);
     })();
   }, [aba, row.id]);
+
+  useEffect(() => {
+    if (!staffEhGamePresenter && (aba === "skills" || aba === "dealer")) setAba("funcao");
+  }, [staffEhGamePresenter, aba]);
 
   const skills = useMemo(() => normalizarSkills(row.staff_skills as Record<string, unknown>), [row.staff_skills]);
   const opSlug = row.staff_operadora_slug?.trim();
@@ -749,8 +760,8 @@ function ModalStaffVer({
       <div role="tablist" aria-label="Seções do prestador" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {tabBtn("pessoal", "Dados pessoais")}
         {tabBtn("funcao", "Dados de função")}
-        {tabBtn("skills", "Dados de skills")}
-        {tabBtn("dealer", "Gestão de dealer")}
+        {staffEhGamePresenter ? tabBtn("skills", "Dados de skills") : null}
+        {staffEhGamePresenter ? tabBtn("dealer", "Gestão de dealer") : null}
         {tabBtn("historico", "Histórico")}
       </div>
 
@@ -768,8 +779,8 @@ function ModalStaffVer({
 
       {aba === "funcao" && (
         <div role="tabpanel">
-          <CampoLeitura k="Função" v={row.cargo} t={t} />
           <CampoLeitura k="Nickname" v={row.staff_nickname ?? ""} t={t} />
+          <CampoLeitura k="Função" v={row.cargo} t={t} />
           <CampoLeitura k="Escala" v={row.escala} t={t} />
           <CampoLeitura k="Turno" v={turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"} t={t} />
           <CampoLeitura k="Operadora" v={opNome} t={t} />
@@ -961,6 +972,7 @@ function ModalStaffVer({
 
 function ModalStaffEditar({
   row,
+  nomeTimeOrganograma,
   operadorasNome,
   operadoraSlugs,
   userEmail,
@@ -970,6 +982,7 @@ function ModalStaffEditar({
   brand,
 }: {
   row: RhFuncionario;
+  nomeTimeOrganograma: string;
   operadorasNome: Record<string, string>;
   operadoraSlugs: string[];
   userEmail: string | null;
@@ -978,6 +991,7 @@ function ModalStaffEditar({
   t: ReturnType<typeof useApp>["theme"];
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
+  const staffEhGamePresenter = useMemo(() => isGamePresenterTimeNome(nomeTimeOrganograma), [nomeTimeOrganograma]);
   const [aba, setAba] = useState<EditarAba>("funcao");
   const [nick, setNick] = useState(row.staff_nickname ?? "");
   const [turno, setTurno] = useState(row.staff_turno ?? "");
@@ -1024,6 +1038,10 @@ function ModalStaffEditar({
     setDealerBio(readStaffDealerBioForUi(row));
     setDealerFotos(readStaffDealerFotosForUi(row));
   }, [aba, row.id, row.staff_dealer_genero, row.staff_dealer_bio, row.staff_dealer_fotos]);
+
+  useEffect(() => {
+    if (!staffEhGamePresenter && (aba === "skills" || aba === "dealer")) setAba("funcao");
+  }, [staffEhGamePresenter, aba]);
 
   const labelStyle: CSSProperties = {
     display: "block",
@@ -1203,16 +1221,12 @@ function ModalStaffEditar({
       <ModalHeader title={`Editar — ${row.nome}`} onClose={onClose} />
       <div role="tablist" aria-label="Seções editáveis" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {tabBtn("funcao", "Dados de função")}
-        {tabBtn("skills", "Dados de skills")}
-        {tabBtn("dealer", "Gestão de dealer")}
+        {staffEhGamePresenter ? tabBtn("skills", "Dados de skills") : null}
+        {staffEhGamePresenter ? tabBtn("dealer", "Gestão de dealer") : null}
       </div>
 
       {aba === "funcao" && (
         <div role="tabpanel">
-          <div style={{ marginBottom: 14 }}>
-            <span style={labelStyle}>Função (somente leitura)</span>
-            <input type="text" readOnly value={row.cargo} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
-          </div>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-nick">
               Nickname
@@ -1220,7 +1234,11 @@ function ModalStaffEditar({
             <input id="staff-nick" type="text" value={nick} onChange={(e) => setNick(e.target.value)} style={inputStyle} />
           </div>
           <div style={{ marginBottom: 14 }}>
-            <span style={labelStyle}>Escala (somente leitura — Gestão de Prestadores)</span>
+            <span style={labelStyle}>Função (somente leitura)</span>
+            <input type="text" readOnly value={row.cargo} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <span style={labelStyle}>Escala (somente leitura)</span>
             <input type="text" readOnly value={row.escala?.trim() || "—"} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
           </div>
           <div style={{ marginBottom: 14 }}>
@@ -1239,9 +1257,6 @@ function ModalStaffEditar({
                 </option>
               ))}
             </select>
-            <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body, lineHeight: 1.45 }}>
-              O mesmo turno definido na Gestão de Prestadores (contratação em estúdio); alterações aqui refletem lá ao reabrir o cadastro.
-            </div>
           </div>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-op">
@@ -1308,11 +1323,6 @@ function ModalStaffEditar({
 
       {aba === "dealer" && (
         <div role="tabpanel">
-          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14, lineHeight: 1.5 }}>
-            Estes campos gravam em <strong style={{ color: t.text }}>rh_funcionarios</strong> e sincronizam com a Gestão de Dealers quando o time do organograma é{" "}
-            <strong style={{ color: t.text }}>Game Presenter</strong>. Nome, nickname, turno, operadora e jogos (skills ativas + VIP) vêm das abas «Dados de
-            função» e «Dados de skills».
-          </p>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-dealer-genero">
               Gênero
@@ -1346,10 +1356,7 @@ function ModalStaffEditar({
           </div>
           <div style={{ marginBottom: 14 }}>
             <span style={labelStyle}>Fotos</span>
-            <p style={{ margin: "0 0 10px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-              Mesmo fluxo de envio de imagens da Gestão de Dealers (bucket dealer-photos).
-            </p>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10, marginTop: 6 }}>
               {dealerFotos.map((url, idx) => (
                 <div
                   key={`${url}-${idx}`}

@@ -96,7 +96,7 @@ export default function GestaoDealers() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    let qDealers = supabase.from("dealers").select("*").order("nickname");
+    let qDealers = supabase.from("dealers").select("*").not("rh_funcionario_id", "is", null).order("nickname");
     if (user?.role === "operador" && operadoraSlugsForcado?.length) {
       qDealers = qDealers.in("operadora_slug", operadoraSlugsForcado);
     }
