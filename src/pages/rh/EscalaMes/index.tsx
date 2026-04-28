@@ -18,8 +18,6 @@ import {
 } from "../../../lib/rhEscalaTurnos";
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 
-type EscalaAba = "minha" | "gerenciar" | "gerar";
-
 type DiaMes = {
   dia: number;
   dowShort: string;
@@ -41,7 +39,7 @@ type LinhaColaborador = {
   /** Nome completo do cadastro (Gestão de Prestadores) — título/aria-label. */
   nomeCompletoCadastro: string;
   nickname: string;
-  /** Padrão 4x2/3x3 etc. (Gestão de Prestadores) — define opções na aba Gerar. */
+  /** Padrão 4x2/3x3 etc. (Gestão de Prestadores) — define opções na grade de geração. */
   escalaCadastro: string;
   /** Sigla do turno na Staff (MRN/AFT/NGT) para a grade; vazio se sem turno aplicável. */
   siglaTurnoStaff: string;
@@ -256,20 +254,8 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
   };
 }
 
-function abaVisivel(aba: EscalaAba, canEditarOk: boolean, canCriarOk: boolean): boolean {
-  if (aba === "minha" || aba === "gerenciar") return canEditarOk;
-  if (aba === "gerar") return canCriarOk;
-  return false;
-}
-
-function primeiraAbaDisponivel(canEditarOk: boolean, canCriarOk: boolean): EscalaAba | null {
-  if (canEditarOk) return "minha";
-  if (canCriarOk) return "gerar";
-  return null;
-}
-
 export default function RhEscalaMesPage() {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_escala_mes");
 
@@ -277,15 +263,12 @@ export default function RhEscalaMesPage() {
   const inicial = useMemo(() => mesReferenciaInicial(), []);
   const [ano, setAno] = useState(inicial.ano);
   const [mes, setMes] = useState(inicial.mes);
-  const [aba, setAba] = useState<EscalaAba>("minha");
 
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
-  /** Área (time) na aba Gerenciar. */
-  const [filtroAreaGerenciar, setFiltroAreaGerenciar] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
-  /** Área (time) na aba Gerar. */
-  const [filtroAreaGerar, setFiltroAreaGerar] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
+  /** Área (time) para consolidado e grade de geração. */
+  const [filtroArea, setFiltroArea] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
   /** Por área: células do mês e baseline após aprovação. */
   const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
 
@@ -342,43 +325,17 @@ export default function RhEscalaMesPage() {
     }
   }, [mes, podeMesSeguinte]);
 
-  useEffect(() => {
-    if (perm.loading) return;
-    if (abaVisivel(aba, perm.canEditarOk, perm.canCriarOk)) return;
-    const first = primeiraAbaDisponivel(perm.canEditarOk, perm.canCriarOk);
-    if (first) setAba(first);
-  }, [perm.loading, perm.canEditarOk, perm.canCriarOk, aba]);
+  const podeEditarGrade = perm.canCriarOk;
+  const mostrarFiltroArea = perm.canView === "sim" || perm.canView === "proprios";
 
-  const mostrarAbas = perm.canEditarOk || perm.canCriarOk;
-
-  const mostrarFiltroArea =
-    (aba === "gerenciar" && perm.canEditarOk) || (aba === "gerar" && perm.canCriarOk);
-
-  /** Novo mês: zera rascunhos/aprovações da aba Gerar (mantém área selecionada). */
+  /** Novo mês: zera rascunhos/aprovações da grade (mantém área selecionada). */
   useEffect(() => {
     setGerarPorFiltro({});
   }, [ano, mes]);
 
-  const linhasGerenciar = useMemo(() => {
-    return filtrarPorArea(prestadoresRaw, filtroAreaGerenciar).map(mapLinhaPrestador);
-  }, [prestadoresRaw, filtroAreaGerenciar]);
-
-  const linhasGerar = useMemo(() => {
-    return filtrarPorArea(prestadoresRaw, filtroAreaGerar).map(mapLinhaPrestador);
-  }, [prestadoresRaw, filtroAreaGerar]);
-
-  const linhas: LinhaColaborador[] = useMemo(() => {
-    const mapped = (rows: RpcPrestadorEscala[]) => rows.map(mapLinhaPrestador);
-    if (!mostrarAbas) return mapped(prestadoresRaw);
-    if (aba === "minha" && perm.canEditarOk) {
-      const em = user?.email?.trim().toLowerCase();
-      if (!em) return [];
-      return prestadoresRaw.filter((p) => (p.email ?? "").trim().toLowerCase() === em).map(mapLinhaPrestador);
-    }
-    if (aba === "gerenciar" && perm.canEditarOk) return linhasGerenciar;
-    if (aba === "gerar" && perm.canCriarOk) return linhasGerar;
-    return [];
-  }, [aba, user?.email, prestadoresRaw, perm.canEditarOk, perm.canCriarOk, mostrarAbas, linhasGerenciar, linhasGerar]);
+  const linhas = useMemo(() => {
+    return filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
+  }, [prestadoresRaw, filtroArea]);
 
   const linhasPorFiltroGerar = useCallback(
     (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador),
@@ -414,7 +371,6 @@ export default function RhEscalaMesPage() {
           baseline: null,
         },
       }));
-      setFiltroAreaGerar(areaKey);
     },
     [dias, linhasPorFiltroGerar],
   );
@@ -581,19 +537,18 @@ export default function RhEscalaMesPage() {
       : "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, #f2effa)";
   };
 
-  const celulasGerarAtivas = aba === "gerar" ? gerarPorFiltro[filtroAreaGerar]?.celulas : undefined;
+  const celulasGerarAtivas = podeEditarGrade ? gerarPorFiltro[filtroArea]?.celulas : undefined;
 
   const resumoTurnoDias = useMemo(() => {
-    if (aba !== "gerenciar" && aba !== "gerar") return null;
-    const areaKey = aba === "gerenciar" ? filtroAreaGerenciar : filtroAreaGerar;
-    const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
-    const celulas = aba === "gerar" ? gerarPorFiltro[areaKey]?.celulas : undefined;
+    if (!mostrarFiltroArea) return null;
+    const linhasF = filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
+    const celulas = podeEditarGrade ? gerarPorFiltro[filtroArea]?.celulas : undefined;
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
     const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
     const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
     const total = dias.map((_, i) => (manha[i] ?? 0) + (tarde[i] ?? 0) + (noite[i] ?? 0));
     return { manha, tarde, noite, total };
-  }, [aba, filtroAreaGerenciar, filtroAreaGerar, prestadoresRaw, dias, gerarPorFiltro]);
+  }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro, podeEditarGrade]);
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
 
@@ -614,7 +569,7 @@ export default function RhEscalaMesPage() {
     cursor: "pointer",
   };
 
-  const acaoGerarNoFiltroSelecionado = aba === "gerar" ? acaoBotaoGerar(filtroAreaGerar) : null;
+  const acaoGerarNoFiltroSelecionado = podeEditarGrade ? acaoBotaoGerar(filtroArea) : null;
 
   if (perm.loading) {
     return (
@@ -637,7 +592,7 @@ export default function RhEscalaMesPage() {
       <PageHeader
         icon={<CalendarRange size={14} aria-hidden />}
         title="Escala do Mês"
-        subtitle="Visualização da escala por colaborador e dia do mês."
+        subtitle="Gere a escala por área (time), colaborador e dia do mês."
       />
 
       <div style={{ marginBottom: 20 }}>
@@ -656,7 +611,7 @@ export default function RhEscalaMesPage() {
               justifyContent: "center",
               gap: 12,
               flexWrap: "wrap",
-              marginBottom: mostrarAbas ? 12 : 0,
+              marginBottom: 0,
             }}
           >
             <button
@@ -699,108 +654,12 @@ export default function RhEscalaMesPage() {
             </button>
           </div>
 
-          {mostrarAbas ? (
-            <div
-              role="tablist"
-              aria-label="Modo da escala"
-              style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
-            >
-              {perm.canEditarOk && (
-                <>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={aba === "minha"}
-                    id="tab-escala-minha"
-                    aria-controls="panel-escala-mes"
-                    onClick={() => setAba("minha")}
-                    style={{
-                      padding: "10px 18px",
-                      minHeight: 44,
-                      borderRadius: 10,
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      fontSize: 13,
-                      cursor: "pointer",
-                      border: `1px solid ${aba === "minha" ? brand.accent : t.cardBorder}`,
-                      background:
-                        aba === "minha"
-                          ? brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                            : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                          : (t.inputBg ?? t.cardBg ?? "transparent"),
-                      color: aba === "minha" ? brand.accent : t.textMuted,
-                    }}
-                  >
-                    Minha Escala
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={aba === "gerenciar"}
-                    id="tab-escala-gerenciar"
-                    aria-controls="panel-escala-mes"
-                    onClick={() => setAba("gerenciar")}
-                    style={{
-                      padding: "10px 18px",
-                      minHeight: 44,
-                      borderRadius: 10,
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      fontSize: 13,
-                      cursor: "pointer",
-                      border: `1px solid ${aba === "gerenciar" ? brand.accent : t.cardBorder}`,
-                      background:
-                        aba === "gerenciar"
-                          ? brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                            : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                          : (t.inputBg ?? t.cardBg ?? "transparent"),
-                      color: aba === "gerenciar" ? brand.accent : t.textMuted,
-                    }}
-                  >
-                    Gerenciar Escala
-                  </button>
-                </>
-              )}
-              {perm.canCriarOk && (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={aba === "gerar"}
-                  id="tab-escala-gerar"
-                  aria-controls="panel-escala-mes"
-                  onClick={() => setAba("gerar")}
-                  style={{
-                    padding: "10px 18px",
-                    minHeight: 44,
-                    borderRadius: 10,
-                    fontWeight: 700,
-                    fontFamily: FONT.body,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    border: `1px solid ${aba === "gerar" ? brand.accent : t.cardBorder}`,
-                    background:
-                      aba === "gerar"
-                        ? brand.useBrand
-                          ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                          : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                        : (t.inputBg ?? t.cardBg ?? "transparent"),
-                    color: aba === "gerar" ? brand.accent : t.textMuted,
-                  }}
-                >
-                  Gerar Escala
-                </button>
-              )}
-            </div>
-          ) : null}
-
           {mostrarFiltroArea ? (
             <div
               style={{
-                marginTop: mostrarAbas ? 14 : 10,
-                paddingTop: mostrarAbas ? 14 : 0,
-                borderTop: mostrarAbas ? `1px solid ${t.cardBorder}` : "none",
+                marginTop: 14,
+                paddingTop: 14,
+                borderTop: `1px solid ${t.cardBorder}`,
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
@@ -809,7 +668,7 @@ export default function RhEscalaMesPage() {
               }}
             >
               <label
-                htmlFor={aba === "gerenciar" ? "escala-filtro-area-gerenciar" : "escala-filtro-area-gerar"}
+                htmlFor="escala-filtro-area"
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
@@ -831,13 +690,11 @@ export default function RhEscalaMesPage() {
                 }}
               >
                 <select
-                  id={aba === "gerenciar" ? "escala-filtro-area-gerenciar" : "escala-filtro-area-gerar"}
+                  id="escala-filtro-area"
                   aria-label="Filtrar por área (time)"
-                  value={aba === "gerenciar" ? filtroAreaGerenciar : filtroAreaGerar}
+                  value={filtroArea}
                   onChange={(e) => {
-                    const v = e.target.value as AreaEscalaKey;
-                    if (aba === "gerenciar") setFiltroAreaGerenciar(v);
-                    else setFiltroAreaGerar(v);
+                    setFiltroArea(e.target.value as AreaEscalaKey);
                   }}
                   style={{
                     minWidth: 280,
@@ -861,7 +718,7 @@ export default function RhEscalaMesPage() {
                 {acaoGerarNoFiltroSelecionado === "sugestao" ? (
                   <button
                     type="button"
-                    onClick={() => aplicarSugestaoGerar(filtroAreaGerar)}
+                    onClick={() => aplicarSugestaoGerar(filtroArea)}
                     aria-label="Gerar sugestão de escala para a área selecionada"
                     style={{
                       padding: "10px 16px",
@@ -883,7 +740,7 @@ export default function RhEscalaMesPage() {
                 ) : acaoGerarNoFiltroSelecionado === "aprovar" ? (
                   <button
                     type="button"
-                    onClick={() => aprovarEscalaGerar(filtroAreaGerar)}
+                    onClick={() => aprovarEscalaGerar(filtroArea)}
                     aria-label="Aprovar escala da área selecionada"
                     style={{
                       padding: "10px 16px",
@@ -927,12 +784,7 @@ export default function RhEscalaMesPage() {
         </div>
       )}
 
-      <div
-        role="tabpanel"
-        id="panel-escala-mes"
-        aria-labelledby={mostrarAbas ? `tab-escala-${aba}` : undefined}
-        aria-label={mostrarAbas ? undefined : "Escala do mês por colaborador e dia"}
-      >
+      <div role="region" aria-label="Gerar escala do mês por colaborador e dia">
         {loadingPrestadores ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 10 }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
@@ -940,7 +792,7 @@ export default function RhEscalaMesPage() {
           </div>
         ) : (
           <>
-            {resumoTurnoDias && mostrarFiltroArea && (aba === "gerenciar" || aba === "gerar") ? (
+            {resumoTurnoDias && mostrarFiltroArea ? (
               <div className="app-table-wrap" style={{ marginBottom: 16 }}>
                 <table
                   style={{
@@ -1195,7 +1047,7 @@ export default function RhEscalaMesPage() {
                 ) : (
                   linhas.map((row, i) => {
                     const bg = zebraBgLinha(i);
-                    const editarCelulasGerar = aba === "gerar";
+                    const editarCelulasGerar = podeEditarGrade;
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>
                         <td
@@ -1262,7 +1114,7 @@ export default function RhEscalaMesPage() {
                                   aria-label={`Escala do dia ${dia.dia} para ${row.nomeCompletoCadastro}`}
                                   value={val}
                                   onChange={(e) =>
-                                    atualizarCelulaGerar(filtroAreaGerar, row.id, dia.iso, row.siglaTurnoStaff, e.target.value)
+                                    atualizarCelulaGerar(filtroArea, row.id, dia.iso, row.siglaTurnoStaff, e.target.value)
                                   }
                                   style={selectCelulaGerarStyle}
                                 >
