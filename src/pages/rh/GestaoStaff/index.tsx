@@ -8,13 +8,9 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
   isGamePresenterTimeNome,
-  labelTurnoDealerSync,
-  primeiroUltimoNome,
   readStaffDealerBioForUi,
   readStaffDealerFotosForUi,
   readStaffDealerGeneroForUi,
-  staffSkillsParaJogosEVip,
-  staffTurnoTextoParaDealerTurno,
   syncGamePresenterDealerFromRhFuncionario,
 } from "../../../lib/rhGamePresenterDealerSync";
 import type { DealerGenero } from "../../../types";
@@ -88,7 +84,7 @@ function labelCampoHistorico(campo: string): string {
   return c;
 }
 
-type VerAba = "pessoal" | "funcao" | "skills" | "dealer" | "historico";
+type VerAba = "pessoal" | "funcao" | "skills" | "historico";
 
 type EditarAba = "funcao" | "skills" | "dealer";
 
@@ -717,7 +713,7 @@ function ModalStaffVer({
   }, [aba, row.id]);
 
   useEffect(() => {
-    if (!staffEhGamePresenter && (aba === "skills" || aba === "dealer")) setAba("funcao");
+    if (!staffEhGamePresenter && aba === "skills") setAba("funcao");
   }, [staffEhGamePresenter, aba]);
 
   const skills = useMemo(() => normalizarSkills(row.staff_skills as Record<string, unknown>), [row.staff_skills]);
@@ -761,7 +757,6 @@ function ModalStaffVer({
         {tabBtn("pessoal", "Dados pessoais")}
         {tabBtn("funcao", "Dados de função")}
         {staffEhGamePresenter ? tabBtn("skills", "Dados de skills") : null}
-        {staffEhGamePresenter ? tabBtn("dealer", "Gestão de dealer") : null}
         {tabBtn("historico", "Histórico")}
       </div>
 
@@ -771,6 +766,7 @@ function ModalStaffVer({
           <CampoLeitura k="Status" v={labelStatusPrestador(row.status)} t={t} />
           <CampoLeitura k="Telefone" v={row.telefone} t={t} />
           <CampoLeitura k="E-mail" v={row.email} t={t} />
+          <CampoLeitura k="Gênero" v={DEALER_GENERO_LABEL[readStaffDealerGeneroForUi(row)]} t={t} />
           <CampoLeitura k="Contato de emergência — nome" v={row.emerg_nome} t={t} />
           <CampoLeitura k="Contato de emergência — parentesco" v={row.emerg_parentesco} t={t} />
           <CampoLeitura k="Contato de emergência — telefone" v={row.emerg_telefone} t={t} />
@@ -786,67 +782,6 @@ function ModalStaffVer({
           <CampoLeitura k="Operadora" v={opNome} t={t} />
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
           <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
-        </div>
-      )}
-
-      {aba === "skills" && (
-        <div role="tabpanel">
-          <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
-            Status de conhecimento por jogo.
-          </div>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {STAFF_SKILL_KEYS.map(({ key, label }) => (
-              <li
-                key={key}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "10px 0",
-                  borderBottom: `1px solid ${t.cardBorder}`,
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  color: t.text,
-                }}
-              >
-                <span style={{ fontWeight: 700 }}>{label}</span>
-                <span style={{ color: t.textMuted }}>{SKILL_STATUS_OPTS.find((o) => o.value === skills[key])?.label ?? "Inativo"}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {aba === "dealer" && (
-        <div role="tabpanel">
-          <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 14, lineHeight: 1.5 }}>
-            Espelho dos campos enviados à Gestão de Dealers quando o time do organograma é <strong style={{ color: t.text }}>Game Presenter</strong>. Somente
-            leitura aqui; edição na aba «Gestão de dealer» do modal Editar.
-          </p>
-          <CampoLeitura k="Nome Real" v={primeiroUltimoNome(row.nome) || "—"} t={t} />
-          <CampoLeitura k="Nickname" v={row.staff_nickname?.trim() || "—"} t={t} />
-          <CampoLeitura k="Gênero" v={DEALER_GENERO_LABEL[readStaffDealerGeneroForUi(row)]} t={t} />
-          <CampoLeitura
-            k="Turno"
-            v={labelTurnoDealerSync(staffTurnoTextoParaDealerTurno(row.staff_turno))}
-            t={t}
-          />
-          <CampoLeitura
-            k="Jogos (skills ativas + VIP)"
-            v={(() => {
-              const { jogos, vip } = staffSkillsParaJogosEVip(row.staff_skills as Record<string, unknown>);
-              const lab: Record<string, string> = {
-                blackjack: "Blackjack",
-                roleta: "Roleta",
-                baccarat: "Baccarat",
-              };
-              const parts = jogos.map((j) => lab[j] ?? j);
-              if (vip) parts.push("VIP");
-              return parts.length ? parts.join(", ") : "—";
-            })()}
-            t={t}
-          />
-          <CampoLeitura k="Operadora" v={opNome} t={t} />
           <CampoLeitura k="Bio do Dealer" v={readStaffDealerBioForUi(row) || "—"} t={t} />
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>Fotos</div>
@@ -876,6 +811,34 @@ function ModalStaffVer({
               );
             })()}
           </div>
+        </div>
+      )}
+
+      {aba === "skills" && (
+        <div role="tabpanel">
+          <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
+            Status de conhecimento por jogo.
+          </div>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {STAFF_SKILL_KEYS.map(({ key, label }) => (
+              <li
+                key={key}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "10px 0",
+                  borderBottom: `1px solid ${t.cardBorder}`,
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  color: t.text,
+                }}
+              >
+                <span style={{ fontWeight: 700 }}>{label}</span>
+                <span style={{ color: t.textMuted }}>{SKILL_STATUS_OPTS.find((o) => o.value === skills[key])?.label ?? "Inativo"}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -1030,6 +993,7 @@ function ModalStaffEditar({
     row.staff_dealer_genero,
     row.staff_dealer_bio,
     row.staff_dealer_fotos,
+    row,
   ]);
 
   useEffect(() => {
@@ -1037,7 +1001,7 @@ function ModalStaffEditar({
     setDealerGenero(readStaffDealerGeneroForUi(row));
     setDealerBio(readStaffDealerBioForUi(row));
     setDealerFotos(readStaffDealerFotosForUi(row));
-  }, [aba, row.id, row.staff_dealer_genero, row.staff_dealer_bio, row.staff_dealer_fotos]);
+  }, [aba, row.id, row.staff_dealer_genero, row.staff_dealer_bio, row.staff_dealer_fotos, row]);
 
   useEffect(() => {
     if (!staffEhGamePresenter && (aba === "skills" || aba === "dealer")) setAba("funcao");

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, type CSSProperties } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -371,7 +371,7 @@ export default function Feedback() {
 
   const semanaSelecionada = semanasDisponiveis[idxSemana];
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     const { start, end } = getRangeSemana(semanaSelecionada ?? null, historico);
 
@@ -419,9 +419,9 @@ export default function Feedback() {
       setResultados(resMap);
     }
     setLoading(false);
-  }
+  }, [semanaSelecionada, historico, operadoraSlugsForcado, influencerFiltros, statusFiltro, podeVerInfluencer]);
 
-  useEffect(() => { loadData(); }, [idxSemana, historico, semanaSelecionada, statusFiltro, influencerFiltros, podeVerInfluencer, operadoraSlugsForcado]);
+  useEffect(() => { void loadData(); }, [loadData]);
 
   useEffect(() => {
     supabase.from("operadoras").select("slug, nome").order("nome")

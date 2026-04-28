@@ -688,7 +688,7 @@ export default function DashboardOverviewInfluencer() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, filtroInfluencer, filtroOperadora, podeVerInfluencer, influencersVisiveis, escoposVisiveis.operadorasVisiveis, mesSelecionado]);
+  }, [historico, idxMes, filtroInfluencer, filtroOperadora, podeVerInfluencer, podeVerOperadora, influencersVisiveis, escoposVisiveis.operadorasVisiveis, mesSelecionado]);
 
   /** Mês civil atual: só exibe dias até ontem (MTD “fechado”); meses passados = mês inteiro. */
   const diasDataComparativoExibicao = useMemo(() => {

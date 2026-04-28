@@ -87,6 +87,15 @@ function remuneracaoHoraCentavosDeRow(f: RhFuncionario): string {
   return String(Math.round(Number(v)));
 }
 
+/** Coluna «Remuneração»: mensal quando preenchida; senão valor por hora (centavos → reais). */
+function textoRemuneracaoColunaTabela(row: RhFuncionario): { texto: string; title?: string } {
+  const sal = Number(row.salario);
+  if (sal > 0) return { texto: fmtBRL(sal) };
+  const rh = Number(row.remuneracao_hora_centavos ?? 0);
+  if (rh > 0) return { texto: fmtBRL(rh / 100), title: "Remuneração por hora" };
+  return { texto: "—" };
+}
+
 function escalaEhPermitida(s: string): s is (typeof ESCALAS_PERMITIDAS)[number] {
   return (ESCALAS_PERMITIDAS as readonly string[]).includes(s.trim());
 }
@@ -2011,7 +2020,7 @@ export default function RhPrestadoresPage() {
             <caption style={{ display: "none" }}>Carregando gestão de prestadores</caption>
             <thead>
               <tr>
-                {["Nome", "Diretoria", "Gerência", "Função", "Líder imediato", "Remuneração Mensal", "Status", "Ações"].map((h) => (
+                {["Nome", "Diretoria", "Gerência", "Função", "Líder imediato", "Remuneração", "Status", "Ações"].map((h) => (
                   <th key={h} scope="col" style={getThStyle(t)}>
                     {h}
                   </th>
@@ -2616,7 +2625,7 @@ export default function RhPrestadoresPage() {
                 />
                 {!tabelaSemSalario ? (
                   <SortTableTh<PrestadoresSortCol>
-                    label="Remuneração Mensal"
+                    label="Remuneração"
                     col="salario"
                     sortCol={sortPrestadores.col}
                     sortDir={sortPrestadores.dir}
@@ -2633,8 +2642,8 @@ export default function RhPrestadoresPage() {
                           }}
                           aria-label={
                             tabelaSalarioVisivel
-                              ? "Ocultar valores de remuneração mensal na tabela"
-                              : "Exibir valores de remuneração mensal na tabela"
+                              ? "Ocultar valores de remuneração na tabela"
+                              : "Exibir valores de remuneração na tabela"
                           }
                           title={tabelaSalarioVisivel ? "Ocultar" : "Ver"}
                           style={{
@@ -2685,6 +2694,7 @@ export default function RhPrestadoresPage() {
                   const { diretoria, gerencia } = orgMetaLinha(row);
                   const liderCompleto = liderImediatoLinha(row);
                   const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
+                  const remCol = textoRemuneracaoColunaTabela(row);
                   return (
                     <tr key={row.id}>
                       <td
@@ -2715,12 +2725,13 @@ export default function RhPrestadoresPage() {
                       </td>
                       {!tabelaSemSalario ? (
                         <td
+                          title={podeVerDadosSensiveis && tabelaSalarioVisivel ? remCol.title : undefined}
                           style={getTdNumStyle(t, {
                             background: zebraStripe(i),
                             ...(podeVerDadosSensiveis && !tabelaSalarioVisivel ? blurSensivel : {}),
                           })}
                         >
-                          {podeVerDadosSensiveis ? fmtBRL(Number(row.salario)) : "—"}
+                          {podeVerDadosSensiveis ? remCol.texto : "—"}
                         </td>
                       ) : null}
                       <td style={{ ...getTdStyle(t, { background: zebraStripe(i) }) }}>

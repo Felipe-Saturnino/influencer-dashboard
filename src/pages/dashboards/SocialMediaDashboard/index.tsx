@@ -587,10 +587,11 @@ export default function SocialMediaDashboard() {
 
   // Datas do período selecionado (atual + janela do mês anterior alinhada ao MTD)
   const { start, end, startPrev, endPrev } = useMemo(() => {
+    const agora = new Date();
     if (historico) {
       return {
         start: `${MES_INICIO.ano}-${String(MES_INICIO.mes + 1).padStart(2, "0")}-01`,
-        end: hoje.toISOString().slice(0, 10),
+        end: agora.toISOString().slice(0, 10),
         startPrev: null as string | null,
         endPrev: null as string | null,
       };
@@ -598,7 +599,7 @@ export default function SocialMediaDashboard() {
     if (!mesSelecionado) {
       return {
         start: "2026-01-01",
-        end: hoje.toISOString().slice(0, 10),
+        end: agora.toISOString().slice(0, 10),
         startPrev: null,
         endPrev: null,
       };
@@ -825,7 +826,7 @@ export default function SocialMediaDashboard() {
     }
     load();
     return () => { cancelled = true; };
-  }, [start, end, startPrev, endPrev]);
+  }, [start, end, startPrev, endPrev, historico]);
 
   // ── Totais agregados ──────────────────────────────────────────────────────────
   const totais = useMemo(() => totaisFromKpiRows(kpiData), [kpiData]);

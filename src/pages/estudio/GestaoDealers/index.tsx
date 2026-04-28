@@ -602,10 +602,11 @@ function DealerFotoCarrossel({
 }) {
   const n = urls.length;
   const [idx, setIdx] = useState(0);
+  const urlsKey = useMemo(() => urls.join("|"), [urls]);
 
   useEffect(() => {
     setIdx(0);
-  }, [resetKey, urls.join("|")]);
+  }, [resetKey, urlsKey]);
 
   if (n === 0) return null;
 

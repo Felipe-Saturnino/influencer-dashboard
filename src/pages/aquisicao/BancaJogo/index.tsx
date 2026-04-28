@@ -1386,7 +1386,10 @@ export default function BancaJogo() {
   }, [user?.role, influencerListVisiveis, agenciaParesInfIds]);
 
   const filterOperadoraEfetivo = operadoraSlugsForcado?.length ? operadoraSlugsForcado[0] : filterOperadora;
-  const filtroOp = operadoraSlugsForcado?.length ? operadoraSlugsForcado : (filterOperadora !== "todas" ? [filterOperadora] : null);
+  const filtroOp = useMemo(
+    () => (operadoraSlugsForcado?.length ? operadoraSlugsForcado : (filterOperadora !== "todas" ? [filterOperadora] : null)),
+    [operadoraSlugsForcado, filterOperadora],
+  );
 
   const filtros: BlocoFiltros = useMemo(() => ({
     podeVerInfluencer,

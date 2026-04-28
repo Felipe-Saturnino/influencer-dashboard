@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -31,6 +31,80 @@ interface PagamentoRow {
   descricao?: string;
   qtd_lives?: number;
 }
+
+interface FinanceiroLiveRow {
+  id: string;
+  influencer_id: string;
+  operadora_slug?: string | null;
+  data?: string;
+  plataforma?: string;
+}
+
+interface FinanceiroLiveComResultado extends FinanceiroLiveRow {
+  _resultado?: { duracao_horas: number; duracao_min: number };
+}
+
+interface FinanceiroPagamentoParcial {
+  influencer_id: string;
+  total: number;
+  horas_realizadas: number;
+  status: string;
+  operadora_slug?: string | null;
+}
+
+interface FinanceiroPagamentoDbRow extends FinanceiroPagamentoParcial {
+  id: string;
+  pago_em?: string | null;
+  cache_hora?: number;
+}
+
+interface FinanceiroAgenteDbRow {
+  id?: string;
+  total: number;
+  status: string;
+  operadora_slug?: string | null;
+  pago_em?: string | null;
+  descricao?: string | null;
+}
+
+interface FinanceiroProfileRow {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+}
+
+interface FinanceiroPerfilRow {
+  id: string;
+  nome_artistico?: string | null;
+  status?: string | null;
+}
+
+interface FinanceiroHistoricoPagRow {
+  id: string;
+  horas_realizadas: number;
+  total: number;
+  status: PagamentoStatus;
+  pago_em?: string | null;
+  ciclos_pagamento?: { data_inicio?: string; data_fim?: string } | null;
+}
+
+interface FinanceiroLiveResultadoRow {
+  live_id: string | number;
+  duracao_horas?: number | null;
+  duracao_min?: number | null;
+}
+
+interface FinanceiroPerfilCacheRow {
+  id: string;
+  cache_hora?: number | null;
+  nome_artistico?: string | null;
+}
+
+type FinanceiroLiveEscopoRow = FinanceiroLiveRow & { data: string };
+
+type FinanceiroPagamentoCicloEscopo = { ciclo_id: string; influencer_id: string; operadora_slug: string };
+
+type FinanceiroAgenteCicloEscopo = { ciclo_id: string; operadora_slug: string };
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
 
@@ -314,18 +388,14 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [valor, setValor] = useState(String(row.total));
-  const [lives, setLives] = useState<any[]>([]);
+  const [lives, setLives] = useState<FinanceiroLiveComResultado[]>([]);
 
   const rawValor = valor.replace(",", ".").trim();
   const parsedValor = rawValor === "" ? NaN : Number.parseFloat(rawValor);
   const valorNum = Number.isFinite(parsedValor) ? parsedValor : NaN;
   const editado = Number.isFinite(valorNum) && valorNum !== row.total;
 
-  useEffect(() => {
-    if (!row.is_agente) carregarLives();
-  }, []);
-
-  async function carregarLives() {
+  const carregarLives = useCallback(async () => {
     let query = supabase
       .from("lives")
       .select("id, data, plataforma")
@@ -338,9 +408,12 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
       query = query.eq("operadora_slug", row.operadora_slug);
     }
     const { data: livesData } = await query;
-    const livesList = livesData ?? [];
-    if (livesList.length === 0) { setLives([]); return; }
-    const liveIds = livesList.map((l: any) => l.id);
+    const livesList = (livesData ?? []) as FinanceiroLiveRow[];
+    if (livesList.length === 0) {
+      setLives([]);
+      return;
+    }
+    const liveIds = livesList.map((l) => l.id);
     const { data: resData } = await supabase
       .from("live_resultados")
       .select("live_id, duracao_horas, duracao_min")
@@ -349,12 +422,16 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
     for (const r of (resData ?? []) as { live_id: string; duracao_horas: number; duracao_min: number }[]) {
       resultadosMap.set(String(r.live_id), { duracao_horas: r.duracao_horas ?? 0, duracao_min: r.duracao_min ?? 0 });
     }
-    const merged = livesList.map((l: any) => ({
+    const merged: FinanceiroLiveComResultado[] = livesList.map((l) => ({
       ...l,
       _resultado: resultadosMap.get(String(l.id)),
     }));
     setLives(merged);
-  }
+  }, [row.influencer_id, row.operadora_slug, ciclo.data_inicio, ciclo.data_fim]);
+
+  useEffect(() => {
+    if (!row.is_agente) void carregarLives();
+  }, [row.is_agente, carregarLives]);
 
   async function handleConfirm(totalAprovar: number) {
     setError("");
@@ -428,7 +505,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
           <div style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "10px", fontFamily: FONT.body }}>
             Lives no período
           </div>
-          {lives.map((l: any) => {
+          {lives.map((l: FinanceiroLiveComResultado) => {
             const r = l._resultado;
             const h = r ? (r.duracao_horas ?? 0) + (r.duracao_min ?? 0) / 60 : 0;
             return (
@@ -698,9 +775,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
   const [horas, setHoras] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, user?.role]);
-
-  async function carregar() {
+  const carregar = useCallback(async () => {
     setLoading(true);
     const periodo = periodoDoMes(mes);
 
@@ -711,7 +786,7 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
         .select("id")
         .gte("data_fim", periodo.inicio)
         .lte("data_fim", periodo.fim);
-      cicloIds = (ciclos ?? []).map((c: any) => c.id);
+      cicloIds = (ciclos ?? []).map((c: { id: string }) => c.id);
       if (cicloIds.length === 0) {
         setTotalPago(0); setPendente(0); setHoras(0);
         setLoading(false); return;
@@ -741,33 +816,37 @@ function BlocoKpis({ filtros }: { filtros: BlocoFiltros }) {
 
     const [{ data: pags }, { data: agentes }] = await Promise.all([pQuery, aQuery]);
 
-    let allPags = (pags ?? []).filter((p: any) => podeVerInfluencer(p.influencer_id));
-    if (filterInfluencers.length > 0) allPags = allPags.filter((p: any) => filterInfluencers.includes(p.influencer_id));
+    let allPags = (pags ?? []).filter((p: FinanceiroPagamentoParcial) => podeVerInfluencer(p.influencer_id));
+    if (filterInfluencers.length > 0) allPags = allPags.filter((p) => filterInfluencers.includes(p.influencer_id));
     if (filtroOp?.length) {
-      allPags = allPags.filter((p: any) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
+      allPags = allPags.filter((p) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
     } else if (filterOperadora && filterOperadora !== "todas") {
-      allPags = allPags.filter((p: any) => p.operadora_slug === filterOperadora);
+      allPags = allPags.filter((p) => p.operadora_slug === filterOperadora);
     }
-    let allAgs = incluirAgentesKpi ? (agentes ?? []) : [];
+    let allAgs: FinanceiroAgenteDbRow[] = incluirAgentesKpi ? ((agentes ?? []) as FinanceiroAgenteDbRow[]) : [];
     if (filtroOp?.length) {
-      allAgs = allAgs.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
+      allAgs = allAgs.filter((a) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
     } else if (filterOperadora && filterOperadora !== "todas") {
-      allAgs = allAgs.filter((a: any) => a.operadora_slug === filterOperadora);
+      allAgs = allAgs.filter((a) => a.operadora_slug === filterOperadora);
     }
 
     if (!periodo) {
       setTotalPago(
-        [...allPags.filter((p: any) => p.status === "pago"), ...allAgs.filter((a: any) => a.status === "pago")]
-          .reduce((acc: number, x: any) => acc + x.total, 0)
+        [...allPags.filter((p) => p.status === "pago"), ...allAgs.filter((a) => a.status === "pago")]
+          .reduce((acc: number, x: FinanceiroPagamentoParcial | FinanceiroAgenteDbRow) => acc + x.total, 0)
       );
     }
     setPendente(
-      [...allPags.filter((p: any) => p.status === "em_analise" || p.status === "a_pagar"), ...allAgs.filter((a: any) => a.status === "em_analise" || a.status === "a_pagar")]
-        .reduce((acc: number, x: any) => acc + x.total, 0)
+      [...allPags.filter((p) => p.status === "em_analise" || p.status === "a_pagar"), ...allAgs.filter((a) => a.status === "em_analise" || a.status === "a_pagar")]
+        .reduce((acc: number, x: FinanceiroPagamentoParcial | FinanceiroAgenteDbRow) => acc + x.total, 0)
     );
-    setHoras(allPags.reduce((acc: number, p: any) => acc + p.horas_realizadas, 0));
+    setHoras(allPags.reduce((acc: number, p: FinanceiroPagamentoParcial) => acc + p.horas_realizadas, 0));
     setLoading(false);
-  }
+  }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   const innerCard = (accent: string): React.CSSProperties => ({
     background: t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.025)",
@@ -854,28 +933,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     if (!sel) setCicloId(aberto?.id ?? ciclos[0]?.id ?? "");
   }, [ciclos, cicloId]);
 
-  // Fecha automaticamente ciclos vencidos (quando quarta 23h59 passou → quinta 00h)
-  useEffect(() => {
-    if (ciclos.length === 0) return;
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const paraFechar = ciclos.find(c => !c.fechado_em && hoje > new Date((c.data_fim || "") + "T00:00:00"));
-    if (paraFechar) fecharCiclo(paraFechar);
-  }, [ciclos]);
-
-  useEffect(() => {
-    if (ciclo) carregarDados(ciclo);
-  }, [cicloId, podeVerInfluencer, filterInfluencers, filterOperadora, refreshTrigger]);
-
-  async function fecharCiclo(c: CicloPagamento) {
-    await gerarPagamentosDoCiclo(c);
-    await supabase.from("ciclos_pagamento").update({ fechado_em: new Date().toISOString() }).eq("id", c.id);
-    onRecarregar();
-  }
-
   const OPERADORA_PADRAO = "casa_apostas";
 
-  async function gerarPagamentosDoCiclo(c: CicloPagamento) {
+  const gerarPagamentosDoCiclo = useCallback(async (c: CicloPagamento) => {
     const { data: lives } = await supabase
       .from("lives")
       .select("id, influencer_id, operadora_slug")
@@ -883,18 +943,19 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       .gte("data", c.data_inicio)
       .lte("data", c.data_fim);
 
-    const livesFiltradas = ((lives ?? []) as any[]).filter((l: any) => podeVerInfluencer(l.influencer_id));
-    const liveIds = livesFiltradas.map((l: any) => l.id);
-    let resultados: { live_id: string; duracao_horas: number; duracao_min: number }[] = [];
+    const livesFiltradas = (lives ?? []) as FinanceiroLiveRow[];
+    const livesOk = livesFiltradas.filter((l) => podeVerInfluencer(l.influencer_id));
+    const liveIds = livesOk.map((l) => l.id);
+    let resultados: FinanceiroLiveResultadoRow[] = [];
     if (liveIds.length > 0) {
       const { data: resData } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", liveIds);
-      resultados = resData || [];
+      resultados = (resData ?? []) as FinanceiroLiveResultadoRow[];
     }
 
     const horasPorPar: Record<string, number> = {};
     const key = (inf: string, op: string) => `${inf}::${op}`;
-    for (const live of livesFiltradas) {
-      const res = resultados.find((r) => r.live_id === live.id);
+    for (const live of livesOk) {
+      const res = resultados.find((r) => String(r.live_id) === String(live.id));
       if (res) {
         const opSlug = live.operadora_slug?.trim() || OPERADORA_PADRAO;
         const k = key(live.influencer_id, opSlug);
@@ -914,20 +975,15 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         cache_hora, total, status: "em_analise",
       }, { onConflict: "ciclo_id,influencer_id,operadora_slug" });
     }
-  }
+  }, [podeVerInfluencer]);
 
-  async function carregarDados(c: CicloPagamento) {
-    setLoading(true);
-    if (cicloAberto(c)) {
-      await carregarPreview(c);
-    } else {
-      // Ciclo fechado: carrega os pagamentos existentes (preserva status aprovado/a pagar/pago).
-      await carregarPagamentos(c);
-    }
-    setLoading(false);
-  }
+  const fecharCiclo = useCallback(async (c: CicloPagamento) => {
+    await gerarPagamentosDoCiclo(c);
+    await supabase.from("ciclos_pagamento").update({ fechado_em: new Date().toISOString() }).eq("id", c.id);
+    onRecarregar();
+  }, [gerarPagamentosDoCiclo, onRecarregar]);
 
-  async function carregarPreview(c: CicloPagamento) {
+  const carregarPreview = useCallback(async (c: CicloPagamento) => {
     const { data: lives } = await supabase
       .from("lives")
       .select("id, influencer_id, operadora_slug")
@@ -935,19 +991,19 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       .gte("data", c.data_inicio)
       .lte("data", c.data_fim);
 
-    const livesFiltradas = (lives ?? []).filter((l: any) => podeVerInfluencer(l.influencer_id));
+    const livesFiltradas = ((lives ?? []) as FinanceiroLiveRow[]).filter((l) => podeVerInfluencer(l.influencer_id));
     if (livesFiltradas.length === 0) { setRows([]); return; }
 
-    const liveIds = livesFiltradas.map((l: any) => l.id);
-    let resultados: { live_id: string; duracao_horas: number; duracao_min: number }[] = [];
+    const liveIds = livesFiltradas.map((l) => l.id);
+    let resultados: FinanceiroLiveResultadoRow[] = [];
     if (liveIds.length > 0) {
       const { data: resData } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", liveIds);
-      resultados = resData || [];
+      resultados = (resData ?? []) as FinanceiroLiveResultadoRow[];
     }
 
     const horasPorPar: Record<string, { horas: number; qtd: number }> = {};
     const key = (inf: string, op: string) => `${inf}::${op}`;
-    for (const live of livesFiltradas as any[]) {
+    for (const live of livesFiltradas) {
       const res = resultados.find((r) => String(r.live_id) === String(live.id));
       if (res) {
         const opSlug = live.operadora_slug?.trim() || OPERADORA_PADRAO;
@@ -973,10 +1029,12 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     ]);
 
     const nameMap: Record<string, string> = {};
-    for (const p of (profiles ?? []) as any[]) nameMap[p.id] = p.name;
+    for (const p of (profiles ?? []) as FinanceiroProfileRow[]) {
+      nameMap[p.id] = p.name ?? p.id;
+    }
 
     const perfilMap: Record<string, { cache: number; artistico: string }> = {};
-    for (const p of (perfis ?? []) as any[]) {
+    for (const p of (perfis ?? []) as FinanceiroPerfilCacheRow[]) {
       perfilMap[p.id] = { cache: p.cache_hora ?? 0, artistico: p.nome_artistico ?? nameMap[p.id] ?? p.id };
     }
 
@@ -1001,9 +1059,9 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
     result.sort((a, b) => b.total - a.total);
     setRows(result);
-  }
+  }, [filterInfluencers, filterOperadora, filtroOp, podeVerInfluencer]);
 
-  async function carregarPagamentos(c: CicloPagamento) {
+  const carregarPagamentos = useCallback(async (c: CicloPagamento) => {
     const incluirLinhasAgente = podeVerPagamentosAgenteFinanceiro(user?.role);
     const [{ data: pags }, { data: agentes }, { data: livesCiclo }] = await Promise.all([
       supabase.from("pagamentos")
@@ -1015,7 +1073,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
             .select("*")
             .eq("ciclo_id", c.id)
             .order("criado_em", { ascending: true })
-        : Promise.resolve({ data: [] as any[] }),
+        : Promise.resolve({ data: [] as FinanceiroAgenteDbRow[] }),
       supabase.from("lives")
         .select("id, influencer_id, operadora_slug")
         .eq("status", "realizada")
@@ -1024,20 +1082,23 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     ]);
 
     // Sincroniza lives validadas após o fechamento: cria pagamentos faltantes (em_analise) sem alterar os existentes
-    const existentesKeys = new Set((pags ?? []).map((p: any) => `${p.influencer_id}::${p.operadora_slug}`));
-    const livesSemPagamento = (livesCiclo ?? []).filter((l: any) => {
+    const pagsList = (pags ?? []) as FinanceiroPagamentoDbRow[];
+    const existentesKeys = new Set(pagsList.map((p) => `${p.influencer_id}::${p.operadora_slug}`));
+    const livesCicloList = (livesCiclo ?? []) as FinanceiroLiveRow[];
+    const livesSemPagamento = livesCicloList.filter((l) => {
       if (!podeVerInfluencer(l.influencer_id)) return false;
       const opSlug = l.operadora_slug?.trim() || OPERADORA_PADRAO;
       return !existentesKeys.has(`${l.influencer_id}::${opSlug}`);
     });
-    let pagsFinais = pags ?? [];
+    let pagsFinais: FinanceiroPagamentoDbRow[] = pagsList;
     if (livesSemPagamento.length > 0) {
-      const liveIdsSync = livesSemPagamento.map((l: any) => l.id);
+      const liveIdsSync = livesSemPagamento.map((l) => l.id);
       const { data: resSync } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", liveIdsSync);
       const horasPorPar: Record<string, number> = {};
       const keySync = (inf: string, op: string) => `${inf}::${op}`;
-      for (const live of livesSemPagamento as any[]) {
-        const res = (resSync ?? []).find((r: any) => String(r.live_id) === String(live.id));
+      const resSyncList = (resSync ?? []) as FinanceiroLiveResultadoRow[];
+      for (const live of livesSemPagamento) {
+        const res = resSyncList.find((r) => String(r.live_id) === String(live.id));
         if (res) {
           const opSlug = live.operadora_slug?.trim() || OPERADORA_PADRAO;
           const k = keySync(live.influencer_id, opSlug);
@@ -1058,19 +1119,19 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       }
       if (Object.keys(horasPorPar).length > 0) {
         const { data: pagsAtual } = await supabase.from("pagamentos").select("*").eq("ciclo_id", c.id).order("total", { ascending: false });
-        pagsFinais = pagsAtual ?? pagsFinais;
+        pagsFinais = (pagsAtual ?? pagsFinais) as FinanceiroPagamentoDbRow[];
       }
     }
 
-    const liveIds = (livesCiclo ?? []).map((l: any) => l.id);
-    let resultados: { live_id: string }[] = [];
+    const liveIds = livesCicloList.map((l) => l.id);
+    let resultados: { live_id: string | number }[] = [];
     if (liveIds.length > 0) {
       const { data: resData } = await supabase.from("live_resultados").select("live_id").in("live_id", liveIds);
-      resultados = resData ?? [];
+      resultados = (resData ?? []) as { live_id: string | number }[];
     }
     const qtdPorPar: Record<string, number> = {};
     const key = (inf: string, op: string) => `${inf}::${op}`;
-    for (const l of (livesCiclo ?? []) as any[]) {
+    for (const l of livesCicloList) {
       if (!podeVerInfluencer(l.influencer_id)) continue;
       const opSlug = l.operadora_slug?.trim() || OPERADORA_PADRAO;
       const temRes = resultados.some((r) => String(r.live_id) === String(l.id));
@@ -1081,65 +1142,89 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     }
 
     // Busca nomes separadamente para evitar falha silenciosa de FK
-    const influencerIds = [...new Set(pagsFinais.map((p: any) => p.influencer_id))];
+    const influencerIds = [...new Set(pagsFinais.map((p) => p.influencer_id))];
     const nomeMap: Record<string, string> = {};
     if (influencerIds.length > 0) {
       const [{ data: perfis }, { data: profiles }] = await Promise.all([
         supabase.from("influencer_perfil").select("id, nome_artistico").in("id", influencerIds),
         supabase.from("profiles").select("id, name").in("id", influencerIds),
       ]);
-      for (const p of (profiles ?? []) as any[]) nomeMap[p.id] = p.name;
-      for (const p of (perfis ?? []) as any[]) {
+      for (const p of (profiles ?? []) as FinanceiroProfileRow[]) {
+        nomeMap[p.id] = p.name ?? p.id;
+      }
+      for (const p of (perfis ?? []) as FinanceiroPerfilRow[]) {
         if (p.nome_artistico) nomeMap[p.id] = p.nome_artistico;
       }
     }
 
-    let pagsFiltrados = pagsFinais.filter((p: any) => podeVerInfluencer(p.influencer_id));
-    if (filterInfluencers.length > 0) pagsFiltrados = pagsFiltrados.filter((p: any) => filterInfluencers.includes(p.influencer_id));
+    let pagsFiltrados = pagsFinais.filter((p) => podeVerInfluencer(p.influencer_id));
+    if (filterInfluencers.length > 0) pagsFiltrados = pagsFiltrados.filter((p) => filterInfluencers.includes(p.influencer_id));
     if (filtroOp?.length) {
-      pagsFiltrados = pagsFiltrados.filter((p: any) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
+      pagsFiltrados = pagsFiltrados.filter((p) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
     } else if (filterOperadora && filterOperadora !== "todas") {
-      pagsFiltrados = pagsFiltrados.filter((p: any) => p.operadora_slug === filterOperadora);
+      pagsFiltrados = pagsFiltrados.filter((p) => p.operadora_slug === filterOperadora);
     }
 
-    const linhasInf: PagamentoRow[] = pagsFiltrados.map((p: any) => {
-      const parKey = key(p.influencer_id, p.operadora_slug);
+    const linhasInf: PagamentoRow[] = pagsFiltrados.map((p) => {
+      const parKey = key(p.influencer_id, p.operadora_slug ?? "");
       return {
         id: p.id,
         influencer_id: p.influencer_id,
         influencer_name: nomeMap[p.influencer_id] ?? p.influencer_id,
-        operadora_slug: p.operadora_slug,
+        operadora_slug: p.operadora_slug ?? undefined,
         horas_realizadas: p.horas_realizadas,
-        cache_hora: p.cache_hora,
+        cache_hora: p.cache_hora ?? 0,
         total: p.total,
-        status: p.status,
-        pago_em: p.pago_em,
+        status: p.status as PagamentoStatus,
+        pago_em: p.pago_em ?? null,
         qtd_lives: qtdPorPar[parKey] ?? 0,
       };
     });
 
-    let agentesFiltrados = incluirLinhasAgente ? (agentes ?? []) : [];
+    let agentesFiltrados: FinanceiroAgenteDbRow[] = incluirLinhasAgente ? ((agentes ?? []) as FinanceiroAgenteDbRow[]) : [];
     if (filtroOp?.length) {
-      agentesFiltrados = agentesFiltrados.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
+      agentesFiltrados = agentesFiltrados.filter((a) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
     } else if (filterOperadora && filterOperadora !== "todas") {
-      agentesFiltrados = agentesFiltrados.filter((a: any) => a.operadora_slug === filterOperadora);
+      agentesFiltrados = agentesFiltrados.filter((a) => a.operadora_slug === filterOperadora);
     }
-    const linhasAg: PagamentoRow[] = agentesFiltrados.map((a: any) => ({
-      id: a.id,
+    const linhasAg: PagamentoRow[] = agentesFiltrados.map((a) => ({
+      id: a.id!,
       influencer_id: "agente",
       influencer_name: "Agentes",
       horas_realizadas: 0,
       cache_hora: 0,
       total: a.total,
-      status: a.status,
-      pago_em: a.pago_em,
+      status: a.status as PagamentoStatus,
+      pago_em: a.pago_em ?? null,
       is_agente: true,
-      descricao: a.descricao,
+      descricao: a.descricao ?? undefined,
       qtd_lives: 0,
     }));
 
     setRows([...linhasInf, ...linhasAg]);
-  }
+  }, [podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
+
+  const carregarDados = useCallback(async (c: CicloPagamento) => {
+    setLoading(true);
+    if (cicloAberto(c)) {
+      await carregarPreview(c);
+    } else {
+      await carregarPagamentos(c);
+    }
+    setLoading(false);
+  }, [carregarPreview, carregarPagamentos]);
+
+  useEffect(() => {
+    if (ciclos.length === 0) return;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const paraFechar = ciclos.find(cic => !cic.fechado_em && hoje > new Date((cic.data_fim || "") + "T00:00:00"));
+    if (paraFechar) void fecharCiclo(paraFechar);
+  }, [ciclos, fecharCiclo]);
+
+  useEffect(() => {
+    if (ciclo) void carregarDados(ciclo);
+  }, [ciclo, carregarDados, refreshTrigger]);
 
   async function handleAprovar(id: string, novoTotal: number, isAgente: boolean) {
     if (String(id).startsWith("preview_")) {
@@ -1527,12 +1612,10 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   const [agentesRow, setAgentesRow] = useState<AgentesRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
-  const [historicoPagamentos, setHistoricoPagamentos] = useState<Record<string, any[]>>({});
+  const [historicoPagamentos, setHistoricoPagamentos] = useState<Record<string, FinanceiroHistoricoPagRow[]>>({});
   const [loadingHist, setLoadingHist] = useState<string | null>(null);
 
-  useEffect(() => { carregar(); }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
-
-  async function carregar() {
+  const carregar = useCallback(async () => {
     setLoading(true);
 
     const { data: perfis } = await supabase
@@ -1548,9 +1631,11 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
     if (!perfis) { setLoading(false); return; }
 
     const emailMap: Record<string, string> = {};
-    for (const p of (profiles ?? []) as any[]) emailMap[p.id] = p.email;
+    for (const p of (profiles ?? []) as FinanceiroProfileRow[]) {
+      emailMap[p.id] = p.email ?? "";
+    }
 
-    let perfisFiltrados = (perfis as any[]).filter((p) => podeVerInfluencer(p.id));
+    let perfisFiltrados = (perfis as FinanceiroPerfilRow[]).filter((p) => podeVerInfluencer(p.id));
     if (filterInfluencers.length > 0) perfisFiltrados = perfisFiltrados.filter((p) => filterInfluencers.includes(p.id));
 
     const periodo = periodoDoMes(mes);
@@ -1561,11 +1646,11 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
         .from("ciclos_pagamento").select("id")
         .gte("data_fim", periodo.inicio)
         .lte("data_fim", periodo.fim);
-      cicloIds = (ciclos ?? []).map((c: any) => c.id);
+      cicloIds = (ciclos ?? []).map((c: { id: string }) => c.id);
     }
 
-    let pagamentosData: any[] = [];
-    let agentesData: any[] = [];
+    let pagamentosData: FinanceiroPagamentoDbRow[] = [];
+    let agentesData: FinanceiroAgenteDbRow[] = [];
     const incluirAgentesConsolidado = podeVerPagamentosAgenteFinanceiro(user?.role);
     if (!periodo || cicloIds.length > 0) {
       const [{ data: pags }, { data: agts }] = await Promise.all([
@@ -1576,20 +1661,20 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
           ? (periodo
               ? supabase.from("pagamentos_agentes").select("*").in("ciclo_id", cicloIds)
               : supabase.from("pagamentos_agentes").select("*"))
-          : Promise.resolve({ data: [] as any[] }),
+          : Promise.resolve({ data: [] as FinanceiroAgenteDbRow[] }),
       ]);
-      pagamentosData = pags ?? [];
-      agentesData = agts ?? [];
+      pagamentosData = (pags ?? []) as FinanceiroPagamentoDbRow[];
+      agentesData = (agts ?? []) as FinanceiroAgenteDbRow[];
     }
     if (filtroOp?.length) {
-      pagamentosData = pagamentosData.filter((p: any) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
-      agentesData = agentesData.filter((a: any) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
-      const infIdsComPag = [...new Set(pagamentosData.map((p: any) => p.influencer_id))];
+      pagamentosData = pagamentosData.filter((p) => p.operadora_slug && filtroOp.includes(p.operadora_slug));
+      agentesData = agentesData.filter((a) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
+      const infIdsComPag = [...new Set(pagamentosData.map((p) => p.influencer_id))];
       perfisFiltrados = perfisFiltrados.filter((p) => infIdsComPag.includes(p.id));
     } else if (filterOperadora && filterOperadora !== "todas") {
-      pagamentosData = pagamentosData.filter((p: any) => p.operadora_slug === filterOperadora);
-      agentesData = agentesData.filter((a: any) => a.operadora_slug === filterOperadora);
-      const infIdsComPag = [...new Set(pagamentosData.map((p: any) => p.influencer_id))];
+      pagamentosData = pagamentosData.filter((p) => p.operadora_slug === filterOperadora);
+      agentesData = agentesData.filter((a) => a.operadora_slug === filterOperadora);
+      const infIdsComPag = [...new Set(pagamentosData.map((p) => p.influencer_id))];
       perfisFiltrados = perfisFiltrados.filter((p) => infIdsComPag.includes(p.id));
     }
 
@@ -1628,7 +1713,11 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
     setRows(resultado);
     setLoading(false);
-  }
+  }, [mes, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   async function toggleExpand(id: string) {
     if (expandido === id) { setExpandido(null); return; }
@@ -1641,7 +1730,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
       .eq("influencer_id", id)
       .order("criado_em", { ascending: false })
       .limit(12);
-    if (data) setHistoricoPagamentos(prev => ({ ...prev, [id]: data }));
+    if (data) setHistoricoPagamentos(prev => ({ ...prev, [id]: data as FinanceiroHistoricoPagRow[] }));
     setLoadingHist(null);
   }
 
@@ -1774,7 +1863,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                                 </tr>
                               </thead>
                               <tbody>
-                                {hist.map((h: any) => (
+                                {hist.map((h) => (
                                   <tr
                                     key={h.id}
                                     style={{ borderBottom: `1px solid ${t.divider}` }}
@@ -1888,7 +1977,10 @@ export default function Financeiro() {
   }, [MESES_OPCOES, historico, mesFiltro]);
 
   const filterOperadoraEfetivo = operadoraSlugsForcado?.length ? operadoraSlugsForcado[0] : filterOperadora;
-  const filtroOp = operadoraSlugsForcado?.length ? operadoraSlugsForcado : (filterOperadora !== "todas" ? [filterOperadora] : null);
+  const filtroOp = useMemo(
+    () => (operadoraSlugsForcado?.length ? operadoraSlugsForcado : (filterOperadora !== "todas" ? [filterOperadora] : null)),
+    [operadoraSlugsForcado, filterOperadora],
+  );
   const filtros: BlocoFiltros = useMemo(() => ({
     podeVerInfluencer,
     podeVerOperadora,
@@ -1930,8 +2022,6 @@ export default function Financeiro() {
     fontFamily: FONT.body, cursor: "pointer", outline: "none",
   });
 
-  useEffect(() => { carregarCiclos(); }, [escoposVisiveis]);
-
   useEffect(() => {
     supabase.from("profiles").select("id, name").eq("role", "influencer")
       .then(({ data }) => { if (data) setInfluencerList(data); });
@@ -1955,7 +2045,7 @@ export default function Financeiro() {
       });
   }, []);
 
-  async function carregarCiclos() {
+  const carregarCiclos = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
       .from("ciclos_pagamento")
@@ -2006,14 +2096,14 @@ export default function Financeiro() {
       const fechadoIds = fechados.map(c => c.id);
 
       const [pagsRes, agtsRes] = await Promise.all([
-        fechadoIds.length > 0 ? supabase.from("pagamentos").select("ciclo_id, influencer_id, operadora_slug").in("ciclo_id", fechadoIds) : { data: [] as any[] },
+        fechadoIds.length > 0 ? supabase.from("pagamentos").select("ciclo_id, influencer_id, operadora_slug").in("ciclo_id", fechadoIds) : { data: [] as FinanceiroPagamentoCicloEscopo[] },
         fechadoIds.length > 0 && podeVerPagamentosAgenteFinanceiro(user?.role)
           ? supabase.from("pagamentos_agentes").select("ciclo_id, operadora_slug").in("ciclo_id", fechadoIds)
-          : { data: [] as any[] },
+          : { data: [] as FinanceiroAgenteCicloEscopo[] },
       ]);
 
-      const pags = (pagsRes.data ?? []) as { ciclo_id: string; influencer_id: string; operadora_slug: string }[];
-      const agts = (agtsRes.data ?? []) as { ciclo_id: string; operadora_slug: string }[];
+      const pags = (pagsRes.data ?? []) as FinanceiroPagamentoCicloEscopo[];
+      const agts = (agtsRes.data ?? []) as FinanceiroAgenteCicloEscopo[];
 
       const ciclosComPagVisible = new Set<string>();
       for (const p of pags) {
@@ -2040,7 +2130,8 @@ export default function Financeiro() {
           .gte("data", dataMin)
           .lte("data", dataMax);
 
-        const liveIds = (lives ?? []).map((l: any) => l.id);
+        const livesEscopo = (lives ?? []) as FinanceiroLiveEscopoRow[];
+        const liveIds = livesEscopo.map((l) => l.id);
         let resIds = new Set<string>();
         if (liveIds.length > 0) {
           const { data: resData } = await supabase.from("live_resultados").select("live_id").in("live_id", liveIds);
@@ -2049,7 +2140,7 @@ export default function Financeiro() {
 
         const OPERADORA_PADRAO = "casa_apostas";
         for (const c of abertos) {
-          const temVisible = (lives ?? []).some((l: any) => {
+          const temVisible = livesEscopo.some((l) => {
             const opSlug = l.operadora_slug?.trim() || OPERADORA_PADRAO;
             return l.data >= (c.data_inicio || "") && l.data <= (c.data_fim || "") &&
               resIds.has(String(l.id)) &&
@@ -2065,7 +2156,11 @@ export default function Financeiro() {
 
     setCiclos(ciclosFiltrados);
     setLoading(false);
-  }
+  }, [escoposVisiveis, user?.role, podeVerInfluencer, podeVerOperadora]);
+
+  useEffect(() => {
+    void carregarCiclos();
+  }, [carregarCiclos]);
 
   /** Cria ciclos que faltam para datas de lives realizadas não cobertas pelos existentes */
   async function complementarCiclos(existentes: CicloPagamento[]): Promise<CicloPagamento[]> {

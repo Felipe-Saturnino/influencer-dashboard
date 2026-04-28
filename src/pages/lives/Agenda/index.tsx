@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -75,12 +75,18 @@ function toISO(d: Date) {
 }
 
 // ─── SINGLE DROPDOWN (Visualização) ──────────────────────────────────────────
+interface SingleDropdownTheme {
+  cardBg: string;
+  cardBorder: string;
+  text: string;
+}
+
 interface SingleDropdownProps {
   value: string;
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
   icon?: React.ReactNode;
-  t: any;
+  t: SingleDropdownTheme;
 }
 
 function SingleDropdown({ value, options, onChange, icon, t, accent }: SingleDropdownProps & { accent?: string }) {
@@ -201,19 +207,20 @@ export default function Agenda() {
     () => influencerList.filter((i) => podeVerInfluencer(i.id)),
     [influencerList, podeVerInfluencer]
   );
-  async function loadLives() {
+  const loadLives = useCallback(async () => {
     setLoading(true);
     let q = supabase.from("lives").select("*, profiles!lives_influencer_id_fkey(name)").order("data", { ascending: true }).order("horario", { ascending: true });
     if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
     const { data, error } = await q;
     if (!error && data) {
-      const mapped = data.map((l: any) => ({ ...l, influencer_name: l.profiles?.name }));
-      setLives(mapped.filter((l: Live) => podeVerInfluencer(l.influencer_id)));
+      type LiveRowDb = Live & { profiles?: { name?: string | null } | null };
+      const mapped = (data as LiveRowDb[]).map((l) => ({ ...l, influencer_name: l.profiles?.name ?? undefined }));
+      setLives(mapped.filter((l) => podeVerInfluencer(l.influencer_id)));
     }
     setLoading(false);
-  }
+  }, [podeVerInfluencer, operadoraSlugsForcado]);
 
-  useEffect(() => { loadLives(); }, [podeVerInfluencer, operadoraSlugsForcado]);
+  useEffect(() => { void loadLives(); }, [loadLives]);
 
   useEffect(() => {
     if (showFiltroInfluencer || showFiltroOperadora) {
@@ -827,7 +834,7 @@ export default function Agenda() {
         <ModalLive
           live={modal.live}
           onClose={() => setModal({ open: false })}
-          onSave={() => { setModal({ open: false }); loadLives(); }}
+          onSave={() => { setModal({ open: false }); void loadLives(); }}
         />
       )}
 

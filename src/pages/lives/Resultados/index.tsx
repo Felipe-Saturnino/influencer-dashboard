@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -564,7 +564,7 @@ export default function Resultados() {
   );
   const showInfluencerName = influencerListVisiveis.length > 1;
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     const hojeLocal = todayISOLocal();
     const agora = Date.now();
@@ -607,9 +607,9 @@ export default function Resultados() {
       }
     }
     setLoading(false);
-  }
+  }, [podeVerInfluencer, operadoraSlugsForcado]);
 
-  useEffect(() => { loadData(); }, [podeVerInfluencer, operadoraSlugsForcado]);
+  useEffect(() => { void loadData(); }, [loadData]);
 
   useEffect(() => {
     supabase.from("profiles").select("id, name").eq("role", "influencer")

@@ -3,8 +3,9 @@
  * O browser chama /api/criar-usuario (mesma origem), e esta função repassa ao Supabase.
  */
 
-import { proxyPostToSupabaseEdge, supabaseProxyOptionsResponse } from "./_supabaseProxy";
+import { proxyPostToSupabaseEdge, supabaseProxyOptionsResponse, type SupabaseProxyContext } from "./_supabaseProxy";
 
-export const onRequestPost = async (context: any) => proxyPostToSupabaseEdge(context, "criar-usuario");
+export const onRequestPost = async (context: SupabaseProxyContext) =>
+  proxyPostToSupabaseEdge(context, "criar-usuario");
 
 export const onRequestOptions = async () => supabaseProxyOptionsResponse();

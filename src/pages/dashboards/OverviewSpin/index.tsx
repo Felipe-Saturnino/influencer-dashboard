@@ -448,13 +448,18 @@ const UAP_JOGO_MAP: Record<string, "blackjack" | "roleta" | "baccarat"> = {
   "Speed Baccarat": "baccarat",
 };
 
-/** Evita encadeamento genérico profundo do cliente Supabase. */
+/**
+ * Filtra consultas às tabelas de relatório por `operadora_slug`.
+ * Tipagem solta: o encadeamento genérico do PostgREST dispara TS2589 se o builder for tipado de forma estrita aqui.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function applyMesasOperadoraSlugFilter(q: any, slugList: string[] | null): any {
   if (slugList != null && slugList.length > 0) {
     return q.in("operadora_slug", slugList);
   }
   return q;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 function buildSlugListForMesasQueries(opts: {
   operadoraSlugsForcado: string[] | null | undefined;
@@ -1387,7 +1392,7 @@ export default function OverviewSpin() {
     operadoraSlugsForcado,
     filtroOperadora,
     escoposVisiveis.semRestricaoEscopo,
-    escoposVisiveis.operadorasVisiveis.join(","),
+    escoposVisiveis.operadorasVisiveis,
   ]);
 
   useEffect(() => {

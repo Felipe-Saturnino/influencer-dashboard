@@ -256,7 +256,7 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
       setLogoUrl(editando.logo_url ?? "");
       setFontUrl(editando.font_url ?? "");
     }
-  }, [editando?.slug]);
+  }, [editando]);
 
   const BUCKET = "operadoras-brand";
 

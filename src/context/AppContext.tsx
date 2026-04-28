@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Provider + hook useApp no mesmo módulo (padrão do projeto). */
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { User, PageKey, PermissaoValor, Role } from "../types";
 import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
@@ -347,7 +348,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setOperadoraBrand(null);
       }
     })();
-  }, [user?.id, user?.role, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
+  }, [user, escoposVisiveis.operadorasVisiveis, brandRefreshKey]);
 
   // Fonte customizada: injeta @font-face e aplica --brand-fontFamily quando operador tem font_url
   useEffect(() => {

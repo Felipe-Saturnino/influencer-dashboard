@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- helpers e constantes ao lado do componente de lista. */
 import { ExternalLink, Loader2, Paperclip } from "lucide-react";
 import type { CSSProperties } from "react";
 import { FONT } from "../../constants/theme";
