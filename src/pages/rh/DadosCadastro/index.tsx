@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { CheckCircle2, Download, Files, History, Image as ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
+import { CheckCircle2, Download, Files, History, Loader2, Trash2, Upload } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -67,7 +67,7 @@ function historicoVisivelAbaDadosCadastro(h: RhFuncionarioHistorico): boolean {
   return tv !== "particular";
 }
 
-type AbaCadastro = "trabalho" | "cadastral" | "documentos" | "historico" | "fotos";
+type AbaCadastro = "trabalho" | "cadastral" | "documentos" | "historico";
 
 type FormState = {
   nome: string;
@@ -298,7 +298,6 @@ const ABAS: { key: AbaCadastro; label: string }[] = [
   { key: "cadastral", label: "Dados cadastrais" },
   { key: "documentos", label: "Documentos" },
   { key: "historico", label: "Histórico" },
-  { key: "fotos", label: "Galeria de fotos" },
 ];
 
 export default function RhDadosCadastroPage() {
@@ -325,7 +324,6 @@ export default function RhDadosCadastroPage() {
   const [mediaRows, setMediaRows] = useState<RhFuncionarioSelfMedia[]>([]);
   const [signedById, setSignedById] = useState<Record<string, string>>({});
   const [uploadingDoc, setUploadingDoc] = useState(false);
-  const [uploadingFoto, setUploadingFoto] = useState(false);
 
   const opcoesVinculoFlat = useMemo(() => flattenVinculosDeGrupos(organogramaGrupos), [organogramaGrupos]);
 
@@ -434,10 +432,9 @@ export default function RhDadosCadastroPage() {
   }, [row?.id, carregarHistorico, carregarMedia]);
 
   const mediaDocs = useMemo(() => mediaRows.filter((m) => m.kind === "documento"), [mediaRows]);
-  const mediaFotos = useMemo(() => mediaRows.filter((m) => m.kind === "foto"), [mediaRows]);
 
   useEffect(() => {
-    const list = [...mediaDocs, ...mediaFotos];
+    const list = [...mediaDocs];
     if (list.length === 0) {
       setSignedById({});
       return;
@@ -454,7 +451,7 @@ export default function RhDadosCadastroPage() {
     return () => {
       cancelled = true;
     };
-  }, [mediaDocs, mediaFotos]);
+  }, [mediaDocs]);
 
   const handleCepBlur = (qual: "res" | "emp", cepRaw: string) => {
     void (async () => {
@@ -522,10 +519,9 @@ export default function RhDadosCadastroPage() {
     await carregarHistorico(row.id);
   };
 
-  const uploadMidia = async (files: FileList | null, kind: "documento" | "foto") => {
+  const uploadMidia = async (files: FileList | null) => {
     if (!perm.canEditarOk || !row || !files?.length) return;
-    const setBusy = kind === "documento" ? setUploadingDoc : setUploadingFoto;
-    setBusy(true);
+    setUploadingDoc(true);
     setErroGlobal(null);
     try {
       for (const file of Array.from(files)) {
@@ -541,7 +537,7 @@ export default function RhDadosCadastroPage() {
         }
         const { error: insErr } = await supabase.from("rh_funcionario_self_media").insert({
           rh_funcionario_id: row.id,
-          kind,
+          kind: "documento",
           storage_path: path,
           file_name: file.name,
           mime_type: file.type || null,
@@ -554,7 +550,7 @@ export default function RhDadosCadastroPage() {
       }
       await carregarMedia(row.id);
     } finally {
-      setBusy(false);
+      setUploadingDoc(false);
     }
   };
 
@@ -1241,7 +1237,7 @@ export default function RhDadosCadastroPage() {
                 disabled={uploadingDoc}
                 style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: uploadingDoc ? "none" : "auto" }}
                 accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
-                onChange={(e) => void uploadMidia(e.target.files, "documento")}
+                onChange={(e) => void uploadMidia(e.target.files)}
               />
               <label
                 htmlFor="dc-upload-docs"
@@ -1322,116 +1318,6 @@ export default function RhDadosCadastroPage() {
             Histórico de RH
           </h2>
           <ListaHistoricoRh items={histItems} loading={histLoading} t={t} />
-        </section>
-      ) : null}
-
-      {aba === "fotos" ? (
-        <section>
-          <h2 style={{ fontFamily: FONT_TITLE, fontSize: 16, color: t.text, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            <ImageIcon size={18} aria-hidden />
-            Galeria de fotos
-          </h2>
-          {perm.canEditarOk ? (
-            <>
-              <input
-                id="dc-upload-fotos"
-                type="file"
-                multiple
-                disabled={uploadingFoto}
-                style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: uploadingFoto ? "none" : "auto" }}
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => void uploadMidia(e.target.files, "foto")}
-              />
-              <label
-                htmlFor="dc-upload-fotos"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 16px",
-                  borderRadius: 12,
-                  border: `1px dashed ${t.cardBorder}`,
-                  cursor: uploadingFoto ? "wait" : "pointer",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: brand.primary,
-                  fontFamily: FONT.body,
-                  marginBottom: 16,
-                }}
-              >
-                <Upload size={16} aria-hidden />
-                {uploadingFoto ? "Enviando…" : "Enviar fotos"}
-              </label>
-            </>
-          ) : null}
-          {mediaFotos.length === 0 ? (
-            <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-              Sem dados para o período selecionado.
-            </div>
-          ) : (
-            <div className="app-grid-2-tight">
-              {mediaFotos.map((m) => {
-                const url = signedById[m.id];
-                return (
-                  <figure
-                    key={m.id}
-                    style={{
-                      margin: 0,
-                      padding: 10,
-                      borderRadius: 14,
-                      border: `1px solid ${t.cardBorder}`,
-                      background: t.cardBg,
-                    }}
-                  >
-                    {url ? (
-                      <img src={url} alt={m.file_name} style={{ width: "100%", maxHeight: 220, objectFit: "cover", borderRadius: 10 }} />
-                    ) : (
-                      <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted }}>
-                        <Loader2 size={20} className="app-lucide-spin" aria-hidden />
-                      </div>
-                    )}
-                    <figcaption style={{ marginTop: 8, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{m.file_name}</figcaption>
-                    {url ? (
-                      <a
-                        href={url}
-                        download={m.file_name}
-                        style={{
-                          marginTop: 8,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: "var(--brand-action, #7c3aed)",
-                          fontFamily: FONT.body,
-                        }}
-                      >
-                        <Download size={14} aria-hidden />
-                        Download
-                      </a>
-                    ) : null}
-                    {perm.canEditarOk ? (
-                      <button
-                        type="button"
-                        onClick={() => void excluirMidia(m)}
-                        style={{
-                          marginTop: 8,
-                          border: "none",
-                          background: "transparent",
-                          color: "#e84025",
-                          cursor: "pointer",
-                          fontSize: 12,
-                          fontFamily: FONT.body,
-                        }}
-                      >
-                        Excluir
-                      </button>
-                    ) : null}
-                  </figure>
-                );
-              })}
-            </div>
-          )}
         </section>
       ) : null}
     </div>

@@ -546,7 +546,7 @@ export default function RhGestaoEscalaPage() {
     [dias, linhasPorFiltroGerar],
   );
 
-  const aplicarSugestaoCustomerService = useCallback(() => {
+  const aplicarSugestaoCustomerService = useCallback(async () => {
     const linhasCs = linhasPorFiltroGerar("customer_service");
     const diasLite = dias.map((d) => ({
       iso: d.iso,
@@ -554,7 +554,29 @@ export default function RhGestaoEscalaPage() {
       isFeriadoSP: d.isFeriadoSP,
     }));
     setErroSalvarGrade(null);
-    const celulas = gerarCelulasSugestaoCustomerService(linhasCs, diasLite);
+
+    let celulasMesAnterior: Record<string, string> | undefined;
+    const mes0Prev = mes === 0 ? 11 : mes - 1;
+    const anoPrev = mes === 0 ? ano - 1 : ano;
+    const refPrev = refMesISO(anoPrev, mes0Prev);
+    const refMin = refMesISO(ESCALA_ANO_MIN, ESCALA_MES0_MIN);
+    if (refPrev >= refMin) {
+      const { data, error } = await supabase.rpc("rh_gestao_escala_grade_carregar", {
+        p_ref_mes: refPrev,
+        p_area_key: "customer_service",
+      });
+      if (!error && data && (data as RpcGradeCarregarRow[]).length > 0) {
+        const m: Record<string, string> = {};
+        for (const row of data as RpcGradeCarregarRow[]) {
+          const isoRaw = row.dia_iso;
+          const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
+          m[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
+        }
+        celulasMesAnterior = m;
+      }
+    }
+
+    const celulas = gerarCelulasSugestaoCustomerService(linhasCs, diasLite, { celulasMesAnterior });
     setGerarPorFiltro((prev) => ({
       ...prev,
       customer_service: {
@@ -564,7 +586,7 @@ export default function RhGestaoEscalaPage() {
         posSugestaoCs: true,
       },
     }));
-  }, [dias, linhasPorFiltroGerar]);
+  }, [ano, mes, dias, linhasPorFiltroGerar]);
 
   const aprovarEscalaGerar = useCallback(
     (areaKey: AreaEscalaKey) => {
@@ -941,7 +963,7 @@ export default function RhGestaoEscalaPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      filtroArea === "customer_service" ? aplicarSugestaoCustomerService() : aplicarSugestaoGerar(filtroArea)
+                      filtroArea === "customer_service" ? void aplicarSugestaoCustomerService() : aplicarSugestaoGerar(filtroArea)
                     }
                     aria-label="Gerar sugestão de escala para a área selecionada"
                     style={{
