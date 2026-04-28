@@ -1561,21 +1561,22 @@ export default function OverviewSpin() {
       const margin_pct = turnover !== 0 ? (ggr / turnover) * 100 : null;
       const bet_size = bets !== 0 ? turnover / bets : null;
       if (modoAgregadoTodasOperadoras) {
-        const somaUapHist = uapMeses.reduce((a, b) => a + b, 0);
-        const uapVal = uapMeses.length > 0 ? somaUapHist : null;
+        /** UAP = média dos totais mensais (somando operadoras no mês) — relatorio_monthly_summary. */
+        const somaUapMeses = uapMeses.reduce((a, b) => a + b, 0);
+        const mediaUapMesesHist =
+          uapMeses.length > 0 ? somaUapMeses / uapMeses.length : null;
         return {
           turnover,
           ggr,
           margin_pct,
           bets,
-          uap: uapVal,
+          uap: mediaUapMesesHist,
           bet_size,
-          arpu: uapVal != null && uapVal !== 0 ? ggr / uapVal : null,
+          arpu: arpuComparativoFromGgrUap(ggr, mediaUapMesesHist),
         };
       }
       const somaUap = uapMeses.reduce((a, b) => a + b, 0);
       const mediaUap = uapMeses.length > 0 ? somaUap / uapMeses.length : null;
-      const arpu = somaUap !== 0 ? ggr / somaUap : null;
       return {
         turnover,
         ggr,
@@ -1583,7 +1584,7 @@ export default function OverviewSpin() {
         bets,
         uap: mediaUap,
         bet_size,
-        arpu,
+        arpu: arpuComparativoFromGgrUap(ggr, mediaUap),
       };
     }
     const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
@@ -1592,9 +1593,8 @@ export default function OverviewSpin() {
     return {
       ...base,
       uap: u,
-      arpu:
-        monthlyUapArpuSel?.arpu ??
-        arpuComparativoFromGgrUap(base.ggr, u),
+      /** ARPU do quadro: GGR agregado do período ÷ UAP oficial mensal relatorio_monthly_summary. */
+      arpu: arpuComparativoFromGgrUap(base.ggr, u),
     };
   }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, modoAgregadoTodasOperadoras]);
 
@@ -1607,9 +1607,7 @@ export default function OverviewSpin() {
     return {
       ...base,
       uap: u,
-      arpu:
-        monthlyUapArpuPrev?.arpu ??
-        arpuComparativoFromGgrUap(base.ggr, u),
+      arpu: arpuComparativoFromGgrUap(base.ggr, u),
     };
   }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev]);
 
@@ -3351,8 +3349,8 @@ export default function OverviewSpin() {
                     <SkeletonKpiCard key={`a-${i}`} />
                   ))}
                 </div>
-                <div className="app-grid-kpi-3" style={{ gap: 12 }}>
-                  {[0, 1, 2].map((i) => (
+                <div className="app-grid-kpi-4" style={{ gap: 12 }}>
+                  {[0, 1, 2, 3].map((i) => (
                     <SkeletonKpiCard key={`b-${i}`} />
                   ))}
                 </div>
@@ -3405,7 +3403,7 @@ export default function OverviewSpin() {
                   isHistorico={isHistoricoKpi}
                 />
               </div>
-              <div className="app-grid-kpi-3" style={{ gap: 12 }}>
+              <div className="app-grid-kpi-4" style={{ gap: 12 }}>
                 <KpiCard
                   label="Apostas"
                   value={kpiExibir?.bets != null ? kpiExibir.bets.toLocaleString("pt-BR") : "—"}
@@ -3425,6 +3423,16 @@ export default function OverviewSpin() {
                   atual={nKpi(kpiExibir?.bet_size)}
                   anterior={nKpi(kpiAntExibir?.bet_size)}
                   isBRL
+                  isHistorico={isHistoricoKpi}
+                />
+                <KpiCard
+                  label={historico ? "Média UAP" : "UAP"}
+                  value={kpiExibir?.uap != null ? kpiExibir.uap.toLocaleString("pt-BR") : "—"}
+                  icon={<Users size={16} />}
+                  accentVar="--brand-icon-color"
+                  accentColor={BRAND.roxo}
+                  atual={nKpi(kpiExibir?.uap)}
+                  anterior={nKpi(kpiAntExibir?.uap)}
                   isHistorico={isHistoricoKpi}
                 />
                 <KpiCard

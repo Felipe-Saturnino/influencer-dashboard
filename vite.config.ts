@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => {
             "vendor-supabase": ["@supabase/supabase-js"],
             "vendor-charts": ["recharts"],
             "vendor-icons": ["react-icons", "lucide-react"],
+            /** PDF / etiquetas RH — isolado para não diluir o chunk principal ao navegar noutras áreas */
+            "vendor-jspdf": ["jspdf"],
+            /** QR em Links & Materiais e exports */
+            "vendor-qrcode": ["qrcode", "qrcode.react"],
           },
         },
       },
