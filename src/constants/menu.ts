@@ -91,7 +91,7 @@ export const MENU: MenuSection[] = [
       { key: "rh_dados_cadastro", label: "Dados de Cadastro", icon: GiFiles },
       { key: "rh_organograma", label: "Organograma", icon: GiOrganigram },
       { key: "rh_vagas", label: "Vagas", icon: GiBriefcase },
-      { key: "rh_escala_mes", label: "Escala do Mês", icon: GiCalendar },
+      { key: "rh_gestao_escala", label: "Gestão de Escala", icon: GiCalendar },
       { key: "rh_staff", label: "Gestão de Staff", icon: GiThreeFriends },
     ],
   },

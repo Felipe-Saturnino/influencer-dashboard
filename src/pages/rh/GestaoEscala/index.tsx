@@ -12,6 +12,7 @@ import {
   escalaPrestadorTemTurnosOperacionais,
   siglaGradeParaNomeTurno,
   staffTurnoCoerenteComEscala,
+  TURNO_ESCALA_5x2,
   turnoOperacionalParaSiglaGrade,
   turnoRhCoerenteComEscala,
   turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
@@ -78,15 +79,12 @@ type RpcPrestadorEscala = {
   staff_nickname: string | null;
 };
 
-const AREA_ESCALA_KEYS = [
-  "game_presenter",
-  "shift_leader",
-  "shuffler",
-  "customer_service",
-  "service_manager",
-] as const;
-
-type AreaEscalaKey = (typeof AREA_ESCALA_KEYS)[number];
+type AreaEscalaKey =
+  | "game_presenter"
+  | "shift_leader"
+  | "shuffler"
+  | "customer_service"
+  | "service_manager";
 
 /** Ordem dos botões de área abaixo do carrossel do mês. */
 const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaKey[] = [
@@ -152,6 +150,23 @@ function contarCelulasComSigla(
   );
 }
 
+/** Consolidado Customer Service: pessoas com turno «Horário Comercial» (5x2) sem sigla operacional na célula (Folga ou vazio). */
+function contarHorarioComercialPorDia(
+  linhas: LinhaColaborador[],
+  dias: DiaMes[],
+  celulas: Record<string, string> | undefined,
+): number[] {
+  return dias.map((dia) =>
+    linhas.reduce((acc, row) => {
+      if (row.turnoStaffNome !== TURNO_ESCALA_5x2) return acc;
+      const k = chaveCelulaGerar(row.id, dia.iso);
+      const v = (celulas?.[k] ?? "").trim();
+      if (v === "MRN" || v === "AFT" || v === "NGT") return acc;
+      return acc + 1;
+    }, 0),
+  );
+}
+
 function opcoesSelectCelulaGerar(siglaTurnoStaff: string): { value: string; label: string }[] {
   const out: { value: string; label: string }[] = [
     { value: "", label: "—" },
@@ -193,6 +208,11 @@ const STICKY_W_TURNO_STAFF = 112;
 const STICKY_LEFT_NICK = STICKY_W_NOME;
 const STICKY_LEFT_ESCALA = STICKY_W_NOME + STICKY_W_NICK;
 const STICKY_LEFT_TURNO_STAFF = STICKY_W_NOME + STICKY_W_NICK + STICKY_W_ESCALA;
+
+/** Colunas fixas quando a coluna Nome está oculta (área Customer Service). */
+const STICKY_LEFT_NICK_SEM_NOME = 0;
+const STICKY_LEFT_ESCALA_SEM_NOME = STICKY_W_NICK;
+const STICKY_LEFT_TURNO_SEM_NOME = STICKY_W_NICK + STICKY_W_ESCALA;
 
 /** Navegação e escala consideram a partir de janeiro de 2026. */
 const ESCALA_ANO_MIN = 2026;
@@ -263,10 +283,10 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
   };
 }
 
-export default function RhEscalaMesPage() {
+export default function RhGestaoEscalaPage() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const perm = usePermission("rh_escala_mes");
+  const perm = usePermission("rh_gestao_escala");
 
   const hoje = useMemo(() => new Date(), []);
   const inicial = useMemo(() => mesReferenciaInicial(), []);
@@ -286,7 +306,9 @@ export default function RhEscalaMesPage() {
     setErroPrestadores(null);
     const { data, error } = await supabase.rpc("rh_escala_prestadores_times");
     if (error) {
-      setErroPrestadores("Não foi possível carregar o staff da escala. Verifique permissões e se a migration da função foi aplicada.");
+      setErroPrestadores(
+        "Não foi possível carregar o staff para a gestão de escala. Verifique permissões e se as migrations foram aplicadas.",
+      );
       setPrestadoresRaw([]);
     } else {
       setPrestadoresRaw((data ?? []) as RpcPrestadorEscala[]);
@@ -555,8 +577,15 @@ export default function RhEscalaMesPage() {
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
     const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
     const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
-    const total = dias.map((_, i) => (manha[i] ?? 0) + (tarde[i] ?? 0) + (noite[i] ?? 0));
-    return { manha, tarde, noite, total };
+    const customerService = filtroArea === "customer_service";
+    const horarioComercial = customerService ? contarHorarioComercialPorDia(linhasF, dias, celulas) : null;
+    const total = dias.map((_, i) => {
+      if (customerService) {
+        return (manha[i] ?? 0) + (noite[i] ?? 0) + (horarioComercial?.[i] ?? 0);
+      }
+      return (manha[i] ?? 0) + (tarde[i] ?? 0) + (noite[i] ?? 0);
+    });
+    return { manha, tarde, noite, horarioComercial, total, customerService };
   }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro, podeEditarGrade]);
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
@@ -579,6 +608,7 @@ export default function RhEscalaMesPage() {
   };
 
   const acaoGerarNoFiltroSelecionado = podeEditarGrade ? acaoBotaoGerar(filtroArea) : null;
+  const areaCustomerService = filtroArea === "customer_service";
 
   if (perm.loading) {
     return (
@@ -600,7 +630,7 @@ export default function RhEscalaMesPage() {
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
         icon={<CalendarRange size={14} aria-hidden />}
-        title="Escala do Mês"
+        title="Gestão de Escala"
         subtitle="Gere a escala por área (time), colaborador e dia do mês."
       />
 
@@ -789,11 +819,11 @@ export default function RhEscalaMesPage() {
         </div>
       )}
 
-      <div role="region" aria-label="Gerar escala do mês por colaborador e dia">
+      <div role="region" aria-label="Gestão de escala por colaborador e dia">
         {loadingPrestadores ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 10 }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-            <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando escala…</span>
+            <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando gestão de escala…</span>
           </div>
         ) : (
           <>
@@ -810,8 +840,9 @@ export default function RhEscalaMesPage() {
                   }}
                 >
                   <caption style={{ display: "none" }}>
-                    Totais de pessoas por turno do dia e por data, linha TOTAL somando os três turnos, conforme área
-                    selecionada
+                    {resumoTurnoDias.customerService
+                      ? "Totais por turno (Manhã, Noite, Horário Comercial) e TOTAL por dia — Customer Service."
+                      : "Totais de pessoas por turno do dia e por data, linha TOTAL somando os três turnos, conforme área selecionada."}
                   </caption>
                   <thead>
                     <tr>
@@ -867,32 +898,34 @@ export default function RhEscalaMesPage() {
                         );
                       })}
                     </tr>
-                    <tr>
-                      <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                        Turno da Tarde
-                      </th>
-                      {resumoTurnoDias.tarde.map((n, idx) => {
-                        const d = dias[idx]!;
-                        return (
-                          <td
-                            key={`resumo-t-${d.iso}`}
-                            style={getTdStyle(t, {
-                              textAlign: "center",
-                              fontVariantNumeric: "tabular-nums",
-                              fontWeight: 700,
-                              ...(diaComDestaqueCalendario(d)
-                                ? {
-                                    background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
-                                    color: "#f59e0b",
-                                  }
-                                : {}),
-                            })}
-                          >
-                            {n}
-                          </td>
-                        );
-                      })}
-                    </tr>
+                    {!resumoTurnoDias.customerService ? (
+                      <tr>
+                        <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
+                          Turno da Tarde
+                        </th>
+                        {resumoTurnoDias.tarde.map((n, idx) => {
+                          const d = dias[idx]!;
+                          return (
+                            <td
+                              key={`resumo-t-${d.iso}`}
+                              style={getTdStyle(t, {
+                                textAlign: "center",
+                                fontVariantNumeric: "tabular-nums",
+                                fontWeight: 700,
+                                ...(diaComDestaqueCalendario(d)
+                                  ? {
+                                      background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
+                                      color: "#f59e0b",
+                                    }
+                                  : {}),
+                              })}
+                            >
+                              {n}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ) : null}
                     <tr>
                       <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
                         Turno da Noite
@@ -919,6 +952,34 @@ export default function RhEscalaMesPage() {
                         );
                       })}
                     </tr>
+                    {resumoTurnoDias.customerService && resumoTurnoDias.horarioComercial ? (
+                      <tr>
+                        <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
+                          Horário Comercial
+                        </th>
+                        {resumoTurnoDias.horarioComercial.map((n, idx) => {
+                          const d = dias[idx]!;
+                          return (
+                            <td
+                              key={`resumo-hc-${d.iso}`}
+                              style={getTdStyle(t, {
+                                textAlign: "center",
+                                fontVariantNumeric: "tabular-nums",
+                                fontWeight: 700,
+                                ...(diaComDestaqueCalendario(d)
+                                  ? {
+                                      background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
+                                      color: "#f59e0b",
+                                    }
+                                  : {}),
+                              })}
+                            >
+                              {n}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ) : null}
                     <tr>
                       <th
                         scope="row"
@@ -964,30 +1025,40 @@ export default function RhEscalaMesPage() {
               style={{
                 width: "100%",
                 minWidth:
-                  STICKY_W_NOME + STICKY_W_NICK + STICKY_W_ESCALA + STICKY_W_TURNO_STAFF + dias.length * 56,
+                  (areaCustomerService ? 0 : STICKY_W_NOME) +
+                  STICKY_W_NICK +
+                  STICKY_W_ESCALA +
+                  STICKY_W_TURNO_STAFF +
+                  dias.length * 56,
                 borderCollapse: "separate",
                 borderSpacing: 0,
                 borderRadius: 14,
                 border: `1px solid ${t.cardBorder}`,
               }}
             >
-              <caption style={{ display: "none" }}>Escala mensal com colunas por dia</caption>
+              <caption style={{ display: "none" }}>
+                {areaCustomerService
+                  ? "Escala mensal por nickname, escala, turno e dia — Customer Service."
+                  : "Escala mensal com colunas por dia"}
+              </caption>
               <thead>
                 <tr>
+                  {!areaCustomerService ? (
+                    <th
+                      scope="col"
+                      style={thSticky(0, {
+                        minWidth: STICKY_W_NOME,
+                        maxWidth: STICKY_W_NOME,
+                        width: STICKY_W_NOME,
+                        verticalAlign: "middle",
+                      })}
+                    >
+                      Nome
+                    </th>
+                  ) : null}
                   <th
                     scope="col"
-                    style={thSticky(0, {
-                      minWidth: STICKY_W_NOME,
-                      maxWidth: STICKY_W_NOME,
-                      width: STICKY_W_NOME,
-                      verticalAlign: "middle",
-                    })}
-                  >
-                    Nome
-                  </th>
-                  <th
-                    scope="col"
-                    style={thSticky(STICKY_LEFT_NICK, {
+                    style={thSticky(areaCustomerService ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
                       minWidth: STICKY_W_NICK,
                       maxWidth: STICKY_W_NICK,
                       width: STICKY_W_NICK,
@@ -998,7 +1069,7 @@ export default function RhEscalaMesPage() {
                   </th>
                   <th
                     scope="col"
-                    style={thSticky(STICKY_LEFT_ESCALA, {
+                    style={thSticky(areaCustomerService ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA, {
                       minWidth: STICKY_W_ESCALA,
                       maxWidth: STICKY_W_ESCALA,
                       width: STICKY_W_ESCALA,
@@ -1009,7 +1080,7 @@ export default function RhEscalaMesPage() {
                   </th>
                   <th
                     scope="col"
-                    style={thSticky(STICKY_LEFT_TURNO_STAFF, {
+                    style={thSticky(areaCustomerService ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
                       minWidth: STICKY_W_TURNO_STAFF,
                       maxWidth: STICKY_W_TURNO_STAFF,
                       width: STICKY_W_TURNO_STAFF,
@@ -1038,7 +1109,7 @@ export default function RhEscalaMesPage() {
                 {linhas.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4 + dias.length}
+                      colSpan={(areaCustomerService ? 3 : 4) + dias.length}
                       style={{
                         ...getTdStyle(t),
                         textAlign: "center",
@@ -1055,47 +1126,65 @@ export default function RhEscalaMesPage() {
                     const editarCelulasGerar = podeEditarGrade;
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>
+                        {!areaCustomerService ? (
+                          <td
+                            style={tdSticky(0, bg, Z_BODY_NOME, {
+                              maxWidth: STICKY_W_NOME,
+                              width: STICKY_W_NOME,
+                              minWidth: STICKY_W_NOME,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            })}
+                            title={row.nomeCompletoCadastro}
+                          >
+                            {row.nome}
+                          </td>
+                        ) : null}
                         <td
-                          style={tdSticky(0, bg, Z_BODY_NOME, {
-                            maxWidth: STICKY_W_NOME,
-                            width: STICKY_W_NOME,
-                            minWidth: STICKY_W_NOME,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          })}
-                          title={row.nomeCompletoCadastro}
-                        >
-                          {row.nome}
-                        </td>
-                        <td
-                          style={tdSticky(STICKY_LEFT_NICK, bg, Z_BODY_NICK, {
-                            minWidth: STICKY_W_NICK,
-                            width: STICKY_W_NICK,
-                            maxWidth: STICKY_W_NICK,
-                          })}
+                          style={tdSticky(
+                            areaCustomerService ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK,
+                            bg,
+                            areaCustomerService ? Z_BODY_NOME : Z_BODY_NICK,
+                            {
+                              minWidth: STICKY_W_NICK,
+                              width: STICKY_W_NICK,
+                              maxWidth: STICKY_W_NICK,
+                            },
+                          )}
+                          title={areaCustomerService ? row.nomeCompletoCadastro : undefined}
                         >
                           {row.nickname}
                         </td>
                         <td
-                          style={tdSticky(STICKY_LEFT_ESCALA, bg, Z_BODY_ESCALA, {
-                            minWidth: STICKY_W_ESCALA,
-                            width: STICKY_W_ESCALA,
-                            maxWidth: STICKY_W_ESCALA,
-                          })}
+                          style={tdSticky(
+                            areaCustomerService ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA,
+                            bg,
+                            areaCustomerService ? Z_BODY_NICK : Z_BODY_ESCALA,
+                            {
+                              minWidth: STICKY_W_ESCALA,
+                              width: STICKY_W_ESCALA,
+                              maxWidth: STICKY_W_ESCALA,
+                            },
+                          )}
                           title={row.escalaCadastro}
                         >
                           {row.escalaCadastro}
                         </td>
                         <td
-                          style={tdSticky(STICKY_LEFT_TURNO_STAFF, bg, Z_BODY_TURNO_STAFF, {
-                            minWidth: STICKY_W_TURNO_STAFF,
-                            width: STICKY_W_TURNO_STAFF,
-                            maxWidth: STICKY_W_TURNO_STAFF,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            borderRight: `1px solid ${t.cardBorder}`,
-                            boxShadow: sombraColFixa,
-                          })}
+                          style={tdSticky(
+                            areaCustomerService ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF,
+                            bg,
+                            areaCustomerService ? Z_BODY_ESCALA : Z_BODY_TURNO_STAFF,
+                            {
+                              minWidth: STICKY_W_TURNO_STAFF,
+                              width: STICKY_W_TURNO_STAFF,
+                              maxWidth: STICKY_W_TURNO_STAFF,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              borderRight: `1px solid ${t.cardBorder}`,
+                              boxShadow: sombraColFixa,
+                            },
+                          )}
                           title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
                         >
                           {row.turnoStaffNome || "—"}

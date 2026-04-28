@@ -20,7 +20,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "rh_dados_cadastro",
   "rh_organograma",
   "rh_vagas",
-  "rh_escala_mes",
+  "rh_gestao_escala",
   "rh_staff",
   "configuracoes", "ajuda",
 ];
