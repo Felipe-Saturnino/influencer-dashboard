@@ -20,10 +20,12 @@ export function primeiroUltimoNome(nomeCompleto: string): string {
 }
 
 export function staffTurnoTextoParaDealerTurno(raw: string | null | undefined): DealerTurno {
-  const n = (raw ?? "").trim().toLowerCase();
+  const n = (raw ?? "").trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  const collapsed = n.replace(/\s+/g, " ");
   if (n.startsWith("manh")) return "manha";
   if (n.startsWith("tarde")) return "tarde";
   if (n.startsWith("noite")) return "noite";
+  if (collapsed.includes("horario comercial")) return "tarde";
   return "noite";
 }
 

@@ -13,6 +13,7 @@ import {
   siglaGradeParaNomeTurno,
   staffTurnoCoerenteComEscala,
   turnoOperacionalParaSiglaGrade,
+  turnoRhCoerenteComEscala,
   turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
 } from "../../../lib/rhEscalaTurnos";
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
@@ -239,9 +240,10 @@ function primeiroEUltimoNomePrestador(nomeCompleto: string): string {
 function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
   const nick = (r.staff_nickname ?? "").trim();
   const esc = (r.escala ?? "").trim();
-  const co = staffTurnoCoerenteComEscala(r.escala, r.staff_turno);
-  const siglaTurnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? turnoOperacionalParaSiglaGrade(co) : "";
-  const turnoStaffNome = escalaPrestadorTemTurnosOperacionais(r.escala) ? co : "";
+  const coOp = staffTurnoCoerenteComEscala(r.escala, r.staff_turno);
+  const turnoRh = turnoRhCoerenteComEscala(r.escala, r.staff_turno);
+  const siglaTurnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? turnoOperacionalParaSiglaGrade(coOp) : "";
+  const turnoStaffNome = escalaPrestadorTemTurnosOperacionais(r.escala) ? coOp : turnoRh;
   const nomeCadastro = (r.nome ?? "").trim();
   return {
     id: r.id,
