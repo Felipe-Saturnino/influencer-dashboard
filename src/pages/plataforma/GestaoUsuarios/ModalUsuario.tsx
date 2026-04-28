@@ -7,7 +7,7 @@ import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import type { Theme } from "../../../constants/theme";
-import { BRAND, ROLES, roleBadgeColor, GESTOR_TIPOS } from "./constants";
+import { BRAND, ROLES, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS } from "./constants";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
 
 interface ModalUsuarioProps {
@@ -27,6 +27,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
   const [scopeOperadoras, setScopeOperadoras] = useState<string[]>([]);
   const [scopePares, setScopePares] = useState<string[]>([]);
   const [scopeGestorTipos, setScopeGestorTipos] = useState<string[]>([]);
+  const [scopePrestadorTipos, setScopePrestadorTipos] = useState<string[]>([]);
   const [paresAgencia, setParesAgencia] = useState<Array<{ influencerId: string; operadoraSlug: string }>>([]);
   const [influencers, setInfluencers] = useState<{ id: string; nome: string }[]>([]);
   const [salvando, setSalvando] = useState(false);
@@ -69,6 +70,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setScopeOperadoras(scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref));
     setScopePares(scopes.filter((s) => s.scope_type === "agencia_par").map((s) => s.scope_ref));
     setScopeGestorTipos(scopes.filter((s) => s.scope_type === "gestor_tipo").map((s) => s.scope_ref));
+    setScopePrestadorTipos(scopes.filter((s) => s.scope_type === "prestador_tipo").map((s) => s.scope_ref));
   }, [editando]);
 
   /** Troca explícita no select: limpa escopos incompatíveis (evita useEffect em [role] que conflita com sync de `editando`). */
@@ -79,6 +81,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setScopeOperadoras([]);
     setScopePares([]);
     setScopeGestorTipos([]);
+    setScopePrestadorTipos([]);
   };
 
   /** Novo usuário influencer: pré-preenche operadora a partir do Scout (parceria), alinhado ao criar-usuario na Edge. */
@@ -157,6 +160,10 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       setErro("Selecione pelo menos um tipo de gestor.");
       return;
     }
+    if (role === "prestador" && scopePrestadorTipos.length === 0) {
+      setErro("Selecione pelo menos uma área de atuação.");
+      return;
+    }
     const paresValidos = role === "agencia" ? paresAgencia.filter((p) => p.influencerId && p.operadoraSlug) : [];
     if (role === "agencia" && paresValidos.length === 0) {
       setErro("Adicione pelo menos um par influencer + operadora.");
@@ -175,6 +182,8 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           ? (Array.isArray(scopeOperadoras) ? scopeOperadoras : []).slice(0, 1)
           : Array.isArray(scopeOperadoras) ? scopeOperadoras : [];
       const scopeGestorTiposArr = role === "gestor" ? (Array.isArray(scopeGestorTipos) ? scopeGestorTipos : []) : [];
+      const scopePrestadorTiposArr =
+        role === "prestador" ? (Array.isArray(scopePrestadorTipos) ? scopePrestadorTipos : []) : [];
 
       if (editando) {
         await callSupabaseEdgeFunction("atualizar-perfil", {
@@ -185,6 +194,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
           scopeGestorTipos: scopeGestorTiposArr,
+          scopePrestadorTipos: scopePrestadorTiposArr,
         });
       } else {
         const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -196,6 +206,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
           scopeGestorTipos: role === "gestor" ? scopeGestorTiposArr : [],
+          scopePrestadorTipos: role === "prestador" ? scopePrestadorTiposArr : [],
           loginUrl,
         });
         uid = fnData.userId ?? "";
@@ -457,6 +468,15 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             items={GESTOR_TIPOS.map((g) => ({ value: g.slug, label: g.label }))}
             selected={scopeGestorTipos}
             onToggle={(v) => toggleItem(scopeGestorTipos, setScopeGestorTipos, v)}
+          />
+        ) : role === "prestador" ? (
+          <MultiSelect
+            label="Áreas de atuação"
+            obrigatorio
+            cor={roleBadgeColor("prestador")}
+            items={PRESTADOR_TIPOS.map((g) => ({ value: g.slug, label: g.label }))}
+            selected={scopePrestadorTipos}
+            onToggle={(v) => toggleItem(scopePrestadorTipos, setScopePrestadorTipos, v)}
           />
         ) : role === "agencia" ? (
           <ParesAgenciaUI

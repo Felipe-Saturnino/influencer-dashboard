@@ -105,6 +105,7 @@ function PlatLogoHome({
 const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrador",
   gestor: "Gestor",
+  prestador: "Prestadores",
   executivo: "Executivo",
   influencer: "Influencer",
   operador: "Operador",
@@ -122,6 +123,11 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Visão geral",
     subtitle:
       "Acesse todos os dashboards e operações. Gerencie campanhas, influencers e acompanhe métricas.",
+  },
+  prestador: {
+    title: "Área de atuação",
+    subtitle:
+      "Seu menu reflete as áreas atribuídas ao seu perfil. Em caso de dúvida sobre acessos, fale com o administrador.",
   },
   executivo: {
     title: "Dashboard executivo",

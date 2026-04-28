@@ -1,4 +1,4 @@
-import type { Role, PageKey, PermissaoValor, GestorTipoSlug } from "../../../types";
+import type { Role, PageKey, PermissaoValor, GestorTipoSlug, PrestadorTipoSlug } from "../../../types";
 import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
 
 export { FONT_TITLE };
@@ -16,11 +16,22 @@ export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "geral", label: "Geral" },
   { slug: "figurino", label: "Figurino" },
   { slug: "recursos_humanos", label: "Recursos Humanos" },
+  { slug: "shift_leader", label: "Shift Leader" },
+  { slug: "service_manager", label: "Service Manager" },
+];
+
+/** Áreas de atuação do perfil Prestadores (multi no cadastro + colunas na aba Prestadores). */
+export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
+  { slug: "customer_service", label: "Customer Service" },
+  { slug: "game_presenter", label: "Game Presenter" },
+  { slug: "shuffler", label: "Shuffler" },
+  { slug: "escritorio", label: "Escritório" },
 ];
 
 export const ROLES: { value: Role; label: string }[] = [
   { value: "admin", label: "Administrador" },
   { value: "gestor", label: "Gestor" },
+  { value: "prestador", label: "Prestadores" },
   { value: "executivo", label: "Executivo" },
   { value: "influencer", label: "Influenciador" },
   { value: "operador", label: "Operador" },
@@ -75,8 +86,16 @@ export const PAGES: {
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
-/** Ordem: Administrador, Executivo, Gestor, Operador, Agência, Influenciador */
-export const ROLES_PERMISSOES: Role[] = ["admin", "executivo", "gestor", "operador", "agencia", "influencer"];
+/** Ordem na aba Permissões */
+export const ROLES_PERMISSOES: Role[] = [
+  "admin",
+  "executivo",
+  "gestor",
+  "prestador",
+  "operador",
+  "agencia",
+  "influencer",
+];
 
 export const PERM_OPCOES: { value: PermissaoValor; label: string }[] = [
   { value: "sim", label: "Sim" },
@@ -92,6 +111,7 @@ export function roleBadgeColor(role: Role): string {
   const map: Record<Role, string> = {
     admin: BRAND.roxoVivo,
     gestor: BRAND.azul,
+    prestador: BRAND.roxo,
     executivo: BRAND.ciano,
     influencer: BRAND.verde,
     operador: BRAND.amarelo,

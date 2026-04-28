@@ -12,7 +12,7 @@ export function useDashboardFiltros() {
 
   const showFiltroInfluencer = useMemo(() => {
     if (!user) return false;
-    if (["admin", "gestor", "executivo"].includes(user.role)) return true;
+    if (["admin", "gestor", "prestador", "executivo"].includes(user.role)) return true;
     if (["operador", "agencia"].includes(user.role))
       return escoposVisiveis.influencersVisiveis.length >= 2;
     return false;
@@ -21,7 +21,7 @@ export function useDashboardFiltros() {
   const showFiltroOperadora = useMemo(() => {
     if (!user) return false;
     if (user.role === "operador" && escoposVisiveis.operadorasVisiveis.length > 0) return false;
-    if (["admin", "gestor", "executivo"].includes(user.role)) return true;
+    if (["admin", "gestor", "prestador", "executivo"].includes(user.role)) return true;
     if (["influencer", "agencia"].includes(user.role))
       return escoposVisiveis.operadorasVisiveis.length >= 2;
     return false;

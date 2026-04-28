@@ -99,7 +99,7 @@ function papelMensagemFromUser(role: string | undefined): "operadora" | "gestor"
 }
 
 function isStaff(role: string | undefined): boolean {
-  return role === "admin" || role === "gestor" || role === "executivo";
+  return role === "admin" || role === "gestor" || role === "prestador" || role === "executivo";
 }
 
 export function ModalThreadSolicitacao({
