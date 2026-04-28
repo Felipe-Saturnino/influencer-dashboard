@@ -15,7 +15,6 @@ import {
   TURNO_ESCALA_5x2,
   turnoOperacionalParaSiglaGrade,
   turnoRhCoerenteComEscala,
-  turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
 } from "../../../lib/rhEscalaTurnos";
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 import { gerarCelulasSugestaoCustomerService } from "../../../lib/gestaoEscalaSugestaoCustomerService";
@@ -54,9 +53,15 @@ type EscalaGerarEstadoFiltro = {
   celulas: Record<string, string>;
   aprovado: boolean;
   baseline: Record<string, string> | null;
-  /** Customer Service: após «Sugestão de Escala» com regras CS — mostra Nova Escala / Salvar / Aprovar. */
+  /** Após «Sugestão de Escala» (regras completas + sequência) — mostra Nova Escala / Salvar / Aprovar. */
+  posSugestao?: boolean;
+  /** Legado (localStorage): tratar como `posSugestao`. */
   posSugestaoCs?: boolean;
 };
+
+function posSugestaoAtiva(est: EscalaGerarEstadoFiltro | undefined): boolean {
+  return Boolean(est?.posSugestao ?? est?.posSugestaoCs);
+}
 
 function chaveStorageEscalaMes(ano: number, mes0: number): string {
   return `rh_gestao_escala_v1_${ano}-${String(mes0 + 1).padStart(2, "0")}`;
@@ -343,7 +348,7 @@ export default function RhGestaoEscalaPage() {
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
   const [erroSalvarGrade, setErroSalvarGrade] = useState<string | null>(null);
-  const [salvandoGradeCs, setSalvandoGradeCs] = useState(false);
+  const [salvandoGrade, setSalvandoGrade] = useState(false);
   /** Área (time) para consolidado e grade de geração. */
   const [filtroArea, setFiltroArea] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
   /** Por área: células do mês e baseline após aprovação. */
@@ -424,37 +429,52 @@ export default function RhGestaoEscalaPage() {
     gravarEscalaMes(ano, mes, gerarPorFiltro);
   }, [gerarPorFiltro, ano, mes]);
 
-  /** Mescla na grade CS os valores persistidos na base (sobrescreve chaves existentes). */
+  /** Mescla na grade de cada área os valores persistidos na base (sobrescreve chaves existentes). */
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || loadingPrestadores) return;
     let cancelled = false;
     const ref = refMesISO(ano, mes);
     void (async () => {
-      const { data, error } = await supabase.rpc("rh_gestao_escala_grade_carregar", {
-        p_ref_mes: ref,
-        p_area_key: "customer_service",
-      });
-      if (cancelled || error) return;
-      const rows = (data ?? []) as RpcGradeCarregarRow[];
-      if (rows.length === 0) return;
-      const fromDb: Record<string, string> = {};
-      for (const row of rows) {
-        const isoRaw = row.dia_iso;
-        const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
-        fromDb[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
+      const areas = [...AREA_ESCALA_ORDEM_BOTOES] as AreaEscalaKey[];
+      const results = await Promise.all(
+        areas.map(async (areaKey) => {
+          const { data, error } = await supabase.rpc("rh_gestao_escala_grade_carregar", {
+            p_ref_mes: ref,
+            p_area_key: areaKey,
+          });
+          return { areaKey, data, error };
+        }),
+      );
+      if (cancelled) return;
+      const fromDbPorArea: Partial<Record<AreaEscalaKey, Record<string, string>>> = {};
+      for (const { areaKey, data, error } of results) {
+        if (error) continue;
+        const rows = (data ?? []) as RpcGradeCarregarRow[];
+        if (rows.length === 0) continue;
+        const fromDb: Record<string, string> = {};
+        for (const row of rows) {
+          const isoRaw = row.dia_iso;
+          const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
+          fromDb[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
+        }
+        fromDbPorArea[areaKey] = fromDb;
       }
+      if (Object.keys(fromDbPorArea).length === 0) return;
       setGerarPorFiltro((prev) => {
-        const cur = prev.customer_service;
-        const merged = { ...(cur?.celulas ?? {}), ...fromDb };
-        return {
-          ...prev,
-          customer_service: {
+        const next = { ...prev };
+        for (const ak of Object.keys(fromDbPorArea) as AreaEscalaKey[]) {
+          const fromDb = fromDbPorArea[ak];
+          if (!fromDb) continue;
+          const cur = next[ak];
+          const merged = { ...(cur?.celulas ?? {}), ...fromDb };
+          next[ak] = {
             celulas: merged,
             aprovado: cur?.aprovado ?? false,
             baseline: cur?.baseline ?? null,
-            posSugestaoCs: cur?.posSugestaoCs ?? false,
-          },
-        };
+            posSugestao: cur?.posSugestao ?? cur?.posSugestaoCs ?? false,
+          };
+        }
+        return next;
       });
     })();
     return () => {
@@ -462,46 +482,49 @@ export default function RhGestaoEscalaPage() {
     };
   }, [ano, mes, perm.loading, perm.canView, loadingPrestadores]);
 
-  const salvarCustomerServiceGradeDb = useCallback(async () => {
-    setErroSalvarGrade(null);
-    const cs = gerarPorFiltro.customer_service;
-    const celulas = cs?.celulas ?? {};
-    if (Object.keys(celulas).length === 0) {
-      setErroSalvarGrade("Não há células para salvar.");
-      return;
-    }
-    setSalvandoGradeCs(true);
-    try {
-      const ref = refMesISO(ano, mes);
-      const { data, error } = await supabase.rpc("rh_gestao_escala_grade_salvar", {
-        p_ref_mes: ref,
-        p_area_key: "customer_service",
-        p_celulas: celulas,
-      });
-      if (error) throw error;
-      const payload = data as RpcGradeSalvarResult | null;
-      if (!payload?.ok) {
-        const code = payload?.error ?? "";
-        setErroSalvarGrade(
-          code === "forbidden"
-            ? "Sem permissão para salvar a grade."
-            : code === "prestador_fora_area"
-              ? "Um ou mais colaboradores não pertencem ao time Customer Service."
-              : code
-                ? `Não foi possível salvar: ${code}.`
-                : "Não foi possível salvar a grade.",
-        );
+  const salvarGradeEscalaDb = useCallback(
+    async (areaKey: AreaEscalaKey) => {
+      setErroSalvarGrade(null);
+      const est = gerarPorFiltro[areaKey];
+      const celulas = est?.celulas ?? {};
+      if (Object.keys(celulas).length === 0) {
+        setErroSalvarGrade("Não há células para salvar.");
         return;
       }
-      gravarEscalaMes(ano, mes, gerarPorFiltro);
-    } catch (e) {
-      setErroSalvarGrade(
-        e instanceof Error ? e.message : "Erro ao salvar na base de dados. Verifique se a migration foi aplicada.",
-      );
-    } finally {
-      setSalvandoGradeCs(false);
-    }
-  }, [ano, mes, gerarPorFiltro]);
+      setSalvandoGrade(true);
+      try {
+        const ref = refMesISO(ano, mes);
+        const { data, error } = await supabase.rpc("rh_gestao_escala_grade_salvar", {
+          p_ref_mes: ref,
+          p_area_key: areaKey,
+          p_celulas: celulas,
+        });
+        if (error) throw error;
+        const payload = data as RpcGradeSalvarResult | null;
+        if (!payload?.ok) {
+          const code = payload?.error ?? "";
+          setErroSalvarGrade(
+            code === "forbidden"
+              ? "Sem permissão para salvar a grade."
+              : code === "prestador_fora_area"
+                ? `Um ou mais colaboradores não pertencem ao time ${labelAreaEscala(areaKey)}.`
+                : code
+                  ? `Não foi possível salvar: ${code}.`
+                  : "Não foi possível salvar a grade.",
+          );
+          return;
+        }
+        gravarEscalaMes(ano, mes, gerarPorFiltro);
+      } catch (e) {
+        setErroSalvarGrade(
+          e instanceof Error ? e.message : "Erro ao salvar na base de dados. Verifique se a migration foi aplicada.",
+        );
+      } finally {
+        setSalvandoGrade(false);
+      }
+    },
+    [ano, mes, gerarPorFiltro],
+  );
 
   const linhas = useMemo(() => {
     return filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
@@ -512,81 +535,53 @@ export default function RhGestaoEscalaPage() {
     [prestadoresRaw],
   );
 
-  /** Sugestão: fim de semana e feriados oficiais (SP capital, sem ponto facultativo) como Folga; dias úteis na sigla do turno da Staff (MRN/AFT/NGT). */
-  const aplicarSugestaoGerar = useCallback(
-    (areaKey: AreaEscalaKey) => {
+  /**
+   * Sugestão com regras de escala (3×3, 4×2, 5×1, 5×2 comercial) e continuidade com o mês anterior gravado na base.
+   */
+  const aplicarSugestaoEscalaArea = useCallback(
+    async (areaKey: AreaEscalaKey) => {
       const linhasF = linhasPorFiltroGerar(areaKey);
-      const next: Record<string, string> = {};
-      for (const row of linhasF) {
-        const turnosEscala = [...turnosPermitidosCadastro(row.escalaCadastro)];
-        const sigla = row.siglaTurnoStaff.trim();
-        for (const dia of dias) {
-          const key = chaveCelulaGerar(row.id, dia.iso);
-          if (turnosEscala.length === 0) {
-            next[key] = "";
-          } else if (diaComDestaqueCalendario(dia)) {
-            next[key] = "Folga";
-          } else if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") {
-            next[key] = sigla;
-          } else {
-            next[key] = "";
+      const diasLite = dias.map((d) => ({
+        iso: d.iso,
+        isWeekend: d.isWeekend,
+        isFeriadoSP: d.isFeriadoSP,
+      }));
+      setErroSalvarGrade(null);
+
+      let celulasMesAnterior: Record<string, string> | undefined;
+      const mes0Prev = mes === 0 ? 11 : mes - 1;
+      const anoPrev = mes === 0 ? ano - 1 : ano;
+      const refPrev = refMesISO(anoPrev, mes0Prev);
+      const refMin = refMesISO(ESCALA_ANO_MIN, ESCALA_MES0_MIN);
+      if (refPrev >= refMin) {
+        const { data, error } = await supabase.rpc("rh_gestao_escala_grade_carregar", {
+          p_ref_mes: refPrev,
+          p_area_key: areaKey,
+        });
+        if (!error && data && (data as RpcGradeCarregarRow[]).length > 0) {
+          const m: Record<string, string> = {};
+          for (const row of data as RpcGradeCarregarRow[]) {
+            const isoRaw = row.dia_iso;
+            const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
+            m[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
           }
+          celulasMesAnterior = m;
         }
       }
+
+      const celulas = gerarCelulasSugestaoCustomerService(linhasF, diasLite, { celulasMesAnterior });
       setGerarPorFiltro((prev) => ({
         ...prev,
         [areaKey]: {
-          celulas: next,
+          celulas,
           aprovado: false,
           baseline: null,
-          ...(areaKey === "customer_service" ? { posSugestaoCs: false } : {}),
+          posSugestao: true,
         },
       }));
     },
-    [dias, linhasPorFiltroGerar],
+    [ano, mes, dias, linhasPorFiltroGerar],
   );
-
-  const aplicarSugestaoCustomerService = useCallback(async () => {
-    const linhasCs = linhasPorFiltroGerar("customer_service");
-    const diasLite = dias.map((d) => ({
-      iso: d.iso,
-      isWeekend: d.isWeekend,
-      isFeriadoSP: d.isFeriadoSP,
-    }));
-    setErroSalvarGrade(null);
-
-    let celulasMesAnterior: Record<string, string> | undefined;
-    const mes0Prev = mes === 0 ? 11 : mes - 1;
-    const anoPrev = mes === 0 ? ano - 1 : ano;
-    const refPrev = refMesISO(anoPrev, mes0Prev);
-    const refMin = refMesISO(ESCALA_ANO_MIN, ESCALA_MES0_MIN);
-    if (refPrev >= refMin) {
-      const { data, error } = await supabase.rpc("rh_gestao_escala_grade_carregar", {
-        p_ref_mes: refPrev,
-        p_area_key: "customer_service",
-      });
-      if (!error && data && (data as RpcGradeCarregarRow[]).length > 0) {
-        const m: Record<string, string> = {};
-        for (const row of data as RpcGradeCarregarRow[]) {
-          const isoRaw = row.dia_iso;
-          const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
-          m[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
-        }
-        celulasMesAnterior = m;
-      }
-    }
-
-    const celulas = gerarCelulasSugestaoCustomerService(linhasCs, diasLite, { celulasMesAnterior });
-    setGerarPorFiltro((prev) => ({
-      ...prev,
-      customer_service: {
-        celulas,
-        aprovado: false,
-        baseline: null,
-        posSugestaoCs: true,
-      },
-    }));
-  }, [ano, mes, dias, linhasPorFiltroGerar]);
 
   const aprovarEscalaGerar = useCallback(
     (areaKey: AreaEscalaKey) => {
@@ -632,7 +627,7 @@ export default function RhGestaoEscalaPage() {
   const acaoBotaoGerar = useCallback(
     (areaKey: AreaEscalaKey): "sugestao" | "aprovar" | null => {
       const estado = gerarPorFiltro[areaKey];
-      if (areaKey === "customer_service" && estado?.posSugestaoCs) return null;
+      if (posSugestaoAtiva(estado)) return null;
       const linhasF = linhasPorFiltroGerar(areaKey);
       if (linhasF.length === 0) return null;
       const celulas = estado?.celulas ?? {};
@@ -879,17 +874,18 @@ export default function RhGestaoEscalaPage() {
             </button>
             {mostrarFiltroArea && podeEditarGrade ? (
               <>
-                {filtroArea === "customer_service" && gerarPorFiltro.customer_service?.posSugestaoCs ? (
+                {posSugestaoAtiva(gerarPorFiltro[filtroArea]) ? (
                   <>
                     <button
                       type="button"
                       onClick={() => {
                         setGerarPorFiltro((prev) => ({
                           ...prev,
-                          customer_service: {
+                          [filtroArea]: {
                             celulas: {},
                             aprovado: false,
                             baseline: null,
+                            posSugestao: false,
                             posSugestaoCs: false,
                           },
                         }));
@@ -912,8 +908,8 @@ export default function RhGestaoEscalaPage() {
                     </button>
                     <button
                       type="button"
-                      disabled={salvandoGradeCs}
-                      onClick={() => void salvarCustomerServiceGradeDb()}
+                      disabled={salvandoGrade}
+                      onClick={() => void salvarGradeEscalaDb(filtroArea)}
                       aria-label="Salvar alterações da escala na base de dados"
                       style={{
                         padding: "10px 16px",
@@ -926,15 +922,15 @@ export default function RhGestaoEscalaPage() {
                         fontFamily: FONT.body,
                         fontSize: 13,
                         fontWeight: 700,
-                        cursor: salvandoGradeCs ? "wait" : "pointer",
+                        cursor: salvandoGrade ? "wait" : "pointer",
                         whiteSpace: "nowrap",
-                        opacity: salvandoGradeCs ? 0.65 : 1,
+                        opacity: salvandoGrade ? 0.65 : 1,
                         display: "inline-flex",
                         alignItems: "center",
                         gap: 8,
                       }}
                     >
-                      {salvandoGradeCs ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
+                      {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
                       Salvar Alterações
                     </button>
                     <button
@@ -963,7 +959,7 @@ export default function RhGestaoEscalaPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      filtroArea === "customer_service" ? void aplicarSugestaoCustomerService() : aplicarSugestaoGerar(filtroArea)
+                      void aplicarSugestaoEscalaArea(filtroArea)
                     }
                     aria-label="Gerar sugestão de escala para a área selecionada"
                     style={{

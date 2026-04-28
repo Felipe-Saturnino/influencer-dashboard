@@ -192,3 +192,41 @@
     display: none;
   }
 }
+
+/* Organograma RH — visão geral: lista scrollável no estreito, grid a partir de 768px */
+.app-org-dir-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(75vh, 900px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 768px) {
+  .app-org-dir-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 12px;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* Kanban de gerências: colunas fluidas; em telas estreitas, faixa horizontal rolável */
+.app-org-gerencias-kanban {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+@media (max-width: 640px) {
+  .app-org-gerencias-kanban {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(280px, min(100%, 320px));
+    grid-template-columns: none;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
