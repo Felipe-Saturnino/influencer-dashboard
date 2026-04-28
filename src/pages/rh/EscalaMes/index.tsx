@@ -88,7 +88,16 @@ const AREA_ESCALA_KEYS = [
 
 type AreaEscalaKey = (typeof AREA_ESCALA_KEYS)[number];
 
-const DEFAULT_AREA_ESCALA: AreaEscalaKey = "game_presenter";
+/** Ordem dos botões de área abaixo do carrossel do mês. */
+const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaKey[] = [
+  "customer_service",
+  "service_manager",
+  "shift_leader",
+  "game_presenter",
+  "shuffler",
+];
+
+const DEFAULT_AREA_ESCALA: AreaEscalaKey = "customer_service";
 
 function normalizarNomeTimeRh(s: string | null | undefined): string {
   return (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -655,33 +664,55 @@ export default function RhEscalaMesPage() {
           </div>
 
           {mostrarFiltroArea ? (
-            <div
-              style={{
-                marginTop: 14,
-                paddingTop: 14,
-                borderTop: `1px solid ${t.cardBorder}`,
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px 16px",
-              }}
-            >
-              <label
-                htmlFor="escala-filtro-area"
+            <>
+              <div
+                role="group"
+                aria-label="Área (time)"
                 style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
+                  marginTop: 14,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
                 }}
               >
-                Área
-              </label>
+                {AREA_ESCALA_ORDEM_BOTOES.map((key) => {
+                  const ativo = filtroArea === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-pressed={ativo}
+                      onClick={() => setFiltroArea(key)}
+                      style={{
+                        padding: "10px 14px",
+                        minHeight: 44,
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        fontFamily: FONT.body,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                        background: ativo
+                          ? brand.useBrand
+                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                            : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                          : (t.inputBg ?? t.cardBg ?? "transparent"),
+                        color: ativo ? brand.accent : t.textMuted,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {labelAreaEscala(key)}
+                    </button>
+                  );
+                })}
+              </div>
               <div
                 style={{
+                  marginTop: 14,
+                  paddingTop: 14,
+                  borderTop: `1px solid ${t.cardBorder}`,
                   display: "flex",
                   flexWrap: "wrap",
                   alignItems: "center",
@@ -689,32 +720,6 @@ export default function RhEscalaMesPage() {
                   gap: 12,
                 }}
               >
-                <select
-                  id="escala-filtro-area"
-                  aria-label="Filtrar por área (time)"
-                  value={filtroArea}
-                  onChange={(e) => {
-                    setFiltroArea(e.target.value as AreaEscalaKey);
-                  }}
-                  style={{
-                    minWidth: 280,
-                    maxWidth: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: `1px solid ${t.cardBorder}`,
-                    background: t.inputBg ?? t.cardBg ?? "transparent",
-                    color: t.text,
-                    fontFamily: FONT.body,
-                    fontSize: 13,
-                    cursor: "pointer",
-                  }}
-                >
-                  {AREA_ESCALA_KEYS.map((key) => (
-                    <option key={key} value={key}>
-                      {labelAreaEscala(key)}
-                    </option>
-                  ))}
-                </select>
                 {acaoGerarNoFiltroSelecionado === "sugestao" ? (
                   <button
                     type="button"
@@ -761,7 +766,7 @@ export default function RhEscalaMesPage() {
                   </button>
                 ) : null}
               </div>
-            </div>
+            </>
           ) : null}
         </div>
       </div>
