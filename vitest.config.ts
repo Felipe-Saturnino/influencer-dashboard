@@ -10,6 +10,11 @@ export default defineConfig({
     },
   },
   test: {
+    env: {
+      /** Evita `createClient` sem URL ao importar páginas que puxam `AppContext` / `supabase`. */
+      VITE_SUPABASE_URL: "https://vitest-placeholder.supabase.co",
+      VITE_SUPABASE_ANON_KEY: "vitest-placeholder-anon-key",
+    },
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
