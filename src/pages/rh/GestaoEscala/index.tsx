@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { CalendarRange, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -18,6 +18,7 @@ import {
   turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
 } from "../../../lib/rhEscalaTurnos";
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
+import { gerarCelulasSugestaoCustomerService } from "../../../lib/gestaoEscalaSugestaoCustomerService";
 
 type DiaMes = {
   dia: number;
@@ -53,7 +54,32 @@ type EscalaGerarEstadoFiltro = {
   celulas: Record<string, string>;
   aprovado: boolean;
   baseline: Record<string, string> | null;
+  /** Customer Service: após «Sugestão de Escala» com regras CS — mostra Nova Escala / Salvar / Aprovar. */
+  posSugestaoCs?: boolean;
 };
+
+function chaveStorageEscalaMes(ano: number, mes0: number): string {
+  return `rh_gestao_escala_v1_${ano}-${String(mes0 + 1).padStart(2, "0")}`;
+}
+
+function carregarEscalaMesGravada(ano: number, mes0: number): Record<string, EscalaGerarEstadoFiltro> {
+  try {
+    const r = localStorage.getItem(chaveStorageEscalaMes(ano, mes0));
+    if (!r) return {};
+    const p = JSON.parse(r) as Record<string, EscalaGerarEstadoFiltro>;
+    return p && typeof p === "object" ? p : {};
+  } catch {
+    return {};
+  }
+}
+
+function gravarEscalaMes(ano: number, mes0: number, est: Record<string, EscalaGerarEstadoFiltro>): void {
+  try {
+    localStorage.setItem(chaveStorageEscalaMes(ano, mes0), JSON.stringify(est));
+  } catch {
+    /* quota / privado */
+  }
+}
 
 function chaveCelulaGerar(rowId: string, iso: string): string {
   return `${rowId}|${iso}`;
@@ -150,7 +176,7 @@ function contarCelulasComSigla(
   );
 }
 
-/** Consolidado Customer Service: pessoas com turno «Horário Comercial» (5x2) sem sigla operacional na célula (Folga ou vazio). */
+/** Consolidado Customer Service: pessoas com turno «Horário Comercial» (5x2) em célula «Comercial». */
 function contarHorarioComercialPorDia(
   linhas: LinhaColaborador[],
   dias: DiaMes[],
@@ -161,17 +187,21 @@ function contarHorarioComercialPorDia(
       if (row.turnoStaffNome !== TURNO_ESCALA_5x2) return acc;
       const k = chaveCelulaGerar(row.id, dia.iso);
       const v = (celulas?.[k] ?? "").trim();
-      if (v === "MRN" || v === "AFT" || v === "NGT") return acc;
-      return acc + 1;
+      if (v === "Comercial") return acc + 1;
+      return acc;
     }, 0),
   );
 }
 
-function opcoesSelectCelulaGerar(siglaTurnoStaff: string): { value: string; label: string }[] {
+function opcoesSelectCelulaGerar(siglaTurnoStaff: string, turnoStaffNome: string): { value: string; label: string }[] {
   const out: { value: string; label: string }[] = [
     { value: "", label: "—" },
     { value: "Folga", label: "Folga" },
   ];
+  if (turnoStaffNome.trim() === TURNO_ESCALA_5x2) {
+    out.push({ value: "Comercial", label: "Comercial" });
+    return out;
+  }
   const sigla = siglaTurnoStaff.trim();
   if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") {
     const label = siglaGradeParaNomeTurno(sigla) || sigla;
@@ -184,9 +214,9 @@ function opcoesSelectCelulaGerar(siglaTurnoStaff: string): { value: string; labe
  * Garante valor coerente: só Folga, vazio ou a sigla do turno configurado na Staff (MRN/AFT/NGT).
  * Aceita legado Manhã/Tarde/Noite se coincidir com a sigla permitida.
  */
-function sanitizarValorCelulaGerar(siglaTurnoStaff: string, valorArmazenado: string): string {
+function sanitizarValorCelulaGerar(siglaTurnoStaff: string, valorArmazenado: string, turnoStaffNome: string): string {
   const v = (valorArmazenado ?? "").trim();
-  const permit = new Set(opcoesSelectCelulaGerar(siglaTurnoStaff).map((o) => o.value));
+  const permit = new Set(opcoesSelectCelulaGerar(siglaTurnoStaff, turnoStaffNome).map((o) => o.value));
   if (permit.has(v)) return v;
   const comoSigla = turnoOperacionalParaSiglaGrade(v);
   if (comoSigla && permit.has(comoSigla)) return comoSigla;
@@ -359,10 +389,21 @@ export default function RhGestaoEscalaPage() {
   const podeEditarGrade = perm.canCriarOk;
   const mostrarFiltroArea = perm.canView === "sim" || perm.canView === "proprios";
 
-  /** Novo mês: zera rascunhos/aprovações da grade (mantém área selecionada). */
+  const mesHydratingRef = useRef(false);
+
+  /** Novo mês: carrega rascunhos gravados no navegador para aquele mês. */
   useEffect(() => {
-    setGerarPorFiltro({});
+    mesHydratingRef.current = true;
+    setGerarPorFiltro(carregarEscalaMesGravada(ano, mes));
   }, [ano, mes]);
+
+  useEffect(() => {
+    if (mesHydratingRef.current) {
+      mesHydratingRef.current = false;
+      return;
+    }
+    gravarEscalaMes(ano, mes, gerarPorFiltro);
+  }, [gerarPorFiltro, ano, mes]);
 
   const linhas = useMemo(() => {
     return filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
@@ -400,11 +441,31 @@ export default function RhGestaoEscalaPage() {
           celulas: next,
           aprovado: false,
           baseline: null,
+          ...(areaKey === "customer_service" ? { posSugestaoCs: false } : {}),
         },
       }));
     },
     [dias, linhasPorFiltroGerar],
   );
+
+  const aplicarSugestaoCustomerService = useCallback(() => {
+    const linhasCs = linhasPorFiltroGerar("customer_service");
+    const diasLite = dias.map((d) => ({
+      iso: d.iso,
+      isWeekend: d.isWeekend,
+      isFeriadoSP: d.isFeriadoSP,
+    }));
+    const celulas = gerarCelulasSugestaoCustomerService(linhasCs, diasLite);
+    setGerarPorFiltro((prev) => ({
+      ...prev,
+      customer_service: {
+        celulas,
+        aprovado: false,
+        baseline: null,
+        posSugestaoCs: true,
+      },
+    }));
+  }, [dias, linhasPorFiltroGerar]);
 
   const aprovarEscalaGerar = useCallback(
     (areaKey: AreaEscalaKey) => {
@@ -416,7 +477,7 @@ export default function RhGestaoEscalaPage() {
         for (const row of linhasF) {
           for (const d of dias) {
             const k = chaveCelulaGerar(row.id, d.iso);
-            merged[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, cur.celulas[k] ?? "");
+            merged[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, cur.celulas[k] ?? "", row.turnoStaffNome);
           }
         }
         const baseline = { ...merged };
@@ -429,31 +490,35 @@ export default function RhGestaoEscalaPage() {
     [dias, linhasPorFiltroGerar],
   );
 
-  const atualizarCelulaGerar = useCallback((areaKey: AreaEscalaKey, rowId: string, iso: string, siglaTurnoStaff: string, valor: string) => {
-    const k = chaveCelulaGerar(rowId, iso);
-    const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor);
-    setGerarPorFiltro((prev) => {
-      const cur = prev[areaKey] ?? { celulas: {}, aprovado: false, baseline: null };
-      return {
-        ...prev,
-        [areaKey]: {
-          ...cur,
-          celulas: { ...cur.celulas, [k]: ok },
-        },
-      };
-    });
-  }, []);
+  const atualizarCelulaGerar = useCallback(
+    (areaKey: AreaEscalaKey, rowId: string, iso: string, siglaTurnoStaff: string, turnoStaffNome: string, valor: string) => {
+      const k = chaveCelulaGerar(rowId, iso);
+      const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor, turnoStaffNome);
+      setGerarPorFiltro((prev) => {
+        const cur = prev[areaKey] ?? { celulas: {}, aprovado: false, baseline: null };
+        return {
+          ...prev,
+          [areaKey]: {
+            ...cur,
+            celulas: { ...cur.celulas, [k]: ok },
+          },
+        };
+      });
+    },
+    [],
+  );
 
   const acaoBotaoGerar = useCallback(
     (areaKey: AreaEscalaKey): "sugestao" | "aprovar" | null => {
       const estado = gerarPorFiltro[areaKey];
+      if (areaKey === "customer_service" && estado?.posSugestaoCs) return null;
       const linhasF = linhasPorFiltroGerar(areaKey);
       if (linhasF.length === 0) return null;
       const celulas = estado?.celulas ?? {};
       const allFilled = linhasF.every((row) =>
         dias.every((d) => {
           const k = chaveCelulaGerar(row.id, d.iso);
-          return sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "").trim() !== "";
+          return sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome).trim() !== "";
         }),
       );
       if (estado?.aprovado && estado.baseline) {
@@ -461,7 +526,7 @@ export default function RhGestaoEscalaPage() {
         for (const row of linhasF) {
           for (const d of dias) {
             const k = chaveCelulaGerar(row.id, d.iso);
-            celSan[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "");
+            celSan[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome);
           }
         }
         if (celulasIguais(celSan, estado.baseline)) return null;
@@ -691,6 +756,131 @@ export default function RhGestaoEscalaPage() {
             >
               <ChevronRight size={14} aria-hidden />
             </button>
+            {mostrarFiltroArea && podeEditarGrade ? (
+              <>
+                {filtroArea === "customer_service" && gerarPorFiltro.customer_service?.posSugestaoCs ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGerarPorFiltro((prev) => ({
+                          ...prev,
+                          customer_service: {
+                            celulas: {},
+                            aprovado: false,
+                            baseline: null,
+                            posSugestaoCs: false,
+                          },
+                        }));
+                      }}
+                      aria-label="Iniciar nova escala em rascunho"
+                      style={{
+                        padding: "10px 16px",
+                        borderRadius: 10,
+                        border: `1px solid ${t.cardBorder}`,
+                        background: t.inputBg ?? t.cardBg ?? "transparent",
+                        color: t.text,
+                        fontFamily: FONT.body,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Nova Escala
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => gravarEscalaMes(ano, mes, gerarPorFiltro)}
+                      aria-label="Salvar alterações da escala no navegador"
+                      style={{
+                        padding: "10px 16px",
+                        borderRadius: 10,
+                        border: `1px solid ${brand.accent}`,
+                        background: brand.useBrand
+                          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                          : "rgba(124,58,237,0.12)",
+                        color: brand.accent,
+                        fontFamily: FONT.body,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Salvar Alterações
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {}}
+                      aria-label="Aprovar escala (ação a definir)"
+                      style={{
+                        padding: "10px 16px",
+                        borderRadius: 10,
+                        border: `1px solid ${brand.accent}`,
+                        background: brand.useBrand
+                          ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
+                          : "rgba(30,54,248,0.12)",
+                        color: brand.accent,
+                        fontFamily: FONT.body,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Aprovar Escala
+                    </button>
+                  </>
+                ) : acaoGerarNoFiltroSelecionado === "sugestao" ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      filtroArea === "customer_service" ? aplicarSugestaoCustomerService() : aplicarSugestaoGerar(filtroArea)
+                    }
+                    aria-label="Gerar sugestão de escala para a área selecionada"
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: 10,
+                      border: `1px solid ${brand.accent}`,
+                      background: brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                        : "rgba(124,58,237,0.12)",
+                      color: brand.accent,
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Sugestão de Escala
+                  </button>
+                ) : acaoGerarNoFiltroSelecionado === "aprovar" ? (
+                  <button
+                    type="button"
+                    onClick={() => aprovarEscalaGerar(filtroArea)}
+                    aria-label="Aprovar escala da área selecionada"
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: 10,
+                      border: `1px solid ${brand.accent}`,
+                      background: brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
+                        : "rgba(30,54,248,0.12)",
+                      color: brand.accent,
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Aprovar Escala
+                  </button>
+                ) : null}
+              </>
+            ) : null}
           </div>
 
           {mostrarFiltroArea ? (
@@ -738,64 +928,6 @@ export default function RhGestaoEscalaPage() {
                   );
                 })}
               </div>
-              <div
-                style={{
-                  marginTop: 14,
-                  paddingTop: 14,
-                  borderTop: `1px solid ${t.cardBorder}`,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 12,
-                }}
-              >
-                {acaoGerarNoFiltroSelecionado === "sugestao" ? (
-                  <button
-                    type="button"
-                    onClick={() => aplicarSugestaoGerar(filtroArea)}
-                    aria-label="Gerar sugestão de escala para a área selecionada"
-                    style={{
-                      padding: "10px 16px",
-                      borderRadius: 10,
-                      border: `1px solid ${brand.accent}`,
-                      background: brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
-                        : "rgba(124,58,237,0.12)",
-                      color: brand.accent,
-                      fontFamily: FONT.body,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Sugestão de Escala
-                  </button>
-                ) : acaoGerarNoFiltroSelecionado === "aprovar" ? (
-                  <button
-                    type="button"
-                    onClick={() => aprovarEscalaGerar(filtroArea)}
-                    aria-label="Aprovar escala da área selecionada"
-                    style={{
-                      padding: "10px 16px",
-                      borderRadius: 10,
-                      border: `1px solid ${brand.accent}`,
-                      background: brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
-                        : "rgba(30,54,248,0.12)",
-                      color: brand.accent,
-                      fontFamily: FONT.body,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Aprovar Escala
-                  </button>
-                ) : null}
-              </div>
             </>
           ) : null}
         </div>
@@ -841,7 +973,7 @@ export default function RhGestaoEscalaPage() {
                 >
                   <caption style={{ display: "none" }}>
                     {resumoTurnoDias.customerService
-                      ? "Totais por turno (Manhã, Noite, Horário Comercial) e TOTAL por dia — Customer Service."
+                      ? "Totais por turno (Manhã, Noite, Comercial) e TOTAL por dia — Customer Service."
                       : "Totais de pessoas por turno do dia e por data, linha TOTAL somando os três turnos, conforme área selecionada."}
                   </caption>
                   <thead>
@@ -955,7 +1087,7 @@ export default function RhGestaoEscalaPage() {
                     {resumoTurnoDias.customerService && resumoTurnoDias.horarioComercial ? (
                       <tr>
                         <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                          Horário Comercial
+                          Comercial
                         </th>
                         {resumoTurnoDias.horarioComercial.map((n, idx) => {
                           const d = dias[idx]!;
@@ -1187,13 +1319,17 @@ export default function RhGestaoEscalaPage() {
                           )}
                           title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
                         >
-                          {row.turnoStaffNome || "—"}
+                          {areaCustomerService && row.turnoStaffNome === TURNO_ESCALA_5x2
+                            ? "Comercial"
+                            : row.turnoStaffNome || "—"}
                         </td>
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);
                           const bruto = editarCelulasGerar ? (celulasGerarAtivas?.[ck] ?? "") : "";
-                          const val = editarCelulasGerar ? sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto) : "";
-                          const opts = opcoesSelectCelulaGerar(row.siglaTurnoStaff);
+                          const val = editarCelulasGerar
+                            ? sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome)
+                            : "";
+                          const opts = opcoesSelectCelulaGerar(row.siglaTurnoStaff, row.turnoStaffNome);
                           return (
                             <td
                               key={`${row.id}-${dia.iso}`}
@@ -1208,7 +1344,14 @@ export default function RhGestaoEscalaPage() {
                                   aria-label={`Escala do dia ${dia.dia} para ${row.nomeCompletoCadastro}`}
                                   value={val}
                                   onChange={(e) =>
-                                    atualizarCelulaGerar(filtroArea, row.id, dia.iso, row.siglaTurnoStaff, e.target.value)
+                                    atualizarCelulaGerar(
+                                      filtroArea,
+                                      row.id,
+                                      dia.iso,
+                                      row.siglaTurnoStaff,
+                                      row.turnoStaffNome,
+                                      e.target.value,
+                                    )
                                   }
                                   style={selectCelulaGerarStyle}
                                 >
