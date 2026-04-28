@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -217,7 +217,7 @@ export default function Influencers() {
   const [cacheLimit,    setCacheLimit]    = useState(5000);
   const [statusError,   setStatusError]   = useState("");
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     const { data: opsList } = await supabase.from("operadoras").select("*").order("nome");
     setOperadorasList(opsList ?? []);
@@ -227,7 +227,7 @@ export default function Influencers() {
       const { data: profiles } = await supabase
         .from("profiles").select("id, name, email").eq("role", "influencer").order("name");
       if (profiles) {
-        const ids = profiles.map((p: any) => p.id);
+        const ids = profiles.map((p: { id: string }) => p.id);
         const [perfisRes, opsRes] = await Promise.all([
           ids.length > 0 ? supabase.from("influencer_perfil").select("*").in("id", ids) : { data: [] },
           ids.length > 0 ? supabase.from("influencer_operadoras").select("*").in("influencer_id", ids) : { data: [] },
@@ -239,10 +239,10 @@ export default function Influencers() {
           if (!opsPorInf[o.influencer_id]) opsPorInf[o.influencer_id] = [];
           opsPorInf[o.influencer_id].push({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome });
         });
-        const mapped = profiles.map((p: any) => ({
+        const mapped = profiles.map((p: { id: string; name?: string | null; email?: string | null }) => ({
           id: p.id,
-          name: p.name ?? p.email,
-          email: p.email,
+          name: p.name ?? p.email ?? "",
+          email: p.email ?? "",
           perfil: perfisMap[p.id] ?? null,
           operadoras: opsPorInf[p.id] ?? [],
         }));
@@ -280,9 +280,9 @@ export default function Influencers() {
       }]);
     }
     setLoading(false);
-  }
+  }, [showManagementUI, user]);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { void loadData(); }, [loadData]);
 
   async function handleStatusChange(infId: string, newStatus: StatusInfluencer) {
     if (!podeAlterarStatus) return;
@@ -809,7 +809,7 @@ export default function Influencers() {
           influencer={modal.inf}
           operadorasList={operadorasNoEscopo}
           onClose={() => setModal(null)}
-          onSaved={() => { setModal(null); loadData(); }}
+          onSaved={() => { setModal(null); void loadData(); }}
           isDark={isDark}
         />
       )}
@@ -1052,7 +1052,7 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
   const [error,          setError]          = useState("");
   const [tab,            setTab]            = useState<"cadastral" | "canais" | "financeiro" | "operadoras">("cadastral");
 
-  const set = (key: keyof Perfil, val: any) => setForm((f) => ({ ...f, [key]: val }));
+  const set = (key: keyof Perfil, val: Perfil[keyof Perfil]) => setForm((f) => ({ ...f, [key]: val }));
 
   const setOp = (slug: string, patch: Partial<{ ativo: boolean; id_operadora: string }>) => {
     setOperadorasForm((prev) => {

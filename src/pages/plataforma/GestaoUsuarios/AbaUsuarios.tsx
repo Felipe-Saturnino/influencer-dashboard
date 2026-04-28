@@ -25,7 +25,7 @@ function formatarUltimoLogin(iso: string | null | undefined): string {
   }
 }
 
-/** Filtro de status: vazio = todos; pode ter ativo, desativado ou ambos (= todos). */
+/** Filtro de status: vazio = todos; chaves selecionadas = união (ativo e/ou desativado; ambos = todos). */
 function passaFiltroStatus(u: UsuarioCompleto, set: Set<"ativo" | "desativado">): boolean {
   if (set.size === 0) return true;
   const ok = u.ativo !== false;
@@ -74,7 +74,10 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<UsuarioCompleto | null>(null);
   const [busca, setBusca] = useState("");
-  const [filtroStatusSet, setFiltroStatusSet] = useState<Set<"ativo" | "desativado">>(new Set());
+  /** Por defeito só utilizadores ativos; incluir desativados via filtro "Desativado" (e/ou desmarcar "Ativo"). */
+  const [filtroStatusSet, setFiltroStatusSet] = useState<Set<"ativo" | "desativado">>(
+    () => new Set(["ativo"]),
+  );
   const [filtroPerfilSet, setFiltroPerfilSet] = useState<Set<Role>>(new Set());
   const [modalDesativar, setModalDesativar] = useState<UsuarioCompleto | null>(null);
   const [modalResetSenha, setModalResetSenha] = useState<UsuarioCompleto | null>(null);
@@ -243,7 +246,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
         </button>
       </div>
 
-      {/* Linha 2: status e perfis (nenhum selecionado = todos) */}
+      {/* Linha 2: status (default: só Ativo) e perfis (nenhum perfil = todos) */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
           <span

@@ -269,7 +269,7 @@ export default function StatusTecnico() {
     setFluxoDados(fluxoArray);
 
     setLoading(false);
-  }, [logFiltro]);
+  }, []);
 
   useEffect(() => {
     carregar();

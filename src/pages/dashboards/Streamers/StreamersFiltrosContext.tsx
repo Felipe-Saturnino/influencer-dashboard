@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Provider + hooks de contexto no mesmo ficheiro. */
 import {
   createContext,
   useCallback,

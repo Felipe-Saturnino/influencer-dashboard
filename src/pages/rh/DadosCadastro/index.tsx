@@ -27,6 +27,8 @@ import type { RhFuncionario, RhFuncionarioHistorico, RhFuncionarioSelfMedia, RhF
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
+import { turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
+import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import { ListaHistoricoRh } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
 
@@ -69,6 +71,7 @@ type AbaCadastro = "trabalho" | "cadastral" | "documentos" | "historico" | "foto
 
 type FormState = {
   nome: string;
+  staff_nickname: string;
   rg: string;
   cpf: string;
   telefone: string;
@@ -116,6 +119,7 @@ function formDeFuncionario(f: RhFuncionario): FormState {
   const emergNome = (f.emerg_nome ?? "").trim() || f.contato_emergencia;
   return {
     nome: f.nome,
+    staff_nickname: (f.staff_nickname ?? "").trim(),
     rg: formatarRgInput(f.rg),
     cpf: formatarCpfDigitos(f.cpf),
     telefone: formatarTelefoneBr(f.telefone),
@@ -185,6 +189,7 @@ function buildPayloadFromForm(form: FormState, statusPrestador: RhFuncionario["s
   return {
     status: statusPrestador,
     nome: form.nome.trim(),
+    staff_nickname: form.staff_nickname.trim() || null,
     rg: form.rg.trim(),
     cpf: somenteDigitos(form.cpf),
     telefone: somenteDigitos(form.telefone),
@@ -499,7 +504,7 @@ export default function RhDadosCadastroPage() {
     setErroGlobal(null);
     setMsgOk(null);
     const payload = buildPayloadFromForm(form, row.status);
-    const { error } = await supabase.from("rh_funcionarios").update(payload).eq("id", row.id);
+    const { data: atualizado, error } = await supabase.from("rh_funcionarios").update(payload).eq("id", row.id).select("*").maybeSingle();
     setSalvando(false);
     if (error) {
       if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
@@ -510,6 +515,9 @@ export default function RhDadosCadastroPage() {
       return;
     }
     setMsgOk("Dados atualizados.");
+    if (atualizado) {
+      await syncGamePresenterDealerFromRhFuncionario(atualizado as RhFuncionario);
+    }
     await carregarFuncionario();
     await carregarHistorico(row.id);
   };
@@ -719,6 +727,7 @@ export default function RhDadosCadastroPage() {
                 ["Remuneração mensal", salarioFmt],
                 ["Data de início", form.data_inicio ? form.data_inicio.slice(0, 10).split("-").reverse().join("/") : "—"],
                 ["Escala", form.escala],
+                ["Turno", turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"],
               ] as const
             ).map(([k, v]) => (
               <div key={k} style={{ marginBottom: 12 }}>
@@ -746,6 +755,19 @@ export default function RhDadosCadastroPage() {
                 style={inputStyle}
               />
               {fieldErr.nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome}</div> : null}
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label htmlFor="dc-nickname" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+                Nickname
+              </label>
+              <input
+                id="dc-nickname"
+                disabled={!perm.canEditarOk}
+                value={form.staff_nickname}
+                onChange={(e) => setForm((s) => (s ? { ...s, staff_nickname: e.target.value } : s))}
+                placeholder="Como prefere ser chamado no estúdio"
+                style={inputStyle}
+              />
             </div>
             <div style={{ marginBottom: 10 }}>
               <label htmlFor="dc-rg" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>

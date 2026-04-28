@@ -29,7 +29,6 @@ export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = t
   const { theme: t, user } = useApp();
   const [pendentes, setPendentes] = useState<PendenciaItem[]>([]);
   const [threadCtx, setThreadCtx] = useState<{ id: string; origem: ThreadSolicitacaoOrigem } | null>(null);
-
   useEffect(() => {
     if (user?.role !== "operador" || !operadoraSlugs.length) {
       setPendentes([]);
@@ -89,7 +88,7 @@ export function BannerPendencias({ operadoraSlugs, operadoras, podeInteragir = t
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [user?.role, operadoraSlugs.join(",")]);
+  }, [user?.role, operadoraSlugs]);
 
   if (user?.role !== "operador" || pendentes.length === 0) return null;
 

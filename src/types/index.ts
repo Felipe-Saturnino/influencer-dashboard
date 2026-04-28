@@ -197,6 +197,8 @@ export interface Dealer {
   jogos:            DealerJogo[];
   operadora_slug:   string | null;
   perfil_influencer: string | null;
+  /** Prestador RH (time Game Presenter) quando o cadastro é gerido pela Gestão de Staff. */
+  rh_funcionario_id?: string | null;
   status?:          "aprovado" | "pendente";
   vip?:             boolean;
   created_at?:      string;

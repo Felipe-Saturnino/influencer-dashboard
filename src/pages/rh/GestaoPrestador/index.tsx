@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   StickyNote,
+  Trash2,
   UserCircle2,
   Users,
   X,
@@ -25,6 +26,7 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 import {
   centavosDeStringMoeda,
+  centavosInteirosDeStringMoeda,
   formatarAgencia,
   formatarCepDigitos,
   formatarCnpjDigitos,
@@ -40,17 +42,21 @@ import {
 } from "../../../lib/rhFuncionarioValidators";
 import { montarContatoEmergenciaLinha, montarEnderecoResumoLine } from "../../../lib/rhFuncionarioEndereco";
 import { buscarEnderecoPorCep } from "../../../lib/rhViaCep";
+import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import type {
+  RhAreaAtuacao,
   RhFuncionario,
   RhFuncionarioHistorico,
   RhFuncionarioTipoContrato,
   RhHistoricoAcaoTipo,
+  RhTipoTerminoPrestacao,
 } from "../../../types/rhFuncionario";
 import { uploadAnexosAcaoRh } from "../../../lib/rhPrestadorAcaoFiles";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
-import { nomeLiderDoisPrimeirosParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
+import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
+import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
@@ -68,6 +74,27 @@ const TIPOS_CONTRATO: { value: RhFuncionarioTipoContrato; label: string }[] = [
 
 /** Valores permitidos para o campo Escala (cadastro de prestador). */
 const ESCALAS_PERMITIDAS = ["5x2", "3x3", "4x2", "5x1"] as const;
+
+function labelAreaAtuacao(a: RhAreaAtuacao | "" | null | undefined): string {
+  if (a === "estudio") return "Estúdio";
+  if (a === "escritorio") return "Escritório";
+  return "—";
+}
+
+function remuneracaoHoraCentavosDeRow(f: RhFuncionario): string {
+  const v = f.remuneracao_hora_centavos;
+  if (v == null || Number.isNaN(Number(v))) return "";
+  return String(Math.round(Number(v)));
+}
+
+/** Coluna «Remuneração»: mensal quando preenchida; senão valor por hora (centavos → reais). */
+function textoRemuneracaoColunaTabela(row: RhFuncionario): { texto: string; title?: string } {
+  const sal = Number(row.salario);
+  if (sal > 0) return { texto: fmtBRL(sal) };
+  const rh = Number(row.remuneracao_hora_centavos ?? 0);
+  if (rh > 0) return { texto: fmtBRL(rh / 100), title: "Remuneração por hora" };
+  return { texto: "—" };
+}
 
 function escalaEhPermitida(s: string): s is (typeof ESCALAS_PERMITIDAS)[number] {
   return (ESCALAS_PERMITIDAS as readonly string[]).includes(s.trim());
@@ -103,6 +130,9 @@ type SliceContratacao = {
   setor: string;
   cargo: string;
   nivel: string;
+  area_atuacao: RhAreaAtuacao | "";
+  remuneracaoHoraCentavos: string;
+  staff_turno: string;
   salarioCentavos: string;
   tipo_contrato: RhFuncionarioTipoContrato;
   escala: string;
@@ -118,6 +148,9 @@ function sliceContratacaoDeForm(f: FormState): SliceContratacao {
     setor: f.setor.trim(),
     cargo: f.cargo.trim(),
     nivel: f.nivel.trim(),
+    area_atuacao: (f.area_atuacao === "estudio" || f.area_atuacao === "escritorio" ? f.area_atuacao : "") as RhAreaAtuacao | "",
+    remuneracaoHoraCentavos: f.remuneracaoHoraCentavos,
+    staff_turno: (f.staff_turno ?? "").trim(),
     salarioCentavos: f.salarioCentavos,
     tipo_contrato: f.tipo_contrato,
     escala: f.escala.trim(),
@@ -129,6 +162,8 @@ function sliceContratacaoDeForm(f: FormState): SliceContratacao {
 function sliceContratacaoDeRow(r: RhFuncionario): SliceContratacao {
   const cents = Math.round(Number(r.salario) * 100).toString();
   const df = r.data_funcao ? String(r.data_funcao).slice(0, 10) : "";
+  const area: RhAreaAtuacao =
+    r.area_atuacao === "estudio" || r.area_atuacao === "escritorio" ? r.area_atuacao : "escritorio";
   return {
     org_diretoria_id: r.org_diretoria_id ?? null,
     org_gerencia_id: r.org_gerencia_id ?? null,
@@ -136,6 +171,9 @@ function sliceContratacaoDeRow(r: RhFuncionario): SliceContratacao {
     setor: r.setor.trim(),
     cargo: r.cargo.trim(),
     nivel: r.nivel.trim(),
+    area_atuacao: area,
+    remuneracaoHoraCentavos: remuneracaoHoraCentavosDeRow(r),
+    staff_turno: (r.staff_turno ?? "").trim(),
     salarioCentavos: cents,
     tipo_contrato: r.tipo_contrato,
     escala: r.escala.trim(),
@@ -179,11 +217,32 @@ function diffContratacaoSlices(
   }
   if (antes.cargo !== depois.cargo) out.push({ campo: "Função", antes: antes.cargo || "—", depois: depois.cargo || "—" });
   if (antes.nivel !== depois.nivel) out.push({ campo: "Nível", antes: antes.nivel, depois: depois.nivel });
+  if (antes.area_atuacao !== depois.area_atuacao) {
+    out.push({
+      campo: "Área de atuação",
+      antes: labelAreaAtuacao(antes.area_atuacao),
+      depois: labelAreaAtuacao(depois.area_atuacao),
+    });
+  }
   if (antes.salarioCentavos !== depois.salarioCentavos) {
     out.push({
       campo: "Remuneração mensal",
       antes: fmtSal(antes.salarioCentavos),
       depois: fmtSal(depois.salarioCentavos),
+    });
+  }
+  if (antes.remuneracaoHoraCentavos !== depois.remuneracaoHoraCentavos) {
+    out.push({
+      campo: "Remuneração por hora",
+      antes: fmtSal(antes.remuneracaoHoraCentavos),
+      depois: fmtSal(depois.remuneracaoHoraCentavos),
+    });
+  }
+  if (antes.staff_turno.trim() !== depois.staff_turno.trim()) {
+    out.push({
+      campo: "Turno",
+      antes: antes.staff_turno.trim() || "—",
+      depois: depois.staff_turno.trim() || "—",
     });
   }
   if (antes.tipo_contrato !== depois.tipo_contrato) {
@@ -251,7 +310,15 @@ function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean):
   const bancoT = (r.banco ?? "").trim();
   if (!bancoT || bancoT === "—" || !r.agencia?.trim() || !r.conta_corrente?.trim() || r.conta_corrente.trim() === "0") return true;
   if (!String(r.pix ?? "").trim()) return true;
-  if (Number(r.salario) <= 0) return true;
+  const area: RhAreaAtuacao =
+    r.area_atuacao === "estudio" || r.area_atuacao === "escritorio" ? r.area_atuacao : "escritorio";
+  if (area === "estudio") {
+    const hc = Number(r.remuneracao_hora_centavos ?? 0);
+    if (hc <= 0) return true;
+    if (!(r.staff_turno ?? "").trim()) return true;
+  } else if (Number(r.salario) <= 0) {
+    return true;
+  }
   return false;
 }
 
@@ -289,6 +356,10 @@ type FormState = {
   org_time_id: string | null;
   cargo: string;
   nivel: string;
+  /** Vazio no «Novo» até o utilizador escolher. */
+  area_atuacao: "" | RhAreaAtuacao;
+  remuneracaoHoraCentavos: string;
+  staff_turno: string;
   salarioCentavos: string;
   data_inicio: string;
   data_funcao: string;
@@ -338,8 +409,12 @@ function abaDoCampoRhModal(campo: string, formEhPJ: boolean): AbaFuncModal {
     "setor",
     "cargo",
     "nivel",
+    "tipo_contrato",
+    "area_atuacao",
     "email_spin",
     "salarioCentavos",
+    "remuneracaoHoraCentavos",
+    "staff_turno",
     "data_inicio",
     "escala",
   ]);
@@ -396,6 +471,9 @@ function estadoVazioForm(): FormState {
     org_time_id: null,
     cargo: "",
     nivel: "Junior",
+    area_atuacao: "",
+    remuneracaoHoraCentavos: "",
+    staff_turno: "",
     salarioCentavos: "",
     data_inicio: "",
     data_funcao: "",
@@ -444,6 +522,10 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     org_time_id: f.org_time_id ?? null,
     cargo: f.cargo,
     nivel: f.nivel,
+    area_atuacao:
+      f.area_atuacao === "estudio" || f.area_atuacao === "escritorio" ? f.area_atuacao : "escritorio",
+    remuneracaoHoraCentavos: remuneracaoHoraCentavosDeRow(f),
+    staff_turno: (f.staff_turno ?? "").trim(),
     salarioCentavos: cents,
     data_inicio: f.data_inicio,
     data_funcao: f.data_funcao ? String(f.data_funcao).slice(0, 10) : "",
@@ -496,7 +578,17 @@ function buildRhFuncionarioPayloadFromState(
   status: RhFuncionario["status"];
   data_desligamento?: string | null;
 } {
-  const sal = podeVerDadosSensiveis ? numeroDeCentavosStr(form.salarioCentavos) : 0;
+  const area: RhAreaAtuacao =
+    form.area_atuacao === "estudio" || form.area_atuacao === "escritorio" ? form.area_atuacao : "escritorio";
+  const isEstudio = area === "estudio";
+  const sal = isEstudio ? 0 : podeVerDadosSensiveis ? numeroDeCentavosStr(form.salarioCentavos) : 0;
+  const remuneracao_hora_centavos =
+    isEstudio && podeVerDadosSensiveis
+      ? centavosInteirosDeStringMoeda(form.remuneracaoHoraCentavos)
+      : isEstudio
+        ? 0
+        : null;
+  const staff_turno = isEstudio ? (form.staff_turno.trim() || null) : null;
   const isPj = form.tipo_contrato === "PJ";
   let cnpjFinal = isPj ? somenteDigitos(form.cnpj) : CNPJ_CONTEXTO_NAO_PJ;
   if (cadastroMinimoNovo && isPj && (cnpjFinal.length !== 14 || !validarCnpjDigitos(cnpjFinal))) {
@@ -576,6 +668,9 @@ function buildRhFuncionarioPayloadFromState(
     org_time_id: form.org_time_id || null,
     cargo: form.cargo.trim(),
     nivel: form.nivel.trim(),
+    area_atuacao: area,
+    remuneracao_hora_centavos,
+    staff_turno,
     salario: sal,
     data_inicio: form.data_inicio,
     data_funcao: form.data_funcao.trim() ? form.data_funcao.trim().slice(0, 10) : null,
@@ -758,6 +853,7 @@ export default function RhPrestadoresPage() {
   const [acaoDtSaida, setAcaoDtSaida] = useState("");
   const [acaoDtRetorno, setAcaoDtRetorno] = useState("");
   const [acaoDtTermino, setAcaoDtTermino] = useState("");
+  const [acaoTipoTermino, setAcaoTipoTermino] = useState<"" | RhTipoTerminoPrestacao>("");
   const [acaoObs, setAcaoObs] = useState("");
   const [acaoFiles, setAcaoFiles] = useState<File[]>([]);
   const [histModalRow, setHistModalRow] = useState<RhFuncionario | null>(null);
@@ -780,6 +876,9 @@ export default function RhPrestadoresPage() {
   const [anAta, setAnAta] = useState("");
   const [anFiles, setAnFiles] = useState<File[]>([]);
   const [anSalvando, setAnSalvando] = useState(false);
+
+  const [prestadorExcluirConfirm, setPrestadorExcluirConfirm] = useState<RhFuncionario | null>(null);
+  const [excluindoPrestador, setExcluindoPrestador] = useState(false);
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -916,6 +1015,7 @@ export default function RhPrestadoresPage() {
   );
 
   const ehPJ = form.tipo_contrato === "PJ";
+  const isEstudioContratacao = form.area_atuacao === "estudio";
 
   const abasModalDef = useMemo(() => {
     const tabs: { key: AbaFuncModal; label: string }[] = [
@@ -1129,6 +1229,7 @@ export default function RhPrestadoresPage() {
     setAcaoDtSaida("");
     setAcaoDtRetorno("");
     setAcaoDtTermino("");
+    setAcaoTipoTermino("");
     setAcaoObs("");
     setAcaoFiles([]);
     acaoBaselineRef.current = null;
@@ -1136,11 +1237,14 @@ export default function RhPrestadoresPage() {
   };
 
   const abrirModalRegistrarAcao = (row: RhFuncionario) => {
+    setErroGlobal(null);
+    setSucessoMsg(null);
     setAcaoModalRow(row);
     setAcaoTipo("");
     setAcaoDtSaida("");
     setAcaoDtRetorno("");
     setAcaoDtTermino("");
+    setAcaoTipoTermino("");
     setAcaoObs("");
     setAcaoFiles([]);
     acaoBaselineRef.current = null;
@@ -1168,6 +1272,8 @@ export default function RhPrestadoresPage() {
   };
 
   const abrirModalRhTalks = () => {
+    setErroGlobal(null);
+    setSucessoMsg(null);
     setRhTalksOpen(true);
     setRtAssunto("");
     setRtData("");
@@ -1188,6 +1294,8 @@ export default function RhPrestadoresPage() {
   };
 
   const abrirModalRegistrarAnotacao = (row: RhFuncionario) => {
+    setErroGlobal(null);
+    setSucessoMsg(null);
     setAnotacaoModalRow(row);
     setAnVisibilidade("Publico");
     setAnAssunto("");
@@ -1367,6 +1475,9 @@ export default function RhPrestadoresPage() {
       req("cargo", "Função", form.cargo);
       req("nivel", "Nível", form.nivel);
       req("data_inicio", "Data de início", form.data_inicio);
+      if (form.area_atuacao !== "estudio" && form.area_atuacao !== "escritorio") {
+        e.area_atuacao = "Selecione a área de atuação.";
+      }
       if (!form.escala.trim()) e.escala = "Escala é obrigatória.";
       else if (!escalaEhPermitida(form.escala)) e.escala = msgEscalaLegadaInvalida();
 
@@ -1383,8 +1494,14 @@ export default function RhPrestadoresPage() {
       if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
 
       if (podeVerDadosSensiveis) {
-        const sal = numeroDeCentavosStr(form.salarioCentavos);
-        if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
+        if (form.area_atuacao === "estudio") {
+          const rh = centavosInteirosDeStringMoeda(form.remuneracaoHoraCentavos);
+          if (rh <= 0) e.remuneracaoHoraCentavos = "Informe a remuneração por hora.";
+          if (!form.staff_turno.trim()) e.staff_turno = "Selecione o turno.";
+        } else if (form.area_atuacao === "escritorio") {
+          const sal = numeroDeCentavosStr(form.salarioCentavos);
+          if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
+        }
       }
 
       return e;
@@ -1458,8 +1575,14 @@ export default function RhPrestadoresPage() {
     if (telEmerg.length < 10 || telEmerg.length > 11) e.emerg_telefone = "Telefone de emergência inválido.";
 
     if (podeVerDadosSensiveis) {
-      const sal = numeroDeCentavosStr(form.salarioCentavos);
-      if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
+      if (form.area_atuacao === "estudio") {
+        const rh = centavosInteirosDeStringMoeda(form.remuneracaoHoraCentavos);
+        if (rh <= 0) e.remuneracaoHoraCentavos = "Informe a remuneração por hora.";
+        if (!form.staff_turno.trim()) e.staff_turno = "Selecione o turno.";
+      } else {
+        const sal = numeroDeCentavosStr(form.salarioCentavos);
+        if (sal <= 0) e.salarioCentavos = "Informe a remuneração mensal.";
+      }
     }
 
     return e;
@@ -1495,7 +1618,7 @@ export default function RhPrestadoresPage() {
     const cadastrarOutro = opts?.outro === true;
 
     if (modalForm === "novo") {
-      const { error } = await supabase.from("rh_funcionarios").insert(payload);
+      const { data: criado, error } = await supabase.from("rh_funcionarios").insert(payload).select("*").single();
       setSalvando(false);
       if (error) {
         if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
@@ -1505,6 +1628,7 @@ export default function RhPrestadoresPage() {
         }
         return;
       }
+      if (criado) await syncGamePresenterDealerFromRhFuncionario(criado as RhFuncionario);
       setSucessoMsg("Funcionário cadastrado.");
       await carregar();
       if (cadastrarOutro) {
@@ -1529,13 +1653,16 @@ export default function RhPrestadoresPage() {
           ? {
               ...payloadEdit,
               salario: salarioFinal,
+              area_atuacao: atual.area_atuacao ?? "escritorio",
+              remuneracao_hora_centavos: atual.remuneracao_hora_centavos ?? null,
+              staff_turno: atual.staff_turno ?? null,
               banco: atual.banco,
               agencia: atual.agencia,
               conta_corrente: atual.conta_corrente,
               pix: atual.pix,
             }
           : { ...payloadEdit, salario: salarioFinal };
-      const { error } = await supabase.from("rh_funcionarios").update(mesclado).eq("id", editId);
+      const { data: atualizadoRh, error } = await supabase.from("rh_funcionarios").update(mesclado).eq("id", editId).select("*").single();
       setSalvando(false);
       if (error) {
         if (error.code === "23505" || error.message.toLowerCase().includes("duplicate")) {
@@ -1545,6 +1672,7 @@ export default function RhPrestadoresPage() {
         }
         return;
       }
+      if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
       setSucessoMsg("Dados atualizados.");
       setModalForm("fechado");
       setAbaModal("pessoais");
@@ -1608,10 +1736,28 @@ export default function RhPrestadoresPage() {
             setAcaoSalvando(false);
             return;
           }
-          if (podeVerDadosSensiveis && numeroDeCentavosStr(acaoForm.salarioCentavos) <= 0) {
-            setErroGlobal("Informe a remuneração mensal.");
-            setAcaoSalvando(false);
-            return;
+          const areaAc: RhAreaAtuacao =
+            acaoForm.area_atuacao === "estudio" || acaoForm.area_atuacao === "escritorio"
+              ? acaoForm.area_atuacao
+              : "escritorio";
+          const isEstudioAc = areaAc === "estudio";
+          if (podeVerDadosSensiveis) {
+            if (isEstudioAc) {
+              if (centavosInteirosDeStringMoeda(acaoForm.remuneracaoHoraCentavos) <= 0) {
+                setErroGlobal("Informe a remuneração por hora.");
+                setAcaoSalvando(false);
+                return;
+              }
+              if (!acaoForm.staff_turno.trim()) {
+                setErroGlobal("Selecione o turno.");
+                setAcaoSalvando(false);
+                return;
+              }
+            } else if (numeroDeCentavosStr(acaoForm.salarioCentavos) <= 0) {
+              setErroGlobal("Informe a remuneração mensal.");
+              setAcaoSalvando(false);
+              return;
+            }
           }
           if (acaoForm.email_spin.trim() && !validarEmail(acaoForm.email_spin.trim())) {
             setErroGlobal("E-mail Spin inválido.");
@@ -1626,7 +1772,21 @@ export default function RhPrestadoresPage() {
             setAcaoSalvando(false);
             return;
           }
-          const sal = podeVerDadosSensiveis ? numeroDeCentavosStr(acaoForm.salarioCentavos) : acaoModalRow.salario;
+          const sal = !podeVerDadosSensiveis
+            ? acaoModalRow.salario
+            : isEstudioAc
+              ? 0
+              : numeroDeCentavosStr(acaoForm.salarioCentavos);
+          const remuneracao_hora_centavos = !podeVerDadosSensiveis
+            ? acaoModalRow.remuneracao_hora_centavos ?? null
+            : isEstudioAc
+              ? centavosInteirosDeStringMoeda(acaoForm.remuneracaoHoraCentavos)
+              : null;
+          const staff_turno = !podeVerDadosSensiveis
+            ? acaoModalRow.staff_turno ?? null
+            : isEstudioAc
+              ? acaoForm.staff_turno.trim() || null
+              : null;
           const df = acaoForm.data_funcao.trim().slice(0, 10);
           const { error: eUp } = await supabase
             .from("rh_funcionarios")
@@ -1637,6 +1797,9 @@ export default function RhPrestadoresPage() {
               setor: acaoForm.setor.trim(),
               cargo: acaoForm.cargo.trim(),
               nivel: acaoForm.nivel.trim(),
+              area_atuacao: areaAc,
+              remuneracao_hora_centavos,
+              staff_turno,
               salario: sal,
               tipo_contrato: acaoForm.tipo_contrato,
               escala: acaoForm.escala.trim(),
@@ -1696,6 +1859,11 @@ export default function RhPrestadoresPage() {
             setAcaoSalvando(false);
             return;
           }
+          if (acaoTipoTermino !== "voluntario" && acaoTipoTermino !== "nao_voluntario") {
+            setErroGlobal("Selecione o tipo de término.");
+            setAcaoSalvando(false);
+            return;
+          }
           if (!acaoObs.trim()) {
             setErroGlobal("Informe a observação.");
             setAcaoSalvando(false);
@@ -1706,7 +1874,11 @@ export default function RhPrestadoresPage() {
             .update({ status: "encerrado", data_desligamento: acaoDtTermino })
             .eq("id", fid);
           if (eUp) throw eUp;
-          const det: Record<string, unknown> = { data_termino: acaoDtTermino, observacao: acaoObs.trim() };
+          const det: Record<string, unknown> = {
+            data_termino: acaoDtTermino,
+            tipo_termino: acaoTipoTermino,
+            observacao: acaoObs.trim(),
+          };
           const errH = await inserirHistorico(fid, "termino_prestacao", det, anexosDb);
           if (errH) throw errH;
           break;
@@ -1750,10 +1922,27 @@ export default function RhPrestadoresPage() {
             setAcaoSalvando(false);
             return;
           }
-          if (podeVerDadosSensiveis && numeroDeCentavosStr(acaoForm.salarioCentavos) <= 0) {
-            setErroGlobal("Informe a remuneração mensal.");
-            setAcaoSalvando(false);
-            return;
+          if (podeVerDadosSensiveis) {
+            const areaReat: RhAreaAtuacao =
+              acaoForm.area_atuacao === "estudio" || acaoForm.area_atuacao === "escritorio"
+                ? acaoForm.area_atuacao
+                : "escritorio";
+            if (areaReat === "estudio") {
+              if (centavosInteirosDeStringMoeda(acaoForm.remuneracaoHoraCentavos) <= 0) {
+                setErroGlobal("Informe a remuneração por hora.");
+                setAcaoSalvando(false);
+                return;
+              }
+              if (!acaoForm.staff_turno.trim()) {
+                setErroGlobal("Selecione o turno.");
+                setAcaoSalvando(false);
+                return;
+              }
+            } else if (numeroDeCentavosStr(acaoForm.salarioCentavos) <= 0) {
+              setErroGlobal("Informe a remuneração mensal.");
+              setAcaoSalvando(false);
+              return;
+            }
           }
           const rowAntes = lista.find((x) => x.id === fid) ?? acaoModalRow;
           const base = buildRhFuncionarioPayloadFromState(acaoForm, "ativo", podeVerDadosSensiveis);
@@ -1801,14 +1990,22 @@ export default function RhPrestadoresPage() {
           if (errH) throw errH;
           break;
         }
-        default:
-          break;
+        default: {
+          setErroGlobal("Tipo de ação não suportado neste formulário.");
+          setAcaoSalvando(false);
+          return;
+        }
       }
       setSucessoMsg("Ação registrada.");
       fecharModalRegistrarAcao();
       await carregar();
     } catch (e: unknown) {
-      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao salvar.";
+      let msg = "Erro ao salvar.";
+      if (e && typeof e === "object") {
+        const o = e as { message?: unknown; details?: unknown };
+        if (typeof o.message === "string" && o.message.trim()) msg = o.message;
+        else if (typeof o.details === "string" && o.details.trim()) msg = o.details;
+      }
       setErroGlobal(msg);
     } finally {
       setAcaoSalvando(false);
@@ -1823,7 +2020,7 @@ export default function RhPrestadoresPage() {
             <caption style={{ display: "none" }}>Carregando gestão de prestadores</caption>
             <thead>
               <tr>
-                {["Nome", "Diretoria", "Gerência", "Função", "Líder imediato", "Remuneração Mensal", "Status", "Ações"].map((h) => (
+                {["Nome", "Diretoria", "Gerência", "Função", "Líder imediato", "Remuneração", "Status", "Ações"].map((h) => (
                   <th key={h} scope="col" style={getThStyle(t)}>
                     {h}
                   </th>
@@ -1912,6 +2109,26 @@ export default function RhPrestadoresPage() {
     setErroGlobal(null);
   };
 
+  const executarExclusaoPrestador = async () => {
+    if (!prestadorExcluirConfirm) return;
+    setExcluindoPrestador(true);
+    setErroGlobal(null);
+    const fid = prestadorExcluirConfirm.id;
+    try {
+      const { error } = await supabase.from("rh_funcionarios").delete().eq("id", fid);
+      if (error) throw error;
+      if (editId === fid) fecharModalFuncionario();
+      setPrestadorExcluirConfirm(null);
+      setSucessoMsg("Prestador excluído.");
+      await carregar();
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao excluir.";
+      setErroGlobal(msg);
+    } finally {
+      setExcluindoPrestador(false);
+    }
+  };
+
   const tabActiveBgPagina = brand.useBrand
     ? "var(--brand-action-12)"
     : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)";
@@ -1951,6 +2168,11 @@ export default function RhPrestadoresPage() {
     fontWeight: 700,
     background: ctaGradient(brand),
   };
+  const btnIconTabelaPerigo: CSSProperties = {
+    ...btnIconTabela,
+    border: "1px solid rgba(232,64,37,0.45)",
+    color: "#e84025",
+  };
 
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
@@ -1960,7 +2182,7 @@ export default function RhPrestadoresPage() {
         subtitle="Cadastro, head count e fluxos de RH."
       />
 
-      {erroGlobal && modalForm === "fechado" ? (
+      {erroGlobal && modalForm === "fechado" && !acaoModalRow && !anotacaoModalRow && !rhTalksOpen ? (
         <div
           role="alert"
           style={{
@@ -2146,29 +2368,34 @@ export default function RhPrestadoresPage() {
             <Users size={13} aria-hidden style={{ color: brand.useBrand ? brand.secondary : t.textMuted }} />
             Total de Prestadores
           </div>
-          <div style={{ fontSize: 36, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE, marginBottom: 12, lineHeight: 1 }}>
+          <div
+            style={{
+              fontSize: 36,
+              fontWeight: 900,
+              color: t.text,
+              fontFamily: FONT_TITLE,
+              marginBottom: filtroStatus === "disponiveis" ? 12 : 0,
+              lineHeight: 1,
+            }}
+          >
             {resumoPrestadoresCards.total}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Ativos</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("ativo"), fontFamily: FONT.body }}>
-                {resumoPrestadoresCards.porStatus.ativo}
-              </span>
+          {filtroStatus === "disponiveis" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Ativos</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("ativo"), fontFamily: FONT.body }}>
+                  {resumoPrestadoresCards.porStatus.ativo}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Indisponíveis</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("indisponivel"), fontFamily: FONT.body }}>
+                  {resumoPrestadoresCards.porStatus.indisponivel}
+                </span>
+              </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Indisponíveis</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("indisponivel"), fontFamily: FONT.body }}>
-                {resumoPrestadoresCards.porStatus.indisponivel}
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Encerrados</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: corStatusPrestador("encerrado"), fontFamily: FONT.body }}>
-                {resumoPrestadoresCards.porStatus.encerrado}
-              </span>
-            </div>
-          </div>
+          ) : null}
         </div>
 
         <div
@@ -2398,7 +2625,7 @@ export default function RhPrestadoresPage() {
                 />
                 {!tabelaSemSalario ? (
                   <SortTableTh<PrestadoresSortCol>
-                    label="Remuneração Mensal"
+                    label="Remuneração"
                     col="salario"
                     sortCol={sortPrestadores.col}
                     sortDir={sortPrestadores.dir}
@@ -2415,8 +2642,8 @@ export default function RhPrestadoresPage() {
                           }}
                           aria-label={
                             tabelaSalarioVisivel
-                              ? "Ocultar valores de remuneração mensal na tabela"
-                              : "Exibir valores de remuneração mensal na tabela"
+                              ? "Ocultar valores de remuneração na tabela"
+                              : "Exibir valores de remuneração na tabela"
                           }
                           title={tabelaSalarioVisivel ? "Ocultar" : "Ver"}
                           style={{
@@ -2466,7 +2693,8 @@ export default function RhPrestadoresPage() {
                 filtradaOrdenada.map((row, i) => {
                   const { diretoria, gerencia } = orgMetaLinha(row);
                   const liderCompleto = liderImediatoLinha(row);
-                  const lider = nomeLiderDoisPrimeirosParaTabela(liderCompleto);
+                  const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
+                  const remCol = textoRemuneracaoColunaTabela(row);
                   return (
                     <tr key={row.id}>
                       <td
@@ -2497,12 +2725,13 @@ export default function RhPrestadoresPage() {
                       </td>
                       {!tabelaSemSalario ? (
                         <td
+                          title={podeVerDadosSensiveis && tabelaSalarioVisivel ? remCol.title : undefined}
                           style={getTdNumStyle(t, {
                             background: zebraStripe(i),
                             ...(podeVerDadosSensiveis && !tabelaSalarioVisivel ? blurSensivel : {}),
                           })}
                         >
-                          {podeVerDadosSensiveis ? fmtBRL(Number(row.salario)) : "—"}
+                          {podeVerDadosSensiveis ? remCol.texto : "—"}
                         </td>
                       ) : null}
                       <td style={{ ...getTdStyle(t, { background: zebraStripe(i) }) }}>
@@ -2550,6 +2779,16 @@ export default function RhPrestadoresPage() {
                                 aria-label={`Registrar anotação de RH para ${row.nome}`}
                               >
                                 <StickyNote size={14} aria-hidden />
+                              </button>
+                            ) : null}
+                            {perm.canExcluirOk ? (
+                              <button
+                                type="button"
+                                onClick={() => setPrestadorExcluirConfirm(row)}
+                                style={btnIconTabelaPerigo}
+                                aria-label={`Excluir ${row.nome}`}
+                              >
+                                <Trash2 size={14} aria-hidden />
                               </button>
                             ) : null}
                           </div>
@@ -3028,22 +3267,71 @@ export default function RhPrestadoresPage() {
                     ))}
                   </select>
                 </div>
-                <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-tipo", "Tipo de contrato", false)}
-                  <select
-                    id="f-tipo"
-                    disabled={desabilitarCampos || bloquearTipoContratoEdit}
-                    value={form.tipo_contrato}
-                    onChange={(e) => setForm((s) => ({ ...s, tipo_contrato: e.target.value as RhFuncionarioTipoContrato }))}
-                    style={inputStyle}
-                    aria-label="Tipo de contrato"
-                  >
-                    {TIPOS_CONTRATO.map((x) => (
-                      <option key={x.value} value={x.value}>
-                        {x.label}
-                      </option>
-                    ))}
-                  </select>
+                <div
+                  style={{
+                    marginBottom: 10,
+                    gridColumn: "1 / -1",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    {lblReqCad("f-tipo", "Tipo de contrato", false)}
+                    <select
+                      id="f-tipo"
+                      disabled={desabilitarCampos || bloquearTipoContratoEdit}
+                      value={form.tipo_contrato}
+                      onChange={(e) => setForm((s) => ({ ...s, tipo_contrato: e.target.value as RhFuncionarioTipoContrato }))}
+                      style={inputStyle}
+                      aria-label="Tipo de contrato"
+                    >
+                      {TIPOS_CONTRATO.map((x) => (
+                        <option key={x.value} value={x.value}>
+                          {x.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    {leitura ? lbl("f-area-atuacao", "Área de atuação") : lblReqCad("f-area-atuacao", "Área de atuação", true)}
+                    <select
+                      id="f-area-atuacao"
+                      disabled={desabilitarCampos}
+                      value={form.area_atuacao}
+                      onChange={(e) => {
+                        const v = e.target.value as "" | RhAreaAtuacao;
+                        setForm((s) => {
+                          if (v === "escritorio") {
+                            const esc = !s.escala.trim() || !escalaEhPermitida(s.escala) ? "5x2" : s.escala;
+                            return {
+                              ...s,
+                              area_atuacao: v,
+                              escala: esc,
+                              remuneracaoHoraCentavos: "",
+                              staff_turno: "",
+                            };
+                          }
+                          if (v === "estudio") {
+                            return { ...s, area_atuacao: v, salarioCentavos: "" };
+                          }
+                          return { ...s, area_atuacao: v };
+                        });
+                      }}
+                      style={inputStyle}
+                      aria-label="Área de atuação"
+                      aria-required={!leitura}
+                    >
+                      {modalForm === "novo" ? (
+                        <option value="">— Selecione —</option>
+                      ) : null}
+                      <option value="escritorio">Escritório</option>
+                      <option value="estudio">Estúdio</option>
+                    </select>
+                    {fieldErr.area_atuacao ? (
+                      <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.area_atuacao}</div>
+                    ) : null}
+                  </div>
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                   {lbl("f-email-spin", "E-mail Spin")}
@@ -3061,25 +3349,46 @@ export default function RhPrestadoresPage() {
                   {fieldErr.email_spin ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email_spin}</div> : null}
                 </div>
                 {podeVerDadosSensiveis ? (
-                  <div style={{ marginBottom: 10 }}>
-                    {lblReqCad("f-sal", "Remuneração Mensal")}
-                    <input
-                      id="f-sal"
-                      disabled={desabilitarCampos || bloquearSalarioEdit}
-                      inputMode="numeric"
-                      autoComplete="off"
-                      value={form.salarioCentavos ? formatarMoedaDigitos(form.salarioCentavos) : ""}
-                      onChange={(e) => setForm((s) => ({ ...s, salarioCentavos: centavosDeStringMoeda(e.target.value) }))}
-                      placeholder="R$ 0,00"
-                      style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
-                    />
-                    {fieldErr.salarioCentavos ? (
-                      <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.salarioCentavos}</div>
-                    ) : null}
-                  </div>
+                  isEstudioContratacao ? (
+                    <div style={{ marginBottom: 10 }}>
+                      {lblReqCad("f-rem-hora", "Remuneração por hora")}
+                      <input
+                        id="f-rem-hora"
+                        disabled={desabilitarCampos}
+                        inputMode="numeric"
+                        autoComplete="off"
+                        value={form.remuneracaoHoraCentavos ? formatarMoedaDigitos(form.remuneracaoHoraCentavos) : ""}
+                        onChange={(e) =>
+                          setForm((s) => ({ ...s, remuneracaoHoraCentavos: centavosDeStringMoeda(e.target.value) }))
+                        }
+                        placeholder="R$ 0,00"
+                        style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
+                      />
+                      {fieldErr.remuneracaoHoraCentavos ? (
+                        <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.remuneracaoHoraCentavos}</div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: 10 }}>
+                      {lblReqCad("f-sal", "Remuneração Mensal")}
+                      <input
+                        id="f-sal"
+                        disabled={desabilitarCampos || bloquearSalarioEdit}
+                        inputMode="numeric"
+                        autoComplete="off"
+                        value={form.salarioCentavos ? formatarMoedaDigitos(form.salarioCentavos) : ""}
+                        onChange={(e) => setForm((s) => ({ ...s, salarioCentavos: centavosDeStringMoeda(e.target.value) }))}
+                        placeholder="R$ 0,00"
+                        style={{ ...inputStyle, ...(sensivelBlurFinanceiro ? blurSensivel : {}) }}
+                      />
+                      {fieldErr.salarioCentavos ? (
+                        <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.salarioCentavos}</div>
+                      ) : null}
+                    </div>
+                  )
                 ) : (
                   <div style={{ marginBottom: 10, padding: 10, borderRadius: 10, background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 8%, transparent)", fontSize: 12, color: t.textMuted }}>
-                    Remuneração mensal e dados bancários: visíveis apenas para administrador ou quem tem permissão de edição nesta página.
+                    Remuneração (mensal ou por hora) e dados bancários: visíveis apenas para administrador ou quem tem permissão de edição nesta página.
                   </div>
                 )}
                 <div style={{ marginBottom: 10 }}>
@@ -3102,7 +3411,14 @@ export default function RhPrestadoresPage() {
                     value={valorSelectEscala(form.escala)}
                     onChange={(e) => {
                       const v = e.target.value;
-                      setForm((s) => ({ ...s, escala: v === "__legacy__" ? s.escala : v }));
+                      setForm((s) => {
+                        const escalaNova = v === "__legacy__" ? s.escala : v;
+                        return {
+                          ...s,
+                          escala: escalaNova,
+                          staff_turno: turnoRhCoerenteComEscala(escalaNova, s.staff_turno),
+                        };
+                      });
                     }}
                     style={inputStyle}
                     aria-label="Escala de trabalho"
@@ -3121,6 +3437,30 @@ export default function RhPrestadoresPage() {
                   </select>
                   {fieldErr.escala ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.escala}</div> : null}
                 </div>
+                {isEstudioContratacao ? (
+                  <div style={{ marginBottom: 10 }}>
+                    {lblReqCad("f-turno-estudio", "Turno")}
+                    <select
+                      id="f-turno-estudio"
+                      disabled={desabilitarCampos}
+                      value={turnoRhCoerenteComEscala(form.escala, form.staff_turno)}
+                      onChange={(e) => setForm((s) => ({ ...s, staff_turno: e.target.value }))}
+                      style={inputStyle}
+                      aria-label="Turno"
+                      aria-required={!leitura}
+                    >
+                      <option value="">— Selecione —</option>
+                      {opcoesTurnoPorEscalaRh(form.escala).map((tn) => (
+                        <option key={tn} value={tn}>
+                          {tn}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErr.staff_turno ? (
+                      <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.staff_turno}</div>
+                    ) : null}
+                  </div>
+                ) : null}
                 {!leitura && modalForm !== "novo" ? (
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                     {lbl("f-dt-funcao", "Data da Função")}
@@ -3397,6 +3737,26 @@ export default function RhPrestadoresPage() {
             <div style={{ marginBottom: 12, fontSize: 13, color: t.textMuted }}>
               <strong style={{ color: t.text }}>{acaoModalRow.nome}</strong>
             </div>
+            {erroGlobal ? (
+              <div
+                role="alert"
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  background: "rgba(232,64,37,0.12)",
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  color: "#e84025",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <AlertCircle size={14} color="#e84025" aria-hidden />
+                {erroGlobal}
+              </div>
+            ) : null}
             <div style={{ marginBottom: 12 }}>
               {lblReq("acao-tipo", "Tipo de ação")}
               <select
@@ -3404,6 +3764,7 @@ export default function RhPrestadoresPage() {
                 value={acaoTipo}
                 onChange={(e) => {
                   setAcaoTipo((e.target.value || "") as "" | RhHistoricoAcaoTipo);
+                  setAcaoTipoTermino("");
                   setAcaoFiles([]);
                 }}
                 style={inputStyle}
@@ -3492,6 +3853,21 @@ export default function RhPrestadoresPage() {
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                   {lblReq("acao-dt-term", "Data de término")}
                   <input id="acao-dt-term" type="date" value={acaoDtTermino} onChange={(e) => setAcaoDtTermino(e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
+                  {lblReq("acao-tipo-term", "Tipo de término")}
+                  <select
+                    id="acao-tipo-term"
+                    value={acaoTipoTermino}
+                    onChange={(e) => setAcaoTipoTermino((e.target.value || "") as "" | RhTipoTerminoPrestacao)}
+                    style={inputStyle}
+                    aria-label="Tipo de término"
+                    aria-required
+                  >
+                    <option value="">— Selecione —</option>
+                    <option value="voluntario">Voluntário</option>
+                    <option value="nao_voluntario">Não voluntário</option>
+                  </select>
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                   {lblReq("acao-obs-t", "Observação")}
@@ -3656,21 +4032,66 @@ export default function RhPrestadoresPage() {
                     ))}
                   </select>
                 </div>
-                <div style={{ marginBottom: 10 }}>
-                  {lblReq("acao-tipo", "Tipo de contrato")}
-                  <select
-                    id="acao-tipo-ct"
-                    value={acaoForm.tipo_contrato}
-                    onChange={(e) => setAcaoForm((s) => ({ ...s, tipo_contrato: e.target.value as RhFuncionarioTipoContrato }))}
-                    style={inputStyle}
-                    aria-label="Tipo de contrato"
-                  >
-                    {TIPOS_CONTRATO.map((x) => (
-                      <option key={x.value} value={x.value}>
-                        {x.label}
-                      </option>
-                    ))}
-                  </select>
+                <div
+                  style={{
+                    marginBottom: 10,
+                    gridColumn: "1 / -1",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    {lblReq("acao-tipo", "Tipo de contrato")}
+                    <select
+                      id="acao-tipo-ct"
+                      value={acaoForm.tipo_contrato}
+                      onChange={(e) => setAcaoForm((s) => ({ ...s, tipo_contrato: e.target.value as RhFuncionarioTipoContrato }))}
+                      style={inputStyle}
+                      aria-label="Tipo de contrato"
+                    >
+                      {TIPOS_CONTRATO.map((x) => (
+                        <option key={x.value} value={x.value}>
+                          {x.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    {lblReq("acao-area-atuacao", "Área de atuação")}
+                    <select
+                      id="acao-area-atuacao"
+                      value={
+                        acaoForm.area_atuacao === "estudio" || acaoForm.area_atuacao === "escritorio"
+                          ? acaoForm.area_atuacao
+                          : "escritorio"
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value as RhAreaAtuacao;
+                        setAcaoForm((s) => {
+                          if (v === "escritorio") {
+                            const esc = !s.escala.trim() || !escalaEhPermitida(s.escala) ? "5x2" : s.escala;
+                            return {
+                              ...s,
+                              area_atuacao: v,
+                              escala: esc,
+                              remuneracaoHoraCentavos: "",
+                              staff_turno: "",
+                            };
+                          }
+                          if (v === "estudio") {
+                            return { ...s, area_atuacao: v, salarioCentavos: "" };
+                          }
+                          return { ...s, area_atuacao: v };
+                        });
+                      }}
+                      style={inputStyle}
+                      aria-label="Área de atuação"
+                    >
+                      <option value="escritorio">Escritório</option>
+                      <option value="estudio">Estúdio</option>
+                    </select>
+                  </div>
                 </div>
                 <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                   {lbl("acao-email-spin", "E-mail Spin")}
@@ -3684,25 +4105,38 @@ export default function RhPrestadoresPage() {
                     style={inputStyle}
                     aria-label="E-mail corporativo Spin"
                   />
-                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body, lineHeight: 1.45 }}>
-                    Opcional. Usado para vincular o login do utilizador ao cadastro em «Dados de Cadastro» quando for diferente do e-mail pessoal.
-                  </div>
                 </div>
                 {podeVerDadosSensiveis ? (
-                  <div style={{ marginBottom: 10 }}>
-                    {lblReq("acao-sal", "Remuneração Mensal")}
-                    <input
-                      id="acao-sal"
-                      inputMode="numeric"
-                      value={acaoForm.salarioCentavos ? formatarMoedaDigitos(acaoForm.salarioCentavos) : ""}
-                      onChange={(e) => setAcaoForm((s) => ({ ...s, salarioCentavos: centavosDeStringMoeda(e.target.value) }))}
-                      placeholder="R$ 0,00"
-                      style={inputStyle}
-                    />
-                  </div>
+                  acaoForm.area_atuacao === "estudio" ? (
+                    <div style={{ marginBottom: 10 }}>
+                      {lblReq("acao-rem-hora", "Remuneração por hora")}
+                      <input
+                        id="acao-rem-hora"
+                        inputMode="numeric"
+                        value={acaoForm.remuneracaoHoraCentavos ? formatarMoedaDigitos(acaoForm.remuneracaoHoraCentavos) : ""}
+                        onChange={(e) =>
+                          setAcaoForm((s) => ({ ...s, remuneracaoHoraCentavos: centavosDeStringMoeda(e.target.value) }))
+                        }
+                        placeholder="R$ 0,00"
+                        style={inputStyle}
+                      />
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: 10 }}>
+                      {lblReq("acao-sal", "Remuneração Mensal")}
+                      <input
+                        id="acao-sal"
+                        inputMode="numeric"
+                        value={acaoForm.salarioCentavos ? formatarMoedaDigitos(acaoForm.salarioCentavos) : ""}
+                        onChange={(e) => setAcaoForm((s) => ({ ...s, salarioCentavos: centavosDeStringMoeda(e.target.value) }))}
+                        placeholder="R$ 0,00"
+                        style={inputStyle}
+                      />
+                    </div>
+                  )
                 ) : (
                   <div style={{ marginBottom: 10, padding: 10, borderRadius: 10, background: "color-mix(in srgb, var(--brand-secondary, #4a2082) 8%, transparent)", fontSize: 12, color: t.textMuted }}>
-                    Remuneração mensal: visível apenas para quem tem permissão de edição.
+                    Remuneração (mensal ou por hora): visível apenas para quem tem permissão de edição.
                   </div>
                 )}
                 <div style={{ marginBottom: 10 }}>
@@ -3712,7 +4146,14 @@ export default function RhPrestadoresPage() {
                     value={valorSelectEscala(acaoForm.escala)}
                     onChange={(e) => {
                       const v = e.target.value;
-                      setAcaoForm((s) => ({ ...s, escala: v === "__legacy__" ? s.escala : v }));
+                      setAcaoForm((s) => {
+                        const escalaNova = v === "__legacy__" ? s.escala : v;
+                        return {
+                          ...s,
+                          escala: escalaNova,
+                          staff_turno: turnoRhCoerenteComEscala(escalaNova, s.staff_turno),
+                        };
+                      });
                     }}
                     style={inputStyle}
                     aria-label="Escala de trabalho"
@@ -3730,6 +4171,25 @@ export default function RhPrestadoresPage() {
                     ))}
                   </select>
                 </div>
+                {acaoForm.area_atuacao === "estudio" ? (
+                  <div style={{ marginBottom: 10 }}>
+                    {lblReq("acao-turno-estudio", "Turno")}
+                    <select
+                      id="acao-turno-estudio"
+                      value={turnoRhCoerenteComEscala(acaoForm.escala, acaoForm.staff_turno)}
+                      onChange={(e) => setAcaoForm((s) => ({ ...s, staff_turno: e.target.value }))}
+                      style={inputStyle}
+                      aria-label="Turno"
+                    >
+                      <option value="">— Selecione —</option>
+                      {opcoesTurnoPorEscalaRh(acaoForm.escala).map((tn) => (
+                        <option key={tn} value={tn}>
+                          {tn}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
                 {acaoTipo === "revisao_contrato" ? (
                   <div style={{ marginBottom: 10, gridColumn: "1 / -1" }}>
                     {lblReq("acao-dt-funcao", "Data da Função")}
@@ -3818,6 +4278,26 @@ export default function RhPrestadoresPage() {
         <ModalBase maxWidth={640} onClose={fecharModalRhTalks}>
           <ModalHeader title="RH Talks" onClose={fecharModalRhTalks} />
           <div style={{ padding: "0 4px 16px", fontFamily: FONT.body }}>
+            {erroGlobal ? (
+              <div
+                role="alert"
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  background: "rgba(232,64,37,0.12)",
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  color: "#e84025",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <AlertCircle size={14} color="#e84025" aria-hidden />
+                {erroGlobal}
+              </div>
+            ) : null}
             <div style={{ marginBottom: 12 }}>
               {lblReq("rt-assunto", "Assunto do RH Talks")}
               <input
@@ -4003,6 +4483,26 @@ export default function RhPrestadoresPage() {
             <div style={{ marginBottom: 12, fontSize: 13, color: t.textMuted }}>
               <strong style={{ color: t.text }}>{anotacaoModalRow.nome}</strong>
             </div>
+            {erroGlobal ? (
+              <div
+                role="alert"
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  background: "rgba(232,64,37,0.12)",
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  color: "#e84025",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <AlertCircle size={14} color="#e84025" aria-hidden />
+                {erroGlobal}
+              </div>
+            ) : null}
             <div style={{ marginBottom: 12 }}>
               {lblReq("an-tipo", "Tipo")}
               <select
@@ -4110,6 +4610,55 @@ export default function RhPrestadoresPage() {
               <strong style={{ color: t.text }}>{histModalRow.nome}</strong>
             </div>
             <ListaHistoricoRh items={histModalItems} loading={histModalLoading} t={t} />
+          </div>
+        </ModalBase>
+      ) : null}
+
+      {prestadorExcluirConfirm ? (
+        <ModalBase
+          maxWidth={440}
+          onClose={() => {
+            if (!excluindoPrestador) setPrestadorExcluirConfirm(null);
+          }}
+        >
+          <ModalHeader
+            title="Excluir prestador?"
+            onClose={() => {
+              if (!excluindoPrestador) setPrestadorExcluirConfirm(null);
+            }}
+          />
+          <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
+            <p style={{ margin: "0 0 12px", fontSize: 14, color: t.text, lineHeight: 1.5 }}>
+              Esta ação remove permanentemente o cadastro de{" "}
+              <strong>{prestadorExcluirConfirm.nome}</strong> (CPF {somenteDigitos(prestadorExcluirConfirm.cpf)}). Não é possível desfazer.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                disabled={excluindoPrestador}
+                onClick={() => setPrestadorExcluirConfirm(null)}
+                style={{ ...inputStyle, width: "auto", cursor: excluindoPrestador ? "not-allowed" : "pointer" }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={excluindoPrestador}
+                onClick={() => void executarExclusaoPrestador()}
+                style={{
+                  ...inputStyle,
+                  width: "auto",
+                  border: "none",
+                  background: "#e84025",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: excluindoPrestador ? "wait" : "pointer",
+                }}
+              >
+                {excluindoPrestador ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+                Excluir
+              </button>
+            </div>
           </div>
         </ModalBase>
       ) : null}

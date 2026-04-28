@@ -6,14 +6,16 @@ import { usePermission } from "../../../hooks/usePermission";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
+import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
 import {
   escalaPrestadorTemTurnosOperacionais,
+  siglaGradeParaNomeTurno,
   staffTurnoCoerenteComEscala,
   turnoOperacionalParaSiglaGrade,
   turnosPermitidosPorEscalaPrestador as turnosPermitidosCadastro,
 } from "../../../lib/rhEscalaTurnos";
+import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 
 type EscalaAba = "minha" | "gerenciar" | "gerar";
 
@@ -21,12 +23,22 @@ type DiaMes = {
   dia: number;
   dowShort: string;
   isWeekend: boolean;
+  /** Feriado nacional/municipal usual em São Paulo (capital) — mesma identificação visual do fim de semana. */
+  isFeriadoSP: boolean;
+  feriadoNome: string | null;
   iso: string;
 };
+
+/** Sábado, domingo ou feriado em SP (capital) para cor de cabeçalho / células. */
+function diaComDestaqueCalendario(dia: DiaMes): boolean {
+  return dia.isWeekend || dia.isFeriadoSP;
+}
 
 type LinhaColaborador = {
   id: string;
   nome: string;
+  /** Nome completo do cadastro (Gestão de Prestadores) — título/aria-label. */
+  nomeCompletoCadastro: string;
   nickname: string;
   /** Padrão 4x2/3x3 etc. (Gestão de Prestadores) — define opções na aba Gerar. */
   escalaCadastro: string;
@@ -139,7 +151,8 @@ function opcoesSelectCelulaGerar(siglaTurnoStaff: string): { value: string; labe
   ];
   const sigla = siglaTurnoStaff.trim();
   if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") {
-    out.push({ value: sigla, label: sigla });
+    const label = siglaGradeParaNomeTurno(sigla) || sigla;
+    out.push({ value: sigla, label });
   }
   return out;
 }
@@ -194,11 +207,15 @@ function diasDoMes(ano: number, mes0: number): DiaMes[] {
     const y = dt.getFullYear();
     const m = String(dt.getMonth() + 1).padStart(2, "0");
     const dd = String(day).padStart(2, "0");
+    const iso = `${y}-${m}-${dd}`;
+    const feriadoNome = feriadoLabelSaoPauloCapital(iso) ?? null;
     out.push({
       dia: day,
       dowShort: DOW_SHORT[dow] ?? "",
       isWeekend: dow === 0 || dow === 6,
-      iso: `${y}-${m}-${dd}`,
+      isFeriadoSP: feriadoNome !== null,
+      feriadoNome,
+      iso,
     });
   }
   return out;
@@ -211,15 +228,25 @@ function labelMesAno(ano: number, mes0: number): string {
   return `${capitalizado} ${ano}`;
 }
 
+/** Nome cadastrado na Gestão de Prestadores: apenas primeiro e último token (ex.: "Ana Paula Costa" → "Ana Costa"). */
+function primeiroEUltimoNomePrestador(nomeCompleto: string): string {
+  const partes = nomeCompleto.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "—";
+  if (partes.length === 1) return partes[0]!;
+  return `${partes[0]!} ${partes[partes.length - 1]!}`;
+}
+
 function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
   const nick = (r.staff_nickname ?? "").trim();
   const esc = (r.escala ?? "").trim();
   const co = staffTurnoCoerenteComEscala(r.escala, r.staff_turno);
   const siglaTurnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? turnoOperacionalParaSiglaGrade(co) : "";
   const turnoStaffNome = escalaPrestadorTemTurnosOperacionais(r.escala) ? co : "";
+  const nomeCadastro = (r.nome ?? "").trim();
   return {
     id: r.id,
-    nome: (r.nome ?? "").trim() || "—",
+    nome: nomeCadastro ? primeiroEUltimoNomePrestador(nomeCadastro) : "—",
+    nomeCompletoCadastro: nomeCadastro || "—",
     nickname: nick || "—",
     escalaCadastro: esc || "—",
     siglaTurnoStaff,
@@ -356,7 +383,7 @@ export default function RhEscalaMesPage() {
     [prestadoresRaw],
   );
 
-  /** Sugestão: fim de semana Folga; dias úteis apenas na sigla do turno configurado na Staff (MRN/AFT/NGT). */
+  /** Sugestão: fim de semana e feriados oficiais (SP capital, sem ponto facultativo) como Folga; dias úteis na sigla do turno da Staff (MRN/AFT/NGT). */
   const aplicarSugestaoGerar = useCallback(
     (areaKey: AreaEscalaKey) => {
       const linhasF = linhasPorFiltroGerar(areaKey);
@@ -368,7 +395,7 @@ export default function RhEscalaMesPage() {
           const key = chaveCelulaGerar(row.id, dia.iso);
           if (turnosEscala.length === 0) {
             next[key] = "";
-          } else if (dia.isWeekend) {
+          } else if (diaComDestaqueCalendario(dia)) {
             next[key] = "Folga";
           } else if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") {
             next[key] = sigla;
@@ -501,14 +528,21 @@ export default function RhEscalaMesPage() {
       letterSpacing: 0,
       zIndex: Z_DIA,
       position: "relative",
-      background: dia.isWeekend
+      background: diaComDestaqueCalendario(dia)
         ? t.isDark
           ? "rgba(245,158,11,0.12)"
           : "rgba(245,158,11,0.14)"
         : getThStyle(t).background,
-      color: dia.isWeekend ? "#f59e0b" : undefined,
+      color: diaComDestaqueCalendario(dia) ? "#f59e0b" : undefined,
     }),
   });
+
+  const fundoColunaDia = (dia: DiaMes, rowBg: string): string => {
+    if (!diaComDestaqueCalendario(dia)) return rowBg;
+    return t.isDark
+      ? `color-mix(in srgb, rgba(245,158,11,0.22) 32%, ${rowBg})`
+      : `color-mix(in srgb, rgba(245,158,11,0.24) 34%, ${rowBg})`;
+  };
 
   const sombraColFixa = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
 
@@ -552,11 +586,11 @@ export default function RhEscalaMesPage() {
     const areaKey = aba === "gerenciar" ? filtroAreaGerenciar : filtroAreaGerar;
     const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
     const celulas = aba === "gerar" ? gerarPorFiltro[areaKey]?.celulas : undefined;
-    return {
-      manha: contarCelulasComSigla(linhasF, dias, celulas, "MRN"),
-      tarde: contarCelulasComSigla(linhasF, dias, celulas, "AFT"),
-      noite: contarCelulasComSigla(linhasF, dias, celulas, "NGT"),
-    };
+    const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
+    const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
+    const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
+    const total = dias.map((_, i) => (manha[i] ?? 0) + (tarde[i] ?? 0) + (noite[i] ?? 0));
+    return { manha, tarde, noite, total };
   }, [aba, filtroAreaGerenciar, filtroAreaGerar, prestadoresRaw, dias, gerarPorFiltro]);
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
@@ -601,7 +635,7 @@ export default function RhEscalaMesPage() {
       <PageHeader
         icon={<CalendarRange size={14} aria-hidden />}
         title="Escala do Mês"
-        subtitle="Visualização da escala por colaborador e dia do mês (mesma base da Gestão de Staff)."
+        subtitle="Visualização da escala por colaborador e dia do mês."
       />
 
       <div style={{ marginBottom: 20 }}>
@@ -917,7 +951,8 @@ export default function RhEscalaMesPage() {
                   }}
                 >
                   <caption style={{ display: "none" }}>
-                    Totais de pessoas por turno do dia e por data, conforme área selecionada
+                    Totais de pessoas por turno do dia e por data, linha TOTAL somando os três turnos, conforme área
+                    selecionada
                   </caption>
                   <thead>
                     <tr>
@@ -934,7 +969,12 @@ export default function RhEscalaMesPage() {
                         Turno
                       </th>
                       {dias.map((dia) => (
-                        <th key={`resumo-h-${dia.iso}`} scope="col" style={thDia(dia)} title={dia.iso}>
+                        <th
+                          key={`resumo-h-${dia.iso}`}
+                          scope="col"
+                          style={thDia(dia)}
+                          title={dia.feriadoNome ? `${dia.iso} · ${dia.feriadoNome}` : dia.iso}
+                        >
                           <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
                           <div style={{ fontWeight: 600, textTransform: "lowercase", opacity: 0.95 }}>{dia.dowShort}</div>
                         </th>
@@ -955,7 +995,7 @@ export default function RhEscalaMesPage() {
                               textAlign: "center",
                               fontVariantNumeric: "tabular-nums",
                               fontWeight: 700,
-                              ...(d.isWeekend
+                              ...(diaComDestaqueCalendario(d)
                                 ? {
                                     background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
                                     color: "#f59e0b",
@@ -981,7 +1021,7 @@ export default function RhEscalaMesPage() {
                               textAlign: "center",
                               fontVariantNumeric: "tabular-nums",
                               fontWeight: 700,
-                              ...(d.isWeekend
+                              ...(diaComDestaqueCalendario(d)
                                 ? {
                                     background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
                                     color: "#f59e0b",
@@ -1007,12 +1047,48 @@ export default function RhEscalaMesPage() {
                               textAlign: "center",
                               fontVariantNumeric: "tabular-nums",
                               fontWeight: 700,
-                              ...(d.isWeekend
+                              ...(diaComDestaqueCalendario(d)
                                 ? {
                                     background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
                                     color: "#f59e0b",
                                   }
                                 : {}),
+                            })}
+                          >
+                            {n}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <th
+                        scope="row"
+                        style={{
+                          ...getThStyle(t),
+                          textAlign: "left",
+                          fontWeight: 800,
+                          borderTop: `2px solid ${t.cardBorder}`,
+                          background: TOTAL_ROW_BG,
+                        }}
+                      >
+                        TOTAL
+                      </th>
+                      {resumoTurnoDias.total.map((n, idx) => {
+                        const d = dias[idx]!;
+                        return (
+                          <td
+                            key={`resumo-tot-${d.iso}`}
+                            style={getTdStyle(t, {
+                              textAlign: "center",
+                              fontVariantNumeric: "tabular-nums",
+                              fontWeight: 800,
+                              borderTop: `2px solid ${t.cardBorder}`,
+                              background: diaComDestaqueCalendario(d)
+                                ? t.isDark
+                                  ? "rgba(245,158,11,0.14)"
+                                  : "rgba(245,158,11,0.16)"
+                                : TOTAL_ROW_BG,
+                              color: diaComDestaqueCalendario(d) ? "#f59e0b" : t.text,
                             })}
                           >
                             {n}
@@ -1087,7 +1163,12 @@ export default function RhEscalaMesPage() {
                     Turno
                   </th>
                   {dias.map((dia) => (
-                    <th key={dia.iso} scope="col" style={thDia(dia)} title={dia.iso}>
+                    <th
+                      key={dia.iso}
+                      scope="col"
+                      style={thDia(dia)}
+                      title={dia.feriadoNome ? `${dia.iso} · ${dia.feriadoNome}` : dia.iso}
+                    >
                       <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
                       <div style={{ fontWeight: 600, textTransform: "lowercase", opacity: 0.95 }}>{dia.dowShort}</div>
                     </th>
@@ -1123,7 +1204,7 @@ export default function RhEscalaMesPage() {
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                           })}
-                          title={row.nome}
+                          title={row.nomeCompletoCadastro}
                         >
                           {row.nome}
                         </td>
@@ -1170,13 +1251,13 @@ export default function RhEscalaMesPage() {
                               key={`${row.id}-${dia.iso}`}
                               style={{
                                 ...tdDia,
-                                background: bg,
+                                background: fundoColunaDia(dia, bg),
                                 ...(editarCelulasGerar ? { minWidth: 72, maxWidth: 80 } : {}),
                               }}
                             >
                               {editarCelulasGerar ? (
                                 <select
-                                  aria-label={`Escala do dia ${dia.dia} para ${row.nome}`}
+                                  aria-label={`Escala do dia ${dia.dia} para ${row.nomeCompletoCadastro}`}
                                   value={val}
                                   onChange={(e) =>
                                     atualizarCelulaGerar(filtroAreaGerar, row.id, dia.iso, row.siglaTurnoStaff, e.target.value)

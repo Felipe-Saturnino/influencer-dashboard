@@ -108,7 +108,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     const linkDoPerfil = (perfilLinks[linkKey] ?? "").trim();
     setForm(f => ({ ...f, link: linkDoPerfil }));
     setLinkAutoPreenchido(!!linkDoPerfil);
-  }, [form.plataforma, perfilLinks]);
+  }, [form.plataforma, form.influencer_id, perfilLinks]);
 
   const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));

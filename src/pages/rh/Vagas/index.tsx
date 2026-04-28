@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, CheckCircle2, Loader2, Plus, Search } from "lucide-react";
+import { Briefcase, CheckCircle2, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -91,8 +91,11 @@ export default function RhVagasPage() {
   const [modalNovaVagaAberto, setModalNovaVagaAberto] = useState(false);
   const [vagaAtualizar, setVagaAtualizar] = useState<RhVagaRow | null>(null);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
+  const [vagaExcluirConfirm, setVagaExcluirConfirm] = useState<RhVagaRow | null>(null);
+  const [excluindoVaga, setExcluindoVaga] = useState(false);
 
-  const podeGerenciarAba = perm.canCriarOk;
+  const podeCriarVaga = perm.canCriarOk;
+  const mostrarAbaGerenciamento = perm.canCriarOk || perm.canExcluirOk;
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   const carregar = useCallback(async (opts?: { silent?: boolean }) => {
@@ -114,8 +117,8 @@ export default function RhVagasPage() {
   }, [carregar, perm.loading, perm.canView]);
 
   useEffect(() => {
-    if (!podeGerenciarAba && aba === "gerenciamento") setAba("abertas");
-  }, [podeGerenciarAba, aba]);
+    if (!mostrarAbaGerenciamento && aba === "gerenciamento") setAba("abertas");
+  }, [mostrarAbaGerenciamento, aba]);
 
   useEffect(() => {
     if (!sucessoMsg) return;
@@ -141,6 +144,26 @@ export default function RhVagasPage() {
 
   const abrirModalStub = (titulo: string, vagaTitulo?: string) => {
     setModalStub({ titulo, vagaTitulo });
+  };
+
+  const executarExclusaoVaga = async () => {
+    if (!vagaExcluirConfirm) return;
+    setExcluindoVaga(true);
+    setErro(null);
+    const id = vagaExcluirConfirm.id;
+    try {
+      const { error } = await supabase.from("rh_vagas").delete().eq("id", id);
+      if (error) throw error;
+      if (vagaAtualizar?.id === id) setVagaAtualizar(null);
+      setVagaExcluirConfirm(null);
+      setSucessoMsg("Vaga excluída.");
+      void carregar({ silent: true });
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao excluir.";
+      setErro(msg);
+    } finally {
+      setExcluindoVaga(false);
+    }
   };
 
   if (perm.loading) {
@@ -268,6 +291,32 @@ export default function RhVagasPage() {
     </button>
   );
 
+  const btnPerigo = (label: string, onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: "8px 14px",
+        borderRadius: 10,
+        border: "1px solid rgba(232,64,37,0.45)",
+        background: t.inputBg,
+        color: "#e84025",
+        fontWeight: 600,
+        fontSize: 13,
+        fontFamily: FONT.body,
+        cursor: "pointer",
+        marginRight: 8,
+        marginTop: 12,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+      }}
+    >
+      <Trash2 size={14} aria-hidden />
+      {label}
+    </button>
+  );
+
   const tipoInterna = (tipo: RhVagaTipo) => tipo === "interna" || tipo === "mista";
   const tipoExterna = (tipo: RhVagaTipo) => tipo === "externa" || tipo === "mista";
 
@@ -316,7 +365,7 @@ export default function RhVagasPage() {
       <RhVagasFiltroBar
         aba={aba}
         setAba={setAba}
-        mostrarGerenciamento={podeGerenciarAba}
+        mostrarGerenciamento={mostrarAbaGerenciamento}
         t={t}
         brand={{ blockBg: brand.blockBg, accent: brand.accent, useBrand: brand.useBrand }}
       />
@@ -435,27 +484,29 @@ export default function RhVagasPage() {
                   </select>
                 </div>
                 <div style={{ flex: 1 }} />
-                <button
-                  type="button"
-                  onClick={() => setModalNovaVagaAberto(true)}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "10px 16px",
-                    borderRadius: 12,
-                    border: "none",
-                    cursor: "pointer",
-                    color: "#fff",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    fontFamily: FONT.body,
-                    background: ctaGradient(brand),
-                  }}
-                >
-                  <Plus size={16} aria-hidden />
-                  Nova vaga
-                </button>
+                {podeCriarVaga ? (
+                  <button
+                    type="button"
+                    onClick={() => setModalNovaVagaAberto(true)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 16px",
+                      borderRadius: 12,
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      fontFamily: FONT.body,
+                      background: ctaGradient(brand),
+                    }}
+                  >
+                    <Plus size={16} aria-hidden />
+                    Nova vaga
+                  </button>
+                ) : null}
               </div>
             </header>
             {vagasGestaoLista.length === 0 ? (
@@ -488,7 +539,10 @@ export default function RhVagasPage() {
                       <CampoVaga k="Data fim de inscrições" v={fmtDataBR(v.data_fim_inscricoes)} t={t} />
                       <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
                       <CampoVaga k="Candidato selecionado" v={nomeCand} t={t} />
-                      <div style={{ marginTop: 4 }}>{btnSec("Ver candidaturas", () => abrirModalStub("Ver candidaturas", v.titulo))}</div>
+                      <div style={{ marginTop: 4 }}>
+                        {btnSec("Ver candidaturas", () => abrirModalStub("Ver candidaturas", v.titulo))}
+                        {perm.canExcluirOk ? btnPerigo("Excluir", () => setVagaExcluirConfirm(v)) : null}
+                      </div>
                     </article>
                   );
                 }
@@ -515,7 +569,8 @@ export default function RhVagasPage() {
                       <CampoVaga k="Motivo do cancelamento" v={textoMultilinha(v.motivo_cancelamento ?? "")} t={t} />
                       <div style={{ marginTop: 4 }}>
                         {btnSec("Ver candidaturas", () => abrirModalStub("Ver candidaturas", v.titulo))}
-                        {btnPrim("Atualizar vaga", () => setVagaAtualizar(v))}
+                        {perm.canEditarOk ? btnPrim("Atualizar vaga", () => setVagaAtualizar(v)) : null}
+                        {perm.canExcluirOk ? btnPerigo("Excluir", () => setVagaExcluirConfirm(v)) : null}
                       </div>
                     </article>
                   );
@@ -524,7 +579,8 @@ export default function RhVagasPage() {
                   v,
                   <div style={{ marginTop: 4 }}>
                     {btnSec("Ver candidaturas", () => abrirModalStub("Ver candidaturas", v.titulo))}
-                    {btnPrim("Atualizar vaga", () => setVagaAtualizar(v))}
+                    {perm.canEditarOk ? btnPrim("Atualizar vaga", () => setVagaAtualizar(v)) : null}
+                    {perm.canExcluirOk ? btnPerigo("Excluir", () => setVagaExcluirConfirm(v)) : null}
                   </div>,
                   { statusLabel: labelStatusVaga(st) },
                 );
@@ -554,6 +610,64 @@ export default function RhVagasPage() {
         }}
         t={t}
       />
+
+      {vagaExcluirConfirm ? (
+        <ModalBase maxWidth={440} onClose={() => !excluindoVaga && setVagaExcluirConfirm(null)}>
+          <ModalHeader
+            title="Excluir vaga?"
+            onClose={() => {
+              if (!excluindoVaga) setVagaExcluirConfirm(null);
+            }}
+          />
+          <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
+            <p style={{ margin: "0 0 12px", fontSize: 14, color: t.text, lineHeight: 1.5 }}>
+              Esta ação remove permanentemente a vaga <strong>{vagaExcluirConfirm.titulo}</strong>. Não é possível desfazer.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                disabled={excluindoVaga}
+                onClick={() => setVagaExcluirConfirm(null)}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontWeight: 600,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  cursor: excluindoVaga ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={excluindoVaga}
+                onClick={() => void executarExclusaoVaga()}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "#e84025",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  cursor: excluindoVaga ? "wait" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {excluindoVaga ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+                Excluir
+              </button>
+            </div>
+          </div>
+        </ModalBase>
+      ) : null}
 
       {modalStub ? (
         <ModalBase maxWidth={440} onClose={() => setModalStub(null)}>

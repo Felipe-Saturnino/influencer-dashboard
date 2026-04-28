@@ -32,7 +32,7 @@ export function useDashboardFiltros() {
     if (!user || user.role !== "operador") return null;
     const slugs = escoposVisiveis.operadorasVisiveis;
     return slugs.length > 0 ? slugs : null;
-  }, [user?.role, escoposVisiveis.operadorasVisiveis]);
+  }, [user, escoposVisiveis.operadorasVisiveis]);
 
   return {
     showFiltroInfluencer,

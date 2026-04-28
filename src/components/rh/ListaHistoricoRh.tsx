@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- helpers e constantes ao lado do componente de lista. */
 import { ExternalLink, Loader2, Paperclip } from "lucide-react";
 import type { CSSProperties } from "react";
 import { FONT } from "../../constants/theme";
@@ -52,6 +53,12 @@ export function fmtDataIsoPtBr(iso: string | null | undefined): string {
   const p = s.split("-");
   if (p.length === 3 && p[0].length === 4) return `${p[2]}/${p[1]}/${p[0]}`;
   return s;
+}
+
+function labelTipoTerminoPrestacaoDet(v: unknown): string {
+  if (v === "voluntario") return "Voluntário";
+  if (v === "nao_voluntario") return "Não voluntário";
+  return "—";
 }
 
 export function ListaHistoricoRh({
@@ -124,6 +131,9 @@ export function ListaHistoricoRh({
               <div style={{ color: t.text, marginTop: 6 }}>
                 <div>
                   <strong>Data de término:</strong> {String(det.data_termino ?? "—")}
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  <strong>Tipo de término:</strong> {labelTipoTerminoPrestacaoDet(det.tipo_termino)}
                 </div>
                 {det.observacao ? (
                   <div style={{ marginTop: 4 }}>

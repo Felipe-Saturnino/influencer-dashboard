@@ -7,7 +7,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
-import { getPeriodoComparativoMoM, isCarrosselMesCivilAtual } from "../../../lib/dashboardHelpers";
+import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
 import KpiCard from "../../../components/dashboard/KpiCard";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { MarginBadge, SelectComIcone, SkeletonKpiCard } from "../../../components/dashboard";
@@ -448,13 +448,18 @@ const UAP_JOGO_MAP: Record<string, "blackjack" | "roleta" | "baccarat"> = {
   "Speed Baccarat": "baccarat",
 };
 
-/** Evita encadeamento genérico profundo do cliente Supabase. */
+/**
+ * Filtra consultas às tabelas de relatório por `operadora_slug`.
+ * Tipagem solta: o encadeamento genérico do PostgREST dispara TS2589 se o builder for tipado de forma estrita aqui.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function applyMesasOperadoraSlugFilter(q: any, slugList: string[] | null): any {
   if (slugList != null && slugList.length > 0) {
     return q.in("operadora_slug", slugList);
   }
   return q;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 function buildSlugListForMesasQueries(opts: {
   operadoraSlugsForcado: string[] | null | undefined;
@@ -729,7 +734,11 @@ type MonthlyKpiSnapshot = {
   arpu: number | null;
 };
 
-/** Agrega linhas do detalhamento diário (somas + margem, aposta média e ARPU derivados). */
+/**
+ * Agrega linhas do detalhamento diário: soma GGR/turnover/apostas e derivados.
+ * O campo `uap` na saída é a **soma dos UAPs diários** (não é “único no mês”); para KPIs consolidados
+ * do mês use `relatorio_monthly_summary` via `monthlyUapArpuSel` / `monthlyUapArpuPrev`.
+ */
 function aggDailyMesKpi(rows: DailyRow[]): MonthlyKpiSnapshot | null {
   if (rows.length === 0) return null;
   let turnover = 0;
@@ -1383,7 +1392,7 @@ export default function OverviewSpin() {
     operadoraSlugsForcado,
     filtroOperadora,
     escoposVisiveis.semRestricaoEscopo,
-    escoposVisiveis.operadorasVisiveis.join(","),
+    escoposVisiveis.operadorasVisiveis,
   ]);
 
   useEffect(() => {
@@ -1579,68 +1588,30 @@ export default function OverviewSpin() {
     }
     const base = dailyData.length === 0 ? null : aggDailyMesKpi(dailyData);
     if (!base) return null;
-    if (modoAgregadoTodasOperadoras) {
-      if (
-        mesSelecionado &&
-        isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
-      ) {
-        return base;
-      }
-      const u = monthlyUapArpuSel?.uap ?? null;
-      return {
-        ...base,
-        uap: u,
-        arpu:
-          monthlyUapArpuSel?.arpu ??
-          arpuComparativoFromGgrUap(base.ggr, u),
-      };
-    }
-    if (
-      mesSelecionado &&
-      isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
-    ) {
-      return base;
-    }
+    const u = monthlyUapArpuSel?.uap ?? null;
     return {
       ...base,
-      uap: monthlyUapArpuSel?.uap ?? null,
-      arpu: monthlyUapArpuSel?.arpu ?? null,
+      uap: u,
+      arpu:
+        monthlyUapArpuSel?.arpu ??
+        arpuComparativoFromGgrUap(base.ggr, u),
     };
-  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, mesSelecionado, modoAgregadoTodasOperadoras]);
+  }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, modoAgregadoTodasOperadoras]);
 
   const kpiAntExibir = useMemo(() => {
     const base =
       historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
     if (!base) return null;
     if (historico) return base;
-    if (modoAgregadoTodasOperadoras) {
-      if (
-        mesSelecionado &&
-        isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
-      ) {
-        return base;
-      }
-      const u = monthlyUapArpuPrev?.uap ?? null;
-      return {
-        ...base,
-        uap: u,
-        arpu:
-          monthlyUapArpuPrev?.arpu ??
-          arpuComparativoFromGgrUap(base.ggr, u),
-      };
-    }
-    if (
-      mesSelecionado &&
-      isCarrosselMesCivilAtual(mesSelecionado.ano, mesSelecionado.mes)
-    ) {
-      return base;
-    }
+    const u = monthlyUapArpuPrev?.uap ?? null;
     return {
       ...base,
-      uap: monthlyUapArpuPrev?.uap ?? base.uap,
-      arpu: monthlyUapArpuPrev?.arpu ?? base.arpu,
+      uap: u,
+      arpu:
+        monthlyUapArpuPrev?.arpu ??
+        arpuComparativoFromGgrUap(base.ggr, u),
     };
-  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev, mesSelecionado, modoAgregadoTodasOperadoras]);
+  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev]);
 
   /** Só Blackjack 1 / 2 / VIP — comparativo lateral. */
   const mesasOpcoesBlackjack = useMemo(() => {

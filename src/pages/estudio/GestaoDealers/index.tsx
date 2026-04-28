@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type CSSProperties, type ChangeEvent, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, type CSSProperties, type ReactNode } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -10,10 +10,7 @@ import type { Dealer, DealerGenero, DealerTurno, DealerJogo, Operadora } from ".
 import {
   Eye,
   History,
-  Pencil,
   Send,
-  Upload,
-  Trash2,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -35,12 +32,6 @@ import { corStatusSolicitacao, type SolicitacaoStatus, type SolicitacaoTipo } fr
 
 /** Jogos no cadastro e filtros. `mesa_vip` pode existir no banco por legado; usar flag `vip` no cadastro. */
 type DealerJogoCadastro = Exclude<DealerJogo, "mesa_vip">;
-
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const GENERO_OPTS: { value: DealerGenero; label: string }[] = [
@@ -84,7 +75,7 @@ const ICONE_JOGO: Record<DealerJogoCadastro, ReactNode> = {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function GestaoDealers() {
-  const { theme: t, user, podeVerOperadora, escoposVisiveis, isDark } = useApp();
+  const { theme: t, user, podeVerOperadora, isDark } = useApp();
   const brand = useDashboardBrand();
   const { showFiltroOperadora, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("gestao_dealers");
@@ -92,10 +83,8 @@ export default function GestaoDealers() {
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalCriar, setModalCriar] = useState(false);
   const [modalVer, setModalVer] = useState<Dealer | null>(null);
   const [modalHistoricoDealer, setModalHistoricoDealer] = useState<Dealer | null>(null);
-  const [modalEditar, setModalEditar] = useState<Dealer | null>(null);
   const [modalSolicitacao, setModalSolicitacao] = useState<Dealer | null>(null);
   const [solicitacaoThreadId, setSolicitacaoThreadId] = useState<string | null>(null);
 
@@ -107,7 +96,7 @@ export default function GestaoDealers() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    let qDealers = supabase.from("dealers").select("*").order("nickname");
+    let qDealers = supabase.from("dealers").select("*").not("rh_funcionario_id", "is", null).order("nickname");
     if (user?.role === "operador" && operadoraSlugsForcado?.length) {
       qDealers = qDealers.in("operadora_slug", operadoraSlugsForcado);
     }
@@ -214,29 +203,6 @@ export default function GestaoDealers() {
       ? "Todos os turnos"
       : (TURNO_OPTS.find((o) => o.value === filtroTurno)?.label ?? filtroTurno);
 
-  const podeCriarDealer =
-    perm.canCriarOk &&
-    (perm.canCriar !== "proprios" ||
-      escoposVisiveis.semRestricaoEscopo === true ||
-      (escoposVisiveis.operadorasVisiveis?.length ?? 0) > 0);
-
-  const podeEditarDealer = (d: Dealer) => {
-    if (!perm.canEditarOk) return false;
-    if (perm.canEditar !== "proprios") return true;
-    const slug = d.operadora_slug;
-    if (!slug) return false;
-    return podeVerOperadora(slug);
-  };
-
-  const operadoraTravadaModal =
-    user?.role === "operador" && operadoraSlugsForcado?.length === 1 ? operadoraSlugsForcado[0] : undefined;
-
-  const operadorasModal = useMemo(() => {
-    if (user?.role === "operador" && operadoraSlugsForcado?.length)
-      return operadoras.filter((o) => operadoraSlugsForcado.includes(o.slug));
-    return operadoras.filter((o) => podeVerOperadora(o.slug));
-  }, [user?.role, operadoraSlugsForcado, operadoras, podeVerOperadora]);
-
   /** Slug da operadora para solicitações (operador com escopo). */
   const operadoraSlugAtiva = useMemo(() => {
     if (user?.role !== "operador" || !operadoraSlugsForcado?.length) return null;
@@ -289,23 +255,7 @@ export default function GestaoDealers() {
       <PageHeader
         icon={<Users size={14} aria-hidden strokeWidth={2.2} />}
         title="Gestão de Dealers"
-        subtitle="Gerencie o elenco de dealers de casino."
-        actions={
-          podeCriarDealer ? (
-            <button
-              type="button"
-              onClick={() => setModalCriar(true)}
-              style={{
-                background: ctaGradient(brand),
-                color: "#fff", border: "none", borderRadius: 10,
-                padding: "10px 18px", cursor: "pointer",
-                fontFamily: FONT.body, fontSize: 13, fontWeight: 700,
-              }}
-            >
-              + Adicionar Dealer
-            </button>
-          ) : undefined
-        }
+        subtitle="Elenco sincronizado a partir da Gestão de Staff quando o time é Game Presenter."
       />
 
       {user?.role === "operador" && operadoraSlugsForcado?.length ? (
@@ -586,7 +536,6 @@ export default function GestaoDealers() {
               operadoras={operadoras}
               brand={brand}
               onVer={() => setModalVer(d)}
-              onEditar={() => setModalEditar(d)}
               onSolicitar={operadoraSlugAtiva && permCentral.canEditarOk ? () => setModalSolicitacao(d) : undefined}
               onHistoricoSolicitacoes={
                 !permCentral.loading &&
@@ -595,31 +544,12 @@ export default function GestaoDealers() {
                   ? () => setModalHistoricoDealer(d)
                   : undefined
               }
-              podeEditar={podeEditarDealer(d)}
             />
           ))}
         </div>
       )}
 
       {/* Modais */}
-      {modalCriar && (
-        <ModalDealer
-          operadoras={operadorasModal}
-          operadoraTravada={operadoraTravadaModal}
-          editando={null}
-          onClose={() => setModalCriar(false)}
-          onSalvo={() => { setModalCriar(false); carregar(); }}
-        />
-      )}
-      {modalEditar && (
-        <ModalDealer
-          operadoras={operadorasModal}
-          operadoraTravada={operadoraTravadaModal}
-          editando={modalEditar}
-          onClose={() => setModalEditar(null)}
-          onSalvo={() => { setModalEditar(null); carregar(); }}
-        />
-      )}
       {modalVer && (
         <ModalVer dealer={modalVer} operadoras={operadoras} onClose={() => setModalVer(null)} />
       )}
@@ -672,10 +602,11 @@ function DealerFotoCarrossel({
 }) {
   const n = urls.length;
   const [idx, setIdx] = useState(0);
+  const urlsKey = useMemo(() => urls.join("|"), [urls]);
 
   useEffect(() => {
     setIdx(0);
-  }, [resetKey, urls.join("|")]);
+  }, [resetKey, urlsKey]);
 
   if (n === 0) return null;
 
@@ -762,21 +693,17 @@ function DealerCard({
   operadoras,
   brand,
   onVer,
-  onEditar,
   onSolicitar,
   onHistoricoSolicitacoes,
-  podeEditar,
 }: {
   dealer: Dealer;
   operadoras: Operadora[];
   brand: ReturnType<typeof useDashboardBrand>;
   onVer: () => void;
-  onEditar: () => void;
   /** Só operador com escopo de operadora definido. */
   onSolicitar?: () => void;
   /** Lista de solicitações do dealer (Central); ver permissão na página pai. */
   onHistoricoSolicitacoes?: () => void;
-  podeEditar: boolean;
 }) {
   const { theme: t, isDark } = useApp();
   const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
@@ -911,28 +838,6 @@ function DealerCard({
           <button type="button" onClick={onVer} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 12, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}>
             <Eye size={13} aria-hidden /> Ver
           </button>
-          {podeEditar && (
-            <button
-              type="button"
-              onClick={onEditar}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "none",
-                background: ctaGradient(brand),
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              <Pencil size={13} aria-hidden /> Editar
-            </button>
-          )}
           {onSolicitar ? (
             <button
               type="button"
@@ -1190,280 +1095,6 @@ function ModalVer({
           Fechar
         </button>
       </div>
-    </ModalBase>
-  );
-}
-
-// ─── Modal Criar/Editar Dealer ─────────────────────────────────────────────────
-function ModalDealer({
-  operadoras,
-  operadoraTravada,
-  editando,
-  onClose,
-  onSalvo,
-}: {
-  operadoras: Operadora[];
-  /** Operador com uma única operadora no escopo: select travado neste slug */
-  operadoraTravada?: string;
-  editando: Dealer | null;
-  onClose: () => void;
-  onSalvo: () => void;
-}) {
-  const { theme: t } = useApp();
-  const brand = useDashboardBrand();
-  const [nomeReal, setNomeReal] = useState(editando?.nome_real ?? "");
-  const [nickname, setNickname] = useState(editando?.nickname ?? "");
-  const [fotos, setFotos] = useState<string[]>(editando?.fotos ?? []);
-  const [genero, setGenero] = useState<DealerGenero>(editando?.genero ?? "feminino");
-  const [turno, setTurno] = useState<DealerTurno>(editando?.turno ?? "noite");
-  const [jogos, setJogos] = useState<DealerJogoCadastro[]>(() =>
-    (editando?.jogos ?? []).filter((j): j is DealerJogoCadastro => j !== "mesa_vip")
-  );
-  const [operadoraSlug, setOperadoraSlug] = useState<string>(
-    editando?.operadora_slug ?? operadoraTravada ?? ""
-  );
-  const [perfilInfluencer, setPerfilInfluencer] = useState(editando?.perfil_influencer ?? "");
-  const [status, setStatus] = useState<"aprovado" | "pendente">(editando?.status ?? "aprovado");
-  const [vip, setVip] = useState(editando?.vip ?? false);
-  const [uploading, setUploading] = useState(false);
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState("");
-
-  useEffect(() => {
-    if (operadoraTravada) setOperadoraSlug(operadoraTravada);
-  }, [operadoraTravada]);
-
-  const toggleJogo = (j: DealerJogoCadastro) => {
-    setJogos((prev) => (prev.includes(j) ? prev.filter((x) => x !== j) : [...prev, j]));
-  };
-
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files?.length) return;
-    setUploading(true);
-    setErro("");
-    try {
-      const novas: string[] = [];
-      for (const file of Array.from(files)) {
-        const ext = file.name.split(".").pop() ?? "jpg";
-        const path = `${editando?.id ?? crypto.randomUUID()}-${crypto.randomUUID()}.${ext}`;
-        const { data, error } = await supabase.storage.from("dealer-photos").upload(path, file, { upsert: true });
-        if (error) throw error;
-        const { data: urlData } = supabase.storage.from("dealer-photos").getPublicUrl(data.path);
-        novas.push(urlData.publicUrl);
-      }
-      setFotos((prev) => [...prev, ...novas]);
-    } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro ao enviar foto. Verifique se o bucket dealer-photos existe no Storage.");
-    } finally {
-      setUploading(false);
-      e.target.value = "";
-    }
-  };
-
-  const removerFoto = (idx: number) => {
-    setFotos((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const salvar = async () => {
-    setErro("");
-    if (!nomeReal.trim()) { setErro("Nome real é obrigatório."); return; }
-    if (!nickname.trim()) { setErro("Nickname é obrigatório."); return; }
-    if (jogos.length === 0) { setErro("Selecione pelo menos um jogo."); return; }
-
-    setSalvando(true);
-    try {
-      const payload = {
-        nome_real: nomeReal.trim(),
-        nickname: nickname.trim(),
-        fotos,
-        genero,
-        turno,
-        jogos,
-        operadora_slug: (operadoraTravada ?? operadoraSlug) || null,
-        perfil_influencer: perfilInfluencer.trim() || null,
-        status,
-        vip,
-      };
-      if (editando) {
-        const { error } = await supabase.from("dealers").update(payload).eq("id", editando.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("dealers").insert(payload);
-        if (error) throw error;
-      }
-      onSalvo();
-    } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro ao salvar.");
-    } finally {
-      setSalvando(false);
-    }
-  };
-
-  const inputStyle: CSSProperties = {
-    width: "100%", background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`,
-    borderRadius: 10, padding: "10px 14px", color: t.text, fontFamily: FONT.body, fontSize: 14, boxSizing: "border-box", outline: "none",
-  };
-  const labelStyle: CSSProperties = { display: "block", fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "1px" };
-  const fieldStyle: CSSProperties = { marginBottom: 18 };
-
-  return (
-    <ModalBase onClose={() => { if (!salvando) onClose(); }} maxWidth={520}>
-      <ModalHeader title={editando ? "Editar Dealer" : "Novo Dealer"} onClose={() => { if (!salvando) onClose(); }} />
-
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Nome Real</label>
-          <input style={inputStyle} value={nomeReal} onChange={(e) => setNomeReal(e.target.value)} placeholder="Ex: Maria Silva" />
-        </div>
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Nickname</label>
-          <input style={inputStyle} value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Ex: YARA" />
-        </div>
-
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Fotos</label>
-          <p style={{ margin: "0 0 10px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-            Você pode enviar várias imagens de uma vez; nos cards da listagem, use as setas para navegar entre elas.
-          </p>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-            {fotos.map((url, idx) => (
-              <div key={idx} style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: `1px solid ${t.cardBorder}` }}>
-                <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <button
-                  type="button"
-                  aria-label="Remover foto"
-                  onClick={() => removerFoto(idx)}
-                  style={{ position: "absolute", top: 4, right: 4, width: 24, height: 24, borderRadius: "50%", background: BRAND.vermelho, border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  <Trash2 size={12} aria-hidden />
-                </button>
-              </div>
-            ))}
-          </div>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: `1px dashed ${t.cardBorder}`, cursor: uploading ? "wait" : "pointer", fontFamily: FONT.body, fontSize: 13, color: t.textMuted }}>
-            {uploading ? <Loader2 size={14} className="app-lucide-spin" aria-hidden /> : <Upload size={16} aria-hidden />}
-            {uploading ? "Enviando..." : "Adicionar fotos"}
-            <input type="file" accept="image/*" multiple hidden onChange={handleFileUpload} disabled={uploading} />
-          </label>
-        </div>
-
-        <div className="app-grid-2-tight" style={{ ...fieldStyle, gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Gênero</label>
-            <select value={genero} onChange={(e) => setGenero(e.target.value as DealerGenero)} style={inputStyle}>
-              {[...GENERO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Turno</label>
-            <select value={turno} onChange={(e) => setTurno(e.target.value as DealerTurno)} style={inputStyle}>
-              {[...TURNO_OPTS].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Jogos</label>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {JOGOS_OPTS.map((o) => (
-              <button
-                key={o.value}
-                type="button"
-                aria-pressed={jogos.includes(o.value)}
-                onClick={() => toggleJogo(o.value)}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 20,
-                  border: `1px solid ${jogos.includes(o.value) ? "var(--brand-action, #7c3aed)" : t.cardBorder}`,
-                  background: jogos.includes(o.value) ? "var(--brand-action-12, rgba(124,58,237,0.12))" : "transparent",
-                  color: jogos.includes(o.value) ? "var(--brand-action, #7c3aed)" : t.textMuted,
-                  fontSize: 12, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer",
-                }}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Operadora</label>
-          {operadoraTravada ? (
-            <div style={{ ...inputStyle, display: "flex", alignItems: "center", opacity: 0.95 }}>
-              {operadoras.find((o) => o.slug === operadoraTravada)?.nome ?? operadoraTravada}
-            </div>
-          ) : (
-            <select value={operadoraSlug} onChange={(e) => setOperadoraSlug(e.target.value)} style={inputStyle}>
-              <option value="">Nenhuma</option>
-              {[...operadoras].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((op) => (
-                <option key={op.slug} value={op.slug}>{op.nome}</option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Bio do Dealer</label>
-          <textarea value={perfilInfluencer} onChange={(e) => setPerfilInfluencer(e.target.value)} placeholder="Descrição, carisma, estilo de jogo..." style={{ ...inputStyle, minHeight: 100, resize: "vertical" }} />
-        </div>
-
-        {editando && (
-          <div style={{ ...fieldStyle, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <label style={{ ...labelStyle, margin: 0 }}>Status</label>
-            <button type="button" onClick={() => setStatus("aprovado")} style={{ padding: "6px 14px", borderRadius: 10, border: `1px solid ${status === "aprovado" ? BRAND.verde : t.cardBorder}`, background: status === "aprovado" ? `${BRAND.verde}22` : "transparent", color: status === "aprovado" ? BRAND.verde : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Aprovado</button>
-            <button type="button" onClick={() => setStatus("pendente")} style={{ padding: "6px 14px", borderRadius: 10, border: `1px solid ${status === "pendente" ? BRAND.amarelo : t.cardBorder}`, background: status === "pendente" ? `${BRAND.amarelo}22` : "transparent", color: status === "pendente" ? BRAND.amarelo : t.textMuted, fontSize: 12, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Pendente</button>
-          </div>
-        )}
-
-        <div style={fieldStyle}>
-          <label htmlFor="dealer-modal-vip" style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT.body, fontSize: 13, color: t.text, cursor: "pointer" }}>
-            <input id="dealer-modal-vip" type="checkbox" checked={vip} onChange={(e) => setVip(e.target.checked)} />
-            VIP
-          </label>
-        </div>
-
-        {erro ? (
-          <div role="alert" aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: BRAND.vermelho, marginBottom: 16, fontFamily: FONT.body }}>
-            {erro}
-          </div>
-        ) : null}
-
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-          <button type="button" onClick={() => { if (!salvando) onClose(); }} style={{ background: "transparent", border: `1px solid ${t.cardBorder}`, borderRadius: 10, padding: "9px 18px", cursor: "pointer", fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void salvar()}
-            disabled={salvando}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              background: ctaGradient(brand),
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              padding: "9px 20px",
-              cursor: salvando ? "not-allowed" : "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              fontWeight: 700,
-              opacity: salvando ? 0.85 : 1,
-            }}
-          >
-            {salvando ? (
-              <>
-                <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
-                Salvando...
-              </>
-            ) : editando ? (
-              "Salvar alterações"
-            ) : (
-              "Criar dealer"
-            )}
-          </button>
-        </div>
     </ModalBase>
   );
 }

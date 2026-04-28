@@ -259,7 +259,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, user?.role]);
+  }, [user]);
 
   if (!user) return null;
 

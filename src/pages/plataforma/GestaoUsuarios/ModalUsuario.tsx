@@ -61,7 +61,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setEmail(editando?.email ?? "");
     setRole((editando?.role ?? "gestor") as Role);
     setErro("");
-  }, [editando?.id]);
+  }, [editando?.id, editando?.name, editando?.email, editando?.role]);
 
   useEffect(() => {
     const scopes = editando?.scopes ?? [];
@@ -123,7 +123,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     } else {
       setParesAgencia([{ influencerId: "", operadoraSlug: "" }]);
     }
-  }, [role, editando?.id]);
+  }, [role, editando?.id, editando?.scopes]);
 
   const toggleItem = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, val: string) =>
     setList((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]));

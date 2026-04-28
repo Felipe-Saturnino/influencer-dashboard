@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
+import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Trash2, Upload, Users } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import {
-  escalaPrestadorTemTurnosOperacionais,
-  staffTurnoCoerenteComEscala,
-  turnosPermitidosPorEscalaPrestador,
-} from "../../../lib/rhEscalaTurnos";
+  isGamePresenterTimeNome,
+  readStaffDealerBioForUi,
+  readStaffDealerFotosForUi,
+  readStaffDealerGeneroForUi,
+  syncGamePresenterDealerFromRhFuncionario,
+} from "../../../lib/rhGamePresenterDealerSync";
+import type { DealerGenero } from "../../../types";
+import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
+import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import { PageHeader } from "../../../components/PageHeader";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -81,6 +85,13 @@ function labelCampoHistorico(campo: string): string {
 }
 
 type VerAba = "pessoal" | "funcao" | "skills" | "historico";
+
+type EditarAba = "funcao" | "skills" | "dealer";
+
+const DEALER_GENERO_LABEL: Record<DealerGenero, string> = {
+  feminino: "Feminino",
+  masculino: "Masculino",
+};
 
 type StaffTabelaSortCol = "nome" | "nickname" | "time" | "funcao" | "escala" | "turno" | "operadora" | "status" | "id_op";
 
@@ -212,7 +223,7 @@ export default function RhGestaoStaffPage() {
     const nomeTime = (r: RhFuncionario) =>
       (r.org_time_id ? nomePorTimeId.get(r.org_time_id) ?? "" : "").trim().toLowerCase();
     const turnoStr = (r: RhFuncionario) =>
-      (staffTurnoCoerenteComEscala(r.escala, r.staff_turno) ?? "").trim().toLowerCase();
+      (turnoRhCoerenteComEscala(r.escala, r.staff_turno) ?? "").trim().toLowerCase();
     const opSlug = (r: RhFuncionario) => (r.staff_operadora_slug ?? "").trim().toLowerCase();
     return [...linhasTabela].sort((a, b) => {
       let cmp = 0;
@@ -297,7 +308,7 @@ export default function RhGestaoStaffPage() {
       <PageHeader
         icon={<Users size={14} aria-hidden />}
         title="Gestão de Staff"
-        subtitle="Prestadores dos times de Studio Operations e Customer Service."
+        subtitle="Prestadores dos times de Game Floor e Operation Management."
       />
 
       {erroTimes && (
@@ -419,7 +430,7 @@ export default function RhGestaoStaffPage() {
         </div>
       ) : times.length === 0 ? (
         <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Nenhum time encontrado para as gerências Studio Operations ou Customer Service. Ajuste os nomes no organograma ou
+          Nenhum time encontrado para as gerências Game Floor ou Operation Management. Ajuste os nomes no organograma ou
           contacte o RH.
         </div>
       ) : (
@@ -544,13 +555,9 @@ export default function RhGestaoStaffPage() {
                       </td>
                       <td
                         style={getTdStyle(t)}
-                        title={
-                          escalaPrestadorTemTurnosOperacionais(row.escala)
-                            ? "Altere o turno em Editar."
-                            : "Esta escala não tem turno operacional na Staff (apenas 4x2, 5x1 ou 3x3)."
-                        }
+                        title="Mesmo campo que na Gestão de Prestadores (Dados da contratação). Pode alterar em Editar."
                       >
-                        {staffTurnoCoerenteComEscala(row.escala, row.staff_turno) || "—"}
+                        {turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"}
                       </td>
                       <td style={getTdStyle(t)}>{opNome}</td>
                       <td style={getTdStyle(t)}>{labelStatusPrestador(row.status)}</td>
@@ -619,6 +626,7 @@ export default function RhGestaoStaffPage() {
       {modalVer ? (
         <ModalStaffVer
           row={modalVer}
+          nomeTimeOrganograma={modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : ""}
           operadorasNome={operadorasNome}
           onClose={() => setModalVer(null)}
           t={t}
@@ -629,6 +637,7 @@ export default function RhGestaoStaffPage() {
       {modalEditar ? (
         <ModalStaffEditar
           row={modalEditar}
+          nomeTimeOrganograma={modalEditar.org_time_id ? nomePorTimeId.get(modalEditar.org_time_id) ?? "" : ""}
           operadorasNome={operadorasNome}
           operadoraSlugs={Object.keys(operadorasNome).sort((a, b) =>
             (operadorasNome[a] ?? a).localeCompare(operadorasNome[b] ?? b, "pt-BR"),
@@ -650,17 +659,21 @@ export default function RhGestaoStaffPage() {
 
 function ModalStaffVer({
   row,
+  nomeTimeOrganograma,
   operadorasNome,
   onClose,
   t,
   brand,
 }: {
   row: RhFuncionario;
+  /** Nome do time no organograma (rh_org_times), mesma regra que na tabela. */
+  nomeTimeOrganograma: string;
   operadorasNome: Record<string, string>;
   onClose: () => void;
   t: ReturnType<typeof useApp>["theme"];
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
+  const staffEhGamePresenter = useMemo(() => isGamePresenterTimeNome(nomeTimeOrganograma), [nomeTimeOrganograma]);
   const [aba, setAba] = useState<VerAba>("pessoal");
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
   const [histLoading, setHistLoading] = useState(false);
@@ -699,6 +712,10 @@ function ModalStaffVer({
     })();
   }, [aba, row.id]);
 
+  useEffect(() => {
+    if (!staffEhGamePresenter && aba === "skills") setAba("funcao");
+  }, [staffEhGamePresenter, aba]);
+
   const skills = useMemo(() => normalizarSkills(row.staff_skills as Record<string, unknown>), [row.staff_skills]);
   const opSlug = row.staff_operadora_slug?.trim();
   const opNome = opSlug ? operadorasNome[opSlug] ?? opSlug : "—";
@@ -734,12 +751,12 @@ function ModalStaffVer({
   };
 
   return (
-    <ModalBase onClose={onClose} maxWidth={560}>
+    <ModalBase onClose={onClose} maxWidth={600}>
       <ModalHeader title={`Prestador — ${row.nome}`} onClose={onClose} />
       <div role="tablist" aria-label="Seções do prestador" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {tabBtn("pessoal", "Dados pessoais")}
         {tabBtn("funcao", "Dados de função")}
-        {tabBtn("skills", "Dados de skills")}
+        {staffEhGamePresenter ? tabBtn("skills", "Dados de skills") : null}
         {tabBtn("historico", "Histórico")}
       </div>
 
@@ -749,6 +766,7 @@ function ModalStaffVer({
           <CampoLeitura k="Status" v={labelStatusPrestador(row.status)} t={t} />
           <CampoLeitura k="Telefone" v={row.telefone} t={t} />
           <CampoLeitura k="E-mail" v={row.email} t={t} />
+          <CampoLeitura k="Gênero" v={DEALER_GENERO_LABEL[readStaffDealerGeneroForUi(row)]} t={t} />
           <CampoLeitura k="Contato de emergência — nome" v={row.emerg_nome} t={t} />
           <CampoLeitura k="Contato de emergência — parentesco" v={row.emerg_parentesco} t={t} />
           <CampoLeitura k="Contato de emergência — telefone" v={row.emerg_telefone} t={t} />
@@ -757,13 +775,42 @@ function ModalStaffVer({
 
       {aba === "funcao" && (
         <div role="tabpanel">
-          <CampoLeitura k="Função" v={row.cargo} t={t} />
           <CampoLeitura k="Nickname" v={row.staff_nickname ?? ""} t={t} />
+          <CampoLeitura k="Função" v={row.cargo} t={t} />
           <CampoLeitura k="Escala" v={row.escala} t={t} />
-          <CampoLeitura k="Turno" v={staffTurnoCoerenteComEscala(row.escala, row.staff_turno) || "—"} t={t} />
+          <CampoLeitura k="Turno" v={turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"} t={t} />
           <CampoLeitura k="Operadora" v={opNome} t={t} />
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
           <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
+          <CampoLeitura k="Bio do Dealer" v={readStaffDealerBioForUi(row) || "—"} t={t} />
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>Fotos</div>
+            {(() => {
+              const urls = readStaffDealerFotosForUi(row);
+              if (urls.length === 0) {
+                return <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>—</div>;
+              }
+              return (
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {urls.map((url) => (
+                    <div
+                      key={url}
+                      style={{
+                        width: 88,
+                        height: 88,
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        border: `1px solid ${t.cardBorder}`,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
@@ -888,6 +935,7 @@ function ModalStaffVer({
 
 function ModalStaffEditar({
   row,
+  nomeTimeOrganograma,
   operadorasNome,
   operadoraSlugs,
   userEmail,
@@ -897,6 +945,7 @@ function ModalStaffEditar({
   brand,
 }: {
   row: RhFuncionario;
+  nomeTimeOrganograma: string;
   operadorasNome: Record<string, string>;
   operadoraSlugs: string[];
   userEmail: string | null;
@@ -905,7 +954,8 @@ function ModalStaffEditar({
   t: ReturnType<typeof useApp>["theme"];
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
-  const [aba, setAba] = useState<"funcao" | "skills">("funcao");
+  const staffEhGamePresenter = useMemo(() => isGamePresenterTimeNome(nomeTimeOrganograma), [nomeTimeOrganograma]);
+  const [aba, setAba] = useState<EditarAba>("funcao");
   const [nick, setNick] = useState(row.staff_nickname ?? "");
   const [turno, setTurno] = useState(row.staff_turno ?? "");
   const [opSlug, setOpSlug] = useState(row.staff_operadora_slug ?? "");
@@ -914,15 +964,22 @@ function ModalStaffEditar({
   const [skills, setSkills] = useState<Record<StaffSkillKey, StaffSkillStatus>>(() => normalizarSkills(row.staff_skills as Record<string, unknown>));
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
+  const [dealerGenero, setDealerGenero] = useState<DealerGenero>(() => readStaffDealerGeneroForUi(row));
+  const [dealerBio, setDealerBio] = useState(() => readStaffDealerBioForUi(row));
+  const [dealerFotos, setDealerFotos] = useState<string[]>(() => readStaffDealerFotosForUi(row));
+  const [dealerUploading, setDealerUploading] = useState(false);
 
   useEffect(() => {
     setNick(row.staff_nickname ?? "");
-    setTurno(staffTurnoCoerenteComEscala(row.escala, row.staff_turno));
+    setTurno(turnoRhCoerenteComEscala(row.escala, row.staff_turno));
     setOpSlug(row.staff_operadora_slug ?? "");
     setBarcode(row.staff_barcode ?? "");
     setIdOperacional(row.staff_id_operacional ?? "");
     setSkills(normalizarSkills(row.staff_skills as Record<string, unknown>));
     setAba("funcao");
+    setDealerGenero(readStaffDealerGeneroForUi(row));
+    setDealerBio(readStaffDealerBioForUi(row));
+    setDealerFotos(readStaffDealerFotosForUi(row));
     setErr("");
   }, [
     row.id,
@@ -933,7 +990,22 @@ function ModalStaffEditar({
     row.staff_barcode,
     row.staff_id_operacional,
     row.staff_skills,
+    row.staff_dealer_genero,
+    row.staff_dealer_bio,
+    row.staff_dealer_fotos,
+    row,
   ]);
+
+  useEffect(() => {
+    if (aba !== "dealer") return;
+    setDealerGenero(readStaffDealerGeneroForUi(row));
+    setDealerBio(readStaffDealerBioForUi(row));
+    setDealerFotos(readStaffDealerFotosForUi(row));
+  }, [aba, row.id, row.staff_dealer_genero, row.staff_dealer_bio, row.staff_dealer_fotos, row]);
+
+  useEffect(() => {
+    if (!staffEhGamePresenter && (aba === "skills" || aba === "dealer")) setAba("funcao");
+  }, [staffEhGamePresenter, aba]);
 
   const labelStyle: CSSProperties = {
     display: "block",
@@ -955,21 +1027,72 @@ function ModalStaffEditar({
     boxSizing: "border-box",
   };
 
+  const handleDealerFotosUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    setDealerUploading(true);
+    setErr("");
+    try {
+      const novas: string[] = [];
+      for (const file of Array.from(files)) {
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${row.id}-${crypto.randomUUID()}.${ext}`;
+        const { data, error } = await supabase.storage.from("dealer-photos").upload(path, file, { upsert: true });
+        if (error) throw error;
+        const { data: urlData } = supabase.storage.from("dealer-photos").getPublicUrl(data.path);
+        novas.push(urlData.publicUrl);
+      }
+      setDealerFotos((prev) => [...prev, ...novas]);
+    } catch (uploadErr) {
+      setErr(
+        uploadErr instanceof Error
+          ? uploadErr.message
+          : "Erro ao enviar foto. Verifique se o bucket dealer-photos existe no Storage.",
+      );
+    } finally {
+      setDealerUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const salvar = async () => {
     setErr("");
+    if (aba === "dealer") {
+      setSaving(true);
+      try {
+        const { data: updatedRh, error } = await supabase
+          .from("rh_funcionarios")
+          .update({
+            staff_dealer_genero: dealerGenero,
+            staff_dealer_bio: dealerBio.trim() || null,
+            staff_dealer_fotos: dealerFotos,
+          })
+          .eq("id", row.id)
+          .select("*")
+          .single();
+        if (error) throw error;
+        const merged = (updatedRh ?? row) as RhFuncionario;
+        await syncGamePresenterDealerFromRhFuncionario(merged);
+        onSalvo(merged);
+      } catch (upErr) {
+        setErr(upErr instanceof Error ? upErr.message : "Não foi possível salvar os dados do dealer.");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     setSaving(true);
-    const allowedTurnos = [...turnosPermitidosPorEscalaPrestador(row.escala ?? "")];
+    const allowedTurnos = [...opcoesTurnoPorEscalaRh(row.escala ?? "")];
+    const turnoStr = turno.trim();
     let turnoFinal: string | null = null;
-    if (allowedTurnos.length > 0) {
-      const turnoStr = turno.trim();
-      turnoFinal = turnoStr && allowedTurnos.includes(turnoStr) ? turnoStr : null;
-      if (turnoStr && turnoFinal === null) {
+    if (turnoStr) {
+      if (!allowedTurnos.includes(turnoStr)) {
         setErr("Turno inválido para a escala deste prestador.");
         setSaving(false);
         return;
       }
-    } else {
-      turnoFinal = null;
+      turnoFinal = turnoStr;
     }
     const antes = {
       nick: (row.staff_nickname ?? "").trim(),
@@ -1021,11 +1144,13 @@ function ModalStaffEditar({
         anexos: [],
       });
     }
-    onSalvo(updated as RhFuncionario);
+    const atualizado = updated as RhFuncionario;
+    await syncGamePresenterDealerFromRhFuncionario(atualizado);
+    onSalvo(atualizado);
     setSaving(false);
   };
 
-  const tabBtn = (key: "funcao" | "skills", label: string) => {
+  const tabBtn = (key: EditarAba, label: string) => {
     const ativo = aba === key;
     return (
       <button
@@ -1056,19 +1181,16 @@ function ModalStaffEditar({
   };
 
   return (
-    <ModalBase onClose={onClose} maxWidth={560}>
+    <ModalBase onClose={onClose} maxWidth={600}>
       <ModalHeader title={`Editar — ${row.nome}`} onClose={onClose} />
       <div role="tablist" aria-label="Seções editáveis" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {tabBtn("funcao", "Dados de função")}
-        {tabBtn("skills", "Dados de skills")}
+        {staffEhGamePresenter ? tabBtn("skills", "Dados de skills") : null}
+        {staffEhGamePresenter ? tabBtn("dealer", "Gestão de dealer") : null}
       </div>
 
       {aba === "funcao" && (
         <div role="tabpanel">
-          <div style={{ marginBottom: 14 }}>
-            <span style={labelStyle}>Função (somente leitura)</span>
-            <input type="text" readOnly value={row.cargo} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
-          </div>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-nick">
               Nickname
@@ -1076,43 +1198,29 @@ function ModalStaffEditar({
             <input id="staff-nick" type="text" value={nick} onChange={(e) => setNick(e.target.value)} style={inputStyle} />
           </div>
           <div style={{ marginBottom: 14 }}>
-            <span style={labelStyle}>Escala (somente leitura — Gestão de Prestadores)</span>
+            <span style={labelStyle}>Função (somente leitura)</span>
+            <input type="text" readOnly value={row.cargo} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <span style={labelStyle}>Escala (somente leitura)</span>
             <input type="text" readOnly value={row.escala?.trim() || "—"} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
           </div>
           <div style={{ marginBottom: 14 }}>
             <span style={labelStyle}>Turno</span>
-            {escalaPrestadorTemTurnosOperacionais(row.escala) ? (
-              <select
-                id="staff-turno"
-                value={turno}
-                onChange={(e) => setTurno(e.target.value)}
-                style={inputStyle}
-                aria-label="Turno operacional"
-              >
-                <option value="">—</option>
-                {turnosPermitidosPorEscalaPrestador(row.escala ?? "").map((op) => (
-                  <option key={op} value={op}>
-                    {op}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div
-                style={{
-                  fontSize: 13,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                  lineHeight: 1.5,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg ?? t.cardBg,
-                }}
-              >
-                Esta escala não tem turno operacional na Staff (apenas 4x2, 5x1 ou 3x3). Ao salvar, um valor incompatível
-                gravado será removido.
-              </div>
-            )}
+            <select
+              id="staff-turno"
+              value={turno}
+              onChange={(e) => setTurno(e.target.value)}
+              style={inputStyle}
+              aria-label="Turno (mesmo cadastro que na Gestão de Prestadores)"
+            >
+              <option value="">—</option>
+              {opcoesTurnoPorEscalaRh(row.escala ?? "").map((op) => (
+                <option key={op} value={op}>
+                  {op}
+                </option>
+              ))}
+            </select>
           </div>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-op">
@@ -1174,6 +1282,102 @@ function ModalStaffEditar({
               </select>
             </div>
           ))}
+        </div>
+      )}
+
+      {aba === "dealer" && (
+        <div role="tabpanel">
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle} htmlFor="staff-dealer-genero">
+              Gênero
+            </label>
+            <select
+              id="staff-dealer-genero"
+              value={dealerGenero}
+              onChange={(e) => setDealerGenero(e.target.value as DealerGenero)}
+              style={inputStyle}
+              aria-label="Gênero do dealer"
+            >
+              {(Object.keys(DEALER_GENERO_LABEL) as DealerGenero[]).map((g) => (
+                <option key={g} value={g}>
+                  {DEALER_GENERO_LABEL[g]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle} htmlFor="staff-dealer-bio">
+              Bio do Dealer
+            </label>
+            <textarea
+              id="staff-dealer-bio"
+              value={dealerBio}
+              onChange={(e) => setDealerBio(e.target.value)}
+              placeholder="Descrição, carisma, estilo de jogo…"
+              rows={4}
+              style={{ ...inputStyle, resize: "vertical", minHeight: 96 }}
+            />
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <span style={labelStyle}>Fotos</span>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10, marginTop: 6 }}>
+              {dealerFotos.map((url, idx) => (
+                <div
+                  key={`${url}-${idx}`}
+                  style={{
+                    position: "relative",
+                    width: 80,
+                    height: 80,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    border: `1px solid ${t.cardBorder}`,
+                  }}
+                >
+                  <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button
+                    type="button"
+                    aria-label="Remover foto"
+                    onClick={() => setDealerFotos((prev) => prev.filter((_, i) => i !== idx))}
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      background: BRAND.vermelho,
+                      border: "none",
+                      color: "#fff",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Trash2 size={12} aria-hidden />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: `1px dashed ${t.cardBorder}`,
+                cursor: dealerUploading ? "wait" : "pointer",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                color: t.textMuted,
+              }}
+            >
+              {dealerUploading ? <Loader2 size={14} className="app-lucide-spin" aria-hidden /> : <Upload size={16} aria-hidden />}
+              {dealerUploading ? "Enviando…" : "Adicionar fotos"}
+              <input type="file" accept="image/*" multiple hidden onChange={(ev) => void handleDealerFotosUpload(ev)} disabled={dealerUploading} />
+            </label>
+          </div>
         </div>
       )}
 

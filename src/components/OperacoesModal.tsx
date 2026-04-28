@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- ModalBase + hook useDialogTitleId partilhados. */
 import {
   createContext,
   useContext,

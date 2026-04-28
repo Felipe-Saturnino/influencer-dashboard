@@ -1,0 +1,166 @@
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\components\OperacoesModal.tsx
+  16:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\components\OperadoraTag.tsx
+  60:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\components\rh\ListaHistoricoRh.tsx
+   6:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  32:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  49:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\context\AppContext.tsx
+  482:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\hooks\useDashboardFiltros.ts
+  35:6  warning  React Hook useMemo has a missing dependency: 'user'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\aquisicao\BancaJogo\index.tsx
+  1389:9  warning  The 'filtroOp' conditional could make the dependencies of useMemo Hook (at line 1401) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'filtroOp' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\aquisicao\Financeiro\index.tsx
+   317:38   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   326:6    warning  React Hook useEffect has missing dependencies: 'carregarLives' and 'row.is_agente'. Either include them or remove the dependency array                                                                                             react-hooks/exhaustive-deps
+   343:39   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   352:38   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   431:26   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   701:36   warning  React Hook useEffect has a missing dependency: 'carregar'. Either include it or remove the dependency array                                                                                                                        react-hooks/exhaustive-deps
+   714:41   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   744:43   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   745:68   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   747:36   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   749:36   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   753:34   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   755:34   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   760:32   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   760:83   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   761:36   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   765:30   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   765:113  warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   766:34   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   768:46   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   864:6    warning  React Hook useEffect has a missing dependency: 'fecharCiclo'. Either include it or remove the dependency array                                                                                                                     react-hooks/exhaustive-deps
+   868:6    warning  React Hook useEffect has missing dependencies: 'carregarDados' and 'ciclo'. Either include them or remove the dependency array                                                                                                     react-hooks/exhaustive-deps
+   886:46   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   886:64   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   887:44   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   938:53   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   941:44   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   950:42   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   976:41   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+   979:39   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1018:41   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1027:57   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1028:61   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1035:53   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1039:47   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1040:46   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1065:48   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1073:43   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1084:58   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1091:43   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1092:41   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1097:47   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1098:80   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1100:48   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1102:48   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1105:61   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1123:54   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1125:54   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1127:63   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1530:81   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1533:36   warning  React Hook useEffect has a missing dependency: 'carregar'. Either include it or remove the dependency array                                                                                                                        react-hooks/exhaustive-deps
+  1551:41   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1553:38   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1564:41   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1567:25   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1568:22   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1579:43   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1585:50   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1586:44   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1587:63   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1590:50   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1591:44   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1592:63   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1777:47   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  1891:9    warning  The 'filtroOp' conditional could make the dependencies of useMemo Hook (at line 1902) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'filtroOp' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  1933:42   warning  React Hook useEffect has a missing dependency: 'carregarCiclos'. Either include it or remove the dependency array                                                                                                                  react-hooks/exhaustive-deps
+  2009:154  warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  2012:27   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  2043:47   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  2052:53   warning  Unexpected any. Specify a different type                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\dashboards\DashboardOverviewInfluencer\index.tsx
+  691:6  warning  React Hook useEffect has a missing dependency: 'podeVerOperadora'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\dashboards\OverviewSpin\index.tsx
+   452:43  warning  Unexpected any. Specify a different type                                                                                                    @typescript-eslint/no-explicit-any
+   452:76  warning  Unexpected any. Specify a different type                                                                                                    @typescript-eslint/no-explicit-any
+  1384:6   warning  React Hook useCallback has a missing dependency: 'escoposVisiveis.operadorasVisiveis'. Either include it or remove the dependency array     react-hooks/exhaustive-deps
+  1390:5   warning  React Hook useCallback has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\dashboards\SocialMediaDashboard\index.tsx
+  613:6  warning  React Hook useMemo has a missing dependency: 'hoje'. Either include it or remove the dependency array         react-hooks/exhaustive-deps
+  828:6  warning  React Hook useEffect has a missing dependency: 'historico'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\dashboards\Streamers\StreamersFiltrosContext.tsx
+  45:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  49:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\estudio\GestaoDealers\index.tsx
+  608:17  warning  React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\estudio\RoteiroMesa\index.tsx
+  990:6  warning  React Hook useEffect has a missing dependency: 'filtroOperadora'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\estudio\solicitacoes\BannerPendencias.tsx
+  92:6   warning  React Hook useEffect has a missing dependency: 'operadoraSlugs'. Either include it or remove the dependency array                         react-hooks/exhaustive-deps
+  92:19  warning  React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\geral\Home\index.tsx
+  262:6  warning  React Hook useEffect has a missing dependency: 'user'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\lives\Agenda\ModalLive.tsx
+  111:6  warning  React Hook useEffect has a missing dependency: 'form.influencer_id'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\lives\Agenda\index.tsx
+   83:6   warning  Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  210:35  warning  Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  216:37  warning  React Hook useEffect has a missing dependency: 'loadLives'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\lives\Feedback\index.tsx
+  424:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\lives\Influencers\index.tsx
+   230:38  warning  Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+   242:41  warning  Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+   285:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  1055:40  warning  Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\lives\Resultados\index.tsx
+  612:36  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\marketing\GestaoLinks\index.tsx
+  106:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  109:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  111:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  114:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\plataforma\GestaoOperadoras\index.tsx
+  259:6  warning  React Hook useEffect has a missing dependency: 'editando'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\plataforma\GestaoUsuarios\ModalUsuario.tsx
+   64:6  warning  React Hook useEffect has missing dependencies: 'editando?.email', 'editando?.name', and 'editando?.role'. Either include them or remove the dependency array. If 'setNome' needs the current value of 'editando.name', you can also switch to useReducer instead of useState and read 'editando.name' in the reducer  react-hooks/exhaustive-deps
+  126:6  warning  React Hook useEffect has a missing dependency: 'editando?.scopes'. Either include it or remove the dependency array                                                                                                                                                                                                   react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\plataforma\StatusTecnico\index.tsx
+  272:6  warning  React Hook useCallback has an unnecessary dependency: 'logFiltro'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\Felipe Saturnino\OneDrive\Aquisition Hub\influencer-dashboard\src\pages\rh\GestaoStaff\index.tsx
+   984:6  warning  React Hook useEffect has a missing dependency: 'row'. Either include it or remove the dependency array. If 'setDealerGenero' needs the current value of 'row', you can also switch to useReducer instead of useState and read 'row' in the reducer  react-hooks/exhaustive-deps
+  1003:6  warning  React Hook useEffect has a missing dependency: 'row'. Either include it or remove the dependency array. If 'setDealerGenero' needs the current value of 'row', you can also switch to useReducer instead of useState and read 'row' in the reducer  react-hooks/exhaustive-deps
+
+✖ 113 problems (0 errors, 113 warnings)
+

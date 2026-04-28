@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- getOperadoraTagStyles exportado para reutilização. */
 import { FONT } from "../constants/theme";
 
 /**

@@ -103,21 +103,21 @@ export default function GestaoLinks() {
     let infNomeMap = new Map<string, string>();
     let campanhaNomeMap = new Map<string, string>();
     if (aba === "mapeados") {
-      const influencerIds = aliasData.map((r: any) => r.influencer_id).filter(Boolean);
+      const influencerIds = aliasData.map((r: UtmAlias) => r.influencer_id).filter(Boolean) as string[];
       if (influencerIds.length > 0) {
         const { data: infData } = await supabase.from("influencer_perfil").select("id, nome_artistico").in("id", influencerIds);
-        infNomeMap = new Map((infData ?? []).map((i: any) => [i.id, i.nome_artistico]));
+        infNomeMap = new Map((infData ?? []).map((i: { id: string; nome_artistico: string | null }) => [i.id, i.nome_artistico ?? ""]));
       }
-      const campanhaIds = aliasData.map((r: any) => r.campanha_id).filter(Boolean);
+      const campanhaIds = aliasData.map((r: UtmAlias) => r.campanha_id).filter(Boolean) as string[];
       if (campanhaIds.length > 0) {
         const { data: campData } = await supabase.from("campanhas").select("id, nome").in("id", campanhaIds);
-        campanhaNomeMap = new Map((campData ?? []).map((c: any) => [c.id, c.nome]));
+        campanhaNomeMap = new Map((campData ?? []).map((c: { id: string; nome: string }) => [c.id, c.nome]));
       }
     }
-    setAliases(aliasData.map((r: any) => ({
+    setAliases(aliasData.map((r: UtmAlias) => ({
       ...r,
-      influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) ?? "—") : null,
-      campanha_nome: r.campanha_id ? (campanhaNomeMap.get(r.campanha_id) ?? "—") : null,
+      influencer_name: r.influencer_id ? (infNomeMap.get(r.influencer_id) || "—") : undefined,
+      campanha_nome: r.campanha_id ? (campanhaNomeMap.get(r.campanha_id) || "—") : undefined,
     })));
     setLoading(false);
   }, [aba, operadoraFiltro]);

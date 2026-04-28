@@ -987,7 +987,7 @@ export default function RoteiroMesa() {
     if (operadoraSlugsForcado?.length && filtroOperadora === "todas") {
       setFiltroOperadora(operadoraSlugsForcado[0]);
     }
-  }, [operadoraSlugsForcado]);
+  }, [operadoraSlugsForcado, filtroOperadora]);
 
   if (perm.canView === "nao") {
     return (
