@@ -81,6 +81,22 @@ function gravarEscalaMes(ano: number, mes0: number, est: Record<string, EscalaGe
   }
 }
 
+/** Primeiro dia do mês (YYYY-MM-DD) para RPC `date`. */
+function refMesISO(ano: number, mes0: number): string {
+  return `${ano}-${String(mes0 + 1).padStart(2, "0")}-01`;
+}
+
+type RpcGradeCarregarRow = {
+  funcionario_id: string;
+  dia_iso: string;
+  valor: string | null;
+};
+
+type RpcGradeSalvarResult = {
+  ok?: boolean;
+  error?: string;
+};
+
 function chaveCelulaGerar(rowId: string, iso: string): string {
   return `${rowId}|${iso}`;
 }
@@ -326,6 +342,8 @@ export default function RhGestaoEscalaPage() {
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
+  const [erroSalvarGrade, setErroSalvarGrade] = useState<string | null>(null);
+  const [salvandoGradeCs, setSalvandoGradeCs] = useState(false);
   /** Área (time) para consolidado e grade de geração. */
   const [filtroArea, setFiltroArea] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
   /** Por área: células do mês e baseline após aprovação. */
@@ -393,6 +411,7 @@ export default function RhGestaoEscalaPage() {
 
   /** Novo mês: carrega rascunhos gravados no navegador para aquele mês. */
   useEffect(() => {
+    setErroSalvarGrade(null);
     mesHydratingRef.current = true;
     setGerarPorFiltro(carregarEscalaMesGravada(ano, mes));
   }, [ano, mes]);
@@ -404,6 +423,85 @@ export default function RhGestaoEscalaPage() {
     }
     gravarEscalaMes(ano, mes, gerarPorFiltro);
   }, [gerarPorFiltro, ano, mes]);
+
+  /** Mescla na grade CS os valores persistidos na base (sobrescreve chaves existentes). */
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao" || loadingPrestadores) return;
+    let cancelled = false;
+    const ref = refMesISO(ano, mes);
+    void (async () => {
+      const { data, error } = await supabase.rpc("rh_gestao_escala_grade_carregar", {
+        p_ref_mes: ref,
+        p_area_key: "customer_service",
+      });
+      if (cancelled || error) return;
+      const rows = (data ?? []) as RpcGradeCarregarRow[];
+      if (rows.length === 0) return;
+      const fromDb: Record<string, string> = {};
+      for (const row of rows) {
+        const isoRaw = row.dia_iso;
+        const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
+        fromDb[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
+      }
+      setGerarPorFiltro((prev) => {
+        const cur = prev.customer_service;
+        const merged = { ...(cur?.celulas ?? {}), ...fromDb };
+        return {
+          ...prev,
+          customer_service: {
+            celulas: merged,
+            aprovado: cur?.aprovado ?? false,
+            baseline: cur?.baseline ?? null,
+            posSugestaoCs: cur?.posSugestaoCs ?? false,
+          },
+        };
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ano, mes, perm.loading, perm.canView, loadingPrestadores]);
+
+  const salvarCustomerServiceGradeDb = useCallback(async () => {
+    setErroSalvarGrade(null);
+    const cs = gerarPorFiltro.customer_service;
+    const celulas = cs?.celulas ?? {};
+    if (Object.keys(celulas).length === 0) {
+      setErroSalvarGrade("Não há células para salvar.");
+      return;
+    }
+    setSalvandoGradeCs(true);
+    try {
+      const ref = refMesISO(ano, mes);
+      const { data, error } = await supabase.rpc("rh_gestao_escala_grade_salvar", {
+        p_ref_mes: ref,
+        p_area_key: "customer_service",
+        p_celulas: celulas,
+      });
+      if (error) throw error;
+      const payload = data as RpcGradeSalvarResult | null;
+      if (!payload?.ok) {
+        const code = payload?.error ?? "";
+        setErroSalvarGrade(
+          code === "forbidden"
+            ? "Sem permissão para salvar a grade."
+            : code === "prestador_fora_area"
+              ? "Um ou mais colaboradores não pertencem ao time Customer Service."
+              : code
+                ? `Não foi possível salvar: ${code}.`
+                : "Não foi possível salvar a grade.",
+        );
+        return;
+      }
+      gravarEscalaMes(ano, mes, gerarPorFiltro);
+    } catch (e) {
+      setErroSalvarGrade(
+        e instanceof Error ? e.message : "Erro ao salvar na base de dados. Verifique se a migration foi aplicada.",
+      );
+    } finally {
+      setSalvandoGradeCs(false);
+    }
+  }, [ano, mes, gerarPorFiltro]);
 
   const linhas = useMemo(() => {
     return filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
@@ -455,6 +553,7 @@ export default function RhGestaoEscalaPage() {
       isWeekend: d.isWeekend,
       isFeriadoSP: d.isFeriadoSP,
     }));
+    setErroSalvarGrade(null);
     const celulas = gerarCelulasSugestaoCustomerService(linhasCs, diasLite);
     setGerarPorFiltro((prev) => ({
       ...prev,
@@ -791,8 +890,9 @@ export default function RhGestaoEscalaPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => gravarEscalaMes(ano, mes, gerarPorFiltro)}
-                      aria-label="Salvar alterações da escala no navegador"
+                      disabled={salvandoGradeCs}
+                      onClick={() => void salvarCustomerServiceGradeDb()}
+                      aria-label="Salvar alterações da escala na base de dados"
                       style={{
                         padding: "10px 16px",
                         borderRadius: 10,
@@ -804,10 +904,15 @@ export default function RhGestaoEscalaPage() {
                         fontFamily: FONT.body,
                         fontSize: 13,
                         fontWeight: 700,
-                        cursor: "pointer",
+                        cursor: salvandoGradeCs ? "wait" : "pointer",
                         whiteSpace: "nowrap",
+                        opacity: salvandoGradeCs ? 0.65 : 1,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
                       }}
                     >
+                      {salvandoGradeCs ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
                       Salvar Alterações
                     </button>
                     <button
@@ -948,6 +1053,24 @@ export default function RhGestaoEscalaPage() {
           }}
         >
           {erroPrestadores}
+        </div>
+      )}
+
+      {erroSalvarGrade && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 16,
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            color: "#e84025",
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "rgba(232,64,37,0.08)",
+          }}
+        >
+          {erroSalvarGrade}
         </div>
       )}
 
