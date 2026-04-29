@@ -99,11 +99,6 @@ export function ModalNovaVaga({
     outline: "none",
   };
 
-  const lbl = (htmlFor: string, text: string) => (
-    <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
-      {text}
-    </label>
-  );
   const lblReq = (htmlFor: string, text: string) => (
     <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
       {text}

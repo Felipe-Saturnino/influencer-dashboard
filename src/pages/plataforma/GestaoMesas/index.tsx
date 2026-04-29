@@ -46,7 +46,7 @@ export default function GestaoMesas() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
-  type MesaSortCol = "tipo";
+  type MesaSortCol = "operadora" | "nome" | "tipo" | "numero" | "ident";
   const [sortMesa, setSortMesa] = useState<{ col: MesaSortCol; dir: SortDir }>({ col: "tipo", dir: "asc" });
 
   const carregar = useCallback(async () => {
@@ -85,13 +85,34 @@ export default function GestaoMesas() {
 
   const rowsOrdenadas = useMemo(() => {
     const arr = [...rowsFiltradas];
+    const { col, dir } = sortMesa;
+    const nomeOp = (r: MesaSpinCadastroRow) => (nomeOperadoraJoin(r) ?? r.operadora_slug ?? "").toLowerCase();
     arr.sort((a, b) => {
-      const c = compareLocaleTexto((a.tipo_jogo ?? "").trim(), (b.tipo_jogo ?? "").trim(), sortMesa.dir);
+      let c = 0;
+      switch (col) {
+        case "operadora":
+          c = compareLocaleTexto(nomeOp(a), nomeOp(b), dir);
+          break;
+        case "nome":
+          c = compareLocaleTexto((a.nome_mesa ?? "").trim(), (b.nome_mesa ?? "").trim(), dir);
+          break;
+        case "tipo":
+          c = compareLocaleTexto((a.tipo_jogo ?? "").trim(), (b.tipo_jogo ?? "").trim(), dir);
+          break;
+        case "numero":
+          c = compareLocaleTexto((a.numero_mesa ?? "").trim(), (b.numero_mesa ?? "").trim(), dir);
+          break;
+        case "ident":
+          c = compareLocaleTexto((a.mesa_identificacao ?? "").trim(), (b.mesa_identificacao ?? "").trim(), dir);
+          break;
+        default:
+          c = 0;
+      }
       if (c !== 0) return c;
-      return (a.nome_mesa ?? "").localeCompare(b.nome_mesa ?? "", "pt-BR", { sensitivity: "base" });
+      return compareLocaleTexto((a.nome_mesa ?? "").trim(), (b.nome_mesa ?? "").trim(), "asc");
     });
     return arr;
-  }, [rowsFiltradas, sortMesa.dir]);
+  }, [rowsFiltradas, sortMesa]);
 
   if (perm.canView === "nao") {
     return (
@@ -235,14 +256,36 @@ export default function GestaoMesas() {
               <caption style={{ display: "none" }}>Cadastro de mesas por operadora</caption>
               <thead>
                 <tr>
-                  <th scope="col" style={getThStyle(t)}>
-                    Operadora
-                  </th>
-                  <th scope="col" style={getThStyle(t)}>
-                    Nome da mesa
-                  </th>
                   <SortTableTh<MesaSortCol>
-                    label="Classificação"
+                    label="Operadora"
+                    col="operadora"
+                    sortCol={sortMesa.col}
+                    sortDir={sortMesa.dir}
+                    thStyle={getThStyle(t)}
+                    align="left"
+                    onSort={(c) =>
+                      setSortMesa((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<MesaSortCol>
+                    label="Nome da mesa"
+                    col="nome"
+                    sortCol={sortMesa.col}
+                    sortDir={sortMesa.dir}
+                    thStyle={getThStyle(t)}
+                    align="left"
+                    onSort={(c) =>
+                      setSortMesa((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<MesaSortCol>
+                    label="Jogo"
                     col="tipo"
                     sortCol={sortMesa.col}
                     sortDir={sortMesa.dir}
@@ -255,12 +298,34 @@ export default function GestaoMesas() {
                       }))
                     }
                   />
-                  <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
-                    Nº mesa
-                  </th>
-                  <th scope="col" style={getThStyle(t)}>
-                    Identificação
-                  </th>
+                  <SortTableTh<MesaSortCol>
+                    label="Nº mesa"
+                    col="numero"
+                    sortCol={sortMesa.col}
+                    sortDir={sortMesa.dir}
+                    thStyle={getThStyle(t, { textAlign: "right" })}
+                    align="right"
+                    onSort={(c) =>
+                      setSortMesa((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                  <SortTableTh<MesaSortCol>
+                    label="Identificação"
+                    col="ident"
+                    sortCol={sortMesa.col}
+                    sortDir={sortMesa.dir}
+                    thStyle={getThStyle(t)}
+                    align="left"
+                    onSort={(c) =>
+                      setSortMesa((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
                   {(perm.canEditarOk || perm.canExcluirOk) && (
                     <th scope="col" style={getThStyle(t, { textAlign: "right" })}>
                       Ações

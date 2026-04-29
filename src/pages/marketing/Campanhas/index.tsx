@@ -13,7 +13,7 @@ import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
-import { compareAtivoBoolean } from "../../../lib/classificacaoSort";
+import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -35,7 +35,7 @@ export default function Campanhas() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Campanha | null>(null);
-  type CampSortCol = "classificacao";
+  type CampSortCol = "nome" | "operadora" | "classificacao" | "criada";
   const [sortCamp, setSortCamp] = useState<{ col: CampSortCol; dir: SortDir }>({ col: "classificacao", dir: "desc" });
 
   const carregar = useCallback(async () => {
@@ -54,13 +54,32 @@ export default function Campanhas() {
 
   const campanhasOrdenadas = useMemo(() => {
     const arr = [...campanhas];
+    const { col, dir } = sortCamp;
+    const nomeOp = (c: Campanha) =>
+      (operadoras.find((o) => o.slug === c.operadora_slug)?.nome ?? c.operadora_slug ?? "").toLowerCase();
     arr.sort((a, b) => {
-      const c0 = compareAtivoBoolean(!!a.ativo, !!b.ativo, sortCamp.dir);
+      let c0 = 0;
+      switch (col) {
+        case "nome":
+          c0 = compareLocaleTexto(a.nome, b.nome, dir);
+          break;
+        case "operadora":
+          c0 = compareLocaleTexto(nomeOp(a), nomeOp(b), dir);
+          break;
+        case "classificacao":
+          c0 = compareAtivoBoolean(!!a.ativo, !!b.ativo, dir);
+          break;
+        case "criada":
+          c0 = compareLocaleTexto(a.created_at ?? "", b.created_at ?? "", dir);
+          break;
+        default:
+          c0 = 0;
+      }
       if (c0 !== 0) return c0;
-      return a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" });
+      return compareLocaleTexto(a.nome, b.nome, "asc");
     });
     return arr;
-  }, [campanhas, sortCamp.dir]);
+  }, [campanhas, sortCamp, operadoras]);
   const ativas = campanhas.filter((c) => c.ativo).length;
   const contadorLabel =
     campanhas.length === 1
@@ -227,10 +246,36 @@ export default function Campanhas() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th scope="col" style={th}>Nome</th>
-                <th scope="col" style={th}>Operadora</th>
                 <SortTableTh<CampSortCol>
-                  label="Classificação"
+                  label="Nome"
+                  col="nome"
+                  sortCol={sortCamp.col}
+                  sortDir={sortCamp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCamp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<CampSortCol>
+                  label="Operadora"
+                  col="operadora"
+                  sortCol={sortCamp.col}
+                  sortDir={sortCamp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCamp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<CampSortCol>
+                  label="Status"
                   col="classificacao"
                   sortCol={sortCamp.col}
                   sortDir={sortCamp.dir}
@@ -243,7 +288,20 @@ export default function Campanhas() {
                     }))
                   }
                 />
-                <th scope="col" style={th}>Criada em</th>
+                <SortTableTh<CampSortCol>
+                  label="Criada em"
+                  col="criada"
+                  sortCol={sortCamp.col}
+                  sortDir={sortCamp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCamp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
                 {perm.canEditarOk && <th scope="col" style={th}>Ações</th>}
               </tr>
             </thead>

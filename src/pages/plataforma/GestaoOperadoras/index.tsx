@@ -11,7 +11,7 @@ import { GiShield } from "react-icons/gi";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
-import { compareAtivoBoolean } from "../../../lib/classificacaoSort";
+import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
@@ -22,7 +22,7 @@ export default function GestaoOperadoras() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Operadora | null>(null);
-  type OpSortCol = "status";
+  type OpSortCol = "slug" | "nome" | "status" | "criada";
   const [sortOp, setSortOp] = useState<{ col: OpSortCol; dir: SortDir }>({ col: "status", dir: "asc" });
 
   const carregar = useCallback(async () => {
@@ -36,13 +36,30 @@ export default function GestaoOperadoras() {
 
   const operadorasOrdenadas = useMemo(() => {
     const arr = [...operadoras];
+    const { col, dir } = sortOp;
     arr.sort((a, b) => {
-      const c = compareAtivoBoolean(!!a.ativo, !!b.ativo, sortOp.dir);
+      let c = 0;
+      switch (col) {
+        case "slug":
+          c = compareLocaleTexto(a.slug, b.slug, dir);
+          break;
+        case "nome":
+          c = compareLocaleTexto(a.nome ?? "", b.nome ?? "", dir);
+          break;
+        case "status":
+          c = compareAtivoBoolean(!!a.ativo, !!b.ativo, dir);
+          break;
+        case "criada":
+          c = compareLocaleTexto(a.criado_em ?? "", b.criado_em ?? "", dir);
+          break;
+        default:
+          c = 0;
+      }
       if (c !== 0) return c;
-      return (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR", { sensitivity: "base" });
+      return compareLocaleTexto(a.nome ?? "", b.nome ?? "", "asc");
     });
     return arr;
-  }, [operadoras, sortOp.dir]);
+  }, [operadoras, sortOp]);
   const ativas = operadoras.filter((o) => o.ativo).length;
   const contadorLabel = operadoras.length === 1 ? "1 operadora cadastrada" : `${operadoras.length} operadoras cadastradas`;
 
@@ -148,10 +165,36 @@ export default function GestaoOperadoras() {
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
             <thead>
               <tr>
-                <th style={th}>Slug</th>
-                <th style={th}>Nome</th>
                 <SortTableTh<OpSortCol>
-                  label="Classificação"
+                  label="Slug"
+                  col="slug"
+                  sortCol={sortOp.col}
+                  sortDir={sortOp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortOp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<OpSortCol>
+                  label="Nome"
+                  col="nome"
+                  sortCol={sortOp.col}
+                  sortDir={sortOp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortOp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<OpSortCol>
+                  label="Status"
                   col="status"
                   sortCol={sortOp.col}
                   sortDir={sortOp.dir}
@@ -164,7 +207,20 @@ export default function GestaoOperadoras() {
                     }))
                   }
                 />
-                <th style={th}>Criada em</th>
+                <SortTableTh<OpSortCol>
+                  label="Criada em"
+                  col="criada"
+                  sortCol={sortOp.col}
+                  sortDir={sortOp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortOp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
                 {perm.canEditarOk && <th style={th}>Ações</th>}
               </tr>
             </thead>

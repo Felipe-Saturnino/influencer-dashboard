@@ -13,7 +13,12 @@ import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { compareInfluencerPerfilStatus } from "../../../lib/classificacaoSort";
+import {
+  compareAtivoBoolean,
+  compareInfluencerPerfilStatus,
+  compareLocaleTexto,
+  compareNumber,
+} from "../../../lib/classificacaoSort";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Shield } from "lucide-react";
 import { GiChipsBag } from "react-icons/gi";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
@@ -638,8 +643,8 @@ function BlocoSolicitacoes({
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [confirmExcluir, setConfirmExcluir] = useState<BancaRowDb | null>(null);
   const [cpfRevelados, setCpfRevelados] = useState<Set<string>>(() => new Set());
-  type SolicSortCol = "classificacao";
-  const [sortSolic, setSortSolic] = useState<{ col: SolicSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
+  type SolicSortCol = "influencer" | "classificacao" | "id_op" | "cpf" | "valor" | "status" | "data";
+  const [sortSolic, setSortSolic] = useState<{ col: SolicSortCol; dir: SortDir }>({ col: "data", dir: "desc" });
 
   const toggleCpfRevelado = useCallback((id: string) => {
     setCpfRevelados((prev) => {
@@ -682,22 +687,49 @@ function BlocoSolicitacoes({
       }
       if (statusFiltro && r.status !== statusFiltro) return false;
       return rowNoMesSolicitacao(r, periodo, historico);
-    }).sort((a, b) => (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? ""));
+    });
   }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, statusFiltro, periodo, historico]);
 
   const listaOrdenada = useMemo(() => {
     const arr = [...lista];
+    const { col, dir } = sortSolic;
+    const cpfNorm = (id: string) => (perfilMap[id]?.cpf ?? "").replace(/\D/g, "");
     arr.sort((a, b) => {
-      const c = compareInfluencerPerfilStatus(
-        { statusInfluencer: perfilMap[a.influencer_id]?.perfil_status ?? null },
-        { statusInfluencer: perfilMap[b.influencer_id]?.perfil_status ?? null },
-        sortSolic.dir,
-      );
+      let c = 0;
+      switch (col) {
+        case "influencer":
+          c = compareLocaleTexto(perfilMap[a.influencer_id]?.nome ?? a.influencer_id, perfilMap[b.influencer_id]?.nome ?? b.influencer_id, dir);
+          break;
+        case "classificacao":
+          c = compareInfluencerPerfilStatus(
+            { statusInfluencer: perfilMap[a.influencer_id]?.perfil_status ?? null },
+            { statusInfluencer: perfilMap[b.influencer_id]?.perfil_status ?? null },
+            dir,
+          );
+          break;
+        case "id_op":
+          c = compareLocaleTexto((a.id_operadora_exibicao ?? "").trim(), (b.id_operadora_exibicao ?? "").trim(), dir);
+          break;
+        case "cpf":
+          c = compareLocaleTexto(cpfNorm(a.influencer_id), cpfNorm(b.influencer_id), dir);
+          break;
+        case "valor":
+          c = compareNumber(Number(a.valor), Number(b.valor), dir);
+          break;
+        case "status":
+          c = compareLocaleTexto(a.status, b.status, dir);
+          break;
+        case "data":
+          c = compareLocaleTexto(a.solicitado_em ?? "", b.solicitado_em ?? "", dir);
+          break;
+        default:
+          c = 0;
+      }
       if (c !== 0) return c;
       return (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? "");
     });
     return arr;
-  }, [lista, perfilMap, sortSolic.dir]);
+  }, [lista, perfilMap, sortSolic]);
 
   async function executarLiberar(row: BancaRowDb) {
     if (!user?.id) return;
@@ -777,9 +809,22 @@ function BlocoSolicitacoes({
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th scope="col" style={th}>Influencer</th>
               <SortTableTh<SolicSortCol>
-                label="Classificação"
+                label="Influencer"
+                col="influencer"
+                sortCol={sortSolic.col}
+                sortDir={sortSolic.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortSolic((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<SolicSortCol>
+                label="Status"
                 col="classificacao"
                 sortCol={sortSolic.col}
                 sortDir={sortSolic.dir}
@@ -792,18 +837,77 @@ function BlocoSolicitacoes({
                   }))
                 }
               />
-              {(["ID operadora", "CPF", "Valor", "Status", "Data", "Ação"] as const).map((h) => (
-                <th
-                  key={h}
-                  scope="col"
-                  style={{
-                    ...th,
-                    ...(narrowMobile && h === "Data" ? { display: "none" } : {}),
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
+              <SortTableTh<SolicSortCol>
+                label="ID operadora"
+                col="id_op"
+                sortCol={sortSolic.col}
+                sortDir={sortSolic.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortSolic((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<SolicSortCol>
+                label="CPF"
+                col="cpf"
+                sortCol={sortSolic.col}
+                sortDir={sortSolic.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortSolic((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<SolicSortCol>
+                label="Valor"
+                col="valor"
+                sortCol={sortSolic.col}
+                sortDir={sortSolic.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortSolic((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<SolicSortCol>
+                label="Status"
+                col="status"
+                sortCol={sortSolic.col}
+                sortDir={sortSolic.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortSolic((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<SolicSortCol>
+                label="Data"
+                col="data"
+                sortCol={sortSolic.col}
+                sortDir={sortSolic.dir}
+                thStyle={{ ...th, ...(narrowMobile ? { display: "none" } : {}) }}
+                align="left"
+                onSort={(c) =>
+                  setSortSolic((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <th scope="col" style={th}>Ação</th>
             </tr>
           </thead>
           <tbody>
@@ -1166,7 +1270,14 @@ function BlocoConsolidadoBanca({
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
   const [busca, setBusca] = useState("");
-  type BancaConsSortCol = "classificacao";
+  type BancaConsSortCol =
+    | "influencer"
+    | "classificacao"
+    | "total_lib"
+    | "total_sol"
+    | "bloq"
+    | "desbloq"
+    | "conta";
   const [sortBancaCons, setSortBancaCons] = useState<{ col: BancaConsSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
   const [expandido, setExpandido] = useState<string | null>(null);
   const [modalStatus, setModalStatus] = useState<{ id: string; nome: string; statusConta: BancaStatusConta } | null>(null);
@@ -1238,17 +1349,43 @@ function BlocoConsolidadoBanca({
 
   const filtradaOrdenada = useMemo(() => {
     const arr = [...filtradaBusca];
+    const { col, dir } = sortBancaCons;
     arr.sort((a, b) => {
-      const c = compareInfluencerPerfilStatus(
-        { statusInfluencer: a.perfil_status },
-        { statusInfluencer: b.perfil_status },
-        sortBancaCons.dir,
-      );
+      let c = 0;
+      switch (col) {
+        case "influencer":
+          c = compareLocaleTexto(a.nome, b.nome, dir);
+          break;
+        case "classificacao":
+          c = compareInfluencerPerfilStatus(
+            { statusInfluencer: a.perfil_status },
+            { statusInfluencer: b.perfil_status },
+            dir,
+          );
+          break;
+        case "total_lib":
+          c = compareNumber(a.totalLiberado, b.totalLiberado, dir);
+          break;
+        case "total_sol":
+          c = compareNumber(a.totalSolicitado, b.totalSolicitado, dir);
+          break;
+        case "bloq":
+          c = compareLocaleTexto(a.dataBloqueio ?? "", b.dataBloqueio ?? "", dir);
+          break;
+        case "desbloq":
+          c = compareLocaleTexto(a.dataDesbloqueio ?? "", b.dataDesbloqueio ?? "", dir);
+          break;
+        case "conta":
+          c = compareAtivoBoolean(a.statusContaBanca === "liberada", b.statusContaBanca === "liberada", dir);
+          break;
+        default:
+          c = 0;
+      }
       if (c !== 0) return c;
-      return a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" });
+      return compareLocaleTexto(a.nome, b.nome, "asc");
     });
     return arr;
-  }, [filtradaBusca, sortBancaCons.dir]);
+  }, [filtradaBusca, sortBancaCons]);
 
   const th: React.CSSProperties = {
     padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
@@ -1288,9 +1425,22 @@ function BlocoConsolidadoBanca({
           <thead>
             <tr>
               <th style={{ ...th, width: 32 }} scope="col" aria-label="Expandir" />
-              <th scope="col" style={th}>Influencer</th>
               <SortTableTh<BancaConsSortCol>
-                label="Classificação"
+                label="Influencer"
+                col="influencer"
+                sortCol={sortBancaCons.col}
+                sortDir={sortBancaCons.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortBancaCons((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<BancaConsSortCol>
+                label="Status"
                 col="classificacao"
                 sortCol={sortBancaCons.col}
                 sortDir={sortBancaCons.dir}
@@ -1303,9 +1453,76 @@ function BlocoConsolidadoBanca({
                   }))
                 }
               />
-              {["Total liberado", "Total solicitado", "Data de bloqueio", "Data de desbloqueio", "Status da conta"].map((h) => (
-                <th key={h} scope="col" style={th}>{h}</th>
-              ))}
+              <SortTableTh<BancaConsSortCol>
+                label="Total liberado"
+                col="total_lib"
+                sortCol={sortBancaCons.col}
+                sortDir={sortBancaCons.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortBancaCons((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<BancaConsSortCol>
+                label="Total solicitado"
+                col="total_sol"
+                sortCol={sortBancaCons.col}
+                sortDir={sortBancaCons.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortBancaCons((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<BancaConsSortCol>
+                label="Data de bloqueio"
+                col="bloq"
+                sortCol={sortBancaCons.col}
+                sortDir={sortBancaCons.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortBancaCons((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<BancaConsSortCol>
+                label="Data de desbloqueio"
+                col="desbloq"
+                sortCol={sortBancaCons.col}
+                sortDir={sortBancaCons.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortBancaCons((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              <SortTableTh<BancaConsSortCol>
+                label="Status da conta"
+                col="conta"
+                sortCol={sortBancaCons.col}
+                sortDir={sortBancaCons.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortBancaCons((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
             </tr>
           </thead>
           <tbody>

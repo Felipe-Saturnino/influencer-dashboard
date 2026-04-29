@@ -47,6 +47,26 @@ export function compareLocaleTexto(a: string, b: string, dir: SortDir): number {
   return dir === "asc" ? d : -d;
 }
 
+export function compareNumber(a: number, b: number, dir: SortDir): number {
+  const d = a - b;
+  return dir === "asc" ? d : -d;
+}
+
+const PAGAMENTO_STATUS_RANK: Record<string, number> = {
+  perfil_incompleto: 0,
+  em_analise: 1,
+  a_pagar: 2,
+  pago: 3,
+};
+
+/** Ordena por fluxo típico de pagamento (perfil incompleto → pago). */
+export function comparePagamentoStatus(a: string, b: string, dir: SortDir): number {
+  const ra = PAGAMENTO_STATUS_RANK[a] ?? 9;
+  const rb = PAGAMENTO_STATUS_RANK[b] ?? 9;
+  const d = ra - rb;
+  return dir === "asc" ? d : -d;
+}
+
 /** `null` = sem influencer associado (sempre após quem tem status, em asc). */
 export function comparePerfilStatusNullable(a: string | null, b: string | null, dir: SortDir): number {
   const ra = a == null ? 10 : rankInfluencerPerfilStatus(a, false);

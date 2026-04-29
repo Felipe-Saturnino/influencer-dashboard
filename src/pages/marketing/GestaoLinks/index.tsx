@@ -13,7 +13,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
-import { comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
+import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -76,7 +76,16 @@ export default function GestaoLinks() {
   const [salvando, setSalvando] = useState(false);
   const [erroModal, setErroModal] = useState<string | null>(null);
   const [confirmFechar, setConfirmFechar] = useState(false);
-  type LinkSortCol = "classificacao";
+  type LinkSortCol =
+    | "utm"
+    | "classificacao"
+    | "operadora"
+    | "primeiro"
+    | "ultimo"
+    | "ftds"
+    | "depositos"
+    | "ggr"
+    | "map";
   const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
 
   const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
@@ -258,13 +267,52 @@ export default function GestaoLinks() {
 
   const aliasesOrdenados = useMemo(() => {
     const arr = [...aliases];
+    const { col, dir } = sortLinks;
+    const nomeOp = (a: UtmAlias) =>
+      (operadorasList.find((o) => o.slug === a.operadora_slug)?.nome ?? a.operadora_slug ?? "").toLowerCase();
+    const mapLabel = (a: UtmAlias) => `${a.influencer_name ?? ""} ${a.campanha_nome ?? ""}`.trim().toLowerCase();
     arr.sort((a, b) => {
-      const c = comparePerfilStatusNullable(statusDoLink(a), statusDoLink(b), sortLinks.dir);
+      let c = 0;
+      switch (col) {
+        case "utm":
+          c = compareLocaleTexto(a.utm_source, b.utm_source, dir);
+          break;
+        case "classificacao":
+          c = comparePerfilStatusNullable(statusDoLink(a), statusDoLink(b), dir);
+          break;
+        case "operadora":
+          c = compareLocaleTexto(nomeOp(a), nomeOp(b), dir);
+          break;
+        case "primeiro":
+          c = compareLocaleTexto(a.primeiro_visto, b.primeiro_visto, dir);
+          break;
+        case "ultimo":
+          c = compareLocaleTexto(a.ultimo_visto, b.ultimo_visto, dir);
+          break;
+        case "ftds":
+          c = compareNumber(a.total_ftds ?? 0, b.total_ftds ?? 0, dir);
+          break;
+        case "depositos":
+          c = compareNumber(a.total_deposit ?? 0, b.total_deposit ?? 0, dir);
+          break;
+        case "ggr":
+          c = compareNumber(calcGgr(a), calcGgr(b), dir);
+          break;
+        case "map":
+          c = compareLocaleTexto(mapLabel(a), mapLabel(b), dir);
+          break;
+        default:
+          c = 0;
+      }
       if (c !== 0) return c;
-      return (b.total_ftds ?? 0) - (a.total_ftds ?? 0);
+      return compareNumber(b.total_ftds ?? 0, a.total_ftds ?? 0, "desc");
     });
     return arr;
-  }, [aliases, sortLinks.dir, statusDoLink]);
+  }, [aliases, sortLinks, statusDoLink, operadorasList]);
+
+  useEffect(() => {
+    setSortLinks((s) => (s.col === "map" && aba !== "mapeados" ? { col: "classificacao", dir: "asc" } : s));
+  }, [aba]);
 
   const colunasTabela =
     1 +
@@ -383,28 +431,136 @@ export default function GestaoLinks() {
             </colgroup>
             <thead>
               <tr>
-                <th scope="col" style={th}>UTM Source</th>
                 <SortTableTh<LinkSortCol>
-                  label="Classificação"
+                  label="UTM Source"
+                  col="utm"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="Status"
                   col="classificacao"
                   sortCol={sortLinks.col}
                   sortDir={sortLinks.dir}
                   thStyle={th}
                   align="left"
-                  onSort={(col) =>
+                  onSort={(c) =>
                     setSortLinks((s) => ({
-                      col,
-                      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
                     }))
                   }
                 />
-                {operadoraFiltro === "todas" && operadorasList.length > 1 && <th scope="col" style={th}>Operadora</th>}
-                <th scope="col" style={th}>1º visto</th>
-                <th scope="col" style={th}>Último</th>
-                <th scope="col" style={{ ...th, textAlign: "right" }}>FTDs</th>
-                <th scope="col" style={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>Depósitos</th>
-                <th scope="col" style={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>GGR</th>
-                {aba === "mapeados" && <th scope="col" style={th}>Influencer / Campanha</th>}
+                {operadoraFiltro === "todas" && operadorasList.length > 1 && (
+                  <SortTableTh<LinkSortCol>
+                    label="Operadora"
+                    col="operadora"
+                    sortCol={sortLinks.col}
+                    sortDir={sortLinks.dir}
+                    thStyle={th}
+                    align="left"
+                    onSort={(c) =>
+                      setSortLinks((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                )}
+                <SortTableTh<LinkSortCol>
+                  label="1º visto"
+                  col="primeiro"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="Último"
+                  col="ultimo"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="FTDs"
+                  col="ftds"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={{ ...th, textAlign: "right" } as React.CSSProperties}
+                  align="right"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="Depósitos"
+                  col="depositos"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) } as React.CSSProperties}
+                  align="right"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="GGR"
+                  col="ggr"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) } as React.CSSProperties}
+                  align="right"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                {aba === "mapeados" && (
+                  <SortTableTh<LinkSortCol>
+                    label="Influencer / Campanha"
+                    col="map"
+                    sortCol={sortLinks.col}
+                    sortDir={sortLinks.dir}
+                    thStyle={th}
+                    align="left"
+                    onSort={(c) =>
+                      setSortLinks((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                )}
                 <th scope="col" style={th}>Ações</th>
               </tr>
             </thead>

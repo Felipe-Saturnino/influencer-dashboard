@@ -14,7 +14,12 @@ import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { compareInfluencerPerfilStatus } from "../../../lib/classificacaoSort";
+import {
+  compareInfluencerPerfilStatus,
+  compareLocaleTexto,
+  compareNumber,
+  comparePagamentoStatus,
+} from "../../../lib/classificacaoSort";
 import { AlertTriangle, ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { GiReceiveMoney } from "react-icons/gi";
 
@@ -934,7 +939,15 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [enviarPagamentoLoading, setEnviarPagamentoLoading] = useState(false);
   const [enviarPagamentoError, setEnviarPagamentoError] = useState("");
-  type CicloSortCol = "classificacao";
+  type CicloSortCol =
+    | "influencer"
+    | "classificacao"
+    | "operadora"
+    | "lives"
+    | "horas"
+    | "cache"
+    | "total"
+    | "status";
   const [sortCiclo, setSortCiclo] = useState<{ col: CicloSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
 
   const ciclo = ciclos.find(c => c.id === cicloId) ?? ciclos[0] ?? null;
@@ -1352,14 +1365,46 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
   const rowsOrdenados = useMemo(() => {
     const arr = [...rows];
-    const dir = sortCiclo.dir;
+    const { col, dir } = sortCiclo;
+    const nomeOp = (r: PagamentoRow) =>
+      r.is_agente
+        ? "\u0000"
+        : (operadorasList.find((o) => o.slug === r.operadora_slug)?.nome ?? r.operadora_slug ?? "").toLowerCase();
     arr.sort((a, b) => {
-      const c = compareInfluencerPerfilStatus(a, b, dir);
+      let c = 0;
+      switch (col) {
+        case "influencer":
+          c = compareLocaleTexto(a.influencer_name, b.influencer_name, dir);
+          break;
+        case "classificacao":
+          c = compareInfluencerPerfilStatus(a, b, dir);
+          break;
+        case "operadora":
+          c = compareLocaleTexto(nomeOp(a), nomeOp(b), dir);
+          break;
+        case "lives":
+          c = compareNumber(a.qtd_lives ?? 0, b.qtd_lives ?? 0, dir);
+          break;
+        case "horas":
+          c = compareNumber(a.horas_realizadas, b.horas_realizadas, dir);
+          break;
+        case "cache":
+          c = compareNumber(a.cache_hora, b.cache_hora, dir);
+          break;
+        case "total":
+          c = compareNumber(a.total, b.total, dir);
+          break;
+        case "status":
+          c = comparePagamentoStatus(a.status, b.status, dir);
+          break;
+        default:
+          c = 0;
+      }
       if (c !== 0) return c;
-      return b.total - a.total;
+      return compareLocaleTexto(a.influencer_name, b.influencer_name, "asc");
     });
     return arr;
-  }, [rows, sortCiclo]);
+  }, [rows, sortCiclo, operadorasList]);
 
   const kpi = useMemo(() => ({
     em: rows.filter(r => r.status === "em_analise").length,
@@ -1483,9 +1528,22 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th scope="col" style={th}>Influencer</th>
                 <SortTableTh<CicloSortCol>
-                  label="Classificação"
+                  label="Influencer"
+                  col="influencer"
+                  sortCol={sortCiclo.col}
+                  sortDir={sortCiclo.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCiclo((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<CicloSortCol>
+                  label="Status"
                   col="classificacao"
                   sortCol={sortCiclo.col}
                   sortDir={sortCiclo.dir}
@@ -1498,11 +1556,114 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     }))
                   }
                 />
-                {filterOperadora === "todas" && <th scope="col" style={th}>Operadora</th>}
-                {isAberto
-                  ? ["Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} scope="col" style={th}>{h}</th>)
-                  : ["Lives", "Horas realizadas", "Total", "Status", "Ação"].map(h => <th key={h} scope="col" style={th}>{h}</th>)
-                }
+                {filterOperadora === "todas" && (
+                  <SortTableTh<CicloSortCol>
+                    label="Operadora"
+                    col="operadora"
+                    sortCol={sortCiclo.col}
+                    sortDir={sortCiclo.dir}
+                    thStyle={th}
+                    align="left"
+                    onSort={(c) =>
+                      setSortCiclo((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                )}
+                <SortTableTh<CicloSortCol>
+                  label="Lives"
+                  col="lives"
+                  sortCol={sortCiclo.col}
+                  sortDir={sortCiclo.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCiclo((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<CicloSortCol>
+                  label="Horas realizadas"
+                  col="horas"
+                  sortCol={sortCiclo.col}
+                  sortDir={sortCiclo.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCiclo((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                {isAberto ? (
+                  <>
+                    <SortTableTh<CicloSortCol>
+                      label="Cachê/hora"
+                      col="cache"
+                      sortCol={sortCiclo.col}
+                      sortDir={sortCiclo.dir}
+                      thStyle={th}
+                      align="left"
+                      onSort={(c) =>
+                        setSortCiclo((s) => ({
+                          col: c,
+                          dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                        }))
+                      }
+                    />
+                    <SortTableTh<CicloSortCol>
+                      label="Estimativa"
+                      col="total"
+                      sortCol={sortCiclo.col}
+                      sortDir={sortCiclo.dir}
+                      thStyle={th}
+                      align="left"
+                      onSort={(c) =>
+                        setSortCiclo((s) => ({
+                          col: c,
+                          dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                        }))
+                      }
+                    />
+                  </>
+                ) : (
+                  <>
+                    <SortTableTh<CicloSortCol>
+                      label="Total"
+                      col="total"
+                      sortCol={sortCiclo.col}
+                      sortDir={sortCiclo.dir}
+                      thStyle={th}
+                      align="left"
+                      onSort={(c) =>
+                        setSortCiclo((s) => ({
+                          col: c,
+                          dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                        }))
+                      }
+                    />
+                    <SortTableTh<CicloSortCol>
+                      label="Status"
+                      col="status"
+                      sortCol={sortCiclo.col}
+                      sortDir={sortCiclo.dir}
+                      thStyle={th}
+                      align="left"
+                      onSort={(c) =>
+                        setSortCiclo((s) => ({
+                          col: c,
+                          dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                        }))
+                      }
+                    />
+                    <th scope="col" style={th}>Ação</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -1684,7 +1845,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   interface AgentesRow { totalPago: number; pendente: number; ultimoPagamento: string | null; }
 
   const [busca, setBusca] = useState("");
-  type ConsolidSortCol = "status";
+  type ConsolidSortCol = "influencer" | "totalPago" | "totalHoras" | "pendente" | "ultimoPag" | "status";
   const [sortCons, setSortCons] = useState<{ col: ConsolidSortCol; dir: SortDir }>({ col: "status", dir: "asc" });
   const [rows, setRows] = useState<ConRow[]>([]);
   const [agentesRow, setAgentesRow] = useState<AgentesRow | null>(null);
@@ -1821,14 +1982,37 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
 
   const ordenados = useMemo(() => {
     const arr = [...filtered];
+    const { col, dir } = sortCons;
     arr.sort((a, b) => {
-      const c = compareInfluencerPerfilStatus(
-        { statusInfluencer: a.statusInfluencer },
-        { statusInfluencer: b.statusInfluencer },
-        sortCons.dir,
-      );
+      let c = 0;
+      switch (col) {
+        case "influencer":
+          c = compareLocaleTexto(a.nome_artistico, b.nome_artistico, dir);
+          break;
+        case "totalPago":
+          c = compareNumber(a.totalPago, b.totalPago, dir);
+          break;
+        case "totalHoras":
+          c = compareNumber(a.totalHoras, b.totalHoras, dir);
+          break;
+        case "pendente":
+          c = compareNumber(a.pendente, b.pendente, dir);
+          break;
+        case "ultimoPag":
+          c = compareLocaleTexto(a.ultimoPagamento ?? "", b.ultimoPagamento ?? "", dir);
+          break;
+        case "status":
+          c = compareInfluencerPerfilStatus(
+            { statusInfluencer: a.statusInfluencer },
+            { statusInfluencer: b.statusInfluencer },
+            dir,
+          );
+          break;
+        default:
+          c = 0;
+      }
       if (c !== 0) return c;
-      return a.nome_artistico.localeCompare(b.nome_artistico, "pt-BR", { sensitivity: "base" });
+      return compareLocaleTexto(a.nome_artistico, b.nome_artistico, "asc");
     });
     return arr;
   }, [filtered, sortCons]);
@@ -1869,13 +2053,78 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
             <thead>
               <tr>
                 <th scope="col" style={{ ...th, width: "32px" }} aria-label="Expandir" />
-                <th scope="col" style={th}>Influencer</th>
-                <th scope="col" style={th}>Total pago</th>
-                <th scope="col" style={th}>Total horas</th>
-                <th scope="col" style={th}>Pendente</th>
-                <th scope="col" style={th}>Último pagamento</th>
                 <SortTableTh<ConsolidSortCol>
-                  label="Classificação"
+                  label="Influencer"
+                  col="influencer"
+                  sortCol={sortCons.col}
+                  sortDir={sortCons.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCons((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<ConsolidSortCol>
+                  label="Total pago"
+                  col="totalPago"
+                  sortCol={sortCons.col}
+                  sortDir={sortCons.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCons((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<ConsolidSortCol>
+                  label="Total horas"
+                  col="totalHoras"
+                  sortCol={sortCons.col}
+                  sortDir={sortCons.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCons((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<ConsolidSortCol>
+                  label="Pendente"
+                  col="pendente"
+                  sortCol={sortCons.col}
+                  sortDir={sortCons.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCons((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<ConsolidSortCol>
+                  label="Último pagamento"
+                  col="ultimoPag"
+                  sortCol={sortCons.col}
+                  sortDir={sortCons.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCons((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<ConsolidSortCol>
+                  label="Status"
                   col="status"
                   sortCol={sortCons.col}
                   sortDir={sortCons.dir}

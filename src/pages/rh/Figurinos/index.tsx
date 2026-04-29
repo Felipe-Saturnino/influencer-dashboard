@@ -14,7 +14,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { compareCondicaoPeca } from "../../../lib/classificacaoSort";
+import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import type {
@@ -139,8 +139,28 @@ export default function FigurinosPage() {
   const [busca, setBusca] = useState("");
   const [filtroCat, setFiltroCat] = useState<string>("todas");
   const [filtroTam, setFiltroTam] = useState<string>("todas");
-  type FigSortCol = "cond";
-  const [sortFig, setSortFig] = useState<{ col: FigSortCol; dir: SortDir }>({ col: "cond", dir: "asc" });
+  type FigSortCol =
+    | "codigo"
+    | "operadora"
+    | "categoria"
+    | "tamanho"
+    | "data_aqui"
+    | "cond"
+    | "tipo_ret"
+    | "loaned_at"
+    | "borrower"
+    | "loaned_by"
+    | "motivo"
+    | "sent_at"
+    | "entered_by"
+    | "disc_motivo"
+    | "disc_at"
+    | "disc_by";
+  const [sortFig, setSortFig] = useState<{ col: FigSortCol; dir: SortDir }>({ col: "codigo", dir: "asc" });
+
+  useEffect(() => {
+    setSortFig({ col: "codigo", dir: "asc" });
+  }, [aba]);
 
   const [modalCadastro, setModalCadastro] = useState(false);
   const [modalScanner, setModalScanner] = useState(false);
@@ -258,17 +278,106 @@ export default function FigurinosPage() {
 
   const pecasOrdenadas = useMemo(() => {
     const arr = [...pecasFiltradas];
+    const { col, dir } = sortFig;
+    const borrowerKey = (p: RhFigurinoPeca) => {
+      const emp = empPorItem[p.id];
+      const emprestadoPara =
+        emp?.borrower_name != null || emp?.borrower_ref
+          ? `${emp?.borrower_name ?? ""}${emp?.borrower_ref ? ` (${emp.borrower_ref})` : ""}`.trim() || "—"
+          : "—";
+      return emprestadoPara;
+    };
     arr.sort((a, b) => {
-      const c = compareCondicaoPeca(a.condition, b.condition, sortFig.dir);
+      let c = 0;
+      switch (col) {
+        case "codigo":
+          c = compareLocaleTexto(a.code, b.code, dir);
+          break;
+        case "operadora":
+          c = compareLocaleTexto(
+            labelOperadorasPeca(a, operadoraNome).toLowerCase(),
+            labelOperadorasPeca(b, operadoraNome).toLowerCase(),
+            dir,
+          );
+          break;
+        case "categoria":
+          c = compareLocaleTexto(a.category, b.category, dir);
+          break;
+        case "tamanho":
+          c = compareLocaleTexto(a.size, b.size, dir);
+          break;
+        case "data_aqui":
+          c = compareLocaleTexto(a.purchase_date ?? "", b.purchase_date ?? "", dir);
+          break;
+        case "cond":
+          c = compareCondicaoPeca(a.condition, b.condition, dir);
+          break;
+        case "tipo_ret":
+          c = compareLocaleTexto(
+            labelTipoRetirada(empPorItem[a.id]?.withdrawal_type),
+            labelTipoRetirada(empPorItem[b.id]?.withdrawal_type),
+            dir,
+          );
+          break;
+        case "loaned_at":
+          c = compareLocaleTexto(empPorItem[a.id]?.loaned_at ?? "", empPorItem[b.id]?.loaned_at ?? "", dir);
+          break;
+        case "borrower":
+          c = compareLocaleTexto(borrowerKey(a), borrowerKey(b), dir);
+          break;
+        case "loaned_by":
+          c = compareLocaleTexto(empPorItem[a.id]?.loaned_by?.trim() ?? "", empPorItem[b.id]?.loaned_by?.trim() ?? "", dir);
+          break;
+        case "motivo":
+          c = compareLocaleTexto(a.maintenance_reason ?? "", b.maintenance_reason ?? "", dir);
+          break;
+        case "sent_at":
+          c = compareLocaleTexto(a.maintenance_entered_at ?? "", b.maintenance_entered_at ?? "", dir);
+          break;
+        case "entered_by":
+          c = compareLocaleTexto(a.maintenance_entered_by?.trim() ?? "", b.maintenance_entered_by?.trim() ?? "", dir);
+          break;
+        case "disc_motivo":
+          c = compareLocaleTexto(a.discard_reason ?? "", b.discard_reason ?? "", dir);
+          break;
+        case "disc_at":
+          c = compareLocaleTexto(a.discarded_at ?? "", b.discarded_at ?? "", dir);
+          break;
+        case "disc_by":
+          c = compareLocaleTexto(a.discarded_by?.trim() ?? "", b.discarded_by?.trim() ?? "", dir);
+          break;
+        default:
+          c = 0;
+      }
       if (c !== 0) return c;
-      return a.code.localeCompare(b.code, "pt-BR");
+      return compareLocaleTexto(a.code, b.code, "asc");
     });
     return arr;
-  }, [pecasFiltradas, sortFig.dir]);
+  }, [pecasFiltradas, sortFig, empPorItem, operadoraNome]);
 
   const pecasNaAbaComFiltroTopo = useMemo(
     () => pecasComFiltroTopo.filter((p) => p.status === aba),
     [pecasComFiltroTopo, aba],
+  );
+
+  const sortHeader = useCallback(
+    (label: string, col: FigSortCol) => (
+      <SortTableTh<FigSortCol>
+        label={label}
+        col={col}
+        sortCol={sortFig.col}
+        sortDir={sortFig.dir}
+        thStyle={getThStyle(t)}
+        align="left"
+        onSort={(c) =>
+          setSortFig((s) => ({
+            col: c,
+            dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+          }))
+        }
+      />
+    ),
+    [sortFig, t],
   );
 
   const abrirDetalhe = async (p: RhFigurinoPeca) => {
@@ -714,35 +823,12 @@ export default function FigurinosPage() {
                 <tr>
                   {aba === "available" ? (
                     <>
-                      <th scope="col" style={getThStyle(t)}>
-                        Código
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Operadora
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Categoria
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Tamanho
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Data de aquisição
-                      </th>
-                      <SortTableTh<FigSortCol>
-                        label="Classificação"
-                        col="cond"
-                        sortCol={sortFig.col}
-                        sortDir={sortFig.dir}
-                        thStyle={getThStyle(t)}
-                        align="left"
-                        onSort={(col) =>
-                          setSortFig((s) => ({
-                            col,
-                            dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
-                          }))
-                        }
-                      />
+                      {sortHeader("Código", "codigo")}
+                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Categoria", "categoria")}
+                      {sortHeader("Tamanho", "tamanho")}
+                      {sortHeader("Data de aquisição", "data_aqui")}
+                      {sortHeader("Classificação", "cond")}
                       <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                         Ações
                       </th>
@@ -750,44 +836,15 @@ export default function FigurinosPage() {
                   ) : null}
                   {aba === "borrowed" ? (
                     <>
-                      <th scope="col" style={getThStyle(t)}>
-                        Código
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Operadora
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Categoria
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Tamanho
-                      </th>
-                      <SortTableTh<FigSortCol>
-                        label="Classificação"
-                        col="cond"
-                        sortCol={sortFig.col}
-                        sortDir={sortFig.dir}
-                        thStyle={getThStyle(t)}
-                        align="left"
-                        onSort={(col) =>
-                          setSortFig((s) => ({
-                            col,
-                            dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
-                          }))
-                        }
-                      />
-                      <th scope="col" style={getThStyle(t)}>
-                        Tipo de retirada
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Data de empréstimo
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Emprestado para
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Registrado por
-                      </th>
+                      {sortHeader("Código", "codigo")}
+                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Categoria", "categoria")}
+                      {sortHeader("Tamanho", "tamanho")}
+                      {sortHeader("Classificação", "cond")}
+                      {sortHeader("Tipo de retirada", "tipo_ret")}
+                      {sortHeader("Data de empréstimo", "loaned_at")}
+                      {sortHeader("Emprestado para", "borrower")}
+                      {sortHeader("Registrado por", "loaned_by")}
                       <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                         Ação
                       </th>
@@ -795,27 +852,13 @@ export default function FigurinosPage() {
                   ) : null}
                   {aba === "maintenance" ? (
                     <>
-                      <th scope="col" style={getThStyle(t)}>
-                        Código
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Operadora
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Categoria
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Tamanho
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Motivo
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Data de envio
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Registrado por
-                      </th>
+                      {sortHeader("Código", "codigo")}
+                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Categoria", "categoria")}
+                      {sortHeader("Tamanho", "tamanho")}
+                      {sortHeader("Motivo", "motivo")}
+                      {sortHeader("Data de envio", "sent_at")}
+                      {sortHeader("Registrado por", "entered_by")}
                       <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                         Ações
                       </th>
@@ -823,27 +866,13 @@ export default function FigurinosPage() {
                   ) : null}
                   {aba === "discarded" ? (
                     <>
-                      <th scope="col" style={getThStyle(t)}>
-                        Código
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Operadora
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Categoria
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Tamanho
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Motivo
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Data de descarte
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Registrado por
-                      </th>
+                      {sortHeader("Código", "codigo")}
+                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Categoria", "categoria")}
+                      {sortHeader("Tamanho", "tamanho")}
+                      {sortHeader("Motivo", "disc_motivo")}
+                      {sortHeader("Data de descarte", "disc_at")}
+                      {sortHeader("Registrado por", "disc_by")}
                     </>
                   ) : null}
                 </tr>
