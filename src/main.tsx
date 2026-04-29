@@ -4,6 +4,9 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { reloadAfterChunkError } from "./lib/chunkReloadGuard";
+import { initObservability } from "./lib/observability";
+
+initObservability();
 
 /** Apenas erros típicos de import dinâmico / chunk (evita falso positivo em outras promises). */
 function isChunkLoadError(err: unknown): boolean {

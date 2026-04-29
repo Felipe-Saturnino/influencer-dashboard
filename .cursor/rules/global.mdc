@@ -78,6 +78,18 @@ import { FONT_TITLE } from "../lib/dashboardConstants";
 
 Nunca hardcodar string de fonte. Sempre `fontFamily: FONT.body` ou `fontFamily: FONT_TITLE`.
 
+## Formulários — obrigatório vs opcional (labels)
+
+Padrão único para formulários, modais e blocos com inputs:
+
+1. **Campo obrigatório:** ao lado do texto do label, renderizar o asterisco vermelho com o componente compartilhado `CampoObrigatorioMark` (`src/components/CampoObrigatorioMark.tsx` — cor `#e84025`, alinhado à paleta semântica negativa). Importar e usar `<CampoObrigatorioMark />` após o texto do label; não reinventar `*` ou cor inline para o mesmo fim.
+
+2. **Campo opcional:** **não** exibir nenhuma marcação extra no layout: **proibido** texto `(opcional)`, a palavra “opcional”, sufixos entre parênteses, badges ou `textMuted` explicando que é opcional. Opcional = apenas o label, sem complemento visual ou textual.
+
+3. **Consistência:** se o campo não for obrigatório, o usuário infere pela ausência do asterisco; não misturar os dois sistemas na mesma tela.
+
+4. **Import:** `import { CampoObrigatorioMark } from "../components/CampoObrigatorioMark"` (ajustar níveis de `../` conforme o arquivo).
+
 ## CSS Classes — Nunca Recriar Inline
 
 Estas classes existem em `responsive.css` — usar sempre via `className`:

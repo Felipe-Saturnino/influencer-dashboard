@@ -4,6 +4,10 @@ import { User, PageKey, PermissaoValor, Role } from "../types";
 import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
 import { validarBrandguide, cssDerivadasBrand, type BrandValidated } from "../lib/brandguideValidation";
+import {
+  aplicarDeepLinkAposRestaurarSessao,
+  aplicarRedirecionamentoPosLoginOuHome,
+} from "../lib/rhLoginDadosCadastroDeepLink";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
@@ -20,7 +24,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "rh_dados_cadastro",
   "rh_organograma",
   "rh_vagas",
-  "rh_escala_mes",
+  "rh_gestao_escala",
   "rh_staff",
   "configuracoes", "ajuda",
 ];
@@ -38,6 +42,8 @@ export interface EscoposVisiveis {
   vêTodosInfluencers?: boolean;   // true = executivo, vê todos os influencers
   /** Tipos de gestor (user_scopes gestor_tipo); usado para filtrar menu vs gestor_tipo_pages */
   gestorTiposVisiveis?: string[];
+  /** Áreas de prestador (user_scopes prestador_tipo); menu vs prestador_tipo_pages */
+  prestadorTiposVisiveis?: string[];
 }
 
 /** Brand da operadora (operador): logo, fonte e fundo (hex); demais cores via CSS vars --brand-* */
@@ -161,6 +167,24 @@ async function carregarEscoposVisiveis(
     };
   }
 
+  if (role === "prestador") {
+    const { data: scopes } = await supabase
+      .from("user_scopes")
+      .select("scope_type, scope_ref")
+      .eq("user_id", userId);
+    const lista = scopes ?? [];
+    const prestadorTiposVisiveis = lista
+      .filter((s) => s.scope_type === "prestador_tipo")
+      .map((s) => s.scope_ref)
+      .filter(Boolean);
+    return {
+      influencersVisiveis: [],
+      operadorasVisiveis: [],
+      semRestricaoEscopo: true,
+      prestadorTiposVisiveis,
+    };
+  }
+
   const { data: scopes } = await supabase
     .from("user_scopes")
     .select("scope_type, scope_ref")
@@ -215,10 +239,15 @@ async function carregarEscoposVisiveis(
 // Para operador: intersecta com operadora_pages (páginas liberadas por operadora)
 async function carregarPermissoes(
   role: User["role"],
-  options?: { operadorasVisiveis?: string[]; gestorTiposVisiveis?: string[] }
+  options?: {
+    operadorasVisiveis?: string[];
+    gestorTiposVisiveis?: string[];
+    prestadorTiposVisiveis?: string[];
+  }
 ): Promise<PermissoesMapa> {
   const operadorasVisiveis = options?.operadorasVisiveis;
   const gestorTiposVisiveis = options?.gestorTiposVisiveis;
+  const prestadorTiposVisiveis = options?.prestadorTiposVisiveis;
   const { data } = await supabase
     .from("role_permissions")
     .select("page_key, can_view")
@@ -242,7 +271,7 @@ async function carregarPermissoes(
   if (mapa.dash_overview_influencer === null && ["influencer", "agencia"].includes(role)) {
     mapa.dash_overview_influencer = "proprios";
   }
-  if (mapa.dash_overview_influencer === null && ["admin", "gestor", "executivo"].includes(role)) {
+  if (mapa.dash_overview_influencer === null && ["admin", "gestor", "prestador", "executivo"].includes(role)) {
     mapa.dash_overview_influencer = "sim";
   }
 
@@ -273,6 +302,23 @@ async function carregarPermissoes(
       .select("page_key")
       .in("gestor_tipo_slug", gestorTiposVisiveis);
     const rows = gtPages ?? [];
+    if (rows.length > 0) {
+      const pagesPermitidas = new Set(rows.map((r) => r.page_key));
+      ALL_PAGE_KEYS.forEach((k) => {
+        const cv = mapa[k];
+        if (cv === "sim" || cv === "proprios") {
+          if (!pagesPermitidas.has(k)) mapa[k] = "nao";
+        }
+      });
+    }
+  }
+
+  if (role === "prestador" && prestadorTiposVisiveis && prestadorTiposVisiveis.length > 0) {
+    const { data: ptPages } = await supabase
+      .from("prestador_tipo_pages")
+      .select("page_key")
+      .in("prestador_tipo_slug", prestadorTiposVisiveis);
+    const rows = ptPages ?? [];
     if (rows.length > 0) {
       const pagesPermitidas = new Set(rows.map((r) => r.page_key));
       ALL_PAGE_KEYS.forEach((k) => {
@@ -377,7 +423,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Wrapper de setUser que também carrega permissões e escopos
   async function setUser(u: User | null) {
     setUserState(u);
-    if (u) setActivePage("home"); // Ao fazer login, volta para a página Home
     if (u) {
       try {
         const escopos = await carregarEscoposVisiveis(u.id, u.role);
@@ -385,6 +430,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const perms = await carregarPermissoes(u.role, {
           operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
           gestorTiposVisiveis: u.role === "gestor" ? escopos.gestorTiposVisiveis : undefined,
+          prestadorTiposVisiveis: u.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
         });
         setPermissions(perms);
       } catch (err) {
@@ -392,6 +438,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
         setEscoposVisiveis(ESCOPOS_VAZIOS);
       }
+      aplicarRedirecionamentoPosLoginOuHome(setActivePage);
     } else {
       setPermissions(
         Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa
@@ -431,6 +478,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               const perms = await carregarPermissoes(u.role, {
                 operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
                 gestorTiposVisiveis: u.role === "gestor" ? escopos.gestorTiposVisiveis : undefined,
+                prestadorTiposVisiveis: u.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
               });
               setPermissions(perms);
             } catch (err) {
@@ -438,6 +486,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
               setEscoposVisiveis(ESCOPOS_VAZIOS);
             }
+            aplicarDeepLinkAposRestaurarSessao(setActivePage);
           }
         }
       } catch (err) {

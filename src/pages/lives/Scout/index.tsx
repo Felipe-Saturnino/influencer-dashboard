@@ -7,6 +7,7 @@ import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
 import { supabase, supabaseAnonKey } from "../../../lib/supabase";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import { CurrencyInput } from "../../../components/CurrencyInput";
@@ -1197,7 +1198,10 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
         </div>
 
         <div style={row}>
-          <label style={labelStyle}>Nome Artístico</label>
+          <label style={labelStyle}>
+            Nome Artístico
+            <CampoObrigatorioMark />
+          </label>
           <input value={nomeArtistico} onChange={(e) => setNomeArtistico(e.target.value)} style={inputStyle} placeholder="Ex: NeryXLS" />
         </div>
         <div style={row}>
@@ -1285,12 +1289,16 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
               </select>
             </div>
             <div style={row}>
-              <label style={labelStyle}>E-mail {status === "fechado" && <span style={{ color: BRAND.vermelho }}>*</span>}</label>
+              <label style={labelStyle}>
+                E-mail
+                {status === "fechado" ? <CampoObrigatorioMark /> : null}
+              </label>
               <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="email@exemplo.com" />
             </div>
             <div style={row}>
               <label style={labelStyle}>
-                Operadora {status === "fechado" && <span style={{ color: BRAND.vermelho }}>*</span>}
+                Operadora
+                {status === "fechado" ? <CampoObrigatorioMark /> : null}
               </label>
               {operadorasList.length === 0 ? (
                 <p style={{ fontSize: 12, color: t.textMuted, margin: 0, fontFamily: FONT.body }}>Cadastre operadoras em Gestão de Operadoras.</p>
@@ -1330,7 +1338,10 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
                 <div key={p} style={row}>
                   <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
                     <PlatLogo plataforma={p} size={12} isDark={isDark ?? false} />
-                    <span style={{ display: "inline-flex", alignItems: "center" }}>{p} — Link e {metrica}</span>
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>
+                      {p} — Link e {metrica}
+                      <CampoObrigatorioMark />
+                    </span>
                   </label>
                   <div style={{ display: "flex", gap: "10px" }}>
                     <input value={links[key] ?? ""} onChange={(e) => setLinks((l) => ({ ...l, [key]: e.target.value }))} style={{ ...inputStyle, flex: 2 }} placeholder={`Link ${p}`} />

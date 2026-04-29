@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
@@ -10,7 +10,10 @@ import { UtmAlias } from "../../../types";
 import { Link2, EyeOff, RotateCcw, AlertCircle, Shield } from "lucide-react";
 import { GiLinkedRings } from "react-icons/gi";
 import { PageHeader } from "../../../components/PageHeader";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -73,6 +76,17 @@ export default function GestaoLinks() {
   const [salvando, setSalvando] = useState(false);
   const [erroModal, setErroModal] = useState<string | null>(null);
   const [confirmFechar, setConfirmFechar] = useState(false);
+  type LinkSortCol =
+    | "utm"
+    | "classificacao"
+    | "operadora"
+    | "primeiro"
+    | "ultimo"
+    | "ftds"
+    | "depositos"
+    | "ggr"
+    | "map";
+  const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
 
   const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
@@ -239,6 +253,76 @@ export default function GestaoLinks() {
     ignorados: "Nenhum link ignorado.",
   };
 
+  const statusInfluencerPorId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const i of influencers) m.set(i.id, i.status);
+    return m;
+  }, [influencers]);
+
+  const statusDoLink = useCallback(
+    (a: UtmAlias): string | null =>
+      a.influencer_id ? (statusInfluencerPorId.get(a.influencer_id) ?? "ativo") : null,
+    [statusInfluencerPorId],
+  );
+
+  const aliasesOrdenados = useMemo(() => {
+    const arr = [...aliases];
+    const { col, dir } = sortLinks;
+    const nomeOp = (a: UtmAlias) =>
+      (operadorasList.find((o) => o.slug === a.operadora_slug)?.nome ?? a.operadora_slug ?? "").toLowerCase();
+    const mapLabel = (a: UtmAlias) => `${a.influencer_name ?? ""} ${a.campanha_nome ?? ""}`.trim().toLowerCase();
+    arr.sort((a, b) => {
+      let c = 0;
+      switch (col) {
+        case "utm":
+          c = compareLocaleTexto(a.utm_source, b.utm_source, dir);
+          break;
+        case "classificacao":
+          c = comparePerfilStatusNullable(statusDoLink(a), statusDoLink(b), dir);
+          break;
+        case "operadora":
+          c = compareLocaleTexto(nomeOp(a), nomeOp(b), dir);
+          break;
+        case "primeiro":
+          c = compareLocaleTexto(a.primeiro_visto, b.primeiro_visto, dir);
+          break;
+        case "ultimo":
+          c = compareLocaleTexto(a.ultimo_visto, b.ultimo_visto, dir);
+          break;
+        case "ftds":
+          c = compareNumber(a.total_ftds ?? 0, b.total_ftds ?? 0, dir);
+          break;
+        case "depositos":
+          c = compareNumber(a.total_deposit ?? 0, b.total_deposit ?? 0, dir);
+          break;
+        case "ggr":
+          c = compareNumber(calcGgr(a), calcGgr(b), dir);
+          break;
+        case "map":
+          c = compareLocaleTexto(mapLabel(a), mapLabel(b), dir);
+          break;
+        default:
+          c = 0;
+      }
+      if (c !== 0) return c;
+      return compareNumber(b.total_ftds ?? 0, a.total_ftds ?? 0, "desc");
+    });
+    return arr;
+  }, [aliases, sortLinks, statusDoLink, operadorasList]);
+
+  useEffect(() => {
+    setSortLinks((s) => (s.col === "map" && aba !== "mapeados" ? { col: "classificacao", dir: "asc" } : s));
+  }, [aba]);
+
+  const colunasTabela =
+    1 +
+    1 +
+    (operadoraFiltro === "todas" && operadorasList.length > 1 ? 1 : 0) +
+    4 +
+    (hideDepGgr ? 0 : 2) +
+    (aba === "mapeados" ? 1 : 0) +
+    1;
+
   if (perm.canView === "nao") {
     return <div style={{ padding: 24, textAlign: "center", color: theme.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar a Gestão de Links.</div>;
   }
@@ -333,8 +417,9 @@ export default function GestaoLinks() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
             <colgroup>
               {/* UTM Source: largura fixa razoável, vai quebrar internamente */}
-              <col style={{ width: "22%" }} />
-              {operadoraFiltro === "todas" && operadorasList.length > 1 && <col style={{ width: "12%" }} />}
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "10%" }} />
+              {operadoraFiltro === "todas" && operadorasList.length > 1 && <col style={{ width: "11%" }} />}
               <col style={{ width: "9%" }} />
               <col style={{ width: "9%" }} />
               <col style={{ width: "6%" }} />
@@ -346,20 +431,158 @@ export default function GestaoLinks() {
             </colgroup>
             <thead>
               <tr>
-                <th scope="col" style={th}>UTM Source</th>
-                {operadoraFiltro === "todas" && operadorasList.length > 1 && <th scope="col" style={th}>Operadora</th>}
-                <th scope="col" style={th}>1º visto</th>
-                <th scope="col" style={th}>Último</th>
-                <th scope="col" style={{ ...th, textAlign: "right" }}>FTDs</th>
-                <th scope="col" style={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>Depósitos</th>
-                <th scope="col" style={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) }}>GGR</th>
-                {aba === "mapeados" && <th scope="col" style={th}>Influencer / Campanha</th>}
+                <SortTableTh<LinkSortCol>
+                  label="UTM Source"
+                  col="utm"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="Status"
+                  col="classificacao"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                {operadoraFiltro === "todas" && operadorasList.length > 1 && (
+                  <SortTableTh<LinkSortCol>
+                    label="Operadora"
+                    col="operadora"
+                    sortCol={sortLinks.col}
+                    sortDir={sortLinks.dir}
+                    thStyle={th}
+                    align="left"
+                    onSort={(c) =>
+                      setSortLinks((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                )}
+                <SortTableTh<LinkSortCol>
+                  label="1º visto"
+                  col="primeiro"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="Último"
+                  col="ultimo"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="FTDs"
+                  col="ftds"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={{ ...th, textAlign: "right" } as React.CSSProperties}
+                  align="right"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="Depósitos"
+                  col="depositos"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) } as React.CSSProperties}
+                  align="right"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<LinkSortCol>
+                  label="GGR"
+                  col="ggr"
+                  sortCol={sortLinks.col}
+                  sortDir={sortLinks.dir}
+                  thStyle={{ ...th, textAlign: "right", ...(hideDepGgr ? { display: "none" } : {}) } as React.CSSProperties}
+                  align="right"
+                  onSort={(c) =>
+                    setSortLinks((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                {aba === "mapeados" && (
+                  <SortTableTh<LinkSortCol>
+                    label="Influencer / Campanha"
+                    col="map"
+                    sortCol={sortLinks.col}
+                    sortDir={sortLinks.dir}
+                    thStyle={th}
+                    align="left"
+                    onSort={(c) =>
+                      setSortLinks((s) => ({
+                        col: c,
+                        dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                      }))
+                    }
+                  />
+                )}
                 <th scope="col" style={th}>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {aliases.map((alias, idx) => {
+              {aliasesOrdenados.length === 0 ? (
+                <tr>
+                  <td colSpan={colunasTabela} style={{ ...td, textAlign: "center", color: theme.textMuted, padding: 40, whiteSpace: "normal" }}>
+                    {emptyMessages[aba]}
+                  </td>
+                </tr>
+              ) : aliasesOrdenados.map((alias, idx) => {
                 const ggr = calcGgr(alias);
+                const st = statusDoLink(alias);
+                const sk = (st ?? "ativo").toLowerCase();
+                const slInf =
+                  st == null
+                    ? { label: "—", color: theme.textMuted }
+                    : sk === "inativo"
+                      ? { label: "Inativo", color: "#94a3b8" }
+                      : sk === "cancelado"
+                        ? { label: "Cancelado", color: "#ef4444" }
+                        : { label: "Ativo", color: "#10b981" };
                 const zebraBg = idx % 2 === 1 ? (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
                 return (
                   <tr
@@ -385,6 +608,27 @@ export default function GestaoLinks() {
                         <Link2 size={11} style={{ flexShrink: 0, marginTop: 2 }} />
                         <span>{alias.utm_source}</span>
                       </span>
+                    </td>
+                    <td style={td}>
+                      {st == null ? (
+                        <span style={{ color: theme.textMuted, fontSize: 12 }}>—</span>
+                      ) : (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "3px 9px",
+                            borderRadius: 20,
+                            background: `${slInf.color}22`,
+                            color: slInf.color,
+                            border: `1px solid ${String(slInf.color)}44`,
+                          }}
+                        >
+                          {slInf.label}
+                        </span>
+                      )}
                     </td>
                     {operadoraFiltro === "todas" && operadorasList.length > 1 && (
                       <td style={td}>{operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—"}</td>
@@ -483,7 +727,10 @@ export default function GestaoLinks() {
 
             {tipoMapeamento === "influencer" ? (
               <>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>Influencer</label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>
+                  Influencer
+                  <CampoObrigatorioMark />
+                </label>
                 <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
                   style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
                   <option value="">Selecione o influencer...</option>
@@ -496,7 +743,10 @@ export default function GestaoLinks() {
               </>
             ) : (
               <>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>Campanha</label>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>
+                  Campanha
+                  <CampoObrigatorioMark />
+                </label>
                 <select value={campanhaSelecionada} onChange={(e) => setCampanhaSelecionada(e.target.value)}
                   style={{ width: "100%", padding: "10px 12px", background: theme.inputBg ?? theme.cardBg, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, color: theme.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
                   <option value="">Selecione a campanha...</option>

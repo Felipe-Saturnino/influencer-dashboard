@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -10,7 +10,10 @@ import { Pencil, AlertCircle } from "lucide-react";
 import { GiMegaphone } from "react-icons/gi";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 
 // ─── BRAND ────────────────────────────────────────────────────────────────────
 const BRAND = {
@@ -32,6 +35,8 @@ export default function Campanhas() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Campanha | null>(null);
+  type CampSortCol = "nome" | "operadora" | "classificacao" | "criada";
+  const [sortCamp, setSortCamp] = useState<{ col: CampSortCol; dir: SortDir }>({ col: "classificacao", dir: "desc" });
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -47,6 +52,34 @@ export default function Campanhas() {
     );
   }, []);
 
+  const campanhasOrdenadas = useMemo(() => {
+    const arr = [...campanhas];
+    const { col, dir } = sortCamp;
+    const nomeOp = (c: Campanha) =>
+      (operadoras.find((o) => o.slug === c.operadora_slug)?.nome ?? c.operadora_slug ?? "").toLowerCase();
+    arr.sort((a, b) => {
+      let c0 = 0;
+      switch (col) {
+        case "nome":
+          c0 = compareLocaleTexto(a.nome, b.nome, dir);
+          break;
+        case "operadora":
+          c0 = compareLocaleTexto(nomeOp(a), nomeOp(b), dir);
+          break;
+        case "classificacao":
+          c0 = compareAtivoBoolean(!!a.ativo, !!b.ativo, dir);
+          break;
+        case "criada":
+          c0 = compareLocaleTexto(a.created_at ?? "", b.created_at ?? "", dir);
+          break;
+        default:
+          c0 = 0;
+      }
+      if (c0 !== 0) return c0;
+      return compareLocaleTexto(a.nome, b.nome, "asc");
+    });
+    return arr;
+  }, [campanhas, sortCamp, operadoras]);
   const ativas = campanhas.filter((c) => c.ativo).length;
   const contadorLabel =
     campanhas.length === 1
@@ -213,15 +246,67 @@ export default function Campanhas() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th scope="col" style={th}>Nome</th>
-                <th scope="col" style={th}>Operadora</th>
-                <th scope="col" style={th}>Status</th>
-                <th scope="col" style={th}>Criada em</th>
+                <SortTableTh<CampSortCol>
+                  label="Nome"
+                  col="nome"
+                  sortCol={sortCamp.col}
+                  sortDir={sortCamp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCamp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<CampSortCol>
+                  label="Operadora"
+                  col="operadora"
+                  sortCol={sortCamp.col}
+                  sortDir={sortCamp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCamp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<CampSortCol>
+                  label="Status"
+                  col="classificacao"
+                  sortCol={sortCamp.col}
+                  sortDir={sortCamp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(col) =>
+                    setSortCamp((s) => ({
+                      col,
+                      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<CampSortCol>
+                  label="Criada em"
+                  col="criada"
+                  sortCol={sortCamp.col}
+                  sortDir={sortCamp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCamp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
                 {perm.canEditarOk && <th scope="col" style={th}>Ações</th>}
               </tr>
             </thead>
             <tbody>
-              {campanhas.map((c, idx) => {
+              {campanhasOrdenadas.map((c, idx) => {
                 const zebra = idx % 2 === 1 ? (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
                 return (
                 <tr
@@ -394,7 +479,10 @@ function ModalCampanha({ t, brand, editando, operadoras, onClose, onSalvo }: Mod
       />
 
         <div style={fieldStyle}>
-          <label style={labelStyle}>Nome</label>
+          <label style={labelStyle}>
+            Nome
+            <CampoObrigatorioMark />
+          </label>
           <input
             ref={nomeInputRef}
             style={inputStyle}

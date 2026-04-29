@@ -2,14 +2,16 @@ import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
+import { UserCog } from "lucide-react";
 import { GiShield, GiPerson, GiLockedChest, GiOfficeChair, GiBriefcase } from "react-icons/gi";
 import { BRAND, FONT_TITLE } from "./constants";
 import { AbaUsuarios } from "./AbaUsuarios";
 import { AbaPermissoes } from "./AbaPermissoes";
 import { AbaOperadora } from "./AbaOperadora";
 import { AbaGestores } from "./AbaGestores";
+import { AbaPrestadores } from "./AbaPrestadores";
 
-type AbaGestao = "usuarios" | "permissoes" | "operadora" | "gestores";
+type AbaGestao = "usuarios" | "permissoes" | "operadora" | "gestores" | "prestadores";
 
 export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
@@ -38,6 +40,7 @@ export default function GestaoUsuarios() {
     { key: "permissoes", label: "Permissões", icon: <GiLockedChest size={13} /> },
     { key: "operadora", label: "Operadora", icon: <GiOfficeChair size={13} /> },
     { key: "gestores", label: "Gestores", icon: <GiBriefcase size={13} /> },
+    { key: "prestadores", label: "Prestadores", icon: <UserCog size={13} aria-hidden /> },
   ];
 
   return (
@@ -121,6 +124,7 @@ export default function GestaoUsuarios() {
         {aba === "permissoes" && <AbaPermissoes t={t} />}
         {aba === "operadora" && <AbaOperadora t={t} />}
         {aba === "gestores" && <AbaGestores t={t} />}
+        {aba === "prestadores" && <AbaPrestadores t={t} />}
       </div>
     </div>
   );

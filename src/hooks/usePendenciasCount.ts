@@ -17,7 +17,7 @@ export function usePendenciasCount(modo: Modo): number {
 
   useEffect(() => {
     const role = user?.role ?? "";
-    if (modo === "gestor" && !["gestor", "admin", "executivo"].includes(role)) {
+    if (modo === "gestor" && !["gestor", "prestador", "admin", "executivo"].includes(role)) {
       setCount(0);
       return;
     }

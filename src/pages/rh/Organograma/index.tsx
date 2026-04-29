@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AlertCircle, CheckCircle2, Loader2, Network, Plus } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
@@ -11,7 +11,6 @@ import {
   contarGerenciasAtivasFilhasDeDiretoria,
   contarTimesAtivosFilhosDeGerencia,
   contarTimesAtivosSobDiretoria,
-  encontrarDiretoriaIdPorCtx,
   montarArvoreOrganograma,
 } from "../../../lib/rhOrganogramaTree";
 import { uploadDiretorFotoDiretoria } from "../../../lib/rhOrgDiretorFoto";
@@ -22,17 +21,16 @@ import type {
   RhOrgGerenciaComFilhos,
   RhOrgTime,
 } from "../../../types/rhOrganograma";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { OrgAccordion } from "../../../components/rh/organograma/OrgAccordion";
-import { OrgBlocoVagasPlaceholder } from "../../../components/rh/organograma/OrgBlocoVagasPlaceholder";
 import {
   OrgFiltroBarDiretorias,
   ORG_FILTRO_TODAS_DIRETORIAS,
   type FiltroDiretoriaOrganograma,
 } from "../../../components/rh/organograma/OrgFiltroBarDiretorias";
 import { OrgChartHierarquico } from "../../../components/rh/organograma/OrgChartHierarquico";
-import type { OrgTreeVisualAcaoCtx } from "../../../components/rh/organograma/OrgTreeVisual";
 import { OrgVisualizacaoDiretoriaUnica } from "../../../components/rh/organograma/OrgVisualizacaoDiretoriaUnica";
 import {
   proximoCentroCustosDiretoria,
@@ -72,10 +70,21 @@ async function deleteIdsInChunks(tabela: "rh_org_times" | "rh_org_gerencias", id
   return null;
 }
 
-function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
-  return brand.useBrand
-    ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-    : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
+function ctaGradient(_brand: ReturnType<typeof useDashboardBrand>): string {
+  return "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
+}
+
+function ModalFocusBody({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const tid = window.setTimeout(() => ref.current?.focus(), 0);
+    return () => window.clearTimeout(tid);
+  }, []);
+  return (
+    <div ref={ref} tabIndex={-1} style={{ outline: "none" }}>
+      {children}
+    </div>
+  );
 }
 
 export default function RhOrganogramaPage() {
@@ -83,12 +92,14 @@ export default function RhOrganogramaPage() {
   const brand = useDashboardBrand();
   const perm = usePermission("rh_organograma");
 
-  const [modo, setModo] = useState<ModoPagina>("gerenciar");
+  const [modo, setModo] = useState<ModoPagina>("visual");
   const [loading, setLoading] = useState(true);
   const [diretorias, setDiretorias] = useState<RhOrgDiretoria[]>([]);
   const [gerencias, setGerencias] = useState<RhOrgGerencia[]>([]);
   const [times, setTimes] = useState<RhOrgTime[]>([]);
-  const [funcionarios, setFuncionarios] = useState<{ id: string; nome: string }[]>([]);
+  const [funcionarios, setFuncionarios] = useState<
+    { id: string; nome: string; org_time_id: string | null; org_gerencia_id: string | null; org_diretoria_id: string | null }[]
+  >([]);
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -118,8 +129,6 @@ export default function RhOrganogramaPage() {
   const [draftGerId, setDraftGerId] = useState<string | null>(null);
   const [draftTimeId, setDraftTimeId] = useState<string | null>(null);
 
-  const [modalAcaoVisual, setModalAcaoVisual] = useState<null | { tipo: "vagas" | "estrutura"; ctx: OrgTreeVisualAcaoCtx }>(null);
-  const [modalVagasTodas, setModalVagasTodas] = useState(false);
   const [filtroDiretoriaId, setFiltroDiretoriaId] = useState<FiltroDiretoriaOrganograma>(ORG_FILTRO_TODAS_DIRETORIAS);
 
   const [diretorSobre, setDiretorSobre] = useState("");
@@ -137,7 +146,11 @@ export default function RhOrganogramaPage() {
       supabase.from("rh_org_diretorias").select("*").order("nome"),
       supabase.from("rh_org_gerencias").select("*").order("nome"),
       supabase.from("rh_org_times").select("*").order("nome"),
-      supabase.from("rh_funcionarios").select("id, nome").in("status", ["ativo", "indisponivel"]).order("nome"),
+      supabase
+        .from("rh_funcionarios")
+        .select("id, nome, org_time_id, org_gerencia_id, org_diretoria_id")
+        .in("status", ["ativo", "indisponivel"])
+        .order("nome"),
     ]);
     if (dr.error) setErroGlobal(dr.error.message);
     else if (gr.error) setErroGlobal(gr.error.message);
@@ -146,7 +159,15 @@ export default function RhOrganogramaPage() {
     setDiretorias((dr.data ?? []) as RhOrgDiretoria[]);
     setGerencias((gr.data ?? []) as RhOrgGerencia[]);
     setTimes((tr.data ?? []) as RhOrgTime[]);
-    setFuncionarios((fr.data ?? []) as { id: string; nome: string }[]);
+    setFuncionarios(
+      (fr.data ?? []) as {
+        id: string;
+        nome: string;
+        org_time_id: string | null;
+        org_gerencia_id: string | null;
+        org_diretoria_id: string | null;
+      }[],
+    );
     setLoading(false);
   }, []);
 
@@ -211,43 +232,73 @@ export default function RhOrganogramaPage() {
     return arvore.find((d) => d.id === filtroDiretoriaId) ?? null;
   }, [arvore, filtroDiretoriaId]);
 
-  const abrirVagasVisual = useCallback(
-    (_ctx: OrgTreeVisualAcaoCtx) => {
-      if (filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS && modo === "visual") {
-        setModalVagasTodas(true);
-        return;
-      }
-      setModalAcaoVisual({ tipo: "vagas", ctx: _ctx });
-    },
-    [filtroDiretoriaId, modo],
-  );
+  const countsMap = useMemo(() => {
+    const acc: Record<string, number> = {};
+    funcionarios.forEach((f) => {
+      const k = f.org_time_id;
+      if (k) acc[k] = (acc[k] ?? 0) + 1;
+    });
+    return acc;
+  }, [funcionarios]);
 
-  const abrirEstruturaVisual = useCallback(
-    (ctx: OrgTreeVisualAcaoCtx) => {
-      if (filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS && modo === "visual") {
-        const id = encontrarDiretoriaIdPorCtx(arvore, ctx);
-        if (id) setFiltroDiretoriaId(id);
-        return;
-      }
-      setModalAcaoVisual({ tipo: "estrutura", ctx });
-    },
-    [filtroDiretoriaId, modo, arvore],
-  );
+  const membrosPorTimeId = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    funcionarios.forEach((f) => {
+      if (!f.org_time_id) return;
+      if (!m[f.org_time_id]) m[f.org_time_id] = [];
+      m[f.org_time_id]!.push(f.nome);
+    });
+    Object.keys(m).forEach((k) => {
+      m[k]!.sort((a, b) => a.localeCompare(b, "pt-BR"));
+    });
+    return m;
+  }, [funcionarios]);
 
-  const [countsMap, setCountsMap] = useState<Record<string, number>>({});
+  /** Prestadores vinculados só à gerência (sem time), para lista quando a gerência não tem times. */
+  const membrosPorGerenciaId = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    funcionarios.forEach((f) => {
+      if (!f.org_gerencia_id || f.org_time_id) return;
+      if (!m[f.org_gerencia_id]) m[f.org_gerencia_id] = [];
+      m[f.org_gerencia_id]!.push(f.nome);
+    });
+    Object.keys(m).forEach((k) => {
+      m[k]!.sort((a, b) => a.localeCompare(b, "pt-BR"));
+    });
+    return m;
+  }, [funcionarios]);
 
-  useEffect(() => {
-    void (async () => {
-      const { data, error } = await supabase.from("rh_funcionarios").select("org_time_id").in("status", ["ativo", "indisponivel"]);
-      if (error) return;
-      const acc: Record<string, number> = {};
-      (data ?? []).forEach((r: { org_time_id: string | null }) => {
-        const k = r.org_time_id;
-        if (k) acc[k] = (acc[k] ?? 0) + 1;
+  /** Contagem distinta de pessoas (prestadores vinculados + líderes explícitos da diretoria). */
+  const prestadoresCountPorDiretoriaId = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const d of arvore) {
+      const ids = new Set<string>();
+      if (d.diretor_funcionario_id) ids.add(d.diretor_funcionario_id);
+      const timeIds = new Set<string>();
+      const gerIds = new Set<string>();
+      d.gerencias.forEach((g) => {
+        gerIds.add(g.id);
+        if (g.gerente_funcionario_id) ids.add(g.gerente_funcionario_id);
+        g.times.forEach((ti) => {
+          timeIds.add(ti.id);
+          if (ti.lider_funcionario_id) ids.add(ti.lider_funcionario_id);
+        });
       });
-      setCountsMap(acc);
-    })();
-  }, [funcionarios, times]);
+      funcionarios.forEach((f) => {
+        if (f.org_time_id && timeIds.has(f.org_time_id)) {
+          ids.add(f.id);
+          return;
+        }
+        if (f.org_gerencia_id && gerIds.has(f.org_gerencia_id)) {
+          ids.add(f.id);
+          return;
+        }
+        if (f.org_diretoria_id === d.id) ids.add(f.id);
+      });
+      out[d.id] = ids.size;
+    }
+    return out;
+  }, [arvore, funcionarios]);
 
   const nomeResponsavel = useCallback(
     (fid: string | null | undefined, livre: string | null | undefined) => {
@@ -294,12 +345,20 @@ export default function RhOrganogramaPage() {
     resize: "vertical",
   };
 
-  /** Asterisco vermelho para campos obrigatórios (sem texto “obrigatório/opcional” no rótulo). */
-  const req = (
-    <span style={{ color: "#e84025", fontWeight: 700, marginLeft: 3 }} aria-hidden="true">
-      *
-    </span>
-  );
+  const btnSecondaryStyle: CSSProperties = {
+    width: "auto",
+    minHeight: 44,
+    padding: "10px 16px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.cardBg,
+    color: t.text,
+    fontWeight: 600,
+    fontSize: 13,
+    fontFamily: FONT.body,
+    cursor: "pointer",
+    boxSizing: "border-box",
+  };
 
   const centroPreviewNovaDiretoria = useMemo(
     () => (mdDir === "new" ? proximoCentroCustosDiretoria(diretorias) : ""),
@@ -712,7 +771,7 @@ export default function RhOrganogramaPage() {
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
-        <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
+        <Loader2 className="app-lucide-spin" size={22} color="var(--brand-action, #7c3aed)" aria-hidden />
       </div>
     );
   }
@@ -816,9 +875,9 @@ export default function RhOrganogramaPage() {
       />
 
       <div
-        role={podeEditar ? "tabpanel" : undefined}
-        id={podeEditar ? `panel-org-${modo}` : undefined}
-        aria-labelledby={podeEditar ? `tab-org-${modo}` : undefined}
+        role={podeEditar ? "tabpanel" : "region"}
+        id={`panel-org-${modo}`}
+        {...(podeEditar ? { "aria-labelledby": `tab-org-${modo}` } : { "aria-label": "Organograma" })}
         style={{
           borderRadius: 14,
           border: `1px solid ${t.cardBorder}`,
@@ -829,7 +888,7 @@ export default function RhOrganogramaPage() {
       >
         {loading ? (
           <div style={{ textAlign: "center", padding: 40 }}>
-            <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
+            <Loader2 className="app-lucide-spin" size={22} color="var(--brand-action, #7c3aed)" aria-hidden />
           </div>
         ) : modo === "visual" ? (
           filtroDiretoriaId === ORG_FILTRO_TODAS_DIRETORIAS ? (
@@ -837,8 +896,8 @@ export default function RhOrganogramaPage() {
               arvore={arvore}
               t={{ ...t, isDark }}
               nomeResponsavel={nomeResponsavel}
-              onAbrirVagas={abrirVagasVisual}
-              onAbrirEstrutura={abrirEstruturaVisual}
+              prestadoresCountPorDiretoriaId={prestadoresCountPorDiretoriaId}
+              onSelectDiretoria={setFiltroDiretoriaId}
             />
           ) : dirSelecionada ? (
             <OrgVisualizacaoDiretoriaUnica
@@ -846,8 +905,8 @@ export default function RhOrganogramaPage() {
               t={{ ...t, isDark }}
               nomeResponsavel={nomeResponsavel}
               countsPorTimeId={countsMap}
-              onAbrirVagas={abrirVagasVisual}
-              onAbrirEstrutura={abrirEstruturaVisual}
+              membrosPorTimeId={membrosPorTimeId}
+              membrosPorGerenciaId={membrosPorGerenciaId}
             />
           ) : (
             <div style={{ padding: "32px 12px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -943,10 +1002,11 @@ export default function RhOrganogramaPage() {
               }
             }}
           />
+          <ModalFocusBody>
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-nome-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Nome da diretoria
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <input id="org-nome-dir" value={nomeDir} onChange={(e) => setNomeDir(e.target.value)} style={inputStyle} aria-required />
           </div>
@@ -972,7 +1032,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-fid-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Diretor(a)
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <select
               id="org-fid-dir"
@@ -989,7 +1049,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-foto-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Foto do Diretor(a)
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <input
               id="org-foto-dir"
@@ -1002,7 +1062,7 @@ export default function RhOrganogramaPage() {
               <div style={{ marginTop: 10 }}>
                 <img
                   src={fotoDiretorPreviewUrl ?? (typeof mdDir === "object" ? mdDir.diretor_foto_url! : "")}
-                  alt=""
+                  alt={fidDir.trim() ? `Foto de ${nomeResponsavel(fidDir, null)}` : "Pré-visualização da foto do diretor(a)"}
                   style={{ maxWidth: "100%", maxHeight: 160, borderRadius: 10, border: `1px solid ${t.cardBorder}` }}
                 />
               </div>
@@ -1011,7 +1071,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 16 }}>
             <label htmlFor="org-sobre-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Sobre o Diretor(a)
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <textarea
               id="org-sobre-dir"
@@ -1032,7 +1092,7 @@ export default function RhOrganogramaPage() {
                 setFotoDiretorFile(null);
                 setDiretorSobre("");
               }}
-              style={{ ...inputStyle, width: "auto", cursor: "pointer" }}
+              style={{ ...btnSecondaryStyle, cursor: salvandoDir ? "not-allowed" : "pointer", opacity: salvandoDir ? 0.65 : 1 }}
             >
               Cancelar
             </button>
@@ -1054,6 +1114,7 @@ export default function RhOrganogramaPage() {
               Salvar
             </button>
           </div>
+          </ModalFocusBody>
         </ModalBase>
       ) : null}
 
@@ -1078,10 +1139,11 @@ export default function RhOrganogramaPage() {
               }
             }}
           />
+          <ModalFocusBody>
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-nome-ger" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Nome da gerência
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <input id="org-nome-ger" value={nomeGer} onChange={(e) => setNomeGer(e.target.value)} style={inputStyle} aria-required />
           </div>
@@ -1105,7 +1167,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-sobre-ger" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Sobre a Gerência
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <textarea
               id="org-sobre-ger"
@@ -1140,7 +1202,7 @@ export default function RhOrganogramaPage() {
                 setDraftGerId(null);
                 setSobreGerencia("");
               }}
-              style={{ ...inputStyle, width: "auto", cursor: "pointer" }}
+              style={{ ...btnSecondaryStyle, cursor: salvandoGer ? "not-allowed" : "pointer", opacity: salvandoGer ? 0.65 : 1 }}
             >
               Cancelar
             </button>
@@ -1162,6 +1224,7 @@ export default function RhOrganogramaPage() {
               Salvar
             </button>
           </div>
+          </ModalFocusBody>
         </ModalBase>
       ) : null}
 
@@ -1184,10 +1247,11 @@ export default function RhOrganogramaPage() {
               }
             }}
           />
+          <ModalFocusBody>
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-nome-time" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Nome do time
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <input id="org-nome-time" value={nomeTime} onChange={(e) => setNomeTime(e.target.value)} style={inputStyle} aria-required />
           </div>
@@ -1231,7 +1295,7 @@ export default function RhOrganogramaPage() {
                 setMdTime(null);
                 setDraftTimeId(null);
               }}
-              style={{ ...inputStyle, width: "auto", cursor: "pointer" }}
+              style={{ ...btnSecondaryStyle, cursor: salvandoTime ? "not-allowed" : "pointer", opacity: salvandoTime ? 0.65 : 1 }}
             >
               Cancelar
             </button>
@@ -1253,35 +1317,21 @@ export default function RhOrganogramaPage() {
               Salvar
             </button>
           </div>
-        </ModalBase>
-      ) : null}
-
-      {modalVagasTodas ? (
-        <ModalBase maxWidth={560} onClose={() => setModalVagasTodas(false)}>
-          <ModalHeader title="Vagas" onClose={() => setModalVagasTodas(false)} />
-          <div style={{ maxHeight: "min(70vh, 520px)", overflowY: "auto", paddingRight: 4 }}>
-            {arvore.map((d) => (
-              <OrgBlocoVagasPlaceholder key={d.id} t={t} titulo="" subtitulo={`Diretoria: ${d.nome}`} />
-            ))}
-          </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-            <button type="button" onClick={() => setModalVagasTodas(false)} style={{ ...inputStyle, width: "auto", cursor: "pointer" }}>
-              Fechar
-            </button>
-          </div>
+          </ModalFocusBody>
         </ModalBase>
       ) : null}
 
       {modalOff ? (
         <ModalBase maxWidth={460} onClose={() => !desativando && setModalOff(null)}>
           <ModalHeader title={modalOff.titulo} onClose={() => !desativando && setModalOff(null)} />
+          <ModalFocusBody>
           <p style={{ color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>{modalOff.corpo}</p>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
             <button
               type="button"
               disabled={desativando}
               onClick={() => setModalOff(null)}
-              style={{ ...inputStyle, width: "auto", cursor: "pointer" }}
+              style={{ ...btnSecondaryStyle, cursor: desativando ? "not-allowed" : "pointer", opacity: desativando ? 0.65 : 1 }}
             >
               Cancelar
             </button>
@@ -1303,19 +1353,21 @@ export default function RhOrganogramaPage() {
               Desativar
             </button>
           </div>
+          </ModalFocusBody>
         </ModalBase>
       ) : null}
 
       {modalExcluir ? (
         <ModalBase maxWidth={480} onClose={() => !excluindo && setModalExcluir(null)}>
           <ModalHeader title={modalExcluir.titulo} onClose={() => !excluindo && setModalExcluir(null)} />
+          <ModalFocusBody>
           <p style={{ color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>{modalExcluir.corpo}</p>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
             <button
               type="button"
               disabled={excluindo}
               onClick={() => setModalExcluir(null)}
-              style={{ ...inputStyle, width: "auto", cursor: "pointer" }}
+              style={{ ...btnSecondaryStyle, cursor: excluindo ? "not-allowed" : "pointer", opacity: excluindo ? 0.65 : 1 }}
             >
               Cancelar
             </button>
@@ -1337,37 +1389,7 @@ export default function RhOrganogramaPage() {
               Excluir definitivamente
             </button>
           </div>
-        </ModalBase>
-      ) : null}
-
-      {modalAcaoVisual ? (
-        <ModalBase maxWidth={420} onClose={() => setModalAcaoVisual(null)}>
-          <ModalHeader
-            title={
-              modalAcaoVisual.tipo === "vagas"
-                ? "Vagas"
-                : "Estrutura"
-            }
-            onClose={() => setModalAcaoVisual(null)}
-          />
-          <p style={{ color: t.textMuted, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.55 }}>
-            Conteúdo em desenvolvimento. Você abriu{" "}
-            <strong style={{ color: t.text }}>{modalAcaoVisual.tipo === "vagas" ? "Vagas" : "Estrutura"}</strong> para{" "}
-            <strong style={{ color: t.text }}>
-              {modalAcaoVisual.ctx.nivel === "diretoria"
-                ? "Diretoria"
-                : modalAcaoVisual.ctx.nivel === "gerencia"
-                  ? "Gerência"
-                  : "Time"}{" "}
-              {modalAcaoVisual.ctx.nome}
-            </strong>
-            .
-          </p>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
-            <button type="button" onClick={() => setModalAcaoVisual(null)} style={{ ...inputStyle, width: "auto", cursor: "pointer" }}>
-              Fechar
-            </button>
-          </div>
+          </ModalFocusBody>
         </ModalBase>
       ) : null}
     </div>

@@ -7,6 +7,7 @@ import { centavosDeStringMoeda, formatarMoedaDigitos, somenteDigitos } from "../
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { hojeIsoDate, tipoVagaDeCheckboxes } from "../../../lib/rhVagasFormat";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
+import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
 import { SelectOrganogramaTimes } from "../SelectOrganogramaTimes";
 
@@ -98,9 +99,10 @@ export function ModalNovaVaga({
     outline: "none",
   };
 
-  const lbl = (htmlFor: string, text: string) => (
+  const lblReq = (htmlFor: string, text: string) => (
     <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
       {text}
+      <CampoObrigatorioMark />
     </label>
   );
 
@@ -176,13 +178,16 @@ export function ModalNovaVaga({
         ) : null}
 
         <div style={{ marginBottom: 14 }}>
-          {lbl("nv-titulo", "Título")}
+          {lblReq("nv-titulo", "Título")}
           <input id="nv-titulo" type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} style={inputStyle} autoComplete="off" />
           {fieldErr.titulo ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.titulo}</div> : null}
         </div>
 
         <fieldset style={{ border: "none", margin: "0 0 14px", padding: 0 }}>
-          <legend style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body, padding: 0 }}>Tipo de vaga</legend>
+          <legend style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body, padding: 0 }}>
+            Tipo de vaga
+            <CampoObrigatorioMark />
+          </legend>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, color: t.text, fontFamily: FONT.body }}>
               <input type="checkbox" checked={chkInterna} onChange={(e) => setChkInterna(e.target.checked)} aria-label="Vaga interna" />
@@ -197,7 +202,7 @@ export function ModalNovaVaga({
         </fieldset>
 
         <div style={{ marginBottom: 14 }}>
-          {lbl("nv-org", "Organograma")}
+          {lblReq("nv-org", "Organograma")}
           <SelectOrganogramaTimes
             id="nv-org"
             aria-label="Selecionar time no organograma"
@@ -212,7 +217,7 @@ export function ModalNovaVaga({
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          {lbl("nv-sal", "Remuneração mensal")}
+          {lblReq("nv-sal", "Remuneração mensal")}
           <input
             id="nv-sal"
             type="text"
@@ -228,24 +233,24 @@ export function ModalNovaVaga({
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
           <div>
-            {lbl("nv-abertura", "Data de abertura")}
+            {lblReq("nv-abertura", "Data de abertura")}
             <input id="nv-abertura" type="date" value={dataAbertura} onChange={(e) => setDataAbertura(e.target.value)} style={inputStyle} />
             {fieldErr.data_abertura ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_abertura}</div> : null}
           </div>
           <div>
-            {lbl("nv-fim", "Data fim das inscrições")}
+            {lblReq("nv-fim", "Data fim das inscrições")}
             <input id="nv-fim" type="date" value={dataFimInscricoes} onChange={(e) => setDataFimInscricoes(e.target.value)} style={inputStyle} />
             {fieldErr.data_fim ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_fim}</div> : null}
           </div>
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          {lbl("nv-desc", "Descrição")}
+          {lblReq("nv-desc", "Descrição")}
           <textarea id="nv-desc" value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} style={{ ...inputStyle, resize: "vertical" }} />
           {fieldErr.descricao ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.descricao}</div> : null}
         </div>
         <div style={{ marginBottom: 14 }}>
-          {lbl("nv-resp", "Responsabilidades")}
+          {lblReq("nv-resp", "Responsabilidades")}
           <textarea
             id="nv-resp"
             value={responsabilidades}
@@ -256,12 +261,12 @@ export function ModalNovaVaga({
           {fieldErr.responsabilidades ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.responsabilidades}</div> : null}
         </div>
         <div style={{ marginBottom: 14 }}>
-          {lbl("nv-req", "Requisitos")}
+          {lblReq("nv-req", "Requisitos")}
           <textarea id="nv-req" value={requisitos} onChange={(e) => setRequisitos(e.target.value)} rows={4} style={{ ...inputStyle, resize: "vertical" }} />
           {fieldErr.requisitos ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.requisitos}</div> : null}
         </div>
         <div style={{ marginBottom: 18 }}>
-          {lbl("nv-escala", "Escala de trabalho")}
+          {lblReq("nv-escala", "Escala de trabalho")}
           <textarea
             id="nv-escala"
             value={escalaTrabalho}

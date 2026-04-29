@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import type { Operadora } from "../../../types";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BRAND } from "./constants";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
@@ -34,7 +35,7 @@ export function ParesAgenciaUI({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <label style={labelStyle}>
           Pares Influencer × Operadora
-          <span style={{ color: BRAND.vermelho, marginLeft: 4 }}>*</span>
+          <CampoObrigatorioMark />
         </label>
         <button
           type="button"

@@ -6,7 +6,7 @@ import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
 import type { Theme } from "../../../constants/theme";
-import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, ROLES } from "./constants";
+import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS, ROLES } from "./constants";
 import { ModalUsuario } from "./ModalUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 
@@ -53,6 +53,13 @@ function formatarEscopo(scopes: UserScope[], ops: Operadora[]): string | null {
       return {
         texto: GESTOR_TIPOS.find((g) => g.slug === s.scope_ref)?.label ?? s.scope_ref,
         ordem: idx >= 0 ? idx : 40,
+      };
+    }
+    if (s.scope_type === "prestador_tipo") {
+      const idx = PRESTADOR_TIPOS.findIndex((p) => p.slug === s.scope_ref);
+      return {
+        texto: PRESTADOR_TIPOS.find((p) => p.slug === s.scope_ref)?.label ?? s.scope_ref,
+        ordem: idx >= 0 ? idx : 35,
       };
     }
     return { texto: "Influencer", ordem: 60 };

@@ -57,9 +57,11 @@ import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../
 import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
+import { buildLoginUrlComPrefillDadosCadastro } from "../../../lib/rhLoginDadosCadastroDeepLink";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
 import { SkeletonTableRow, SortTableTh, type SortDir } from "../../../components/dashboard";
 
@@ -2074,7 +2076,7 @@ export default function RhPrestadoresPage() {
     boxSizing: "border-box",
   };
 
-  const astReq = <span style={{ color: "#e84025", fontWeight: 700 }} aria-hidden> *</span>;
+  const astReq = <CampoObrigatorioMark />;
   const lbl = (htmlFor: string, text: string) => (
     <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
       {text}
@@ -3347,6 +3349,18 @@ export default function RhPrestadoresPage() {
                     aria-label="E-mail corporativo Spin"
                   />
                   {fieldErr.email_spin ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email_spin}</div> : null}
+                  {form.email_spin.trim() && validarEmail(form.email_spin.trim()) ? (
+                    <div style={{ marginTop: 8, fontSize: 12, fontFamily: FONT.body }}>
+                      <a
+                        href={buildLoginUrlComPrefillDadosCadastro(form.email_spin)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "var(--brand-primary, #7c3aed)" }}
+                      >
+                        Abrir tela de login com este e-mail (após entrar: Dados de cadastro)
+                      </a>
+                    </div>
+                  ) : null}
                 </div>
                 {podeVerDadosSensiveis ? (
                   isEstudioContratacao ? (
@@ -4105,6 +4119,18 @@ export default function RhPrestadoresPage() {
                     style={inputStyle}
                     aria-label="E-mail corporativo Spin"
                   />
+                  {acaoForm.email_spin.trim() && validarEmail(acaoForm.email_spin.trim()) ? (
+                    <div style={{ marginTop: 8, fontSize: 12, fontFamily: FONT.body }}>
+                      <a
+                        href={buildLoginUrlComPrefillDadosCadastro(acaoForm.email_spin)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "var(--brand-primary, #7c3aed)" }}
+                      >
+                        Abrir tela de login com este e-mail (após entrar: Dados de cadastro)
+                      </a>
+                    </div>
+                  ) : null}
                 </div>
                 {podeVerDadosSensiveis ? (
                   acaoForm.area_atuacao === "estudio" ? (

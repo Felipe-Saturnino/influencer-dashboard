@@ -9,6 +9,7 @@ import { supabase } from "../../../lib/supabase";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
 // Dívida técnica (B6): migrar para InfluencerDropdown na refatoração de filtros.
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
 import {
@@ -419,7 +420,10 @@ function ModalValidacao({
 
         {operadorasList.length > 0 && (
           <div style={row}>
-            <label style={labelStyle}>Operadora <span style={{ color: BRAND.vermelho }}>*</span></label>
+            <label style={labelStyle}>
+              Operadora
+              <CampoObrigatorioMark />
+            </label>
             <select
               value={operadoraSlug}
               onChange={e => setOperadoraSlug(e.target.value)}
@@ -455,7 +459,10 @@ function ModalValidacao({
             </div>
 
             <div style={row}>
-              <label style={labelStyle}>Duração</label>
+              <label style={labelStyle}>
+                Duração
+                <CampoObrigatorioMark />
+              </label>
               <div className="app-grid-2-tight" style={{ gap: 10 }}>
                 <div>
                   <input

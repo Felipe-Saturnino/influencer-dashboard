@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../../lib/supabase";
 import { validarBrandguide } from "../../../lib/brandguideValidation";
 import { useApp } from "../../../context/AppContext";
@@ -8,7 +8,10 @@ import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/th
 import { Operadora } from "../../../types";
 import { Pencil, AlertCircle, Upload, Check } from "lucide-react";
 import { GiShield } from "react-icons/gi";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
@@ -19,6 +22,8 @@ export default function GestaoOperadoras() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Operadora | null>(null);
+  type OpSortCol = "slug" | "nome" | "status" | "criada";
+  const [sortOp, setSortOp] = useState<{ col: OpSortCol; dir: SortDir }>({ col: "status", dir: "asc" });
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -29,6 +34,32 @@ export default function GestaoOperadoras() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  const operadorasOrdenadas = useMemo(() => {
+    const arr = [...operadoras];
+    const { col, dir } = sortOp;
+    arr.sort((a, b) => {
+      let c = 0;
+      switch (col) {
+        case "slug":
+          c = compareLocaleTexto(a.slug, b.slug, dir);
+          break;
+        case "nome":
+          c = compareLocaleTexto(a.nome ?? "", b.nome ?? "", dir);
+          break;
+        case "status":
+          c = compareAtivoBoolean(!!a.ativo, !!b.ativo, dir);
+          break;
+        case "criada":
+          c = compareLocaleTexto(a.criado_em ?? "", b.criado_em ?? "", dir);
+          break;
+        default:
+          c = 0;
+      }
+      if (c !== 0) return c;
+      return compareLocaleTexto(a.nome ?? "", b.nome ?? "", "asc");
+    });
+    return arr;
+  }, [operadoras, sortOp]);
   const ativas = operadoras.filter((o) => o.ativo).length;
   const contadorLabel = operadoras.length === 1 ? "1 operadora cadastrada" : `${operadoras.length} operadoras cadastradas`;
 
@@ -134,15 +165,67 @@ export default function GestaoOperadoras() {
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
             <thead>
               <tr>
-                <th style={th}>Slug</th>
-                <th style={th}>Nome</th>
-                <th style={th}>Status</th>
-                <th style={th}>Criada em</th>
+                <SortTableTh<OpSortCol>
+                  label="Slug"
+                  col="slug"
+                  sortCol={sortOp.col}
+                  sortDir={sortOp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortOp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<OpSortCol>
+                  label="Nome"
+                  col="nome"
+                  sortCol={sortOp.col}
+                  sortDir={sortOp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortOp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<OpSortCol>
+                  label="Status"
+                  col="status"
+                  sortCol={sortOp.col}
+                  sortDir={sortOp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(col) =>
+                    setSortOp((s) => ({
+                      col,
+                      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
+                <SortTableTh<OpSortCol>
+                  label="Criada em"
+                  col="criada"
+                  sortCol={sortOp.col}
+                  sortDir={sortOp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortOp((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
                 {perm.canEditarOk && <th style={th}>Ações</th>}
               </tr>
             </thead>
             <tbody>
-              {operadoras.map((op, idx) => (
+              {operadorasOrdenadas.map((op, idx) => (
                 <tr key={op.slug} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
                   <td style={td}>
                     <code style={{
@@ -376,7 +459,10 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
 
         {/* Campo Nome */}
         <div style={fieldStyle}>
-          <label style={labelStyle}>Nome</label>
+          <label style={labelStyle}>
+            Nome
+            <CampoObrigatorioMark />
+          </label>
           <input
             style={inputStyle}
             value={nome}

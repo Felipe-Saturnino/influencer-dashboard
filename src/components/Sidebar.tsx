@@ -38,7 +38,10 @@ export default function Sidebar({ activePage, onNavigate, isDrawer = false, draw
   const badgeCentral =
     user?.role === "operador"
       ? pendOperadora
-      : user?.role === "gestor" || user?.role === "admin" || user?.role === "executivo"
+      : user?.role === "gestor" ||
+          user?.role === "prestador" ||
+          user?.role === "admin" ||
+          user?.role === "executivo"
         ? pendGestor
         : 0;
   const logoUrl = operadoraBrand?.logo_url || LOGO_DEFAULT;

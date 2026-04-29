@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import type { Dealer } from "../../../types";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import type { SolicitacaoTipo } from "./solicitacoesUtils";
 
@@ -123,6 +124,7 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
       </div>
       <label htmlFor="sol-texto" style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
         Descrição
+        <CampoObrigatorioMark />
       </label>
       <textarea
         id="sol-texto"

@@ -1,0 +1,22 @@
+# Atualizações automáticas de dependências (PRs semanais).
+# Revise cada PR: rodar `npm ci`, `npm run lint`, `npm test`, `npm run build` antes de merge.
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 8
+    labels:
+      - "dependencies"
+      - "javascript"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "github-actions"

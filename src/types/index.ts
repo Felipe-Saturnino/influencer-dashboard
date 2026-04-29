@@ -1,5 +1,12 @@
 // ─── ROLES ───────────────────────────────────────────────────────────────────
-export type Role = "admin" | "gestor" | "executivo" | "influencer" | "operador" | "agencia"; // ✅ agencia adicionado
+export type Role =
+  | "admin"
+  | "gestor"
+  | "prestador"
+  | "executivo"
+  | "influencer"
+  | "operador"
+  | "agencia";
 
 // ─── USER ────────────────────────────────────────────────────────────────────
 export interface User {
@@ -41,7 +48,7 @@ export type PageKey =
   | "rh_dados_cadastro"
   | "rh_organograma"
   | "rh_vagas"
-  | "rh_escala_mes"
+  | "rh_gestao_escala"
   | "rh_staff"
   | "configuracoes"
   | "ajuda";
@@ -163,8 +170,14 @@ export interface RolePermission {
 // "influencer"   → scope_ref = UUID do influencer
 // "operadora"    → scope_ref = slug da operadora (ex: "blaze")
 // "agencia_par"  → scope_ref = "uuid_influencer:slug_operadora" (ex: "abc-123:blaze")
-// "gestor_tipo"  → scope_ref = operacoes (rótulo UI: Estúdio) | marketing | afiliados | geral | figurino | recursos_humanos
-export type ScopeType = "influencer" | "operadora" | "agencia_par" | "gestor_tipo";
+// "gestor_tipo"   → scope_ref = tipo de gestor (aba Gestores)
+// "prestador_tipo" → scope_ref = área de atuação do perfil Prestadores (aba Prestadores)
+export type ScopeType =
+  | "influencer"
+  | "operadora"
+  | "agencia_par"
+  | "gestor_tipo"
+  | "prestador_tipo";
 
 export type GestorTipoSlug =
   | "operacoes"
@@ -172,7 +185,16 @@ export type GestorTipoSlug =
   | "afiliados"
   | "geral"
   | "figurino"
-  | "recursos_humanos";
+  | "recursos_humanos"
+  | "shift_leader"
+  | "service_manager";
+
+/** Áreas de atuação do perfil Prestadores (mapeiam prestador_tipo_pages). */
+export type PrestadorTipoSlug =
+  | "customer_service"
+  | "game_presenter"
+  | "shuffler"
+  | "escritorio";
 
 export interface UserScope {
   id:          string;
@@ -241,6 +263,14 @@ export interface GestorTipoPage {
   gestor_tipo_slug:   GestorTipoSlug;
   page_key:           PageKey;
   created_at?:        string;
+}
+
+/** Páginas habilitadas por área de prestador (aba Prestadores) */
+export interface PrestadorTipoPage {
+  id:                    string;
+  prestador_tipo_slug:   PrestadorTipoSlug;
+  page_key:              PageKey;
+  created_at?:           string;
 }
 
 // ─── INFLUENCER OPERADORA ────────────────────────────────────────────────────

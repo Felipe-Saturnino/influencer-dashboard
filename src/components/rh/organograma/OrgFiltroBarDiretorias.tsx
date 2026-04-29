@@ -101,6 +101,9 @@ export function OrgFiltroBarDiretorias({
     visual: "Visualização",
     gerenciar: "Gerenciamento",
   };
+  const tabsVisiveis: ModoOrganograma[] = podeEditar ? tabIds : [];
+  const navPrevDisabled = todas || !idxValido || isPrimeiro || sorted.length === 0;
+  const navNextDisabled = todas || !idxValido || isUltimo || sorted.length === 0;
 
   return (
     <div style={{ marginBottom: 14 }}>
@@ -126,15 +129,16 @@ export function OrgFiltroBarDiretorias({
             <button
               type="button"
               aria-label="Diretoria anterior"
+              aria-disabled={navPrevDisabled}
               style={{
                 ...btnNavStyle,
-                opacity: todas || !idxValido || isPrimeiro || sorted.length === 0 ? 0.35 : 1,
-                cursor: todas || !idxValido || isPrimeiro || sorted.length === 0 ? "not-allowed" : "pointer",
+                opacity: navPrevDisabled ? 0.35 : 1,
+                cursor: navPrevDisabled ? "not-allowed" : "pointer",
               }}
               onClick={irAnterior}
-              disabled={todas || !idxValido || isPrimeiro || sorted.length === 0}
+              disabled={navPrevDisabled}
             >
-              <ChevronLeft size={14} aria-hidden />
+              <ChevronLeft size={14} strokeWidth={2} aria-hidden />
             </button>
 
             <span
@@ -157,15 +161,16 @@ export function OrgFiltroBarDiretorias({
             <button
               type="button"
               aria-label="Próxima diretoria"
+              aria-disabled={navNextDisabled}
               style={{
                 ...btnNavStyle,
-                opacity: todas || !idxValido || isUltimo || sorted.length === 0 ? 0.35 : 1,
-                cursor: todas || !idxValido || isUltimo || sorted.length === 0 ? "not-allowed" : "pointer",
+                opacity: navNextDisabled ? 0.35 : 1,
+                cursor: navNextDisabled ? "not-allowed" : "pointer",
               }}
               onClick={irProximo}
-              disabled={todas || !idxValido || isUltimo || sorted.length === 0}
+              disabled={navNextDisabled}
             >
-              <ChevronRight size={14} aria-hidden />
+              <ChevronRight size={14} strokeWidth={2} aria-hidden />
             </button>
           </div>
 
@@ -197,7 +202,7 @@ export function OrgFiltroBarDiretorias({
               transition: "all 0.15s",
             }}
           >
-            <Building2 size={15} aria-hidden />
+            <Building2 size={15} strokeWidth={2} aria-hidden />
             Todas as diretorias
           </button>
 
@@ -222,10 +227,29 @@ export function OrgFiltroBarDiretorias({
         {podeEditar ? (
           <div
             role="tablist"
-            aria-label="Modo do organograma"
-            style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
+            aria-label="Modo de visualização do organograma"
+            onKeyDown={(e) => {
+              if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+              if (tabsVisiveis.length < 2) return;
+              const el = e.target as HTMLElement;
+              if (el.getAttribute("role") !== "tab") return;
+              e.preventDefault();
+              const currentId = el.id;
+              const currentKey = tabsVisiveis.find((k) => `tab-org-${k}` === currentId);
+              if (!currentKey) return;
+              const idx = tabsVisiveis.indexOf(currentKey);
+              const next =
+                e.key === "ArrowRight"
+                  ? tabsVisiveis[(idx + 1) % tabsVisiveis.length]!
+                  : tabsVisiveis[(idx - 1 + tabsVisiveis.length) % tabsVisiveis.length]!;
+              setModo(next);
+              requestAnimationFrame(() => {
+                document.getElementById(`tab-org-${next}`)?.focus();
+              });
+            }}
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginTop: 12 }}
           >
-            {tabIds.map((key) => {
+            {tabsVisiveis.map((key) => {
               const ativo = modo === key;
               return (
                 <button
@@ -237,26 +261,6 @@ export function OrgFiltroBarDiretorias({
                   aria-selected={ativo}
                   aria-controls={`panel-org-${key}`}
                   onClick={() => setModo(key)}
-                  onKeyDown={(e) => {
-                    const tabs = tabIds;
-                    const current = tabs.indexOf(key);
-                    if (e.key === "ArrowRight") {
-                      e.preventDefault();
-                      const next = tabs[(current + 1) % tabs.length];
-                      setModo(next);
-                      requestAnimationFrame(() => {
-                        document.getElementById(`tab-org-${next}`)?.focus();
-                      });
-                    }
-                    if (e.key === "ArrowLeft") {
-                      e.preventDefault();
-                      const next = tabs[(current - 1 + tabs.length) % tabs.length];
-                      setModo(next);
-                      requestAnimationFrame(() => {
-                        document.getElementById(`tab-org-${next}`)?.focus();
-                      });
-                    }
-                  }}
                   style={{
                     padding: "10px 18px",
                     minHeight: 44,
@@ -277,7 +281,7 @@ export function OrgFiltroBarDiretorias({
                     gap: 8,
                   }}
                 >
-                  {key === "visual" ? <Network size={16} aria-hidden /> : <LayoutList size={16} aria-hidden />}
+                  {key === "visual" ? <Network size={16} strokeWidth={2} aria-hidden /> : <LayoutList size={16} strokeWidth={2} aria-hidden />}
                   {tabLabels[key]}
                 </button>
               );

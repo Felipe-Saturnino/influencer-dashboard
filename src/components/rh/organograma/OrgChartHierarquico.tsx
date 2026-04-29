@@ -1,10 +1,9 @@
 import { useMemo, useState, type CSSProperties } from "react";
-import { Search } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
 import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos } from "../../../types/rhOrganograma";
-import type { OrgTreeVisualAcaoCtx } from "./OrgTreeVisual";
 
 function normalizarBusca(s: string): string {
   return s
@@ -56,11 +55,18 @@ function filtrarArvoreOrganogramaVisual(
     .filter((x): x is RhOrgDiretoriaComFilhos => x !== null);
 }
 
-type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string; isDark: boolean };
+type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string; cardBg: string; isDark: boolean };
 
 function textoOuTraco(s: string): string {
   const x = s.trim();
   return x ? x : "—";
+}
+
+function iniciaisNome(nome: string): string {
+  const p = nome.trim().split(/\s+/).filter(Boolean);
+  if (p.length === 0) return "?";
+  if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
+  return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
 }
 
 function badgeInativo() {
@@ -82,19 +88,19 @@ function badgeInativo() {
   );
 }
 
-/** Nó executivo (CEO + diretorias + gerências), estilo organograma clássico em colunas. */
+/** Visão geral: grid de cards de diretoria (foto, diretor, contagens). */
 export function OrgChartHierarquico({
   arvore,
   t,
   nomeResponsavel,
-  onAbrirVagas,
-  onAbrirEstrutura,
+  prestadoresCountPorDiretoriaId,
+  onSelectDiretoria,
 }: {
   arvore: RhOrgDiretoriaComFilhos[];
   t: Theme;
   nomeResponsavel: (funcId: string | null | undefined, nomeLivre: string | null | undefined) => string;
-  onAbrirVagas: (ctx: OrgTreeVisualAcaoCtx) => void;
-  onAbrirEstrutura: (ctx: OrgTreeVisualAcaoCtx) => void;
+  prestadoresCountPorDiretoriaId: Record<string, number>;
+  onSelectDiretoria: (diretoriaId: string) => void;
 }) {
   const [busca, setBusca] = useState("");
   const arvoreFiltrada = useMemo(
@@ -102,78 +108,30 @@ export function OrgChartHierarquico({
     [arvore, busca, nomeResponsavel],
   );
 
-  const linhaConectora: CSSProperties = {
-    width: 2,
-    minHeight: 18,
-    background: `color-mix(in srgb, ${t.cardBorder} 85%, ${t.text} 15%)`,
-    borderRadius: 1,
-    flexShrink: 0,
-  };
-
-  const btnAcao: CSSProperties = {
-    padding: "8px 12px",
-    borderRadius: 10,
-    border: `1px solid rgba(255,255,255,0.35)`,
-    background: "rgba(255,255,255,0.12)",
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: 12,
-    fontWeight: 600,
-    fontFamily: FONT.body,
-  };
-
-  const cardCeo: CSSProperties = {
-    padding: "14px 28px",
-    borderRadius: 14,
-    background: "var(--brand-action, #7c3aed)",
-    color: "#fff",
-    fontFamily: FONT.body,
-    fontWeight: 800,
-    fontSize: 16,
-    letterSpacing: "0.04em",
-    textAlign: "center",
-    boxShadow: t.isDark ? "0 4px 14px rgba(0,0,0,0.35)" : "0 4px 14px color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)",
-    border: "1px solid color-mix(in srgb, #fff 22%, transparent)",
-  };
-
-  const cardDir = (inativo: boolean): CSSProperties => ({
-    padding: "12px 16px",
-    borderRadius: 12,
-    background: "var(--brand-action, #7c3aed)",
-    color: "#fff",
-    fontFamily: FONT.body,
-    minWidth: 160,
-    maxWidth: 280,
-    textAlign: "center",
-    opacity: inativo ? 0.75 : 1,
-    border: "1px solid color-mix(in srgb, #fff 20%, transparent)",
-    boxShadow: t.isDark ? "0 2px 10px rgba(0,0,0,0.25)" : "0 2px 10px color-mix(in srgb, var(--brand-action, #7c3aed) 28%, transparent)",
-  });
-
-  const cardGer = (inativo: boolean): CSSProperties => ({
-    padding: "10px 12px",
-    borderRadius: 10,
-    background: "color-mix(in srgb, var(--brand-contrast, #1e36f8) 88%, #000 12%)",
-    color: "#fff",
-    fontFamily: FONT.body,
-    minWidth: 120,
-    maxWidth: 200,
-    textAlign: "center",
-    fontSize: 13,
-    opacity: inativo ? 0.72 : 1,
-    border: "1px solid color-mix(in srgb, #fff 18%, transparent)",
-  });
-
   if (arvore.length === 0) {
     return (
       <div style={{ padding: "32px 16px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body, fontSize: 14 }}>
-        Sem diretorias cadastradas. Use o modo Gerenciamento para criar a primeira diretoria.
+        Sem dados para o período selecionado.
       </div>
     );
   }
 
   const buscaTrim = busca.trim();
   const semResultadosBusca = buscaTrim.length > 0 && arvoreFiltrada.length === 0;
+
+  const cardShell: CSSProperties = {
+    width: "100%",
+    minHeight: 44,
+    textAlign: "left",
+    padding: 0,
+    margin: 0,
+    border: "none",
+    cursor: "pointer",
+    borderRadius: 14,
+    background: "var(--brand-action-20, color-mix(in srgb, #7c3aed 20%, transparent))",
+    boxShadow: t.isDark ? "0 2px 10px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.06)",
+    fontFamily: FONT.body,
+  };
 
   return (
     <div style={{ fontFamily: FONT.body }}>
@@ -189,10 +147,10 @@ export function OrgChartHierarquico({
             letterSpacing: "0.02em",
           }}
         >
-          Organograma
+          Diretorias
         </h2>
         <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
-          Visão em colunas: CEO, diretorias, gerências e times.
+          Selecione uma diretoria para ver gerências, times e equipe.
         </p>
         <label htmlFor="org-hierarquia-busca" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
           Pesquisar por nome de funcionário, diretoria, gerência ou time
@@ -200,6 +158,7 @@ export function OrgChartHierarquico({
         <div style={{ position: "relative", maxWidth: 520, marginBottom: 20 }}>
           <Search
             size={16}
+            strokeWidth={2}
             aria-hidden
             style={{
               position: "absolute",
@@ -233,122 +192,133 @@ export function OrgChartHierarquico({
           />
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 0,
-            padding: "8px 0 24px",
-          }}
-        >
-          <div style={cardCeo} role="group" aria-label="Nível executivo">
-            CEO
-          </div>
-          <div style={{ ...linhaConectora, marginTop: 10, marginBottom: 10 }} aria-hidden />
-
-          {semResultadosBusca ? (
-            <div
-              role="status"
-              style={{
-                padding: "24px 16px",
-                textAlign: "center",
-                color: t.textMuted,
-                fontSize: 14,
-                maxWidth: 420,
-                lineHeight: 1.5,
-              }}
-            >
-              Nenhum resultado para a pesquisa. Tente outro termo ou limpe o campo para ver o organograma completo.
-            </div>
-          ) : (
+        {semResultadosBusca ? (
           <div
-            role="list"
+            role="status"
             style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "center",
-              alignItems: "flex-start",
-              gap: 28,
-              width: "100%",
+              padding: "24px 16px",
+              textAlign: "center",
+              color: t.textMuted,
+              fontSize: 14,
+              maxWidth: 420,
+              lineHeight: 1.5,
             }}
           >
+            Sem dados para o período selecionado.
+          </div>
+        ) : (
+          <ul className="app-org-dir-cards" aria-label="Lista de diretorias" style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {arvoreFiltrada.map((d) => {
               const diretor = nomeResponsavel(d.diretor_funcionario_id, d.diretor_nome_livre);
-              const ctxD: OrgTreeVisualAcaoCtx = { nivel: "diretoria", id: d.id, nome: d.nome };
+              const nPrest = prestadoresCountPorDiretoriaId[d.id] ?? 0;
+              const inativo = d.status === "inativo";
+              const altFoto = `Foto de ${diretor}`;
               return (
-                <div
-                  key={d.id}
-                  role="listitem"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 0,
-                    maxWidth: 340,
-                  }}
-                >
-                  <div style={{ ...linhaConectora, marginBottom: 10 }} aria-hidden />
-                  <div style={cardDir(d.status === "inativo")}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 6 }}>
-                      <span style={{ fontWeight: 800, fontSize: 14 }}>{d.nome}</span>
-                      {d.status === "inativo" ? badgeInativo() : null}
-                    </div>
-                    <p style={{ margin: "8px 0 0", fontSize: 12, fontWeight: 500, opacity: 0.95, lineHeight: 1.45 }}>
-                      {`Diretor(a): ${textoOuTraco(diretor)}\nCC ${d.centro_custos}`}
-                    </p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12, justifyContent: "center" }}>
-                      <button type="button" style={btnAcao} onClick={() => onAbrirVagas(ctxD)}>
-                        Vagas
-                      </button>
-                      <button type="button" style={btnAcao} onClick={() => onAbrirEstrutura(ctxD)}>
-                        Estrutura
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ ...linhaConectora, marginTop: 12, marginBottom: 10 }} aria-hidden />
-
+                <li key={d.id} className="app-org-dir-card-item" style={{ minWidth: 0, height: "100%" }}>
+                  <button
+                    type="button"
+                    className="app-org-dir-card-btn"
+                    aria-label={`Ver estrutura da diretoria ${d.nome}`}
+                    onClick={() => onSelectDiretoria(d.id)}
+                    style={cardShell}
+                  >
                   <div
+                    className="app-org-dir-card-bordered"
                     style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 10,
-                      justifyContent: "center",
-                      width: "100%",
+                      borderTop: "4px solid var(--brand-action, #7c3aed)",
+                      borderRadius: "14px 14px 0 0",
+                      borderLeft: "2px solid var(--brand-action, #7c3aed)",
+                      borderRight: "2px solid var(--brand-action, #7c3aed)",
+                      borderBottom: "2px solid var(--brand-action, #7c3aed)",
+                      padding: 16,
+                      color: "var(--brand-action, #7c3aed)",
                     }}
                   >
-                    {d.gerencias.length === 0 ? (
-                      <span style={{ fontSize: 12, color: t.textMuted }}>Nenhuma gerência.</span>
-                    ) : (
-                      d.gerencias.map((g: RhOrgGerenciaComFilhos) => {
-                        const lider = nomeLiderImediatoGerencia(d, g, nomeResponsavel);
-                        const ctxG: OrgTreeVisualAcaoCtx = { nivel: "gerencia", id: g.id, nome: g.nome };
-                        return (
-                          <div key={g.id} style={cardGer(g.status === "inativo")}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 6 }}>
-                              <span style={{ fontWeight: 700 }}>{g.nome}</span>
-                              {g.status === "inativo" ? badgeInativo() : null}
-                            </div>
-                            <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 500, opacity: 0.92, lineHeight: 1.4 }}>
-                              {`Líder: ${textoOuTraco(lider)}\nCC ${g.centro_custos}`}
-                            </p>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10, justifyContent: "center" }}>
-                              <button type="button" style={btnAcao} onClick={() => onAbrirEstrutura(ctxG)}>
-                                Estrutura
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
+                    <div className="app-org-dir-card-row">
+                      <div
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: "50%",
+                          overflow: "hidden",
+                          flexShrink: 0,
+                          border: "2px solid var(--brand-action, #7c3aed)",
+                          background: "var(--brand-action-20, color-mix(in srgb, #7c3aed 20%, transparent))",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {d.diretor_foto_url ? (
+                          <img src={d.diretor_foto_url} alt={altFoto} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <span aria-hidden="true" style={{ fontSize: 16, fontWeight: 800, fontFamily: FONT_TITLE, color: "var(--brand-action, #7c3aed)" }}>
+                            {iniciaisNome(diretor)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="app-org-dir-card-textcol">
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{d.nome}</span>
+                          {inativo ? badgeInativo() : null}
+                        </div>
+                        <p
+                          style={{
+                            margin: "6px 0 0",
+                            fontSize: 13,
+                            color: t.textMuted,
+                            fontFamily: FONT.body,
+                            lineHeight: 1.4,
+                            minHeight: "2.8em",
+                            maxHeight: "2.8em",
+                            overflow: "hidden",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          Diretor(a): {textoOuTraco(diretor)}
+                        </p>
+                        <div
+                          style={{
+                            marginTop: 10,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "var(--brand-action, #7c3aed)",
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              padding: "4px 10px",
+                              borderRadius: 8,
+                              border: "1px solid var(--brand-action-border, color-mix(in srgb, #7c3aed 35%, transparent))",
+                              background: "var(--brand-action-20, color-mix(in srgb, #7c3aed 20%, transparent))",
+                            }}
+                          >
+                            <Users size={14} strokeWidth={2} aria-hidden />
+                            {nPrest} prestador(es) na estrutura
+                          </span>
+                        </div>
+                        <p style={{ margin: 0, marginTop: "auto", paddingTop: 10, fontSize: 12, fontWeight: 700, color: "var(--brand-action, #7c3aed)" }}>
+                          Ver estrutura →
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                  </button>
+                </li>
               );
             })}
-          </div>
-          )}
-        </div>
+          </ul>
+        )}
       </section>
     </div>
   );

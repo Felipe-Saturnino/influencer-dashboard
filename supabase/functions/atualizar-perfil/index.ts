@@ -13,9 +13,10 @@ interface AtualizarPerfilRequest {
   scopeOperadoras?: string[]
   scopePares?: string[]
   scopeGestorTipos?: string[]
+  scopePrestadorTipos?: string[]
 }
 
-const ROLES_BLOQUEADOS = ['admin', 'gestor']
+const ROLES_BLOQUEADOS = ['admin', 'gestor', 'prestador']
 
 const GESTOR_TIPO_SLUGS = [
   'operacoes',
@@ -24,6 +25,15 @@ const GESTOR_TIPO_SLUGS = [
   'geral',
   'figurino',
   'recursos_humanos',
+  'shift_leader',
+  'service_manager',
+] as const
+
+const PRESTADOR_TIPO_SLUGS = [
+  'customer_service',
+  'game_presenter',
+  'shuffler',
+  'escritorio',
 ] as const
 
 const supabaseServiceOptions = {
@@ -194,13 +204,17 @@ serve(async (req) => {
     })
   }
 
-  const { userId, name, role, scopeInfluencers, scopeOperadoras, scopePares, scopeGestorTipos } = body
+  const { userId, name, role, scopeInfluencers, scopeOperadoras, scopePares, scopeGestorTipos, scopePrestadorTipos } =
+    body
   const toStrArr = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
   const scopeInfluencersArr = toStrArr(scopeInfluencers)
   const scopeOperadorasArr = toStrArr(scopeOperadoras)
   const scopeParesArr = toStrArr(scopePares)
   const scopeGestorTiposArr = toStrArr(scopeGestorTipos).filter((s) =>
     (GESTOR_TIPO_SLUGS as readonly string[]).includes(s)
+  )
+  const scopePrestadorTiposArr = toStrArr(scopePrestadorTipos).filter((s) =>
+    (PRESTADOR_TIPO_SLUGS as readonly string[]).includes(s)
   )
 
   if (!userId?.trim() || !name?.trim() || !role?.trim()) {
@@ -232,6 +246,12 @@ serve(async (req) => {
   }
   if (role === 'gestor' && scopeGestorTiposArr.length === 0) {
     return new Response(JSON.stringify({ error: 'Selecione pelo menos um tipo de gestor' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+  if (role === 'prestador' && scopePrestadorTiposArr.length === 0) {
+    return new Response(JSON.stringify({ error: 'Selecione pelo menos uma área de atuação' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
@@ -276,6 +296,21 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             error: `Erro ao salvar tipos de gestor: ${scopeErr.message}. Verifique a migration user_scopes (scope_type gestor_tipo).`,
+          }),
+          { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
+        )
+      }
+    } else if (role === 'prestador') {
+      const novasAreas = scopePrestadorTiposArr.map((scope_ref) => ({
+        user_id: userId,
+        scope_type: 'prestador_tipo',
+        scope_ref,
+      }))
+      const { error: scopeErr } = await supabase.from('user_scopes').insert(novasAreas)
+      if (scopeErr) {
+        return new Response(
+          JSON.stringify({
+            error: `Erro ao salvar áreas de prestador: ${scopeErr.message}. Verifique user_scopes (scope_type prestador_tipo).`,
           }),
           { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } },
         )

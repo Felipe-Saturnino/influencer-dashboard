@@ -11,8 +11,12 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { PageHeader } from "../../../components/PageHeader";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
+import type { RhFuncionario } from "../../../types/rhFuncionario";
 import type {
   RhFigurinoCondition,
   RhFigurinoEmprestimo,
@@ -135,6 +139,28 @@ export default function FigurinosPage() {
   const [busca, setBusca] = useState("");
   const [filtroCat, setFiltroCat] = useState<string>("todas");
   const [filtroTam, setFiltroTam] = useState<string>("todas");
+  type FigSortCol =
+    | "codigo"
+    | "operadora"
+    | "categoria"
+    | "tamanho"
+    | "data_aqui"
+    | "cond"
+    | "tipo_ret"
+    | "loaned_at"
+    | "borrower"
+    | "loaned_by"
+    | "motivo"
+    | "sent_at"
+    | "entered_by"
+    | "disc_motivo"
+    | "disc_at"
+    | "disc_by";
+  const [sortFig, setSortFig] = useState<{ col: FigSortCol; dir: SortDir }>({ col: "codigo", dir: "asc" });
+
+  useEffect(() => {
+    setSortFig({ col: "codigo", dir: "asc" });
+  }, [aba]);
 
   const [modalCadastro, setModalCadastro] = useState(false);
   const [modalScanner, setModalScanner] = useState(false);
@@ -250,9 +276,108 @@ export default function FigurinosPage() {
     });
   }, [pecasComFiltroTopo, aba, buscaNorm, empPorItem, operadoraNome]);
 
+  const pecasOrdenadas = useMemo(() => {
+    const arr = [...pecasFiltradas];
+    const { col, dir } = sortFig;
+    const borrowerKey = (p: RhFigurinoPeca) => {
+      const emp = empPorItem[p.id];
+      const emprestadoPara =
+        emp?.borrower_name != null || emp?.borrower_ref
+          ? `${emp?.borrower_name ?? ""}${emp?.borrower_ref ? ` (${emp.borrower_ref})` : ""}`.trim() || "—"
+          : "—";
+      return emprestadoPara;
+    };
+    arr.sort((a, b) => {
+      let c = 0;
+      switch (col) {
+        case "codigo":
+          c = compareLocaleTexto(a.code, b.code, dir);
+          break;
+        case "operadora":
+          c = compareLocaleTexto(
+            labelOperadorasPeca(a, operadoraNome).toLowerCase(),
+            labelOperadorasPeca(b, operadoraNome).toLowerCase(),
+            dir,
+          );
+          break;
+        case "categoria":
+          c = compareLocaleTexto(a.category, b.category, dir);
+          break;
+        case "tamanho":
+          c = compareLocaleTexto(a.size, b.size, dir);
+          break;
+        case "data_aqui":
+          c = compareLocaleTexto(a.purchase_date ?? "", b.purchase_date ?? "", dir);
+          break;
+        case "cond":
+          c = compareCondicaoPeca(a.condition, b.condition, dir);
+          break;
+        case "tipo_ret":
+          c = compareLocaleTexto(
+            labelTipoRetirada(empPorItem[a.id]?.withdrawal_type),
+            labelTipoRetirada(empPorItem[b.id]?.withdrawal_type),
+            dir,
+          );
+          break;
+        case "loaned_at":
+          c = compareLocaleTexto(empPorItem[a.id]?.loaned_at ?? "", empPorItem[b.id]?.loaned_at ?? "", dir);
+          break;
+        case "borrower":
+          c = compareLocaleTexto(borrowerKey(a), borrowerKey(b), dir);
+          break;
+        case "loaned_by":
+          c = compareLocaleTexto(empPorItem[a.id]?.loaned_by?.trim() ?? "", empPorItem[b.id]?.loaned_by?.trim() ?? "", dir);
+          break;
+        case "motivo":
+          c = compareLocaleTexto(a.maintenance_reason ?? "", b.maintenance_reason ?? "", dir);
+          break;
+        case "sent_at":
+          c = compareLocaleTexto(a.maintenance_entered_at ?? "", b.maintenance_entered_at ?? "", dir);
+          break;
+        case "entered_by":
+          c = compareLocaleTexto(a.maintenance_entered_by?.trim() ?? "", b.maintenance_entered_by?.trim() ?? "", dir);
+          break;
+        case "disc_motivo":
+          c = compareLocaleTexto(a.discard_reason ?? "", b.discard_reason ?? "", dir);
+          break;
+        case "disc_at":
+          c = compareLocaleTexto(a.discarded_at ?? "", b.discarded_at ?? "", dir);
+          break;
+        case "disc_by":
+          c = compareLocaleTexto(a.discarded_by?.trim() ?? "", b.discarded_by?.trim() ?? "", dir);
+          break;
+        default:
+          c = 0;
+      }
+      if (c !== 0) return c;
+      return compareLocaleTexto(a.code, b.code, "asc");
+    });
+    return arr;
+  }, [pecasFiltradas, sortFig, empPorItem, operadoraNome]);
+
   const pecasNaAbaComFiltroTopo = useMemo(
     () => pecasComFiltroTopo.filter((p) => p.status === aba),
     [pecasComFiltroTopo, aba],
+  );
+
+  const sortHeader = useCallback(
+    (label: string, col: FigSortCol) => (
+      <SortTableTh<FigSortCol>
+        label={label}
+        col={col}
+        sortCol={sortFig.col}
+        sortDir={sortFig.dir}
+        thStyle={getThStyle(t)}
+        align="left"
+        onSort={(c) =>
+          setSortFig((s) => ({
+            col: c,
+            dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+          }))
+        }
+      />
+    ),
+    [sortFig, t],
   );
 
   const abrirDetalhe = async (p: RhFigurinoPeca) => {
@@ -677,7 +802,9 @@ export default function FigurinosPage() {
           </div>
         ) : pecasFiltradas.length === 0 ? (
           <div style={{ padding: "36px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            {pecasNaAbaComFiltroTopo.length > 0 ? "Nenhuma peça corresponde à pesquisa nesta aba." : emptyMsgAba(aba)}
+            {pecasNaAbaComFiltroTopo.length > 0
+              ? "Nenhuma peça corresponde à pesquisa nesta aba."
+              : emptyMsgAba(aba)}
           </div>
         ) : (
           <div className="app-table-wrap">
@@ -696,24 +823,12 @@ export default function FigurinosPage() {
                 <tr>
                   {aba === "available" ? (
                     <>
-                      <th scope="col" style={getThStyle(t)}>
-                        Código
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Operadora
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Categoria
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Tamanho
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Data de aquisição
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Condição
-                      </th>
+                      {sortHeader("Código", "codigo")}
+                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Categoria", "categoria")}
+                      {sortHeader("Tamanho", "tamanho")}
+                      {sortHeader("Data de aquisição", "data_aqui")}
+                      {sortHeader("Classificação", "cond")}
                       <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                         Ações
                       </th>
@@ -721,33 +836,15 @@ export default function FigurinosPage() {
                   ) : null}
                   {aba === "borrowed" ? (
                     <>
-                      <th scope="col" style={getThStyle(t)}>
-                        Código
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Operadora
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Categoria
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Tamanho
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Condição
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Tipo de retirada
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Data de empréstimo
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Emprestado para
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Registrado por
-                      </th>
+                      {sortHeader("Código", "codigo")}
+                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Categoria", "categoria")}
+                      {sortHeader("Tamanho", "tamanho")}
+                      {sortHeader("Classificação", "cond")}
+                      {sortHeader("Tipo de retirada", "tipo_ret")}
+                      {sortHeader("Data de empréstimo", "loaned_at")}
+                      {sortHeader("Emprestado para", "borrower")}
+                      {sortHeader("Registrado por", "loaned_by")}
                       <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                         Ação
                       </th>
@@ -755,27 +852,13 @@ export default function FigurinosPage() {
                   ) : null}
                   {aba === "maintenance" ? (
                     <>
-                      <th scope="col" style={getThStyle(t)}>
-                        Código
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Operadora
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Categoria
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Tamanho
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Motivo
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Data de envio
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Registrado por
-                      </th>
+                      {sortHeader("Código", "codigo")}
+                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Categoria", "categoria")}
+                      {sortHeader("Tamanho", "tamanho")}
+                      {sortHeader("Motivo", "motivo")}
+                      {sortHeader("Data de envio", "sent_at")}
+                      {sortHeader("Registrado por", "entered_by")}
                       <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                         Ações
                       </th>
@@ -783,33 +866,19 @@ export default function FigurinosPage() {
                   ) : null}
                   {aba === "discarded" ? (
                     <>
-                      <th scope="col" style={getThStyle(t)}>
-                        Código
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Operadora
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Categoria
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Tamanho
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Motivo
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Data de descarte
-                      </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Registrado por
-                      </th>
+                      {sortHeader("Código", "codigo")}
+                      {sortHeader("Operadora", "operadora")}
+                      {sortHeader("Categoria", "categoria")}
+                      {sortHeader("Tamanho", "tamanho")}
+                      {sortHeader("Motivo", "disc_motivo")}
+                      {sortHeader("Data de descarte", "disc_at")}
+                      {sortHeader("Registrado por", "disc_by")}
                     </>
                   ) : null}
                 </tr>
               </thead>
               <tbody>
-                {pecasFiltradas.map((p, i) => {
+                {pecasOrdenadas.map((p, i) => {
                   const emp = empPorItem[p.id];
                   const zebra = { background: zebraStripe(i) };
                   const emprestadoPara =
@@ -1306,7 +1375,9 @@ function ModalCadastroPeca({
         </label>
         <fieldset style={{ border: "none", margin: 0, padding: 0 }}>
           <legend style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>
-            Operadoras * <span style={{ fontWeight: 400 }}>(pode marcar várias)</span>
+            Operadoras
+            <CampoObrigatorioMark />
+            <span style={{ fontWeight: 400 }}> (pode marcar várias)</span>
           </legend>
           <div
             style={{
@@ -1353,7 +1424,8 @@ function ModalCadastroPeca({
         </fieldset>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-            Categoria *
+            Categoria
+            <CampoObrigatorioMark />
             <select
               value={cat}
               onChange={(e) => setCat(e.target.value)}
@@ -1377,7 +1449,8 @@ function ModalCadastroPeca({
             </select>
           </label>
           <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-            Tamanho *
+            Tamanho
+            <CampoObrigatorioMark />
             <select
               value={tam}
               onChange={(e) => setTam(e.target.value)}
@@ -1402,7 +1475,9 @@ function ModalCadastroPeca({
           </label>
         </div>
         <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-          Data de entrada * <span style={{ fontWeight: 400, color: t.textMuted }}>(data de aquisição)</span>
+          Data de entrada
+          <CampoObrigatorioMark />
+          <span style={{ fontWeight: 400, color: t.textMuted }}> (data de aquisição)</span>
           <input
             type="date"
             required
@@ -1627,6 +1702,8 @@ function ModalScanner({
   );
 }
 
+type PrestadorRetiradaRow = Pick<RhFuncionario, "id" | "nome" | "setor" | "status">;
+
 function ModalRetirada({
   peca,
   resumoOperadoras,
@@ -1642,29 +1719,74 @@ function ModalRetirada({
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [nome, setNome] = useState("");
+  const [prestadores, setPrestadores] = useState<PrestadorRetiradaRow[]>([]);
+  const [loadingPrestadores, setLoadingPrestadores] = useState(true);
+  const [erroCargaPrestadores, setErroCargaPrestadores] = useState<string | null>(null);
+  const [buscaPrestador, setBuscaPrestador] = useState("");
+  const [prestadorSelecionadoId, setPrestadorSelecionadoId] = useState<string | null>(null);
   const [tipoRetirada, setTipoRetirada] = useState<RhWithdrawalType>("emprestar");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const buscaRef = useRef<HTMLInputElement>(null);
   const agoraIso = useMemo(() => new Date().toISOString(), []);
 
   useEffect(() => {
-    const id = window.setTimeout(() => inputRef.current?.focus(), 100);
+    let cancelado = false;
+    (async () => {
+      setLoadingPrestadores(true);
+      setErroCargaPrestadores(null);
+      const { data, error } = await supabase
+        .from("rh_funcionarios")
+        .select("id, nome, setor, status")
+        .in("status", ["ativo", "indisponivel"])
+        .order("nome", { ascending: true })
+        .limit(5000);
+      if (cancelado) return;
+      if (error) {
+        setErroCargaPrestadores(error.message);
+        setPrestadores([]);
+      } else {
+        setPrestadores((data ?? []) as PrestadorRetiradaRow[]);
+      }
+      setLoadingPrestadores(false);
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => buscaRef.current?.focus(), 100);
     return () => window.clearTimeout(id);
   }, []);
 
+  const prestadorSelecionado = useMemo(
+    () => (prestadorSelecionadoId ? prestadores.find((p) => p.id === prestadorSelecionadoId) : undefined),
+    [prestadores, prestadorSelecionadoId],
+  );
+
+  const prestadoresFiltrados = useMemo(() => {
+    const q = buscaPrestador.trim().toLowerCase();
+    if (!q) return prestadores;
+    return prestadores.filter((p) => {
+      const nome = (p.nome ?? "").toLowerCase();
+      const setor = (p.setor ?? "").toLowerCase();
+      return nome.includes(q) || setor.includes(q);
+    });
+  }, [prestadores, buscaPrestador]);
+
   const confirmar = async () => {
     setErr(null);
-    if (!nome.trim()) {
-      setErr("Informe o nome da pessoa responsável pela retirada.");
+    const row = prestadorSelecionado;
+    if (!row?.id || !(row.nome ?? "").trim()) {
+      setErr("Selecione um prestador na lista (cadastro da Gestão de Prestadores).");
       return;
     }
     setLoading(true);
     const { error } = await supabase.rpc("rh_figurino_registrar_emprestimo", {
       p_item_id: peca.id,
-      p_borrower_name: nome.trim(),
-      p_borrower_ref: "",
+      p_borrower_name: row.nome.trim(),
+      p_borrower_ref: row.id,
       p_withdrawal_type: tipoRetirada,
       p_actor: actor,
     });
@@ -1676,30 +1798,153 @@ function ModalRetirada({
     await onOk();
   };
 
+  const confirmarDesabilitado =
+    loading ||
+    loadingPrestadores ||
+    !prestadorSelecionadoId ||
+    !!erroCargaPrestadores ||
+    prestadores.length === 0;
+
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
       <ModalHeader title="Retirada" onClose={onClose} />
       <BlocoResumoPecaBasico peca={peca} operadorasTexto={resumoOperadoras} t={t} />
-      <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 10 }}>
-        Nome *
-        <input
-          ref={inputRef}
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          aria-required="true"
-          style={{
-            display: "block",
-            width: "100%",
-            marginTop: 6,
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg ?? t.cardBg,
-            color: t.text,
-            fontFamily: FONT.body,
-          }}
-        />
-      </label>
+      <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span>
+            Prestador <span style={{ color: "#e84025" }}>*</span>
+          </span>
+          {loadingPrestadores ? <Loader2 size={14} className="app-lucide-spin" style={{ color: t.textMuted }} aria-hidden /> : null}
+        </div>
+        <p style={{ margin: "0 0 8px", fontSize: 11, lineHeight: 1.45, opacity: 0.92 }}>
+          Mesma base da página Gestão de Prestadores (ativos e indisponíveis). Pesquise por nome ou setor e escolha na lista.
+        </p>
+        {erroCargaPrestadores ? (
+          <div role="alert" style={{ color: "#e84025", fontSize: 12, marginBottom: 8 }}>
+            Não foi possível carregar prestadores: {erroCargaPrestadores}
+          </div>
+        ) : null}
+        {!loadingPrestadores && !erroCargaPrestadores && prestadores.length === 0 ? (
+          <div style={{ color: t.textMuted, fontSize: 12, marginBottom: 8 }}>
+            Sem prestadores ativos ou indisponíveis cadastrados na Gestão de Prestadores.
+          </div>
+        ) : null}
+        {prestadorSelecionado ? (
+          <div
+            style={{
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg ?? t.cardBg,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <div style={{ color: t.text, fontSize: 13, fontWeight: 600 }}>{prestadorSelecionado.nome}</div>
+            <div style={{ color: t.textMuted, fontSize: 11 }}>
+              {(prestadorSelecionado.setor ?? "").trim() || "—"}
+              {" · "}
+              {prestadorSelecionado.status === "indisponivel" ? "Indisponível" : "Ativo"}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPrestadorSelecionadoId(null);
+                setBuscaPrestador("");
+                window.setTimeout(() => buscaRef.current?.focus(), 50);
+              }}
+              style={{
+                alignSelf: "flex-start",
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: `1px solid ${t.cardBorder}`,
+                background: "transparent",
+                color: t.text,
+                fontSize: 12,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Trocar prestador
+            </button>
+          </div>
+        ) : (
+          <>
+            <input
+              ref={buscaRef}
+              type="search"
+              value={buscaPrestador}
+              onChange={(e) => setBuscaPrestador(e.target.value)}
+              disabled={loadingPrestadores || !!erroCargaPrestadores || prestadores.length === 0}
+              placeholder="Digite para filtrar…"
+              aria-label="Filtrar prestadores por nome ou setor"
+              aria-required="true"
+              autoComplete="off"
+              style={{
+                display: "block",
+                width: "100%",
+                marginBottom: 8,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontFamily: FONT.body,
+              }}
+            />
+            <div
+              role="listbox"
+              aria-label="Prestadores da Gestão de Prestadores"
+              style={{
+                maxHeight: 200,
+                overflowY: "auto",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+              }}
+            >
+              {prestadoresFiltrados.length === 0 ? (
+                <div style={{ padding: 12, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                  Nenhum resultado para a pesquisa.
+                </div>
+              ) : (
+                prestadoresFiltrados.map((p, i) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="option"
+                    aria-selected={prestadorSelecionadoId === p.id}
+                    onClick={() => {
+                      setPrestadorSelecionadoId(p.id);
+                      setBuscaPrestador("");
+                    }}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      border: "none",
+                      borderBottom:
+                        i === prestadoresFiltrados.length - 1 ? "none" : `1px solid ${t.cardBorder}`,
+                      background: "transparent",
+                      cursor: "pointer",
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <span style={{ display: "block", color: t.text, fontSize: 13, fontWeight: 600 }}>{p.nome}</span>
+                    <span style={{ display: "block", color: t.textMuted, fontSize: 11, marginTop: 2 }}>
+                      {(p.setor ?? "").trim() || "—"}
+                      {p.status === "indisponivel" ? " · Indisponível" : ""}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </div>
       <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 10 }}>
         Tipo de retirada *
         <select
@@ -1763,7 +2008,7 @@ function ModalRetirada({
         </button>
         <button
           type="button"
-          disabled={loading}
+          disabled={confirmarDesabilitado}
           onClick={() => void confirmar()}
           style={{
             flex: 1,
@@ -1774,8 +2019,8 @@ function ModalRetirada({
             color: "#fff",
             fontWeight: 700,
             fontFamily: FONT.body,
-            cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading ? 0.8 : 1,
+            cursor: confirmarDesabilitado ? "not-allowed" : "pointer",
+            opacity: confirmarDesabilitado ? 0.55 : 1,
           }}
         >
           {loading ? "Salvando…" : "Confirmar Retirada"}
