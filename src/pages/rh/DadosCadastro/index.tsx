@@ -633,6 +633,14 @@ export default function RhDadosCadastroPage() {
 
   const isPj = form.tipo_contrato === "PJ";
   const salarioFmt = fmtBRL(numeroDeCentavosStr(form.salarioCentavos));
+  const areaEstudio = row.area_atuacao === "estudio";
+  const remuneracaoTrabalhoLabel = areaEstudio ? "Remuneração por hora" : "Remuneração mensal";
+  const rhCent = Number(row.remuneracao_hora_centavos ?? 0);
+  const remuneracaoTrabalhoValor = areaEstudio
+    ? rhCent > 0
+      ? fmtBRL(rhCent / 100)
+      : "—"
+    : salarioFmt;
 
   return (
     <div className="app-page-shell app-page-shell--pb64">
@@ -720,11 +728,11 @@ export default function RhDadosCadastroPage() {
                 ["Nível", form.nivel],
                 ["Tipo de contrato", TIPOS_CONTRATO_LABEL[form.tipo_contrato]],
                 ["E-mail Spin", form.email_spin?.trim() || "—"],
-                ["Remuneração mensal", salarioFmt],
+                [remuneracaoTrabalhoLabel, remuneracaoTrabalhoValor],
                 ["Data de início", form.data_inicio ? form.data_inicio.slice(0, 10).split("-").reverse().join("/") : "—"],
                 ["Escala", form.escala],
                 ["Turno", turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"],
-              ] as const
+              ] as [string, string][]
             ).map(([k, v]) => (
               <div key={k} style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>{k}</div>
