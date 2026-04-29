@@ -36,6 +36,11 @@ const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
   { value: "dia", label: "Dia" },
 ];
 
+/** Carrossel de período: mês inicial ao abrir a página (1 de abril de 2026). */
+function dataInicialCarrosselCalendarioRh(): Date {
+  return new Date(2026, 3, 1);
+}
+
 function getWeekDays(date: Date): Date[] {
   const day = date.getDay();
   const start = new Date(date);
@@ -210,7 +215,7 @@ export default function RhCalendarioPage() {
   const perm = usePermission("rh_calendario");
 
   const [view, setView] = useState<ViewMode>("mes");
-  const [current, setCurrent] = useState(() => new Date());
+  const [current, setCurrent] = useState(() => dataInicialCarrosselCalendarioRh());
 
   const [times, setTimes] = useState<StaffTimeRow[]>([]);
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);

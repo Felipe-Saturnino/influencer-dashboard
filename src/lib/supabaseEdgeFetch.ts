@@ -5,7 +5,12 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 const GET_SESSION_MS = 20_000;
 const READ_BODY_MS = 45_000;
 
-const PROXY_FUNCTIONS = new Set(["criar-usuario", "atualizar-perfil", "admin-usuario-acao"]);
+const PROXY_FUNCTIONS = new Set([
+  "criar-usuario",
+  "atualizar-perfil",
+  "admin-usuario-acao",
+  "sync-rh-prestador-auth-user",
+]);
 
 /** Sinal interno: proxy não serviu; tentar URL direta do Supabase. */
 class TryDirectInstead extends Error {

@@ -1,6 +1,7 @@
 # Configuração do Supabase (projeto local)
-# Para deploy via CLI: supabase functions deploy criar-usuario
-# Para deploy: supabase functions deploy atualizar-perfil
+# Deploy exemplos: supabase functions deploy criar-usuario
+#                   supabase functions deploy atualizar-perfil
+#                   supabase functions deploy sync-rh-prestador-auth-user
 
 [functions.criar-usuario]
 verify_jwt = false
@@ -17,6 +18,10 @@ verify_jwt = false
 [functions.criar-usuario-scout]
 verify_jwt = false
 # Cria influencer a partir do Scout; usa service_role internamente
+
+[functions.sync-rh-prestador-auth-user]
+verify_jwt = false
+# Sincroniza usuário prestador (Auth + profile + user_scopes) a partir de rh_funcionarios; permissão rh_funcionarios no corpo
 
 [functions.sync-metricas-cda]
 verify_jwt = false

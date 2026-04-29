@@ -57,7 +57,7 @@ import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../
 import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
-import { buildLoginUrlComPrefillDadosCadastro } from "../../../lib/rhLoginDadosCadastroDeepLink";
+import { syncUsuarioPrestadorAposSalvarRh } from "../../../lib/rhPrestadorUsuarioSync";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
@@ -1593,6 +1593,14 @@ export default function RhPrestadoresPage() {
   const montarPayload = (statusPrestador: RhFuncionario["status"]) =>
     buildRhFuncionarioPayloadFromState(form, statusPrestador, podeVerDadosSensiveis, modalForm === "novo");
 
+  const dispararSyncUsuarioPrestadorSeEmailSpin = (row: RhFuncionario) => {
+    const em = (row.email_spin ?? "").trim().toLowerCase();
+    if (!em || !validarEmail(em)) return;
+    void syncUsuarioPrestadorAposSalvarRh(row.id).catch((e) => {
+      console.warn("[sync-rh-prestador-auth-user]", e);
+    });
+  };
+
   const salvar = async (opts?: { outro?: boolean }) => {
     if (modalForm === "ver") return;
     setAlertaValidacaoModal(null);
@@ -1631,6 +1639,7 @@ export default function RhPrestadoresPage() {
         return;
       }
       if (criado) await syncGamePresenterDealerFromRhFuncionario(criado as RhFuncionario);
+      if (criado) dispararSyncUsuarioPrestadorSeEmailSpin(criado as RhFuncionario);
       setSucessoMsg("Funcionário cadastrado.");
       await carregar();
       if (cadastrarOutro) {
@@ -1675,6 +1684,7 @@ export default function RhPrestadoresPage() {
         return;
       }
       if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
+      if (atualizadoRh) dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario);
       setSucessoMsg("Dados atualizados.");
       setModalForm("fechado");
       setAbaModal("pessoais");
@@ -1998,6 +2008,9 @@ export default function RhPrestadoresPage() {
           return;
         }
       }
+      void syncUsuarioPrestadorAposSalvarRh(fid).catch((e) => {
+        console.warn("[sync-rh-prestador-auth-user]", e);
+      });
       setSucessoMsg("Ação registrada.");
       fecharModalRegistrarAcao();
       await carregar();
@@ -3349,18 +3362,6 @@ export default function RhPrestadoresPage() {
                     aria-label="E-mail corporativo Spin"
                   />
                   {fieldErr.email_spin ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.email_spin}</div> : null}
-                  {form.email_spin.trim() && validarEmail(form.email_spin.trim()) ? (
-                    <div style={{ marginTop: 8, fontSize: 12, fontFamily: FONT.body }}>
-                      <a
-                        href={buildLoginUrlComPrefillDadosCadastro(form.email_spin)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "var(--brand-primary, #7c3aed)" }}
-                      >
-                        Abrir tela de login com este e-mail (após entrar: Dados de cadastro)
-                      </a>
-                    </div>
-                  ) : null}
                 </div>
                 {podeVerDadosSensiveis ? (
                   isEstudioContratacao ? (
@@ -4119,18 +4120,6 @@ export default function RhPrestadoresPage() {
                     style={inputStyle}
                     aria-label="E-mail corporativo Spin"
                   />
-                  {acaoForm.email_spin.trim() && validarEmail(acaoForm.email_spin.trim()) ? (
-                    <div style={{ marginTop: 8, fontSize: 12, fontFamily: FONT.body }}>
-                      <a
-                        href={buildLoginUrlComPrefillDadosCadastro(acaoForm.email_spin)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "var(--brand-primary, #7c3aed)" }}
-                      >
-                        Abrir tela de login com este e-mail (após entrar: Dados de cadastro)
-                      </a>
-                    </div>
-                  ) : null}
                 </div>
                 {podeVerDadosSensiveis ? (
                   acaoForm.area_atuacao === "estudio" ? (
