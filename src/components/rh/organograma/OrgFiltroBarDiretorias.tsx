@@ -101,7 +101,7 @@ export function OrgFiltroBarDiretorias({
     visual: "Visualização",
     gerenciar: "Gerenciamento",
   };
-  const tabsVisiveis: ModoOrganograma[] = podeEditar ? tabIds : ["visual"];
+  const tabsVisiveis: ModoOrganograma[] = podeEditar ? tabIds : [];
   const navPrevDisabled = todas || !idxValido || isPrimeiro || sorted.length === 0;
   const navNextDisabled = todas || !idxValido || isUltimo || sorted.length === 0;
 
@@ -122,7 +122,7 @@ export function OrgFiltroBarDiretorias({
             justifyContent: "center",
             gap: 10,
             flexWrap: "wrap",
-            marginBottom: 12,
+            marginBottom: podeEditar ? 12 : 0,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
@@ -224,70 +224,70 @@ export function OrgFiltroBarDiretorias({
           ) : null}
         </div>
 
-        <div
-          role="tablist"
-          aria-label="Modo de visualização do organograma"
-          onKeyDown={(e) => {
-            if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-            if (tabsVisiveis.length < 2) return;
-            const el = e.target as HTMLElement;
-            if (el.getAttribute("role") !== "tab") return;
-            e.preventDefault();
-            const currentId = el.id;
-            const currentKey = tabsVisiveis.find((k) => `tab-org-${k}` === currentId);
-            if (!currentKey) return;
-            const idx = tabsVisiveis.indexOf(currentKey);
-            const next =
-              e.key === "ArrowRight"
-                ? tabsVisiveis[(idx + 1) % tabsVisiveis.length]!
-                : tabsVisiveis[(idx - 1 + tabsVisiveis.length) % tabsVisiveis.length]!;
-            setModo(next);
-            requestAnimationFrame(() => {
-              document.getElementById(`tab-org-${next}`)?.focus();
-            });
-          }}
-          style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginTop: 12 }}
-        >
-          {tabsVisiveis.map((key) => {
-            const ativo = podeEditar ? modo === key : key === "visual";
-            return (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                id={`tab-org-${key}`}
-                tabIndex={ativo ? 0 : -1}
-                aria-selected={ativo}
-                aria-controls={`panel-org-${key}`}
-                onClick={() => {
-                  if (podeEditar) setModo(key);
-                }}
-                style={{
-                  padding: "10px 18px",
-                  minHeight: 44,
-                  borderRadius: 10,
-                  border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                  background: ativo
-                    ? brand.useBrand
-                      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                      : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                    : (t.inputBg ?? t.cardBg ?? "transparent"),
-                  color: ativo ? brand.accent : t.textMuted,
-                  fontWeight: ativo ? 700 : 500,
-                  fontSize: 13,
-                  fontFamily: FONT.body,
-                  cursor: podeEditar ? "pointer" : "default",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                {key === "visual" ? <Network size={16} strokeWidth={2} aria-hidden /> : <LayoutList size={16} strokeWidth={2} aria-hidden />}
-                {tabLabels[key]}
-              </button>
-            );
-          })}
-        </div>
+        {podeEditar ? (
+          <div
+            role="tablist"
+            aria-label="Modo de visualização do organograma"
+            onKeyDown={(e) => {
+              if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+              if (tabsVisiveis.length < 2) return;
+              const el = e.target as HTMLElement;
+              if (el.getAttribute("role") !== "tab") return;
+              e.preventDefault();
+              const currentId = el.id;
+              const currentKey = tabsVisiveis.find((k) => `tab-org-${k}` === currentId);
+              if (!currentKey) return;
+              const idx = tabsVisiveis.indexOf(currentKey);
+              const next =
+                e.key === "ArrowRight"
+                  ? tabsVisiveis[(idx + 1) % tabsVisiveis.length]!
+                  : tabsVisiveis[(idx - 1 + tabsVisiveis.length) % tabsVisiveis.length]!;
+              setModo(next);
+              requestAnimationFrame(() => {
+                document.getElementById(`tab-org-${next}`)?.focus();
+              });
+            }}
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginTop: 12 }}
+          >
+            {tabsVisiveis.map((key) => {
+              const ativo = modo === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  id={`tab-org-${key}`}
+                  tabIndex={ativo ? 0 : -1}
+                  aria-selected={ativo}
+                  aria-controls={`panel-org-${key}`}
+                  onClick={() => setModo(key)}
+                  style={{
+                    padding: "10px 18px",
+                    minHeight: 44,
+                    borderRadius: 10,
+                    border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                    background: ativo
+                      ? brand.useBrand
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                        : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                      : (t.inputBg ?? t.cardBg ?? "transparent"),
+                    color: ativo ? brand.accent : t.textMuted,
+                    fontWeight: ativo ? 700 : 500,
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  {key === "visual" ? <Network size={16} strokeWidth={2} aria-hidden /> : <LayoutList size={16} strokeWidth={2} aria-hidden />}
+                  {tabLabels[key]}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

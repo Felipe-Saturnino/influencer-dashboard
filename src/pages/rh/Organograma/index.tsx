@@ -881,9 +881,9 @@ export default function RhOrganogramaPage() {
       />
 
       <div
-        role="tabpanel"
+        role={podeEditar ? "tabpanel" : "region"}
         id={`panel-org-${modo}`}
-        aria-labelledby={`tab-org-${modo}`}
+        {...(podeEditar ? { "aria-labelledby": `tab-org-${modo}` } : { "aria-label": "Organograma" })}
         style={{
           borderRadius: 14,
           border: `1px solid ${t.cardBorder}`,
