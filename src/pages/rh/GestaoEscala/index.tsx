@@ -198,7 +198,7 @@ function contarCelulasComSigla(
   );
 }
 
-/** Consolidado Customer Service: pessoas com turno «Horário Comercial» (5x2) em célula «Comercial». */
+/** Consolidado Customer Service: pessoas com turno Comercial (5x2) em célula «Comercial». */
 function contarHorarioComercialPorDia(
   linhas: LinhaColaborador[],
   dias: DiaMes[],
@@ -1563,11 +1563,7 @@ export default function RhGestaoEscalaPage() {
                           )}
                           title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
                         >
-                          {areaCustomerService && row.turnoStaffNome === TURNO_ESCALA_5x2
-                            ? row.escalaCadastro !== "—"
-                              ? row.escalaCadastro
-                              : "Contrato"
-                            : row.turnoStaffNome || "—"}
+                          {row.turnoStaffNome || "—"}
                         </td>
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);

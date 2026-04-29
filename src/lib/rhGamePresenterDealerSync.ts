@@ -25,7 +25,7 @@ export function staffTurnoTextoParaDealerTurno(raw: string | null | undefined): 
   if (n.startsWith("manh")) return "manha";
   if (n.startsWith("tarde")) return "tarde";
   if (n.startsWith("noite")) return "noite";
-  if (collapsed.includes("horario comercial")) return "tarde";
+  if (collapsed === "comercial" || collapsed.includes("horario comercial")) return "tarde";
   return "noite";
 }
 

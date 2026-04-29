@@ -4,7 +4,7 @@
  * Se existirem células salvas do mês anterior, infere K a partir delas para alinhar Maio a Abril, etc.
  */
 
-import { normalizarEscalaCadastro } from "./rhEscalaTurnos";
+import { normalizarEscalaCadastro, turnoStaffEhComercial5x2 } from "./rhEscalaTurnos";
 
 export type DiaMesLite = {
   iso: string;
@@ -169,7 +169,7 @@ export function gerarCelulasSugestaoCustomerService(
   for (const row of linhasOrdenadas) {
     const esc = normalizarEscalaCadastro(row.escalaCadastro);
     const sig = row.siglaTurnoStaff.trim() as "" | "MRN" | "AFT" | "NGT";
-    const eh5x2 = esc === "5x2" || row.turnoStaffNome.trim() === "Horário Comercial";
+    const eh5x2 = esc === "5x2" || turnoStaffEhComercial5x2(row.turnoStaffNome);
 
     if (eh5x2) {
       for (const dia of dias) {
