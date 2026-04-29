@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { CalendarRange, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -8,6 +8,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
+import SectionTitle from "../../../components/dashboard/SectionTitle";
 import {
   escalaPrestadorTemTurnosOperacionais,
   staffTurnoCoerenteComEscala,
@@ -376,7 +377,7 @@ function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
 }
 
 export default function RhGestaoEscalaPage() {
-  const { theme: t } = useApp();
+  const { theme: t, isDark } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_gestao_escala");
 
@@ -717,6 +718,15 @@ export default function RhGestaoEscalaPage() {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+  };
+
+  /** Mesmo bloco de conteúdo que `OverviewSpin` (Detalhamento Diário): `card` + `SectionTitle`. */
+  const card: CSSProperties = {
+    background: brand.blockBg,
+    border: `1px solid ${t.cardBorder}`,
+    borderRadius: 18,
+    padding: 20,
+    boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.35)" : "0 4px 20px rgba(0,0,0,0.08)",
   };
 
   const thBase = getThStyle(t);
@@ -1174,20 +1184,13 @@ export default function RhGestaoEscalaPage() {
         ) : (
           <>
             {resumoTurnoDias && mostrarFiltroArea ? (
-              <section aria-labelledby="rh-ge-consolidado-heading" style={{ marginBottom: 20 }}>
-                <h3
-                  id="rh-ge-consolidado-heading"
-                  style={{
-                    margin: "0 0 10px 0",
-                    fontSize: 15,
-                    fontWeight: 800,
-                    fontFamily: FONT_TITLE,
-                    color: t.text,
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  Consolidado - quantidade de Prestadores no dia por turno
-                </h3>
+              <section
+                aria-label="Consolidado - quantidade de Prestadores no dia por turno"
+                style={{ ...card, marginBottom: 14 }}
+              >
+                <SectionTitle icon={<Users size={15} aria-hidden />} sub="quantidade de Prestadores no dia por turno">
+                  Consolidado
+                </SectionTitle>
                 <div className="app-table-wrap">
                 <table
                   style={{
@@ -1382,20 +1385,13 @@ export default function RhGestaoEscalaPage() {
                 </div>
               </section>
             ) : null}
-            <section aria-labelledby="rh-ge-escala-diaria-heading">
-              <h3
-                id="rh-ge-escala-diaria-heading"
-                style={{
-                  margin: "0 0 10px 0",
-                  fontSize: 15,
-                  fontWeight: 800,
-                  fontFamily: FONT_TITLE,
-                  color: t.text,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Escala Diária - Definição de status diário por Prestador
-              </h3>
+            <section
+              aria-label="Escala Diária - Definição de status diário por Prestador"
+              style={{ ...card, marginBottom: 14 }}
+            >
+              <SectionTitle icon={<Calendar size={15} aria-hidden />} sub="definição de status diário por Prestador">
+                Escala Diária
+              </SectionTitle>
               <div className="app-table-wrap">
             <table
               style={{
