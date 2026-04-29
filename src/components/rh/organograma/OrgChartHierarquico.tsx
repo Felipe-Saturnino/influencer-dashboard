@@ -93,11 +93,13 @@ export function OrgChartHierarquico({
   arvore,
   t,
   nomeResponsavel,
+  prestadoresCountPorDiretoriaId,
   onSelectDiretoria,
 }: {
   arvore: RhOrgDiretoriaComFilhos[];
   t: Theme;
   nomeResponsavel: (funcId: string | null | undefined, nomeLivre: string | null | undefined) => string;
+  prestadoresCountPorDiretoriaId: Record<string, number>;
   onSelectDiretoria: (diretoriaId: string) => void;
 }) {
   const [busca, setBusca] = useState("");
@@ -209,8 +211,7 @@ export function OrgChartHierarquico({
           <ul className="app-org-dir-cards" aria-label="Lista de diretorias" style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {arvoreFiltrada.map((d) => {
               const diretor = nomeResponsavel(d.diretor_funcionario_id, d.diretor_nome_livre);
-              const nGer = d.gerencias.length;
-              const nTimes = d.gerencias.reduce((acc, g) => acc + g.times.length, 0);
+              const nPrest = prestadoresCountPorDiretoriaId[d.id] ?? 0;
               const inativo = d.status === "inativo";
               const altFoto = `Foto de ${diretor}`;
               return (
@@ -261,7 +262,6 @@ export function OrgChartHierarquico({
                           {inativo ? badgeInativo() : null}
                         </div>
                         <p style={{ margin: "6px 0 0", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Diretor(a): {textoOuTraco(diretor)}</p>
-                        <p style={{ margin: "4px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>Cargo: Diretor(a)</p>
                         <div
                           style={{
                             marginTop: 10,
@@ -286,7 +286,7 @@ export function OrgChartHierarquico({
                             }}
                           >
                             <Users size={14} strokeWidth={2} aria-hidden />
-                            {nGer} gerências · {nTimes} times
+                            {nPrest} prestador(es) na estrutura
                           </span>
                         </div>
                         <p style={{ margin: "12px 0 0", fontSize: 12, fontWeight: 700, color: "var(--brand-action, #7c3aed)" }}>Ver estrutura →</p>

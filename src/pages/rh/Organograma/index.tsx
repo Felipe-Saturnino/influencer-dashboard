@@ -96,7 +96,9 @@ export default function RhOrganogramaPage() {
   const [diretorias, setDiretorias] = useState<RhOrgDiretoria[]>([]);
   const [gerencias, setGerencias] = useState<RhOrgGerencia[]>([]);
   const [times, setTimes] = useState<RhOrgTime[]>([]);
-  const [funcionarios, setFuncionarios] = useState<{ id: string; nome: string; org_time_id: string | null }[]>([]);
+  const [funcionarios, setFuncionarios] = useState<
+    { id: string; nome: string; org_time_id: string | null; org_gerencia_id: string | null; org_diretoria_id: string | null }[]
+  >([]);
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -143,7 +145,11 @@ export default function RhOrganogramaPage() {
       supabase.from("rh_org_diretorias").select("*").order("nome"),
       supabase.from("rh_org_gerencias").select("*").order("nome"),
       supabase.from("rh_org_times").select("*").order("nome"),
-      supabase.from("rh_funcionarios").select("id, nome, org_time_id").in("status", ["ativo", "indisponivel"]).order("nome"),
+      supabase
+        .from("rh_funcionarios")
+        .select("id, nome, org_time_id, org_gerencia_id, org_diretoria_id")
+        .in("status", ["ativo", "indisponivel"])
+        .order("nome"),
     ]);
     if (dr.error) setErroGlobal(dr.error.message);
     else if (gr.error) setErroGlobal(gr.error.message);
@@ -152,7 +158,15 @@ export default function RhOrganogramaPage() {
     setDiretorias((dr.data ?? []) as RhOrgDiretoria[]);
     setGerencias((gr.data ?? []) as RhOrgGerencia[]);
     setTimes((tr.data ?? []) as RhOrgTime[]);
-    setFuncionarios((fr.data ?? []) as { id: string; nome: string; org_time_id: string | null }[]);
+    setFuncionarios(
+      (fr.data ?? []) as {
+        id: string;
+        nome: string;
+        org_time_id: string | null;
+        org_gerencia_id: string | null;
+        org_diretoria_id: string | null;
+      }[],
+    );
     setLoading(false);
   }, []);
 
@@ -238,6 +252,70 @@ export default function RhOrganogramaPage() {
     });
     return m;
   }, [funcionarios]);
+
+  /** Prestadores vinculados só à gerência (sem time), para lista quando a gerência não tem times. */
+  const membrosPorGerenciaId = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    funcionarios.forEach((f) => {
+      if (!f.org_gerencia_id || f.org_time_id) return;
+      if (!m[f.org_gerencia_id]) m[f.org_gerencia_id] = [];
+      m[f.org_gerencia_id]!.push(f.nome);
+    });
+    Object.keys(m).forEach((k) => {
+      m[k]!.sort((a, b) => a.localeCompare(b, "pt-BR"));
+    });
+    return m;
+  }, [funcionarios]);
+
+  /** Prestadores só na gerência (sem time), incluindo líder imediato no total — para card sem times. */
+  const prestadoresSemTimeCountPorGerenciaId = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const d of arvore) {
+      for (const g of d.gerencias) {
+        if (g.times.length > 0) continue;
+        const ids = new Set<string>();
+        funcionarios.forEach((f) => {
+          if (f.org_gerencia_id === g.id && !f.org_time_id) ids.add(f.id);
+        });
+        const lid = g.gerente_funcionario_id || d.diretor_funcionario_id;
+        if (lid) ids.add(lid);
+        m[g.id] = ids.size;
+      }
+    }
+    return m;
+  }, [arvore, funcionarios]);
+
+  /** Contagem distinta de pessoas (prestadores vinculados + líderes explícitos da diretoria). */
+  const prestadoresCountPorDiretoriaId = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const d of arvore) {
+      const ids = new Set<string>();
+      if (d.diretor_funcionario_id) ids.add(d.diretor_funcionario_id);
+      const timeIds = new Set<string>();
+      const gerIds = new Set<string>();
+      d.gerencias.forEach((g) => {
+        gerIds.add(g.id);
+        if (g.gerente_funcionario_id) ids.add(g.gerente_funcionario_id);
+        g.times.forEach((ti) => {
+          timeIds.add(ti.id);
+          if (ti.lider_funcionario_id) ids.add(ti.lider_funcionario_id);
+        });
+      });
+      funcionarios.forEach((f) => {
+        if (f.org_time_id && timeIds.has(f.org_time_id)) {
+          ids.add(f.id);
+          return;
+        }
+        if (f.org_gerencia_id && gerIds.has(f.org_gerencia_id)) {
+          ids.add(f.id);
+          return;
+        }
+        if (f.org_diretoria_id === d.id) ids.add(f.id);
+      });
+      out[d.id] = ids.size;
+    }
+    return out;
+  }, [arvore, funcionarios]);
 
   const nomeResponsavel = useCallback(
     (fid: string | null | undefined, livre: string | null | undefined) => {
@@ -842,6 +920,7 @@ export default function RhOrganogramaPage() {
               arvore={arvore}
               t={{ ...t, isDark }}
               nomeResponsavel={nomeResponsavel}
+              prestadoresCountPorDiretoriaId={prestadoresCountPorDiretoriaId}
               onSelectDiretoria={setFiltroDiretoriaId}
             />
           ) : dirSelecionada ? (
@@ -851,6 +930,8 @@ export default function RhOrganogramaPage() {
               nomeResponsavel={nomeResponsavel}
               countsPorTimeId={countsMap}
               membrosPorTimeId={membrosPorTimeId}
+              membrosPorGerenciaId={membrosPorGerenciaId}
+              prestadoresSemTimeCountPorGerenciaId={prestadoresSemTimeCountPorGerenciaId}
             />
           ) : (
             <div style={{ padding: "32px 12px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>

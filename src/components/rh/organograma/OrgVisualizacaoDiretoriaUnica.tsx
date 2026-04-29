@@ -1,4 +1,4 @@
-import { useCallback, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
@@ -18,20 +18,19 @@ function iniciaisNome(nome: string): string {
   return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
 }
 
-const chipTime: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  minHeight: 44,
-  padding: "6px 12px",
-  borderRadius: 999,
-  fontSize: 12,
-  fontWeight: 600,
-  fontFamily: FONT.body,
-  cursor: "pointer",
-  border: "1px solid var(--brand-contrast-30, rgba(30,54,248,0.3))",
-  background: "var(--brand-contrast-12, rgba(30,54,248,0.12))",
-  color: "var(--brand-contrast, #1e36f8)",
-};
+function quadroBase(t: Theme): CSSProperties {
+  return {
+    width: "100%",
+    minHeight: 44,
+    padding: "12px 14px",
+    borderRadius: 12,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.cardBg,
+    textAlign: "left",
+    boxSizing: "border-box",
+    fontFamily: FONT.body,
+  };
+}
 
 export function OrgVisualizacaoDiretoriaUnica({
   d,
@@ -39,12 +38,16 @@ export function OrgVisualizacaoDiretoriaUnica({
   nomeResponsavel,
   countsPorTimeId,
   membrosPorTimeId,
+  membrosPorGerenciaId,
+  prestadoresSemTimeCountPorGerenciaId,
 }: {
   d: RhOrgDiretoriaComFilhos;
   t: Theme;
   nomeResponsavel: (funcId: string | null | undefined, nomeLivre: string | null | undefined) => string;
   countsPorTimeId: Record<string, number>;
   membrosPorTimeId: Record<string, string[]>;
+  membrosPorGerenciaId: Record<string, string[]>;
+  prestadoresSemTimeCountPorGerenciaId: Record<string, number>;
 }) {
   const nomeDir = nomeResponsavel(d.diretor_funcionario_id, d.diretor_nome_livre);
   const altFoto = `Foto de ${nomeDir}`;
@@ -54,6 +57,26 @@ export function OrgVisualizacaoDiretoriaUnica({
   const toggleTime = useCallback((timeId: string) => {
     setTimesExpandidos((prev) => ({ ...prev, [timeId]: !prev[timeId] }));
   }, []);
+
+  const nomesListaGerenciaSemTimes = useCallback(
+    (gId: string, liderNome: string) => {
+      const base = [...(membrosPorGerenciaId[gId] ?? [])];
+      const l = liderNome.trim();
+      if (l && l !== "—" && !base.some((n) => n === l)) base.push(l);
+      return [...base].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    },
+    [membrosPorGerenciaId],
+  );
+
+  const linhaEstilo = useMemo(
+    () => ({
+      titulo: { margin: 0, fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1.35 } as CSSProperties,
+      liderLabel: { margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 } as CSSProperties,
+      liderNome: { fontWeight: 700, color: t.text } as CSSProperties,
+      contagem: { margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 } as CSSProperties,
+    }),
+    [t.text, t.textMuted],
+  );
 
   const heroCard: CSSProperties = {
     border: "2px solid var(--brand-action, #7c3aed)",
@@ -194,15 +217,26 @@ export function OrgVisualizacaoDiretoriaUnica({
             {d.gerencias.map((g) => {
               const liderG = nomeLiderImediatoGerencia(d, g, nomeResponsavel);
               const sobreG = g.sobre_gerencia.trim();
+              const semTimes = g.times.length === 0;
+              const nSemTime = prestadoresSemTimeCountPorGerenciaId[g.id] ?? 0;
+              const listaPrestadoresSemTime = nomesListaGerenciaSemTimes(g.id, liderG);
+              const nPrestadoresExibirSemTime = Math.max(nSemTime, listaPrestadoresSemTime.length);
+
               return (
                 <article key={g.id} style={cardGerencia}>
-                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "var(--brand-contrast, #1e36f8)", fontFamily: FONT_TITLE }}>
-                    {g.nome}
-                  </h3>
-                  <p style={{ margin: "10px 0 0", fontSize: 13, fontFamily: FONT.body, color: "var(--brand-contrast, #1e36f8)", opacity: 0.95 }}>
-                    Líder imediato: <span style={{ fontWeight: 700 }}>{textoOuTraco(liderG)}</span>
-                  </p>
-                  <div style={{ marginTop: 12 }}>
+                  {semTimes ? (
+                    <div style={{ ...quadroBase(t), marginBottom: 12, borderColor: t.cardBorder, background: t.cardBg }}>
+                      <p style={linhaEstilo.titulo}>{g.nome}</p>
+                      <p style={{ ...linhaEstilo.liderLabel, marginTop: 6 }}>
+                        Líder imediato: <span style={linhaEstilo.liderNome}>{textoOuTraco(liderG)}</span>
+                      </p>
+                      <p style={{ ...linhaEstilo.contagem, marginTop: 6 }}>
+                        {nPrestadoresExibirSemTime} prestador(es)
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div style={{ marginTop: semTimes ? 0 : 0 }}>
                     <h4
                       style={{
                         margin: "0 0 6px",
@@ -221,86 +255,113 @@ export function OrgVisualizacaoDiretoriaUnica({
                       {sobreG ? g.sobre_gerencia : "—"}
                     </p>
                   </div>
+
                   <div style={{ marginTop: 14 }}>
-                    <h4
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: 11,
-                        fontWeight: 800,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                        fontFamily: FONT.body,
-                        color: "var(--brand-contrast, #1e36f8)",
-                        opacity: 0.85,
-                      }}
-                    >
-                      Times
-                    </h4>
-                    {g.times.length === 0 ? (
-                      <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
+                    {semTimes ? (
+                      <>
+                        <h4
+                          style={{
+                            margin: "0 0 8px",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em",
+                            fontFamily: FONT.body,
+                            color: "var(--brand-contrast, #1e36f8)",
+                            opacity: 0.85,
+                          }}
+                        >
+                          Prestadores
+                        </h4>
+                        {listaPrestadoresSemTime.length === 0 ? (
+                          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
+                        ) : (
+                          <ul style={{ margin: 0, paddingLeft: 18, color: t.text, fontSize: 13, fontFamily: FONT.body, lineHeight: 1.55 }}>
+                            {listaPrestadoresSemTime.map((n, i) => (
+                              <li key={`${g.id}-${i}-${n}`}>{n}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
                     ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {g.times.map((ti: RhOrgTime) => {
-                          const lt = nomeLiderImediatoTime(d, g, ti, nomeResponsavel);
-                          const q = countsPorTimeId[ti.id] ?? 0;
-                          const exp = Boolean(timesExpandidos[ti.id]);
-                          const membros = membrosPorTimeId[ti.id] ?? [];
-                          return (
-                            <div key={ti.id} style={{ minWidth: 0 }}>
-                              <button
-                                type="button"
-                                aria-expanded={exp}
-                                aria-controls={`org-time-membros-${ti.id}`}
-                                id={`org-time-chip-${ti.id}`}
-                                onClick={() => toggleTime(ti.id)}
-                                style={{
-                                  ...chipTime,
-                                  width: "100%",
-                                  justifyContent: "space-between",
-                                  textAlign: "left",
-                                  background: t.cardBg,
-                                  border: `1px solid ${t.cardBorder}`,
-                                  color: t.text,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-                                  <span>{ti.nome}</span>
-                                  <span style={{ fontSize: 11, fontWeight: 500, color: t.textMuted }}>
-                                    Líder: {textoOuTraco(lt)} · {q} prestador(es)
-                                  </span>
-                                </span>
-                              </button>
-                              {exp ? (
-                                <div
-                                  id={`org-time-membros-${ti.id}`}
-                                  role="region"
-                                  aria-labelledby={`org-time-chip-${ti.id}`}
+                      <>
+                        <h4
+                          style={{
+                            margin: "0 0 8px",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em",
+                            fontFamily: FONT.body,
+                            color: "var(--brand-contrast, #1e36f8)",
+                            opacity: 0.85,
+                          }}
+                        >
+                          Times
+                        </h4>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          {g.times.map((ti: RhOrgTime) => {
+                            const lt = nomeLiderImediatoTime(d, g, ti, nomeResponsavel);
+                            const q = countsPorTimeId[ti.id] ?? 0;
+                            const exp = Boolean(timesExpandidos[ti.id]);
+                            const membros = membrosPorTimeId[ti.id] ?? [];
+                            return (
+                              <div key={ti.id} style={{ minWidth: 0 }}>
+                                <button
+                                  type="button"
+                                  aria-expanded={exp}
+                                  aria-controls={`org-time-membros-${ti.id}`}
+                                  id={`org-time-chip-${ti.id}`}
+                                  aria-label={`Time ${ti.nome}, gerência ${g.nome}. Toque para ${exp ? "ocultar" : "expandir"} a lista de membros.`}
+                                  onClick={() => toggleTime(ti.id)}
                                   style={{
-                                    marginTop: 8,
-                                    padding: 10,
-                                    borderRadius: 10,
+                                    ...quadroBase(t),
+                                    cursor: "pointer",
                                     border: `1px solid ${t.cardBorder}`,
-                                    background: t.inputBg,
                                   }}
                                 >
-                                  {membros.length === 0 ? (
-                                    <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                                      Sem dados para o período selecionado.
-                                    </p>
-                                  ) : (
-                                    <ul style={{ margin: 0, paddingLeft: 18, color: t.text, fontSize: 13, fontFamily: FONT.body, lineHeight: 1.5 }}>
-                                      {membros.map((n) => (
-                                        <li key={n}>{n}</li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
+                                  <p style={linhaEstilo.titulo}>
+                                    {g.nome}
+                                    <span style={{ fontWeight: 600, color: t.textMuted }}> · {ti.nome}</span>
+                                  </p>
+                                  <p style={{ ...linhaEstilo.liderLabel, marginTop: 6 }}>
+                                    Líder imediato: <span style={linhaEstilo.liderNome}>{textoOuTraco(lt)}</span>
+                                  </p>
+                                  <p style={{ ...linhaEstilo.contagem, marginTop: 6 }}>
+                                    {q} prestador(es)
+                                  </p>
+                                </button>
+                                {exp ? (
+                                  <div
+                                    id={`org-time-membros-${ti.id}`}
+                                    role="region"
+                                    aria-labelledby={`org-time-chip-${ti.id}`}
+                                    style={{
+                                      marginTop: 8,
+                                      padding: 10,
+                                      borderRadius: 10,
+                                      border: `1px solid ${t.cardBorder}`,
+                                      background: t.inputBg,
+                                    }}
+                                  >
+                                    {membros.length === 0 ? (
+                                      <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                                        Sem dados para o período selecionado.
+                                      </p>
+                                    ) : (
+                                      <ul style={{ margin: 0, paddingLeft: 18, color: t.text, fontSize: 13, fontFamily: FONT.body, lineHeight: 1.5 }}>
+                                        {membros.map((n) => (
+                                          <li key={n}>{n}</li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
                     )}
                   </div>
                 </article>
