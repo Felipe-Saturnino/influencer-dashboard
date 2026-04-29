@@ -498,6 +498,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Mantém o estado React alinhado ao Auth quando a sessão é limpa (ex.: tokens inválidos em Edge Function).
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_OUT") return;
+      setUserState(null);
+      setEscoposVisiveis(ESCOPOS_VAZIOS);
+      setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
+      setOperadoraBrand(null);
+      setActivePage("home");
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const podeVerInfluencer = useCallback(
     (id: string) =>
       escoposVisiveis.semRestricaoEscopo === true ||

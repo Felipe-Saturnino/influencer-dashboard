@@ -1596,8 +1596,9 @@ export default function RhPrestadoresPage() {
   const montarPayload = (statusPrestador: RhFuncionario["status"]) =>
     buildRhFuncionarioPayloadFromState(form, statusPrestador, podeVerDadosSensiveis, modalForm === "novo");
 
-  const dispararSyncUsuarioPrestadorSeEmailSpin = async (row: RhFuncionario) => {
-    const em = (row.email_spin ?? "").trim().toLowerCase();
+  /** `emailSpinDoFormulario`: valor que o operador acabou de salvar (evita depender só do JSON do `update`). */
+  const dispararSyncUsuarioPrestadorSeEmailSpin = async (row: RhFuncionario, emailSpinDoFormulario?: string) => {
+    const em = (emailSpinDoFormulario !== undefined ? emailSpinDoFormulario : (row.email_spin ?? "")).trim().toLowerCase();
     if (!em || !validarEmail(em)) return;
     const res = await syncUsuarioPrestadorAposSalvarRh(row.id);
     const m = mensagemFeedbackSyncPrestador(res);
@@ -1644,7 +1645,7 @@ export default function RhPrestadoresPage() {
       if (criado) await syncGamePresenterDealerFromRhFuncionario(criado as RhFuncionario);
       if (criado) {
         try {
-          await dispararSyncUsuarioPrestadorSeEmailSpin(criado as RhFuncionario);
+          await dispararSyncUsuarioPrestadorSeEmailSpin(criado as RhFuncionario, form.email_spin.trim());
         } catch (e) {
           setErroGlobal(
             `Funcionário cadastrado, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
@@ -1697,7 +1698,7 @@ export default function RhPrestadoresPage() {
       if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
       if (atualizadoRh) {
         try {
-          await dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario);
+          await dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario, form.email_spin.trim());
         } catch (e) {
           setErroGlobal(
             `Dados atualizados, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,

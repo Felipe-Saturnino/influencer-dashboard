@@ -3,10 +3,18 @@ export function somenteDigitos(s: string): string {
   return s.replace(/\D/g, "");
 }
 
+/** E-mail “humano” (pessoal ou corporativo): aceita subdomínios e TLD compostos (.com.br, .co.uk). */
 export function validarEmail(email: string): boolean {
   const t = email.trim();
-  if (t.length < 5) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
+  if (t.length < 5 || /\s/.test(t)) return false;
+  const i = t.indexOf("@");
+  if (i <= 0 || i === t.length - 1) return false;
+  const local = t.slice(0, i);
+  const domain = t.slice(i + 1);
+  if (!local.length || !domain.length || domain.includes("@")) return false;
+  if (!domain.includes(".")) return false;
+  if (domain.startsWith(".") || domain.endsWith(".") || local.startsWith(".") || local.endsWith(".")) return false;
+  return true;
 }
 
 /** CPF com 11 dígitos; valida dígitos verificadores. */

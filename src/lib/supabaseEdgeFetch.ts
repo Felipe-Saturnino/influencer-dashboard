@@ -301,6 +301,16 @@ export async function callSupabaseEdgeFunction<T = unknown>(
     return /session_id claim in JWT does not exist|session from session_id/i.test(msg);
   }
 
+  function isRefreshTokenDead(refreshErr: { message?: string } | null): boolean {
+    const msg = (refreshErr?.message ?? "").toLowerCase();
+    return (
+      msg.includes("refresh token not found") ||
+      msg.includes("invalid refresh token") ||
+      msg.includes("already used") ||
+      msg.includes("revoked")
+    );
+  }
+
   async function runWithRefreshRetry(run: () => Promise<T>): Promise<T> {
     try {
       return await run();
@@ -310,9 +320,14 @@ export async function callSupabaseEdgeFunction<T = unknown>(
       }
       const { error: refreshErr } = await supabase.auth.refreshSession();
       if (refreshErr) {
+        if (isRefreshTokenDead(refreshErr)) {
+          await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+        }
         throw new Error(
-          "Sessão inválida no servidor (expirada ou revogada). Faça login novamente.\n" +
-            (refreshErr.message ? `Detalhe: ${refreshErr.message}` : "")
+          isRefreshTokenDead(refreshErr)
+            ? "Sua sessão expirou ou foi encerrada no servidor. Faça login novamente."
+            : "Não foi possível renovar a sessão. Faça login novamente.\n" +
+                (refreshErr.message ? `Detalhe: ${refreshErr.message}` : "")
         );
       }
       accessToken = await getAccessToken();
