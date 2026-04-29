@@ -14,6 +14,7 @@ import {
 import OperadoraTag from "../../../components/OperadoraTag";
 import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
@@ -1260,7 +1261,8 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
               return (
                 <div key={c} style={row}>
                   <label style={labelStyle}>
-                    Link {c} <span style={{ color: BRAND.vermelho }}>*</span>
+                    Link {c}
+                    <CampoObrigatorioMark />
                   </label>
                   <input value={(form[linkKey] as string) ?? ""} onChange={(e) => set(linkKey, e.target.value)} style={inputStyle} placeholder={`https://${c.toLowerCase()}.com/seu-canal`} />
                 </div>
@@ -1324,7 +1326,8 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
                     {ativo && (
                       <div>
                         <label style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body }}>
-                          ID {op.nome} <span style={{ color: BRAND.vermelho }}>*</span>
+                          ID {op.nome}
+                          <CampoObrigatorioMark />
                         </label>
                         <input
                           value={st.id_operadora}

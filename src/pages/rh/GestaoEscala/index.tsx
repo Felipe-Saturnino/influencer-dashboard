@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
+import { Calendar, CalendarRange, ChevronLeft, ChevronRight, Loader2, Search, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -302,20 +302,38 @@ const STICKY_LEFT_NICK = STICKY_W_NOME;
 const STICKY_LEFT_ESCALA = STICKY_W_NOME + STICKY_W_NICK;
 const STICKY_LEFT_TURNO_STAFF = STICKY_W_NOME + STICKY_W_NICK + STICKY_W_ESCALA;
 
-/** Colunas fixas quando a coluna Nome está oculta (área Customer Service). */
+/** Colunas fixas quando a coluna Nome está oculta (Customer Service, Service Manager, Shift Leader). */
 const STICKY_LEFT_NICK_SEM_NOME = 0;
 const STICKY_LEFT_ESCALA_SEM_NOME = STICKY_W_NICK;
 const STICKY_LEFT_TURNO_SEM_NOME = STICKY_W_NICK + STICKY_W_ESCALA;
 
-/** Navegação e escala consideram a partir de janeiro de 2026. */
+/** Navegação e escala consideram a partir de abril de 2026 (sem escala antes). */
 const ESCALA_ANO_MIN = 2026;
-const ESCALA_MES0_MIN = 0;
+/** Abril (0-indexado). */
+const ESCALA_MES0_MIN = 3;
+
+function primeiroDiaMes(ano: number, mes0: number): Date {
+  return new Date(ano, mes0, 1);
+}
+
+function dataMinimaEscalaCarrossel(): Date {
+  return primeiroDiaMes(ESCALA_ANO_MIN, ESCALA_MES0_MIN);
+}
+
+/** Último mês permitido no carrossel: o mês civil seguinte ao de hoje (não listar meses além disso). */
+function dataMaximaEscalaCarrossel(diaReferencia: Date): Date {
+  const min = dataMinimaEscalaCarrossel();
+  const cand = primeiroDiaMes(diaReferencia.getFullYear(), diaReferencia.getMonth() + 1);
+  return cand < min ? min : cand;
+}
 
 function mesReferenciaInicial(): { ano: number; mes: number } {
-  const d = new Date();
-  const ref = new Date(d.getFullYear(), d.getMonth(), 1);
-  const min = new Date(ESCALA_ANO_MIN, ESCALA_MES0_MIN, 1);
-  if (ref < min) return { ano: ESCALA_ANO_MIN, mes: ESCALA_MES0_MIN };
+  const hoje = new Date();
+  const min = dataMinimaEscalaCarrossel();
+  const max = dataMaximaEscalaCarrossel(hoje);
+  let d = primeiroDiaMes(hoje.getFullYear(), hoje.getMonth());
+  if (d < min) d = min;
+  if (d > max) d = max;
   return { ano: d.getFullYear(), mes: d.getMonth() };
 }
 
@@ -393,8 +411,14 @@ export default function RhGestaoEscalaPage() {
   const [salvandoGrade, setSalvandoGrade] = useState(false);
   /** Área (time) para consolidado e grade de geração. */
   const [filtroArea, setFiltroArea] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
+  /** Filtro local da tabela Escala Diária (nickname). */
+  const [filtroNicknameEscala, setFiltroNicknameEscala] = useState("");
   /** Por área: células do mês e baseline após aprovação. */
   const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
+
+  useEffect(() => {
+    setFiltroNicknameEscala("");
+  }, [filtroArea]);
 
   const carregarPrestadores = useCallback(async () => {
     setLoadingPrestadores(true);
@@ -419,17 +443,23 @@ export default function RhGestaoEscalaPage() {
   const dias = useMemo(() => diasDoMes(ano, mes), [ano, mes]);
   const tituloMes = useMemo(() => labelMesAno(ano, mes), [ano, mes]);
 
+  const limitesCarrosselMes = useMemo(
+    () => ({
+      min: dataMinimaEscalaCarrossel(),
+      max: dataMaximaEscalaCarrossel(hoje),
+    }),
+    [hoje],
+  );
+
   const podeMesAnterior = useMemo(() => {
-    const ref = new Date(ano, mes, 1);
-    const min = new Date(ESCALA_ANO_MIN, ESCALA_MES0_MIN, 1);
-    return ref > min;
-  }, [ano, mes]);
+    const ref = primeiroDiaMes(ano, mes);
+    return ref > limitesCarrosselMes.min;
+  }, [ano, mes, limitesCarrosselMes.min]);
 
   const podeMesSeguinte = useMemo(() => {
-    const ref = new Date(ano, mes, 1);
-    const max = new Date(hoje.getFullYear() + 2, 11, 1);
-    return ref < max;
-  }, [ano, mes, hoje]);
+    const ref = primeiroDiaMes(ano, mes);
+    return ref < limitesCarrosselMes.max;
+  }, [ano, mes, limitesCarrosselMes.max]);
 
   const mesAnterior = useCallback(() => {
     if (!podeMesAnterior) return;
@@ -581,6 +611,12 @@ export default function RhGestaoEscalaPage() {
   const linhas = useMemo(() => {
     return filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
   }, [prestadoresRaw, filtroArea]);
+
+  const linhasFiltradasNickname = useMemo(() => {
+    const q = filtroNicknameEscala.trim().toLowerCase();
+    if (!q) return linhas;
+    return linhas.filter((row) => row.nickname.toLowerCase().includes(q));
+  }, [linhas, filtroNicknameEscala]);
 
   const linhasPorFiltroGerar = useCallback(
     (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador),
@@ -823,15 +859,35 @@ export default function RhGestaoEscalaPage() {
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
     const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
     const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
-    const customerService = filtroArea === "customer_service";
-    const horarioComercial = customerService ? contarHorarioComercialPorDia(linhasF, dias, celulas) : null;
+    /** Customer Service e Shift Leader: linha Comercial no consolidado (5×2 em célula «Comercial»). */
+    const temLinhaComercialConsolidado =
+      filtroArea === "customer_service" || filtroArea === "shift_leader";
+    /** Sem pessoal de tarde na operação destas áreas — não exibir linha «Turno da Tarde». */
+    const temLinhaTardeConsolidado =
+      filtroArea !== "customer_service" &&
+      filtroArea !== "service_manager" &&
+      filtroArea !== "shift_leader";
+    const horarioComercial = temLinhaComercialConsolidado
+      ? contarHorarioComercialPorDia(linhasF, dias, celulas)
+      : null;
     const total = dias.map((_, i) => {
-      if (customerService) {
+      if (temLinhaComercialConsolidado) {
         return (manha[i] ?? 0) + (noite[i] ?? 0) + (horarioComercial?.[i] ?? 0);
+      }
+      if (!temLinhaTardeConsolidado) {
+        return (manha[i] ?? 0) + (noite[i] ?? 0);
       }
       return (manha[i] ?? 0) + (tarde[i] ?? 0) + (noite[i] ?? 0);
     });
-    return { manha, tarde, noite, horarioComercial, total, customerService };
+    return {
+      manha,
+      tarde,
+      noite,
+      horarioComercial,
+      total,
+      temLinhaComercialConsolidado,
+      temLinhaTardeConsolidado,
+    };
   }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro]);
 
   const mostrarSalvarAlteracoes = useMemo(() => {
@@ -867,7 +923,11 @@ export default function RhGestaoEscalaPage() {
   };
 
   const acaoGerarNoFiltroSelecionado = podeEditarGrade ? acaoBotaoGerar(filtroArea) : null;
-  const areaCustomerService = filtroArea === "customer_service";
+  /** Oculta coluna Nome na Escala Diária (layout tipo Customer Service). */
+  const semColunaNome =
+    filtroArea === "customer_service" ||
+    filtroArea === "service_manager" ||
+    filtroArea === "shift_leader";
 
   if (perm.loading) {
     return (
@@ -950,143 +1010,6 @@ export default function RhGestaoEscalaPage() {
             >
               <ChevronRight size={14} aria-hidden />
             </button>
-            {mostrarFiltroArea && podeEditarGrade ? (
-              <>
-                {posSugestaoAtiva(gerarPorFiltro[filtroArea]) ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGerarPorFiltro((prev) => ({
-                          ...prev,
-                          [filtroArea]: {
-                            celulas: {},
-                            aprovado: false,
-                            baseline: null,
-                            celulasSincronizadasComDb: null,
-                            posSugestao: false,
-                            posSugestaoCs: false,
-                          },
-                        }));
-                      }}
-                      aria-label="Iniciar nova escala em rascunho"
-                      style={{
-                        padding: "10px 16px",
-                        borderRadius: 10,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg ?? t.cardBg ?? "transparent",
-                        color: t.text,
-                        fontFamily: FONT.body,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Nova Escala
-                    </button>
-                    {mostrarSalvarAlteracoes ? (
-                      <button
-                        type="button"
-                        disabled={salvandoGrade}
-                        onClick={() => void salvarGradeEscalaDb(filtroArea)}
-                        aria-label="Salvar alterações da escala na base de dados"
-                        style={{
-                          padding: "10px 16px",
-                          borderRadius: 10,
-                          border: `1px solid ${brand.accent}`,
-                          background: brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
-                            : "rgba(124,58,237,0.12)",
-                          color: brand.accent,
-                          fontFamily: FONT.body,
-                          fontSize: 13,
-                          fontWeight: 700,
-                          cursor: salvandoGrade ? "wait" : "pointer",
-                          whiteSpace: "nowrap",
-                          opacity: salvandoGrade ? 0.65 : 1,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
-                        Salvar Alterações
-                      </button>
-                    ) : null}
-                    {!gerarPorFiltro[filtroArea]?.aprovado ? (
-                      <button
-                        type="button"
-                        onClick={() => aprovarEscalaGerar(filtroArea)}
-                        aria-label="Aprovar escala e bloquear edição manual da grade"
-                        style={{
-                          padding: "10px 16px",
-                          borderRadius: 10,
-                          border: `1px solid ${brand.accent}`,
-                          background: brand.useBrand
-                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
-                            : "rgba(30,54,248,0.12)",
-                          color: brand.accent,
-                          fontFamily: FONT.body,
-                          fontSize: 13,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Aprovar Escala
-                      </button>
-                    ) : null}
-                  </>
-                ) : acaoGerarNoFiltroSelecionado === "sugestao" ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void aplicarSugestaoEscalaArea(filtroArea)
-                    }
-                    aria-label="Gerar sugestão de escala para a área selecionada"
-                    style={{
-                      padding: "10px 16px",
-                      borderRadius: 10,
-                      border: `1px solid ${brand.accent}`,
-                      background: brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
-                        : "rgba(124,58,237,0.12)",
-                      color: brand.accent,
-                      fontFamily: FONT.body,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Sugestão de Escala
-                  </button>
-                ) : acaoGerarNoFiltroSelecionado === "aprovar" ? (
-                  <button
-                    type="button"
-                    onClick={() => aprovarEscalaGerar(filtroArea)}
-                    aria-label="Aprovar escala da área selecionada"
-                    style={{
-                      padding: "10px 16px",
-                      borderRadius: 10,
-                      border: `1px solid ${brand.accent}`,
-                      background: brand.useBrand
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
-                        : "rgba(30,54,248,0.12)",
-                      color: brand.accent,
-                      fontFamily: FONT.body,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Aprovar Escala
-                  </button>
-                ) : null}
-              </>
-            ) : null}
           </div>
 
           {mostrarFiltroArea ? (
@@ -1204,9 +1127,11 @@ export default function RhGestaoEscalaPage() {
                 >
                   <caption style={{ display: "none" }}>
                     Consolidado - quantidade de Prestadores no dia por turno.{" "}
-                    {resumoTurnoDias.customerService
-                      ? "Totais por turno Manhã, Noite, Comercial e TOTAL por dia."
-                      : "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."}
+                    {resumoTurnoDias.temLinhaTardeConsolidado
+                      ? "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."
+                      : resumoTurnoDias.temLinhaComercialConsolidado
+                        ? "Totais por turno Manhã, Noite, Comercial e TOTAL por dia."
+                        : "Totais por turno Manhã, Noite e TOTAL por dia."}
                   </caption>
                   <thead>
                     <tr>
@@ -1262,7 +1187,7 @@ export default function RhGestaoEscalaPage() {
                         );
                       })}
                     </tr>
-                    {!resumoTurnoDias.customerService ? (
+                    {resumoTurnoDias.temLinhaTardeConsolidado ? (
                       <tr>
                         <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
                           Turno da Tarde
@@ -1316,7 +1241,7 @@ export default function RhGestaoEscalaPage() {
                         );
                       })}
                     </tr>
-                    {resumoTurnoDias.customerService && resumoTurnoDias.horarioComercial ? (
+                    {resumoTurnoDias.temLinhaComercialConsolidado && resumoTurnoDias.horarioComercial ? (
                       <tr>
                         <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
                           Comercial
@@ -1392,12 +1317,197 @@ export default function RhGestaoEscalaPage() {
               <SectionTitle icon={<Calendar size={15} aria-hidden />} sub="definição de status diário por Prestador">
                 Escala Diária
               </SectionTitle>
+              <div
+                style={{
+                  marginBottom: 14,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: 12,
+                  justifyContent: "space-between",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  {mostrarFiltroArea && podeEditarGrade ? (
+                    <>
+                      {posSugestaoAtiva(gerarPorFiltro[filtroArea]) ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGerarPorFiltro((prev) => ({
+                                ...prev,
+                                [filtroArea]: {
+                                  celulas: {},
+                                  aprovado: false,
+                                  baseline: null,
+                                  celulasSincronizadasComDb: null,
+                                  posSugestao: false,
+                                  posSugestaoCs: false,
+                                },
+                              }));
+                            }}
+                            aria-label="Iniciar nova escala em rascunho"
+                            style={{
+                              padding: "10px 16px",
+                              borderRadius: 10,
+                              border: `1px solid ${t.cardBorder}`,
+                              background: t.inputBg ?? t.cardBg ?? "transparent",
+                              color: t.text,
+                              fontFamily: FONT.body,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Nova Escala
+                          </button>
+                          {mostrarSalvarAlteracoes ? (
+                            <button
+                              type="button"
+                              disabled={salvandoGrade}
+                              onClick={() => void salvarGradeEscalaDb(filtroArea)}
+                              aria-label="Salvar alterações da escala na base de dados"
+                              style={{
+                                padding: "10px 16px",
+                                borderRadius: 10,
+                                border: `1px solid ${brand.accent}`,
+                                background: brand.useBrand
+                                  ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                                  : "rgba(124,58,237,0.12)",
+                                color: brand.accent,
+                                fontFamily: FONT.body,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                cursor: salvandoGrade ? "wait" : "pointer",
+                                whiteSpace: "nowrap",
+                                opacity: salvandoGrade ? 0.65 : 1,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
+                              Salvar Alterações
+                            </button>
+                          ) : null}
+                          {!gerarPorFiltro[filtroArea]?.aprovado ? (
+                            <button
+                              type="button"
+                              onClick={() => aprovarEscalaGerar(filtroArea)}
+                              aria-label="Aprovar escala e bloquear edição manual da grade"
+                              style={{
+                                padding: "10px 16px",
+                                borderRadius: 10,
+                                border: `1px solid ${brand.accent}`,
+                                background: brand.useBrand
+                                  ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
+                                  : "rgba(30,54,248,0.12)",
+                                color: brand.accent,
+                                fontFamily: FONT.body,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              Aprovar Escala
+                            </button>
+                          ) : null}
+                        </>
+                      ) : acaoGerarNoFiltroSelecionado === "sugestao" ? (
+                        <button
+                          type="button"
+                          onClick={() => void aplicarSugestaoEscalaArea(filtroArea)}
+                          aria-label="Gerar sugestão de escala para a área selecionada"
+                          style={{
+                            padding: "10px 16px",
+                            borderRadius: 10,
+                            border: `1px solid ${brand.accent}`,
+                            background: brand.useBrand
+                              ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                              : "rgba(124,58,237,0.12)",
+                            color: brand.accent,
+                            fontFamily: FONT.body,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Sugestão de Escala
+                        </button>
+                      ) : acaoGerarNoFiltroSelecionado === "aprovar" ? (
+                        <button
+                          type="button"
+                          onClick={() => aprovarEscalaGerar(filtroArea)}
+                          aria-label="Aprovar escala da área selecionada"
+                          style={{
+                            padding: "10px 16px",
+                            borderRadius: 10,
+                            border: `1px solid ${brand.accent}`,
+                            background: brand.useBrand
+                              ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
+                              : "rgba(30,54,248,0.12)",
+                            color: brand.accent,
+                            fontFamily: FONT.body,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Aprovar Escala
+                        </button>
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flex: "1 1 200px",
+                    maxWidth: 400,
+                    minWidth: 0,
+                  }}
+                >
+                  <Search size={16} aria-hidden="true" style={{ color: t.textMuted, flexShrink: 0 }} />
+                  <input
+                    type="search"
+                    value={filtroNicknameEscala}
+                    onChange={(e) => setFiltroNicknameEscala(e.target.value)}
+                    placeholder="Pesquisar nickname…"
+                    aria-label="Filtrar tabela de escala por nickname"
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      padding: "8px 12px",
+                      borderRadius: 10,
+                      border: `1px solid ${t.cardBorder}`,
+                      background: t.inputBg ?? t.cardBg ?? "transparent",
+                      color: t.text,
+                      fontFamily: FONT.body,
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+              </div>
               <div className="app-table-wrap">
             <table
               style={{
                 width: "100%",
                 minWidth:
-                  (areaCustomerService ? 0 : STICKY_W_NOME) +
+                  (semColunaNome ? 0 : STICKY_W_NOME) +
                   STICKY_W_NICK +
                   STICKY_W_ESCALA +
                   STICKY_W_TURNO_STAFF +
@@ -1410,13 +1520,13 @@ export default function RhGestaoEscalaPage() {
             >
               <caption style={{ display: "none" }}>
                 Escala Diária - Definição de status diário por Prestador.{" "}
-                {areaCustomerService
-                  ? "Grade por nickname, escala, turno e dia do mês — Customer Service."
+                {semColunaNome
+                  ? "Grade por nickname, escala, turno e dia do mês (coluna Nome oculta nesta área)."
                   : "Grade mensal por colaborador e dia do mês."}
               </caption>
               <thead>
                 <tr>
-                  {!areaCustomerService ? (
+                  {!semColunaNome ? (
                     <th
                       scope="col"
                       style={thSticky(0, {
@@ -1431,7 +1541,7 @@ export default function RhGestaoEscalaPage() {
                   ) : null}
                   <th
                     scope="col"
-                    style={thSticky(areaCustomerService ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
+                    style={thSticky(semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
                       minWidth: STICKY_W_NICK,
                       maxWidth: STICKY_W_NICK,
                       width: STICKY_W_NICK,
@@ -1442,7 +1552,7 @@ export default function RhGestaoEscalaPage() {
                   </th>
                   <th
                     scope="col"
-                    style={thSticky(areaCustomerService ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA, {
+                    style={thSticky(semColunaNome ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA, {
                       minWidth: STICKY_W_ESCALA,
                       maxWidth: STICKY_W_ESCALA,
                       width: STICKY_W_ESCALA,
@@ -1453,7 +1563,7 @@ export default function RhGestaoEscalaPage() {
                   </th>
                   <th
                     scope="col"
-                    style={thSticky(areaCustomerService ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
+                    style={thSticky(semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
                       minWidth: STICKY_W_TURNO_STAFF,
                       maxWidth: STICKY_W_TURNO_STAFF,
                       width: STICKY_W_TURNO_STAFF,
@@ -1482,7 +1592,7 @@ export default function RhGestaoEscalaPage() {
                 {linhas.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={(areaCustomerService ? 3 : 4) + dias.length}
+                      colSpan={(semColunaNome ? 3 : 4) + dias.length}
                       style={{
                         ...getTdStyle(t),
                         textAlign: "center",
@@ -1493,12 +1603,28 @@ export default function RhGestaoEscalaPage() {
                       {msgTabelaVazia}
                     </td>
                   </tr>
+                ) : linhasFiltradasNickname.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={(semColunaNome ? 3 : 4) + dias.length}
+                      style={{
+                        ...getTdStyle(t),
+                        textAlign: "center",
+                        padding: "36px 16px",
+                        color: t.textMuted,
+                        fontFamily: FONT.body,
+                        fontSize: 13,
+                      }}
+                    >
+                      Nenhum nickname corresponde à pesquisa.
+                    </td>
+                  </tr>
                 ) : (
-                  linhas.map((row, i) => {
+                  linhasFiltradasNickname.map((row, i) => {
                     const bg = zebraBgLinha(i);
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>
-                        {!areaCustomerService ? (
+                        {!semColunaNome ? (
                           <td
                             style={tdSticky(0, bg, Z_BODY_NOME, {
                               maxWidth: STICKY_W_NOME,
@@ -1514,24 +1640,24 @@ export default function RhGestaoEscalaPage() {
                         ) : null}
                         <td
                           style={tdSticky(
-                            areaCustomerService ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK,
+                            semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK,
                             bg,
-                            areaCustomerService ? Z_BODY_NOME : Z_BODY_NICK,
+                            semColunaNome ? Z_BODY_NOME : Z_BODY_NICK,
                             {
                               minWidth: STICKY_W_NICK,
                               width: STICKY_W_NICK,
                               maxWidth: STICKY_W_NICK,
                             },
                           )}
-                          title={areaCustomerService ? row.nomeCompletoCadastro : undefined}
+                          title={semColunaNome ? row.nomeCompletoCadastro : undefined}
                         >
                           {row.nickname}
                         </td>
                         <td
                           style={tdSticky(
-                            areaCustomerService ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA,
+                            semColunaNome ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA,
                             bg,
-                            areaCustomerService ? Z_BODY_NICK : Z_BODY_ESCALA,
+                            semColunaNome ? Z_BODY_NICK : Z_BODY_ESCALA,
                             {
                               minWidth: STICKY_W_ESCALA,
                               width: STICKY_W_ESCALA,
@@ -1544,9 +1670,9 @@ export default function RhGestaoEscalaPage() {
                         </td>
                         <td
                           style={tdSticky(
-                            areaCustomerService ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF,
+                            semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF,
                             bg,
-                            areaCustomerService ? Z_BODY_ESCALA : Z_BODY_TURNO_STAFF,
+                            semColunaNome ? Z_BODY_ESCALA : Z_BODY_TURNO_STAFF,
                             {
                               minWidth: STICKY_W_TURNO_STAFF,
                               width: STICKY_W_TURNO_STAFF,

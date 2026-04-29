@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../../lib/supabase";
 import { validarBrandguide } from "../../../lib/brandguideValidation";
 import { useApp } from "../../../context/AppContext";
@@ -8,7 +8,10 @@ import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/th
 import { Operadora } from "../../../types";
 import { Pencil, AlertCircle, Upload, Check } from "lucide-react";
 import { GiShield } from "react-icons/gi";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { compareAtivoBoolean } from "../../../lib/classificacaoSort";
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
@@ -19,6 +22,8 @@ export default function GestaoOperadoras() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Operadora | null>(null);
+  type OpSortCol = "status";
+  const [sortOp, setSortOp] = useState<{ col: OpSortCol; dir: SortDir }>({ col: "status", dir: "asc" });
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -29,6 +34,15 @@ export default function GestaoOperadoras() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  const operadorasOrdenadas = useMemo(() => {
+    const arr = [...operadoras];
+    arr.sort((a, b) => {
+      const c = compareAtivoBoolean(!!a.ativo, !!b.ativo, sortOp.dir);
+      if (c !== 0) return c;
+      return (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR", { sensitivity: "base" });
+    });
+    return arr;
+  }, [operadoras, sortOp.dir]);
   const ativas = operadoras.filter((o) => o.ativo).length;
   const contadorLabel = operadoras.length === 1 ? "1 operadora cadastrada" : `${operadoras.length} operadoras cadastradas`;
 
@@ -136,13 +150,26 @@ export default function GestaoOperadoras() {
               <tr>
                 <th style={th}>Slug</th>
                 <th style={th}>Nome</th>
-                <th style={th}>Status</th>
+                <SortTableTh<OpSortCol>
+                  label="Classificação"
+                  col="status"
+                  sortCol={sortOp.col}
+                  sortDir={sortOp.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(col) =>
+                    setSortOp((s) => ({
+                      col,
+                      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
                 <th style={th}>Criada em</th>
                 {perm.canEditarOk && <th style={th}>Ações</th>}
               </tr>
             </thead>
             <tbody>
-              {operadoras.map((op, idx) => (
+              {operadorasOrdenadas.map((op, idx) => (
                 <tr key={op.slug} style={{ background: idx % 2 === 1 ? (t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent" }}>
                   <td style={td}>
                     <code style={{
@@ -376,7 +403,10 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
 
         {/* Campo Nome */}
         <div style={fieldStyle}>
-          <label style={labelStyle}>Nome</label>
+          <label style={labelStyle}>
+            Nome
+            <CampoObrigatorioMark />
+          </label>
           <input
             style={inputStyle}
             value={nome}

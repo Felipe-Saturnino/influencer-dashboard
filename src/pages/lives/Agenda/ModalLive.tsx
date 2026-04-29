@@ -12,6 +12,7 @@ import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import { X, Trash2, Lock, Video, Loader2 } from "lucide-react";
 
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LINK_KEY } from "../../../constants/platforms";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 
 function dateToISOLocal(d: Date): string {
@@ -202,6 +203,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body,
   };
   const row: React.CSSProperties = { marginBottom: 14 };
+  const showReqMark = !somenteLeitura && (podeCriar || podeEditar);
 
   return (
     <>
@@ -289,7 +291,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         {/* Influencer */}
         {!isInfluencer && influencers.length > 0 && (
           <div style={row}>
-            <label style={labelStyle}>Influencer</label>
+            <label style={labelStyle}>
+              Influencer
+              {showReqMark ? <CampoObrigatorioMark /> : null}
+            </label>
             <select
               value={form.influencer_id}
                 onChange={e => {
@@ -310,7 +315,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         {/* Data e horário */}
         <div className="app-grid-2-tight" style={{ ...row, gap: 10 }}>
           <div>
-            <label style={labelStyle}>Data</label>
+            <label style={labelStyle}>
+              Data
+              {showReqMark ? <CampoObrigatorioMark /> : null}
+            </label>
             <input
               type="date"
               value={form.data}
@@ -327,7 +335,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
             />
           </div>
           <div>
-            <label style={labelStyle}>Horário</label>
+            <label style={labelStyle}>
+              Horário
+              {showReqMark ? <CampoObrigatorioMark /> : null}
+            </label>
             <input
               type="time"
               value={form.horario}
@@ -349,7 +360,10 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         )}
         {/* Plataforma — com logos SVG */}
         <div style={row}>
-          <label style={labelStyle}>Plataforma</label>
+          <label style={labelStyle}>
+            Plataforma
+            {showReqMark ? <CampoObrigatorioMark /> : null}
+          </label>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {PLATAFORMAS.map(p => {
               const selected = form.plataforma === p;
@@ -380,7 +394,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
         {/* Link */}
         <div style={row}>
           <label style={labelStyle}>
-            Link {form.plataforma} <span style={{ color: BRAND.vermelho }}>*</span>
+            Link {form.plataforma}
+            {showReqMark ? <CampoObrigatorioMark /> : null}
           </label>
           <input
             value={form.link}

@@ -61,6 +61,7 @@ import { buildLoginUrlComPrefillDadosCadastro } from "../../../lib/rhLoginDadosC
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, useDialogTitleId } from "../../../components/OperacoesModal";
 import { SkeletonTableRow, SortTableTh, type SortDir } from "../../../components/dashboard";
 
@@ -2075,7 +2076,7 @@ export default function RhPrestadoresPage() {
     boxSizing: "border-box",
   };
 
-  const astReq = <span style={{ color: "#e84025", fontWeight: 700 }} aria-hidden> *</span>;
+  const astReq = <CampoObrigatorioMark />;
   const lbl = (htmlFor: string, text: string) => (
     <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
       {text}

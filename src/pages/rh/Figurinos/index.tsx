@@ -11,7 +11,10 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { baixarEtiquetaFigurinoPdf } from "../../../lib/rhFigurinoEtiquetaPdf";
 import { PageHeader } from "../../../components/PageHeader";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { compareCondicaoPeca } from "../../../lib/classificacaoSort";
 import type { Operadora } from "../../../types";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import type {
@@ -136,6 +139,8 @@ export default function FigurinosPage() {
   const [busca, setBusca] = useState("");
   const [filtroCat, setFiltroCat] = useState<string>("todas");
   const [filtroTam, setFiltroTam] = useState<string>("todas");
+  type FigSortCol = "cond";
+  const [sortFig, setSortFig] = useState<{ col: FigSortCol; dir: SortDir }>({ col: "cond", dir: "asc" });
 
   const [modalCadastro, setModalCadastro] = useState(false);
   const [modalScanner, setModalScanner] = useState(false);
@@ -250,6 +255,16 @@ export default function FigurinosPage() {
       return hay.includes(buscaNorm);
     });
   }, [pecasComFiltroTopo, aba, buscaNorm, empPorItem, operadoraNome]);
+
+  const pecasOrdenadas = useMemo(() => {
+    const arr = [...pecasFiltradas];
+    arr.sort((a, b) => {
+      const c = compareCondicaoPeca(a.condition, b.condition, sortFig.dir);
+      if (c !== 0) return c;
+      return a.code.localeCompare(b.code, "pt-BR");
+    });
+    return arr;
+  }, [pecasFiltradas, sortFig.dir]);
 
   const pecasNaAbaComFiltroTopo = useMemo(
     () => pecasComFiltroTopo.filter((p) => p.status === aba),
@@ -678,7 +693,9 @@ export default function FigurinosPage() {
           </div>
         ) : pecasFiltradas.length === 0 ? (
           <div style={{ padding: "36px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            {pecasNaAbaComFiltroTopo.length > 0 ? "Nenhuma peça corresponde à pesquisa nesta aba." : emptyMsgAba(aba)}
+            {pecasNaAbaComFiltroTopo.length > 0
+              ? "Nenhuma peça corresponde à pesquisa nesta aba."
+              : emptyMsgAba(aba)}
           </div>
         ) : (
           <div className="app-table-wrap">
@@ -712,9 +729,20 @@ export default function FigurinosPage() {
                       <th scope="col" style={getThStyle(t)}>
                         Data de aquisição
                       </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Condição
-                      </th>
+                      <SortTableTh<FigSortCol>
+                        label="Classificação"
+                        col="cond"
+                        sortCol={sortFig.col}
+                        sortDir={sortFig.dir}
+                        thStyle={getThStyle(t)}
+                        align="left"
+                        onSort={(col) =>
+                          setSortFig((s) => ({
+                            col,
+                            dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+                          }))
+                        }
+                      />
                       <th scope="col" style={{ ...getThStyle(t), textAlign: "right" }}>
                         Ações
                       </th>
@@ -734,9 +762,20 @@ export default function FigurinosPage() {
                       <th scope="col" style={getThStyle(t)}>
                         Tamanho
                       </th>
-                      <th scope="col" style={getThStyle(t)}>
-                        Condição
-                      </th>
+                      <SortTableTh<FigSortCol>
+                        label="Classificação"
+                        col="cond"
+                        sortCol={sortFig.col}
+                        sortDir={sortFig.dir}
+                        thStyle={getThStyle(t)}
+                        align="left"
+                        onSort={(col) =>
+                          setSortFig((s) => ({
+                            col,
+                            dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+                          }))
+                        }
+                      />
                       <th scope="col" style={getThStyle(t)}>
                         Tipo de retirada
                       </th>
@@ -810,7 +849,7 @@ export default function FigurinosPage() {
                 </tr>
               </thead>
               <tbody>
-                {pecasFiltradas.map((p, i) => {
+                {pecasOrdenadas.map((p, i) => {
                   const emp = empPorItem[p.id];
                   const zebra = { background: zebraStripe(i) };
                   const emprestadoPara =
@@ -1307,7 +1346,9 @@ function ModalCadastroPeca({
         </label>
         <fieldset style={{ border: "none", margin: 0, padding: 0 }}>
           <legend style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 8 }}>
-            Operadoras * <span style={{ fontWeight: 400 }}>(pode marcar várias)</span>
+            Operadoras
+            <CampoObrigatorioMark />
+            <span style={{ fontWeight: 400 }}> (pode marcar várias)</span>
           </legend>
           <div
             style={{
@@ -1354,7 +1395,8 @@ function ModalCadastroPeca({
         </fieldset>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-            Categoria *
+            Categoria
+            <CampoObrigatorioMark />
             <select
               value={cat}
               onChange={(e) => setCat(e.target.value)}
@@ -1378,7 +1420,8 @@ function ModalCadastroPeca({
             </select>
           </label>
           <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-            Tamanho *
+            Tamanho
+            <CampoObrigatorioMark />
             <select
               value={tam}
               onChange={(e) => setTam(e.target.value)}
@@ -1403,7 +1446,9 @@ function ModalCadastroPeca({
           </label>
         </div>
         <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-          Data de entrada * <span style={{ fontWeight: 400, color: t.textMuted }}>(data de aquisição)</span>
+          Data de entrada
+          <CampoObrigatorioMark />
+          <span style={{ fontWeight: 400, color: t.textMuted }}> (data de aquisição)</span>
           <input
             type="date"
             required

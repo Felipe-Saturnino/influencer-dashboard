@@ -3,6 +3,7 @@ import { X, AlertCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
@@ -277,7 +278,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     <div style={field}>
       <label style={labelStyle}>
         {label}
-        {obrigatorio && <span style={{ color: BRAND.vermelho, marginLeft: 4 }}>*</span>}
+        {obrigatorio ? <CampoObrigatorioMark /> : null}
         <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6 }}>(seleção única)</span>
       </label>
       <div
@@ -344,7 +345,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     <div style={field}>
       <label style={labelStyle}>
         {label}
-        {obrigatorio && <span style={{ color: BRAND.vermelho, marginLeft: 4 }}>*</span>}
+        {obrigatorio ? <CampoObrigatorioMark /> : null}
         <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6 }}>(multi-seleção)</span>
       </label>
       <div
@@ -408,7 +409,10 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     <ModalBase onClose={onClose} maxWidth={560} zIndex={999}>
       <ModalHeader title={tituloModal} onClose={onClose} />
         <div style={field}>
-          <label style={labelStyle}>Nome</label>
+          <label style={labelStyle}>
+            Nome
+            <CampoObrigatorioMark />
+          </label>
           <input
             style={inputStyle}
             value={nome}
@@ -420,7 +424,10 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         </div>
         {!editando && (
           <div style={field}>
-            <label style={labelStyle}>E-mail</label>
+            <label style={labelStyle}>
+              E-mail
+              <CampoObrigatorioMark />
+            </label>
             <input
               style={inputStyle}
               value={email}

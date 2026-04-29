@@ -14,6 +14,7 @@ import {
 } from "../../../lib/rhVagasFormat";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
+import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
 import { SelectOrganogramaTimes } from "../SelectOrganogramaTimes";
 
@@ -207,6 +208,12 @@ export function ModalAtualizarVaga({
   const lbl = (htmlFor: string, text: string) => (
     <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
       {text}
+    </label>
+  );
+  const lblReq = (htmlFor: string, text: string) => (
+    <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
+      {text}
+      <CampoObrigatorioMark />
     </label>
   );
 
@@ -442,13 +449,16 @@ export function ModalAtualizarVaga({
               ) : null}
 
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-titulo", "Título")}
+                {lblReq("atv-titulo", "Título")}
                 <input id="atv-titulo" type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} style={inputStyle} autoComplete="off" />
                 {fieldErr.titulo ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.titulo}</div> : null}
               </div>
 
               <fieldset style={{ border: "none", margin: "0 0 14px", padding: 0 }}>
-                <legend style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body, padding: 0 }}>Tipo de vaga</legend>
+                <legend style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body, padding: 0 }}>
+                  Tipo de vaga
+                  <CampoObrigatorioMark />
+                </legend>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, color: t.text, fontFamily: FONT.body }}>
                     <input type="checkbox" checked={chkInterna} onChange={(e) => setChkInterna(e.target.checked)} aria-label="Vaga interna" />
@@ -463,7 +473,7 @@ export function ModalAtualizarVaga({
               </fieldset>
 
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-org", "Organograma")}
+                {lblReq("atv-org", "Organograma")}
                 <SelectOrganogramaTimes
                   id="atv-org"
                   aria-label="Selecionar time no organograma"
@@ -478,7 +488,7 @@ export function ModalAtualizarVaga({
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-sal", "Remuneração mensal")}
+                {lblReq("atv-sal", "Remuneração mensal")}
                 <input
                   id="atv-sal"
                   type="text"
@@ -494,25 +504,25 @@ export function ModalAtualizarVaga({
 
               {accao === "reabrir" ? (
                 <div style={{ marginBottom: 14 }}>
-                  {lbl("atv-abertura", "Data de abertura")}
+                  {lblReq("atv-abertura", "Data de abertura")}
                   <input id="atv-abertura" type="date" value={dataAbertura} onChange={(e) => setDataAbertura(e.target.value)} style={inputStyle} />
                   {fieldErr.data_abertura ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_abertura}</div> : null}
                 </div>
               ) : null}
 
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-fim", "Data fim das inscrições")}
+                {lblReq("atv-fim", "Data fim das inscrições")}
                 <input id="atv-fim" type="date" value={dataFimInscricoes} onChange={(e) => setDataFimInscricoes(e.target.value)} style={inputStyle} />
                 {fieldErr.data_fim ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_fim}</div> : null}
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-desc", "Descrição")}
+                {lblReq("atv-desc", "Descrição")}
                 <textarea id="atv-desc" value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} style={{ ...inputStyle, resize: "vertical" }} />
                 {fieldErr.descricao ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.descricao}</div> : null}
               </div>
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-resp", "Responsabilidades")}
+                {lblReq("atv-resp", "Responsabilidades")}
                 <textarea
                   id="atv-resp"
                   value={responsabilidades}
@@ -523,12 +533,12 @@ export function ModalAtualizarVaga({
                 {fieldErr.responsabilidades ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.responsabilidades}</div> : null}
               </div>
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-req", "Requisitos")}
+                {lblReq("atv-req", "Requisitos")}
                 <textarea id="atv-req" value={requisitos} onChange={(e) => setRequisitos(e.target.value)} rows={4} style={{ ...inputStyle, resize: "vertical" }} />
                 {fieldErr.requisitos ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.requisitos}</div> : null}
               </div>
               <div style={{ marginBottom: 18 }}>
-                {lbl("atv-escala", "Escala de trabalho")}
+                {lblReq("atv-escala", "Escala de trabalho")}
                 <textarea
                   id="atv-escala"
                   value={escalaTrabalho}
@@ -564,7 +574,7 @@ export function ModalAtualizarVaga({
                 />
               </div>
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-cand", "Candidato selecionado")}
+                {lblReq("atv-cand", "Candidato selecionado")}
                 <select
                   id="atv-cand"
                   value={candidatoId}
@@ -586,7 +596,7 @@ export function ModalAtualizarVaga({
                 {fieldErr.candidato ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.candidato}</div> : null}
               </div>
               <div style={{ marginBottom: 18 }}>
-                {lbl("atv-enc-1", "Data de encerramento")}
+                {lblReq("atv-enc-1", "Data de encerramento")}
                 <input id="atv-enc-1" type="date" value={dataEncerramento} onChange={(e) => setDataEncerramento(e.target.value)} style={inputStyle} />
                 {fieldErr.data_enc ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_enc}</div> : null}
               </div>
@@ -596,12 +606,12 @@ export function ModalAtualizarVaga({
           {accao === "cancelar" ? (
             <>
               <div style={{ marginBottom: 14 }}>
-                {lbl("atv-enc-2", "Data de encerramento")}
+                {lblReq("atv-enc-2", "Data de encerramento")}
                 <input id="atv-enc-2" type="date" value={dataEncerramento} onChange={(e) => setDataEncerramento(e.target.value)} style={inputStyle} />
                 {fieldErr.data_enc ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_enc}</div> : null}
               </div>
               <div style={{ marginBottom: 18 }}>
-                {lbl("atv-motivo", "Motivo do cancelamento")}
+                {lblReq("atv-motivo", "Motivo do cancelamento")}
                 <textarea
                   id="atv-motivo"
                   value={motivoCancelamento}

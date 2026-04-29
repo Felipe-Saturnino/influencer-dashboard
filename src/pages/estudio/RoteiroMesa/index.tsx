@@ -8,6 +8,7 @@ import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { BookOpen, Megaphone, Trash2, FileText, Info, AlertTriangle, Plus, Check, Shield } from "lucide-react";
 import { GiNotebook } from "react-icons/gi";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
@@ -293,7 +294,10 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
 
         {mostraCampoOperadora && operadorasFiltradas.length > 0 && (
           <>
-            <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Operadora *</p>
+            <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+              Operadora
+              <CampoObrigatorioMark />
+            </p>
             <select value={operadoraSlugModal} onChange={(e) => setOperadoraSlugModal(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.text, fontFamily: FONT.body, fontSize: 13, marginBottom: 18, outline: "none" }}>
               <option value="">Selecione a operadora</option>
               {[...operadorasFiltradas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
@@ -303,7 +307,10 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
           </>
         )}
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Tipo *</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+          Tipo
+          <CampoObrigatorioMark />
+        </p>
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
           {TIPOS.map(({ key, label }) => {
             const tcfg = TIPO_CONFIG[key];
@@ -314,7 +321,10 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
           })}
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Jogos *</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+          Jogos
+          <CampoObrigatorioMark />
+        </p>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {JOGOS.map(({ key, label }) => {
             const jcfg = JOGO_TAG_CONFIG[key];
@@ -325,7 +335,10 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
           })}
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>Texto *</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px", fontFamily: FONT.body }}>
+          Texto
+          <CampoObrigatorioMark />
+        </p>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "script" ? "Olá Jogadores, meu nome é [Nome]..." : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o dealer..."} rows={4} style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", outline: "none", marginBottom: 18 }} />
 
         {erroSalvar ? (
@@ -488,7 +501,10 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
 
         {mostraCampoOperadora && operadorasFiltradas.length > 0 && (
           <>
-            <label style={lbl}>Operadora *</label>
+            <label style={lbl}>
+              Operadora
+              <CampoObrigatorioMark />
+            </label>
             <select value={operadoraSlugModal} onChange={(e) => setOperadoraSlugModal(e.target.value)} style={{ ...inp, marginBottom: 18 }}>
               <option value="">Selecione a operadora</option>
               {[...operadorasFiltradas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => (
@@ -498,10 +514,16 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
           </>
         )}
 
-        <label style={lbl}>Título *</label>
+        <label style={lbl}>
+          Título
+          <CampoObrigatorioMark />
+        </label>
         <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder='Ex: "Cashback na Mesa X — Blaze"' style={{ ...inp, marginBottom: 18 }} />
 
-        <p style={lbl}>Jogos *</p>
+        <p style={lbl}>
+          Jogos
+          <CampoObrigatorioMark />
+        </p>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {JOGOS.map(({ key, label }) => {
             const jcfg = JOGO_TAG_CONFIG[key];
@@ -512,13 +534,22 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
           })}
         </div>
 
-        <p style={lbl}>Data início *</p>
+        <p style={lbl}>
+          Data início
+          <CampoObrigatorioMark />
+        </p>
         <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} style={{ ...inp, marginBottom: 18 }} />
 
-        <p style={lbl}>Data fim *</p>
+        <p style={lbl}>
+          Data fim
+          <CampoObrigatorioMark />
+        </p>
         <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} style={{ ...inp, marginBottom: 18 }} />
 
-        <label style={lbl}>Texto *</label>
+        <label style={lbl}>
+          Texto
+          <CampoObrigatorioMark />
+        </label>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='O que o dealer deve falar...' rows={4} style={{ ...inp, resize: "vertical", marginBottom: 18 }} />
 
         {erroSalvar ? (

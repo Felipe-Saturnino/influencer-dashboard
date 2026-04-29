@@ -10,7 +10,10 @@ import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaG
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
+import { compareInfluencerPerfilStatus } from "../../../lib/classificacaoSort";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Shield } from "lucide-react";
 import { GiChipsBag } from "react-icons/gi";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
@@ -31,6 +34,17 @@ interface BancaRowDb {
   liberado_em: string | null;
   liberado_por: string | null;
 }
+
+/** Dados de `influencer_perfil` + e-mail usados na Banca. */
+type BancaPerfilMapRow = {
+  nome: string;
+  cpf: string;
+  email: string;
+  banca_status_conta: BancaStatusConta;
+  banca_data_bloqueio: string | null;
+  banca_data_desbloqueio: string | null;
+  perfil_status: string | null;
+};
 
 const MESES_NOMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -339,7 +353,10 @@ function ModalSolicitar({
         )}
         {userRole === "agencia" && (
           <div>
-            <label style={labelStyle}>Influencer *</label>
+            <label style={labelStyle}>
+              Influencer
+              <CampoObrigatorioMark />
+            </label>
             <select value={infSel} onChange={(e) => setInfSel(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
               <option value="">Selecione...</option>
               {influencerListAgencia.map((i) => (
@@ -358,7 +375,10 @@ function ModalSolicitar({
         )}
 
         <div>
-          <label style={labelStyle}>ID da operadora (ativo)</label>
+          <label style={labelStyle}>
+            ID da operadora (ativo)
+            <CampoObrigatorioMark />
+          </label>
           {opcoesIo.length > 1 ? (
             <select value={opSlug} onChange={(e) => setOpSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
               <option value="">Selecione a operadora...</option>
@@ -376,7 +396,10 @@ function ModalSolicitar({
         </div>
 
         <div>
-          <label style={labelStyle}>Valor solicitado (R$) *</label>
+          <label style={labelStyle}>
+            Valor solicitado (R$)
+            <CampoObrigatorioMark />
+          </label>
           <input
             type="number"
             min={0}
@@ -477,7 +500,10 @@ function ModalAprovarBanca({
         Ajuste o valor, se necessário, antes de aprovar.
       </p>
       <div>
-        <label style={labelStyle}>Valor (R$)</label>
+        <label style={labelStyle}>
+          Valor (R$)
+          <CampoObrigatorioMark />
+        </label>
         <input
           type="number"
           min={0.01}
@@ -581,7 +607,7 @@ function BlocoSolicitacoes({
 }: {
   filtros: BlocoFiltros;
   rowsDb: BancaRowDb[];
-  perfilMap: Record<string, { nome: string; cpf: string }>;
+  perfilMap: Record<string, Pick<BancaPerfilMapRow, "nome" | "cpf" | "perfil_status">>;
   staffPodeAcao: boolean;
   /** Operador não aprova solicitações; só libera após aprovação interna. */
   staffPodeAprovar: boolean;
@@ -612,6 +638,8 @@ function BlocoSolicitacoes({
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [confirmExcluir, setConfirmExcluir] = useState<BancaRowDb | null>(null);
   const [cpfRevelados, setCpfRevelados] = useState<Set<string>>(() => new Set());
+  type SolicSortCol = "classificacao";
+  const [sortSolic, setSortSolic] = useState<{ col: SolicSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
 
   const toggleCpfRevelado = useCallback((id: string) => {
     setCpfRevelados((prev) => {
@@ -656,6 +684,20 @@ function BlocoSolicitacoes({
       return rowNoMesSolicitacao(r, periodo, historico);
     }).sort((a, b) => (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? ""));
   }, [rowsDb, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, statusFiltro, periodo, historico]);
+
+  const listaOrdenada = useMemo(() => {
+    const arr = [...lista];
+    arr.sort((a, b) => {
+      const c = compareInfluencerPerfilStatus(
+        { statusInfluencer: perfilMap[a.influencer_id]?.perfil_status ?? null },
+        { statusInfluencer: perfilMap[b.influencer_id]?.perfil_status ?? null },
+        sortSolic.dir,
+      );
+      if (c !== 0) return c;
+      return (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? "");
+    });
+    return arr;
+  }, [lista, perfilMap, sortSolic.dir]);
 
   async function executarLiberar(row: BancaRowDb) {
     if (!user?.id) return;
@@ -735,7 +777,22 @@ function BlocoSolicitacoes({
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              {(["Influencer", "ID operadora", "CPF", "Valor", "Status", "Data", "Ação"] as const).map((h) => (
+              <th scope="col" style={th}>Influencer</th>
+              <SortTableTh<SolicSortCol>
+                label="Classificação"
+                col="classificacao"
+                sortCol={sortSolic.col}
+                sortDir={sortSolic.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortSolic((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              {(["ID operadora", "CPF", "Valor", "Status", "Data", "Ação"] as const).map((h) => (
                 <th
                   key={h}
                   scope="col"
@@ -752,14 +809,21 @@ function BlocoSolicitacoes({
           <tbody>
             {lista.length === 0 ? (
               <tr>
-                <td colSpan={narrowMobile ? 6 : 7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 36 }}>
+                <td colSpan={narrowMobile ? 7 : 8} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 36 }}>
                   Nenhuma solicitação em aberto neste filtro.
                 </td>
               </tr>
             ) : (
-              lista.map((r) => {
+              listaOrdenada.map((r) => {
                 const perf = perfilMap[r.influencer_id];
                 const st = STATUS_BANCA[r.status];
+                const sk = (perf?.perfil_status ?? "ativo").toLowerCase();
+                const slInf =
+                  sk === "inativo"
+                    ? { label: "Inativo", color: "#94a3b8" }
+                    : sk === "cancelado"
+                      ? { label: "Cancelado", color: "#ef4444" }
+                      : { label: "Ativo", color: "#10b981" };
                 const dataStr = new Date(r.solicitado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
                 const showAprovar = staffPodeAprovar && r.status === "solicitado";
                 const showLiberar = staffPodeAcao && r.status === "aprovado";
@@ -780,6 +844,23 @@ function BlocoSolicitacoes({
                 return (
                   <tr key={r.id} {...rowHover}>
                     <td style={td}>{perf?.nome ?? r.influencer_id}</td>
+                    <td style={td}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          padding: "3px 9px",
+                          borderRadius: 20,
+                          background: `${slInf.color}22`,
+                          color: slInf.color,
+                          border: `1px solid ${slInf.color}44`,
+                        }}
+                      >
+                        {slInf.label}
+                      </span>
+                    </td>
                     <td style={{ ...td, fontFamily: "monospace", fontSize: 12 }}>{(r.id_operadora_exibicao ?? "").trim() || "—"}</td>
                     <td style={{ ...td, fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1072,14 +1153,7 @@ function BlocoConsolidadoBanca({
 }: {
   filtros: BlocoFiltros;
   rowsDb: BancaRowDb[];
-  perfilMap: Record<string, {
-    nome: string;
-    cpf: string;
-    email: string;
-    banca_status_conta: BancaStatusConta;
-    banca_data_bloqueio: string | null;
-    banca_data_desbloqueio: string | null;
-  }>;
+  perfilMap: Record<string, BancaPerfilMapRow>;
   podeEditarStatusConta: boolean;
   onPerfisAtualizados: () => void;
 }) {
@@ -1092,6 +1166,8 @@ function BlocoConsolidadoBanca({
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
   const [busca, setBusca] = useState("");
+  type BancaConsSortCol = "classificacao";
+  const [sortBancaCons, setSortBancaCons] = useState<{ col: BancaConsSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
   const [expandido, setExpandido] = useState<string | null>(null);
   const [modalStatus, setModalStatus] = useState<{ id: string; nome: string; statusConta: BancaStatusConta } | null>(null);
 
@@ -1121,6 +1197,7 @@ function BlocoConsolidadoBanca({
     dataBloqueio: string | null;
     dataDesbloqueio: string | null;
     statusContaBanca: BancaStatusConta;
+    perfil_status: string | null;
   }
 
   const agregados = useMemo(() => {
@@ -1146,14 +1223,32 @@ function BlocoConsolidadoBanca({
         dataBloqueio: perf?.banca_data_bloqueio ?? null,
         dataDesbloqueio: perf?.banca_data_desbloqueio ?? null,
         statusContaBanca: stConta,
+        perfil_status: perf?.perfil_status ?? null,
       });
     }
     return out.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   }, [rowsFiltradas, perfilMap]);
 
-  const filtradaBusca = agregados.filter((r) =>
-    !busca || r.nome.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase()),
-  );
+  const filtradaBusca = useMemo(() => {
+    return agregados.filter((r) => {
+      if (!busca) return true;
+      return r.nome.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase());
+    });
+  }, [agregados, busca]);
+
+  const filtradaOrdenada = useMemo(() => {
+    const arr = [...filtradaBusca];
+    arr.sort((a, b) => {
+      const c = compareInfluencerPerfilStatus(
+        { statusInfluencer: a.perfil_status },
+        { statusInfluencer: b.perfil_status },
+        sortBancaCons.dir,
+      );
+      if (c !== 0) return c;
+      return a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" });
+    });
+    return arr;
+  }, [filtradaBusca, sortBancaCons.dir]);
 
   const th: React.CSSProperties = {
     padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
@@ -1185,7 +1280,7 @@ function BlocoConsolidadoBanca({
             fontSize: 13, fontFamily: FONT.body, outline: "none",
           }}
         />
-        <span style={{ fontSize: 12, color: t.textMuted }}>{filtradaBusca.length} influencers</span>
+        <span style={{ fontSize: 12, color: t.textMuted }}>{filtradaOrdenada.length} influencers</span>
       </div>
 
       <div style={{ overflowX: "auto", borderRadius: 12, border: `1px solid ${t.cardBorder}` }}>
@@ -1193,22 +1288,44 @@ function BlocoConsolidadoBanca({
           <thead>
             <tr>
               <th style={{ ...th, width: 32 }} scope="col" aria-label="Expandir" />
-              {["Influencer", "Total liberado", "Total solicitado", "Data de bloqueio", "Data de desbloqueio", "Status da conta"].map((h) => (
+              <th scope="col" style={th}>Influencer</th>
+              <SortTableTh<BancaConsSortCol>
+                label="Classificação"
+                col="classificacao"
+                sortCol={sortBancaCons.col}
+                sortDir={sortBancaCons.dir}
+                thStyle={th}
+                align="left"
+                onSort={(c) =>
+                  setSortBancaCons((s) => ({
+                    col: c,
+                    dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                  }))
+                }
+              />
+              {["Total liberado", "Total solicitado", "Data de bloqueio", "Data de desbloqueio", "Status da conta"].map((h) => (
                 <th key={h} scope="col" style={th}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtradaBusca.length === 0 ? (
+            {filtradaOrdenada.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40 }}>
+                <td colSpan={8} style={{ ...td, textAlign: "center", color: t.textMuted, padding: 40 }}>
                   {MSG_SEM_DADOS_FILTRO}
                 </td>
               </tr>
             ) : (
-              filtradaBusca.map((row) => {
+              filtradaOrdenada.map((row) => {
                 const open = expandido === row.influencer_id;
                 const sl = contaLabel(row.statusContaBanca);
+                const sk = (row.perfil_status ?? "ativo").toLowerCase();
+                const slInf =
+                  sk === "inativo"
+                    ? { label: "Inativo", color: "#94a3b8" }
+                    : sk === "cancelado"
+                      ? { label: "Cancelado", color: "#ef4444" }
+                      : { label: "Ativo", color: "#10b981" };
                 const itens = rowsFiltradas.filter((r) => r.influencer_id === row.influencer_id).sort((a, b) => (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? ""));
                 return (
                   <Fragment key={row.influencer_id}>
@@ -1247,6 +1364,23 @@ function BlocoConsolidadoBanca({
                           </div>
                         </div>
                       </td>
+                      <td style={td} onClick={(e) => e.stopPropagation()}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "3px 9px",
+                            borderRadius: 20,
+                            background: `${slInf.color}22`,
+                            color: slInf.color,
+                            border: `1px solid ${slInf.color}44`,
+                          }}
+                        >
+                          {slInf.label}
+                        </span>
+                      </td>
                       <td style={{ ...td, fontWeight: 700, color: "#10b981" }}>{fmtMoeda(row.totalLiberado)}</td>
                       <td style={{ ...td, color: row.totalSolicitado > 0 ? "#f59e0b" : t.textMuted, fontWeight: row.totalSolicitado > 0 ? 600 : 400 }}>{fmtMoeda(row.totalSolicitado)}</td>
                       <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>{fmtData(row.dataBloqueio)}</td>
@@ -1271,7 +1405,7 @@ function BlocoConsolidadoBanca({
                     </tr>
                     {open ? (
                       <tr style={{ background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)" }}>
-                        <td colSpan={7} style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
+                        <td colSpan={8} style={{ padding: "16px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
                           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: t.textMuted, marginBottom: 10, fontFamily: FONT.body }}>
                             Bancas solicitadas — {row.nome}
                           </div>
@@ -1354,14 +1488,7 @@ export default function BancaJogo() {
   const [filterOperadora, setFilterOperadora] = useState("todas");
   const [influencerList, setInfluencerList] = useState<{ id: string; name: string }[]>([]);
   const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
-  const [perfilMap, setPerfilMap] = useState<Record<string, {
-    nome: string;
-    cpf: string;
-    email: string;
-    banca_status_conta: BancaStatusConta;
-    banca_data_bloqueio: string | null;
-    banca_data_desbloqueio: string | null;
-  }>>({});
+  const [perfilMap, setPerfilMap] = useState<Record<string, BancaPerfilMapRow>>({});
 
   const MESES_OPCOES = useMemo(() => gerarMeses().slice(1), []);
   const [mesFiltro, setMesFiltro] = useState(MESES_OPCOES[0]?.value ?? "");
@@ -1450,18 +1577,11 @@ export default function BancaJogo() {
   const carregarPerfis = useCallback(async () => {
     const { data: perfis } = await supabase
       .from("influencer_perfil")
-      .select("id, nome_artistico, cpf, banca_status_conta, banca_data_bloqueio, banca_data_desbloqueio");
+      .select("id, nome_artistico, cpf, banca_status_conta, banca_data_bloqueio, banca_data_desbloqueio, status");
     const { data: emails } = await supabase.from("profiles").select("id, email").eq("role", "influencer");
     const emailM: Record<string, string> = {};
     for (const e of emails ?? []) emailM[(e as { id: string }).id] = (e as { email: string }).email;
-    const m: Record<string, {
-      nome: string;
-      cpf: string;
-      email: string;
-      banca_status_conta: BancaStatusConta;
-      banca_data_bloqueio: string | null;
-      banca_data_desbloqueio: string | null;
-    }> = {};
+    const m: Record<string, BancaPerfilMapRow> = {};
     for (const p of perfis ?? []) {
       const row = p as {
         id: string;
@@ -1470,6 +1590,7 @@ export default function BancaJogo() {
         banca_status_conta?: string | null;
         banca_data_bloqueio?: string | null;
         banca_data_desbloqueio?: string | null;
+        status?: string | null;
       };
       const conta: BancaStatusConta = row.banca_status_conta === "bloqueada" ? "bloqueada" : "liberada";
       m[row.id] = {
@@ -1479,6 +1600,7 @@ export default function BancaJogo() {
         banca_status_conta: conta,
         banca_data_bloqueio: row.banca_data_bloqueio ?? null,
         banca_data_desbloqueio: row.banca_data_desbloqueio ?? null,
+        perfil_status: row.status ?? null,
       };
     }
     setPerfilMap(m);

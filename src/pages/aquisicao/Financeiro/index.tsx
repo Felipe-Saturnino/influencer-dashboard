@@ -11,7 +11,10 @@ import { CicloPagamento, PagamentoStatus, type Role } from "../../../types";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { compareInfluencerPerfilStatus } from "../../../lib/classificacaoSort";
 import { AlertTriangle, ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { GiReceiveMoney } from "react-icons/gi";
 
@@ -30,6 +33,8 @@ interface PagamentoRow {
   is_agente?: boolean;
   descricao?: string;
   qtd_lives?: number;
+  /** `influencer_perfil.status` — ausente em linhas de agente. */
+  statusInfluencer?: string | null;
 }
 
 interface FinanceiroLiveRow {
@@ -98,6 +103,7 @@ interface FinanceiroPerfilCacheRow {
   id: string;
   cache_hora?: number | null;
   nome_artistico?: string | null;
+  status?: string | null;
 }
 
 type FinanceiroLiveEscopoRow = FinanceiroLiveRow & { data: string };
@@ -521,6 +527,7 @@ function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
       <div style={{ marginBottom: "20px" }}>
         <label style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1px", display: "block", marginBottom: "8px", fontFamily: FONT.body }}>
           Valor a aprovar (R$)
+          <CampoObrigatorioMark />
         </label>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <input
@@ -703,7 +710,10 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerOperador
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {precisaSelecionarOp && (
           <div>
-            <label style={labelStyle}>Operadora *</label>
+            <label style={labelStyle}>
+              Operadora
+              <CampoObrigatorioMark />
+            </label>
             <select value={operadoraSlug} onChange={e => setOperadoraSlug(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
               <option value="">Selecione...</option>
               {[...opcoes].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
@@ -711,11 +721,17 @@ function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerOperador
           </div>
         )}
         <div>
-          <label style={labelStyle}>Descrição *</label>
+          <label style={labelStyle}>
+            Descrição
+            <CampoObrigatorioMark />
+          </label>
           <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex: Comissão João" style={inputStyle} />
         </div>
         <div>
-          <label style={labelStyle}>Valor (R$) *</label>
+          <label style={labelStyle}>
+            Valor (R$)
+            <CampoObrigatorioMark />
+          </label>
           <input
             type="number"
             min={0}
@@ -918,6 +934,8 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [enviarPagamentoLoading, setEnviarPagamentoLoading] = useState(false);
   const [enviarPagamentoError, setEnviarPagamentoError] = useState("");
+  type CicloSortCol = "classificacao";
+  const [sortCiclo, setSortCiclo] = useState<{ col: CicloSortCol; dir: SortDir }>({ col: "classificacao", dir: "asc" });
 
   const ciclo = ciclos.find(c => c.id === cicloId) ?? ciclos[0] ?? null;
   const isAberto = ciclo ? cicloAberto(ciclo) : false;
@@ -1025,7 +1043,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     const ids = [...new Set(parKeys.map((k) => k.split("::")[0]))];
     const [{ data: profiles }, { data: perfis }] = await Promise.all([
       supabase.from("profiles").select("id, name").in("id", ids),
-      supabase.from("influencer_perfil").select("id, cache_hora, nome_artistico").in("id", ids),
+      supabase.from("influencer_perfil").select("id, cache_hora, nome_artistico, status").in("id", ids),
     ]);
 
     const nameMap: Record<string, string> = {};
@@ -1033,9 +1051,13 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       nameMap[p.id] = p.name ?? p.id;
     }
 
-    const perfilMap: Record<string, { cache: number; artistico: string }> = {};
+    const perfilMap: Record<string, { cache: number; artistico: string; status: string | null }> = {};
     for (const p of (perfis ?? []) as FinanceiroPerfilCacheRow[]) {
-      perfilMap[p.id] = { cache: p.cache_hora ?? 0, artistico: p.nome_artistico ?? nameMap[p.id] ?? p.id };
+      perfilMap[p.id] = {
+        cache: p.cache_hora ?? 0,
+        artistico: p.nome_artistico ?? nameMap[p.id] ?? p.id,
+        status: p.status ?? null,
+      };
     }
 
     const result: PagamentoRow[] = parKeys.map(parKey => {
@@ -1054,6 +1076,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         status: "em_analise" as PagamentoStatus,
         pago_em: null,
         qtd_lives: qtd,
+        statusInfluencer: perfilMap[id]?.status ?? null,
       };
     });
 
@@ -1144,9 +1167,10 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     // Busca nomes separadamente para evitar falha silenciosa de FK
     const influencerIds = [...new Set(pagsFinais.map((p) => p.influencer_id))];
     const nomeMap: Record<string, string> = {};
+    const statusPorId: Record<string, string | null> = {};
     if (influencerIds.length > 0) {
       const [{ data: perfis }, { data: profiles }] = await Promise.all([
-        supabase.from("influencer_perfil").select("id, nome_artistico").in("id", influencerIds),
+        supabase.from("influencer_perfil").select("id, nome_artistico, status").in("id", influencerIds),
         supabase.from("profiles").select("id, name").in("id", influencerIds),
       ]);
       for (const p of (profiles ?? []) as FinanceiroProfileRow[]) {
@@ -1154,6 +1178,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       }
       for (const p of (perfis ?? []) as FinanceiroPerfilRow[]) {
         if (p.nome_artistico) nomeMap[p.id] = p.nome_artistico;
+        statusPorId[p.id] = p.status ?? null;
       }
     }
 
@@ -1178,6 +1203,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
         status: p.status as PagamentoStatus,
         pago_em: p.pago_em ?? null,
         qtd_lives: qtdPorPar[parKey] ?? 0,
+        statusInfluencer: statusPorId[p.influencer_id] ?? null,
       };
     });
 
@@ -1324,6 +1350,17 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     setRefreshTrigger(t => t + 1);
   }
 
+  const rowsOrdenados = useMemo(() => {
+    const arr = [...rows];
+    const dir = sortCiclo.dir;
+    arr.sort((a, b) => {
+      const c = compareInfluencerPerfilStatus(a, b, dir);
+      if (c !== 0) return c;
+      return b.total - a.total;
+    });
+    return arr;
+  }, [rows, sortCiclo]);
+
   const kpi = useMemo(() => ({
     em: rows.filter(r => r.status === "em_analise").length,
     ap: rows.filter(r => r.status === "a_pagar").length,
@@ -1447,6 +1484,20 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
             <thead>
               <tr>
                 <th scope="col" style={th}>Influencer</th>
+                <SortTableTh<CicloSortCol>
+                  label="Classificação"
+                  col="classificacao"
+                  sortCol={sortCiclo.col}
+                  sortDir={sortCiclo.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCiclo((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
                 {filterOperadora === "todas" && <th scope="col" style={th}>Operadora</th>}
                 {isAberto
                   ? ["Lives", "Horas realizadas", "Cachê/hora", "Estimativa"].map(h => <th key={h} scope="col" style={th}>{h}</th>)
@@ -1457,7 +1508,7 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={(isAberto ? 5 : 6) + (filterOperadora === "todas" ? 1 : 0)} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
+                  <td colSpan={(isAberto ? 6 : 7) + (filterOperadora === "todas" ? 1 : 0)} style={{ ...td, textAlign: "center", color: t.textMuted, padding: "48px" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       {isAberto ? "Nenhuma live realizada neste ciclo ainda." : "Nenhum pagamento neste ciclo."}
                       <span style={{ fontSize: "12px", maxWidth: 480, display: "block", marginTop: 8 }}>
@@ -1466,12 +1517,14 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     </div>
                   </td>
                 </tr>
-              ) : rows.map((row, i) => {
+              ) : rowsOrdenados.map((row, i) => {
+                const sk = (row.statusInfluencer ?? "ativo").toLowerCase();
+                const slInf = STATUS_INFLUENCER[sk] ?? { label: row.statusInfluencer ?? "Ativo", color: "#94a3b8" };
                 const zebra = i % 2 === 1 ? (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)") : "transparent";
                 return (
                 <tr
                   key={row.id}
-                  style={{ borderBottom: i < rows.length - 1 ? `1px solid ${t.cardBorder}` : "none", background: zebra }}
+                  style={{ borderBottom: i < rowsOrdenados.length - 1 ? `1px solid ${t.cardBorder}` : "none", background: zebra }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
                   }}
@@ -1489,6 +1542,28 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                         )}
                       </div>
                     </div>
+                  </td>
+
+                  <td style={td}>
+                    {row.is_agente ? (
+                      <span style={{ color: t.textMuted, fontSize: 12 }}>—</span>
+                    ) : (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          padding: "3px 9px",
+                          borderRadius: "20px",
+                          background: `${slInf.color}22`,
+                          color: slInf.color,
+                          border: `1px solid ${slInf.color}44`,
+                        }}
+                      >
+                        {slInf.label}
+                      </span>
+                    )}
                   </td>
 
                   {filterOperadora === "todas" && (
@@ -1536,25 +1611,26 @@ function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
               })}
             </tbody>
 
-            {rows.length > 0 && (
+            {rowsOrdenados.length > 0 && (
               <tfoot>
                 <tr style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", borderTop: `2px solid ${t.cardBorder}` }}>
                   <td style={{ ...td, fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: t.textMuted }}>
                     {isAberto ? "ESTIMATIVA TOTAL" : "TOTAL"}
                   </td>
+                  <td style={td} />
                   {filterOperadora === "todas" && <td style={td}></td>}
                   {isAberto ? (
                     <>
                       <td style={td}></td>
-                      <td style={{ ...td, fontWeight: 700 }}>{fmtHoras(rows.reduce((a, r) => a + r.horas_realizadas, 0))}</td>
+                      <td style={{ ...td, fontWeight: 700 }}>{fmtHoras(rowsOrdenados.reduce((a, r) => a + r.horas_realizadas, 0))}</td>
                       <td style={td}></td>
-                      <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(rows.reduce((a, r) => a + r.total, 0))}</td>
+                      <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
                     </>
                   ) : (
                     <>
                       <td style={td}></td>
-                      <td style={{ ...td, fontWeight: 700 }}>{fmtHoras(rows.filter(r => !r.is_agente).reduce((a, r) => a + r.horas_realizadas, 0))}</td>
-                      <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(rows.reduce((a, r) => a + r.total, 0))}</td>
+                      <td style={{ ...td, fontWeight: 700 }}>{fmtHoras(rowsOrdenados.filter(r => !r.is_agente).reduce((a, r) => a + r.horas_realizadas, 0))}</td>
+                      <td style={{ ...td, fontSize: "15px", color: "#c9b8f0", fontWeight: 700 }}>{fmtMoeda(rowsOrdenados.reduce((a, r) => a + r.total, 0))}</td>
                       <td colSpan={2}></td>
                     </>
                   )}
@@ -1608,6 +1684,8 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
   interface AgentesRow { totalPago: number; pendente: number; ultimoPagamento: string | null; }
 
   const [busca, setBusca] = useState("");
+  type ConsolidSortCol = "status";
+  const [sortCons, setSortCons] = useState<{ col: ConsolidSortCol; dir: SortDir }>({ col: "status", dir: "asc" });
   const [rows, setRows] = useState<ConRow[]>([]);
   const [agentesRow, setAgentesRow] = useState<AgentesRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1734,9 +1812,26 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
     setLoadingHist(null);
   }
 
-  const filtered = rows.filter(r =>
-    !busca || r.nome_artistico.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    return rows.filter((r) => {
+      if (!busca) return true;
+      return r.nome_artistico.toLowerCase().includes(busca.toLowerCase()) || r.email.toLowerCase().includes(busca.toLowerCase());
+    });
+  }, [rows, busca]);
+
+  const ordenados = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const c = compareInfluencerPerfilStatus(
+        { statusInfluencer: a.statusInfluencer },
+        { statusInfluencer: b.statusInfluencer },
+        sortCons.dir,
+      );
+      if (c !== 0) return c;
+      return a.nome_artistico.localeCompare(b.nome_artistico, "pt-BR", { sensitivity: "base" });
+    });
+    return arr;
+  }, [filtered, sortCons]);
 
   const th: React.CSSProperties = {
     padding: "11px 14px", textAlign: "left", fontSize: "10px", fontWeight: 700,
@@ -1763,7 +1858,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
             fontSize: "13px", fontFamily: FONT.body, outline: "none",
           }}
         />
-        {!loading && <span style={{ fontSize: "12px", color: t.textMuted, whiteSpace: "nowrap" }}>{filtered.length} influencers</span>}
+        {!loading && <span style={{ fontSize: "12px", color: t.textMuted, whiteSpace: "nowrap" }}>{ordenados.length} influencers</span>}
       </div>
 
       {loading ? (
@@ -1774,9 +1869,25 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
             <thead>
               <tr>
                 <th scope="col" style={{ ...th, width: "32px" }} aria-label="Expandir" />
-                {["Influencer", "Total pago", "Total horas", "Pendente", "Último pagamento", "Status"].map(h => (
-                  <th key={h} scope="col" style={th}>{h}</th>
-                ))}
+                <th scope="col" style={th}>Influencer</th>
+                <th scope="col" style={th}>Total pago</th>
+                <th scope="col" style={th}>Total horas</th>
+                <th scope="col" style={th}>Pendente</th>
+                <th scope="col" style={th}>Último pagamento</th>
+                <SortTableTh<ConsolidSortCol>
+                  label="Classificação"
+                  col="status"
+                  sortCol={sortCons.col}
+                  sortDir={sortCons.dir}
+                  thStyle={th}
+                  align="left"
+                  onSort={(c) =>
+                    setSortCons((s) => ({
+                      col: c,
+                      dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                    }))
+                  }
+                />
               </tr>
             </thead>
             <tbody>
@@ -1786,7 +1897,7 @@ function BlocoConsolidado({ filtros }: { filtros: BlocoFiltros }) {
                     Nenhum influencer encontrado.
                   </td>
                 </tr>
-              ) : filtered.map(row => {
+              ) : ordenados.map(row => {
                 const isOpen = expandido === row.influencer_id;
                 const hist = historicoPagamentos[row.influencer_id] ?? [];
                 const sl = STATUS_INFLUENCER[row.statusInfluencer] ?? { label: row.statusInfluencer, color: "#94a3b8" };

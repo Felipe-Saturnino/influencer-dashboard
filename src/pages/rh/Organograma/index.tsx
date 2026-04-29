@@ -21,6 +21,7 @@ import type {
   RhOrgGerenciaComFilhos,
   RhOrgTime,
 } from "../../../types/rhOrganograma";
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { OrgAccordion } from "../../../components/rh/organograma/OrgAccordion";
@@ -358,13 +359,6 @@ export default function RhOrganogramaPage() {
     cursor: "pointer",
     boxSizing: "border-box",
   };
-
-  /** Asterisco vermelho para campos obrigatórios (sem texto “obrigatório/opcional” no rótulo). */
-  const req = (
-    <span style={{ color: "#e84025", fontWeight: 700, marginLeft: 3 }} aria-hidden="true">
-      *
-    </span>
-  );
 
   const centroPreviewNovaDiretoria = useMemo(
     () => (mdDir === "new" ? proximoCentroCustosDiretoria(diretorias) : ""),
@@ -1012,7 +1006,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-nome-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Nome da diretoria
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <input id="org-nome-dir" value={nomeDir} onChange={(e) => setNomeDir(e.target.value)} style={inputStyle} aria-required />
           </div>
@@ -1038,7 +1032,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-fid-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Diretor(a)
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <select
               id="org-fid-dir"
@@ -1055,7 +1049,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-foto-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Foto do Diretor(a)
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <input
               id="org-foto-dir"
@@ -1077,7 +1071,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 16 }}>
             <label htmlFor="org-sobre-dir" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Sobre o Diretor(a)
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <textarea
               id="org-sobre-dir"
@@ -1149,7 +1143,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-nome-ger" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Nome da gerência
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <input id="org-nome-ger" value={nomeGer} onChange={(e) => setNomeGer(e.target.value)} style={inputStyle} aria-required />
           </div>
@@ -1173,7 +1167,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-sobre-ger" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Sobre a Gerência
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <textarea
               id="org-sobre-ger"
@@ -1257,7 +1251,7 @@ export default function RhOrganogramaPage() {
           <div style={{ marginBottom: 12 }}>
             <label htmlFor="org-nome-time" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4 }}>
               Nome do time
-              {req}
+              <CampoObrigatorioMark />
             </label>
             <input id="org-nome-time" value={nomeTime} onChange={(e) => setNomeTime(e.target.value)} style={inputStyle} aria-required />
           </div>
