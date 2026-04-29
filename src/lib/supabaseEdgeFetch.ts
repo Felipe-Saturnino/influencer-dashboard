@@ -254,19 +254,22 @@ export async function callSupabaseEdgeFunction<T = unknown>(
 
   const url = resolveEdgeFunctionUrl(functionName);
 
-  const {
-    data: { session },
-  } = await raceReject(
-    supabase.auth.getSession(),
-    GET_SESSION_MS,
-    "Tempo esgotado ao obter a sessão. Recarregue a página e faça login novamente."
-  );
-
-  const tokenRaw = session?.access_token?.trim();
-  if (!tokenRaw) {
-    throw new Error("Sessão expirada ou ausente. Faça login novamente.");
+  async function getAccessToken(): Promise<string> {
+    const {
+      data: { session },
+    } = await raceReject(
+      supabase.auth.getSession(),
+      GET_SESSION_MS,
+      "Tempo esgotado ao obter a sessão. Recarregue a página e faça login novamente."
+    );
+    const tokenRaw = session?.access_token?.trim();
+    if (!tokenRaw) {
+      throw new Error("Sessão expirada ou ausente. Faça login novamente.");
+    }
+    return tokenRaw;
   }
-  const accessToken: string = tokenRaw;
+
+  let accessToken = await getAccessToken();
 
   const useProxyFallback = typeof window !== "undefined" && PROXY_FUNCTIONS.has(functionName);
 
@@ -292,9 +295,34 @@ export async function callSupabaseEdgeFunction<T = unknown>(
     return e instanceof Error ? e : new Error(String(e));
   }
 
+  /** GoTrue: sessão removida no servidor mas token ainda em memória — um refresh costuma resolver. */
+  function isStaleSessionJwtError(e: unknown): boolean {
+    const msg = e instanceof Error ? e.message : String(e);
+    return /session_id claim in JWT does not exist|session from session_id/i.test(msg);
+  }
+
+  async function runWithRefreshRetry(run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (e) {
+      if (!isStaleSessionJwtError(e)) {
+        throw e;
+      }
+      const { error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr) {
+        throw new Error(
+          "Sessão inválida no servidor (expirada ou revogada). Faça login novamente.\n" +
+            (refreshErr.message ? `Detalhe: ${refreshErr.message}` : "")
+        );
+      }
+      accessToken = await getAccessToken();
+      return await run();
+    }
+  }
+
   if (useProxyFallback) {
     try {
-      return await callDirect();
+      return await runWithRefreshRetry(() => callDirect());
     } catch (e) {
       if (!isRetriableNetworkError(e)) {
         throw e;
@@ -315,7 +343,7 @@ export async function callSupabaseEdgeFunction<T = unknown>(
   }
 
   try {
-    return await callDirect();
+    return await runWithRefreshRetry(() => callDirect());
   } catch (e) {
     throw formatDirectFailure(e);
   }
