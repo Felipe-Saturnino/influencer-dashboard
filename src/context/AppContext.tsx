@@ -4,6 +4,10 @@ import { User, PageKey, PermissaoValor, Role } from "../types";
 import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
 import { validarBrandguide, cssDerivadasBrand, type BrandValidated } from "../lib/brandguideValidation";
+import {
+  aplicarDeepLinkAposRestaurarSessao,
+  aplicarRedirecionamentoPosLoginOuHome,
+} from "../lib/rhLoginDadosCadastroDeepLink";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
@@ -419,7 +423,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Wrapper de setUser que também carrega permissões e escopos
   async function setUser(u: User | null) {
     setUserState(u);
-    if (u) setActivePage("home"); // Ao fazer login, volta para a página Home
     if (u) {
       try {
         const escopos = await carregarEscoposVisiveis(u.id, u.role);
@@ -435,6 +438,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
         setEscoposVisiveis(ESCOPOS_VAZIOS);
       }
+      aplicarRedirecionamentoPosLoginOuHome(setActivePage);
     } else {
       setPermissions(
         Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa
@@ -482,6 +486,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               setPermissions(Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa);
               setEscoposVisiveis(ESCOPOS_VAZIOS);
             }
+            aplicarDeepLinkAposRestaurarSessao(setActivePage);
           }
         }
       } catch (err) {

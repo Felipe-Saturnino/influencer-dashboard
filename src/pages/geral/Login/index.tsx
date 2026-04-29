@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { lerEmailLoginDaUrl } from "../../../lib/rhLoginDadosCadastroDeepLink";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { AUTH_PLATFORM_TAGLINE, AUTH_TAGLINE_STYLE } from "../../../constants/authScreen";
 import { useApp } from "../../../context/AppContext";
@@ -14,7 +15,7 @@ const CONTACT_LINK_COLOR = "var(--brand-icon, #70cae4)";
 
 export default function Login({ onLogin }: Props) {
   const { theme: t } = useApp();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => lerEmailLoginDaUrl());
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
