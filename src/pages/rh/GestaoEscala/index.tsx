@@ -10,7 +10,6 @@ import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
 import {
   escalaPrestadorTemTurnosOperacionais,
-  siglaGradeParaNomeTurno,
   staffTurnoCoerenteComEscala,
   TURNO_ESCALA_5x2,
   turnoOperacionalParaSiglaGrade,
@@ -53,6 +52,8 @@ type EscalaGerarEstadoFiltro = {
   celulas: Record<string, string>;
   aprovado: boolean;
   baseline: Record<string, string> | null;
+  /** Grade sanitizada igual à última carga/salvamento no Supabase (para exibir «Salvar» só se houver diferença). */
+  celulasSincronizadasComDb?: Record<string, string> | null;
   /** Após «Sugestão de Escala» (regras completas + sequência) — mostra Nova Escala / Salvar / Aprovar. */
   posSugestao?: boolean;
   /** Legado (localStorage): tratar como `posSugestao`. */
@@ -182,62 +183,42 @@ function filtrarPorArea(rows: RpcPrestadorEscala[], area: AreaEscalaKey): RpcPre
   return rows.filter((p) => nomeTimePassaNaArea(p.nome_time, area));
 }
 
-function contarCelulasComSigla(
-  linhas: LinhaColaborador[],
-  dias: DiaMes[],
-  celulas: Record<string, string> | undefined,
-  sigla: "MRN" | "AFT" | "NGT",
-): number[] {
-  return dias.map((dia) =>
-    linhas.reduce((acc, row) => {
-      const k = chaveCelulaGerar(row.id, dia.iso);
-      const v = (celulas?.[k] ?? "").trim();
-      return acc + (v === sigla ? 1 : 0);
-    }, 0),
-  );
+/** Valor interno gravado na célula para «dia de trabalho» (exibição: «Escalado»). */
+function valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff: string, turnoStaffNome: string): string {
+  if (turnoStaffNome.trim() === TURNO_ESCALA_5x2) return "Comercial";
+  const sigla = siglaTurnoStaff.trim();
+  if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") return sigla;
+  return "";
 }
 
-/** Consolidado Customer Service: pessoas com turno «Horário Comercial» (5x2) em célula «Comercial». */
-function contarHorarioComercialPorDia(
-  linhas: LinhaColaborador[],
-  dias: DiaMes[],
-  celulas: Record<string, string> | undefined,
-): number[] {
-  return dias.map((dia) =>
-    linhas.reduce((acc, row) => {
-      if (row.turnoStaffNome !== TURNO_ESCALA_5x2) return acc;
-      const k = chaveCelulaGerar(row.id, dia.iso);
-      const v = (celulas?.[k] ?? "").trim();
-      if (v === "Comercial") return acc + 1;
-      return acc;
-    }, 0),
-  );
-}
-
-function opcoesSelectCelulaGerar(siglaTurnoStaff: string, turnoStaffNome: string): { value: string; label: string }[] {
+function opcoesSelectCelulaGerar(row: LinhaColaborador): { value: string; label: string }[] {
   const out: { value: string; label: string }[] = [
     { value: "", label: "—" },
     { value: "Folga", label: "Folga" },
   ];
-  if (turnoStaffNome.trim() === TURNO_ESCALA_5x2) {
-    out.push({ value: "Comercial", label: "Comercial" });
-    return out;
+  const work = valorTurnoTrabalhoInternoParaLinha(row.siglaTurnoStaff, row.turnoStaffNome);
+  if (work) {
+    out.push({ value: work, label: "Escalado" });
   }
-  const sigla = siglaTurnoStaff.trim();
-  if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") {
-    const label = siglaGradeParaNomeTurno(sigla) || sigla;
-    out.push({ value: sigla, label });
-  }
+  out.push(
+    { value: "Compra", label: "Compra" },
+    { value: "Venda", label: "Venda" },
+    { value: "Troca", label: "Troca" },
+  );
   return out;
 }
 
 /**
- * Garante valor coerente: só Folga, vazio ou a sigla do turno configurado na Staff (MRN/AFT/NGT).
+ * Garante valor coerente: Folga; Compra/Venda/Troca; sigla/Comercial de trabalho da linha; vazio.
  * Aceita legado Manhã/Tarde/Noite se coincidir com a sigla permitida.
  */
 function sanitizarValorCelulaGerar(siglaTurnoStaff: string, valorArmazenado: string, turnoStaffNome: string): string {
   const v = (valorArmazenado ?? "").trim();
-  const permit = new Set(opcoesSelectCelulaGerar(siglaTurnoStaff, turnoStaffNome).map((o) => o.value));
+  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+  if (v === "F" || v.toLowerCase() === "folga") return "Folga";
+  const work = valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff, turnoStaffNome);
+  const permit = new Set<string>(["", "Folga", "Compra", "Venda", "Troca"]);
+  if (work) permit.add(work);
   if (permit.has(v)) return v;
   const comoSigla = turnoOperacionalParaSiglaGrade(v);
   if (comoSigla && permit.has(comoSigla)) return comoSigla;
@@ -245,8 +226,65 @@ function sanitizarValorCelulaGerar(siglaTurnoStaff: string, valorArmazenado: str
     const mrn = turnoOperacionalParaSiglaGrade("Manhã");
     if (mrn && permit.has(mrn)) return mrn;
   }
-  if (v === "F" || v.toLowerCase() === "folga") return permit.has("Folga") ? "Folga" : "";
   return "";
+}
+
+/** Snapshot completo (todas as chaves linha×dia) para comparar com a base. */
+function buildCelulasSnapshotGrade(
+  linhasF: LinhaColaborador[],
+  dias: DiaMes[],
+  celulas: Record<string, string>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const row of linhasF) {
+    for (const d of dias) {
+      const k = chaveCelulaGerar(row.id, d.iso);
+      out[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome);
+    }
+  }
+  return out;
+}
+
+type CategoriaCelulaResumo = "Escalado" | "Folga" | "Compra" | "Venda" | "Troca";
+
+function categoriaCelulaParaResumo(
+  siglaTurnoStaff: string,
+  bruto: string | undefined,
+  turnoStaffNome: string,
+): CategoriaCelulaResumo | null {
+  const v = sanitizarValorCelulaGerar(siglaTurnoStaff, bruto ?? "", turnoStaffNome);
+  if (!v) return null;
+  if (v === "Folga") return "Folga";
+  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+  return "Escalado";
+}
+
+function contarCategoriaPorDia(
+  linhas: LinhaColaborador[],
+  dias: DiaMes[],
+  celulas: Record<string, string> | undefined,
+  cat: CategoriaCelulaResumo,
+): number[] {
+  return dias.map((dia) =>
+    linhas.reduce((acc, row) => {
+      const k = chaveCelulaGerar(row.id, dia.iso);
+      const c = categoriaCelulaParaResumo(row.siglaTurnoStaff, celulas?.[k], row.turnoStaffNome);
+      return acc + (c === cat ? 1 : 0);
+    }, 0),
+  );
+}
+
+/** Texto exibido na célula (grade ou somente leitura). */
+function labelExibicaoCelulaEscala(
+  siglaTurnoStaff: string,
+  valorArmazenado: string | undefined,
+  turnoStaffNome: string,
+): string {
+  const v = sanitizarValorCelulaGerar(siglaTurnoStaff, valorArmazenado ?? "", turnoStaffNome);
+  if (!v) return "—";
+  if (v === "Folga") return "Folga";
+  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+  return "Escalado";
 }
 
 const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
@@ -450,7 +488,6 @@ export default function RhGestaoEscalaPage() {
       for (const { areaKey, data, error } of results) {
         if (error) continue;
         const rows = (data ?? []) as RpcGradeCarregarRow[];
-        if (rows.length === 0) continue;
         const fromDb: Record<string, string> = {};
         for (const row of rows) {
           const isoRaw = row.dia_iso;
@@ -467,11 +504,14 @@ export default function RhGestaoEscalaPage() {
           if (!fromDb) continue;
           const cur = next[ak];
           const merged = { ...(cur?.celulas ?? {}), ...fromDb };
+          const linhasF = filtrarPorArea(prestadoresRaw, ak).map(mapLinhaPrestador);
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, merged);
           next[ak] = {
             celulas: merged,
             aprovado: cur?.aprovado ?? false,
             baseline: cur?.baseline ?? null,
             posSugestao: cur?.posSugestao ?? cur?.posSugestaoCs ?? false,
+            celulasSincronizadasComDb: snap,
           };
         }
         return next;
@@ -480,7 +520,7 @@ export default function RhGestaoEscalaPage() {
     return () => {
       cancelled = true;
     };
-  }, [ano, mes, perm.loading, perm.canView, loadingPrestadores]);
+  }, [ano, mes, dias, perm.loading, perm.canView, loadingPrestadores, prestadoresRaw]);
 
   const salvarGradeEscalaDb = useCallback(
     async (areaKey: AreaEscalaKey) => {
@@ -514,7 +554,15 @@ export default function RhGestaoEscalaPage() {
           );
           return;
         }
-        gravarEscalaMes(ano, mes, gerarPorFiltro);
+        setGerarPorFiltro((prev) => {
+          const est = prev[areaKey];
+          if (!est) return prev;
+          const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, est.celulas);
+          const next = { ...prev, [areaKey]: { ...est, celulasSincronizadasComDb: snap } };
+          gravarEscalaMes(ano, mes, next);
+          return next;
+        });
       } catch (e) {
         setErroSalvarGrade(
           e instanceof Error ? e.message : "Erro ao salvar na base de dados. Verifique se a migration foi aplicada.",
@@ -523,7 +571,7 @@ export default function RhGestaoEscalaPage() {
         setSalvandoGrade(false);
       }
     },
-    [ano, mes, gerarPorFiltro],
+    [ano, mes, dias, gerarPorFiltro, prestadoresRaw],
   );
 
   const linhas = useMemo(() => {
@@ -576,6 +624,7 @@ export default function RhGestaoEscalaPage() {
           celulas,
           aprovado: false,
           baseline: null,
+          celulasSincronizadasComDb: null,
           posSugestao: true,
         },
       }));
@@ -612,6 +661,7 @@ export default function RhGestaoEscalaPage() {
       const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor, turnoStaffNome);
       setGerarPorFiltro((prev) => {
         const cur = prev[areaKey] ?? { celulas: {}, aprovado: false, baseline: null };
+        if (cur.aprovado) return prev;
         return {
           ...prev,
           [areaKey]: {
@@ -690,8 +740,8 @@ export default function RhGestaoEscalaPage() {
   const thDia = (dia: DiaMes): CSSProperties => ({
     ...getThStyle(t, {
       textAlign: "center",
-      minWidth: 52,
-      maxWidth: 56,
+      minWidth: 72,
+      maxWidth: 88,
       whiteSpace: "normal",
       lineHeight: 1.25,
       fontSize: 9,
@@ -719,8 +769,8 @@ export default function RhGestaoEscalaPage() {
   const tdDia: CSSProperties = {
     ...getTdStyle(t, {
       textAlign: "center",
-      minWidth: 52,
-      maxWidth: 56,
+      minWidth: 72,
+      maxWidth: 88,
       fontSize: 12,
       color: t.textMuted,
       zIndex: Z_DIA,
@@ -749,31 +799,49 @@ export default function RhGestaoEscalaPage() {
       : "color-mix(in srgb, var(--brand-secondary, #4a2082) 10%, #f2effa)";
   };
 
-  const celulasGerarAtivas = podeEditarGrade ? gerarPorFiltro[filtroArea]?.celulas : undefined;
+  const estGradeFiltro = gerarPorFiltro[filtroArea];
+  const celulasGerarAtivas = estGradeFiltro?.celulas;
+  const podeEditarCelulasDia = Boolean(podeEditarGrade && !estGradeFiltro?.aprovado);
 
   const resumoTurnoDias = useMemo(() => {
     if (!mostrarFiltroArea) return null;
     const linhasF = filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
-    const celulas = podeEditarGrade ? gerarPorFiltro[filtroArea]?.celulas : undefined;
-    const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
-    const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
-    const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
-    const customerService = filtroArea === "customer_service";
-    const horarioComercial = customerService ? contarHorarioComercialPorDia(linhasF, dias, celulas) : null;
+    const celulas = gerarPorFiltro[filtroArea]?.celulas;
+    const escalado = contarCategoriaPorDia(linhasF, dias, celulas, "Escalado");
+    const folga = contarCategoriaPorDia(linhasF, dias, celulas, "Folga");
+    const compra = contarCategoriaPorDia(linhasF, dias, celulas, "Compra");
+    const venda = contarCategoriaPorDia(linhasF, dias, celulas, "Venda");
+    const troca = contarCategoriaPorDia(linhasF, dias, celulas, "Troca");
     const total = dias.map((_, i) => {
-      if (customerService) {
-        return (manha[i] ?? 0) + (noite[i] ?? 0) + (horarioComercial?.[i] ?? 0);
-      }
-      return (manha[i] ?? 0) + (tarde[i] ?? 0) + (noite[i] ?? 0);
+      return (
+        (escalado[i] ?? 0) +
+        (folga[i] ?? 0) +
+        (compra[i] ?? 0) +
+        (venda[i] ?? 0) +
+        (troca[i] ?? 0)
+      );
     });
-    return { manha, tarde, noite, horarioComercial, total, customerService };
-  }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro, podeEditarGrade]);
+    return { escalado, folga, compra, venda, troca, total };
+  }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro]);
+
+  const mostrarSalvarAlteracoes = useMemo(() => {
+    const est = gerarPorFiltro[filtroArea];
+    if (!mostrarFiltroArea || !posSugestaoAtiva(est)) return false;
+    const linhasF = filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
+    if (linhasF.length === 0) return false;
+    const atual = buildCelulasSnapshotGrade(linhasF, dias, est?.celulas ?? {});
+    const temAlguma = Object.values(atual).some((v) => v.trim() !== "");
+    if (!temAlguma) return false;
+    const snapDb = est?.celulasSincronizadasComDb ?? null;
+    if (snapDb === null) return true;
+    return !celulasIguais(atual, snapDb);
+  }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro]);
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
 
   const selectCelulaGerarStyle: CSSProperties = {
     width: "100%",
-    maxWidth: 76,
+    maxWidth: 84,
     margin: "0 auto",
     display: "block",
     boxSizing: "border-box",
@@ -885,6 +953,7 @@ export default function RhGestaoEscalaPage() {
                             celulas: {},
                             aprovado: false,
                             baseline: null,
+                            celulasSincronizadasComDb: null,
                             posSugestao: false,
                             posSugestaoCs: false,
                           },
@@ -906,54 +975,58 @@ export default function RhGestaoEscalaPage() {
                     >
                       Nova Escala
                     </button>
-                    <button
-                      type="button"
-                      disabled={salvandoGrade}
-                      onClick={() => void salvarGradeEscalaDb(filtroArea)}
-                      aria-label="Salvar alterações da escala na base de dados"
-                      style={{
-                        padding: "10px 16px",
-                        borderRadius: 10,
-                        border: `1px solid ${brand.accent}`,
-                        background: brand.useBrand
-                          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
-                          : "rgba(124,58,237,0.12)",
-                        color: brand.accent,
-                        fontFamily: FONT.body,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: salvandoGrade ? "wait" : "pointer",
-                        whiteSpace: "nowrap",
-                        opacity: salvandoGrade ? 0.65 : 1,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
-                      {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
-                      Salvar Alterações
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {}}
-                      aria-label="Aprovar escala (ação a definir)"
-                      style={{
-                        padding: "10px 16px",
-                        borderRadius: 10,
-                        border: `1px solid ${brand.accent}`,
-                        background: brand.useBrand
-                          ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
-                          : "rgba(30,54,248,0.12)",
-                        color: brand.accent,
-                        fontFamily: FONT.body,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Aprovar Escala
-                    </button>
+                    {mostrarSalvarAlteracoes ? (
+                      <button
+                        type="button"
+                        disabled={salvandoGrade}
+                        onClick={() => void salvarGradeEscalaDb(filtroArea)}
+                        aria-label="Salvar alterações da escala na base de dados"
+                        style={{
+                          padding: "10px 16px",
+                          borderRadius: 10,
+                          border: `1px solid ${brand.accent}`,
+                          background: brand.useBrand
+                            ? "color-mix(in srgb, var(--brand-action, #7c3aed) 18%, transparent)"
+                            : "rgba(124,58,237,0.12)",
+                          color: brand.accent,
+                          fontFamily: FONT.body,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: salvandoGrade ? "wait" : "pointer",
+                          whiteSpace: "nowrap",
+                          opacity: salvandoGrade ? 0.65 : 1,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
+                        Salvar Alterações
+                      </button>
+                    ) : null}
+                    {!gerarPorFiltro[filtroArea]?.aprovado ? (
+                      <button
+                        type="button"
+                        onClick={() => aprovarEscalaGerar(filtroArea)}
+                        aria-label="Aprovar escala e bloquear edição manual da grade"
+                        style={{
+                          padding: "10px 16px",
+                          borderRadius: 10,
+                          border: `1px solid ${brand.accent}`,
+                          background: brand.useBrand
+                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 22%, transparent)"
+                            : "rgba(30,54,248,0.12)",
+                          color: brand.accent,
+                          fontFamily: FONT.body,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Aprovar Escala
+                      </button>
+                    ) : null}
                   </>
                 ) : acaoGerarNoFiltroSelecionado === "sugestao" ? (
                   <button
@@ -1113,9 +1186,7 @@ export default function RhGestaoEscalaPage() {
                   }}
                 >
                   <caption style={{ display: "none" }}>
-                    {resumoTurnoDias.customerService
-                      ? "Totais por turno (Manhã, Noite, Comercial) e TOTAL por dia — Customer Service."
-                      : "Totais de pessoas por turno do dia e por data, linha TOTAL somando os três turnos, conforme área selecionada."}
+                    Totais por dia: Escalado, Folga, Compra, Venda, Troca e linha TOTAL da área selecionada.
                   </caption>
                   <thead>
                     <tr>
@@ -1129,7 +1200,7 @@ export default function RhGestaoEscalaPage() {
                           verticalAlign: "middle",
                         }}
                       >
-                        Turno
+                        Tipo
                       </th>
                       {dias.map((dia) => (
                         <th
@@ -1145,42 +1216,24 @@ export default function RhGestaoEscalaPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                        Turno da Manhã
-                      </th>
-                      {resumoTurnoDias.manha.map((n, idx) => {
-                        const d = dias[idx]!;
-                        return (
-                          <td
-                            key={`resumo-m-${d.iso}`}
-                            style={getTdStyle(t, {
-                              textAlign: "center",
-                              fontVariantNumeric: "tabular-nums",
-                              fontWeight: 700,
-                              ...(diaComDestaqueCalendario(d)
-                                ? {
-                                    background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
-                                    color: "#f59e0b",
-                                  }
-                                : {}),
-                            })}
-                          >
-                            {n}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                    {!resumoTurnoDias.customerService ? (
-                      <tr>
+                    {(
+                      [
+                        { label: "Escalado", arr: resumoTurnoDias.escalado, k: "e" },
+                        { label: "Folga", arr: resumoTurnoDias.folga, k: "f" },
+                        { label: "Compra", arr: resumoTurnoDias.compra, k: "c" },
+                        { label: "Venda", arr: resumoTurnoDias.venda, k: "v" },
+                        { label: "Troca", arr: resumoTurnoDias.troca, k: "t" },
+                      ] as const
+                    ).map(({ label, arr, k }) => (
+                      <tr key={`resumo-${k}`}>
                         <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                          Turno da Tarde
+                          {label}
                         </th>
-                        {resumoTurnoDias.tarde.map((n, idx) => {
+                        {arr.map((n, idx) => {
                           const d = dias[idx]!;
                           return (
                             <td
-                              key={`resumo-t-${d.iso}`}
+                              key={`resumo-${k}-${d.iso}`}
                               style={getTdStyle(t, {
                                 textAlign: "center",
                                 fontVariantNumeric: "tabular-nums",
@@ -1198,61 +1251,7 @@ export default function RhGestaoEscalaPage() {
                           );
                         })}
                       </tr>
-                    ) : null}
-                    <tr>
-                      <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                        Turno da Noite
-                      </th>
-                      {resumoTurnoDias.noite.map((n, idx) => {
-                        const d = dias[idx]!;
-                        return (
-                          <td
-                            key={`resumo-n-${d.iso}`}
-                            style={getTdStyle(t, {
-                              textAlign: "center",
-                              fontVariantNumeric: "tabular-nums",
-                              fontWeight: 700,
-                              ...(diaComDestaqueCalendario(d)
-                                ? {
-                                    background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
-                                    color: "#f59e0b",
-                                  }
-                                : {}),
-                            })}
-                          >
-                            {n}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                    {resumoTurnoDias.customerService && resumoTurnoDias.horarioComercial ? (
-                      <tr>
-                        <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                          Comercial
-                        </th>
-                        {resumoTurnoDias.horarioComercial.map((n, idx) => {
-                          const d = dias[idx]!;
-                          return (
-                            <td
-                              key={`resumo-hc-${d.iso}`}
-                              style={getTdStyle(t, {
-                                textAlign: "center",
-                                fontVariantNumeric: "tabular-nums",
-                                fontWeight: 700,
-                                ...(diaComDestaqueCalendario(d)
-                                  ? {
-                                      background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
-                                      color: "#f59e0b",
-                                    }
-                                  : {}),
-                              })}
-                            >
-                              {n}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ) : null}
+                    ))}
                     <tr>
                       <th
                         scope="row"
@@ -1302,7 +1301,7 @@ export default function RhGestaoEscalaPage() {
                   STICKY_W_NICK +
                   STICKY_W_ESCALA +
                   STICKY_W_TURNO_STAFF +
-                  dias.length * 56,
+                  dias.length * 80,
                 borderCollapse: "separate",
                 borderSpacing: 0,
                 borderRadius: 14,
@@ -1361,7 +1360,7 @@ export default function RhGestaoEscalaPage() {
                       borderRight: `1px solid ${t.cardBorder}`,
                       boxShadow: sombraColFixa,
                     })}
-                    title="Turno cadastrado na Gestão de Staff (Manhã, Tarde ou Noite)."
+                    title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
                   >
                     Turno
                   </th>
@@ -1396,7 +1395,6 @@ export default function RhGestaoEscalaPage() {
                 ) : (
                   linhas.map((row, i) => {
                     const bg = zebraBgLinha(i);
-                    const editarCelulasGerar = podeEditarGrade;
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>
                         {!areaCustomerService ? (
@@ -1461,26 +1459,31 @@ export default function RhGestaoEscalaPage() {
                           title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
                         >
                           {areaCustomerService && row.turnoStaffNome === TURNO_ESCALA_5x2
-                            ? "Comercial"
+                            ? row.escalaCadastro !== "—"
+                              ? row.escalaCadastro
+                              : "Contrato"
                             : row.turnoStaffNome || "—"}
                         </td>
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);
-                          const bruto = editarCelulasGerar ? (celulasGerarAtivas?.[ck] ?? "") : "";
-                          const val = editarCelulasGerar
-                            ? sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome)
-                            : "";
-                          const opts = opcoesSelectCelulaGerar(row.siglaTurnoStaff, row.turnoStaffNome);
+                          const bruto = celulasGerarAtivas?.[ck] ?? "";
+                          const val = sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome);
+                          const opts = opcoesSelectCelulaGerar(row);
+                          const textoCelula = labelExibicaoCelulaEscala(
+                            row.siglaTurnoStaff,
+                            celulasGerarAtivas?.[ck],
+                            row.turnoStaffNome,
+                          );
                           return (
                             <td
                               key={`${row.id}-${dia.iso}`}
                               style={{
                                 ...tdDia,
                                 background: fundoColunaDia(dia, bg),
-                                ...(editarCelulasGerar ? { minWidth: 72, maxWidth: 80 } : {}),
+                                ...(podeEditarCelulasDia ? { minWidth: 76, maxWidth: 86 } : {}),
                               }}
                             >
-                              {editarCelulasGerar ? (
+                              {podeEditarCelulasDia ? (
                                 <select
                                   aria-label={`Escala do dia ${dia.dia} para ${row.nomeCompletoCadastro}`}
                                   value={val}
@@ -1503,7 +1506,18 @@ export default function RhGestaoEscalaPage() {
                                   ))}
                                 </select>
                               ) : (
-                                "—"
+                                <span
+                                  style={{
+                                    display: "block",
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    color: t.text,
+                                    lineHeight: 1.2,
+                                    padding: "2px 0",
+                                  }}
+                                >
+                                  {textoCelula}
+                                </span>
                               )}
                             </td>
                           );
