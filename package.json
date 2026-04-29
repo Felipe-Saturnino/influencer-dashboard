@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@sentry/react": "^9.47.1",
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.105.1",
     "@zxing/library": "^0.21.3",
     "jsbarcode": "^3.12.3",
     "jspdf": "^4.2.1",
