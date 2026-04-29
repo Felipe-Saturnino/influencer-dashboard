@@ -29,11 +29,38 @@ export function prestadorTipoSlugDeAreaETimeRh(
   return "escritorio";
 }
 
+/** Corpo JSON típico da Edge `sync-rh-prestador-auth-user`. */
+export type SyncRhPrestadorAuthUserResponse = {
+  success?: boolean;
+  skipped?: boolean;
+  reason?: string;
+  created?: boolean;
+  userId?: string;
+  error?: string;
+};
+
+/**
+ * Mensagem para o operador quando a Edge devolve 200 mas não criou usuário por regra de negócio.
+ */
+export function mensagemFeedbackSyncPrestador(res: SyncRhPrestadorAuthUserResponse | null | undefined): string | null {
+  if (!res || typeof res !== "object") return null;
+  if (!res.skipped) return null;
+  if (res.reason === "usuario_email_ja_existe" || res.reason === "usuario_email_ja_existe_auth") {
+    return "Prestador salvo, mas não foi criado novo usuário na plataforma: já existe conta com este E-mail Spin. Ajuste em Gestão de Usuários, se necessário.";
+  }
+  return null;
+}
+
 /**
  * Chama a Edge Function após criar/atualizar prestador com E-mail Spin.
- * Falhas não interrompem o fluxo de salvamento do RH (logar no console).
+ * Erros HTTP/rede propagam para o chamador tratar feedback; `skipped` + `reason` vêm em 200.
  */
-export async function syncUsuarioPrestadorAposSalvarRh(rhFuncionarioId: string): Promise<void> {
+export async function syncUsuarioPrestadorAposSalvarRh(
+  rhFuncionarioId: string,
+): Promise<SyncRhPrestadorAuthUserResponse> {
   const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
-  await callSupabaseEdgeFunction("sync-rh-prestador-auth-user", { rhFuncionarioId, loginUrl });
+  return await callSupabaseEdgeFunction<SyncRhPrestadorAuthUserResponse>("sync-rh-prestador-auth-user", {
+    rhFuncionarioId,
+    loginUrl,
+  });
 }
