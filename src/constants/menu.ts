@@ -28,11 +28,17 @@ import {
   GiThreeFriends,
   GiFiles,
 } from "react-icons/gi";
+import { createElement } from "react";
+import { CalendarRange } from "lucide-react";
+
+function IconRhCalendarioMenu({ size = 15, color }: { size?: number; color?: string }) {
+  return createElement(CalendarRange, { size, color, "aria-hidden": true });
+}
 
 export interface MenuItem {
   key: PageKey;
   label: string;
-  icon: React.ComponentType<{ size?: number; color?: string }>;
+  icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
 }
 
 export interface MenuSection {
@@ -93,6 +99,7 @@ export const MENU: MenuSection[] = [
       { key: "rh_vagas", label: "Vagas", icon: GiBriefcase },
       { key: "rh_gestao_escala", label: "Gestão de Escala", icon: GiCalendar },
       { key: "rh_staff", label: "Gestão de Staff", icon: GiThreeFriends },
+      { key: "rh_calendario", label: "Calendário", icon: IconRhCalendarioMenu },
     ],
   },
   {
