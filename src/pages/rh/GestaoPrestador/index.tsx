@@ -57,7 +57,10 @@ import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../
 import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
-import { syncUsuarioPrestadorAposSalvarRh } from "../../../lib/rhPrestadorUsuarioSync";
+import {
+  mensagemFeedbackSyncPrestador,
+  syncUsuarioPrestadorAposSalvarRh,
+} from "../../../lib/rhPrestadorUsuarioSync";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
@@ -1593,12 +1596,12 @@ export default function RhPrestadoresPage() {
   const montarPayload = (statusPrestador: RhFuncionario["status"]) =>
     buildRhFuncionarioPayloadFromState(form, statusPrestador, podeVerDadosSensiveis, modalForm === "novo");
 
-  const dispararSyncUsuarioPrestadorSeEmailSpin = (row: RhFuncionario) => {
+  const dispararSyncUsuarioPrestadorSeEmailSpin = async (row: RhFuncionario) => {
     const em = (row.email_spin ?? "").trim().toLowerCase();
     if (!em || !validarEmail(em)) return;
-    void syncUsuarioPrestadorAposSalvarRh(row.id).catch((e) => {
-      console.warn("[sync-rh-prestador-auth-user]", e);
-    });
+    const res = await syncUsuarioPrestadorAposSalvarRh(row.id);
+    const m = mensagemFeedbackSyncPrestador(res);
+    if (m) setErroGlobal(m);
   };
 
   const salvar = async (opts?: { outro?: boolean }) => {
@@ -1639,7 +1642,15 @@ export default function RhPrestadoresPage() {
         return;
       }
       if (criado) await syncGamePresenterDealerFromRhFuncionario(criado as RhFuncionario);
-      if (criado) dispararSyncUsuarioPrestadorSeEmailSpin(criado as RhFuncionario);
+      if (criado) {
+        try {
+          await dispararSyncUsuarioPrestadorSeEmailSpin(criado as RhFuncionario);
+        } catch (e) {
+          setErroGlobal(
+            `Funcionário cadastrado, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      }
       setSucessoMsg("Funcionário cadastrado.");
       await carregar();
       if (cadastrarOutro) {
@@ -1684,7 +1695,15 @@ export default function RhPrestadoresPage() {
         return;
       }
       if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
-      if (atualizadoRh) dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario);
+      if (atualizadoRh) {
+        try {
+          await dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario);
+        } catch (e) {
+          setErroGlobal(
+            `Dados atualizados, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      }
       setSucessoMsg("Dados atualizados.");
       setModalForm("fechado");
       setAbaModal("pessoais");
@@ -2008,9 +2027,15 @@ export default function RhPrestadoresPage() {
           return;
         }
       }
-      void syncUsuarioPrestadorAposSalvarRh(fid).catch((e) => {
-        console.warn("[sync-rh-prestador-auth-user]", e);
-      });
+      try {
+        const resSync = await syncUsuarioPrestadorAposSalvarRh(fid);
+        const m = mensagemFeedbackSyncPrestador(resSync);
+        if (m) setErroGlobal(m);
+      } catch (e) {
+        setErroGlobal(
+          `Ação registrada, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
       setSucessoMsg("Ação registrada.");
       fecharModalRegistrarAcao();
       await carregar();

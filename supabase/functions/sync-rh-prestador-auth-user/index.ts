@@ -6,7 +6,7 @@ import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
  * Edge: sync-rh-prestador-auth-user
  * Cria ou atualiza usuário Auth + profile (role prestador) + user_scopes (prestador_tipo)
  * a partir de rh_funcionarios quando email_spin está preenchido.
- * Chamada após salvar na Gestão de Prestadores (JWT do operador; permissão rh_funcionarios).
+ * Chamada após salvar na Gestão de Prestadores (JWT do operador; mesma regra que _rh_funcionario_perm: admin, rh_funcionarios ou rh_staff com editar/criar).
  */
 
 type PrestadorTipoSlug = 'customer_service' | 'game_presenter' | 'shuffler' | 'escritorio'
@@ -201,14 +201,17 @@ async function callerPodeSyncPrestador(supabase: SupabaseSvc, callerId: string):
   const role = String(p?.role ?? '').trim()
   if (role === 'admin') return true
   if (!role) return false
-  const { data: rp } = await supabase
-    .from('role_permissions')
-    .select('can_editar, can_criar')
-    .eq('role', role)
-    .eq('page_key', 'rh_funcionarios')
-    .maybeSingle()
-  if (!rp) return false
-  return okPerm(rp.can_editar as string) || okPerm(rp.can_criar as string)
+  const pageKeys = ['rh_funcionarios', 'rh_staff'] as const
+  for (const page_key of pageKeys) {
+    const { data: rp } = await supabase
+      .from('role_permissions')
+      .select('can_editar, can_criar')
+      .eq('role', role)
+      .eq('page_key', page_key)
+      .maybeSingle()
+    if (rp && (okPerm(rp.can_editar as string) || okPerm(rp.can_criar as string))) return true
+  }
+  return false
 }
 
 async function enviarEmailBoasVindas(to: string, nome: string, senhaPadrao: string, loginUrl: string): Promise<void> {
@@ -364,8 +367,8 @@ serve(async (req) => {
     })
   }
 
-  const { data: perfilComEmail } = await supabase.from('profiles').select('id').eq('email', emailSpin).maybeSingle()
-  if (perfilComEmail?.id) {
+  const { data: perfilComEmailRows } = await supabase.from('profiles').select('id').ilike('email', emailSpin).limit(1)
+  if (perfilComEmailRows?.length) {
     return new Response(JSON.stringify({ success: true, skipped: true, reason: 'usuario_email_ja_existe' }), {
       status: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
