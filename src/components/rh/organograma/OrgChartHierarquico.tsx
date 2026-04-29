@@ -131,7 +131,6 @@ export function OrgChartHierarquico({
     background: "var(--brand-action-20, color-mix(in srgb, #7c3aed 20%, transparent))",
     boxShadow: t.isDark ? "0 2px 10px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.06)",
     fontFamily: FONT.body,
-    display: "block",
   };
 
   return (
@@ -215,14 +214,16 @@ export function OrgChartHierarquico({
               const inativo = d.status === "inativo";
               const altFoto = `Foto de ${diretor}`;
               return (
-                <li key={d.id} style={{ minWidth: 0 }}>
+                <li key={d.id} className="app-org-dir-card-item" style={{ minWidth: 0, height: "100%" }}>
                   <button
                     type="button"
+                    className="app-org-dir-card-btn"
                     aria-label={`Ver estrutura da diretoria ${d.nome}`}
                     onClick={() => onSelectDiretoria(d.id)}
                     style={cardShell}
                   >
                   <div
+                    className="app-org-dir-card-bordered"
                     style={{
                       borderTop: "4px solid var(--brand-action, #7c3aed)",
                       borderRadius: "14px 14px 0 0",
@@ -233,7 +234,7 @@ export function OrgChartHierarquico({
                       color: "var(--brand-action, #7c3aed)",
                     }}
                   >
-                    <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                    <div className="app-org-dir-card-row">
                       <div
                         style={{
                           width: 56,
@@ -256,12 +257,29 @@ export function OrgChartHierarquico({
                           </span>
                         )}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="app-org-dir-card-textcol">
                         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 16, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{d.nome}</span>
                           {inativo ? badgeInativo() : null}
                         </div>
-                        <p style={{ margin: "6px 0 0", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Diretor(a): {textoOuTraco(diretor)}</p>
+                        <p
+                          style={{
+                            margin: "6px 0 0",
+                            fontSize: 13,
+                            color: t.textMuted,
+                            fontFamily: FONT.body,
+                            lineHeight: 1.4,
+                            minHeight: "2.8em",
+                            maxHeight: "2.8em",
+                            overflow: "hidden",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          Diretor(a): {textoOuTraco(diretor)}
+                        </p>
                         <div
                           style={{
                             marginTop: 10,
@@ -289,7 +307,9 @@ export function OrgChartHierarquico({
                             {nPrest} prestador(es) na estrutura
                           </span>
                         </div>
-                        <p style={{ margin: "12px 0 0", fontSize: 12, fontWeight: 700, color: "var(--brand-action, #7c3aed)" }}>Ver estrutura →</p>
+                        <p style={{ margin: 0, marginTop: "auto", paddingTop: 10, fontSize: 12, fontWeight: 700, color: "var(--brand-action, #7c3aed)" }}>
+                          Ver estrutura →
+                        </p>
                       </div>
                     </div>
                   </div>

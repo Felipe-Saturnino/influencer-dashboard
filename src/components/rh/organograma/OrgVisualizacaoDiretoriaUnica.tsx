@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { nomeLiderImediatoGerencia, nomeLiderImediatoTime } from "../../../lib/rhOrganogramaLiderImediato";
-import type { RhOrgDiretoriaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
+import type { RhOrgDiretoriaComFilhos, RhOrgGerenciaComFilhos, RhOrgTime } from "../../../types/rhOrganograma";
 
 type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string; cardBg: string; isDark: boolean };
 
@@ -16,6 +16,16 @@ function iniciaisNome(nome: string): string {
   if (p.length === 0) return "?";
   if (p.length === 1) return p[0]!.slice(0, 2).toUpperCase();
   return (p[0]![0]! + p[p.length - 1]![0]!).toUpperCase();
+}
+
+function totalPrestadoresNaGerencia(
+  g: RhOrgGerenciaComFilhos,
+  countsPorTimeId: Record<string, number>,
+  membrosPorGerenciaId: Record<string, string[]>,
+): number {
+  const porGerencia = (membrosPorGerenciaId[g.id] ?? []).length;
+  const porTimes = g.times.reduce((acc, ti) => acc + (countsPorTimeId[ti.id] ?? 0), 0);
+  return porTimes + porGerencia;
 }
 
 function quadroBase(t: Theme): CSSProperties {
@@ -39,7 +49,6 @@ export function OrgVisualizacaoDiretoriaUnica({
   countsPorTimeId,
   membrosPorTimeId,
   membrosPorGerenciaId,
-  prestadoresSemTimeCountPorGerenciaId,
 }: {
   d: RhOrgDiretoriaComFilhos;
   t: Theme;
@@ -47,7 +56,6 @@ export function OrgVisualizacaoDiretoriaUnica({
   countsPorTimeId: Record<string, number>;
   membrosPorTimeId: Record<string, string[]>;
   membrosPorGerenciaId: Record<string, string[]>;
-  prestadoresSemTimeCountPorGerenciaId: Record<string, number>;
 }) {
   const nomeDir = nomeResponsavel(d.diretor_funcionario_id, d.diretor_nome_livre);
   const altFoto = `Foto de ${nomeDir}`;
@@ -70,10 +78,22 @@ export function OrgVisualizacaoDiretoriaUnica({
 
   const linhaEstilo = useMemo(
     () => ({
-      titulo: { margin: 0, fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1.35 } as CSSProperties,
-      liderLabel: { margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 } as CSSProperties,
+      nomeGerencia: { margin: 0, fontSize: 17, fontWeight: 800, color: "var(--brand-contrast, #1e36f8)", fontFamily: FONT_TITLE, lineHeight: 1.35 } as CSSProperties,
+      nomeTime: { margin: 0, fontSize: 15, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, lineHeight: 1.35 } as CSSProperties,
+      liderLabel: { margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 } as CSSProperties,
       liderNome: { fontWeight: 700, color: t.text } as CSSProperties,
-      contagem: { margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 } as CSSProperties,
+      contagem: { margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 } as CSSProperties,
+      sobreTitulo: {
+        margin: "0 0 6px",
+        fontSize: 11,
+        fontWeight: 800,
+        textTransform: "uppercase",
+        letterSpacing: "0.06em",
+        fontFamily: FONT.body,
+        color: "var(--brand-contrast, #1e36f8)",
+        opacity: 0.85,
+      } as CSSProperties,
+      sobreTexto: { margin: 0, fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap", fontFamily: FONT.body, color: t.text } as CSSProperties,
     }),
     [t.text, t.textMuted],
   );
@@ -218,61 +238,28 @@ export function OrgVisualizacaoDiretoriaUnica({
               const liderG = nomeLiderImediatoGerencia(d, g, nomeResponsavel);
               const sobreG = g.sobre_gerencia.trim();
               const semTimes = g.times.length === 0;
-              const nSemTime = prestadoresSemTimeCountPorGerenciaId[g.id] ?? 0;
               const listaPrestadoresSemTime = nomesListaGerenciaSemTimes(g.id, liderG);
-              const nPrestadoresExibirSemTime = Math.max(nSemTime, listaPrestadoresSemTime.length);
+              const totalPrestGerencia = totalPrestadoresNaGerencia(g, countsPorTimeId, membrosPorGerenciaId);
 
               return (
                 <article key={g.id} style={cardGerencia}>
-                  {semTimes ? (
-                    <div style={{ ...quadroBase(t), marginBottom: 12, borderColor: t.cardBorder, background: t.cardBg }}>
-                      <p style={linhaEstilo.titulo}>{g.nome}</p>
-                      <p style={{ ...linhaEstilo.liderLabel, marginTop: 6 }}>
-                        Líder imediato: <span style={linhaEstilo.liderNome}>{textoOuTraco(liderG)}</span>
-                      </p>
-                      <p style={{ ...linhaEstilo.contagem, marginTop: 6 }}>
-                        {nPrestadoresExibirSemTime} prestador(es)
-                      </p>
-                    </div>
-                  ) : null}
+                  <p style={linhaEstilo.nomeGerencia}>{g.nome}</p>
+                  <p style={{ ...linhaEstilo.liderLabel, marginTop: 8 }}>
+                    Líder imediato: <span style={linhaEstilo.liderNome}>{textoOuTraco(liderG)}</span>
+                  </p>
+                  <p style={{ ...linhaEstilo.contagem, marginTop: 6 }}>
+                    {totalPrestGerencia} prestador(es)
+                  </p>
 
-                  <div style={{ marginTop: semTimes ? 0 : 0 }}>
-                    <h4
-                      style={{
-                        margin: "0 0 6px",
-                        fontSize: 11,
-                        fontWeight: 800,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                        fontFamily: FONT.body,
-                        color: "var(--brand-contrast, #1e36f8)",
-                        opacity: 0.85,
-                      }}
-                    >
-                      Sobre a Gerência
-                    </h4>
-                    <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap", fontFamily: FONT.body, color: t.text }}>
-                      {sobreG ? g.sobre_gerencia : "—"}
-                    </p>
+                  <div style={{ marginTop: 14 }}>
+                    <h4 style={linhaEstilo.sobreTitulo}>Sobre a Gerência</h4>
+                    <p style={linhaEstilo.sobreTexto}>{sobreG ? g.sobre_gerencia : "—"}</p>
                   </div>
 
                   <div style={{ marginTop: 14 }}>
                     {semTimes ? (
                       <>
-                        <h4
-                          style={{
-                            margin: "0 0 8px",
-                            fontSize: 11,
-                            fontWeight: 800,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.06em",
-                            fontFamily: FONT.body,
-                            color: "var(--brand-contrast, #1e36f8)",
-                            opacity: 0.85,
-                          }}
-                        >
-                          Prestadores
-                        </h4>
+                        <h4 style={{ ...linhaEstilo.sobreTitulo, marginBottom: 8 }}>Prestadores</h4>
                         {listaPrestadoresSemTime.length === 0 ? (
                           <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Sem dados para o período selecionado.</p>
                         ) : (
@@ -285,20 +272,7 @@ export function OrgVisualizacaoDiretoriaUnica({
                       </>
                     ) : (
                       <>
-                        <h4
-                          style={{
-                            margin: "0 0 8px",
-                            fontSize: 11,
-                            fontWeight: 800,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.06em",
-                            fontFamily: FONT.body,
-                            color: "var(--brand-contrast, #1e36f8)",
-                            opacity: 0.85,
-                          }}
-                        >
-                          Times
-                        </h4>
+                        <h4 style={{ ...linhaEstilo.sobreTitulo, marginBottom: 8 }}>Times</h4>
                         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                           {g.times.map((ti: RhOrgTime) => {
                             const lt = nomeLiderImediatoTime(d, g, ti, nomeResponsavel);
@@ -312,7 +286,7 @@ export function OrgVisualizacaoDiretoriaUnica({
                                   aria-expanded={exp}
                                   aria-controls={`org-time-membros-${ti.id}`}
                                   id={`org-time-chip-${ti.id}`}
-                                  aria-label={`Time ${ti.nome}, gerência ${g.nome}. Toque para ${exp ? "ocultar" : "expandir"} a lista de membros.`}
+                                  aria-label={`Time ${ti.nome}. Toque para ${exp ? "ocultar" : "abrir"} a lista de prestadores.`}
                                   onClick={() => toggleTime(ti.id)}
                                   style={{
                                     ...quadroBase(t),
@@ -320,11 +294,8 @@ export function OrgVisualizacaoDiretoriaUnica({
                                     border: `1px solid ${t.cardBorder}`,
                                   }}
                                 >
-                                  <p style={linhaEstilo.titulo}>
-                                    {g.nome}
-                                    <span style={{ fontWeight: 600, color: t.textMuted }}> · {ti.nome}</span>
-                                  </p>
-                                  <p style={{ ...linhaEstilo.liderLabel, marginTop: 6 }}>
+                                  <p style={linhaEstilo.nomeTime}>{ti.nome}</p>
+                                  <p style={{ ...linhaEstilo.liderLabel, marginTop: 8 }}>
                                     Líder imediato: <span style={linhaEstilo.liderNome}>{textoOuTraco(lt)}</span>
                                   </p>
                                   <p style={{ ...linhaEstilo.contagem, marginTop: 6 }}>
@@ -350,8 +321,8 @@ export function OrgVisualizacaoDiretoriaUnica({
                                       </p>
                                     ) : (
                                       <ul style={{ margin: 0, paddingLeft: 18, color: t.text, fontSize: 13, fontFamily: FONT.body, lineHeight: 1.5 }}>
-                                        {membros.map((n) => (
-                                          <li key={n}>{n}</li>
+                                        {membros.map((n, i) => (
+                                          <li key={`${ti.id}-${i}-${n}`}>{n}</li>
                                         ))}
                                       </ul>
                                     )}

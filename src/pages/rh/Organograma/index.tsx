@@ -267,24 +267,6 @@ export default function RhOrganogramaPage() {
     return m;
   }, [funcionarios]);
 
-  /** Prestadores só na gerência (sem time), incluindo líder imediato no total — para card sem times. */
-  const prestadoresSemTimeCountPorGerenciaId = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const d of arvore) {
-      for (const g of d.gerencias) {
-        if (g.times.length > 0) continue;
-        const ids = new Set<string>();
-        funcionarios.forEach((f) => {
-          if (f.org_gerencia_id === g.id && !f.org_time_id) ids.add(f.id);
-        });
-        const lid = g.gerente_funcionario_id || d.diretor_funcionario_id;
-        if (lid) ids.add(lid);
-        m[g.id] = ids.size;
-      }
-    }
-    return m;
-  }, [arvore, funcionarios]);
-
   /** Contagem distinta de pessoas (prestadores vinculados + líderes explícitos da diretoria). */
   const prestadoresCountPorDiretoriaId = useMemo(() => {
     const out: Record<string, number> = {};
@@ -931,7 +913,6 @@ export default function RhOrganogramaPage() {
               countsPorTimeId={countsMap}
               membrosPorTimeId={membrosPorTimeId}
               membrosPorGerenciaId={membrosPorGerenciaId}
-              prestadoresSemTimeCountPorGerenciaId={prestadoresSemTimeCountPorGerenciaId}
             />
           ) : (
             <div style={{ padding: "32px 12px", textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
