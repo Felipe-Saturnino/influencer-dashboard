@@ -23,6 +23,9 @@ export default tseslint.config(
       'react-refresh': reactRefresh,
     },
     rules: {
+      // ESLint 10 — @eslint/js recommended; desligadas até refatoração incremental no repo
+      'no-useless-assignment': 'off',
+      'preserve-caught-error': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],

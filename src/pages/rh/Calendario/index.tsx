@@ -231,7 +231,6 @@ export default function RhCalendarioPage() {
   }, []);
 
   const timeIds = useMemo(() => times.map((x) => x.id), [times]);
-  const timeIdsKey = useMemo(() => [...timeIds].sort().join(","), [timeIds]);
 
   const carregarPrestadores = useCallback(async (ids: string[]) => {
     if (ids.length === 0) {
@@ -256,12 +255,13 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
-    if (timeIds.length === 0) {
+    const ids = times.map((x) => x.id);
+    if (ids.length === 0) {
       setPrestadores([]);
       return;
     }
-    void carregarPrestadores(timeIds);
-  }, [perm.loading, perm.canView, timeIdsKey, carregarPrestadores, timeIds.length]);
+    void carregarPrestadores(ids);
+  }, [perm.loading, perm.canView, times, carregarPrestadores]);
 
   const staffMultiselectItems = useMemo(() => {
     const permitidos = new Set(timeIds);
