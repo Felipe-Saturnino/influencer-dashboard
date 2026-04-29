@@ -50,6 +50,7 @@ export type PageKey =
   | "rh_vagas"
   | "rh_gestao_escala"
   | "rh_staff"
+  | "rh_calendario"
   | "configuracoes"
   | "ajuda";
 

@@ -18,17 +18,26 @@ export default defineConfig(({ mode }) => {
         }),
     ].filter(Boolean),
     build: {
-      rollupOptions: {
+      // Vite 8 (Rolldown): objeto `manualChunks` não é suportado — ver codeSplitting.groups
+      rolldownOptions: {
         output: {
-          manualChunks: {
-            "vendor-react": ["react", "react-dom"],
-            "vendor-supabase": ["@supabase/supabase-js"],
-            "vendor-charts": ["recharts"],
-            "vendor-icons": ["react-icons", "lucide-react"],
-            /** PDF / etiquetas RH — isolado para não diluir o chunk principal ao navegar noutras áreas */
-            "vendor-jspdf": ["jspdf"],
-            /** QR em Links & Materiais e exports */
-            "vendor-qrcode": ["qrcode", "qrcode.react"],
+          codeSplitting: {
+            groups: [
+              { name: "vendor-react", test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/ },
+              { name: "vendor-supabase", test: /[\\/]node_modules[\\/]@supabase[\\/]supabase-js[\\/]/ },
+              { name: "vendor-charts", test: /[\\/]node_modules[\\/]recharts[\\/]/ },
+              {
+                name: "vendor-icons",
+                test: /[\\/]node_modules[\\/](react-icons|lucide-react)[\\/]/,
+              },
+              /** PDF / etiquetas RH — isolado para não diluir o chunk principal ao navegar noutras áreas */
+              { name: "vendor-jspdf", test: /[\\/]node_modules[\\/]jspdf[\\/]/ },
+              /** QR em Links & Materiais e exports */
+              {
+                name: "vendor-qrcode",
+                test: /[\\/]node_modules[\\/](qrcode|qrcode\.react)[\\/]/,
+              },
+            ],
           },
         },
       },

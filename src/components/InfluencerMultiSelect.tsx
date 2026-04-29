@@ -10,9 +10,23 @@ interface InfluencerMultiSelectProps {
   onChange: (v: string[]) => void;
   influencers: { id: string; name: string }[];
   t: Theme;
+  /** Rótulo do trigger quando nada está selecionado (padrão: "Influencers"). */
+  triggerEmptyLabel?: string;
+  /** `aria-label` do botão (padrão: "Filtrar por influencer — …"). */
+  ariaFilterPrefix?: string;
+  /** `aria-label` do listbox (padrão: "Selecionar influencers"). */
+  listboxAriaLabel?: string;
 }
 
-export default function InfluencerMultiSelect({ selected, onChange, influencers, t }: InfluencerMultiSelectProps) {
+export default function InfluencerMultiSelect({
+  selected,
+  onChange,
+  influencers,
+  t,
+  triggerEmptyLabel = "Influencers",
+  ariaFilterPrefix = "Filtrar por influencer",
+  listboxAriaLabel = "Selecionar influencers",
+}: InfluencerMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [alignRight, setAlignRight] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -44,9 +58,9 @@ export default function InfluencerMultiSelect({ selected, onChange, influencers,
   const active = selected.length > 0;
   const label =
     selected.length === 0
-      ? "Influencers"
+      ? triggerEmptyLabel
       : selected.length === 1
-        ? (influencers.find((i) => i.id === selected[0])?.name ?? "Influencers")
+        ? (influencers.find((i) => i.id === selected[0])?.name ?? triggerEmptyLabel)
         : `${selected.length} selecionados`;
 
   return (
@@ -58,7 +72,7 @@ export default function InfluencerMultiSelect({ selected, onChange, influencers,
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listboxId}
-        aria-label={`Filtrar por influencer — ${label}`}
+        aria-label={`${ariaFilterPrefix} — ${label}`}
         onClick={() => setOpen(!open)}
         style={{
           padding: "6px 14px",
@@ -89,7 +103,7 @@ export default function InfluencerMultiSelect({ selected, onChange, influencers,
           id={listboxId}
           role="listbox"
           aria-multiselectable="true"
-          aria-label="Selecionar influencers"
+          aria-label={listboxAriaLabel}
           style={{
             position: "absolute",
             top: "calc(100% + 6px)",

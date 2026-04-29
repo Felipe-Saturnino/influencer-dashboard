@@ -12,6 +12,24 @@ updates:
     labels:
       - "dependencies"
       - "javascript"
+    # @eslint/js 10+ exige eslint ^10 no peer; agrupar evita PR só com @eslint/js deixando eslint em 9.x.
+    groups:
+      eslint-ecosystem:
+        patterns:
+          - "eslint"
+          - "@eslint/js"
+          - "@eslint/*"
+          - "eslint-*"
+      react-ecosystem:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      vite-ecosystem:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
