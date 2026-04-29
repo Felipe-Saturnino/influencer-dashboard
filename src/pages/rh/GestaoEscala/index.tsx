@@ -1174,7 +1174,21 @@ export default function RhGestaoEscalaPage() {
         ) : (
           <>
             {resumoTurnoDias && mostrarFiltroArea ? (
-              <div className="app-table-wrap" style={{ marginBottom: 16 }}>
+              <section aria-labelledby="rh-ge-consolidado-heading" style={{ marginBottom: 20 }}>
+                <h3
+                  id="rh-ge-consolidado-heading"
+                  style={{
+                    margin: "0 0 10px 0",
+                    fontSize: 15,
+                    fontWeight: 800,
+                    fontFamily: FONT_TITLE,
+                    color: t.text,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  Consolidado - quantidade de Prestadores no dia por turno
+                </h3>
+                <div className="app-table-wrap">
                 <table
                   style={{
                     width: "100%",
@@ -1186,9 +1200,10 @@ export default function RhGestaoEscalaPage() {
                   }}
                 >
                   <caption style={{ display: "none" }}>
+                    Consolidado - quantidade de Prestadores no dia por turno.{" "}
                     {resumoTurnoDias.customerService
-                      ? "Totais por turno (Manhã, Noite, Comercial) e TOTAL por dia — Customer Service."
-                      : "Totais de pessoas por turno do dia e por data, linha TOTAL somando os três turnos, conforme área selecionada."}
+                      ? "Totais por turno Manhã, Noite, Comercial e TOTAL por dia."
+                      : "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."}
                   </caption>
                   <thead>
                     <tr>
@@ -1364,9 +1379,24 @@ export default function RhGestaoEscalaPage() {
                     </tr>
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </section>
             ) : null}
-            <div className="app-table-wrap">
+            <section aria-labelledby="rh-ge-escala-diaria-heading">
+              <h3
+                id="rh-ge-escala-diaria-heading"
+                style={{
+                  margin: "0 0 10px 0",
+                  fontSize: 15,
+                  fontWeight: 800,
+                  fontFamily: FONT_TITLE,
+                  color: t.text,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                Escala Diária - Definição de status diário por Prestador
+              </h3>
+              <div className="app-table-wrap">
             <table
               style={{
                 width: "100%",
@@ -1383,9 +1413,10 @@ export default function RhGestaoEscalaPage() {
               }}
             >
               <caption style={{ display: "none" }}>
+                Escala Diária - Definição de status diário por Prestador.{" "}
                 {areaCustomerService
-                  ? "Escala mensal por nickname, escala, turno e dia — Customer Service."
-                  : "Escala mensal com colunas por dia"}
+                  ? "Grade por nickname, escala, turno e dia do mês — Customer Service."
+                  : "Grade mensal por colaborador e dia do mês."}
               </caption>
               <thead>
                 <tr>
@@ -1602,7 +1633,8 @@ export default function RhGestaoEscalaPage() {
                 )}
               </tbody>
             </table>
-          </div>
+              </div>
+            </section>
           </>
         )}
       </div>
