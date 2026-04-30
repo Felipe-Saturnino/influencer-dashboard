@@ -12,6 +12,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export default function GestaoOperadoras() {
@@ -278,6 +279,7 @@ export default function GestaoOperadoras() {
 
       {modalOpen && (
         <ModalOperadora
+          key={editando?.slug ?? "nova"}
           t={t}
           dashBrand={dashBrand}
           editando={editando}
@@ -298,10 +300,33 @@ interface ModalProps {
   onSalvo: () => void;
 }
 
+type ModalTabId = "dados" | "brand" | "operacoes";
+
+type MesaCadastroResumo = {
+  tipo_jogo: string;
+  nome_mesa: string;
+  numero_mesa: string | null;
+  mesa_identificacao: string;
+};
+
+function timeDbToInput(v: string | null | undefined): string {
+  if (!v || typeof v !== "string") return "";
+  const m = v.match(/^(\d{1,2}):(\d{2})/);
+  return m ? `${m[1].padStart(2, "0")}:${m[2]}` : v.slice(0, 5);
+}
+
+function normHex6(s: string): string | null {
+  const x = s.trim();
+  if (!x) return null;
+  return /^#[0-9a-fA-F]{6}$/.test(x) ? x.toLowerCase() : null;
+}
+
 function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps) {
+  const isNova = !editando;
+  const [aba, setAba] = useState<ModalTabId>("dados");
   const [nome, setNome] = useState(editando?.nome ?? "");
   const [slug, setSlug] = useState(editando?.slug ?? "");
-  const [ativo, setAtivo] = useState(editando?.ativo ?? true);
+  const [ativo, setAtivo] = useState(editando?.ativo ?? false);
   const [brandAction, setBrandAction] = useState(editando?.brand_action ?? "");
   const [brandContrast, setBrandContrast] = useState(editando?.brand_contrast ?? "");
   const [brandBg, setBrandBg] = useState(editando?.brand_bg ?? "");
@@ -309,12 +334,19 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
   const [brandAvisos, setBrandAvisos] = useState<string[]>([]);
   const [logoUrl, setLogoUrl] = useState(editando?.logo_url ?? "");
   const [fontUrl, setFontUrl] = useState(editando?.font_url ?? "");
+  const [turnoManha, setTurnoManha] = useState(() => timeDbToInput(editando?.turno_manha_inicio));
+  const [turnoTarde, setTurnoTarde] = useState(() => timeDbToInput(editando?.turno_tarde_inicio));
+  const [turnoNoite, setTurnoNoite] = useState(() => timeDbToInput(editando?.turno_noite_inicio));
+  const [mesas, setMesas] = useState<MesaCadastroResumo[]>([]);
+  const [mesasLoading, setMesasLoading] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFont, setUploadingFont] = useState(false);
   const [erro, setErro] = useState("");
 
-  // Gera slug automaticamente a partir do nome — invisível ao usuário na criação
+  const brandObrigatorio = isNova || ativo;
+  const storageSlug = (editando?.slug ?? slug).trim();
+
   useEffect(() => {
     if (!editando) {
       setSlug(
@@ -328,33 +360,46 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
     }
   }, [nome, editando]);
 
-  // Sincroniza campos de brand quando abre para outra operadora
   useEffect(() => {
-    if (editando) {
-      setBrandAction(editando.brand_action ?? "");
-      setBrandContrast(editando.brand_contrast ?? "");
-      setBrandBg(editando.brand_bg ?? "");
-      setBrandText(editando.brand_text ?? "");
-      setBrandAvisos([]);
-      setLogoUrl(editando.logo_url ?? "");
-      setFontUrl(editando.font_url ?? "");
+    if (!editando?.slug) {
+      setMesas([]);
+      return;
     }
-  }, [editando]);
+    let cancelled = false;
+    setMesasLoading(true);
+    void supabase
+      .from("mesas_spin_cadastro")
+      .select("tipo_jogo, nome_mesa, numero_mesa, mesa_identificacao")
+      .eq("operadora_slug", editando.slug)
+      .order("nome_mesa")
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setMesasLoading(false);
+        if (error || !data) setMesas([]);
+        else setMesas(data as MesaCadastroResumo[]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editando?.slug]);
 
   const BUCKET = "operadoras-brand";
 
   const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !editando?.slug) return;
+    if (!file || !storageSlug) {
+      setErro("Informe o nome para gerar o identificador antes de enviar o logo.");
+      e.target.value = "";
+      return;
+    }
     setUploadingLogo(true);
     setErro("");
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-      const path = `${editando.slug}/logo.${ext}`;
+      const path = `${storageSlug}/logo.${ext}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      // Cache-busting: evita que o navegador sirva logo antigo após novo upload
       setLogoUrl(`${publicUrl}?v=${Date.now()}`);
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Erro ao enviar logo.");
@@ -373,12 +418,16 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
 
   const handleUploadFont = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !editando?.slug) return;
+    if (!file || !storageSlug) {
+      setErro("Informe o nome para gerar o identificador antes de enviar a fonte.");
+      e.target.value = "";
+      return;
+    }
     setUploadingFont(true);
     setErro("");
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "woff2";
-      const path = `${editando.slug}/font.${ext}`;
+      const path = `${storageSlug}/font.${ext}`;
       const contentType = FONT_MIME[ext] ?? "font/woff2";
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType });
       if (error) throw error;
@@ -394,36 +443,144 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
 
   const salvar = async () => {
     setErro("");
-    if (!nome.trim()) { setErro("Nome é obrigatório."); return; }
-    if (!slug.trim()) { setErro("Slug inválido. Verifique o nome informado."); return; }
-    if (!/^[a-z0-9_]+$/.test(slug)) { setErro("Slug inválido. Use apenas letras minúsculas, números e underscore."); return; }
+    if (!nome.trim()) {
+      setErro("Nome é obrigatório.");
+      return;
+    }
+    if (!slug.trim()) {
+      setErro("Informe um nome para gerar o identificador interno.");
+      return;
+    }
+    if (!/^[a-z0-9_]+$/.test(slug)) {
+      setErro("Identificador inválido. Use apenas letras minúsculas, números e underscore.");
+      return;
+    }
+
+    const logoTrim = logoUrl.trim();
+    const fontTrim = fontUrl.trim();
+    const tm = turnoManha.trim();
+    const tt = turnoTarde.trim();
+    const tn = turnoNoite.trim();
 
     setSalvando(true);
     try {
-      const brandPayload: Record<string, string | null> = {
-        logo_url: logoUrl.trim() || null,
-        font_url: fontUrl.trim() || null,
-      };
-      if (editando) {
+      if (isNova) {
+        const ha = normHex6(brandAction);
+        const hc = normHex6(brandContrast);
+        const hb = normHex6(brandBg);
+        const ht = normHex6(brandText);
+        if (!ha || !hc || !hb || !ht) {
+          setErro("Preencha as quatro cores do brandguide em formato #RRGGBB.");
+          setSalvando(false);
+          return;
+        }
+        if (!logoTrim) {
+          setErro("Logo é obrigatório.");
+          setSalvando(false);
+          return;
+        }
         const v = validarBrandguide({
-          action: brandAction.trim() || null,
-          contrast: brandContrast.trim() || null,
-          bg: brandBg.trim() || null,
-          text: brandText.trim() || null,
+          action: ha,
+          contrast: hc,
+          bg: hb,
+          text: ht,
         });
         setBrandAvisos(v.warnings);
-        brandPayload.brand_action = v.action;
-        brandPayload.brand_contrast = v.contrast;
-        brandPayload.brand_bg = v.bg;
-        brandPayload.brand_text = v.text;
-      }
-      if (editando) {
-        const { error } = await supabase.from("operadoras").update({ nome, ativo, ...brandPayload }).eq("slug", editando.slug);
+        const { data: existe } = await supabase.from("operadoras").select("slug").eq("slug", slug).maybeSingle();
+        if (existe) {
+          setErro("Este identificador já está em uso. Tente um nome diferente.");
+          setSalvando(false);
+          return;
+        }
+        const { error } = await supabase.from("operadoras").insert({
+          slug,
+          nome: nome.trim(),
+          ativo: false,
+          brand_action: v.action,
+          brand_contrast: v.contrast,
+          brand_bg: v.bg,
+          brand_text: v.text,
+          logo_url: logoTrim,
+          font_url: fontTrim || null,
+        });
         if (error) throw error;
       } else {
-        const { data: existe } = await supabase.from("operadoras").select("slug").eq("slug", slug).maybeSingle();
-        if (existe) { setErro("Este slug já está em uso. Tente um nome diferente."); setSalvando(false); return; }
-        const { error } = await supabase.from("operadoras").insert({ slug, nome, ativo: true, ...brandPayload });
+        let brandPayload: Record<string, string | null>;
+        if (ativo) {
+          const ha = normHex6(brandAction);
+          const hc = normHex6(brandContrast);
+          const hb = normHex6(brandBg);
+          const ht = normHex6(brandText);
+          if (!ha || !hc || !hb || !ht) {
+            setErro("Com status Ativa, todas as cores do brandguide são obrigatórias (#RRGGBB).");
+            setSalvando(false);
+            return;
+          }
+          if (!logoTrim) {
+            setErro("Com status Ativa, o logo é obrigatório.");
+            setSalvando(false);
+            return;
+          }
+          if (!tm || !tt || !tn) {
+            setErro("Com status Ativa, informe o horário de início dos três turnos.");
+            setSalvando(false);
+            return;
+          }
+          const v = validarBrandguide({
+            action: ha,
+            contrast: hc,
+            bg: hb,
+            text: ht,
+          });
+          setBrandAvisos(v.warnings);
+          brandPayload = {
+            brand_action: v.action,
+            brand_contrast: v.contrast,
+            brand_bg: v.bg,
+            brand_text: v.text,
+            logo_url: logoTrim,
+            font_url: fontTrim || null,
+          };
+        } else {
+          setBrandAvisos([]);
+          const nullable = (s: string) => {
+            const x = s.trim();
+            if (!x) return null;
+            const h = normHex6(x);
+            return h === null ? "bad" : h;
+          };
+          const a = nullable(brandAction);
+          const c = nullable(brandContrast);
+          const b = nullable(brandBg);
+          const tx = nullable(brandText);
+          if (a === "bad" || c === "bad" || b === "bad" || tx === "bad") {
+            setErro("Use #RRGGBB para as cores preenchidas ou deixe em branco com operadora inativa.");
+            setSalvando(false);
+            return;
+          }
+          brandPayload = {
+            brand_action: a,
+            brand_contrast: c,
+            brand_bg: b,
+            brand_text: tx,
+            logo_url: logoTrim || null,
+            font_url: fontTrim || null,
+          };
+        }
+
+        const turnoPayload =
+          ativo
+            ? { turno_manha_inicio: tm, turno_tarde_inicio: tt, turno_noite_inicio: tn }
+            : {
+                turno_manha_inicio: tm || null,
+                turno_tarde_inicio: tt || null,
+                turno_noite_inicio: tn || null,
+              };
+
+        const { error } = await supabase
+          .from("operadoras")
+          .update({ nome: nome.trim(), ativo, ...brandPayload, ...turnoPayload })
+          .eq("slug", editando.slug);
         if (error) throw error;
       }
       onSalvo();
@@ -450,204 +607,375 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
   const fieldStyle: React.CSSProperties = { marginBottom: 18 };
   const tryClose = () => { if (!salvando) onClose(); };
 
-  return (
-    <ModalBase maxWidth={460} onClose={tryClose}>
-        <ModalHeader
-          title={editando ? "Editar Operadora" : "Nova Operadora"}
-          onClose={tryClose}
-        />
+  const tabs: { id: ModalTabId; label: string }[] = isNova
+    ? [
+        { id: "dados", label: "Dados cadastrais" },
+        { id: "brand", label: "Brandguide" },
+      ]
+    : [
+        { id: "dados", label: "Dados cadastrais" },
+        { id: "brand", label: "Brandguide" },
+        { id: "operacoes", label: "Operações" },
+      ];
 
-        {/* Campo Nome */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>
-            Nome
-            <CampoObrigatorioMark />
+  const tabBtn = (id: ModalTabId, label: string) => {
+    const sel = aba === id;
+    return (
+      <button
+        key={id}
+        type="button"
+        role="tab"
+        id={`tab-op-${id}`}
+        aria-selected={sel}
+        aria-controls={`panel-op-${id}`}
+        onClick={() => setAba(id)}
+        style={{
+          padding: "8px 14px",
+          borderRadius: 10,
+          border: `1px solid ${sel ? BRAND.roxoVivo : t.cardBorder}`,
+          background: sel ? `${BRAND.roxoVivo}18` : "transparent",
+          color: sel ? BRAND.roxoVivo : t.textMuted,
+          fontFamily: FONT.body,
+          fontSize: 12,
+          fontWeight: sel ? 700 : 600,
+          cursor: "pointer",
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+
+  const slugInputStyle: React.CSSProperties = {
+    ...inputStyle,
+    opacity: 0.85,
+    cursor: "not-allowed",
+    fontFamily: "monospace",
+    color: BRAND.roxoVivo,
+    fontSize: 13,
+  };
+
+  const brandGrid = (
+    <div style={{ ...fieldStyle, marginBottom: 0, padding: 16, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", borderRadius: 12, border: `1px solid ${t.cardBorder}`, maxHeight: 420, overflowY: "auto" }}>
+      <div className="app-grid-2-tight">
+        <div>
+          <label style={{ ...labelStyle, fontSize: 10 }}>
+            Cor de ação
+            {brandObrigatorio ? <CampoObrigatorioMark /> : null}
           </label>
-          <input
-            style={inputStyle}
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex: Blaze"
-            autoFocus
-          />
+          <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
+            CTAs, títulos, item ativo no menu. Alto contraste sobre o fundo.
+          </div>
+          <input type="color" value={brandAction || "#7c3aed"} onChange={(e) => setBrandAction(e.target.value)}
+            style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+          <input type="text" value={brandAction} onChange={(e) => setBrandAction(e.target.value)} placeholder="#7c3aed"
+            style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
         </div>
+        <div>
+          <label style={{ ...labelStyle, fontSize: 10 }}>
+            Cor de contraste
+            {brandObrigatorio ? <CampoObrigatorioMark /> : null}
+          </label>
+          <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
+            Comparativos e destaque secundário — deve ser distinta da cor de ação.
+          </div>
+          <input type="color" value={brandContrast || "#1e36f8"} onChange={(e) => setBrandContrast(e.target.value)}
+            style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+          <input type="text" value={brandContrast} onChange={(e) => setBrandContrast(e.target.value)} placeholder="#1e36f8"
+            style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+        </div>
+        <div>
+          <label style={{ ...labelStyle, fontSize: 10 }}>
+            Fundo
+            {brandObrigatorio ? <CampoObrigatorioMark /> : null}
+          </label>
+          <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
+            Background da aplicação (modo operador escuro).
+          </div>
+          <input type="color" value={brandBg || "#0f0f1a"} onChange={(e) => setBrandBg(e.target.value)}
+            style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+          <input type="text" value={brandBg} onChange={(e) => setBrandBg(e.target.value)} placeholder="#0f0f1a"
+            style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+        </div>
+        <div>
+          <label style={{ ...labelStyle, fontSize: 10 }}>
+            Texto
+            {brandObrigatorio ? <CampoObrigatorioMark /> : null}
+          </label>
+          <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
+            Texto principal e ícones estruturais (derivados de contraste no app).
+          </div>
+          <input type="color" value={brandText || "#ffffff"} onChange={(e) => setBrandText(e.target.value)}
+            style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
+          <input type="text" value={brandText} onChange={(e) => setBrandText(e.target.value)} placeholder="#ffffff"
+            style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
+        </div>
+        {brandAvisos.length > 0 && (
+          <div style={{ gridColumn: "1 / -1", fontSize: 11, color: BRAND.amarelo, fontFamily: FONT.body, lineHeight: 1.45, padding: "8px 10px", borderRadius: 8, border: `1px solid ${BRAND.amarelo}55`, background: `${BRAND.amarelo}14` }}>
+            {brandAvisos.map((w, i) => (
+              <div key={i}>{w}</div>
+            ))}
+          </div>
+        )}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={{ ...labelStyle, fontSize: 10 }}>
+            Logo
+            {brandObrigatorio ? <CampoObrigatorioMark /> : null}
+          </label>
+          <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="URL ou envie um arquivo"
+            style={inputStyle} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+            <label style={{
+              display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
+              background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${t.cardBorder}`,
+              borderRadius: 8, cursor: uploadingLogo ? "not-allowed" : "pointer",
+              fontSize: 12, fontFamily: FONT.body, color: t.text,
+            }}>
+              <Upload size={14} aria-hidden="true" />
+              {uploadingLogo ? "Enviando..." : "Enviar logo (PNG, JPG, SVG)"}
+              <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden disabled={uploadingLogo} onChange={handleUploadLogo} />
+            </label>
+            {logoUrl ? (
+              <a href={logoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
+            ) : null}
+          </div>
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={{ ...labelStyle, fontSize: 10 }}>Fonte customizada</label>
+          <input type="url" value={fontUrl} onChange={(e) => setFontUrl(e.target.value)} placeholder="URL ou envie .woff2, .woff, .ttf, .otf"
+            style={inputStyle} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+            <label style={{
+              display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
+              background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${t.cardBorder}`,
+              borderRadius: 8, cursor: uploadingFont ? "not-allowed" : "pointer",
+              fontSize: 12, fontFamily: FONT.body, color: t.text,
+            }}>
+              <Upload size={14} aria-hidden="true" />
+              {uploadingFont ? "Enviando..." : "Enviar fonte (WOFF2, WOFF, TTF, OTF)"}
+              <input type="file" accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf" hidden disabled={uploadingFont} onChange={handleUploadFont} />
+            </label>
+            {fontUrl ? (
+              <a href={fontUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
-        {/* Slug — apenas visível na edição, como referência somente leitura */}
-        {editando && (
+  const thM = getThStyle(t);
+  const tdM = getTdStyle(t);
+  const tdNum = getTdNumStyle(t);
+
+  return (
+    <ModalBase maxWidth={isNova ? 520 : 720} onClose={tryClose}>
+      <ModalHeader
+        title={editando ? "Editar Operadora" : "Nova Operadora"}
+        onClose={tryClose}
+      />
+
+      <div role="tablist" aria-label="Seções do cadastro da operadora" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+        {tabs.map((x) => tabBtn(x.id, x.label))}
+      </div>
+
+      {aba === "dados" && (
+        <div role="tabpanel" id="panel-op-dados" aria-labelledby="tab-op-dados">
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              Nome
+              <CampoObrigatorioMark />
+            </label>
+            <input
+              style={inputStyle}
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex: Blaze"
+              autoFocus
+            />
+          </div>
+
           <div style={fieldStyle}>
             <label style={labelStyle}>
               Identificador interno
               <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 6, fontSize: 10 }}>(não editável)</span>
             </label>
             <input
-              style={{
-                ...inputStyle,
-                opacity: 0.5,
-                cursor: "not-allowed",
-                fontFamily: "monospace",
-                color: BRAND.roxoVivo,
-                fontSize: 13,
-              }}
+              style={slugInputStyle}
               value={slug}
               readOnly
+              placeholder="Será gerado a partir do nome"
+              aria-label="Identificador interno gerado automaticamente"
             />
           </div>
-        )}
 
-        {/* Brandguide — cores exibidas para operadores desta operadora */}
-        {editando && (
-          <div style={{ ...fieldStyle, padding: 16, background: t.isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)", borderRadius: 12, border: `1px solid ${t.cardBorder}`, maxHeight: 420, overflowY: "auto" }}>
-            <div style={{ ...labelStyle, marginBottom: 12 }}>Brandguide (operadores)</div>
-            <div className="app-grid-2-tight">
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Cor de ação</label>
-                <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
-                  CTAs, títulos, item ativo no menu. Alto contraste sobre o fundo.
-                </div>
-                <input type="color" value={brandAction || "#7c3aed"} onChange={(e) => setBrandAction(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={brandAction} onChange={(e) => setBrandAction(e.target.value)} placeholder="#7c3aed"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Cor de contraste</label>
-                <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
-                  Comparativos e destaque secundário — deve ser distinta da cor de ação.
-                </div>
-                <input type="color" value={brandContrast || "#1e36f8"} onChange={(e) => setBrandContrast(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={brandContrast} onChange={(e) => setBrandContrast(e.target.value)} placeholder="#1e36f8"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Fundo</label>
-                <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
-                  Background da aplicação (modo operador escuro).
-                </div>
-                <input type="color" value={brandBg || "#0f0f1a"} onChange={(e) => setBrandBg(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={brandBg} onChange={(e) => setBrandBg(e.target.value)} placeholder="#0f0f1a"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
-              <div>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Texto</label>
-                <div style={{ fontSize: 10, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body, lineHeight: 1.35 }}>
-                  Texto principal e ícones estruturais (derivados de contraste no app).
-                </div>
-                <input type="color" value={brandText || "#ffffff"} onChange={(e) => setBrandText(e.target.value)}
-                  style={{ width: "100%", height: 36, border: `1px solid ${t.cardBorder}`, borderRadius: 8, cursor: "pointer" }} />
-                <input type="text" value={brandText} onChange={(e) => setBrandText(e.target.value)} placeholder="#ffffff"
-                  style={{ ...inputStyle, marginTop: 6, fontSize: 12 }} />
-              </div>
-              {brandAvisos.length > 0 && (
-                <div style={{ gridColumn: "1 / -1", fontSize: 11, color: BRAND.amarelo, fontFamily: FONT.body, lineHeight: 1.45, padding: "8px 10px", borderRadius: 8, border: `1px solid ${BRAND.amarelo}55`, background: `${BRAND.amarelo}14` }}>
-                  {brandAvisos.map((w, i) => (
-                    <div key={i}>{w}</div>
-                  ))}
+          {isNova ? (
+            <div style={{ ...fieldStyle, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <span style={{ ...labelStyle, margin: 0 }}>Status</span>
+              <span
+                style={{
+                  border: `1px solid #6b728044`,
+                  background: "#6b728022",
+                  color: "#6b7280",
+                  borderRadius: 10, padding: "6px 16px",
+                  fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
+                }}
+              >
+                Inativa
+              </span>
+              <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                Novas operadoras são criadas como inativas até serem ativadas na edição.
+              </span>
+            </div>
+          ) : (
+            <div style={{ ...fieldStyle, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <label style={{ ...labelStyle, margin: 0 }}>Status</label>
+              <button
+                type="button"
+                aria-pressed={ativo}
+                onClick={() => setAtivo((prev) => !prev)}
+                style={{
+                  border: `1px solid ${ativo ? "#05966966" : t.cardBorder}`,
+                  background: ativo ? "#05966922" : "transparent",
+                  color: ativo ? "#059669" : t.textMuted,
+                  borderRadius: 10, padding: "6px 16px", cursor: "pointer",
+                  fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                }}
+              >
+                {ativo && <Check size={13} aria-hidden="true" />}
+                {ativo ? "Ativa" : "Inativa"}
+              </button>
+              {!ativo && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
+                  <AlertCircle size={13} aria-hidden="true" /> Vínculos existentes não são removidos
                 </div>
               )}
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Logo (opcional)</label>
-                <input type="url" value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="URL ou envie um arquivo"
-                  style={inputStyle} />
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                  <label style={{
-                    display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
-                    background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 8, cursor: uploadingLogo ? "not-allowed" : "pointer",
-                    fontSize: 12, fontFamily: FONT.body, color: t.text,
-                  }}>
-                    <Upload size={14} />
-                    {uploadingLogo ? "Enviando..." : "Enviar logo (PNG, JPG, SVG)"}
-                    <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden disabled={uploadingLogo} onChange={handleUploadLogo} />
-                  </label>
-                  {logoUrl && (
-                    <a href={logoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
-                  )}
-                </div>
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ ...labelStyle, fontSize: 10 }}>Fonte customizada (opcional)</label>
-                <input type="url" value={fontUrl} onChange={e => setFontUrl(e.target.value)} placeholder="URL ou envie .woff2, .woff, .ttf, .otf"
-                  style={inputStyle} />
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                  <label style={{
-                    display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
-                    background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 8, cursor: uploadingFont ? "not-allowed" : "pointer",
-                    fontSize: 12, fontFamily: FONT.body, color: t.text,
-                  }}>
-                    <Upload size={14} />
-                    {uploadingFont ? "Enviando..." : "Enviar fonte (WOFF2, WOFF, TTF, OTF)"}
-                    <input type="file" accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf" hidden disabled={uploadingFont} onChange={handleUploadFont} />
-                  </label>
-                  {fontUrl && (
-                    <a href={fontUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
-                  )}
-                </div>
-              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {aba === "brand" && (
+        <div role="tabpanel" id="panel-op-brand" aria-labelledby="tab-op-brand">
+          {brandGrid}
+        </div>
+      )}
+
+      {!isNova && aba === "operacoes" && (
+        <div role="tabpanel" id="panel-op-operacoes" aria-labelledby="tab-op-operacoes">
+          <div style={{ ...labelStyle, marginBottom: 10, textTransform: "none", letterSpacing: "0.04em", fontSize: 12, color: t.text }}>
+            Horário de turno dos dealers
+          </div>
+          <div className="app-grid-2-tight" style={{ marginBottom: 24 }}>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>
+                Turno da manhã — horário de início
+                {ativo ? <CampoObrigatorioMark /> : null}
+              </label>
+              <input
+                type="time"
+                value={turnoManha}
+                onChange={(e) => setTurnoManha(e.target.value)}
+                style={inputStyle}
+                aria-label="Horário de início do turno da manhã"
+              />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>
+                Turno da tarde — horário de início
+                {ativo ? <CampoObrigatorioMark /> : null}
+              </label>
+              <input
+                type="time"
+                value={turnoTarde}
+                onChange={(e) => setTurnoTarde(e.target.value)}
+                style={inputStyle}
+                aria-label="Horário de início do turno da tarde"
+              />
+            </div>
+            <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+              <label style={labelStyle}>
+                Turno da noite — horário de início
+                {ativo ? <CampoObrigatorioMark /> : null}
+              </label>
+              <input
+                type="time"
+                value={turnoNoite}
+                onChange={(e) => setTurnoNoite(e.target.value)}
+                style={inputStyle}
+                aria-label="Horário de início do turno da noite"
+              />
             </div>
           </div>
-        )}
 
-        {/* Status — apenas na edição */}
-        {editando && (
-          <div style={{ ...fieldStyle, display: "flex", alignItems: "center", gap: 12 }}>
-            <label style={{ ...labelStyle, margin: 0 }}>Status</label>
-            <button
-              type="button"
-              aria-pressed={ativo}
-              onClick={() => setAtivo((prev) => !prev)}
-              style={{
-                border: `1px solid ${ativo ? "#05966966" : t.cardBorder}`,
-                background: ativo ? "#05966922" : "transparent",
-                color: ativo ? "#059669" : t.textMuted,
-                borderRadius: 10, padding: "6px 16px", cursor: "pointer",
-                fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
-                display: "inline-flex", alignItems: "center", gap: 6,
-              }}
-            >
-              {ativo && <Check size={13} aria-hidden="true" />}
-              {ativo ? "Ativa" : "Inativa"}
-            </button>
-            {!ativo && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
-                <AlertCircle size={13} /> Vínculos existentes não são removidos
-              </div>
-            )}
+          <div style={{ ...labelStyle, marginBottom: 10, textTransform: "none", letterSpacing: "0.04em", fontSize: 12, color: t.text }}>
+            Mesas em operação
           </div>
-        )}
-
-        {/* Erro */}
-        {erro && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: BRAND.vermelho, marginBottom: 16, fontFamily: FONT.body }}>
-            <AlertCircle size={14} /> {erro}
-          </div>
-        )}
-
-        {/* Botões */}
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-          <button
-            type="button"
-            onClick={tryClose}
-            style={{ background: "transparent", border: `1px solid ${t.cardBorder}`, borderRadius: 10, padding: "9px 18px", cursor: "pointer", fontFamily: FONT.body, fontSize: 13, color: t.text }}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={salvar}
-            disabled={salvando}
-            style={{
-              background: dashBrand.useBrand ? "var(--brand-action, #7c3aed)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
-              color: "#fff", border: "none", borderRadius: 10,
-              padding: "9px 20px", cursor: salvando ? "not-allowed" : "pointer",
-              fontFamily: FONT.body, fontSize: 13, fontWeight: 700, opacity: salvando ? 0.7 : 1,
-            }}
-          >
-            {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar operadora"}
-          </button>
+          {mesasLoading ? (
+            <div style={{ padding: 20, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>Carregando mesas...</div>
+          ) : mesas.length === 0 ? (
+            <div style={{ padding: "16px 0", color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
+              Nenhuma mesa cadastrada para esta operadora.
+            </div>
+          ) : (
+            <div className="app-table-wrap">
+              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, borderRadius: 14, overflow: "hidden" }}>
+                <caption style={{ display: "none" }}>
+                  Mesas em operação cadastradas para esta operadora
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" style={{ ...thM, textAlign: "left" }}>Jogo</th>
+                    <th scope="col" style={{ ...thM, textAlign: "left" }}>Nome da mesa</th>
+                    <th scope="col" style={{ ...thM, textAlign: "right" }}>Nº mesa</th>
+                    <th scope="col" style={{ ...thM, textAlign: "left" }}>Identificação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mesas.map((m, i) => (
+                    <tr key={`${m.mesa_identificacao}-${i}`} style={{ background: zebraStripe(i) }}>
+                      <td style={{ ...tdM, textAlign: "left" }}>{m.tipo_jogo}</td>
+                      <td style={{ ...tdM, textAlign: "left", fontWeight: 600 }}>{m.nome_mesa}</td>
+                      <td style={{ ...tdNum }}>{m.numero_mesa ?? "—"}</td>
+                      <td style={{ ...tdM, textAlign: "left", fontFamily: "monospace", fontSize: 12 }}>{m.mesa_identificacao}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
+      )}
+
+      {erro && (
+        <div role="alert" style={{ display: "flex", alignItems: "center", gap: 8, background: `${BRAND.vermelho}18`, border: `1px solid ${BRAND.vermelho}44`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: BRAND.vermelho, marginTop: 16, marginBottom: 8, fontFamily: FONT.body }}>
+          <AlertCircle size={14} aria-hidden="true" /> {erro}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+        <button
+          type="button"
+          onClick={tryClose}
+          style={{ background: "transparent", border: `1px solid ${t.cardBorder}`, borderRadius: 10, padding: "9px 18px", cursor: "pointer", fontFamily: FONT.body, fontSize: 13, color: t.text }}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={salvar}
+          disabled={salvando}
+          style={{
+            background: dashBrand.useBrand ? "var(--brand-action, #7c3aed)" : `linear-gradient(135deg, ${BRAND.roxo}, ${BRAND.azul})`,
+            color: "#fff", border: "none", borderRadius: 10,
+            padding: "9px 20px", cursor: salvando ? "not-allowed" : "pointer",
+            fontFamily: FONT.body, fontSize: 13, fontWeight: 700, opacity: salvando ? 0.7 : 1,
+          }}
+        >
+          {salvando ? "Salvando..." : editando ? "Salvar alterações" : "Criar operadora"}
+        </button>
+      </div>
     </ModalBase>
   );
 }

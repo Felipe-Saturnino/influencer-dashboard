@@ -247,6 +247,10 @@ export interface Operadora {
   logo_url?:        string | null;
   /** Brandguide: URL da fonte customizada (.woff2, .woff, .ttf) */
   font_url?:        string | null;
+  /** Início do turno da manhã (dealers), formato time do Postgres (ex.: 08:00:00) */
+  turno_manha_inicio?:  string | null;
+  turno_tarde_inicio?:  string | null;
+  turno_noite_inicio?:  string | null;
 }
 
 // ─── OPERADORA PAGES ─────────────────────────────────────────────────────────
