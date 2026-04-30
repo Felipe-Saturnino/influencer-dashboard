@@ -42,6 +42,8 @@ export interface RhFuncionario {
   email: string;
   /** E-mail corporativo Spin (opcional); vínculo com login quando diferente do e-mail pessoal. */
   email_spin?: string | null;
+  /** Data de nascimento (YYYY-MM-DD), opcional. */
+  data_nascimento?: string | null;
   endereco_residencial: string;
   res_cep: string;
   res_logradouro: string;

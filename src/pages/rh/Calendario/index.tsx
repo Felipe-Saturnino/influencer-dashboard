@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  CalendarDays,
   CalendarRange,
   Check,
   ChevronDown,
@@ -8,6 +7,7 @@ import {
   ChevronRight,
   ChevronUp,
   Clock,
+  LayoutList,
   Loader2,
   X,
 } from "lucide-react";
@@ -21,8 +21,17 @@ import type { RhFuncionario } from "../../../types/rhFuncionario";
 import { siglaGradeParaNomeTurno } from "../../../lib/rhEscalaTurnos";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 
-type ViewMode = "mes" | "semana" | "dia";
+type FiltroCompromissosCal = "todos" | "turnos" | "reunioes" | "treinamentos" | "feedback";
+
+const COMPROMISSOS_FILTER_OPTIONS: { value: FiltroCompromissosCal; label: string }[] = [
+  { value: "todos", label: "Todos os Compromissos" },
+  { value: "turnos", label: "Turnos" },
+  { value: "reunioes", label: "Reuniões" },
+  { value: "treinamentos", label: "Treinamentos" },
+  { value: "feedback", label: "Feedback" },
+];
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
 
@@ -83,27 +92,23 @@ const MONTHS = [
   "Dezembro",
 ];
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const DAYS_LONG = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 
-const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
-  { value: "mes", label: "Mês" },
-  { value: "semana", label: "Semana" },
-  { value: "dia", label: "Dia" },
-];
+/** Primeiro mês disponível no calendário RH (sem navegação para meses anteriores). */
+const CALENDARIO_ANO_MIN = 2026;
+const CALENDARIO_MES0_MIN = 3; // Abril (0-based)
 
-/** Carrossel de período: mês inicial ao abrir a página (1 de abril de 2026). */
 function dataInicialCarrosselCalendarioRh(): Date {
-  return new Date(2026, 3, 1);
+  return new Date(CALENDARIO_ANO_MIN, CALENDARIO_MES0_MIN, 1);
 }
 
-function getWeekDays(date: Date): Date[] {
-  const day = date.getDay();
-  const start = new Date(date);
-  start.setDate(date.getDate() - day);
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return d;
-  });
+function mesCalendarioAntesDoMinimo(c: Date): boolean {
+  return c.getFullYear() < CALENDARIO_ANO_MIN || (c.getFullYear() === CALENDARIO_ANO_MIN && c.getMonth() < CALENDARIO_MES0_MIN);
+}
+
+/** Permite ir ao mês anterior (nunca antes de abril/2026). */
+function podeRetrocederMesCalendario(c: Date): boolean {
+  return c.getFullYear() > CALENDARIO_ANO_MIN || (c.getFullYear() === CALENDARIO_ANO_MIN && c.getMonth() > CALENDARIO_MES0_MIN);
 }
 
 function getMonthDays(year: number, month: number): (Date | null)[] {
@@ -137,22 +142,18 @@ type CompromissoEscalaCal = {
   turno: string;
 };
 
+/** Compromissos não-turno (futuro: API); hoje lista vazia por dia. */
+type CompromissoAgendaExtra = { id: string; titulo: string };
+
+function tituloModalDiaPt(d: Date): string {
+  const dow = DAYS_LONG[d.getDay()] ?? "";
+  return `${dow}, ${d.getDate()} de ${MONTHS[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
 function refMesPrimeiroDiaISO(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   return `${y}-${m}-01`;
-}
-
-function mesesRefISOEntre(inicio: Date, fim: Date): string[] {
-  const keys = new Set<string>();
-  const cur = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
-  const lim = new Date(fim.getFullYear(), fim.getMonth(), 1);
-  const c = new Date(cur);
-  while (c <= lim) {
-    keys.add(refMesPrimeiroDiaISO(c));
-    c.setMonth(c.getMonth() + 1);
-  }
-  return [...keys];
 }
 
 function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
@@ -187,6 +188,7 @@ function SingleDropdown({
   icon,
   t,
   accent,
+  triggerAriaLabel,
 }: {
   value: string;
   options: { value: string; label: string }[];
@@ -194,6 +196,8 @@ function SingleDropdown({
   icon?: React.ReactNode;
   t: SingleDropdownTheme;
   accent?: string;
+  /** Se definido, substitui o texto fixo «Modo de visualização» no aria-label do botão. */
+  triggerAriaLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -216,7 +220,11 @@ function SingleDropdown({
         onClick={() => setOpen(!open)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Modo de visualização: ${current?.label ?? value}`}
+        aria-label={
+          triggerAriaLabel
+            ? `${triggerAriaLabel}: ${current?.label ?? value}`
+            : `Modo de visualização: ${current?.label ?? value}`
+        }
         style={{
           padding: "6px 14px",
           borderRadius: 999,
@@ -325,8 +333,11 @@ export default function RhCalendarioPage() {
   const perm = usePermission("rh_calendario");
   const soPropriosCal = !perm.loading && perm.canView === "proprios";
 
-  const [view, setView] = useState<ViewMode>("mes");
   const [current, setCurrent] = useState(() => dataInicialCarrosselCalendarioRh());
+  const [filtroCompromissos, setFiltroCompromissos] = useState<FiltroCompromissosCal>("todos");
+  const [modalDia, setModalDia] = useState<Date | null>(null);
+  const [modalDiaTab, setModalDiaTab] = useState<"compromissos" | "ofertas">("compromissos");
+  const [modalAcaoAberto, setModalAcaoAberto] = useState(false);
 
   const [times, setTimes] = useState<StaffTimeRow[]>([]);
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
@@ -578,14 +589,7 @@ export default function RhCalendarioPage() {
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
   }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds]);
 
-  const mesesRefISOConsulta = useMemo(() => {
-    if (view === "mes") return [refMesPrimeiroDiaISO(current)];
-    if (view === "semana") {
-      const w = getWeekDays(current);
-      return mesesRefISOEntre(w[0]!, w[6]!);
-    }
-    return [refMesPrimeiroDiaISO(current)];
-  }, [view, current]);
+  const mesesRefISOConsulta = useMemo(() => [refMesPrimeiroDiaISO(current)], [current]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
@@ -681,35 +685,69 @@ export default function RhCalendarioPage() {
     treinamentoTimeIds,
   ]);
 
-  function compromissosNoDia(date: Date): CompromissoEscalaCal[] {
+  function reunioesAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
+    return [];
+  }
+  function treinamentosAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
+    return [];
+  }
+  function feedbackAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
+    return [];
+  }
+
+  function turnosAgendadosNoDia(date: Date): CompromissoEscalaCal[] {
     return compromissosPorDiaIso.get(toISO(date)) ?? [];
   }
 
+  function compromissosVisiveisNoCalendario(date: Date): CompromissoEscalaCal[] {
+    const iso = toISO(date);
+    const turnos = compromissosPorDiaIso.get(iso) ?? [];
+    if (filtroCompromissos === "todos" || filtroCompromissos === "turnos") return turnos;
+    return [];
+  }
+
+  function contagemItensCalendarioNoDia(date: Date): number {
+    const iso = toISO(date);
+    const turnos = compromissosPorDiaIso.get(iso) ?? [];
+    const r = reunioesAgendaDoDia(iso);
+    const tr = treinamentosAgendaDoDia(iso);
+    const fb = feedbackAgendaDoDia(iso);
+    switch (filtroCompromissos) {
+      case "todos":
+        return turnos.length + r.length + tr.length + fb.length;
+      case "turnos":
+        return turnos.length;
+      case "reunioes":
+        return r.length;
+      case "treinamentos":
+        return tr.length;
+      case "feedback":
+        return fb.length;
+      default:
+        return turnos.length;
+    }
+  }
+
+  function abrirModalDia(d: Date) {
+    setModalDia(d);
+    setModalDiaTab("compromissos");
+  }
+
   function prev() {
+    if (!podeRetrocederMesCalendario(current)) return;
     const d = new Date(current);
-    if (view === "mes") d.setMonth(d.getMonth() - 1);
-    if (view === "semana") d.setDate(d.getDate() - 7);
-    if (view === "dia") d.setDate(d.getDate() - 1);
-    setCurrent(d);
+    d.setMonth(d.getMonth() - 1);
+    if (mesCalendarioAntesDoMinimo(d)) setCurrent(dataInicialCarrosselCalendarioRh());
+    else setCurrent(d);
   }
   function next() {
     const d = new Date(current);
-    if (view === "mes") d.setMonth(d.getMonth() + 1);
-    if (view === "semana") d.setDate(d.getDate() + 7);
-    if (view === "dia") d.setDate(d.getDate() + 1);
+    d.setMonth(d.getMonth() + 1);
     setCurrent(d);
-  }
-  function goToday() {
-    setCurrent(new Date());
   }
 
   function headerTitle() {
-    if (view === "mes") return `${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
-    if (view === "semana") {
-      const w = getWeekDays(current);
-      return `${w[0].getDate()} – ${w[6].getDate()} ${MONTHS[w[6].getMonth()]} ${w[6].getFullYear()}`;
-    }
-    return `${current.getDate()} ${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
+    return `${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
   }
 
   function dayStyle(date: Date, todayISO: string): React.CSSProperties {
@@ -747,12 +785,6 @@ export default function RhCalendarioPage() {
     boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
   };
 
-  const DEFAULT_CHIP_COLOR = "var(--brand-action, #7c3aed)";
-  function chipActiveBg(color: string): string {
-    if (color.startsWith("var(")) return `color-mix(in srgb, ${color} 14%, transparent)`;
-    return `${color}22`;
-  }
-
   const btnNav: React.CSSProperties = {
     width: 30,
     height: 30,
@@ -765,23 +797,6 @@ export default function RhCalendarioPage() {
     alignItems: "center",
     justifyContent: "center",
   };
-
-  const chipBase = (active: boolean, color: string = DEFAULT_CHIP_COLOR): React.CSSProperties => ({
-    padding: "6px 14px",
-    borderRadius: 999,
-    fontSize: 13,
-    cursor: "pointer",
-    border: `1px solid ${active ? color : t.cardBorder}`,
-    background: active ? chipActiveBg(color) : "transparent",
-    color: active ? color : t.textMuted,
-    fontFamily: FONT.body,
-    fontWeight: active ? 700 : 400,
-    transition: "all 0.15s",
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    lineHeight: 1,
-  });
 
   function EscalaCompromissoChip({ comp }: { comp: CompromissoEscalaCal }) {
     return (
@@ -848,10 +863,20 @@ export default function RhCalendarioPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "minmax(140px, auto)", gap: 4 }}>
             {cells.map((date, i) => {
               if (!date) return <div key={i} />;
-              const lista = compromissosNoDia(date);
+              const lista = compromissosVisiveisNoCalendario(date);
+              const totalDia = contagemItensCalendarioNoDia(date);
               return (
                 <div
                   key={i}
+                  tabIndex={0}
+                  onClick={() => abrirModalDia(date)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      abrirModalDia(date);
+                    }
+                  }}
+                  aria-label={`Abrir detalhes do dia ${date.getDate()} de ${MONTHS[date.getMonth()]}`}
                   style={{
                     minHeight: 140,
                     padding: 8,
@@ -861,19 +886,13 @@ export default function RhCalendarioPage() {
                     overflow: "hidden",
                     boxSizing: "border-box",
                     transition: "background 0.15s",
+                    cursor: "pointer",
+                    outline: "none",
                     ...dayStyle(date, todayISO),
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrent(date);
-                      setView("dia");
-                    }}
-                    aria-label={`Ver dia ${date.getDate()} de ${MONTHS[date.getMonth()]}`}
+                  <div
                     style={{
-                      all: "unset",
-                      cursor: "pointer",
                       width: "100%",
                       boxSizing: "border-box",
                       display: "flex",
@@ -893,9 +912,9 @@ export default function RhCalendarioPage() {
                     >
                       {date.getDate()}
                     </span>
-                    {lista.length > 0 && (
+                    {totalDia > 0 && (
                       <span
-                        aria-label={`${lista.length} compromisso${lista.length > 1 ? "s" : ""} de escala neste dia`}
+                        aria-hidden="true"
                         style={{
                           fontSize: 10,
                           fontWeight: 700,
@@ -906,36 +925,47 @@ export default function RhCalendarioPage() {
                           fontFamily: FONT.body,
                         }}
                       >
-                        {lista.length}
+                        {totalDia}
                       </span>
                     )}
-                  </button>
-                  <div className="agenda-day-scroll" style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }} role="list" aria-label="Escalas do dia">
+                  </div>
+                  <div
+                    className="agenda-day-scroll"
+                    style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }}
+                    role="list"
+                    aria-label="Compromissos do dia na grelha"
+                  >
                     {lista.slice(0, MAX_CHIPS_COMPROMISSOS_DIA).map((comp) => (
                       <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
                     ))}
                     {lista.length > MAX_CHIPS_COMPROMISSOS_DIA && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCurrent(date);
-                          setView("dia");
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          abrirModalDia(date);
                         }}
-                        aria-label={`Ver mais ${lista.length - MAX_CHIPS_COMPROMISSOS_DIA} compromissos de escala`}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            abrirModalDia(date);
+                          }
+                        }}
+                        aria-label={`Ver mais ${lista.length - MAX_CHIPS_COMPROMISSOS_DIA} compromissos`}
                         style={{
                           fontSize: 11,
                           color: t.textMuted,
                           fontFamily: FONT.body,
-                          background: "none",
-                          border: "none",
                           cursor: "pointer",
-                          padding: 0,
                           textDecoration: "underline",
                           textUnderlineOffset: 2,
+                          display: "inline-block",
                         }}
                       >
                         +{lista.length - MAX_CHIPS_COMPROMISSOS_DIA} mais
-                      </button>
+                      </span>
                     )}
                   </div>
                 </div>
@@ -943,135 +973,6 @@ export default function RhCalendarioPage() {
             })}
           </div>
         </div>
-      </div>
-    );
-  }
-
-  function ViewSemana() {
-    const week = getWeekDays(current);
-    const todayISO = toISO(new Date());
-    return (
-      <div className="app-agenda-cal-scroll">
-        <div className="app-agenda-cal-scroll-inner">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
-            {week.map((date, i) => {
-              const lista = compromissosNoDia(date);
-              return (
-                <div
-                  key={i}
-                  style={{
-                    borderRadius: 12,
-                    padding: "10px 8px",
-                    minHeight: 200,
-                    display: "flex",
-                    flexDirection: "column",
-                    ...dayStyle(date, todayISO),
-                  }}
-                >
-                  <div style={{ textAlign: "center", marginBottom: 8, flexShrink: 0 }}>
-                    <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{DAYS[date.getDay()]}</div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCurrent(date);
-                        setView("dia");
-                      }}
-                      aria-label={`Ver dia ${date.getDate()} em modo dia`}
-                      style={{
-                        all: "unset",
-                        cursor: "pointer",
-                        display: "block",
-                        width: "100%",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 22,
-                          fontWeight: 700,
-                          color: dayNumberColor(date, todayISO),
-                          fontFamily: FONT_TITLE,
-                        }}
-                      >
-                        {date.getDate()}
-                      </div>
-                    </button>
-                    {lista.length > 0 && (
-                      <div
-                        aria-label={`${lista.length} compromisso${lista.length > 1 ? "s" : ""} de escala neste dia`}
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#fff",
-                          background: brand.accent,
-                          borderRadius: 10,
-                          padding: "1px 8px",
-                          display: "inline-block",
-                          fontFamily: FONT.body,
-                          marginTop: 2,
-                        }}
-                      >
-                        {lista.length} escala{lista.length > 1 ? "s" : ""}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginTop: 6 }} role="list" aria-label="Escalas da semana">
-                    {lista.map((comp) => (
-                      <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
-                    ))}
-                    {lista.length === 0 && (
-                      <div style={{ fontSize: 11, color: t.textMuted, textAlign: "center", marginTop: 8, fontFamily: FONT.body }}>—</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function ViewDia() {
-    const todayISO = toISO(new Date());
-    const isToday = toISO(current) === todayISO;
-    const lista = compromissosNoDia(current);
-
-    return (
-      <div>
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <span style={{ fontSize: 32, fontWeight: 900, color: isToday ? BRAND.azul : t.text, fontFamily: FONT_TITLE }}>
-            {current.getDate()}
-          </span>
-          <span style={{ fontSize: 16, color: t.textMuted, marginLeft: 8, fontFamily: FONT.body }}>{DAYS[current.getDay()]}</span>
-          {lista.length > 0 && (
-            <span
-              aria-label={`${lista.length} compromisso${lista.length > 1 ? "s" : ""} de escala neste dia`}
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: "#fff",
-                background: brand.accent,
-                borderRadius: 12,
-                padding: "2px 10px",
-                marginLeft: 10,
-                fontFamily: FONT.body,
-              }}
-            >
-              {lista.length} escala{lista.length > 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
-        {lista.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            Nenhuma escala neste dia.
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 480, margin: "0 auto" }} role="list" aria-label="Compromissos de escala do dia">
-            {lista.map((comp) => (
-              <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
-            ))}
-          </div>
-        )}
       </div>
     );
   }
@@ -1088,6 +989,7 @@ export default function RhCalendarioPage() {
   const showStaffFilter = !soPropriosCal && staffMultiselectItems.length > 0;
   const hasStaffFilter = filterStaffIds.length > 0;
   const hasTimeFilter = filterTimeIds.length > 0;
+  const podeRetrocederMes = podeRetrocederMesCalendario(current);
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
@@ -1097,7 +999,7 @@ export default function RhCalendarioPage() {
         subtitle={
           soPropriosCal
             ? "Apenas as suas escalas (turno Manhã, Tarde, Noite ou Comercial), conforme a Gestão de Escala."
-            : "Visão por período do time — escalas da Gestão de Escala (turno Manhã, Tarde, Noite ou Comercial) aparecem como compromissos nos dias correspondentes."
+            : "Grelha mensal — clique num dia para ver compromissos e ofertas. Turnos vêm da Gestão de Escala; reuniões, treinamentos e feedback serão integrados em breve."
         }
         brand={brand}
         t={t}
@@ -1112,40 +1014,65 @@ export default function RhCalendarioPage() {
             padding: "12px 20px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-            <button type="button" onClick={prev} style={btnNav} aria-label="Período anterior">
-              <ChevronLeft size={14} aria-hidden="true" />
-            </button>
-            <span
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 16,
+              width: "100%",
+            }}
+          >
+            <div
               style={{
-                fontSize: 18,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT.body,
-                minWidth: 180,
-                textAlign: "center",
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 18,
+                flex: "1 1 280px",
+                justifyContent: "center",
               }}
             >
-              {headerTitle()}
-            </span>
-            <button type="button" onClick={next} style={btnNav} aria-label="Próximo período">
-              <ChevronRight size={14} aria-hidden="true" />
-            </button>
+              <button
+                type="button"
+                onClick={prev}
+                disabled={!podeRetrocederMes}
+                style={{
+                  ...btnNav,
+                  opacity: podeRetrocederMes ? 1 : 0.38,
+                  cursor: podeRetrocederMes ? "pointer" : "not-allowed",
+                }}
+                aria-label={podeRetrocederMes ? "Mês anterior" : "Primeiro mês: Abril de 2026"}
+              >
+                <ChevronLeft size={14} aria-hidden="true" />
+              </button>
+              <span
+                style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: t.text,
+                  fontFamily: FONT.body,
+                  minWidth: 180,
+                  textAlign: "center",
+                }}
+              >
+                {headerTitle()}
+              </span>
+              <button type="button" onClick={next} style={btnNav} aria-label="Próximo mês">
+                <ChevronRight size={14} aria-hidden="true" />
+              </button>
 
-            <button type="button" onClick={goToday} style={chipBase(false)}>
-              Hoje
-            </button>
+              <SingleDropdown
+                value={filtroCompromissos}
+                options={COMPROMISSOS_FILTER_OPTIONS}
+                onChange={(v) => setFiltroCompromissos(v as FiltroCompromissosCal)}
+                icon={<LayoutList size={13} aria-hidden="true" />}
+                t={t}
+                accent={brand.accent}
+                triggerAriaLabel="Filtrar compromissos"
+              />
 
-            <SingleDropdown
-              value={view}
-              options={VIEW_OPTIONS}
-              onChange={(v) => setView(v as ViewMode)}
-              icon={<CalendarDays size={13} aria-hidden="true" />}
-              t={t}
-              accent={brand.accent}
-            />
-
-            {loadingEscala && (
+              {loadingEscala && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
                 <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
                 Atualizando escala…
@@ -1185,6 +1112,31 @@ export default function RhCalendarioPage() {
                 ) : null}
               </>
             )}
+            </div>
+
+            <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => setModalAcaoAberto(true)}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: 999,
+                  border: `1px solid ${brand.accent}`,
+                  background: brand.accent.startsWith("var(")
+                    ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 12%, transparent)"
+                    : `${String(brand.accent)}18`,
+                  color: brand.accent,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: "pointer",
+                  lineHeight: 1,
+                }}
+                aria-label="Abrir ações"
+              >
+                Ação
+              </button>
+            </div>
           </div>
 
           {(hasStaffFilter || hasTimeFilter) && (
@@ -1264,9 +1216,134 @@ export default function RhCalendarioPage() {
             Carregando…
           </div>
         ) : (
-          view === "mes" ? <ViewMes /> : view === "semana" ? <ViewSemana /> : <ViewDia />
+          <ViewMes />
         )}
       </div>
+
+      {modalDia && (
+        <ModalBase maxWidth={520} onClose={() => setModalDia(null)} zIndex={1100}>
+          <ModalHeader title={tituloModalDiaPt(modalDia)} onClose={() => setModalDia(null)} />
+          <div
+            role="tablist"
+            aria-label="Conteúdo do dia"
+            style={{ display: "flex", gap: 8, marginBottom: 18, borderBottom: `1px solid ${t.cardBorder}`, paddingBottom: 10 }}
+          >
+            <button
+              type="button"
+              onClick={() => setModalDiaTab("compromissos")}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: modalDiaTab === "compromissos" ? 800 : 500,
+                color: modalDiaTab === "compromissos" ? brand.accent : t.textMuted,
+                background: modalDiaTab === "compromissos" ? (isDark ? "rgba(30,54,248,0.15)" : "rgba(30,54,248,0.08)") : "transparent",
+                boxShadow: modalDiaTab === "compromissos" ? `inset 0 -2px 0 ${brand.accent}` : "none",
+              }}
+              aria-selected={modalDiaTab === "compromissos"}
+              role="tab"
+              aria-controls="cal-modal-tab-compromissos"
+              id="cal-modal-tab-btn-compromissos"
+            >
+              Compromissos
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalDiaTab("ofertas")}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: modalDiaTab === "ofertas" ? 800 : 500,
+                color: modalDiaTab === "ofertas" ? brand.accent : t.textMuted,
+                background: modalDiaTab === "ofertas" ? (isDark ? "rgba(30,54,248,0.15)" : "rgba(30,54,248,0.08)") : "transparent",
+                boxShadow: modalDiaTab === "ofertas" ? `inset 0 -2px 0 ${brand.accent}` : "none",
+              }}
+              aria-selected={modalDiaTab === "ofertas"}
+              role="tab"
+              aria-controls="cal-modal-tab-ofertas"
+              id="cal-modal-tab-btn-ofertas"
+            >
+              Ofertas
+            </button>
+          </div>
+
+          {modalDiaTab === "compromissos" ? (
+            <div id="cal-modal-tab-compromissos" role="tabpanel" aria-labelledby="cal-modal-tab-btn-compromissos">
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Turnos</div>
+                {turnosAgendadosNoDia(modalDia).length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="list">
+                    {turnosAgendadosNoDia(modalDia).map((comp) => (
+                      <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
+                )}
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Reuniões</div>
+                {reunioesAgendaDoDia(toISO(modalDia)).length > 0 ? (
+                  <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                    {reunioesAgendaDoDia(toISO(modalDia)).map((x) => (
+                      <li key={x.id}>{x.titulo}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
+                )}
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Treinamentos</div>
+                {treinamentosAgendaDoDia(toISO(modalDia)).length > 0 ? (
+                  <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                    {treinamentosAgendaDoDia(toISO(modalDia)).map((x) => (
+                      <li key={x.id}>{x.titulo}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Feedback</div>
+                {feedbackAgendaDoDia(toISO(modalDia)).length > 0 ? (
+                  <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                    {feedbackAgendaDoDia(toISO(modalDia)).map((x) => (
+                      <li key={x.id}>{x.titulo}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div id="cal-modal-tab-ofertas" role="tabpanel" aria-labelledby="cal-modal-tab-btn-ofertas">
+              <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 12, fontFamily: FONT_TITLE }}>
+                Ofertas de Troca e Compra
+              </div>
+              <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
+            </div>
+          )}
+        </ModalBase>
+      )}
+
+      {modalAcaoAberto && (
+        <ModalBase maxWidth={420} onClose={() => setModalAcaoAberto(false)} zIndex={1100}>
+          <ModalHeader title="Ação" onClose={() => setModalAcaoAberto(false)} />
+          <p style={{ margin: 0, color: t.textMuted, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>
+            Este fluxo será configurado numa próxima etapa.
+          </p>
+        </ModalBase>
+      )}
     </div>
   );
 }
