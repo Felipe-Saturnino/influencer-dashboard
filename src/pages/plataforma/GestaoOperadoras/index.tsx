@@ -505,6 +505,18 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
         });
         if (error) throw error;
       } else {
+        if (ativo) {
+          if (mesasLoading) {
+            setErro("Aguarde a verificação das mesas cadastradas antes de salvar.");
+            setSalvando(false);
+            return;
+          }
+          if (mesas.length === 0) {
+            setErro("Só é possível definir o status como Ativa quando existir pelo menos uma mesa registrada para esta operadora.");
+            setSalvando(false);
+            return;
+          }
+        }
         let brandPayload: Record<string, string | null>;
         if (ativo) {
           const ha = normHex6(brandAction);
@@ -824,7 +836,7 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
                 Inativa
               </span>
               <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                Novas operadoras são criadas como inativas até serem ativadas na edição.
+                Novas operadoras são criadas como inativas até as mesas desta operadora serem cadastradas.
               </span>
             </div>
           ) : (
@@ -833,7 +845,27 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
               <button
                 type="button"
                 aria-pressed={ativo}
-                onClick={() => setAtivo((prev) => !prev)}
+                title={
+                  !ativo && (mesasLoading || mesas.length === 0)
+                    ? "Cadastre pelo menos uma mesa para esta operadora (Gestão de Mesas) antes de ativar."
+                    : undefined
+                }
+                onClick={() => {
+                  setErro("");
+                  if (ativo) {
+                    setAtivo(false);
+                    return;
+                  }
+                  if (mesasLoading) {
+                    setErro("Aguarde a verificação das mesas cadastradas.");
+                    return;
+                  }
+                  if (mesas.length === 0) {
+                    setErro("Só é possível ativar quando existir pelo menos uma mesa registrada para esta operadora.");
+                    return;
+                  }
+                  setAtivo(true);
+                }}
                 style={{
                   border: `1px solid ${ativo ? "#05966966" : t.cardBorder}`,
                   background: ativo ? "#05966922" : "transparent",
@@ -841,11 +873,17 @@ function ModalOperadora({ t, dashBrand, editando, onClose, onSalvo }: ModalProps
                   borderRadius: 10, padding: "6px 16px", cursor: "pointer",
                   fontFamily: FONT.body, fontSize: 13, fontWeight: 600,
                   display: "inline-flex", alignItems: "center", gap: 6,
+                  opacity: !ativo && (mesasLoading || mesas.length === 0) ? 0.65 : 1,
                 }}
               >
                 {ativo && <Check size={13} aria-hidden="true" />}
                 {ativo ? "Ativa" : "Inativa"}
               </button>
+              {!ativo && mesas.length === 0 && !mesasLoading && (
+                <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 420, lineHeight: 1.45 }}>
+                  Cadastre pelo menos uma mesa em Gestão de Mesas para poder marcar como Ativa.
+                </span>
+              )}
               {!ativo && (
                 <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: BRAND.roxoVivo, fontFamily: FONT.body }}>
                   <AlertCircle size={13} aria-hidden="true" /> Vínculos existentes não são removidos
