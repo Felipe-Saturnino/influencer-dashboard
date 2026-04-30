@@ -18,8 +18,6 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
-import type { RhOrgTimeOpcao } from "../../../types/rhOrganograma";
-import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { siglaGradeParaNomeTurno } from "../../../lib/rhEscalaTurnos";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
@@ -27,6 +25,48 @@ import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 type ViewMode = "mes" | "semana" | "dia";
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
+
+/** Id sintético no multiselect (não é uuid de `rh_org_times`). */
+const TREINAMENTO_FILTRO_ID = "rh-cal-filtro-treinamento";
+
+/** Ordem e rótulos exibidos no filtro (nome do time; Treinamento = gerência Treinamento). */
+const CALENDARIO_TIMES_FILTRO_ORDEM = [
+  "Customer Service",
+  "Service manager",
+  "Game Presenter",
+  "Performance Coach",
+  "Shift Leader",
+  "Shuffler",
+  "Treinamento",
+] as const;
+
+function normalizarNomeCalFiltro(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function timeRowPorRotuloCanonica(times: StaffTimeRow[], rotulo: string): StaffTimeRow | undefined {
+  const target = normalizarNomeCalFiltro(rotulo);
+  return times.find((t) => normalizarNomeCalFiltro(t.nome) === target);
+}
+
+function prestadorAtendeFiltroTime(
+  p: RhFuncionario,
+  opts: {
+    filtroAtivo: boolean;
+    filtroTimeIdsReais: Set<string>;
+    treinamentoSelecionado: boolean;
+    treinamentoGerenciaId: string | null;
+    treinamentoTimeIds: Set<string>;
+  },
+): boolean {
+  if (!opts.filtroAtivo) return true;
+  if (p.org_time_id && opts.filtroTimeIdsReais.has(p.org_time_id)) return true;
+  if (opts.treinamentoSelecionado && opts.treinamentoGerenciaId) {
+    if (p.org_gerencia_id === opts.treinamentoGerenciaId) return true;
+    if (p.org_time_id && opts.treinamentoTimeIds.has(p.org_time_id)) return true;
+  }
+  return false;
+}
 
 const MONTHS = [
   "Janeiro",
@@ -280,9 +320,10 @@ function SingleDropdown({
 }
 
 export default function RhCalendarioPage() {
-  const { theme: t, isDark } = useApp();
+  const { theme: t, isDark, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_calendario");
+  const soPropriosCal = !perm.loading && perm.canView === "proprios";
 
   const [view, setView] = useState<ViewMode>("mes");
   const [current, setCurrent] = useState(() => dataInicialCarrosselCalendarioRh());
@@ -294,10 +335,13 @@ export default function RhCalendarioPage() {
 
   const [filterStaffIds, setFilterStaffIds] = useState<string[]>([]);
   const [filterTimeIds, setFilterTimeIds] = useState<string[]>([]);
-  const [opcoesTimesOrg, setOpcoesTimesOrg] = useState<RhOrgTimeOpcao[]>([]);
+  const [treinamentoGerenciaId, setTreinamentoGerenciaId] = useState<string | null>(null);
+  const [treinamentoTimeIdsList, setTreinamentoTimeIdsList] = useState<string[]>([]);
 
   const [rawGradeRows, setRawGradeRows] = useState<RpcGradeCalendarioRow[]>([]);
   const [loadingEscala, setLoadingEscala] = useState(false);
+  /** Quando `rh_calendario` está em «Próprios»: id do `rh_funcionarios` do utilizador autenticado (e-mail / e-mail Spin). */
+  const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
 
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
@@ -311,95 +355,228 @@ export default function RhCalendarioPage() {
   }, []);
 
   const timeIds = useMemo(() => times.map((x) => x.id), [times]);
-  const timeIdsKey = useMemo(() => [...timeIds].sort().join(","), [timeIds]);
-
-  const carregarPrestadores = useCallback(async (ids: string[]) => {
-    if (ids.length === 0) {
-      setPrestadores([]);
-      return;
-    }
-    const { data, error } = await supabase
-      .from("rh_funcionarios")
-      .select("*")
-      .in("org_time_id", ids)
-      .in("status", ["ativo", "indisponivel"])
-      .order("nome", { ascending: true });
-    if (error) setPrestadores([]);
-    else setPrestadores((data ?? []) as RhFuncionario[]);
-  }, []);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
+    if (perm.canView !== "sim" && perm.canView !== "proprios") return;
+    if (perm.canView === "proprios") {
+      setTimes([]);
+      setErroStaff(null);
+      return;
+    }
     setLoadingStaff(true);
     void carregarTimes().finally(() => setLoadingStaff(false));
   }, [perm.loading, perm.canView, carregarTimes]);
 
   useEffect(() => {
-    if (perm.loading || perm.canView === "nao") return;
-    const ids = times.map((x) => x.id);
-    if (ids.length === 0) {
+    if (perm.loading || perm.canView !== "proprios") return;
+    if (!user?.email?.trim()) {
       setPrestadores([]);
-      return;
-    }
-    void carregarPrestadores(ids);
-  }, [perm.loading, perm.canView, times, carregarPrestadores]);
-
-  useEffect(() => {
-    if (perm.loading || perm.canView === "nao") return;
-    if (timeIds.length === 0) {
-      setOpcoesTimesOrg([]);
+      setMeuRhFuncionarioId(null);
+      setLoadingStaff(false);
       return;
     }
     let cancelled = false;
-    void carregarOpcoesTimesOrganograma().then(({ opcoes, error }) => {
+    setLoadingStaff(true);
+    void (async () => {
+      const em = user.email.trim();
+      const el = em.toLowerCase();
+      const { data: porEmailEq } = await supabase
+        .from("rh_funcionarios")
+        .select("*")
+        .eq("email", em)
+        .in("status", ["ativo", "indisponivel"])
+        .maybeSingle();
+      let row: RhFuncionario | null = (porEmailEq as RhFuncionario | null) ?? null;
+      if (!row) {
+        const { data: porSpinEq } = await supabase
+          .from("rh_funcionarios")
+          .select("*")
+          .eq("email_spin", em)
+          .in("status", ["ativo", "indisponivel"])
+          .maybeSingle();
+        row = (porSpinEq as RhFuncionario | null) ?? null;
+      }
+      if (!row) {
+        const { data: cand } = await supabase
+          .from("rh_funcionarios")
+          .select("*")
+          .in("status", ["ativo", "indisponivel"])
+          .limit(80);
+        if (!cancelled && cand?.length) {
+          row =
+            (cand as RhFuncionario[]).find(
+              (p) =>
+                (p.email ?? "").trim().toLowerCase() === el ||
+                (Boolean((p.email_spin ?? "").trim()) && (p.email_spin ?? "").trim().toLowerCase() === el),
+            ) ?? null;
+        }
+      }
       if (cancelled) return;
-      if (error) setOpcoesTimesOrg([]);
-      else setOpcoesTimesOrg(opcoes);
-    });
+      if (row) {
+        setPrestadores([row]);
+        setMeuRhFuncionarioId(row.id);
+        setErroStaff(null);
+      } else {
+        setPrestadores([]);
+        setMeuRhFuncionarioId(null);
+        setErroStaff(null);
+      }
+      setLoadingStaff(false);
+    })();
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, timeIdsKey]);
-
-  const permitidosTimes = useMemo(() => {
-    const all = new Set(timeIds);
-    if (filterTimeIds.length === 0) return all;
-    return new Set(filterTimeIds.filter((id) => all.has(id)));
-  }, [timeIds, filterTimeIds]);
-
-  const timeMultiselectItems = useMemo(() => {
-    const allowed = new Set(timeIds);
-    const fromOrg = opcoesTimesOrg
-      .filter((o) => allowed.has(o.timeId))
-      .map((o) => ({ id: o.timeId, name: o.label }));
-    if (fromOrg.length > 0) {
-      return [...fromOrg].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-    }
-    return [...times]
-      .map((x) => ({ id: x.id, name: `${x.gerencia_nome} › ${x.nome}` }))
-      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  }, [opcoesTimesOrg, times, timeIds]);
+  }, [perm.loading, perm.canView, user?.email]);
 
   useEffect(() => {
-    if (prestadores.length === 0) return;
-    const allT = new Set(times.map((x) => x.id));
-    const permitidos =
-      filterTimeIds.length === 0 ? allT : new Set(filterTimeIds.filter((id) => allT.has(id)));
+    if (!perm.loading && perm.canView === "sim") setMeuRhFuncionarioId(null);
+  }, [perm.loading, perm.canView]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("rh_org_gerencias")
+        .select("id, nome")
+        .eq("status", "ativo")
+        .ilike("nome", "%treinamento%");
+      if (cancelled) return;
+      if (error || !data?.length) {
+        setTreinamentoGerenciaId(null);
+        return;
+      }
+      const exato = data.find((r: { nome: string }) => normalizarNomeCalFiltro(r.nome) === "treinamento");
+      setTreinamentoGerenciaId(exato?.id ?? data[0]!.id);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    if (perm.canView === "proprios") return;
+    let cancelled = false;
+    void (async () => {
+      const idsStaff = times.map((x) => x.id);
+      const merged = new Map<string, RhFuncionario>();
+
+      if (idsStaff.length > 0) {
+        const { data, error } = await supabase
+          .from("rh_funcionarios")
+          .select("*")
+          .in("org_time_id", idsStaff)
+          .in("status", ["ativo", "indisponivel"])
+          .order("nome", { ascending: true });
+        if (!cancelled && !error) (data ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
+      }
+
+      let ttIdsLocal: string[] = [];
+      if (treinamentoGerenciaId) {
+        const { data: tt } = await supabase
+          .from("rh_org_times")
+          .select("id")
+          .eq("gerencia_id", treinamentoGerenciaId)
+          .eq("status", "ativo");
+        ttIdsLocal = (tt ?? []).map((r: { id: string }) => r.id);
+        if (!cancelled) setTreinamentoTimeIdsList(ttIdsLocal);
+
+        let q = supabase
+          .from("rh_funcionarios")
+          .select("*")
+          .in("status", ["ativo", "indisponivel"])
+          .order("nome", { ascending: true });
+        if (ttIdsLocal.length > 0) {
+          q = q.or(`org_gerencia_id.eq.${treinamentoGerenciaId},org_time_id.in.(${ttIdsLocal.join(",")})`);
+        } else {
+          q = q.eq("org_gerencia_id", treinamentoGerenciaId);
+        }
+        const { data: d2, error: e2 } = await q;
+        if (!cancelled && !e2) (d2 ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
+      } else if (!cancelled) {
+        setTreinamentoTimeIdsList([]);
+      }
+
+      if (!cancelled) {
+        setPrestadores(
+          [...merged.values()].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")),
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, times, treinamentoGerenciaId]);
+
+  useEffect(() => {
+    if (perm.canView === "proprios") {
+      setFilterStaffIds([]);
+      setFilterTimeIds([]);
+    }
+  }, [perm.canView]);
+
+  const treinamentoTimeIds = useMemo(() => new Set(treinamentoTimeIdsList), [treinamentoTimeIdsList]);
+
+  const filtroTimeIdsReais = useMemo(() => {
+    const allowed = new Set(timeIds);
+    return new Set(filterTimeIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
+  }, [filterTimeIds, timeIds]);
+
+  const treinamentoSelecionado = filterTimeIds.includes(TREINAMENTO_FILTRO_ID);
+  const filtroTimeAtivo = filterTimeIds.length > 0;
+
+  const timeMultiselectItems = useMemo(() => {
+    const items: { id: string; name: string }[] = [];
+    for (const rotulo of CALENDARIO_TIMES_FILTRO_ORDEM) {
+      if (rotulo === "Treinamento") {
+        if (treinamentoGerenciaId) items.push({ id: TREINAMENTO_FILTRO_ID, name: "Treinamento" });
+        continue;
+      }
+      const row = timeRowPorRotuloCanonica(times, rotulo);
+      if (row) items.push({ id: row.id, name: rotulo });
+    }
+    return items;
+  }, [times, treinamentoGerenciaId]);
+
+  useEffect(() => {
+    const valid = new Set(timeMultiselectItems.map((x) => x.id));
+    setFilterTimeIds((prev) => {
+      const next = prev.filter((id) => valid.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [timeMultiselectItems]);
+
+  useEffect(() => {
+    if (prestadores.length === 0 || !filtroTimeAtivo) return;
+    const opts = {
+      filtroAtivo: true,
+      filtroTimeIdsReais,
+      treinamentoSelecionado,
+      treinamentoGerenciaId,
+      treinamentoTimeIds,
+    };
     setFilterStaffIds((prev) => {
       if (prev.length === 0) return prev;
-      const allowedStaff = new Set(
-        prestadores.filter((p) => p.org_time_id && permitidos.has(p.org_time_id)).map((p) => p.id),
-      );
+      const allowedStaff = new Set(prestadores.filter((p) => prestadorAtendeFiltroTime(p, opts)).map((p) => p.id));
       const next = prev.filter((id) => allowedStaff.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [prestadores, times, filterTimeIds]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds, filterTimeIds]);
 
   const staffMultiselectItems = useMemo(() => {
+    const opts = {
+      filtroAtivo: filtroTimeAtivo,
+      filtroTimeIdsReais,
+      treinamentoSelecionado,
+      treinamentoGerenciaId,
+      treinamentoTimeIds,
+    };
     return prestadores
-      .filter((p) => p.org_time_id && permitidosTimes.has(p.org_time_id))
+      .filter((p) => prestadorAtendeFiltroTime(p, opts))
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
-  }, [prestadores, permitidosTimes]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds]);
 
   const mesesRefISOConsulta = useMemo(() => {
     if (view === "mes") return [refMesPrimeiroDiaISO(current)];
@@ -434,13 +611,23 @@ export default function RhCalendarioPage() {
     };
   }, [mesesRefISOConsulta, perm.loading, perm.canView]);
 
+  const rawGradeRowsFiltrados = useMemo(() => {
+    if (perm.canView !== "proprios") return rawGradeRows;
+    if (!meuRhFuncionarioId) return [];
+    return rawGradeRows.filter((r) => r.funcionario_id === meuRhFuncionarioId);
+  }, [rawGradeRows, perm.canView, meuRhFuncionarioId]);
+
   const nomePrestadorPorId = useMemo(() => {
     const m = new Map<string, string>();
     prestadores.forEach((p) => {
       m.set(p.id, (p.nome ?? "").trim() || "—");
     });
+    if (soPropriosCal && meuRhFuncionarioId && user?.name) {
+      const cur = m.get(meuRhFuncionarioId);
+      if (!cur || cur === "—") m.set(meuRhFuncionarioId, user.name.trim() || "—");
+    }
     return m;
-  }, [prestadores]);
+  }, [prestadores, soPropriosCal, meuRhFuncionarioId, user?.name]);
 
   const orgTimeIdPorPrestadorId = useMemo(() => {
     const m = new Map<string, string | null>();
@@ -448,15 +635,27 @@ export default function RhCalendarioPage() {
     return m;
   }, [prestadores]);
 
+  const orgGerenciaIdPorPrestadorId = useMemo(() => {
+    const m = new Map<string, string | null>();
+    prestadores.forEach((p) => m.set(p.id, p.org_gerencia_id ?? null));
+    return m;
+  }, [prestadores]);
+
   const compromissosPorDiaIso = useMemo(() => {
     const filtroStaff = filterStaffIds.length > 0 ? new Set(filterStaffIds) : null;
-    const filtroTime = filterTimeIds.length > 0 ? permitidosTimes : null;
     const mapa = new Map<string, CompromissoEscalaCal[]>();
-    for (const r of rawGradeRows) {
+    for (const r of rawGradeRowsFiltrados) {
       if (filtroStaff && !filtroStaff.has(r.funcionario_id)) continue;
-      if (filtroTime) {
-        const tid = orgTimeIdPorPrestadorId.get(r.funcionario_id);
-        if (!tid || !filtroTime.has(tid)) continue;
+      if (filtroTimeAtivo) {
+        const tid = orgTimeIdPorPrestadorId.get(r.funcionario_id) ?? null;
+        const gid = orgGerenciaIdPorPrestadorId.get(r.funcionario_id) ?? null;
+        let pass = false;
+        if (tid && filtroTimeIdsReais.has(tid)) pass = true;
+        if (treinamentoSelecionado && treinamentoGerenciaId) {
+          if (gid === treinamentoGerenciaId) pass = true;
+          if (tid && treinamentoTimeIds.has(tid)) pass = true;
+        }
+        if (!pass) continue;
       }
       const turno = turnoExibicaoDeValorCelulaEscala(r.valor ?? "");
       if (!turno) continue;
@@ -469,7 +668,18 @@ export default function RhCalendarioPage() {
       mapa.set(iso, arr);
     }
     return mapa;
-  }, [rawGradeRows, filterStaffIds, filterTimeIds, nomePrestadorPorId, orgTimeIdPorPrestadorId, permitidosTimes]);
+  }, [
+    rawGradeRowsFiltrados,
+    filterStaffIds,
+    nomePrestadorPorId,
+    orgTimeIdPorPrestadorId,
+    orgGerenciaIdPorPrestadorId,
+    filtroTimeAtivo,
+    filtroTimeIdsReais,
+    treinamentoSelecionado,
+    treinamentoGerenciaId,
+    treinamentoTimeIds,
+  ]);
 
   function compromissosNoDia(date: Date): CompromissoEscalaCal[] {
     return compromissosPorDiaIso.get(toISO(date)) ?? [];
@@ -874,8 +1084,8 @@ export default function RhCalendarioPage() {
     );
   }
 
-  const showTimeFilter = timeMultiselectItems.length > 0;
-  const showStaffFilter = staffMultiselectItems.length > 0;
+  const showTimeFilter = !soPropriosCal && timeMultiselectItems.length > 0;
+  const showStaffFilter = !soPropriosCal && staffMultiselectItems.length > 0;
   const hasStaffFilter = filterStaffIds.length > 0;
   const hasTimeFilter = filterTimeIds.length > 0;
 
@@ -884,7 +1094,11 @@ export default function RhCalendarioPage() {
       <DashboardPageHeader
         icon={<CalendarRange size={14} aria-hidden="true" />}
         title="Calendário"
-        subtitle="Visão por período do time — escalas da Gestão de Escala (turno Manhã, Tarde, Noite ou Comercial) aparecem como compromissos nos dias correspondentes."
+        subtitle={
+          soPropriosCal
+            ? "Apenas as suas escalas (turno Manhã, Tarde, Noite ou Comercial), conforme a Gestão de Escala."
+            : "Visão por período do time — escalas da Gestão de Escala (turno Manhã, Tarde, Noite ou Comercial) aparecem como compromissos nos dias correspondentes."
+        }
         brand={brand}
         t={t}
       />
@@ -941,7 +1155,7 @@ export default function RhCalendarioPage() {
             {loadingStaff ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
                 <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
-                Carregando staff…
+                {soPropriosCal ? "Carregando…" : "Carregando staff…"}
               </span>
             ) : erroStaff ? (
               <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
@@ -955,7 +1169,7 @@ export default function RhCalendarioPage() {
                     t={t}
                     triggerEmptyLabel="Time"
                     ariaFilterPrefix="Filtrar por time"
-                    listboxAriaLabel="Selecionar time do organograma"
+                    listboxAriaLabel="Selecionar time"
                   />
                 ) : null}
                 {showStaffFilter ? (
@@ -1013,8 +1227,27 @@ export default function RhCalendarioPage() {
         </div>
       </div>
 
+      {soPropriosCal && !loadingStaff && !meuRhFuncionarioId && (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: `1px solid ${t.cardBorder}`,
+            background: isDark ? "rgba(245,158,11,0.12)" : "rgba(245,158,11,0.1)",
+            color: t.text,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            lineHeight: 1.45,
+          }}
+          role="status"
+        >
+          Não encontramos um cadastro de colaborador (RH) associado ao seu e-mail de login. As escalas só aparecem após essa associação — fale com o RH se precisar de ajuda.
+        </div>
+      )}
+
       <div style={card}>
-        {loadingStaff && times.length === 0 ? (
+        {loadingStaff ? (
           <div
             style={{
               textAlign: "center",
