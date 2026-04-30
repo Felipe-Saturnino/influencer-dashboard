@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, CalendarRange, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, X } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarRange,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  Loader2,
+  X,
+} from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -7,6 +18,7 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
+import { siglaGradeParaNomeTurno } from "../../../lib/rhEscalaTurnos";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 
@@ -60,8 +72,64 @@ function getMonthDays(year: number, month: number): (Date | null)[] {
   return cells;
 }
 
+/** Chave YYYY-MM-DD no fuso local (alinhada a `dia_iso` da grade). */
 function toISO(d: Date) {
-  return d.toISOString().split("T")[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+const MAX_CHIPS_COMPROMISSOS_DIA = 8;
+
+type RpcGradeCalendarioRow = {
+  funcionario_id: string;
+  dia_iso: string;
+  valor: string;
+  area_key: string;
+};
+
+type CompromissoEscalaCal = {
+  prestadorId: string;
+  nome: string;
+  turno: string;
+};
+
+function refMesPrimeiroDiaISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}-01`;
+}
+
+function mesesRefISOEntre(inicio: Date, fim: Date): string[] {
+  const keys = new Set<string>();
+  const cur = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
+  const lim = new Date(fim.getFullYear(), fim.getMonth(), 1);
+  const c = new Date(cur);
+  while (c <= lim) {
+    keys.add(refMesPrimeiroDiaISO(c));
+    c.setMonth(c.getMonth() + 1);
+  }
+  return [...keys];
+}
+
+function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
+  const raw = row.dia_iso as string | Date | undefined;
+  if (raw == null) return "";
+  if (typeof raw === "string") return raw.slice(0, 10);
+  try {
+    return new Date(raw).toISOString().slice(0, 10);
+  } catch {
+    return String(raw).slice(0, 10);
+  }
+}
+
+/** Valores de célula «Escalado» na Gestão de Escala (siglas ou Comercial). */
+function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
+  const v = (valor ?? "").trim();
+  if (v === "Comercial") return "Comercial";
+  const nome = siglaGradeParaNomeTurno(v);
+  return nome || null;
 }
 
 interface SingleDropdownTheme {
@@ -224,6 +292,9 @@ export default function RhCalendarioPage() {
 
   const [filterStaffIds, setFilterStaffIds] = useState<string[]>([]);
 
+  const [rawGradeRows, setRawGradeRows] = useState<RpcGradeCalendarioRow[]>([]);
+  const [loadingEscala, setLoadingEscala] = useState(false);
+
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
     const { data, error } = await supabase.rpc("rh_staff_times_filtrados");
@@ -274,6 +345,69 @@ export default function RhCalendarioPage() {
       .filter((p) => p.org_time_id && permitidos.has(p.org_time_id))
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
   }, [prestadores, timeIds]);
+
+  const mesesRefISOConsulta = useMemo(() => {
+    if (view === "mes") return [refMesPrimeiroDiaISO(current)];
+    if (view === "semana") {
+      const w = getWeekDays(current);
+      return mesesRefISOEntre(w[0]!, w[6]!);
+    }
+    return [refMesPrimeiroDiaISO(current)];
+  }, [view, current]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    let cancelled = false;
+    setLoadingEscala(true);
+    void (async () => {
+      const merged: RpcGradeCalendarioRow[] = [];
+      try {
+        for (const refIso of mesesRefISOConsulta) {
+          if (cancelled) return;
+          const { data, error } = await supabase.rpc("rh_calendario_grade_escala_mes", { p_ref_mes: refIso });
+          if (cancelled) return;
+          if (error || !data) continue;
+          merged.push(...(data as RpcGradeCalendarioRow[]));
+        }
+        if (!cancelled) setRawGradeRows(merged);
+      } finally {
+        if (!cancelled) setLoadingEscala(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mesesRefISOConsulta, perm.loading, perm.canView]);
+
+  const nomePrestadorPorId = useMemo(() => {
+    const m = new Map<string, string>();
+    prestadores.forEach((p) => {
+      m.set(p.id, (p.nome ?? "").trim() || "—");
+    });
+    return m;
+  }, [prestadores]);
+
+  const compromissosPorDiaIso = useMemo(() => {
+    const filtro = filterStaffIds.length > 0 ? new Set(filterStaffIds) : null;
+    const mapa = new Map<string, CompromissoEscalaCal[]>();
+    for (const r of rawGradeRows) {
+      if (filtro && !filtro.has(r.funcionario_id)) continue;
+      const turno = turnoExibicaoDeValorCelulaEscala(r.valor ?? "");
+      if (!turno) continue;
+      const iso = diaIsoChaveGrade(r);
+      if (!iso) continue;
+      const nome = nomePrestadorPorId.get(r.funcionario_id) ?? "—";
+      const item: CompromissoEscalaCal = { prestadorId: r.funcionario_id, nome, turno };
+      const arr = mapa.get(iso) ?? [];
+      if (!arr.some((x) => x.prestadorId === item.prestadorId && x.turno === item.turno)) arr.push(item);
+      mapa.set(iso, arr);
+    }
+    return mapa;
+  }, [rawGradeRows, filterStaffIds, nomePrestadorPorId]);
+
+  function compromissosNoDia(date: Date): CompromissoEscalaCal[] {
+    return compromissosPorDiaIso.get(toISO(date)) ?? [];
+  }
 
   function prev() {
     const d = new Date(current);
@@ -373,6 +507,45 @@ export default function RhCalendarioPage() {
     lineHeight: 1,
   });
 
+  function EscalaCompromissoChip({ comp }: { comp: CompromissoEscalaCal }) {
+    return (
+      <div
+        role="listitem"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "5px 8px",
+          borderRadius: 8,
+          marginBottom: 4,
+          background: isDark ? "rgba(30,54,248,0.12)" : "rgba(30,54,248,0.08)",
+          border: `1px solid ${BRAND.azul}40`,
+          width: "100%",
+          boxSizing: "border-box",
+          lineHeight: 1.2,
+        }}
+      >
+        <Clock size={11} color={BRAND.azul} aria-hidden="true" />
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body, flexShrink: 0 }}>{comp.turno}</span>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 500,
+            color: t.text,
+            fontFamily: FONT.body,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            minWidth: 0,
+          }}
+          title={`${comp.turno} — ${comp.nome}`}
+        >
+          {comp.nome}
+        </span>
+      </div>
+    );
+  }
+
   function ViewMes() {
     const cells = getMonthDays(current.getFullYear(), current.getMonth());
     const todayISO = toISO(new Date());
@@ -399,6 +572,7 @@ export default function RhCalendarioPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "minmax(140px, auto)", gap: 4 }}>
             {cells.map((date, i) => {
               if (!date) return <div key={i} />;
+              const lista = compromissosNoDia(date);
               return (
                 <div
                   key={i}
@@ -430,8 +604,7 @@ export default function RhCalendarioPage() {
                       justifyContent: "space-between",
                       alignItems: "center",
                       flexShrink: 0,
-                      flex: 1,
-                      minHeight: 72,
+                      ...(lista.length === 0 ? { flex: 1, minHeight: 72 } : {}),
                     }}
                   >
                     <span
@@ -444,7 +617,51 @@ export default function RhCalendarioPage() {
                     >
                       {date.getDate()}
                     </span>
+                    {lista.length > 0 && (
+                      <span
+                        aria-label={`${lista.length} compromisso${lista.length > 1 ? "s" : ""} de escala neste dia`}
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: "#fff",
+                          background: brand.accent,
+                          borderRadius: 10,
+                          padding: "1px 6px",
+                          fontFamily: FONT.body,
+                        }}
+                      >
+                        {lista.length}
+                      </span>
+                    )}
                   </button>
+                  <div className="agenda-day-scroll" style={{ marginTop: 4, flex: 1, minHeight: 0, overflowY: "auto" }} role="list" aria-label="Escalas do dia">
+                    {lista.slice(0, MAX_CHIPS_COMPROMISSOS_DIA).map((comp) => (
+                      <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
+                    ))}
+                    {lista.length > MAX_CHIPS_COMPROMISSOS_DIA && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrent(date);
+                          setView("dia");
+                        }}
+                        aria-label={`Ver mais ${lista.length - MAX_CHIPS_COMPROMISSOS_DIA} compromissos de escala`}
+                        style={{
+                          fontSize: 11,
+                          color: t.textMuted,
+                          fontFamily: FONT.body,
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 0,
+                          textDecoration: "underline",
+                          textUnderlineOffset: 2,
+                        }}
+                      >
+                        +{lista.length - MAX_CHIPS_COMPROMISSOS_DIA} mais
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -461,25 +678,77 @@ export default function RhCalendarioPage() {
       <div className="app-agenda-cal-scroll">
         <div className="app-agenda-cal-scroll-inner">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
-            {week.map((date, i) => (
-              <div
-                key={i}
-                style={{
-                  borderRadius: 12,
-                  padding: "10px 8px",
-                  minHeight: 200,
-                  ...dayStyle(date, todayISO),
-                }}
-              >
-                <div style={{ textAlign: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{DAYS[date.getDay()]}</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: dayNumberColor(date, todayISO), fontFamily: FONT_TITLE }}>
-                    {date.getDate()}
+            {week.map((date, i) => {
+              const lista = compromissosNoDia(date);
+              return (
+                <div
+                  key={i}
+                  style={{
+                    borderRadius: 12,
+                    padding: "10px 8px",
+                    minHeight: 200,
+                    display: "flex",
+                    flexDirection: "column",
+                    ...dayStyle(date, todayISO),
+                  }}
+                >
+                  <div style={{ textAlign: "center", marginBottom: 8, flexShrink: 0 }}>
+                    <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{DAYS[date.getDay()]}</div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrent(date);
+                        setView("dia");
+                      }}
+                      aria-label={`Ver dia ${date.getDate()} em modo dia`}
+                      style={{
+                        all: "unset",
+                        cursor: "pointer",
+                        display: "block",
+                        width: "100%",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 22,
+                          fontWeight: 700,
+                          color: dayNumberColor(date, todayISO),
+                          fontFamily: FONT_TITLE,
+                        }}
+                      >
+                        {date.getDate()}
+                      </div>
+                    </button>
+                    {lista.length > 0 && (
+                      <div
+                        aria-label={`${lista.length} compromisso${lista.length > 1 ? "s" : ""} de escala neste dia`}
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: "#fff",
+                          background: brand.accent,
+                          borderRadius: 10,
+                          padding: "1px 8px",
+                          display: "inline-block",
+                          fontFamily: FONT.body,
+                          marginTop: 2,
+                        }}
+                      >
+                        {lista.length} escala{lista.length > 1 ? "s" : ""}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginTop: 6 }} role="list" aria-label="Escalas da semana">
+                    {lista.map((comp) => (
+                      <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
+                    ))}
+                    {lista.length === 0 && (
+                      <div style={{ fontSize: 11, color: t.textMuted, textAlign: "center", marginTop: 8, fontFamily: FONT.body }}>—</div>
+                    )}
                   </div>
                 </div>
-                <div style={{ fontSize: 11, color: t.textMuted, textAlign: "center", marginTop: 12, fontFamily: FONT.body }}>—</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -489,6 +758,7 @@ export default function RhCalendarioPage() {
   function ViewDia() {
     const todayISO = toISO(new Date());
     const isToday = toISO(current) === todayISO;
+    const lista = compromissosNoDia(current);
 
     return (
       <div>
@@ -497,16 +767,35 @@ export default function RhCalendarioPage() {
             {current.getDate()}
           </span>
           <span style={{ fontSize: 16, color: t.textMuted, marginLeft: 8, fontFamily: FONT.body }}>{DAYS[current.getDay()]}</span>
+          {lista.length > 0 && (
+            <span
+              aria-label={`${lista.length} compromisso${lista.length > 1 ? "s" : ""} de escala neste dia`}
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: "#fff",
+                background: brand.accent,
+                borderRadius: 12,
+                padding: "2px 10px",
+                marginLeft: 10,
+                fontFamily: FONT.body,
+              }}
+            >
+              {lista.length} escala{lista.length > 1 ? "s" : ""}
+            </span>
+          )}
         </div>
-        <div
-          style={{
-            minHeight: 120,
-            borderRadius: 12,
-            border: `1px dashed ${t.cardBorder}`,
-            background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-          }}
-          aria-hidden="true"
-        />
+        {lista.length === 0 ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            Nenhuma escala neste dia.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 480, margin: "0 auto" }} role="list" aria-label="Compromissos de escala do dia">
+            {lista.map((comp) => (
+              <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -527,7 +816,7 @@ export default function RhCalendarioPage() {
       <DashboardPageHeader
         icon={<CalendarRange size={14} aria-hidden="true" />}
         title="Calendário"
-        subtitle="Visão por período do time — eventos e ações serão adicionados em breve."
+        subtitle="Visão por período do time — escalas da Gestão de Escala (turno Manhã, Tarde, Noite ou Comercial) aparecem como compromissos nos dias correspondentes."
         brand={brand}
         t={t}
       />
@@ -573,6 +862,13 @@ export default function RhCalendarioPage() {
               t={t}
               accent={brand.accent}
             />
+
+            {loadingEscala && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
+                <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+                Atualizando escala…
+              </span>
+            )}
 
             {loadingStaff ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
