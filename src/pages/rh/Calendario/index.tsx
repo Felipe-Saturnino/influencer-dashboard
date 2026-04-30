@@ -18,6 +18,8 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
+import type { RhOrgTimeOpcao } from "../../../types/rhOrganograma";
+import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { siglaGradeParaNomeTurno } from "../../../lib/rhEscalaTurnos";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
@@ -291,6 +293,8 @@ export default function RhCalendarioPage() {
   const [erroStaff, setErroStaff] = useState<string | null>(null);
 
   const [filterStaffIds, setFilterStaffIds] = useState<string[]>([]);
+  const [filterTimeIds, setFilterTimeIds] = useState<string[]>([]);
+  const [opcoesTimesOrg, setOpcoesTimesOrg] = useState<RhOrgTimeOpcao[]>([]);
 
   const [rawGradeRows, setRawGradeRows] = useState<RpcGradeCalendarioRow[]>([]);
   const [loadingEscala, setLoadingEscala] = useState(false);
@@ -307,6 +311,7 @@ export default function RhCalendarioPage() {
   }, []);
 
   const timeIds = useMemo(() => times.map((x) => x.id), [times]);
+  const timeIdsKey = useMemo(() => [...timeIds].sort().join(","), [timeIds]);
 
   const carregarPrestadores = useCallback(async (ids: string[]) => {
     if (ids.length === 0) {
@@ -339,12 +344,62 @@ export default function RhCalendarioPage() {
     void carregarPrestadores(ids);
   }, [perm.loading, perm.canView, times, carregarPrestadores]);
 
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    if (timeIds.length === 0) {
+      setOpcoesTimesOrg([]);
+      return;
+    }
+    let cancelled = false;
+    void carregarOpcoesTimesOrganograma().then(({ opcoes, error }) => {
+      if (cancelled) return;
+      if (error) setOpcoesTimesOrg([]);
+      else setOpcoesTimesOrg(opcoes);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, timeIdsKey]);
+
+  const permitidosTimes = useMemo(() => {
+    const all = new Set(timeIds);
+    if (filterTimeIds.length === 0) return all;
+    return new Set(filterTimeIds.filter((id) => all.has(id)));
+  }, [timeIds, filterTimeIds]);
+
+  const timeMultiselectItems = useMemo(() => {
+    const allowed = new Set(timeIds);
+    const fromOrg = opcoesTimesOrg
+      .filter((o) => allowed.has(o.timeId))
+      .map((o) => ({ id: o.timeId, name: o.label }));
+    if (fromOrg.length > 0) {
+      return [...fromOrg].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    }
+    return [...times]
+      .map((x) => ({ id: x.id, name: `${x.gerencia_nome} › ${x.nome}` }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [opcoesTimesOrg, times, timeIds]);
+
+  useEffect(() => {
+    if (prestadores.length === 0) return;
+    const allT = new Set(times.map((x) => x.id));
+    const permitidos =
+      filterTimeIds.length === 0 ? allT : new Set(filterTimeIds.filter((id) => allT.has(id)));
+    setFilterStaffIds((prev) => {
+      if (prev.length === 0) return prev;
+      const allowedStaff = new Set(
+        prestadores.filter((p) => p.org_time_id && permitidos.has(p.org_time_id)).map((p) => p.id),
+      );
+      const next = prev.filter((id) => allowedStaff.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [prestadores, times, filterTimeIds]);
+
   const staffMultiselectItems = useMemo(() => {
-    const permitidos = new Set(timeIds);
     return prestadores
-      .filter((p) => p.org_time_id && permitidos.has(p.org_time_id))
+      .filter((p) => p.org_time_id && permitidosTimes.has(p.org_time_id))
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
-  }, [prestadores, timeIds]);
+  }, [prestadores, permitidosTimes]);
 
   const mesesRefISOConsulta = useMemo(() => {
     if (view === "mes") return [refMesPrimeiroDiaISO(current)];
@@ -387,11 +442,22 @@ export default function RhCalendarioPage() {
     return m;
   }, [prestadores]);
 
+  const orgTimeIdPorPrestadorId = useMemo(() => {
+    const m = new Map<string, string | null>();
+    prestadores.forEach((p) => m.set(p.id, p.org_time_id ?? null));
+    return m;
+  }, [prestadores]);
+
   const compromissosPorDiaIso = useMemo(() => {
-    const filtro = filterStaffIds.length > 0 ? new Set(filterStaffIds) : null;
+    const filtroStaff = filterStaffIds.length > 0 ? new Set(filterStaffIds) : null;
+    const filtroTime = filterTimeIds.length > 0 ? permitidosTimes : null;
     const mapa = new Map<string, CompromissoEscalaCal[]>();
     for (const r of rawGradeRows) {
-      if (filtro && !filtro.has(r.funcionario_id)) continue;
+      if (filtroStaff && !filtroStaff.has(r.funcionario_id)) continue;
+      if (filtroTime) {
+        const tid = orgTimeIdPorPrestadorId.get(r.funcionario_id);
+        if (!tid || !filtroTime.has(tid)) continue;
+      }
       const turno = turnoExibicaoDeValorCelulaEscala(r.valor ?? "");
       if (!turno) continue;
       const iso = diaIsoChaveGrade(r);
@@ -403,7 +469,7 @@ export default function RhCalendarioPage() {
       mapa.set(iso, arr);
     }
     return mapa;
-  }, [rawGradeRows, filterStaffIds, nomePrestadorPorId]);
+  }, [rawGradeRows, filterStaffIds, filterTimeIds, nomePrestadorPorId, orgTimeIdPorPrestadorId, permitidosTimes]);
 
   function compromissosNoDia(date: Date): CompromissoEscalaCal[] {
     return compromissosPorDiaIso.get(toISO(date)) ?? [];
@@ -808,8 +874,10 @@ export default function RhCalendarioPage() {
     );
   }
 
+  const showTimeFilter = timeMultiselectItems.length > 0;
   const showStaffFilter = staffMultiselectItems.length > 0;
   const hasStaffFilter = filterStaffIds.length > 0;
+  const hasTimeFilter = filterTimeIds.length > 0;
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
@@ -877,24 +945,52 @@ export default function RhCalendarioPage() {
               </span>
             ) : erroStaff ? (
               <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
-            ) : showStaffFilter ? (
-              <InfluencerMultiSelect
-                selected={filterStaffIds}
-                onChange={setFilterStaffIds}
-                influencers={staffMultiselectItems}
-                t={t}
-                triggerEmptyLabel="Staff"
-                ariaFilterPrefix="Filtrar por staff"
-                listboxAriaLabel="Selecionar membro do staff"
-              />
-            ) : null}
+            ) : (
+              <>
+                {showTimeFilter ? (
+                  <InfluencerMultiSelect
+                    selected={filterTimeIds}
+                    onChange={setFilterTimeIds}
+                    influencers={timeMultiselectItems}
+                    t={t}
+                    triggerEmptyLabel="Time"
+                    ariaFilterPrefix="Filtrar por time"
+                    listboxAriaLabel="Selecionar time do organograma"
+                  />
+                ) : null}
+                {showStaffFilter ? (
+                  <InfluencerMultiSelect
+                    selected={filterStaffIds}
+                    onChange={setFilterStaffIds}
+                    influencers={staffMultiselectItems}
+                    t={t}
+                    triggerEmptyLabel="Staff"
+                    ariaFilterPrefix="Filtrar por staff"
+                    listboxAriaLabel="Selecionar membro do staff"
+                  />
+                ) : null}
+              </>
+            )}
           </div>
 
-          {hasStaffFilter && (
-            <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}`, display: "flex", justifyContent: "center" }}>
+          {(hasStaffFilter || hasTimeFilter) && (
+            <div
+              style={{
+                paddingTop: 12,
+                marginTop: 12,
+                borderTop: `1px solid ${t.cardBorder}`,
+                display: "flex",
+                justifyContent: "center",
+                flexWrap: "wrap",
+                gap: 10,
+              }}
+            >
               <button
                 type="button"
-                onClick={() => setFilterStaffIds([])}
+                onClick={() => {
+                  setFilterTimeIds([]);
+                  setFilterStaffIds([]);
+                }}
                 style={{
                   padding: "5px 14px",
                   borderRadius: 999,
@@ -910,7 +1006,7 @@ export default function RhCalendarioPage() {
                   gap: 6,
                 }}
               >
-                <X size={12} aria-hidden="true" /> Limpar filtro de staff
+                <X size={12} aria-hidden="true" /> Limpar filtros
               </button>
             </div>
           )}
