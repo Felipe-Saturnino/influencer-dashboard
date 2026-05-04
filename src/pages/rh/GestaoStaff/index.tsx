@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Trash2, Upload, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Search, Trash2, Upload, Users } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -16,6 +16,15 @@ import {
 import type { DealerGenero } from "../../../types";
 import { getThStyle, getTdStyle, zebraStripe } from "../../../lib/tableStyles";
 import { opcoesTurnoPorEscalaRh, turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
+import {
+  escalaComHorarioTurnoSomenteOperadora,
+  escalaUsaHorarioTurnoEditavel,
+  horarioTurnoStaffValorPermitido,
+  labelHorarioTurnoStaffPorValor,
+  opcoesHorarioTurnoStaff,
+  textoHorarioTurnoSomenteOperadora,
+} from "../../../lib/rhStaffHorarioTurno";
+import type { Operadora } from "../../../types";
 import { PageHeader } from "../../../components/PageHeader";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -81,6 +90,7 @@ function labelCampoHistorico(campo: string): string {
   const c = campo.trim();
   if (c === "Operadora (slug)") return "Operadora";
   if (c === "Skills (JSON)") return "Skills";
+  if (c === "Horário do Turno") return "Horário do Turno";
   return c;
 }
 
@@ -119,6 +129,7 @@ export default function RhGestaoStaffPage() {
 
   const [todosTimes, setTodosTimes] = useState(true);
   const [idxTime, setIdxTime] = useState(0);
+  const [buscaNomeNickname, setBuscaNomeNickname] = useState("");
 
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
@@ -198,8 +209,16 @@ export default function RhGestaoStaffPage() {
       const tid = times[idxTime]!.id;
       rows = rows.filter((p) => p.org_time_id === tid);
     }
+    const q = buscaNomeNickname.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((p) => {
+        const nome = (p.nome ?? "").toLowerCase();
+        const nick = (p.staff_nickname ?? "").trim().toLowerCase();
+        return nome.includes(q) || nick.includes(q);
+      });
+    }
     return rows;
-  }, [prestadores, times, todosTimes, idxTime, timeIds]);
+  }, [prestadores, times, todosTimes, idxTime, timeIds, buscaNomeNickname]);
 
   const nomePorTimeId = useMemo(() => {
     const m = new Map<string, string>();
@@ -419,6 +438,47 @@ export default function RhGestaoStaffPage() {
                 Carregando…
               </span>
             ) : null}
+          </div>
+
+          <div
+            style={{
+              marginTop: 14,
+              paddingTop: 14,
+              borderTop: `1px solid ${t.cardBorder}`,
+            }}
+          >
+            <label
+              htmlFor="staff-busca-nome-nick"
+              style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}
+            >
+              Pesquisar prestador
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Search size={16} aria-hidden style={{ flexShrink: 0, color: t.textMuted }} />
+              <input
+                id="staff-busca-nome-nick"
+                type="search"
+                value={buscaNomeNickname}
+                onChange={(e) => setBuscaNomeNickname(e.target.value)}
+                placeholder="Nome ou nickname"
+                autoComplete="off"
+                aria-label="Pesquisar por nome ou nickname"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  maxWidth: 420,
+                  boxSizing: "border-box",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  outline: "none",
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -719,6 +779,30 @@ function ModalStaffVer({
   const skills = useMemo(() => normalizarSkills(row.staff_skills as Record<string, unknown>), [row.staff_skills]);
   const opSlug = row.staff_operadora_slug?.trim();
   const opNome = opSlug ? operadorasNome[opSlug] ?? opSlug : "—";
+  const turnoEfVer = turnoRhCoerenteComEscala(row.escala, row.staff_turno);
+  const [opTurnosVer, setOpTurnosVer] = useState<Pick<
+    Operadora,
+    "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio"
+  > | null>(null);
+
+  useEffect(() => {
+    if (!opSlug || !escalaComHorarioTurnoSomenteOperadora(row.escala)) {
+      setOpTurnosVer(null);
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("operadoras")
+      .select("turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
+      .eq("slug", opSlug)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setOpTurnosVer((data as Operadora) ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [opSlug, row.escala]);
 
   const tabBtn = (key: VerAba, label: string) => {
     const ativo = aba === key;
@@ -778,7 +862,14 @@ function ModalStaffVer({
           <CampoLeitura k="Nickname" v={row.staff_nickname ?? ""} t={t} />
           <CampoLeitura k="Função" v={row.cargo} t={t} />
           <CampoLeitura k="Escala" v={row.escala} t={t} />
-          <CampoLeitura k="Turno" v={turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"} t={t} />
+          <CampoLeitura k="Turno" v={turnoEfVer || "—"} t={t} />
+          {escalaUsaHorarioTurnoEditavel(row.escala, turnoEfVer) ? (
+            <CampoLeitura k="Horário do Turno" v={labelHorarioTurnoStaffPorValor(row.staff_horario_turno)} t={t} />
+          ) : escalaComHorarioTurnoSomenteOperadora(row.escala) ? (
+            <CampoLeitura k="Horário do Turno" v={textoHorarioTurnoSomenteOperadora(row.escala, turnoEfVer, opTurnosVer)} t={t} />
+          ) : (
+            <CampoLeitura k="Horário do Turno" v="—" t={t} />
+          )}
           <CampoLeitura k="Operadora" v={opNome} t={t} />
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
           <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
@@ -961,6 +1052,11 @@ function ModalStaffEditar({
   const [opSlug, setOpSlug] = useState(row.staff_operadora_slug ?? "");
   const [barcode, setBarcode] = useState(row.staff_barcode ?? "");
   const [idOperacional, setIdOperacional] = useState(row.staff_id_operacional ?? "");
+  const [horarioTurno, setHorarioTurno] = useState("");
+  const [opTurnosEdit, setOpTurnosEdit] = useState<Pick<
+    Operadora,
+    "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio"
+  > | null>(null);
   const [skills, setSkills] = useState<Record<StaffSkillKey, StaffSkillStatus>>(() => normalizarSkills(row.staff_skills as Record<string, unknown>));
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
@@ -975,6 +1071,11 @@ function ModalStaffEditar({
     setOpSlug(row.staff_operadora_slug ?? "");
     setBarcode(row.staff_barcode ?? "");
     setIdOperacional(row.staff_id_operacional ?? "");
+    {
+      const te = turnoRhCoerenteComEscala(row.escala, row.staff_turno);
+      const hRaw = (row.staff_horario_turno ?? "").trim();
+      setHorarioTurno(hRaw && horarioTurnoStaffValorPermitido(row.escala, te, hRaw) ? hRaw : "");
+    }
     setSkills(normalizarSkills(row.staff_skills as Record<string, unknown>));
     setAba("funcao");
     setDealerGenero(readStaffDealerGeneroForUi(row));
@@ -989,6 +1090,7 @@ function ModalStaffEditar({
     row.staff_operadora_slug,
     row.staff_barcode,
     row.staff_id_operacional,
+    row.staff_horario_turno,
     row.staff_skills,
     row.staff_dealer_genero,
     row.staff_dealer_bio,
@@ -1006,6 +1108,26 @@ function ModalStaffEditar({
   useEffect(() => {
     if (!staffEhGamePresenter && (aba === "skills" || aba === "dealer")) setAba("funcao");
   }, [staffEhGamePresenter, aba]);
+
+  useEffect(() => {
+    const slug = opSlug.trim();
+    if (!slug || !escalaComHorarioTurnoSomenteOperadora(row.escala)) {
+      setOpTurnosEdit(null);
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("operadoras")
+      .select("turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
+      .eq("slug", slug)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setOpTurnosEdit((data as Operadora) ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [opSlug, row.escala]);
 
   const labelStyle: CSSProperties = {
     display: "block",
@@ -1094,12 +1216,30 @@ function ModalStaffEditar({
       }
       turnoFinal = turnoStr;
     }
+    const precisaHorario = escalaUsaHorarioTurnoEditavel(row.escala, turnoFinal ?? "");
+    const horarioFinal = precisaHorario ? (horarioTurno.trim() || null) : null;
+    if (precisaHorario && turnoFinal && !horarioFinal) {
+      setErr("Selecione o horário do turno.");
+      setSaving(false);
+      return;
+    }
+    if (
+      precisaHorario &&
+      horarioFinal &&
+      !horarioTurnoStaffValorPermitido(row.escala, turnoFinal ?? "", horarioFinal)
+    ) {
+      setErr("Horário do turno inválido para esta escala.");
+      setSaving(false);
+      return;
+    }
+
     const antes = {
       nick: (row.staff_nickname ?? "").trim(),
       turno: (row.staff_turno ?? "").trim(),
       op: (row.staff_operadora_slug ?? "").trim(),
       barcode: (row.staff_barcode ?? "").trim(),
       idOp: (row.staff_id_operacional ?? "").trim(),
+      horario: (row.staff_horario_turno ?? "").trim(),
       skills: stringifySkills(normalizarSkills(row.staff_skills as Record<string, unknown>)),
     };
     const depois = {
@@ -1108,11 +1248,19 @@ function ModalStaffEditar({
       op: opSlug.trim(),
       barcode: barcode.trim(),
       idOp: idOperacional.trim(),
+      horario: (horarioFinal ?? "").trim(),
       skills: stringifySkills(skills),
     };
     const alteracoes: { campo: string; antes: string; depois: string }[] = [];
     if (antes.nick !== depois.nick) alteracoes.push({ campo: "Nickname", antes: antes.nick || "—", depois: depois.nick || "—" });
     if (antes.turno !== depois.turno) alteracoes.push({ campo: "Turno", antes: antes.turno || "—", depois: depois.turno || "—" });
+    if (antes.horario !== depois.horario) {
+      alteracoes.push({
+        campo: "Horário do Turno",
+        antes: labelHorarioTurnoStaffPorValor(antes.horario || undefined),
+        depois: labelHorarioTurnoStaffPorValor(depois.horario || undefined),
+      });
+    }
     if (antes.op !== depois.op) alteracoes.push({ campo: "Operadora", antes: antes.op || "—", depois: depois.op || "—" });
     if (antes.barcode !== depois.barcode) alteracoes.push({ campo: "Barcode", antes: antes.barcode || "—", depois: depois.barcode || "—" });
     if (antes.idOp !== depois.idOp) alteracoes.push({ campo: "ID operacional", antes: antes.idOp || "—", depois: depois.idOp || "—" });
@@ -1121,6 +1269,7 @@ function ModalStaffEditar({
     const patch = {
       staff_nickname: depois.nick || null,
       staff_turno: turnoFinal,
+      staff_horario_turno: precisaHorario ? horarioFinal : null,
       staff_operadora_slug: depois.op || null,
       staff_barcode: depois.barcode || null,
       staff_id_operacional: depois.idOp || null,
@@ -1210,7 +1359,12 @@ function ModalStaffEditar({
             <select
               id="staff-turno"
               value={turno}
-              onChange={(e) => setTurno(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setTurno(v);
+                const opts = opcoesHorarioTurnoStaff(row.escala, v);
+                setHorarioTurno((h) => (opts.some((o) => o.value === h) ? h : ""));
+              }}
               style={inputStyle}
               aria-label="Turno (mesmo cadastro que na Gestão de Prestadores)"
             >
@@ -1222,6 +1376,42 @@ function ModalStaffEditar({
               ))}
             </select>
           </div>
+          {escalaUsaHorarioTurnoEditavel(row.escala, turno) ? (
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle} htmlFor="staff-horario-turno">
+                Horário do Turno
+              </label>
+              <select
+                id="staff-horario-turno"
+                value={horarioTurno}
+                onChange={(e) => setHorarioTurno(e.target.value)}
+                style={inputStyle}
+                aria-label="Horário do turno conforme a escala"
+              >
+                <option value="">— Selecione —</option>
+                {opcoesHorarioTurnoStaff(row.escala, turno).map((op) => (
+                  <option key={op.value} value={op.value}>
+                    {op.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : escalaComHorarioTurnoSomenteOperadora(row.escala) ? (
+            <div style={{ marginBottom: 14 }}>
+              <span style={labelStyle}>Horário do Turno (somente leitura)</span>
+              <div
+                style={{
+                  ...inputStyle,
+                  opacity: 0.92,
+                  lineHeight: 1.45,
+                  whiteSpace: "pre-wrap",
+                }}
+                aria-readonly
+              >
+                {textoHorarioTurnoSomenteOperadora(row.escala, turno, opTurnosEdit)}
+              </div>
+            </div>
+          ) : null}
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-op">
               Operadora

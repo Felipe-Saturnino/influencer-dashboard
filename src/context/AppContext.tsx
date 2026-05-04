@@ -265,8 +265,10 @@ async function carregarPermissoes(
     }
   });
 
-  // Gestão de Usuários: APENAS admin tem acesso (gestores não podem alterar perfis)
-  mapa.gestao_usuarios = role === "admin" ? "sim" : "nao";
+  // Gestão de Usuários: admin mantém acesso total (comportamento legado; demais perfis vêm do role_permissions + escopo por tipo).
+  if (role === "admin") {
+    mapa.gestao_usuarios = "sim";
+  }
 
   // Overview Influencer: padrão "proprios" para influencer e agencia (único dash para eles)
   if (mapa.dash_overview_influencer === null && ["influencer", "agencia"].includes(role)) {

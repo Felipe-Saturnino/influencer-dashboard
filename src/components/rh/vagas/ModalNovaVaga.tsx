@@ -3,7 +3,6 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { centavosDeStringMoeda, formatarMoedaDigitos, somenteDigitos } from "../../../lib/rhFuncionarioValidators";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { hojeIsoDate, tipoVagaDeCheckboxes } from "../../../lib/rhVagasFormat";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
@@ -46,7 +45,6 @@ export function ModalNovaVaga({
   const [chkInterna, setChkInterna] = useState(true);
   const [chkExterna, setChkExterna] = useState(false);
   const [orgTimeId, setOrgTimeId] = useState<string | null>(null);
-  const [salarioCentavos, setSalarioCentavos] = useState("");
   const [dataAbertura, setDataAbertura] = useState(hojeIsoDate());
   const [dataFimInscricoes, setDataFimInscricoes] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -63,7 +61,6 @@ export function ModalNovaVaga({
     setChkInterna(true);
     setChkExterna(false);
     setOrgTimeId(null);
-    setSalarioCentavos("");
     setDataAbertura(hojeIsoDate());
     setDataFimInscricoes("");
     setDescricao("");
@@ -112,8 +109,6 @@ export function ModalNovaVaga({
     const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna);
     if (!tipo) e.tipo_vaga = "Selecione Interna e/ou Externa.";
     if (!orgTimeId) e.org_time_id = "Selecione o organograma (time).";
-    const centSal = parseInt(somenteDigitos(salarioCentavos), 10) || 0;
-    if (centSal <= 0) e.remuneracao = "Informe a remuneração mensal.";
     if (!dataAbertura.trim()) e.data_abertura = "Informe a data de abertura.";
     if (!dataFimInscricoes.trim()) e.data_fim = "Informe a data fim das inscrições.";
     if (dataAbertura && dataFimInscricoes && dataFimInscricoes < dataAbertura) {
@@ -132,12 +127,11 @@ export function ModalNovaVaga({
     if (!validar()) return;
     const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna)!;
     setSalvando(true);
-    const centSal = parseInt(somenteDigitos(salarioCentavos), 10) || 0;
     const payload = {
       titulo: titulo.trim(),
       tipo_vaga: tipo,
       org_time_id: orgTimeId,
-      remuneracao_centavos: centSal,
+      remuneracao_centavos: 0,
       data_abertura: dataAbertura.trim(),
       data_fim_inscricoes: dataFimInscricoes.trim(),
       descricao: descricao.trim(),
@@ -214,21 +208,6 @@ export function ModalNovaVaga({
             style={inputStyle}
           />
           {fieldErr.org_time_id ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div> : null}
-        </div>
-
-        <div style={{ marginBottom: 14 }}>
-          {lblReq("nv-sal", "Remuneração mensal")}
-          <input
-            id="nv-sal"
-            type="text"
-            inputMode="decimal"
-            value={salarioCentavos ? formatarMoedaDigitos(salarioCentavos) : ""}
-            onChange={(e) => setSalarioCentavos(centavosDeStringMoeda(e.target.value))}
-            placeholder="R$ 0,00"
-            style={inputStyle}
-            autoComplete="off"
-          />
-          {fieldErr.remuneracao ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.remuneracao}</div> : null}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>

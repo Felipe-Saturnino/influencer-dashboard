@@ -161,7 +161,10 @@ export function usePermission(pageKey: PageKey): Permissoes {
       .eq("page_key", pageKey)
       .single()
       .then(({ data }) => {
-        const cv = (data?.can_view as PermissaoValor) ?? "nao";
+        let cv = (data?.can_view as PermissaoValor) ?? "nao";
+        if (user.role === "admin" && pageKey === "gestao_usuarios") {
+          cv = "sim";
+        }
         const cc = (data?.can_criar as PermissaoValor) ?? null;
         const ce = (data?.can_editar as PermissaoValor) ?? null;
         const cx = (data?.can_excluir as PermissaoValor) ?? null;

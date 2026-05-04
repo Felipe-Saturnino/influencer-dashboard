@@ -6,7 +6,6 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { fmtBRL } from "../../../lib/dashboardHelpers";
 import {
   fmtDataBR,
   labelStatusVaga,
@@ -38,10 +37,6 @@ function ctaGradient(brand: ReturnType<typeof useDashboardBrand>): string {
   return brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
     : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))";
-}
-
-function fmtRemuneracao(centavos: number): string {
-  return fmtBRL(centavos / 100);
 }
 
 function textoMultilinha(s: string): string {
@@ -236,7 +231,6 @@ export default function RhVagasPage() {
       <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
       {opts?.statusLabel != null ? <CampoVaga k="Status" v={opts.statusLabel} t={t} /> : null}
       <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
-      <CampoVaga k="Remuneração mensal" v={fmtRemuneracao(v.remuneracao_centavos)} t={t} />
       <CampoVaga k="Data de abertura" v={fmtDataBR(v.data_abertura)} t={t} />
       <CampoVaga k="Data fim de inscrições" v={fmtDataBR(v.data_fim_inscricoes)} t={t} />
       <CampoVaga k="Descrição" v={textoMultilinha(v.descricao)} t={t} />
@@ -534,7 +528,6 @@ export default function RhVagasPage() {
                       <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
                       <CampoVaga k="Status" v={labelStatusVaga(st)} t={t} />
                       <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
-                      <CampoVaga k="Remuneração mensal" v={fmtRemuneracao(v.remuneracao_centavos)} t={t} />
                       <CampoVaga k="Data de abertura" v={fmtDataBR(v.data_abertura)} t={t} />
                       <CampoVaga k="Data fim de inscrições" v={fmtDataBR(v.data_fim_inscricoes)} t={t} />
                       <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
@@ -563,7 +556,6 @@ export default function RhVagasPage() {
                       <CampoVaga k="Tipo da vaga" v={labelTipoVaga(v.tipo_vaga as RhVagaTipo)} t={t} />
                       <CampoVaga k="Status" v={labelStatusVaga(st)} t={t} />
                       <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
-                      <CampoVaga k="Remuneração mensal" v={fmtRemuneracao(v.remuneracao_centavos)} t={t} />
                       <CampoVaga k="Data de abertura" v={fmtDataBR(v.data_abertura)} t={t} />
                       <CampoVaga k="Data de encerramento" v={fmtDataBR(v.data_encerramento)} t={t} />
                       <CampoVaga k="Motivo do cancelamento" v={textoMultilinha(v.motivo_cancelamento ?? "")} t={t} />

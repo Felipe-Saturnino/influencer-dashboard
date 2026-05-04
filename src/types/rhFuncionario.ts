@@ -98,6 +98,8 @@ export interface RhFuncionario {
   staff_id_operacional?: string | null;
   /** Turno operacional (Gestão de Staff); distinto de `escala` (4x2/3x3 — Gestão de Prestadores). */
   staff_turno?: string | null;
+  /** Intervalo do turno (chave, ex. 07-15) para escalas 3x3 e 5x2; 4x2/5x1 usam operadoras. */
+  staff_horario_turno?: string | null;
   /** JSON: baccarat | blackjack | vip | roleta | futebol_studio → ativo | treinamento | inativo */
   staff_skills?: Record<string, string> | null;
   /** Gênero no dealer (Gestão de Staff > Gestão de dealer). */

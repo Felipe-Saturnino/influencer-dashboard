@@ -9,6 +9,8 @@ interface AtualizarPerfilRequest {
   userId: string
   name: string
   role: string
+  /** Texto livre; vazio grava NULL. Filtro «Próprios» em Gestão de Usuários. */
+  emprestadoPara?: string | null
   scopeInfluencers?: string[]
   scopeOperadoras?: string[]
   scopePares?: string[]
@@ -258,9 +260,16 @@ serve(async (req) => {
   }
 
   try {
+    const patch: Record<string, unknown> = { name: name.trim(), role }
+    if ('emprestadoPara' in body) {
+      const raw = body.emprestadoPara
+      const s = typeof raw === 'string' ? raw.trim() : ''
+      patch.emprestado_para = s || null
+    }
+
     const { data: updatedProfile, error: profileErr } = await supabase
       .from('profiles')
-      .update({ name: name.trim(), role })
+      .update(patch)
       .eq('id', userId)
       .select('id')
 
