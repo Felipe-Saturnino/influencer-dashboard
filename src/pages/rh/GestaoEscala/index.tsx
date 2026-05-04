@@ -15,6 +15,7 @@ import {
   TURNO_ESCALA_5x2,
   turnoOperacionalParaSiglaGrade,
   turnoRhCoerenteComEscala,
+  turnoStaffEhComercial5x2,
 } from "../../../lib/rhEscalaTurnos";
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 import { gerarCelulasSugestaoCustomerService } from "../../../lib/gestaoEscalaSugestaoCustomerService";
@@ -134,6 +135,29 @@ type AreaEscalaKey =
   | "shuffler"
   | "customer_service"
   | "service_manager";
+
+/** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
+type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite" | "comercial";
+
+function linhaColaboradorNoFiltroTurnoConsolidado(
+  row: LinhaColaborador,
+  filtro: FiltroTurnoConsolidadoRh | null,
+): boolean {
+  if (filtro == null) return true;
+  const nome = (row.turnoStaffNome ?? "").trim();
+  switch (filtro) {
+    case "manha":
+      return nome === "Manhã";
+    case "tarde":
+      return nome === "Tarde";
+    case "noite":
+      return nome === "Noite";
+    case "comercial":
+      return turnoStaffEhComercial5x2(row.turnoStaffNome);
+    default:
+      return true;
+  }
+}
 
 /** Ordem dos botões de área abaixo do carrossel do mês. */
 const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaKey[] = [
@@ -413,12 +437,19 @@ export default function RhGestaoEscalaPage() {
   const [filtroArea, setFiltroArea] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
   /** Filtro local da tabela Escala Diária (nickname). */
   const [filtroNicknameEscala, setFiltroNicknameEscala] = useState("");
+  /** Filtro da Escala Diária por turno (clique no Consolidado). */
+  const [filtroTurnoConsolidado, setFiltroTurnoConsolidado] = useState<FiltroTurnoConsolidadoRh | null>(null);
   /** Por área: células do mês e baseline após aprovação. */
   const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
 
   useEffect(() => {
     setFiltroNicknameEscala("");
+    setFiltroTurnoConsolidado(null);
   }, [filtroArea]);
+
+  useEffect(() => {
+    setFiltroTurnoConsolidado(null);
+  }, [ano, mes]);
 
   const carregarPrestadores = useCallback(async () => {
     setLoadingPrestadores(true);
@@ -622,11 +653,16 @@ export default function RhGestaoEscalaPage() {
     return filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
   }, [prestadoresRaw, filtroArea]);
 
-  const linhasFiltradasNickname = useMemo(() => {
+  const linhasAposNickname = useMemo(() => {
     const q = filtroNicknameEscala.trim().toLowerCase();
     if (!q) return linhas;
     return linhas.filter((row) => row.nickname.toLowerCase().includes(q));
   }, [linhas, filtroNicknameEscala]);
+
+  const linhasFiltradasEscalaDiaria = useMemo(() => {
+    if (filtroTurnoConsolidado == null) return linhasAposNickname;
+    return linhasAposNickname.filter((row) => linhaColaboradorNoFiltroTurnoConsolidado(row, filtroTurnoConsolidado));
+  }, [linhasAposNickname, filtroTurnoConsolidado]);
 
   const linhasPorFiltroGerar = useCallback(
     (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador),
@@ -928,6 +964,34 @@ export default function RhGestaoEscalaPage() {
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
 
+  const alternarFiltroTurnoConsolidado = useCallback((k: FiltroTurnoConsolidadoRh) => {
+    setFiltroTurnoConsolidado((prev) => (prev === k ? null : k));
+  }, []);
+
+  const estiloBotaoTurnoConsolidado = useCallback(
+    (ativo: boolean): CSSProperties => ({
+      width: "100%",
+      textAlign: "left",
+      fontWeight: 700,
+      fontFamily: FONT.body,
+      fontSize: "inherit",
+      padding: "10px 12px",
+      margin: 0,
+      border: "none",
+      borderLeft: ativo ? `3px solid ${brand.accent}` : "3px solid transparent",
+      boxSizing: "border-box",
+      background: ativo
+        ? brand.useBrand
+          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)"
+          : "rgba(124,58,237,0.09)"
+        : "transparent",
+      color: t.text,
+      cursor: "pointer",
+      borderRadius: 0,
+    }),
+    [brand.accent, brand.useBrand, t.text],
+  );
+
   const selectCelulaGerarStyle: CSSProperties = {
     width: "100%",
     maxWidth: 84,
@@ -1134,7 +1198,10 @@ export default function RhGestaoEscalaPage() {
                 aria-label="Consolidado - quantidade de Prestadores no dia por turno"
                 style={{ ...card, marginBottom: 14 }}
               >
-                <SectionTitle icon={<Users size={15} aria-hidden />} sub="quantidade de Prestadores no dia por turno">
+                <SectionTitle
+                  icon={<Users size={15} aria-hidden />}
+                  sub="quantidade de Prestadores no dia por turno — clique num turno para filtrar a Escala Diária"
+                >
                   Consolidado
                 </SectionTitle>
                 <div className="app-table-wrap">
@@ -1149,7 +1216,8 @@ export default function RhGestaoEscalaPage() {
                   }}
                 >
                   <caption style={{ display: "none" }}>
-                    Consolidado - quantidade de Prestadores no dia por turno.{" "}
+                    Consolidado - quantidade de Prestadores no dia por turno. Linhas de turno são clicáveis para filtrar a
+                    tabela Escala Diária.{" "}
                     {resumoTurnoDias.temLinhaTardeConsolidado
                       ? "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."
                       : resumoTurnoDias.temLinhaComercialConsolidado
@@ -1185,8 +1253,19 @@ export default function RhGestaoEscalaPage() {
                   </thead>
                   <tbody>
                     <tr>
-                      <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                        Turno da Manhã
+                      <th
+                        scope="row"
+                        style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                      >
+                        <button
+                          type="button"
+                          aria-pressed={filtroTurnoConsolidado === "manha"}
+                          aria-label="Filtrar Escala Diária pelo turno da manhã"
+                          onClick={() => alternarFiltroTurnoConsolidado("manha")}
+                          style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "manha")}
+                        >
+                          Turno da Manhã
+                        </button>
                       </th>
                       {resumoTurnoDias.manha.map((n, idx) => {
                         const d = dias[idx]!;
@@ -1212,8 +1291,19 @@ export default function RhGestaoEscalaPage() {
                     </tr>
                     {resumoTurnoDias.temLinhaTardeConsolidado ? (
                       <tr>
-                        <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                          Turno da Tarde
+                        <th
+                          scope="row"
+                          style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                        >
+                          <button
+                            type="button"
+                            aria-pressed={filtroTurnoConsolidado === "tarde"}
+                            aria-label="Filtrar Escala Diária pelo turno da tarde"
+                            onClick={() => alternarFiltroTurnoConsolidado("tarde")}
+                            style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "tarde")}
+                          >
+                            Turno da Tarde
+                          </button>
                         </th>
                         {resumoTurnoDias.tarde.map((n, idx) => {
                           const d = dias[idx]!;
@@ -1239,8 +1329,19 @@ export default function RhGestaoEscalaPage() {
                       </tr>
                     ) : null}
                     <tr>
-                      <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                        Turno da Noite
+                      <th
+                        scope="row"
+                        style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                      >
+                        <button
+                          type="button"
+                          aria-pressed={filtroTurnoConsolidado === "noite"}
+                          aria-label="Filtrar Escala Diária pelo turno da noite"
+                          onClick={() => alternarFiltroTurnoConsolidado("noite")}
+                          style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "noite")}
+                        >
+                          Turno da Noite
+                        </button>
                       </th>
                       {resumoTurnoDias.noite.map((n, idx) => {
                         const d = dias[idx]!;
@@ -1266,8 +1367,19 @@ export default function RhGestaoEscalaPage() {
                     </tr>
                     {resumoTurnoDias.temLinhaComercialConsolidado && resumoTurnoDias.horarioComercial ? (
                       <tr>
-                        <th scope="row" style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700 }}>
-                          Comercial
+                        <th
+                          scope="row"
+                          style={{ ...getThStyle(t), textAlign: "left", fontWeight: 700, padding: 0, verticalAlign: "middle" }}
+                        >
+                          <button
+                            type="button"
+                            aria-pressed={filtroTurnoConsolidado === "comercial"}
+                            aria-label="Filtrar Escala Diária pelo turno comercial"
+                            onClick={() => alternarFiltroTurnoConsolidado("comercial")}
+                            style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "comercial")}
+                          >
+                            Comercial
+                          </button>
                         </th>
                         {resumoTurnoDias.horarioComercial.map((n, idx) => {
                           const d = dias[idx]!;
@@ -1301,9 +1413,33 @@ export default function RhGestaoEscalaPage() {
                           fontWeight: 800,
                           borderTop: `2px solid ${t.cardBorder}`,
                           background: TOTAL_ROW_BG,
+                          padding: 0,
+                          verticalAlign: "middle",
                         }}
                       >
-                        TOTAL
+                        <button
+                          type="button"
+                          aria-label="Mostrar na Escala Diária todos os turnos"
+                          onClick={() => setFiltroTurnoConsolidado(null)}
+                          style={{
+                            width: "100%",
+                            textAlign: "left",
+                            fontWeight: 800,
+                            fontFamily: FONT.body,
+                            fontSize: "inherit",
+                            padding: "10px 12px",
+                            margin: 0,
+                            border: "none",
+                            borderLeft: "3px solid transparent",
+                            boxSizing: "border-box",
+                            background: "transparent",
+                            color: t.text,
+                            cursor: "pointer",
+                            borderRadius: 0,
+                          }}
+                        >
+                          TOTAL
+                        </button>
                       </th>
                       {resumoTurnoDias.total.map((n, idx) => {
                         const d = dias[idx]!;
@@ -1638,7 +1774,7 @@ export default function RhGestaoEscalaPage() {
                       {msgTabelaVazia}
                     </td>
                   </tr>
-                ) : linhasFiltradasNickname.length === 0 ? (
+                ) : linhasFiltradasEscalaDiaria.length === 0 ? (
                   <tr>
                     <td
                       colSpan={(semColunaNome ? 3 : 4) + dias.length}
@@ -1651,11 +1787,15 @@ export default function RhGestaoEscalaPage() {
                         fontSize: 13,
                       }}
                     >
-                      Nenhum nickname corresponde à pesquisa.
+                      {linhasAposNickname.length === 0 && filtroNicknameEscala.trim()
+                        ? "Nenhum nickname corresponde à pesquisa."
+                        : filtroTurnoConsolidado != null && linhasAposNickname.length > 0
+                          ? "Nenhum colaborador com o turno selecionado."
+                          : "Nenhum colaborador corresponde aos filtros aplicados."}
                     </td>
                   </tr>
                 ) : (
-                  linhasFiltradasNickname.map((row, i) => {
+                  linhasFiltradasEscalaDiaria.map((row, i) => {
                     const bg = zebraBgLinha(i);
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>
