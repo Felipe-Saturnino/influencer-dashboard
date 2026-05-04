@@ -280,7 +280,7 @@ const UFS_BR = [
 /** Cadastro considerado incompleto para o card de resumo (campos mínimos alinhados à validação de gravação). */
 function prestadorCadastroIncompleto(r: RhFuncionario, temOrganograma: boolean): boolean {
   if (!r.nome?.trim()) return true;
-  const cpf = somenteDigitos(r.cpf);
+  const cpf = somenteDigitos(r.cpf ?? "");
   if (cpf.length !== 11 || !validarCpfDigitos(cpf)) return true;
   if (!r.email?.trim() || !validarEmail(r.email)) return true;
   const tel = somenteDigitos(r.telefone);
@@ -513,7 +513,7 @@ function formDeFuncionario(f: RhFuncionario): FormState {
   return {
     nome: f.nome,
     rg: formatarRgInput(f.rg),
-    cpf: formatarCpfDigitos(f.cpf),
+    cpf: formatarCpfDigitos(f.cpf ?? ""),
     telefone: formatarTelefoneBr(f.telefone),
     email: f.email,
     email_spin: (f.email_spin ?? "").trim(),
@@ -654,11 +654,12 @@ function buildRhFuncionarioPayloadFromState(
     if (!contaV) contaV = "0";
   }
 
+  const cpfDigits = somenteDigitos(form.cpf);
   return {
     status: statusPrestador,
     nome: form.nome.trim(),
     rg: form.rg.trim(),
-    cpf: somenteDigitos(form.cpf),
+    cpf: cadastroMinimoNovo && cpfDigits.length === 0 ? null : cpfDigits,
     telefone: somenteDigitos(form.telefone),
     email: form.email.trim().toLowerCase(),
     email_spin: form.email_spin.trim() ? form.email_spin.trim().toLowerCase() : null,
@@ -1083,7 +1084,7 @@ export default function RhPrestadoresPage() {
       if (digits.length === 11 && r.cpf === digits) return true;
       if (r.nome.toLowerCase().includes(b)) return true;
       if (r.email.toLowerCase().includes(b)) return true;
-      if (r.cpf.includes(digits) && digits.length >= 3) return true;
+      if (r.cpf && r.cpf.includes(digits) && digits.length >= 3) return true;
       return false;
     });
   }, [lista, busca, filtroSetor, filtroContrato, filtroStatus, filtroDiretoria, filtroGerencia, opcoesVinculoFlat]);
@@ -1473,11 +1474,9 @@ export default function RhPrestadoresPage() {
     const usarOrg = permOrg.canView !== "nao" && !permOrg.loading && opcoesVinculoFlat.length > 0;
     const temOrgVinculo = Boolean(form.org_time_id || form.org_gerencia_id || form.org_diretoria_id);
 
-    /** Novo prestador: só os campos mínimos; demais na edição posterior. */
+    /** Novo prestador: só os campos mínimos; demais na edição posterior. RG, CPF e telefone opcionais. */
     if (modalForm === "novo") {
       req("nome", "Nome completo", form.nome);
-      req("rg", "RG", form.rg);
-      req("telefone", "Telefone", form.telefone);
       req("email", "E-mail", form.email);
       if (usarOrg) {
         if (!temOrgVinculo) e.org_time_id = "Selecione o organograma.";
@@ -1494,8 +1493,8 @@ export default function RhPrestadoresPage() {
       else if (!escalaEhPermitida(form.escala)) e.escala = msgEscalaLegadaInvalida();
 
       const cpfD = somenteDigitos(form.cpf);
-      if (cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
-      else if (!validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
+      if (cpfD.length > 0 && cpfD.length !== 11) e.cpf = "CPF deve ter 11 dígitos.";
+      else if (cpfD.length === 11 && !validarCpfDigitos(cpfD)) e.cpf = "CPF inválido.";
 
       if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
       if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
@@ -1506,7 +1505,7 @@ export default function RhPrestadoresPage() {
       }
 
       const telD = somenteDigitos(form.telefone);
-      if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
+      if (telD.length > 0 && (telD.length < 10 || telD.length > 11)) e.telefone = "Telefone inválido.";
 
       if (podeVerDadosSensiveis) {
         if (form.area_atuacao === "estudio") {
@@ -2119,6 +2118,7 @@ export default function RhPrestadoresPage() {
 
   const leitura = modalForm === "ver";
   const snapshotEdicao = modalForm === "editar" && editId ? lista.find((x) => x.id === editId) ?? null : null;
+  const cpfCampoTravadoEdicao = Boolean(modalForm === "editar" && somenteDigitos(snapshotEdicao?.cpf ?? "").length === 11);
   const bloquearOrgEdit = Boolean(
     usarSelectOrganograma &&
       (snapshotEdicao?.org_time_id || snapshotEdicao?.org_gerencia_id || snapshotEdicao?.org_diretoria_id),
@@ -3017,7 +3017,7 @@ export default function RhPrestadoresPage() {
                   {fieldErr.nome ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.nome}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-rg", "RG")}
+                  {lblReqCad("f-rg", "RG", modalForm !== "novo")}
                   <input
                     id="f-rg"
                     disabled={desabilitarCampos}
@@ -3029,15 +3029,15 @@ export default function RhPrestadoresPage() {
                   {fieldErr.rg ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.rg}</div> : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-cpf", "CPF")}
+                  {lblReqCad("f-cpf", "CPF", modalForm !== "novo")}
                   <input
                     id="f-cpf"
-                    disabled={desabilitarCampos || modalForm === "editar"}
+                    disabled={desabilitarCampos || cpfCampoTravadoEdicao}
                     value={form.cpf}
                     onChange={(e) => setForm((s) => ({ ...s, cpf: formatarCpfDigitos(e.target.value) }))}
                     placeholder="000.000.000-00"
                     style={{ ...inputStyle, ...(sensivelBlurDoc ? blurSensivel : {}) }}
-                    title={modalForm === "editar" ? "CPF não pode ser alterado" : undefined}
+                    title={cpfCampoTravadoEdicao ? "CPF não pode ser alterado" : undefined}
                   />
                   {fieldErr.cpf ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cpf}</div> : null}
                 </div>
@@ -3061,7 +3061,7 @@ export default function RhPrestadoresPage() {
                   ) : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  {lblReqCad("f-tel", "Telefone")}
+                  {lblReqCad("f-tel", "Telefone", modalForm !== "novo")}
                   <input
                     id="f-tel"
                     disabled={desabilitarCampos}
@@ -4720,7 +4720,7 @@ export default function RhPrestadoresPage() {
           <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
             <p style={{ margin: "0 0 12px", fontSize: 14, color: t.text, lineHeight: 1.5 }}>
               Esta ação remove permanentemente o cadastro de{" "}
-              <strong>{prestadorExcluirConfirm.nome}</strong> (CPF {somenteDigitos(prestadorExcluirConfirm.cpf)}). Não é possível desfazer.
+              <strong>{prestadorExcluirConfirm.nome}</strong> (CPF {somenteDigitos(prestadorExcluirConfirm.cpf ?? "") || "—"}). Não é possível desfazer.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
               <button

@@ -37,7 +37,8 @@ export interface RhFuncionario {
   status: RhFuncionarioStatus;
   nome: string;
   rg: string;
-  cpf: string;
+  /** NULL permitido em cadastro mínimo até o RH completar. */
+  cpf: string | null;
   telefone: string;
   email: string;
   /** E-mail corporativo Spin (opcional); vínculo com login quando diferente do e-mail pessoal. */
