@@ -3,10 +3,33 @@ export function somenteDigitos(s: string): string {
   return s.replace(/\D/g, "");
 }
 
+/** E-mail “humano” (pessoal ou corporativo): aceita subdomínios e TLD compostos (.com.br, .co.uk). */
+/** Data em YYYY-MM-DD (opcional). Vazio é válido; não permite data futura nem calendário inválido. */
+export function validarDataNascimentoOpcional(iso: string): boolean {
+  const t = iso.trim().slice(0, 10);
+  if (!t) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return false;
+  const [y, mo, da] = t.split("-").map((x) => parseInt(x, 10));
+  if (!y || !mo || !da) return false;
+  const d = new Date(y, mo - 1, da);
+  if (d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== da) return false;
+  const hoje = new Date();
+  hoje.setHours(23, 59, 59, 999);
+  if (d > hoje) return false;
+  return true;
+}
+
 export function validarEmail(email: string): boolean {
   const t = email.trim();
-  if (t.length < 5) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
+  if (t.length < 5 || /\s/.test(t)) return false;
+  const i = t.indexOf("@");
+  if (i <= 0 || i === t.length - 1) return false;
+  const local = t.slice(0, i);
+  const domain = t.slice(i + 1);
+  if (!local.length || !domain.length || domain.includes("@")) return false;
+  if (!domain.includes(".")) return false;
+  if (domain.startsWith(".") || domain.endsWith(".") || local.startsWith(".") || local.endsWith(".")) return false;
+  return true;
 }
 
 /** CPF com 11 dígitos; valida dígitos verificadores. */

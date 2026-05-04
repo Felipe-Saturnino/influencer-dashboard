@@ -38,6 +38,7 @@ import {
   somenteDigitos,
   validarCnpjDigitos,
   validarCpfDigitos,
+  validarDataNascimentoOpcional,
   validarEmail,
 } from "../../../lib/rhFuncionarioValidators";
 import { montarContatoEmergenciaLinha, montarEnderecoResumoLine } from "../../../lib/rhFuncionarioEndereco";
@@ -346,6 +347,8 @@ type FormState = {
   email: string;
   /** E-mail corporativo Spin (opcional). */
   email_spin: string;
+  /** YYYY-MM-DD opcional. */
+  data_nascimento: string;
   res_cep: string;
   res_logradouro: string;
   res_numero: string;
@@ -398,6 +401,7 @@ function abaDoCampoRhModal(campo: string, formEhPJ: boolean): AbaFuncModal {
     "nome",
     "rg",
     "cpf",
+    "data_nascimento",
     "telefone",
     "email",
     "res_cep",
@@ -461,6 +465,7 @@ function estadoVazioForm(): FormState {
     telefone: "",
     email: "",
     email_spin: "",
+    data_nascimento: "",
     res_cep: "",
     res_logradouro: "",
     res_numero: "",
@@ -512,6 +517,7 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     telefone: formatarTelefoneBr(f.telefone),
     email: f.email,
     email_spin: (f.email_spin ?? "").trim(),
+    data_nascimento: f.data_nascimento ? String(f.data_nascimento).slice(0, 10) : "",
     res_cep: formatarCepDigitos(f.res_cep ?? ""),
     res_logradouro: resLog,
     res_numero: f.res_numero ?? "",
@@ -656,6 +662,7 @@ function buildRhFuncionarioPayloadFromState(
     telefone: somenteDigitos(form.telefone),
     email: form.email.trim().toLowerCase(),
     email_spin: form.email_spin.trim() ? form.email_spin.trim().toLowerCase() : null,
+    data_nascimento: form.data_nascimento.trim() ? form.data_nascimento.trim().slice(0, 10) : null,
     endereco_residencial: endResLinha,
     res_cep: somenteDigitos(form.res_cep),
     res_logradouro: form.res_logradouro.trim(),
@@ -1494,6 +1501,9 @@ export default function RhPrestadoresPage() {
       if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
         e.email_spin = "E-mail Spin inválido.";
       }
+      if (form.data_nascimento.trim() && !validarDataNascimentoOpcional(form.data_nascimento)) {
+        e.data_nascimento = "Data de nascimento inválida.";
+      }
 
       const telD = somenteDigitos(form.telefone);
       if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
@@ -1572,6 +1582,9 @@ export default function RhPrestadoresPage() {
     if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
       e.email_spin = "E-mail Spin inválido.";
     }
+    if (form.data_nascimento.trim() && !validarDataNascimentoOpcional(form.data_nascimento)) {
+      e.data_nascimento = "Data de nascimento inválida.";
+    }
 
     const telD = somenteDigitos(form.telefone);
     if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
@@ -1596,8 +1609,9 @@ export default function RhPrestadoresPage() {
   const montarPayload = (statusPrestador: RhFuncionario["status"]) =>
     buildRhFuncionarioPayloadFromState(form, statusPrestador, podeVerDadosSensiveis, modalForm === "novo");
 
-  const dispararSyncUsuarioPrestadorSeEmailSpin = async (row: RhFuncionario) => {
-    const em = (row.email_spin ?? "").trim().toLowerCase();
+  /** `emailSpinDoFormulario`: valor que o operador acabou de salvar (evita depender só do JSON do `update`). */
+  const dispararSyncUsuarioPrestadorSeEmailSpin = async (row: RhFuncionario, emailSpinDoFormulario?: string) => {
+    const em = (emailSpinDoFormulario !== undefined ? emailSpinDoFormulario : (row.email_spin ?? "")).trim().toLowerCase();
     if (!em || !validarEmail(em)) return;
     const res = await syncUsuarioPrestadorAposSalvarRh(row.id);
     const m = mensagemFeedbackSyncPrestador(res);
@@ -1644,7 +1658,7 @@ export default function RhPrestadoresPage() {
       if (criado) await syncGamePresenterDealerFromRhFuncionario(criado as RhFuncionario);
       if (criado) {
         try {
-          await dispararSyncUsuarioPrestadorSeEmailSpin(criado as RhFuncionario);
+          await dispararSyncUsuarioPrestadorSeEmailSpin(criado as RhFuncionario, form.email_spin.trim());
         } catch (e) {
           setErroGlobal(
             `Funcionário cadastrado, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
@@ -1697,7 +1711,7 @@ export default function RhPrestadoresPage() {
       if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
       if (atualizadoRh) {
         try {
-          await dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario);
+          await dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario, form.email_spin.trim());
         } catch (e) {
           setErroGlobal(
             `Dados atualizados, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
@@ -3009,6 +3023,25 @@ export default function RhPrestadoresPage() {
                     title={modalForm === "editar" ? "CPF não pode ser alterado" : undefined}
                   />
                   {fieldErr.cpf ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cpf}</div> : null}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  {lbl("f-data-nasc", "Data de nascimento")}
+                  {!leitura ? (
+                    <input
+                      id="f-data-nasc"
+                      type="date"
+                      disabled={desabilitarCampos}
+                      value={form.data_nascimento.trim().slice(0, 10)}
+                      onChange={(e) => setForm((s) => ({ ...s, data_nascimento: e.target.value }))}
+                      style={inputStyle}
+                      aria-label="Data de nascimento"
+                    />
+                  ) : (
+                    <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>{fmtDataIsoPtBr(form.data_nascimento)}</div>
+                  )}
+                  {fieldErr.data_nascimento ? (
+                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_nascimento}</div>
+                  ) : null}
                 </div>
                 <div style={{ marginBottom: 10 }}>
                   {lblReqCad("f-tel", "Telefone")}

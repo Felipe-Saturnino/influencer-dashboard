@@ -21,6 +21,7 @@ import {
   somenteDigitos,
   validarCnpjDigitos,
   validarCpfDigitos,
+  validarDataNascimentoOpcional,
   validarEmail,
 } from "../../../lib/rhFuncionarioValidators";
 import type { RhFuncionario, RhFuncionarioHistorico, RhFuncionarioSelfMedia, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
@@ -29,7 +30,7 @@ import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../ty
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { turnoRhCoerenteComEscala } from "../../../lib/rhEscalaTurnos";
 import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePresenterDealerSync";
-import { ListaHistoricoRh } from "../../../components/rh/ListaHistoricoRh";
+import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
 
 const RH_SELF_MEDIA_BUCKET = "rh-prestador-self-media";
@@ -77,6 +78,7 @@ type FormState = {
   telefone: string;
   email: string;
   email_spin: string;
+  data_nascimento: string;
   res_cep: string;
   res_logradouro: string;
   res_numero: string;
@@ -125,6 +127,7 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     telefone: formatarTelefoneBr(f.telefone),
     email: f.email,
     email_spin: (f.email_spin ?? "").trim(),
+    data_nascimento: f.data_nascimento ? String(f.data_nascimento).slice(0, 10) : "",
     res_cep: formatarCepDigitos(f.res_cep ?? ""),
     res_logradouro: resLog,
     res_numero: f.res_numero ?? "",
@@ -195,6 +198,7 @@ function buildPayloadFromForm(form: FormState, statusPrestador: RhFuncionario["s
     telefone: somenteDigitos(form.telefone),
     email: form.email.trim().toLowerCase(),
     email_spin: form.email_spin.trim() ? form.email_spin.trim().toLowerCase() : null,
+    data_nascimento: form.data_nascimento.trim() ? form.data_nascimento.trim().slice(0, 10) : null,
     endereco_residencial: endResLinha,
     res_cep: somenteDigitos(form.res_cep),
     res_logradouro: form.res_logradouro.trim(),
@@ -285,6 +289,9 @@ function validarCadastroSelf(form: FormState): Record<string, string> {
   if (form.email.trim() && !validarEmail(form.email)) e.email = "E-mail inválido.";
   if (form.email_spin.trim() && !validarEmail(form.email_spin.trim())) {
     e.email_spin = "E-mail Spin inválido.";
+  }
+  if (form.data_nascimento.trim() && !validarDataNascimentoOpcional(form.data_nascimento)) {
+    e.data_nascimento = "Data de nascimento inválida.";
   }
   const telD = somenteDigitos(form.telefone);
   if (telD.length < 10 || telD.length > 11) e.telefone = "Telefone inválido.";
@@ -798,6 +805,26 @@ export default function RhDadosCadastroPage() {
                 style={inputStyle}
               />
               {fieldErr.cpf ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.cpf}</div> : null}
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label htmlFor="dc-data-nasc" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
+                Data de nascimento
+              </label>
+              {perm.canEditarOk ? (
+                <input
+                  id="dc-data-nasc"
+                  type="date"
+                  value={form.data_nascimento.trim().slice(0, 10)}
+                  onChange={(e) => setForm((s) => (s ? { ...s, data_nascimento: e.target.value } : s))}
+                  style={inputStyle}
+                  aria-label="Data de nascimento"
+                />
+              ) : (
+                <div style={readOnlyBox}>{fmtDataIsoPtBr(form.data_nascimento)}</div>
+              )}
+              {fieldErr.data_nascimento ? (
+                <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_nascimento}</div>
+              ) : null}
             </div>
             <div style={{ marginBottom: 10 }}>
               <label htmlFor="dc-tel" style={{ fontSize: 12, fontWeight: 600, color: t.textMuted, fontFamily: FONT.body }}>
