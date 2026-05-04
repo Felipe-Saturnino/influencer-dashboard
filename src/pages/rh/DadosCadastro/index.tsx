@@ -123,7 +123,7 @@ function formDeFuncionario(f: RhFuncionario): FormState {
     nome: f.nome,
     staff_nickname: (f.staff_nickname ?? "").trim(),
     rg: formatarRgInput(f.rg),
-    cpf: formatarCpfDigitos(f.cpf),
+    cpf: formatarCpfDigitos(f.cpf ?? ""),
     telefone: formatarTelefoneBr(f.telefone),
     email: f.email,
     email_spin: (f.email_spin ?? "").trim(),
