@@ -92,8 +92,20 @@ export function adicionarMinutosAoRelogioHHMM(horaHHMM: string, minutos: number)
   return `${String(h2).padStart(2, "0")}:${String(m2).padStart(2, "0")}`;
 }
 
+/** Formato compacto alinhado às opções 3x3/5x2 (ex.: `07h às 15h`, `08h30 às 17h`). */
+function formatarHoraCurtaParaIntervalo(hhmm: string): string {
+  const raw = (hhmm ?? "").trim();
+  const m = /^(\d{1,2}):(\d{2})/.exec(raw);
+  if (!m) return raw;
+  const h = parseInt(m[1]!, 10);
+  const min = parseInt(m[2]!, 10);
+  const hs = String(h).padStart(2, "0");
+  if (min === 0) return `${hs}h`;
+  return `${hs}h${String(min).padStart(2, "0")}`;
+}
+
 /**
- * Texto de leitura para 4x2 / 5x1: horários de início da operadora + duração da jornada.
+ * Texto de leitura para 4x2 / 5x1: intervalo «XXh às XXh» (início na operadora + jornada 8h ou 6h30).
  */
 export function textoHorarioTurnoSomenteOperadora(
   escalaRaw: string | null | undefined,
@@ -103,30 +115,28 @@ export function textoHorarioTurnoSomenteOperadora(
   if (!escalaComHorarioTurnoSomenteOperadora(escalaRaw)) return "";
   const t = (turnoStaffNome ?? "").trim();
   if (!t) return "Selecione o turno para ver o horário.";
-  if (!op) return "Associe uma operadora para ver os horários de turno da Gestão de Operadoras.";
+  if (!op) return "Associe uma operadora para ver o horário.";
 
-  const duracao = normalizarEscalaCadastro(escalaRaw ?? "") === "4x2" ? "8 horas" : "6h30";
+  const duracaoMin = normalizarEscalaCadastro(escalaRaw ?? "") === "4x2" ? 8 * 60 : 6 * 60 + 30;
 
   let inicio: string | null = null;
-  let rotuloTurno = "";
   if (t === "Manhã") {
     inicio = op.turno_manha_inicio ?? null;
-    rotuloTurno = "Turno da manhã — horário de início";
   } else if (t === "Tarde") {
     inicio = op.turno_tarde_inicio ?? null;
-    rotuloTurno = "Turno da tarde — horário de início";
   } else if (t === "Noite") {
     inicio = op.turno_noite_inicio ?? null;
-    rotuloTurno = "Turno da noite — horário de início";
   } else {
-    return "Para esta escala, o horário é definido na Gestão de Operadoras apenas para Manhã, Tarde ou Noite.";
+    return "—";
   }
 
   const hi = formatarHoraInicioOperadora(inicio);
-  if (hi === "—") {
-    return `${rotuloTurno}: não cadastrado na operadora. Jornada de ${duracao} a contar do horário de início (quando definido).`;
-  }
-  return `${rotuloTurno}: ${hi}. Jornada de ${duracao} a contar deste horário (definido na Gestão de Operadoras — não editável aqui).`;
+  if (hi === "—") return "—";
+
+  const fim = adicionarMinutosAoRelogioHHMM(hi, duracaoMin);
+  if (fim === "—") return "—";
+
+  return `${formatarHoraCurtaParaIntervalo(hi)} até as ${formatarHoraCurtaParaIntervalo(fim)}`;
 }
 
 export function horarioTurnoStaffValorPermitido(
