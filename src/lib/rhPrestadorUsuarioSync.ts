@@ -46,21 +46,29 @@ export function mensagemFeedbackSyncPrestador(res: SyncRhPrestadorAuthUserRespon
   if (!res || typeof res !== "object") return null;
   if (!res.skipped) return null;
   if (res.reason === "usuario_email_ja_existe" || res.reason === "usuario_email_ja_existe_auth") {
-    return "Prestador salvo, mas não foi criado novo usuário na plataforma: já existe conta com este E-mail Spin. Ajuste em Gestão de Usuários, se necessário.";
+    return "Prestador salvo, mas não foi criado novo usuário na plataforma: já existe conta com o e-mail usado para login (E-mail Spin ou e-mail pessoal). Ajuste em Gestão de Usuários, se necessário.";
+  }
+  if (res.reason === "sem_email" || res.reason === "sem_email_spin") {
+    return "Prestador salvo, mas não há e-mail válido para criar o login (preencha E-mail Spin ou e-mail pessoal).";
   }
   return null;
 }
 
 /**
- * Chama a Edge Function após criar/atualizar prestador com E-mail Spin.
- * Erros HTTP/rede propagam para o chamador tratar feedback; `skipped` + `reason` vêm em 200.
+ * Chama a Edge Function após gravar prestador.
+ * Login na plataforma: E-mail Spin se preenchido; senão e-mail pessoal. Envie os dois no body quando possível (reforço pós-save).
  */
 export async function syncUsuarioPrestadorAposSalvarRh(
   rhFuncionarioId: string,
+  opts?: { emailSpin?: string | null; emailPessoal?: string | null },
 ): Promise<SyncRhPrestadorAuthUserResponse> {
   const loginUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const emailSpin = opts?.emailSpin?.trim();
+  const emailPessoal = opts?.emailPessoal?.trim();
   return await callSupabaseEdgeFunction<SyncRhPrestadorAuthUserResponse>("sync-rh-prestador-auth-user", {
     rhFuncionarioId,
     loginUrl,
+    ...(emailSpin ? { emailSpin } : {}),
+    ...(emailPessoal ? { emailPessoal } : {}),
   });
 }

@@ -5,7 +5,7 @@ import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
 /**
  * Edge: sync-rh-prestador-auth-user
  * Cria ou atualiza usuário Auth + profile (role prestador) + user_scopes (prestador_tipo)
- * a partir de rh_funcionarios quando email_spin está preenchido.
+ * E-mail de login: `email_spin` se preenchido; senão `email` (pessoal). Body opcional reforça valores após save.
  * Chamada após salvar na Gestão de Prestadores (JWT do operador; mesma regra que _rh_funcionario_perm: admin, rh_funcionarios ou rh_staff com editar/criar).
  */
 
@@ -260,6 +260,10 @@ async function enviarEmailBoasVindas(to: string, nome: string, senhaPadrao: stri
 interface Body {
   rhFuncionarioId?: string
   loginUrl?: string
+  /** E-mail Spin (corporativo); opcional — reforço pós-save. */
+  emailSpin?: string
+  /** E-mail pessoal (`rh_funcionarios.email`); usado quando não há Spin. */
+  emailPessoal?: string
 }
 
 serve(async (req) => {
@@ -348,7 +352,7 @@ serve(async (req) => {
 
   const { data: row, error: rowErr } = await supabase
     .from('rh_funcionarios')
-    .select('id, nome, email_spin, area_atuacao, org_time_id')
+    .select('id, nome, email, email_spin, area_atuacao, org_time_id')
     .eq('id', rhId)
     .maybeSingle()
 
@@ -359,15 +363,23 @@ serve(async (req) => {
     })
   }
 
-  const emailSpin = String(row.email_spin ?? '').trim().toLowerCase()
-  if (!emailSpin || !emailSpin.includes('@')) {
-    return new Response(JSON.stringify({ success: true, skipped: true, reason: 'sem_email_spin' }), {
+  const spinFromRow = String(row.email_spin ?? '').trim().toLowerCase()
+  const spinFromBody = String(body.emailSpin ?? '').trim().toLowerCase()
+  const spin = spinFromRow || spinFromBody
+
+  const personalFromRow = String(row.email ?? '').trim().toLowerCase()
+  const personalFromBody = String(body.emailPessoal ?? '').trim().toLowerCase()
+  const personal = personalFromRow || personalFromBody
+
+  const loginEmail = spin && spin.includes('@') ? spin : personal
+  if (!loginEmail || !loginEmail.includes('@')) {
+    return new Response(JSON.stringify({ success: true, skipped: true, reason: 'sem_email' }), {
       status: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
-  const { data: perfilComEmailRows } = await supabase.from('profiles').select('id').ilike('email', emailSpin).limit(1)
+  const { data: perfilComEmailRows } = await supabase.from('profiles').select('id').ilike('email', loginEmail).limit(1)
   if (perfilComEmailRows?.length) {
     return new Response(JSON.stringify({ success: true, skipped: true, reason: 'usuario_email_ja_existe' }), {
       status: 200,
@@ -381,13 +393,13 @@ serve(async (req) => {
     timeNome = (tr as { nome?: string } | null)?.nome ?? null
   }
 
-  const nomePlataforma = primeiroUltimoNome(String(row.nome ?? '')).trim() || emailSpin.split('@')[0] || 'Prestador'
+  const nomePlataforma = primeiroUltimoNome(String(row.nome ?? '')).trim() || loginEmail.split('@')[0] || 'Prestador'
   const tipoSlug = prestadorTipoSlugFromRow(row.area_atuacao as string, timeNome)
 
   const created = await goTrueAdminCreateUser(
     supabaseUrl,
     serviceRoleKey,
-    emailSpin,
+    loginEmail,
     senhaPadrao,
     nomePlataforma,
     'prestador',
@@ -412,7 +424,7 @@ serve(async (req) => {
     {
       id: uid,
       name: nomePlataforma,
-      email: emailSpin,
+      email: loginEmail,
       role: 'prestador',
       must_change_password: true,
     },
@@ -441,7 +453,19 @@ serve(async (req) => {
     })
   }
 
-  void enviarEmailBoasVindas(emailSpin, nomePlataforma, senhaPadrao, loginUrl).catch((e) =>
+  if (
+    spinFromBody &&
+    spinFromBody.includes('@') &&
+    !spinFromRow &&
+    loginEmail === spin
+  ) {
+    const { error: rhPatchErr } = await supabase.from('rh_funcionarios').update({ email_spin: loginEmail }).eq('id', rhId)
+    if (rhPatchErr) {
+      console.error('[sync-rh-prestador-auth-user] gravar email_spin em rh_funcionarios:', rhPatchErr)
+    }
+  }
+
+  void enviarEmailBoasVindas(loginEmail, nomePlataforma, senhaPadrao, loginUrl).catch((e) =>
     console.error('[sync-rh-prestador-auth-user] e-mail:', e)
   )
 
