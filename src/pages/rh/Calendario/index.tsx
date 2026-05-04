@@ -167,10 +167,13 @@ function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
   }
 }
 
-/** Valores de célula «Escalado» na Gestão de Escala (siglas ou Comercial). */
+/** Rótulo no Calendário para o valor gravado na grade (Gestão de Escala). */
 function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   const v = (valor ?? "").trim();
+  if (!v) return null;
   if (v === "Comercial") return "Comercial";
+  if (v === "Folga") return "Folga";
+  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   const nome = siglaGradeParaNomeTurno(v);
   return nome || null;
 }

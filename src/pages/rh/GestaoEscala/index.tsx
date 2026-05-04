@@ -557,13 +557,13 @@ export default function RhGestaoEscalaPage() {
   }, [ano, mes, dias, perm.loading, perm.canView, loadingPrestadores, prestadoresRaw]);
 
   const salvarGradeEscalaDb = useCallback(
-    async (areaKey: AreaEscalaKey) => {
+    async (areaKey: AreaEscalaKey, celulasOverride?: Record<string, string>): Promise<boolean> => {
       setErroSalvarGrade(null);
       const est = gerarPorFiltro[areaKey];
-      const celulas = est?.celulas ?? {};
+      const celulas = celulasOverride ?? est?.celulas ?? {};
       if (Object.keys(celulas).length === 0) {
         setErroSalvarGrade("Não há células para salvar.");
-        return;
+        return false;
       }
       setSalvandoGrade(true);
       try {
@@ -586,21 +586,31 @@ export default function RhGestaoEscalaPage() {
                   ? `Não foi possível salvar: ${code}.`
                   : "Não foi possível salvar a grade.",
           );
-          return;
+          return false;
         }
         setGerarPorFiltro((prev) => {
-          const est = prev[areaKey];
-          if (!est) return prev;
+          const estAtual = prev[areaKey];
+          if (!estAtual) return prev;
           const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
-          const snap = buildCelulasSnapshotGrade(linhasF, dias, est.celulas);
-          const next = { ...prev, [areaKey]: { ...est, celulasSincronizadasComDb: snap } };
+          const celulasFinais = celulasOverride !== undefined ? celulasOverride : estAtual.celulas;
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, celulasFinais);
+          const next = {
+            ...prev,
+            [areaKey]: {
+              ...estAtual,
+              celulas: celulasFinais,
+              celulasSincronizadasComDb: snap,
+            },
+          };
           gravarEscalaMes(ano, mes, next);
           return next;
         });
+        return true;
       } catch (e) {
         setErroSalvarGrade(
           e instanceof Error ? e.message : "Erro ao salvar na base de dados. Verifique se a migration foi aplicada.",
         );
+        return false;
       } finally {
         setSalvandoGrade(false);
       }
@@ -673,26 +683,39 @@ export default function RhGestaoEscalaPage() {
   );
 
   const aprovarEscalaGerar = useCallback(
-    (areaKey: AreaEscalaKey) => {
+    async (areaKey: AreaEscalaKey) => {
       const linhasF = linhasPorFiltroGerar(areaKey);
-      setGerarPorFiltro((prev) => {
-        const cur = prev[areaKey];
-        if (!cur) return prev;
-        const merged: Record<string, string> = { ...cur.celulas };
-        for (const row of linhasF) {
-          for (const d of dias) {
-            const k = chaveCelulaGerar(row.id, d.iso);
-            merged[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, cur.celulas[k] ?? "", row.turnoStaffNome);
-          }
+      const cur = gerarPorFiltro[areaKey];
+      if (!cur) return;
+      const merged: Record<string, string> = { ...cur.celulas };
+      for (const row of linhasF) {
+        for (const d of dias) {
+          const k = chaveCelulaGerar(row.id, d.iso);
+          merged[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, cur.celulas[k] ?? "", row.turnoStaffNome);
         }
-        const baseline = { ...merged };
-        return {
+      }
+      const baseline = { ...merged };
+      const ok = await salvarGradeEscalaDb(areaKey, merged);
+      if (!ok) return;
+      setGerarPorFiltro((prev) => {
+        const estAtual = prev[areaKey];
+        if (!estAtual) return prev;
+        const next = {
           ...prev,
-          [areaKey]: { ...cur, celulas: merged, aprovado: true, baseline },
+          [areaKey]: {
+            ...estAtual,
+            celulas: merged,
+            aprovado: true,
+            baseline,
+            posSugestao: true,
+            celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasF, dias, merged),
+          },
         };
+        gravarEscalaMes(ano, mes, next);
+        return next;
       });
     },
-    [dias, linhasPorFiltroGerar],
+    [ano, mes, dias, gerarPorFiltro, linhasPorFiltroGerar, salvarGradeEscalaDb],
   );
 
   const atualizarCelulaGerar = useCallback(
@@ -1402,7 +1425,8 @@ export default function RhGestaoEscalaPage() {
                           {!gerarPorFiltro[filtroArea]?.aprovado ? (
                             <button
                               type="button"
-                              onClick={() => aprovarEscalaGerar(filtroArea)}
+                              disabled={salvandoGrade}
+                              onClick={() => void aprovarEscalaGerar(filtroArea)}
                               aria-label="Aprovar escala e bloquear edição manual da grade"
                               style={{
                                 padding: "10px 16px",
@@ -1415,10 +1439,15 @@ export default function RhGestaoEscalaPage() {
                                 fontFamily: FONT.body,
                                 fontSize: 13,
                                 fontWeight: 700,
-                                cursor: "pointer",
+                                cursor: salvandoGrade ? "wait" : "pointer",
                                 whiteSpace: "nowrap",
+                                opacity: salvandoGrade ? 0.65 : 1,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
                               }}
                             >
+                              {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
                               Aprovar Escala
                             </button>
                           ) : null}
@@ -1448,7 +1477,8 @@ export default function RhGestaoEscalaPage() {
                       ) : acaoGerarNoFiltroSelecionado === "aprovar" ? (
                         <button
                           type="button"
-                          onClick={() => aprovarEscalaGerar(filtroArea)}
+                          disabled={salvandoGrade}
+                          onClick={() => void aprovarEscalaGerar(filtroArea)}
                           aria-label="Aprovar escala da área selecionada"
                           style={{
                             padding: "10px 16px",
@@ -1461,10 +1491,15 @@ export default function RhGestaoEscalaPage() {
                             fontFamily: FONT.body,
                             fontSize: 13,
                             fontWeight: 700,
-                            cursor: "pointer",
+                            cursor: salvandoGrade ? "wait" : "pointer",
                             whiteSpace: "nowrap",
+                            opacity: salvandoGrade ? 0.65 : 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
                           }}
                         >
+                          {salvandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
                           Aprovar Escala
                         </button>
                       ) : null}
