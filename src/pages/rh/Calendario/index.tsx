@@ -33,6 +33,7 @@ import {
 import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalAcaoCalendario } from "./ModalAcaoCalendario";
 
 /** Tipos de compromisso filtráveis; conjunto vazio na UI = mostrar todos. */
 type ChaveFiltroCompromissoCal = "reunioes" | "treinamentos" | "feedback" | "turnos";
@@ -686,6 +687,19 @@ export default function RhCalendarioPage() {
     treinamentoTimeIds,
   ]);
 
+  /** Valores brutos da grade (por dia) só do colaborador autenticado — para o modal Ação. */
+  const gradeValorPorDiaIso = useMemo(() => {
+    const m = new Map<string, string>();
+    if (!meuRhFuncionarioId) return m;
+    for (const r of rawGradeRowsFiltrados) {
+      if (r.funcionario_id !== meuRhFuncionarioId) continue;
+      const iso = diaIsoChaveGrade(r);
+      if (!iso) continue;
+      m.set(iso, (r.valor ?? "").trim());
+    }
+    return m;
+  }, [rawGradeRowsFiltrados, meuRhFuncionarioId]);
+
   function reunioesAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
     return [];
   }
@@ -1249,62 +1263,56 @@ export default function RhCalendarioPage() {
               paddingTop: 12,
               marginTop: 12,
               borderTop: `1px solid ${t.cardBorder}`,
+              width: "100%",
               display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
               justifyContent: "center",
-              gap: 10,
             }}
           >
-            <span
+            <div
               style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: t.textMuted,
-                fontFamily: FONT.body,
-                width: "100%",
-                textAlign: "center",
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                maxWidth: "100%",
               }}
             >
-              Compromissos
-              {chavesFiltroCompromissos.length === 0 ? (
-                <span style={{ fontWeight: 400 }}> — sem filtro: todos</span>
-              ) : null}
-            </span>
-            {COMPROMISSOS_FILTRO_BOTOES.map(({ chave, label }) => {
-              const ativo = chavesFiltroCompromissos.includes(chave);
-              const accent = brand.accent;
-              return (
-                <button
-                  key={chave}
-                  type="button"
-                  aria-pressed={ativo}
-                  onClick={() => {
-                    setChavesFiltroCompromissos((prev) =>
-                      prev.includes(chave) ? prev.filter((x) => x !== chave) : [...prev, chave],
-                    );
-                  }}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 999,
-                    border: `1px solid ${ativo ? accent : t.cardBorder}`,
-                    background: ativo
-                      ? accent.startsWith("var(")
-                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 18%, transparent)"
-                        : `${String(accent)}28`
-                      : "transparent",
-                    color: ativo ? accent : t.text,
-                    fontSize: 13,
-                    fontWeight: ativo ? 700 : 500,
-                    fontFamily: FONT.body,
-                    cursor: "pointer",
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
+              {COMPROMISSOS_FILTRO_BOTOES.map(({ chave, label }) => {
+                const ativo = chavesFiltroCompromissos.includes(chave);
+                const accent = brand.accent;
+                return (
+                  <button
+                    key={chave}
+                    type="button"
+                    aria-pressed={ativo}
+                    onClick={() => {
+                      setChavesFiltroCompromissos((prev) =>
+                        prev.includes(chave) ? prev.filter((x) => x !== chave) : [...prev, chave],
+                      );
+                    }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 999,
+                      border: `1px solid ${ativo ? accent : t.cardBorder}`,
+                      background: ativo
+                        ? accent.startsWith("var(")
+                          ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 18%, transparent)"
+                          : `${String(accent)}28`
+                        : "transparent",
+                      color: ativo ? accent : t.text,
+                      fontSize: 13,
+                      fontWeight: ativo ? 700 : 500,
+                      fontFamily: FONT.body,
+                      cursor: "pointer",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {(hasStaffFilter || hasTimeFilter) && (
@@ -1508,14 +1516,30 @@ export default function RhCalendarioPage() {
         </ModalBase>
       )}
 
-      {modalAcaoAberto && (
-        <ModalBase maxWidth={420} onClose={() => setModalAcaoAberto(false)} zIndex={1100}>
-          <ModalHeader title="Ação" onClose={() => setModalAcaoAberto(false)} />
-          <p style={{ margin: 0, color: t.textMuted, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>
-            Este fluxo será configurado numa próxima etapa.
-          </p>
-        </ModalBase>
-      )}
+      {modalAcaoAberto &&
+        (soPropriosCal && meuRhFuncionarioId && prestadores[0] ? (
+          <ModalAcaoCalendario
+            open={modalAcaoAberto}
+            onClose={() => setModalAcaoAberto(false)}
+            t={t}
+            brand={brand}
+            refMes={current}
+            meuFuncionario={prestadores[0]}
+            meuFuncionarioId={meuRhFuncionarioId}
+            gradeValorPorDiaIso={gradeValorPorDiaIso}
+            operadoraTurnos={(() => {
+              const slug = (prestadores[0]?.staff_operadora_slug ?? "").trim();
+              return slug ? mapOpTurnos.get(slug) ?? null : null;
+            })()}
+          />
+        ) : (
+          <ModalBase maxWidth={440} onClose={() => setModalAcaoAberto(false)} zIndex={1150}>
+            <ModalHeader title="Ação" onClose={() => setModalAcaoAberto(false)} />
+            <p style={{ margin: 0, color: t.textMuted, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.5 }}>
+              As ações do calendário (venda de folga ou turno, trocas e agendamento de reunião) estão disponíveis na vista do seu próprio calendário enquanto prestador.
+            </p>
+          </ModalBase>
+        ))}
     </div>
   );
 }
