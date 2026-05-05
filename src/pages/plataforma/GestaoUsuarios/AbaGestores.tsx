@@ -99,7 +99,7 @@ export function AbaGestores({ t }: AbaGestoresProps) {
     "Plataforma",
     "Geral",
   ];
-  const pagesDaTipo = PAGES.filter((p) => p.key !== "gestao_usuarios");
+  const pagesDaTipo = PAGES;
   const secoes = [...new Set(pagesDaTipo.map((p) => p.secao))].sort(
     (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR")
   );

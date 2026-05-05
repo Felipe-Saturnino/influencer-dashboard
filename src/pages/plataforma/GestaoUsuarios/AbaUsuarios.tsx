@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, KeyRound } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
@@ -12,6 +12,22 @@ import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 
 interface AbaUsuariosProps {
   t: Theme;
+  /** Criar/editar usuários, reset senha e ver lista completa (sem filtro por «Emprestado para»). */
+  modoAdmin: boolean;
+  /** Quando true (permissão «Próprios» e não admin), só entram perfis com `emprestado_para` igual ao nome do usuário logado. */
+  restringirListaProprios: boolean;
+  nomeUsuarioLogado: string;
+}
+
+function normalizarNomeEmprestado(s: string): string {
+  return s.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
+}
+
+/** Comparação alinhada ao texto «Emprestado para» (Figurinos / cadastro de usuário). */
+function emprestadoParaCoincideComUsuario(emprestadoPara: string | null | undefined, nomeLogado: string): boolean {
+  const a = normalizarNomeEmprestado(emprestadoPara ?? "");
+  const b = normalizarNomeEmprestado(nomeLogado);
+  return a.length > 0 && b.length > 0 && a === b;
 }
 
 function formatarUltimoLogin(iso: string | null | undefined): string {
@@ -74,7 +90,7 @@ function formatarEscopo(scopes: UserScope[], ops: Operadora[]): string | null {
     .join(", ");
 }
 
-export function AbaUsuarios({ t }: AbaUsuariosProps) {
+export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuarioLogado }: AbaUsuariosProps) {
   const [usuarios, setUsuarios] = useState<UsuarioCompleto[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +116,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
     const [{ data: profiles }, { data: scopes }, { data: ops }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("id, name, email, role, ativo, created_at, last_sign_in_at")
+        .select("id, name, email, role, ativo, created_at, last_sign_in_at, emprestado_para")
         .order("created_at", { ascending: true }),
       supabase.from("user_scopes").select("*"),
       supabase.from("operadoras").select("*").order("nome"),
@@ -148,6 +164,11 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
     carregar();
   }, [carregar]);
 
+  const usuariosNaLista = useMemo(() => {
+    if (!restringirListaProprios) return usuarios;
+    return usuarios.filter((u) => emprestadoParaCoincideComUsuario(u.emprestado_para, nomeUsuarioLogado));
+  }, [usuarios, restringirListaProprios, nomeUsuarioLogado]);
+
   const abrirNovo = () => {
     setEditando(null);
     setModalOpen(true);
@@ -158,12 +179,12 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
   };
 
   const porBusca = busca.trim()
-    ? usuarios.filter(
+    ? usuariosNaLista.filter(
         (u) =>
           (u.name ?? "").toLowerCase().includes(busca.toLowerCase()) ||
           (u.email ?? "").toLowerCase().includes(busca.toLowerCase())
       )
-    : usuarios;
+    : usuariosNaLista;
 
   const baseContagemStatus = porBusca.filter((u) => passaFiltroPerfil(u, filtroPerfilSet));
   const qtdAtivos = baseContagemStatus.filter((u) => u.ativo !== false).length;
@@ -233,24 +254,26 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
             }}
           />
         </div>
-        <button
-          type="button"
-          onClick={abrirNovo}
-          style={{
-            background: BRAND.gradiente,
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            padding: "10px 18px",
-            cursor: "pointer",
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 600,
-            flexShrink: 0,
-          }}
-        >
-          + Novo Usuário
-        </button>
+        {modoAdmin ? (
+          <button
+            type="button"
+            onClick={abrirNovo}
+            style={{
+              background: BRAND.gradiente,
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              padding: "10px 18px",
+              cursor: "pointer",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 600,
+              flexShrink: 0,
+            }}
+          >
+            + Novo Usuário
+          </button>
+        ) : null}
       </div>
 
       {/* Linha 2: status (default: só Ativo) e perfis (nenhum perfil = todos) */}
@@ -313,17 +336,6 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
               </button>
             );
           })}
-          <span
-            style={{
-              marginLeft: 8,
-              padding: "2px 10px",
-              fontSize: 12,
-              color: t.textMuted,
-              fontFamily: FONT.body,
-            }}
-          >
-            {usuariosListaFinal.length} usuário{usuariosListaFinal.length !== 1 ? "s" : ""}
-          </span>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
           <span
@@ -407,7 +419,9 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
         >
           {usuarios.length === 0
             ? "Nenhum usuário cadastrado."
-            : "Nenhum usuário corresponde aos filtros ou à busca."}
+            : restringirListaProprios && usuariosNaLista.length === 0
+              ? "Nenhum usuário com «Emprestado para» correspondente ao seu nome."
+              : "Nenhum usuário corresponde aos filtros ou à busca."}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 16 }}>
@@ -498,115 +512,130 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
                   <span style={{ fontWeight: 600, color: t.textMuted }}>Último login:</span>{" "}
                   <span style={{ color: t.text }}>{formatarUltimoLogin(u.last_sign_in_at)}</span>
                 </div>
-                <div style={{ display: "flex", gap: 8, marginTop: "auto", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    disabled={isCardBusy(u.id)}
-                    onClick={() => abrirEditar(u)}
+                {(u.emprestado_para ?? "").trim() ? (
+                  <div
                     style={{
-                      background: `${BRAND.roxoVivo}12`,
-                      border: `1px solid ${BRAND.roxoVivo}44`,
-                      borderRadius: 8,
-                      padding: "6px 14px",
-                      cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
-                      opacity: isCardBusy(u.id) ? 0.55 : 1,
-                      fontFamily: FONT.body,
                       fontSize: 12,
-                      color: BRAND.roxoVivo,
-                      fontWeight: 600,
-                      transition: "all 0.15s",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (isCardBusy(u.id)) return;
-                      e.currentTarget.style.background = `${BRAND.roxoVivo}22`;
-                      e.currentTarget.style.borderColor = BRAND.roxoVivo;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = `${BRAND.roxoVivo}12`;
-                      e.currentTarget.style.borderColor = `${BRAND.roxoVivo}44`;
+                      color: t.textMuted,
+                      fontFamily: FONT.body,
+                      lineHeight: 1.4,
                     }}
                   >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isCardBusy(u.id)}
-                    onClick={() => setModalResetSenha(u)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      background: `${BRAND.amarelo}18`,
-                      border: `1px solid ${BRAND.amarelo}`,
-                      borderRadius: 8,
-                      padding: "6px 14px",
-                      cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
-                      opacity: isCardBusy(u.id) ? 0.55 : 1,
-                      fontFamily: FONT.body,
-                      fontSize: 12,
-                      color: BRAND.amarelo,
-                      fontWeight: 600,
-                    }}
-                  >
-                    <KeyRound size={14} aria-hidden />
-                    {isEstaAcao(u.id, "reset_senha") ? "…" : "Reset senha"}
-                  </button>
-                  {ativo ? (
+                    <span style={{ fontWeight: 600, color: t.textMuted }}>Emprestado para:</span>{" "}
+                    <span style={{ color: t.text }}>{(u.emprestado_para ?? "").trim()}</span>
+                  </div>
+                ) : null}
+                {modoAdmin ? (
+                  <div style={{ display: "flex", gap: 8, marginTop: "auto", flexWrap: "wrap" }}>
                     <button
                       type="button"
                       disabled={isCardBusy(u.id)}
-                      onClick={() => setModalDesativar(u)}
+                      onClick={() => abrirEditar(u)}
                       style={{
-                        background: "none",
-                        border: `1px solid ${BRAND.vermelho}`,
+                        background: `${BRAND.roxoVivo}12`,
+                        border: `1px solid ${BRAND.roxoVivo}44`,
                         borderRadius: 8,
                         padding: "6px 14px",
                         cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
                         opacity: isCardBusy(u.id) ? 0.55 : 1,
                         fontFamily: FONT.body,
                         fontSize: 12,
-                        color: BRAND.vermelho,
-                        transition: "background 0.15s",
+                        color: BRAND.roxoVivo,
+                        fontWeight: 600,
+                        transition: "all 0.15s",
                       }}
                       onMouseEnter={(e) => {
                         if (isCardBusy(u.id)) return;
-                        e.currentTarget.style.background = `${BRAND.vermelho}18`;
+                        e.currentTarget.style.background = `${BRAND.roxoVivo}22`;
+                        e.currentTarget.style.borderColor = BRAND.roxoVivo;
                       }}
                       onMouseLeave={(e) => {
-                         e.currentTarget.style.background = "none";
+                        e.currentTarget.style.background = `${BRAND.roxoVivo}12`;
+                        e.currentTarget.style.borderColor = `${BRAND.roxoVivo}44`;
                       }}
                     >
-                      {isEstaAcao(u.id, "desativar") ? "…" : "Desativar"}
+                      Editar
                     </button>
-                  ) : (
                     <button
                       type="button"
                       disabled={isCardBusy(u.id)}
-                      onClick={() => executarAcaoAdmin(u, "ativar")}
+                      onClick={() => setModalResetSenha(u)}
                       style={{
-                        background: `${BRAND.verde}22`,
-                        border: `1px solid ${BRAND.verde}`,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: `${BRAND.amarelo}18`,
+                        border: `1px solid ${BRAND.amarelo}`,
                         borderRadius: 8,
                         padding: "6px 14px",
                         cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
                         opacity: isCardBusy(u.id) ? 0.55 : 1,
                         fontFamily: FONT.body,
                         fontSize: 12,
-                        color: BRAND.verde,
+                        color: BRAND.amarelo,
                         fontWeight: 600,
                       }}
                     >
-                      {isEstaAcao(u.id, "ativar") ? "…" : "ATIVAR"}
+                      <KeyRound size={14} aria-hidden />
+                      {isEstaAcao(u.id, "reset_senha") ? "…" : "Reset senha"}
                     </button>
-                  )}
-                </div>
+                    {ativo ? (
+                      <button
+                        type="button"
+                        disabled={isCardBusy(u.id)}
+                        onClick={() => setModalDesativar(u)}
+                        style={{
+                          background: "none",
+                          border: `1px solid ${BRAND.vermelho}`,
+                          borderRadius: 8,
+                          padding: "6px 14px",
+                          cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
+                          opacity: isCardBusy(u.id) ? 0.55 : 1,
+                          fontFamily: FONT.body,
+                          fontSize: 12,
+                          color: BRAND.vermelho,
+                          transition: "background 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (isCardBusy(u.id)) return;
+                          e.currentTarget.style.background = `${BRAND.vermelho}18`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "none";
+                        }}
+                      >
+                        {isEstaAcao(u.id, "desativar") ? "…" : "Desativar"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={isCardBusy(u.id)}
+                        onClick={() => executarAcaoAdmin(u, "ativar")}
+                        style={{
+                          background: `${BRAND.verde}22`,
+                          border: `1px solid ${BRAND.verde}`,
+                          borderRadius: 8,
+                          padding: "6px 14px",
+                          cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
+                          opacity: isCardBusy(u.id) ? 0.55 : 1,
+                          fontFamily: FONT.body,
+                          fontSize: 12,
+                          color: BRAND.verde,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {isEstaAcao(u.id, "ativar") ? "…" : "ATIVAR"}
+                      </button>
+                    )}
+                  </div>
+                ) : null}
               </div>
             );
           })}
         </div>
       )}
 
-      {modalDesativar && (
+      {modoAdmin && modalDesativar && (
         <ModalConfirmDelete
           title="Desativar usuário"
           texto={`O usuário ${modalDesativar.name} perderá acesso imediato à plataforma. Deseja continuar?`}
@@ -621,7 +650,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
         />
       )}
 
-      {modalResetSenha && (
+      {modoAdmin && modalResetSenha && (
         <ModalConfirmDelete
           title="Redefinir senha"
           texto={`A senha de ${modalResetSenha.name} voltará à senha padrão (mesma do cadastro de novos usuários). No próximo login será obrigatório definir uma nova senha.`}
@@ -637,7 +666,7 @@ export function AbaUsuarios({ t }: AbaUsuariosProps) {
         />
       )}
 
-      {modalOpen && (
+      {modoAdmin && modalOpen && (
         <ModalUsuario
           key={editando?.id ?? "novo"}
           t={t}

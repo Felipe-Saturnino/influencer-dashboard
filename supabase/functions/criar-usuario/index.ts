@@ -9,6 +9,7 @@ interface CriarUsuarioRequest {
   email: string
   nome: string
   role: string
+  emprestadoPara?: string | null
   scopeInfluencers: string[]
   scopeOperadoras: string[]
   scopePares: string[]
@@ -294,8 +295,19 @@ serve(async (req) => {
     })
   }
 
-  const { email, nome, role, scopeInfluencers, scopeOperadoras, scopePares, scopeGestorTipos, scopePrestadorTipos } =
-    body
+  const {
+    email,
+    nome,
+    role,
+    emprestadoPara,
+    scopeInfluencers,
+    scopeOperadoras,
+    scopePares,
+    scopeGestorTipos,
+    scopePrestadorTipos,
+  } = body
+  const emprestadoParaDb =
+    typeof emprestadoPara === 'string' && emprestadoPara.trim() ? emprestadoPara.trim() : null
   const loginUrl = (body.loginUrl ?? '').trim() || 'https://acquisition-hub.vercel.app' // fallback legado; envie loginUrl a partir do app
 
   // Garantir arrays (evita "forEach is not a function" quando vem string/objeto/undefined)
@@ -392,6 +404,7 @@ serve(async (req) => {
         email: email.trim().toLowerCase(),
         role,
         must_change_password: true,
+        emprestado_para: emprestadoParaDb,
       },
       { onConflict: 'id' }
     )

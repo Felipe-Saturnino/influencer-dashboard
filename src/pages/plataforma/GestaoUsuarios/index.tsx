@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { UserCog } from "lucide-react";
 import { GiShield, GiPerson, GiLockedChest, GiOfficeChair, GiBriefcase } from "react-icons/gi";
@@ -16,12 +17,26 @@ type AbaGestao = "usuarios" | "permissoes" | "operadora" | "gestores" | "prestad
 export default function GestaoUsuarios() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const perm = usePermission("gestao_usuarios");
   const [aba, setAba] = useState<AbaGestao>("usuarios");
+  const isAdmin = user?.role === "admin";
 
-  if (user?.role !== "admin") {
+  useEffect(() => {
+    if (!isAdmin && aba !== "usuarios") setAba("usuarios");
+  }, [isAdmin, aba]);
+
+  if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Apenas administradores podem acessar a Gestão de Usuários.
+        Carregando…
+      </div>
+    );
+  }
+
+  if (perm.canView === "nao") {
+    return (
+      <div className="app-page-shell" style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
+        Você não tem permissão para visualizar este dashboard.
       </div>
     );
   }
@@ -35,13 +50,15 @@ export default function GestaoUsuarios() {
     boxShadow: cardShadow,
   };
 
-  const ABAS: { key: AbaGestao; label: string; icon: React.ReactNode }[] = [
-    { key: "usuarios", label: "Usuários", icon: <GiPerson size={13} /> },
-    { key: "permissoes", label: "Permissões", icon: <GiLockedChest size={13} /> },
-    { key: "operadora", label: "Operadora", icon: <GiOfficeChair size={13} /> },
-    { key: "gestores", label: "Gestores", icon: <GiBriefcase size={13} /> },
-    { key: "prestadores", label: "Prestadores", icon: <UserCog size={13} aria-hidden /> },
-  ];
+  const ABAS: { key: AbaGestao; label: string; icon: React.ReactNode }[] = isAdmin
+    ? [
+        { key: "usuarios", label: "Usuários", icon: <GiPerson size={13} /> },
+        { key: "permissoes", label: "Permissões", icon: <GiLockedChest size={13} /> },
+        { key: "operadora", label: "Operadora", icon: <GiOfficeChair size={13} /> },
+        { key: "gestores", label: "Gestores", icon: <GiBriefcase size={13} /> },
+        { key: "prestadores", label: "Prestadores", icon: <UserCog size={13} aria-hidden /> },
+      ]
+    : [{ key: "usuarios", label: "Usuários", icon: <GiPerson size={13} /> }];
 
   return (
     <div className="app-page-shell" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -78,49 +95,67 @@ export default function GestaoUsuarios() {
               Gestão de Usuários
             </h1>
             <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>
-              Gerencie usuários, acessos e permissões da plataforma.
+              {isAdmin
+                ? "Gerencie usuários, acessos e permissões da plataforma."
+                : perm.canView === "proprios"
+                  ? "Lista de usuários vinculados a você pelo campo «Emprestado para»."
+                  : "Visualização de usuários da plataforma."}
             </p>
           </div>
         </div>
       </div>
 
-      <div role="tablist" aria-label="Seções de gestão de usuários" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {ABAS.map((a) => {
-          const ativa = aba === a.key;
-          return (
-            <button
-              key={a.key}
-              type="button"
-              role="tab"
-              id={`tab-gestao-${a.key}`}
-              aria-selected={ativa}
-              aria-controls={`panel-gestao-${a.key}`}
-              onClick={() => setAba(a.key)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                background: ativa ? `${BRAND.roxoVivo}22` : t.inputBg ?? t.bg,
-                border: `1px solid ${ativa ? BRAND.roxoVivo : t.cardBorder}`,
-                color: ativa ? BRAND.roxoVivo : t.textMuted,
-                borderRadius: 20,
-                padding: "7px 18px",
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                fontWeight: ativa ? 700 : 400,
-                transition: "all 0.18s",
-              }}
-            >
-              {a.icon}
-              {a.label}
-            </button>
-          );
-        })}
-      </div>
+      {isAdmin && (
+        <div role="tablist" aria-label="Seções de gestão de usuários" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {ABAS.map((a) => {
+            const ativa = aba === a.key;
+            return (
+              <button
+                key={a.key}
+                type="button"
+                role="tab"
+                id={`tab-gestao-${a.key}`}
+                aria-selected={ativa}
+                aria-controls={`panel-gestao-${a.key}`}
+                onClick={() => setAba(a.key)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: ativa ? `${BRAND.roxoVivo}22` : t.inputBg ?? t.bg,
+                  border: `1px solid ${ativa ? BRAND.roxoVivo : t.cardBorder}`,
+                  color: ativa ? BRAND.roxoVivo : t.textMuted,
+                  borderRadius: 20,
+                  padding: "7px 18px",
+                  cursor: "pointer",
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  fontWeight: ativa ? 700 : 400,
+                  transition: "all 0.18s",
+                }}
+              >
+                {a.icon}
+                {a.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-      <div role="tabpanel" id={`panel-gestao-${aba}`} aria-labelledby={`tab-gestao-${aba}`} style={card}>
-        {aba === "usuarios" && <AbaUsuarios t={t} />}
+      <div
+        style={card}
+        {...(isAdmin
+          ? { role: "tabpanel" as const, id: `panel-gestao-${aba}`, "aria-labelledby": `tab-gestao-${aba}` }
+          : { role: "region" as const, "aria-label": "Usuários da plataforma" })}
+      >
+        {aba === "usuarios" && (
+          <AbaUsuarios
+            t={t}
+            modoAdmin={isAdmin}
+            restringirListaProprios={perm.canView === "proprios" && !isAdmin}
+            nomeUsuarioLogado={(user?.name ?? "").trim()}
+          />
+        )}
         {aba === "permissoes" && <AbaPermissoes t={t} />}
         {aba === "operadora" && <AbaOperadora t={t} />}
         {aba === "gestores" && <AbaGestores t={t} />}

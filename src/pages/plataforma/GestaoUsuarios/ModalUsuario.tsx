@@ -31,6 +31,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
   const [scopePrestadorTipos, setScopePrestadorTipos] = useState<string[]>([]);
   const [paresAgencia, setParesAgencia] = useState<Array<{ influencerId: string; operadoraSlug: string }>>([]);
   const [influencers, setInfluencers] = useState<{ id: string; nome: string }[]>([]);
+  const [emprestadoPara, setEmprestadoPara] = useState(editando?.emprestado_para ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -62,8 +63,9 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setNome(editando?.name ?? "");
     setEmail(editando?.email ?? "");
     setRole((editando?.role ?? "gestor") as Role);
+    setEmprestadoPara(editando?.emprestado_para ?? "");
     setErro("");
-  }, [editando?.id, editando?.name, editando?.email, editando?.role]);
+  }, [editando?.id, editando?.name, editando?.email, editando?.role, editando?.emprestado_para]);
 
   useEffect(() => {
     const scopes = editando?.scopes ?? [];
@@ -191,6 +193,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           userId: uid,
           name: nome.trim(),
           role,
+          emprestadoPara: emprestadoPara.trim(),
           scopeInfluencers: scopeInfluencersArr,
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
@@ -203,6 +206,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           email: email.trim().toLowerCase(),
           nome: nome.trim(),
           role,
+          emprestadoPara: emprestadoPara.trim(),
           scopeInfluencers: scopeInfluencersArr,
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
@@ -420,6 +424,21 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             placeholder="Nome completo"
             onFocus={(e) => { e.currentTarget.style.borderColor = BRAND.roxoVivo; }}
             onBlur={(e) => { e.currentTarget.style.borderColor = t.cardBorder; }}
+          />
+        </div>
+        <div style={field}>
+          <label style={labelStyle}>Emprestado para</label>
+          <input
+            style={inputStyle}
+            value={emprestadoPara}
+            onChange={(e) => setEmprestadoPara(e.target.value)}
+            placeholder="Ex.: mesmo nome usado em Figurinos ao emprestar peça"
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = BRAND.roxoVivo;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = t.cardBorder;
+            }}
           />
         </div>
         {!editando && (

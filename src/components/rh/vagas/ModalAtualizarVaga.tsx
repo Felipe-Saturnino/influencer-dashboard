@@ -3,7 +3,6 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { centavosDeStringMoeda, formatarMoedaDigitos, somenteDigitos } from "../../../lib/rhFuncionarioValidators";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import {
   checkboxesFromTipoVaga,
@@ -74,7 +73,6 @@ export function ModalAtualizarVaga({
   const [chkInterna, setChkInterna] = useState(true);
   const [chkExterna, setChkExterna] = useState(false);
   const [orgTimeId, setOrgTimeId] = useState<string | null>(null);
-  const [salarioCentavos, setSalarioCentavos] = useState("");
   const [dataAbertura, setDataAbertura] = useState("");
   /** Só usado em "Atualizar" para validar data fim vs abertura (campo oculto). */
   const [dataAberturaRef, setDataAberturaRef] = useState("");
@@ -124,7 +122,6 @@ export function ModalAtualizarVaga({
     setChkExterna(checks.externa);
     setTitulo(vaga.titulo);
     setOrgTimeId(vaga.org_time_id);
-    setSalarioCentavos(String(Math.max(0, Math.round(Number(vaga.remuneracao_centavos)))));
     setDataFimInscricoes(dataIsoDateOnly(vaga.data_fim_inscricoes));
     setDescricao(vaga.descricao ?? "");
     setResponsabilidades(vaga.responsabilidades ?? "");
@@ -223,8 +220,6 @@ export function ModalAtualizarVaga({
     const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna);
     if (!tipo) e.tipo_vaga = "Selecione Interna e/ou Externa.";
     if (!orgTimeId) e.org_time_id = "Selecione o organograma (time).";
-    const centSal = parseInt(somenteDigitos(salarioCentavos), 10) || 0;
-    if (centSal <= 0) e.remuneracao = "Informe a remuneração mensal.";
     const abRef = accao === "atualizar" ? dataAberturaRef : dataAbertura;
     if (accao === "reabrir") {
       if (!dataAbertura.trim()) e.data_abertura = "Informe a data de abertura.";
@@ -274,12 +269,10 @@ export function ModalAtualizarVaga({
 
     if (accao === "reabrir") {
       const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna)!;
-      const centSal = parseInt(somenteDigitos(salarioCentavos), 10) || 0;
       patch = {
         titulo: titulo.trim(),
         tipo_vaga: tipo,
         org_time_id: orgTimeId,
-        remuneracao_centavos: centSal,
         data_abertura: dataAbertura.trim(),
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
@@ -293,12 +286,10 @@ export function ModalAtualizarVaga({
       };
     } else if (accao === "atualizar") {
       const tipo = tipoVagaDeCheckboxes(chkInterna, chkExterna)!;
-      const centSal = parseInt(somenteDigitos(salarioCentavos), 10) || 0;
       patch = {
         titulo: titulo.trim(),
         tipo_vaga: tipo,
         org_time_id: orgTimeId,
-        remuneracao_centavos: centSal,
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
@@ -485,21 +476,6 @@ export function ModalAtualizarVaga({
                   style={inputStyle}
                 />
                 {fieldErr.org_time_id ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.org_time_id}</div> : null}
-              </div>
-
-              <div style={{ marginBottom: 14 }}>
-                {lblReq("atv-sal", "Remuneração mensal")}
-                <input
-                  id="atv-sal"
-                  type="text"
-                  inputMode="decimal"
-                  value={salarioCentavos ? formatarMoedaDigitos(salarioCentavos) : ""}
-                  onChange={(e) => setSalarioCentavos(centavosDeStringMoeda(e.target.value))}
-                  placeholder="R$ 0,00"
-                  style={inputStyle}
-                  autoComplete="off"
-                />
-                {fieldErr.remuneracao ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.remuneracao}</div> : null}
               </div>
 
               {accao === "reabrir" ? (

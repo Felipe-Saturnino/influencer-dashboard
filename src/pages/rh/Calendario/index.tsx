@@ -17,8 +17,20 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import type { Operadora } from "../../../types";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
-import { siglaGradeParaNomeTurno } from "../../../lib/rhEscalaTurnos";
+import {
+  normalizarEscalaCadastro,
+  siglaGradeParaNomeTurno,
+  turnoStaffEhComercial5x2,
+} from "../../../lib/rhEscalaTurnos";
+import {
+  adicionarMinutosAoRelogioHHMM,
+  escalaComHorarioTurnoEditavelNaStaff,
+  escalaComHorarioTurnoSomenteOperadora,
+  formatarHoraInicioOperadora,
+  labelHorarioTurnoStaffPorValor,
+} from "../../../lib/rhStaffHorarioTurno";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -167,12 +179,65 @@ function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
   }
 }
 
-/** Valores de célula «Escalado» na Gestão de Escala (siglas ou Comercial). */
+/** Rótulo no Calendário para o valor gravado na grade (Gestão de Escala). Folgas não entram na grelha. */
 function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   const v = (valor ?? "").trim();
+  if (!v) return null;
+  const vl = v.toLowerCase();
+  if (v === "Folga" || vl === "folga" || v === "F" || vl === "f") return null;
   if (v === "Comercial") return "Comercial";
+  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   const nome = siglaGradeParaNomeTurno(v);
   return nome || null;
+}
+
+type OpTurnosCalPick = Pick<Operadora, "slug" | "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
+type OpTurnosHorarioPick = Pick<Operadora, "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
+
+function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
+  return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca";
+}
+
+/** Início/fim do turno para o modal (null = não calculado; usar "—" no UI). */
+function resumoHorarioTurnoModalCalendario(
+  p: RhFuncionario | undefined,
+  turnoNomeExibicao: string,
+  op: OpTurnosHorarioPick | null | undefined,
+): string | null {
+  if (!p) return null;
+  if (turnoCalendarioEhCompraVendaTroca(turnoNomeExibicao)) return null;
+
+  const escala = p.escala ?? "";
+
+  if (turnoNomeExibicao === "Comercial") {
+    if (turnoStaffEhComercial5x2(p.staff_turno)) {
+      const lbl = labelHorarioTurnoStaffPorValor(p.staff_horario_turno);
+      return lbl !== "—" ? lbl : null;
+    }
+    return null;
+  }
+
+  if (turnoNomeExibicao !== "Manhã" && turnoNomeExibicao !== "Tarde" && turnoNomeExibicao !== "Noite") return null;
+
+  if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
+    const lbl = labelHorarioTurnoStaffPorValor(p.staff_horario_turno);
+    return lbl !== "—" ? lbl : null;
+  }
+
+  if (escalaComHorarioTurnoSomenteOperadora(escala) && op) {
+    const k = normalizarEscalaCadastro(escala);
+    const durMin = k === "5x1" ? 6 * 60 + 30 : 8 * 60;
+    let iniDb: string | null = null;
+    if (turnoNomeExibicao === "Manhã") iniDb = op.turno_manha_inicio ?? null;
+    else if (turnoNomeExibicao === "Tarde") iniDb = op.turno_tarde_inicio ?? null;
+    else iniDb = op.turno_noite_inicio ?? null;
+    const hi = formatarHoraInicioOperadora(iniDb ?? undefined);
+    if (hi === "—") return null;
+    const hf = adicionarMinutosAoRelogioHHMM(hi, durMin);
+    return `Início ${hi} · Fim ${hf}`;
+  }
+
+  return null;
 }
 
 interface SingleDropdownTheme {
@@ -353,6 +418,7 @@ export default function RhCalendarioPage() {
   const [loadingEscala, setLoadingEscala] = useState(false);
   /** Quando `rh_calendario` está em «Próprios»: id do `rh_funcionarios` do utilizador autenticado (e-mail / e-mail Spin). */
   const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
+  const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosCalPick>>(() => new Map());
 
   const carregarTimes = useCallback(async () => {
     setErroStaff(null);
@@ -645,6 +711,43 @@ export default function RhCalendarioPage() {
     return m;
   }, [prestadores]);
 
+  const prestadorPorId = useMemo(() => {
+    const m = new Map<string, RhFuncionario>();
+    prestadores.forEach((p) => m.set(p.id, p));
+    return m;
+  }, [prestadores]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") return;
+    const slugs = [
+      ...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean)),
+    ];
+    if (slugs.length === 0) {
+      setMapOpTurnos(new Map());
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("operadoras")
+      .select("slug, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
+      .in("slug", slugs)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setMapOpTurnos(new Map());
+          return;
+        }
+        const m = new Map<string, OpTurnosCalPick>();
+        (data ?? []).forEach((row: OpTurnosCalPick) => {
+          if (row.slug) m.set(row.slug, row);
+        });
+        setMapOpTurnos(m);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [prestadores, perm.loading, perm.canView]);
+
   const compromissosPorDiaIso = useMemo(() => {
     const filtroStaff = filterStaffIds.length > 0 ? new Set(filterStaffIds) : null;
     const mapa = new Map<string, CompromissoEscalaCal[]>();
@@ -798,14 +901,33 @@ export default function RhCalendarioPage() {
     justifyContent: "center",
   };
 
-  function EscalaCompromissoChip({ comp }: { comp: CompromissoEscalaCal }) {
+  /** Início/fim do turno (ou "—"); `undefined` para Compra/Venda/Troca. */
+  function horarioSubtituloParaCompromissoCal(comp: CompromissoEscalaCal): string | undefined {
+    if (turnoCalendarioEhCompraVendaTroca(comp.turno)) return undefined;
+    const pRow = prestadorPorId.get(comp.prestadorId);
+    const slug = (pRow?.staff_operadora_slug ?? "").trim();
+    const opRow = slug ? mapOpTurnos.get(slug) : undefined;
+    const horario = resumoHorarioTurnoModalCalendario(pRow, comp.turno, opRow ?? null);
+    return horario ?? "—";
+  }
+
+  function EscalaCompromissoChip({
+    comp,
+    subtituloModal,
+  }: {
+    comp: CompromissoEscalaCal;
+    /** Segunda linha: início/fim (ou "—") no modal; na grelha só em modo «Próprios» (prestador). */
+    subtituloModal?: string;
+  }) {
+    const temSubtitulo = subtituloModal !== undefined;
     return (
       <div
         role="listitem"
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 6,
+          flexDirection: temSubtitulo ? "column" : "row",
+          alignItems: temSubtitulo ? "stretch" : "center",
+          gap: temSubtitulo ? 4 : 6,
           padding: "5px 8px",
           borderRadius: 8,
           marginBottom: 4,
@@ -816,23 +938,47 @@ export default function RhCalendarioPage() {
           lineHeight: 1.2,
         }}
       >
-        <Clock size={11} color={BRAND.azul} aria-hidden="true" />
-        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body, flexShrink: 0 }}>{comp.turno}</span>
-        <span
+        <div
           style={{
-            fontSize: 11,
-            fontWeight: 500,
-            color: t.text,
-            fontFamily: FONT.body,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
             minWidth: 0,
+            width: "100%",
           }}
-          title={`${comp.turno} — ${comp.nome}`}
         >
-          {comp.nome}
-        </span>
+          <Clock size={11} color={BRAND.azul} aria-hidden="true" />
+          <span style={{ fontSize: 11, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body, flexShrink: 0 }}>{comp.turno}</span>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 500,
+              color: t.text,
+              fontFamily: FONT.body,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              minWidth: 0,
+            }}
+            title={`${comp.turno} — ${comp.nome}`}
+          >
+            {comp.nome}
+          </span>
+        </div>
+        {temSubtitulo ? (
+          <div
+            style={{
+              fontSize: 11,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              paddingLeft: 17,
+              fontVariantNumeric: "tabular-nums",
+              lineHeight: 1.35,
+            }}
+          >
+            {subtituloModal}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -936,7 +1082,11 @@ export default function RhCalendarioPage() {
                     aria-label="Compromissos do dia na grelha"
                   >
                     {lista.slice(0, MAX_CHIPS_COMPROMISSOS_DIA).map((comp) => (
-                      <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
+                      <EscalaCompromissoChip
+                        key={`${comp.prestadorId}-${comp.turno}`}
+                        comp={comp}
+                        subtituloModal={soPropriosCal ? horarioSubtituloParaCompromissoCal(comp) : undefined}
+                      />
                     ))}
                     {lista.length > MAX_CHIPS_COMPROMISSOS_DIA && (
                       <span
@@ -1281,7 +1431,11 @@ export default function RhCalendarioPage() {
                 {turnosAgendadosNoDia(modalDia).length > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="list">
                     {turnosAgendadosNoDia(modalDia).map((comp) => (
-                      <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
+                      <EscalaCompromissoChip
+                        key={`${comp.prestadorId}-${comp.turno}`}
+                        comp={comp}
+                        subtituloModal={horarioSubtituloParaCompromissoCal(comp)}
+                      />
                     ))}
                   </div>
                 ) : (
