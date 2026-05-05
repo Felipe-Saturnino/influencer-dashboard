@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, Search, Trash2, Upload, Users } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  History,
+  Loader2,
+  Pencil,
+  Search,
+  StickyNote,
+  Trash2,
+  Upload,
+  Users,
+} from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -29,7 +41,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ListaHistoricoRh } from "../../../components/rh/ListaHistoricoRh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import type { RhFuncionario, RhFuncionarioHistorico } from "../../../types/rhFuncionario";
+import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
 
@@ -228,6 +240,251 @@ function ModalStaffHistorico({
   );
 }
 
+function ModalStaffAnotacoes({
+  row,
+  onClose,
+  t,
+  brand,
+  canEditarOk,
+}: {
+  row: RhFuncionario;
+  onClose: () => void;
+  t: ReturnType<typeof useApp>["theme"];
+  brand: ReturnType<typeof useDashboardBrand>;
+  canEditarOk: boolean;
+}) {
+  const [lista, setLista] = useState<RhStaffAnotacao[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [nomesAutor, setNomesAutor] = useState<Record<string, string>>({});
+  const [textoNovo, setTextoNovo] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [err, setErr] = useState("");
+
+  const labelStyle: CSSProperties = {
+    display: "block",
+    fontSize: 11,
+    fontWeight: 700,
+    color: t.textMuted,
+    marginBottom: 6,
+    fontFamily: FONT.body,
+  };
+  const inputStyle: CSSProperties = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg,
+    color: t.text,
+    fontFamily: FONT.body,
+    fontSize: 13,
+    boxSizing: "border-box",
+    minHeight: 120,
+    resize: "vertical" as const,
+    lineHeight: 1.45,
+  };
+
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    setErr("");
+    const { data, error } = await supabase
+      .from("rh_staff_anotacoes")
+      .select("id, rh_funcionario_id, texto, created_at, created_by")
+      .eq("rh_funcionario_id", row.id)
+      .order("created_at", { ascending: false });
+    if (error) {
+      setLista([]);
+      setNomesAutor({});
+      setErr(error.message || "Não foi possível carregar as anotações.");
+      setLoading(false);
+      return;
+    }
+    const items = (data ?? []) as RhStaffAnotacao[];
+    setLista(items);
+    const ids = [...new Set(items.map((a) => a.created_by).filter(Boolean))] as string[];
+    if (ids.length === 0) {
+      setNomesAutor({});
+      setLoading(false);
+      return;
+    }
+    const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+    const m: Record<string, string> = {};
+    (profs ?? []).forEach((p: { id: string; name: string | null }) => {
+      m[p.id] = (p.name ?? "").trim() || p.id.slice(0, 8);
+    });
+    setNomesAutor(m);
+    setLoading(false);
+  }, [row.id]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  const nomeAutor = (a: RhStaffAnotacao) => {
+    if (!a.created_by) return "—";
+    return nomesAutor[a.created_by] ?? `${a.created_by.slice(0, 8)}…`;
+  };
+
+  const salvar = async () => {
+    const textoTrim = textoNovo.trim();
+    if (!textoTrim) {
+      setErr("Escreva a anotação antes de salvar.");
+      return;
+    }
+    setErr("");
+    setSalvando(true);
+    const { error } = await supabase.from("rh_staff_anotacoes").insert({
+      rh_funcionario_id: row.id,
+      texto: textoTrim,
+    });
+    if (error) {
+      setErr(error.message || "Não foi possível salvar a anotação.");
+      setSalvando(false);
+      return;
+    }
+    setTextoNovo("");
+    await carregar();
+    setSalvando(false);
+  };
+
+  return (
+    <ModalBase maxWidth={600} onClose={onClose}>
+      <ModalHeader title={`Anotações — ${row.nome}`} onClose={onClose} />
+      <div style={{ padding: "0 4px 16px", fontFamily: FONT.body }}>
+        <div
+          style={{
+            marginBottom: 20,
+            padding: "14px 16px",
+            borderRadius: 12,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+          }}
+        >
+          <div style={{ ...labelStyle, fontSize: 12, color: t.text, marginBottom: 10 }}>Registrar anotações</div>
+          {canEditarOk ? (
+            <>
+              <label htmlFor="staff-anotacao-nova" style={labelStyle}>
+                Observações sobre este prestador
+              </label>
+              <textarea
+                id="staff-anotacao-nova"
+                value={textoNovo}
+                onChange={(e) => setTextoNovo(e.target.value)}
+                style={inputStyle}
+                rows={5}
+                placeholder="Escreva aqui anotações ou observações internas…"
+                aria-label="Texto da nova anotação"
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                <button
+                  type="button"
+                  disabled={salvando || !textoNovo.trim()}
+                  onClick={() => void salvar()}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: 10,
+                    border: "none",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    fontSize: 13,
+                    cursor: salvando || !textoNovo.trim() ? "not-allowed" : "pointer",
+                    opacity: salvando || !textoNovo.trim() ? 0.65 : 1,
+                    background: brand.useBrand
+                      ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                      : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  {salvando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+                  Salvar anotação
+                </button>
+              </div>
+            </>
+          ) : (
+            <p style={{ margin: 0, fontSize: 13, color: t.textMuted, lineHeight: 1.5 }}>
+              Apenas utilizadores com permissão de edição em Gestão de Staff podem registrar novas anotações.
+            </p>
+          )}
+        </div>
+
+        <div style={{ ...labelStyle, fontSize: 12, color: t.text, marginBottom: 10 }}>Anotações anteriores</div>
+        <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, lineHeight: 1.45 }}>
+          Estas entradas são só desta página e não aparecem no histórico geral de RH nem na Gestão de Prestadores.
+        </p>
+        {err ? (
+          <div role="alert" style={{ color: "#e84025", fontSize: 12, marginBottom: 12 }}>
+            {err}
+          </div>
+        ) : null}
+        {loading ? (
+          <div style={{ color: t.textMuted, fontSize: 13 }}>
+            <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ marginRight: 8, verticalAlign: "middle" }} />
+            Carregando anotações…
+          </div>
+        ) : lista.length === 0 ? (
+          <div style={{ padding: "20px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Ainda não há anotações registradas.</div>
+        ) : (
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, maxHeight: "min(48dvh, 360px)", overflowY: "auto" }}>
+            {lista.map((a) => (
+              <li
+                key={a.id}
+                style={{
+                  marginBottom: 12,
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.cardBg,
+                }}
+              >
+                <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
+                  <span style={{ fontWeight: 700, color: t.text }}>Data/Hora:</span> {fmtDataHora(a.created_at)}
+                </div>
+                <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 10 }}>
+                  <span style={{ fontWeight: 700, color: t.text }}>Usuário que registrou:</span> {nomeAutor(a)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: t.text,
+                    lineHeight: 1.5,
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {a.texto}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div style={{ marginTop: 16 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: "100%",
+              padding: 12,
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </ModalBase>
+  );
+}
+
 export default function RhGestaoStaffPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
@@ -248,6 +505,7 @@ export default function RhGestaoStaffPage() {
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
   const [modalHistorico, setModalHistorico] = useState<RhFuncionario | null>(null);
+  const [modalAnotacoes, setModalAnotacoes] = useState<RhFuncionario | null>(null);
 
   const [sortCol, setSortCol] = useState<StaffTabelaSortCol>("nome");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -776,6 +1034,14 @@ export default function RhGestaoStaffPage() {
                           >
                             <History size={14} aria-hidden />
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => setModalAnotacoes(row)}
+                            style={btnIconTabela}
+                            aria-label={`Anotações de ${row.nome}`}
+                          >
+                            <StickyNote size={14} aria-hidden />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -825,6 +1091,16 @@ export default function RhGestaoStaffPage() {
           operadorasNome={operadorasNome}
           onClose={() => setModalHistorico(null)}
           t={t}
+        />
+      ) : null}
+
+      {modalAnotacoes ? (
+        <ModalStaffAnotacoes
+          row={modalAnotacoes}
+          onClose={() => setModalAnotacoes(null)}
+          t={t}
+          brand={brand}
+          canEditarOk={perm.canEditarOk}
         />
       ) : null}
     </div>

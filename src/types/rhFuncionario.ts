@@ -127,3 +127,12 @@ export interface RhFuncionarioSelfMedia {
   created_at: string;
   created_by: string | null;
 }
+
+/** Linha de `public.rh_staff_anotacoes` (somente Gestão de Staff). */
+export interface RhStaffAnotacao {
+  id: string;
+  rh_funcionario_id: string;
+  texto: string;
+  created_at: string;
+  created_by: string | null;
+}
