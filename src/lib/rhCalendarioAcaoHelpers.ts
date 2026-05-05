@@ -45,6 +45,16 @@ export function diaIsoChaveGradeCell(raw: string | Date | undefined | null): str
   }
 }
 
+/** Rótulo `dd-MM-yyyy` a partir de ISO `YYYY-MM-DD` (calendário local da string). */
+export function labelDataDdMmAaaa(iso: string): string {
+  const s = iso.slice(0, 10);
+  const parts = s.split("-");
+  if (parts.length < 3) return s;
+  const [y, mo, d] = parts;
+  if (!y || !mo || !d) return s;
+  return `${d}-${mo}-${y}`;
+}
+
 export function valorCelulaEhFolga(valor: string): boolean {
   const v = (valor ?? "").trim();
   const vl = v.toLowerCase();
@@ -99,30 +109,12 @@ export function listarDatasFolgaFuturasNoMes(
   refMesPrimeiroDia: Date,
   valorPorIso: Map<string, string>,
 ): { iso: string; label: string }[] {
-  const y = refMesPrimeiroDia.getFullYear();
-  const m0 = refMesPrimeiroDia.getMonth();
-  const meses = [
-    "Jan",
-    "Fev",
-    "Mar",
-    "Abr",
-    "Mai",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Set",
-    "Out",
-    "Nov",
-    "Dez",
-  ];
   const out: { iso: string; label: string }[] = [];
   for (const iso of listarIsoDiasDoMes(refMesPrimeiroDia)) {
     if (!diaIsoEhEstritamenteFuturo(iso)) continue;
     const v = valorPorIso.get(iso);
     if (v == null || !valorCelulaEhFolga(v)) continue;
-    const parts = iso.slice(0, 10).split("-");
-    const d = parseInt(parts[2] ?? "0", 10);
-    out.push({ iso, label: `${d} ${meses[m0] ?? ""}` });
+    out.push({ iso, label: labelDataDdMmAaaa(iso) });
   }
   return out;
 }
@@ -131,22 +123,6 @@ export function listarDatasEscaladoFuturasNoMes(
   refMesPrimeiroDia: Date,
   valorPorIso: Map<string, string>,
 ): { iso: string; label: string; turno: string }[] {
-  const y = refMesPrimeiroDia.getFullYear();
-  const m0 = refMesPrimeiroDia.getMonth();
-  const meses = [
-    "Jan",
-    "Fev",
-    "Mar",
-    "Abr",
-    "Mai",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Set",
-    "Out",
-    "Nov",
-    "Dez",
-  ];
   const out: { iso: string; label: string; turno: string }[] = [];
   for (const iso of listarIsoDiasDoMes(refMesPrimeiroDia)) {
     if (!diaIsoEhEstritamenteFuturo(iso)) continue;
@@ -154,9 +130,7 @@ export function listarDatasEscaladoFuturasNoMes(
     if (v == null) continue;
     const turno = turnoExibicaoValorGrade(v);
     if (!turno) continue;
-    const parts = iso.slice(0, 10).split("-");
-    const d = parseInt(parts[2] ?? "0", 10);
-    out.push({ iso, turno, label: `${d} ${meses[m0] ?? ""} (${turno})` });
+    out.push({ iso, turno, label: `${labelDataDdMmAaaa(iso)} - ${turno}` });
   }
   return out;
 }

@@ -17,7 +17,9 @@ import {
   turnoExibicaoValorGrade,
   valorCelulaEhFolga,
   diaIsoChaveGradeCell,
+  labelDataDdMmAaaa,
 } from "../../../lib/rhCalendarioAcaoHelpers";
+import { normalizarEscalaCadastro } from "../../../lib/rhEscalaTurnos";
 import {
   type OperadoraTurnosPick,
   turnosPermitidosVendaFolgaComRegra8h,
@@ -123,6 +125,11 @@ export function ModalAcaoCalendario({
     return turnosPermitidosVendaFolgaComRegra8h(diaIso, gradeValorPorDiaIso, meuFuncionario, operadoraTurnos);
   }, [tipo, diaIso, gradeValorPorDiaIso, meuFuncionario, operadoraTurnos]);
 
+  const trocaListaSoPorTime = useMemo(
+    () => normalizarEscalaCadastro(meuFuncionario.escala ?? "") === "3x3",
+    [meuFuncionario.escala],
+  );
+
   useEffect(() => {
     if (!open || tipo !== "troca_cassada") {
       setColegas([]);
@@ -130,38 +137,50 @@ export function ModalAcaoCalendario({
     }
     const tid = meuFuncionario.org_time_id;
     const slug = (meuFuncionario.staff_operadora_slug ?? "").trim();
-    if (!tid || !slug) {
+    if (!tid) {
+      setColegas([]);
+      return;
+    }
+    if (!trocaListaSoPorTime && !slug) {
       setColegas([]);
       return;
     }
     let c = false;
     setLoadingColegas(true);
-    void supabase
+    let q = supabase
       .from("rh_funcionarios")
       .select("id, nome")
       .eq("org_time_id", tid)
-      .eq("staff_operadora_slug", slug)
       .neq("id", meuFuncionarioId)
-      .in("status", ["ativo", "indisponivel"])
-      .order("nome", { ascending: true })
-      .then(({ data, error }) => {
-        if (c) return;
-        setLoadingColegas(false);
-        if (error || !data) {
-          setColegas([]);
-          return;
-        }
-        setColegas(
-          (data as { id: string; nome: string }[]).map((r) => ({
-            id: r.id,
-            nome: (r.nome ?? "").trim() || "—",
-          })),
-        );
-      });
+      .in("status", ["ativo", "indisponivel"]);
+    if (!trocaListaSoPorTime) {
+      q = q.eq("staff_operadora_slug", slug);
+    }
+    void q.order("nome", { ascending: true }).then(({ data, error }) => {
+      if (c) return;
+      setLoadingColegas(false);
+      if (error || !data) {
+        setColegas([]);
+        return;
+      }
+      setColegas(
+        (data as { id: string; nome: string }[]).map((r) => ({
+          id: r.id,
+          nome: (r.nome ?? "").trim() || "—",
+        })),
+      );
+    });
     return () => {
       c = true;
     };
-  }, [open, tipo, meuFuncionario.org_time_id, meuFuncionario.staff_operadora_slug, meuFuncionarioId]);
+  }, [
+    open,
+    tipo,
+    meuFuncionario.org_time_id,
+    meuFuncionario.staff_operadora_slug,
+    meuFuncionarioId,
+    trocaListaSoPorTime,
+  ]);
 
   useEffect(() => {
     if (!open || tipo !== "troca_cassada" || !outroFuncionarioId) {
@@ -194,22 +213,6 @@ export function ModalAcaoCalendario({
   }, [open, tipo, outroFuncionarioId, refMes]);
 
   const diasEscaladoColegaFuturos = useMemo(() => {
-    const y = refMes.getFullYear();
-    const m0 = refMes.getMonth();
-    const meses = [
-      "Jan",
-      "Fev",
-      "Mar",
-      "Abr",
-      "Mai",
-      "Jun",
-      "Jul",
-      "Ago",
-      "Set",
-      "Out",
-      "Nov",
-      "Dez",
-    ];
     const out: { iso: string; label: string; turno: string }[] = [];
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -221,8 +224,7 @@ export function ModalAcaoCalendario({
       if (v == null) continue;
       const turno = turnoExibicaoValorGrade(v);
       if (!turno) continue;
-      const d = parseInt(iso.slice(8, 10), 10);
-      out.push({ iso, turno, label: `${d} ${meses[m0] ?? ""} (${turno})` });
+      out.push({ iso, turno, label: `${labelDataDdMmAaaa(iso)} - ${turno}` });
     }
     return out;
   }, [refMes, gradeOutroPorIso]);
@@ -504,7 +506,7 @@ export function ModalAcaoCalendario({
                     <option value="">Selecione…</option>
                     {diasFolgaFuturos.map((o) => (
                       <option key={o.iso} value={o.iso}>
-                        {o.label} — {o.iso}
+                        {o.label}
                       </option>
                     ))}
                   </select>
@@ -585,14 +587,16 @@ export function ModalAcaoCalendario({
                 </div>
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-                    Quem irá assumir (mesma operadora e time)
+                    Quem irá assumir
                     <CampoObrigatorioMark />
                   </label>
                   {loadingColegas ? (
                     <span style={{ color: t.textMuted, fontSize: 13 }}>A carregar…</span>
                   ) : colegas.length === 0 ? (
                     <span style={{ color: t.textMuted, fontSize: 13 }}>
-                      Não há outros prestadores no mesmo time e operadora.
+                      {trocaListaSoPorTime
+                        ? "Não há outros prestadores no mesmo time."
+                        : "Não há outros prestadores no mesmo time e operadora."}
                     </span>
                   ) : (
                     <select
@@ -612,7 +616,7 @@ export function ModalAcaoCalendario({
                 </div>
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-                    Dia escalado deste prestador (mês atual)
+                    Data do turno de troca
                     <CampoObrigatorioMark />
                   </label>
                   {!outroFuncionarioId ? (
@@ -621,7 +625,7 @@ export function ModalAcaoCalendario({
                     <span style={{ color: t.textMuted, fontSize: 13 }}>A carregar escala…</span>
                   ) : (
                     <select
-                      aria-label="Dia do outro prestador"
+                      aria-label="Data do turno de troca do outro prestador"
                       value={outroDiaIso}
                       onChange={(e) => setOutroDiaIso(e.target.value)}
                       style={inputStyle}
