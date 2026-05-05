@@ -1,14 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  BookOpen,
   CalendarRange,
-  Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Clock,
-  LayoutList,
   Loader2,
+  MessageSquare,
+  Users,
   X,
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
@@ -35,15 +34,17 @@ import { DashboardPageHeader } from "../../../components/dashboard";
 import InfluencerMultiSelect from "../../../components/InfluencerMultiSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 
-type FiltroCompromissosCal = "todos" | "turnos" | "reunioes" | "treinamentos" | "feedback";
+/** Tipos de compromisso filtráveis; conjunto vazio na UI = mostrar todos. */
+type ChaveFiltroCompromissoCal = "reunioes" | "treinamentos" | "feedback" | "turnos";
 
-const COMPROMISSOS_FILTER_OPTIONS: { value: FiltroCompromissosCal; label: string }[] = [
-  { value: "todos", label: "Todos os Compromissos" },
-  { value: "turnos", label: "Turnos" },
-  { value: "reunioes", label: "Reuniões" },
-  { value: "treinamentos", label: "Treinamentos" },
-  { value: "feedback", label: "Feedback" },
+const COMPROMISSOS_FILTRO_BOTOES: { chave: ChaveFiltroCompromissoCal; label: string }[] = [
+  { chave: "reunioes", label: "Reuniões" },
+  { chave: "treinamentos", label: "Treinamentos" },
+  { chave: "feedback", label: "Feedback" },
+  { chave: "turnos", label: "Turnos" },
 ];
+
+const ORDEM_CHAVE_FILTRO_NA_LISTA: ChaveFiltroCompromissoCal[] = ["reunioes", "treinamentos", "feedback", "turnos"];
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
 
@@ -114,6 +115,14 @@ function dataInicialCarrosselCalendarioRh(): Date {
   return new Date(CALENDARIO_ANO_MIN, CALENDARIO_MES0_MIN, 1);
 }
 
+/** Ao abrir a página: mês civil atual (dia 1); não antes do primeiro mês com dados na grade. */
+function mesInicialCalendarioRhNaEntrada(): Date {
+  const hoje = new Date();
+  const primeiroDoMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const minimo = dataInicialCarrosselCalendarioRh();
+  return primeiroDoMesAtual < minimo ? minimo : primeiroDoMesAtual;
+}
+
 function mesCalendarioAntesDoMinimo(c: Date): boolean {
   return c.getFullYear() < CALENDARIO_ANO_MIN || (c.getFullYear() === CALENDARIO_ANO_MIN && c.getMonth() < CALENDARIO_MES0_MIN);
 }
@@ -156,6 +165,46 @@ type CompromissoEscalaCal = {
 
 /** Compromissos não-turno (futuro: API); hoje lista vazia por dia. */
 type CompromissoAgendaExtra = { id: string; titulo: string };
+
+/** Ordem na grelha do dia: reuniões → treinamentos → feedback → turnos (ver `pesoTurnoExibicaoCalendario`). */
+type LinhaCalendarioDia =
+  | { tipo: "reuniao"; item: CompromissoAgendaExtra }
+  | { tipo: "treinamento"; item: CompromissoAgendaExtra }
+  | { tipo: "feedback"; item: CompromissoAgendaExtra }
+  | { tipo: "turno"; comp: CompromissoEscalaCal };
+
+/** Peso para ordenar turnos na mesma categoria: Comercial, Manhã, Tarde, Noite; depois Compra/Venda/Troca. */
+function pesoTurnoExibicaoCalendario(turno: string): number {
+  switch (turno) {
+    case "Comercial":
+      return 0;
+    case "Manhã":
+      return 1;
+    case "Tarde":
+      return 2;
+    case "Noite":
+      return 3;
+    case "Compra":
+      return 4;
+    case "Venda":
+      return 5;
+    case "Troca":
+      return 6;
+    default:
+      return 50;
+  }
+}
+
+function compararTurnoEscalaCalendario(a: CompromissoEscalaCal, b: CompromissoEscalaCal): number {
+  const pa = pesoTurnoExibicaoCalendario(a.turno);
+  const pb = pesoTurnoExibicaoCalendario(b.turno);
+  if (pa !== pb) return pa - pb;
+  return (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR");
+}
+
+function ordenarTurnosCalendario(turnos: CompromissoEscalaCal[]): CompromissoEscalaCal[] {
+  return [...turnos].sort(compararTurnoEscalaCalendario);
+}
 
 function tituloModalDiaPt(d: Date): string {
   const dow = DAYS_LONG[d.getDay()] ?? "";
@@ -240,166 +289,15 @@ function resumoHorarioTurnoModalCalendario(
   return null;
 }
 
-interface SingleDropdownTheme {
-  cardBg: string;
-  cardBorder: string;
-  text: string;
-}
-
-function SingleDropdown({
-  value,
-  options,
-  onChange,
-  icon,
-  t,
-  accent,
-  triggerAriaLabel,
-}: {
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-  icon?: React.ReactNode;
-  t: SingleDropdownTheme;
-  accent?: string;
-  /** Se definido, substitui o texto fixo «Modo de visualização» no aria-label do botão. */
-  triggerAriaLabel?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const accentColor = accent ?? BRAND.roxoVivo;
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const current = options.find((o) => o.value === value);
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={
-          triggerAriaLabel
-            ? `${triggerAriaLabel}: ${current?.label ?? value}`
-            : `Modo de visualização: ${current?.label ?? value}`
-        }
-        style={{
-          padding: "6px 14px",
-          borderRadius: 999,
-          border: `1px solid ${accentColor}`,
-          background: accentColor.startsWith("var(")
-            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-            : `${accentColor}22`,
-          color: accentColor,
-          fontSize: 13,
-          fontWeight: 600,
-          fontFamily: FONT.body,
-          cursor: "pointer",
-          outline: "none",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          whiteSpace: "nowrap" as const,
-          lineHeight: 1,
-        }}
-      >
-        {icon && <span style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}>{icon}</span>}
-        <span style={{ display: "inline-flex", alignItems: "center" }}>{current?.label}</span>
-        {open ? (
-          <ChevronUp size={9} style={{ opacity: 0.7 }} aria-hidden="true" />
-        ) : (
-          <ChevronDown size={9} style={{ opacity: 0.7 }} aria-hidden="true" />
-        )}
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            zIndex: 200,
-            background: t.cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 12,
-            padding: 8,
-            minWidth: 130,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          }}
-        >
-          {options.map((opt) => {
-            const selected = opt.value === value;
-            return (
-              <button
-                type="button"
-                role="menuitem"
-                key={opt.value}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: selected
-                    ? accentColor.startsWith("var(")
-                      ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                      : `${accentColor}22`
-                    : "transparent",
-                  color: selected ? accentColor : t.text,
-                  fontSize: 12,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontWeight: selected ? 700 : 400,
-                }}
-              >
-                <span
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: "50%",
-                    flexShrink: 0,
-                    border: `1.5px solid ${selected ? accentColor : t.cardBorder}`,
-                    background: selected ? accentColor : "transparent",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {selected ? <Check size={9} color="#fff" aria-hidden="true" /> : null}
-                </span>
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function RhCalendarioPage() {
   const { theme: t, isDark, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_calendario");
   const soPropriosCal = !perm.loading && perm.canView === "proprios";
 
-  const [current, setCurrent] = useState(() => dataInicialCarrosselCalendarioRh());
-  const [filtroCompromissos, setFiltroCompromissos] = useState<FiltroCompromissosCal>("todos");
+  const [current, setCurrent] = useState(() => mesInicialCalendarioRhNaEntrada());
+  /** Vazio = mostrar todos os tipos de compromisso na grelha e contagens. */
+  const [chavesFiltroCompromissos, setChavesFiltroCompromissos] = useState<ChaveFiltroCompromissoCal[]>([]);
   const [modalDia, setModalDia] = useState<Date | null>(null);
   const [modalDiaTab, setModalDiaTab] = useState<"compromissos" | "ofertas">("compromissos");
   const [modalAcaoAberto, setModalAcaoAberto] = useState(false);
@@ -799,14 +697,30 @@ export default function RhCalendarioPage() {
   }
 
   function turnosAgendadosNoDia(date: Date): CompromissoEscalaCal[] {
-    return compromissosPorDiaIso.get(toISO(date)) ?? [];
+    return ordenarTurnosCalendario(compromissosPorDiaIso.get(toISO(date)) ?? []);
   }
 
-  function compromissosVisiveisNoCalendario(date: Date): CompromissoEscalaCal[] {
+  /** Linhas do dia na grelha: Reuniões, Treinamentos, Feedback, Turnos (Comercial → Noite → ofertas). */
+  function linhasCompromissosDiaCalendario(date: Date): LinhaCalendarioDia[] {
     const iso = toISO(date);
-    const turnos = compromissosPorDiaIso.get(iso) ?? [];
-    if (filtroCompromissos === "todos" || filtroCompromissos === "turnos") return turnos;
-    return [];
+    const turnosOrd = ordenarTurnosCalendario(compromissosPorDiaIso.get(iso) ?? []);
+    const turnLinhas: LinhaCalendarioDia[] = turnosOrd.map((comp) => ({ tipo: "turno", comp }));
+    const r: LinhaCalendarioDia[] = reunioesAgendaDoDia(iso).map((item) => ({ tipo: "reuniao", item }));
+    const tr: LinhaCalendarioDia[] = treinamentosAgendaDoDia(iso).map((item) => ({ tipo: "treinamento", item }));
+    const fb: LinhaCalendarioDia[] = feedbackAgendaDoDia(iso).map((item) => ({ tipo: "feedback", item }));
+
+    if (chavesFiltroCompromissos.length === 0) {
+      return [...r, ...tr, ...fb, ...turnLinhas];
+    }
+    const out: LinhaCalendarioDia[] = [];
+    for (const k of ORDEM_CHAVE_FILTRO_NA_LISTA) {
+      if (!chavesFiltroCompromissos.includes(k)) continue;
+      if (k === "reunioes") out.push(...r);
+      else if (k === "treinamentos") out.push(...tr);
+      else if (k === "feedback") out.push(...fb);
+      else if (k === "turnos") out.push(...turnLinhas);
+    }
+    return out;
   }
 
   function contagemItensCalendarioNoDia(date: Date): number {
@@ -815,20 +729,15 @@ export default function RhCalendarioPage() {
     const r = reunioesAgendaDoDia(iso);
     const tr = treinamentosAgendaDoDia(iso);
     const fb = feedbackAgendaDoDia(iso);
-    switch (filtroCompromissos) {
-      case "todos":
-        return turnos.length + r.length + tr.length + fb.length;
-      case "turnos":
-        return turnos.length;
-      case "reunioes":
-        return r.length;
-      case "treinamentos":
-        return tr.length;
-      case "feedback":
-        return fb.length;
-      default:
-        return turnos.length;
+    if (chavesFiltroCompromissos.length === 0) {
+      return turnos.length + r.length + tr.length + fb.length;
     }
+    let n = 0;
+    if (chavesFiltroCompromissos.includes("reunioes")) n += r.length;
+    if (chavesFiltroCompromissos.includes("treinamentos")) n += tr.length;
+    if (chavesFiltroCompromissos.includes("feedback")) n += fb.length;
+    if (chavesFiltroCompromissos.includes("turnos")) n += turnos.length;
+    return n;
   }
 
   function abrirModalDia(d: Date) {
@@ -909,6 +818,52 @@ export default function RhCalendarioPage() {
     const opRow = slug ? mapOpTurnos.get(slug) : undefined;
     const horario = resumoHorarioTurnoModalCalendario(pRow, comp.turno, opRow ?? null);
     return horario ?? "—";
+  }
+
+  function AgendaExtraDiaChip({
+    linha,
+  }: {
+    linha: Extract<LinhaCalendarioDia, { tipo: "reuniao" } | { tipo: "treinamento" } | { tipo: "feedback" }>;
+  }) {
+    const { tipo, item } = linha;
+    const etiqueta = tipo === "reuniao" ? "Reunião" : tipo === "treinamento" ? "Treinamento" : "Feedback";
+    const Icon = tipo === "reuniao" ? Users : tipo === "treinamento" ? BookOpen : MessageSquare;
+    return (
+      <div
+        role="listitem"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "5px 8px",
+          borderRadius: 8,
+          marginBottom: 4,
+          background: isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.08)",
+          border: `1px solid rgba(245,158,11,0.35)`,
+          width: "100%",
+          boxSizing: "border-box",
+          lineHeight: 1.2,
+        }}
+      >
+        <Icon size={11} color="#f59e0b" aria-hidden="true" />
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", fontFamily: FONT.body, flexShrink: 0 }}>{etiqueta}</span>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 500,
+            color: t.text,
+            fontFamily: FONT.body,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            minWidth: 0,
+          }}
+          title={`${etiqueta} — ${item.titulo}`}
+        >
+          {item.titulo}
+        </span>
+      </div>
+    );
   }
 
   function EscalaCompromissoChip({
@@ -1009,7 +964,7 @@ export default function RhCalendarioPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "minmax(140px, auto)", gap: 4 }}>
             {cells.map((date, i) => {
               if (!date) return <div key={i} />;
-              const lista = compromissosVisiveisNoCalendario(date);
+              const lista = linhasCompromissosDiaCalendario(date);
               const totalDia = contagemItensCalendarioNoDia(date);
               return (
                 <div
@@ -1081,13 +1036,17 @@ export default function RhCalendarioPage() {
                     role="list"
                     aria-label="Compromissos do dia na grelha"
                   >
-                    {lista.slice(0, MAX_CHIPS_COMPROMISSOS_DIA).map((comp) => (
-                      <EscalaCompromissoChip
-                        key={`${comp.prestadorId}-${comp.turno}`}
-                        comp={comp}
-                        subtituloModal={soPropriosCal ? horarioSubtituloParaCompromissoCal(comp) : undefined}
-                      />
-                    ))}
+                    {lista.slice(0, MAX_CHIPS_COMPROMISSOS_DIA).map((linha) =>
+                      linha.tipo === "turno" ? (
+                        <EscalaCompromissoChip
+                          key={`${linha.comp.prestadorId}-${linha.comp.turno}`}
+                          comp={linha.comp}
+                          subtituloModal={soPropriosCal ? horarioSubtituloParaCompromissoCal(linha.comp) : undefined}
+                        />
+                      ) : (
+                        <AgendaExtraDiaChip key={`${linha.tipo}-${linha.item.id}`} linha={linha} />
+                      ),
+                    )}
                     {lista.length > MAX_CHIPS_COMPROMISSOS_DIA && (
                       <span
                         role="button"
@@ -1192,7 +1151,11 @@ export default function RhCalendarioPage() {
                   opacity: podeRetrocederMes ? 1 : 0.38,
                   cursor: podeRetrocederMes ? "pointer" : "not-allowed",
                 }}
-                aria-label={podeRetrocederMes ? "Mês anterior" : "Primeiro mês: Abril de 2026"}
+                aria-label={
+                  podeRetrocederMes
+                    ? "Mês anterior"
+                    : `Primeiro mês disponível: ${MONTHS[CALENDARIO_MES0_MIN]} de ${CALENDARIO_ANO_MIN}`
+                }
               >
                 <ChevronLeft size={14} aria-hidden="true" />
               </button>
@@ -1211,16 +1174,6 @@ export default function RhCalendarioPage() {
               <button type="button" onClick={next} style={btnNav} aria-label="Próximo mês">
                 <ChevronRight size={14} aria-hidden="true" />
               </button>
-
-              <SingleDropdown
-                value={filtroCompromissos}
-                options={COMPROMISSOS_FILTER_OPTIONS}
-                onChange={(v) => setFiltroCompromissos(v as FiltroCompromissosCal)}
-                icon={<LayoutList size={13} aria-hidden="true" />}
-                t={t}
-                accent={brand.accent}
-                triggerAriaLabel="Filtrar compromissos"
-              />
 
               {loadingEscala && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>
@@ -1287,6 +1240,71 @@ export default function RhCalendarioPage() {
                 Ação
               </button>
             </div>
+          </div>
+
+          <div
+            role="group"
+            aria-label="Filtrar compromissos por tipo. Sem nenhum botão ativo, mostra todos."
+            style={{
+              paddingTop: 12,
+              marginTop: 12,
+              borderTop: `1px solid ${t.cardBorder}`,
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                width: "100%",
+                textAlign: "center",
+              }}
+            >
+              Compromissos
+              {chavesFiltroCompromissos.length === 0 ? (
+                <span style={{ fontWeight: 400 }}> — sem filtro: todos</span>
+              ) : null}
+            </span>
+            {COMPROMISSOS_FILTRO_BOTOES.map(({ chave, label }) => {
+              const ativo = chavesFiltroCompromissos.includes(chave);
+              const accent = brand.accent;
+              return (
+                <button
+                  key={chave}
+                  type="button"
+                  aria-pressed={ativo}
+                  onClick={() => {
+                    setChavesFiltroCompromissos((prev) =>
+                      prev.includes(chave) ? prev.filter((x) => x !== chave) : [...prev, chave],
+                    );
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 999,
+                    border: `1px solid ${ativo ? accent : t.cardBorder}`,
+                    background: ativo
+                      ? accent.startsWith("var(")
+                        ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 18%, transparent)"
+                        : `${String(accent)}28`
+                      : "transparent",
+                    color: ativo ? accent : t.text,
+                    fontSize: 13,
+                    fontWeight: ativo ? 700 : 500,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           {(hasStaffFilter || hasTimeFilter) && (
@@ -1427,22 +1445,6 @@ export default function RhCalendarioPage() {
           {modalDiaTab === "compromissos" ? (
             <div id="cal-modal-tab-compromissos" role="tabpanel" aria-labelledby="cal-modal-tab-btn-compromissos">
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Turnos</div>
-                {turnosAgendadosNoDia(modalDia).length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="list">
-                    {turnosAgendadosNoDia(modalDia).map((comp) => (
-                      <EscalaCompromissoChip
-                        key={`${comp.prestadorId}-${comp.turno}`}
-                        comp={comp}
-                        subtituloModal={horarioSubtituloParaCompromissoCal(comp)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
-                )}
-              </div>
-              <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Reuniões</div>
                 {reunioesAgendaDoDia(toISO(modalDia)).length > 0 ? (
                   <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
@@ -1466,7 +1468,7 @@ export default function RhCalendarioPage() {
                   <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
                 )}
               </div>
-              <div>
+              <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Feedback</div>
                 {feedbackAgendaDoDia(toISO(modalDia)).length > 0 ? (
                   <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
@@ -1474,6 +1476,22 @@ export default function RhCalendarioPage() {
                       <li key={x.id}>{x.titulo}</li>
                     ))}
                   </ul>
+                ) : (
+                  <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Turnos</div>
+                {turnosAgendadosNoDia(modalDia).length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="list">
+                    {turnosAgendadosNoDia(modalDia).map((comp) => (
+                      <EscalaCompromissoChip
+                        key={`${comp.prestadorId}-${comp.turno}`}
+                        comp={comp}
+                        subtituloModal={horarioSubtituloParaCompromissoCal(comp)}
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
                 )}
