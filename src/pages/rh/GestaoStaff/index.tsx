@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Search, Trash2, Upload, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, History, Loader2, Pencil, Search, Trash2, Upload, Users } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -27,6 +27,7 @@ import {
 import type { Operadora } from "../../../types";
 import { PageHeader } from "../../../components/PageHeader";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
+import { ListaHistoricoRh } from "../../../components/rh/ListaHistoricoRh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import type { RhFuncionario, RhFuncionarioHistorico } from "../../../types/rhFuncionario";
 
@@ -114,6 +115,119 @@ function CampoLeitura({ k, v, t }: { k: string; v: string; t: { textMuted: strin
   );
 }
 
+function ModalStaffHistorico({
+  row,
+  nomeTimeOrganograma,
+  operadorasNome,
+  onClose,
+  t,
+}: {
+  row: RhFuncionario;
+  nomeTimeOrganograma: string;
+  operadorasNome: Record<string, string>;
+  onClose: () => void;
+  t: ReturnType<typeof useApp>["theme"];
+}) {
+  const [items, setItems] = useState<RhFuncionarioHistorico[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [nomesAutor, setNomesAutor] = useState<Record<string, string>>({});
+
+  const opSlug = row.staff_operadora_slug?.trim();
+  const opNome = opSlug ? operadorasNome[opSlug] ?? opSlug : "—";
+
+  useEffect(() => {
+    let cancel = false;
+    setLoading(true);
+    void (async () => {
+      const { data, error } = await supabase
+        .from("rh_funcionario_historico")
+        .select("*")
+        .eq("rh_funcionario_id", row.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (cancel) return;
+      const list = (error ? [] : (data ?? [])) as RhFuncionarioHistorico[];
+      setItems(list);
+      const ids = [...new Set(list.map((h) => h.created_by).filter(Boolean))] as string[];
+      if (ids.length === 0) {
+        setNomesAutor({});
+        setLoading(false);
+        return;
+      }
+      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+      if (cancel) return;
+      const m: Record<string, string> = {};
+      (profs ?? []).forEach((p: { id: string; name: string | null }) => {
+        m[p.id] = (p.name ?? "").trim() || p.id.slice(0, 8);
+      });
+      setNomesAutor(m);
+      setLoading(false);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [row.id]);
+
+  const resolveAutor = useCallback(
+    (h: RhFuncionarioHistorico) => {
+      const det = h.detalhes ?? {};
+      const labelUser = det.usuario_label != null ? String(det.usuario_label).trim() : "";
+      if (labelUser) return labelUser;
+      if (h.created_by) return nomesAutor[h.created_by] ?? `${h.created_by.slice(0, 8)}…`;
+      return "—";
+    },
+    [nomesAutor],
+  );
+
+  return (
+    <ModalBase maxWidth={720} onClose={onClose}>
+      <ModalHeader title="Histórico" onClose={onClose} />
+      <div style={{ padding: "0 4px 16px", fontFamily: FONT.body }}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "14px 16px",
+            borderRadius: 12,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: t.textMuted,
+              marginBottom: 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              fontFamily: FONT.body,
+            }}
+          >
+            Registro do prestador
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px 20px" }}>
+            <CampoLeitura k="Nome" v={row.nome} t={t} />
+            <CampoLeitura k="Nickname" v={row.staff_nickname?.trim() ?? ""} t={t} />
+            <CampoLeitura k="Time" v={nomeTimeOrganograma} t={t} />
+            <CampoLeitura k="Função" v={row.cargo?.trim() ?? ""} t={t} />
+            <CampoLeitura k="Operadora" v={opNome} t={t} />
+            <CampoLeitura k="Status" v={labelStatusPrestador(row.status)} t={t} />
+            <CampoLeitura k="ID operacional" v={row.staff_id_operacional?.trim() ?? ""} t={t} />
+          </div>
+        </div>
+        <ListaHistoricoRh
+          items={items}
+          loading={loading}
+          t={t}
+          variant="staff"
+          resolveAutor={resolveAutor}
+          emptyMessage="Nenhum registro no histórico."
+        />
+      </div>
+    </ModalBase>
+  );
+}
+
 export default function RhGestaoStaffPage() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
@@ -133,6 +247,7 @@ export default function RhGestaoStaffPage() {
 
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
+  const [modalHistorico, setModalHistorico] = useState<RhFuncionario | null>(null);
 
   const [sortCol, setSortCol] = useState<StaffTabelaSortCol>("nome");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -305,6 +420,20 @@ export default function RhGestaoStaffPage() {
   };
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
+  const btnIconTabela: CSSProperties = {
+    padding: "6px 10px",
+    borderRadius: 8,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg,
+    color: t.text,
+    cursor: "pointer",
+    fontSize: 12,
+    fontFamily: FONT.body,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
 
   if (perm.loading) {
     return (
@@ -625,53 +754,28 @@ export default function RhGestaoStaffPage() {
                         {row.staff_id_operacional?.trim() || "—"}
                       </td>
                       <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                           <button
                             type="button"
                             onClick={() => setModalVer(row)}
-                            aria-label={`Ver ${row.nome}`}
-                            style={{
-                              padding: "5px 12px",
-                              borderRadius: 8,
-                              border: `1px solid ${t.cardBorder}`,
-                              background: t.inputBg ?? "transparent",
-                              color: t.text,
-                              fontSize: 11,
-                              fontWeight: 700,
-                              fontFamily: FONT.body,
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                            }}
+                            style={btnIconTabela}
+                            aria-label={`Visualizar ${row.nome}`}
                           >
                             <Eye size={14} aria-hidden />
-                            Ver
                           </button>
                           {perm.canEditarOk ? (
-                            <button
-                              type="button"
-                              onClick={() => setModalEditar(row)}
-                              aria-label={`Editar ${row.nome}`}
-                              style={{
-                                padding: "5px 12px",
-                                borderRadius: 8,
-                                border: `1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)`,
-                                background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-                                color: "var(--brand-action, #7c3aed)",
-                                fontSize: 11,
-                                fontWeight: 700,
-                                fontFamily: FONT.body,
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                              }}
-                            >
+                            <button type="button" onClick={() => setModalEditar(row)} style={btnIconTabela} aria-label={`Editar ${row.nome}`}>
                               <Pencil size={14} aria-hidden />
-                              Editar
                             </button>
                           ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setModalHistorico(row)}
+                            style={btnIconTabela}
+                            aria-label={`Histórico de ${row.nome}`}
+                          >
+                            <History size={14} aria-hidden />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -711,6 +815,16 @@ export default function RhGestaoStaffPage() {
           }}
           t={t}
           brand={brand}
+        />
+      ) : null}
+
+      {modalHistorico ? (
+        <ModalStaffHistorico
+          row={modalHistorico}
+          nomeTimeOrganograma={modalHistorico.org_time_id ? nomePorTimeId.get(modalHistorico.org_time_id) ?? "" : ""}
+          operadorasNome={operadorasNome}
+          onClose={() => setModalHistorico(null)}
+          t={t}
         />
       ) : null}
     </div>
@@ -1355,6 +1469,19 @@ function ModalStaffEditar({
             <input type="text" readOnly value={row.escala?.trim() || "—"} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
           </div>
           <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle} htmlFor="staff-op">
+              Operadora
+            </label>
+            <select id="staff-op" value={opSlug} onChange={(e) => setOpSlug(e.target.value)} style={inputStyle} aria-label="Operadora">
+              <option value="">—</option>
+              {operadoraSlugs.map((slug) => (
+                <option key={slug} value={slug}>
+                  {operadorasNome[slug] ?? slug}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginBottom: 14 }}>
             <span style={labelStyle}>Turno</span>
             <select
               id="staff-turno"
@@ -1413,25 +1540,6 @@ function ModalStaffEditar({
             </div>
           ) : null}
           <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle} htmlFor="staff-op">
-              Operadora
-            </label>
-            <select id="staff-op" value={opSlug} onChange={(e) => setOpSlug(e.target.value)} style={inputStyle} aria-label="Operadora">
-              <option value="">—</option>
-              {operadoraSlugs.map((slug) => (
-                <option key={slug} value={slug}>
-                  {operadorasNome[slug] ?? slug}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle} htmlFor="staff-barcode">
-              Barcode
-            </label>
-            <input id="staff-barcode" type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} style={inputStyle} />
-          </div>
-          <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-id-op">
               ID operacional
             </label>
@@ -1446,6 +1554,12 @@ function ModalStaffEditar({
             <div id="staff-id-op-hint" style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
               Código ou número usado na operação
             </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle} htmlFor="staff-barcode">
+              Barcode
+            </label>
+            <input id="staff-barcode" type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} style={inputStyle} />
           </div>
         </div>
       )}
