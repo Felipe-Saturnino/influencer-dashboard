@@ -1608,16 +1608,24 @@ export default function RhPrestadoresPage() {
   const montarPayload = (statusPrestador: RhFuncionario["status"]) =>
     buildRhFuncionarioPayloadFromState(form, statusPrestador, podeVerDadosSensiveis, modalForm === "novo");
 
-  /** Reforça e-mails do formulário na Edge (prioridade: Spin → pessoal). */
+  /**
+   * E-mails para a Edge: valor válido do formulário, senão o já gravado em `row`
+   * (evita que `emailSpin: ""` / `emailPessoal: ""` apaguem os da BD e impeçam a sync
+   * quando o operador não vê dados sensíveis ou não abriu o separador de e-mails).
+   */
   const dispararSyncUsuarioPrestadorSeEmailSpin = async (row: RhFuncionario, emailsDoFormulario?: { emailSpin?: string; emailPessoal?: string }) => {
-    const spin = (emailsDoFormulario?.emailSpin !== undefined ? emailsDoFormulario.emailSpin : (row.email_spin ?? "")).trim().toLowerCase();
-    const personal = (emailsDoFormulario?.emailPessoal !== undefined ? emailsDoFormulario.emailPessoal : (row.email ?? "")).trim().toLowerCase();
-    const useSpin = spin.length > 0 && validarEmail(spin);
-    const usePersonal = personal.length > 0 && validarEmail(personal);
-    if (!useSpin && !usePersonal) return;
+    const emailValidoNormalizado = (s: string | null | undefined) => {
+      const t = String(s ?? "").trim().toLowerCase();
+      return t.length > 0 && validarEmail(t) ? t : "";
+    };
+    const spin =
+      emailValidoNormalizado(emailsDoFormulario?.emailSpin) || emailValidoNormalizado(row.email_spin ?? null);
+    const personal =
+      emailValidoNormalizado(emailsDoFormulario?.emailPessoal) || emailValidoNormalizado(row.email ?? null);
+    if (!spin && !personal) return;
     const res = await syncUsuarioPrestadorAposSalvarRh(row.id, {
-      emailSpin: useSpin ? spin : undefined,
-      emailPessoal: usePersonal ? personal : undefined,
+      emailSpin: spin || undefined,
+      emailPessoal: personal || undefined,
     });
     const m = mensagemFeedbackSyncPrestador(res);
     if (m) setErroGlobal(m);
