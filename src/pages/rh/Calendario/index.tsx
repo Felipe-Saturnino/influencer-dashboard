@@ -901,12 +901,22 @@ export default function RhCalendarioPage() {
     justifyContent: "center",
   };
 
+  /** Início/fim do turno (ou "—"); `undefined` para Compra/Venda/Troca. */
+  function horarioSubtituloParaCompromissoCal(comp: CompromissoEscalaCal): string | undefined {
+    if (turnoCalendarioEhCompraVendaTroca(comp.turno)) return undefined;
+    const pRow = prestadorPorId.get(comp.prestadorId);
+    const slug = (pRow?.staff_operadora_slug ?? "").trim();
+    const opRow = slug ? mapOpTurnos.get(slug) : undefined;
+    const horario = resumoHorarioTurnoModalCalendario(pRow, comp.turno, opRow ?? null);
+    return horario ?? "—";
+  }
+
   function EscalaCompromissoChip({
     comp,
     subtituloModal,
   }: {
     comp: CompromissoEscalaCal;
-    /** Segunda linha só no modal do dia (início/fim ou "—"). */
+    /** Segunda linha: início/fim (ou "—") no modal; na grelha só em modo «Próprios» (prestador). */
     subtituloModal?: string;
   }) {
     const temSubtitulo = subtituloModal !== undefined;
@@ -1072,7 +1082,11 @@ export default function RhCalendarioPage() {
                     aria-label="Compromissos do dia na grelha"
                   >
                     {lista.slice(0, MAX_CHIPS_COMPROMISSOS_DIA).map((comp) => (
-                      <EscalaCompromissoChip key={`${comp.prestadorId}-${comp.turno}`} comp={comp} />
+                      <EscalaCompromissoChip
+                        key={`${comp.prestadorId}-${comp.turno}`}
+                        comp={comp}
+                        subtituloModal={soPropriosCal ? horarioSubtituloParaCompromissoCal(comp) : undefined}
+                      />
                     ))}
                     {lista.length > MAX_CHIPS_COMPROMISSOS_DIA && (
                       <span
@@ -1416,20 +1430,13 @@ export default function RhCalendarioPage() {
                 <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>Turnos</div>
                 {turnosAgendadosNoDia(modalDia).length > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }} role="list">
-                    {turnosAgendadosNoDia(modalDia).map((comp) => {
-                      const pRow = prestadorPorId.get(comp.prestadorId);
-                      const slug = (pRow?.staff_operadora_slug ?? "").trim();
-                      const opRow = slug ? mapOpTurnos.get(slug) : undefined;
-                      const horario = resumoHorarioTurnoModalCalendario(pRow, comp.turno, opRow ?? null);
-                      const subtituloModal = turnoCalendarioEhCompraVendaTroca(comp.turno) ? undefined : (horario ?? "—");
-                      return (
-                        <EscalaCompromissoChip
-                          key={`${comp.prestadorId}-${comp.turno}`}
-                          comp={comp}
-                          subtituloModal={subtituloModal}
-                        />
-                      );
-                    })}
+                    {turnosAgendadosNoDia(modalDia).map((comp) => (
+                      <EscalaCompromissoChip
+                        key={`${comp.prestadorId}-${comp.turno}`}
+                        comp={comp}
+                        subtituloModal={horarioSubtituloParaCompromissoCal(comp)}
+                      />
+                    ))}
                   </div>
                 ) : (
                   <div style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Sem dados para o período selecionado.</div>
