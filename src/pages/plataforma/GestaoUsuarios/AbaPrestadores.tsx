@@ -107,9 +107,14 @@ export function AbaPrestadores({ t }: AbaPrestadoresProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: 0 }}>
-        Marque as páginas que cada área de atuação pode acessar. Usuários com várias áreas veem a{" "}
-        <strong>união</strong> das páginas. As ações (criar/editar/excluir) continuam na aba Permissões para o perfil
-        Prestadores. Alterações de menu exigem novo login.
+        Para cada <strong style={{ color: t.text }}>área de atuação</strong>, marque em que páginas esse perfil pode entrar
+        no menu. O resultado efetivo para cada utilizador prestador é a{" "}
+        <strong style={{ color: t.text }}>interseção</strong> entre estas marcações e a matriz da aba{" "}
+        <strong style={{ color: t.text }}>Permissões</strong> (Ver / Criar / Editar / Excluir no perfil Prestadores).
+        Quem tem várias áreas recebe a <strong>união</strong> das páginas permitidas por área, sempre cortada pelas
+        permissões. <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong>{" "}
+        e <strong style={{ color: t.text }}>Ajuda</strong> seguem só a aba Permissões. Alterações de menu podem exigir novo
+        login.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>

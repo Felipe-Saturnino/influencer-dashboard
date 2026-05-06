@@ -89,20 +89,8 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
     padding: "10px 14px",
   };
 
-  const ordemSecoes = [
-    "Dashboards",
-    "Lives",
-    "Aquisição",
-    "Marketing",
-    "Estúdio",
-    "RH",
-    "Conteúdo",
-    "Plataforma",
-    "Geral",
-  ];
-  const secoes = [...new Set(PAGES.map((p) => p.secao))].sort(
-    (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR")
-  );
+  /** Secções na ordem em que aparecem em `PAGES` (alinhado ao menu lateral; Geral por último). */
+  const secoes = [...new Set(PAGES.map((p) => p.secao))];
 
   // ── Renderização das linhas ──────────────────────────────────────────────────
   // Estratégia: para cada seção, inserimos:
@@ -111,9 +99,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
   const linhas: React.ReactNode[] = [];
 
   secoes.forEach((secao, secaoIdx) => {
-    const pagesDaSec = PAGES
-      .filter((p) => p.secao === secao)
-      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+    const pagesDaSec = PAGES.filter((p) => p.secao === secao);
 
     // Linha separadora de seção — colspan 6, de ponta a ponta
     if (secaoIdx > 0) {
@@ -217,6 +203,35 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
+        Selecione um perfil abaixo para configurar permissões por página. O perfil{" "}
+        <strong style={{ color: t.text }}>Administrador</strong> não é configurado aqui: na plataforma mantém acesso total
+        (Ver, Criar, Editar e Excluir) a todas as páginas.
+      </p>
+      {roleAtivo === "gestor" ? (
+        <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
+          Perfil <strong style={{ color: t.text }}>Gestor</strong>: aqui define-se por página o que o perfil pode{" "}
+          <strong style={{ color: t.text }}>Ver</strong>, <strong style={{ color: t.text }}>Criar</strong>,{" "}
+          <strong style={{ color: t.text }}>Editar</strong> e <strong style={{ color: t.text }}>Excluir</strong>. Cada
+          utilizador gestor precisa de pelo menos um <strong style={{ color: t.text }}>tipo de gestor</strong> (aba Usuários); o menu
+          operacional cruza estas permissões com a união das páginas marcadas para esses tipos na aba{" "}
+          <strong style={{ color: t.text }}>Gestores</strong>.{" "}
+          <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong> e{" "}
+          <strong style={{ color: t.text }}>Ajuda</strong> não passam pela aba Gestores.
+        </p>
+      ) : null}
+      {roleAtivo === "prestador" ? (
+        <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
+          Perfil <strong style={{ color: t.text }}>Prestadores</strong>: nesta aba configuram-se, por página,{" "}
+          <strong style={{ color: t.text }}>Ver</strong>, <strong style={{ color: t.text }}>Criar</strong>,{" "}
+          <strong style={{ color: t.text }}>Editar</strong> e <strong style={{ color: t.text }}>Excluir</strong> para
+          qualquer utilizador com este perfil. No cadastro (aba Usuários), cada prestador tem de ter pelo menos uma{" "}
+          <strong style={{ color: t.text }}>área de atuação</strong>; o menu cruza estas permissões com a união das páginas
+          marcadas para essas áreas na aba <strong style={{ color: t.text }}>Prestadores</strong>.{" "}
+          <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong> e{" "}
+          <strong style={{ color: t.text }}>Ajuda</strong> não passam pela aba Prestadores.
+        </p>
+      ) : null}
       <div role="tablist" aria-label="Perfil de permissões" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {ROLES_PERMISSOES.map((r) => {
           const ativo = roleAtivo === r;

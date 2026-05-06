@@ -7,13 +7,14 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
-import { Live, Plataforma } from "../../../types";
+import { Live, Plataforma, Role } from "../../../types";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
 import { X, Trash2, Lock, Video, Loader2 } from "lucide-react";
 
 import { PLATAFORMAS, PLAT_COLOR, PLAT_LINK_KEY } from "../../../constants/platforms";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
+import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
 function dateToISOLocal(d: Date): string {
   const y = d.getFullYear();
@@ -47,7 +48,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   const perm = usePermission("agenda");
   const isInfluencer = user?.role === "influencer";
   const isEdit       = !!live;
-  const isAdminOuGestor = user?.role === "admin" || user?.role === "gestor";
+  const isAdminOuGestor =
+    !!user?.role && ROLES_STAFF_OPERACOES_LIVES.includes(user.role as Role);
   const exigeAgendarSoDiaSeguinte = user?.role === "influencer" || user?.role === "operador";
   const statusValidado = live?.status === "realizada" || live?.status === "nao_realizada";
   // Apenas Admin e Gestor podem editar/excluir lives com status realizada ou não realizada

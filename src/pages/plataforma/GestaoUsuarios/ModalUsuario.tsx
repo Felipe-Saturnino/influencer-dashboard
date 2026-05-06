@@ -9,6 +9,7 @@ import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import type { Theme } from "../../../constants/theme";
 import { BRAND, ROLES, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS } from "./constants";
+import { ROLES_STAFF_APENAS_PERMISSOES } from "../../../lib/staffRoles";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
 
 interface ModalUsuarioProps {
@@ -31,7 +32,6 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
   const [scopePrestadorTipos, setScopePrestadorTipos] = useState<string[]>([]);
   const [paresAgencia, setParesAgencia] = useState<Array<{ influencerId: string; operadoraSlug: string }>>([]);
   const [influencers, setInfluencers] = useState<{ id: string; nome: string }[]>([]);
-  const [emprestadoPara, setEmprestadoPara] = useState(editando?.emprestado_para ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -63,18 +63,22 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
     setNome(editando?.name ?? "");
     setEmail(editando?.email ?? "");
     setRole((editando?.role ?? "gestor") as Role);
-    setEmprestadoPara(editando?.emprestado_para ?? "");
     setErro("");
-  }, [editando?.id, editando?.name, editando?.email, editando?.role, editando?.emprestado_para]);
+  }, [editando?.id, editando?.name, editando?.email, editando?.role]);
 
   useEffect(() => {
     const scopes = editando?.scopes ?? [];
+    const r = editando?.role ?? role;
     setScopeInfluencers(scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref));
-    setScopeOperadoras(scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref));
+    setScopeOperadoras(
+      r === "gestor" || ROLES_STAFF_APENAS_PERMISSOES.includes(r as Role)
+        ? []
+        : scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref)
+    );
     setScopePares(scopes.filter((s) => s.scope_type === "agencia_par").map((s) => s.scope_ref));
     setScopeGestorTipos(scopes.filter((s) => s.scope_type === "gestor_tipo").map((s) => s.scope_ref));
     setScopePrestadorTipos(scopes.filter((s) => s.scope_type === "prestador_tipo").map((s) => s.scope_ref));
-  }, [editando]);
+  }, [editando, role]);
 
   /** Troca explícita no select: limpa escopos incompatíveis (evita useEffect em [role] que conflita com sync de `editando`). */
   const handleRoleChange = (next: Role) => {
@@ -183,7 +187,13 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
       const scopeOperadorasArr =
         role === "operador"
           ? (Array.isArray(scopeOperadoras) ? scopeOperadoras : []).slice(0, 1)
-          : Array.isArray(scopeOperadoras) ? scopeOperadoras : [];
+          : role === "gestor"
+            ? []
+            : ROLES_STAFF_APENAS_PERMISSOES.includes(role)
+              ? []
+              : Array.isArray(scopeOperadoras)
+                ? scopeOperadoras
+                : [];
       const scopeGestorTiposArr = role === "gestor" ? (Array.isArray(scopeGestorTipos) ? scopeGestorTipos : []) : [];
       const scopePrestadorTiposArr =
         role === "prestador" ? (Array.isArray(scopePrestadorTipos) ? scopePrestadorTipos : []) : [];
@@ -193,7 +203,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           userId: uid,
           name: nome.trim(),
           role,
-          emprestadoPara: emprestadoPara.trim(),
+          emprestadoPara: null,
           scopeInfluencers: scopeInfluencersArr,
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
@@ -206,7 +216,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           email: email.trim().toLowerCase(),
           nome: nome.trim(),
           role,
-          emprestadoPara: emprestadoPara.trim(),
+          emprestadoPara: null,
           scopeInfluencers: scopeInfluencersArr,
           scopeOperadoras: scopeOperadorasArr,
           scopePares: scopeParesParaApi,
@@ -426,21 +436,6 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             onBlur={(e) => { e.currentTarget.style.borderColor = t.cardBorder; }}
           />
         </div>
-        <div style={field}>
-          <label style={labelStyle}>Emprestado para</label>
-          <input
-            style={inputStyle}
-            value={emprestadoPara}
-            onChange={(e) => setEmprestadoPara(e.target.value)}
-            placeholder="Ex.: mesmo nome usado em Figurinos ao emprestar peça"
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = BRAND.roxoVivo;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = t.cardBorder;
-            }}
-          />
-        </div>
         {!editando && (
           <div style={field}>
             <label style={labelStyle}>
@@ -461,14 +456,14 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         <div style={field}>
           <label style={labelStyle}>Perfil</label>
           <select style={selectStyle} value={role} onChange={(e) => handleRoleChange(e.target.value as Role)}>
-            {[...ROLES].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((r) => (
+            {ROLES.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
               </option>
             ))}
           </select>
         </div>
-        {role === "admin" ? (
+        {role === "admin" || role === "executivo" || ROLES_STAFF_APENAS_PERMISSOES.includes(role) ? (
           <div style={field}>
             <label style={labelStyle}>Escopo de acesso</label>
             <div
@@ -483,27 +478,68 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
                 fontStyle: "italic",
               }}
             >
-              Todos os influencers e operadoras
+              {role === "admin"
+                ? "Todos os influencers e operadoras"
+                : "Todos os influencers e todas as operadoras — permissões apenas pela aba Permissões (sem escopo por operadora)."}
             </div>
           </div>
         ) : role === "gestor" ? (
-          <MultiSelect
-            label="Tipos de gestor"
-            obrigatorio
-            cor={roleBadgeColor("gestor")}
-            items={GESTOR_TIPOS.map((g) => ({ value: g.slug, label: g.label }))}
-            selected={scopeGestorTipos}
-            onToggle={(v) => toggleItem(scopeGestorTipos, setScopeGestorTipos, v)}
-          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <MultiSelect
+              label="Tipos de gestor"
+              obrigatorio
+              cor={roleBadgeColor("gestor")}
+              items={GESTOR_TIPOS.map((g) => ({ value: g.slug, label: g.label }))}
+              selected={scopeGestorTipos}
+              onToggle={(v) => toggleItem(scopeGestorTipos, setScopeGestorTipos, v)}
+            />
+            <div style={field}>
+              <label style={labelStyle}>Operadoras</label>
+              <div
+                style={{
+                  background: t.inputBg ?? t.cardBg,
+                  border: `1px solid ${t.cardBorder}`,
+                  borderRadius: 8,
+                  padding: "10px 14px",
+                  fontFamily: FONT.body,
+                  fontSize: 14,
+                  color: t.textMuted,
+                  fontStyle: "italic",
+                }}
+              >
+                Todas as operadoras — igual ao perfil Executivo. Permissões de menu combinam tipos de gestor (aba Gestores)
+                com a aba Permissões.
+              </div>
+            </div>
+            <MultiSelect
+              label="Influencers"
+              cor={roleBadgeColor("operador")}
+              items={influencers.map((i) => ({ value: i.id, label: i.nome }))}
+              selected={scopeInfluencers}
+              onToggle={(v) => toggleItem(scopeInfluencers, setScopeInfluencers, v)}
+            />
+            <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+              Influencers opcionais limitam a visão nos dashboards quando indicados; sem seleção, aplicam-se todos os
+              influencers permitidos pelo restante das permissões.
+            </p>
+          </div>
         ) : role === "prestador" ? (
-          <MultiSelect
-            label="Áreas de atuação"
-            obrigatorio
-            cor={roleBadgeColor("prestador")}
-            items={PRESTADOR_TIPOS.map((g) => ({ value: g.slug, label: g.label }))}
-            selected={scopePrestadorTipos}
-            onToggle={(v) => toggleItem(scopePrestadorTipos, setScopePrestadorTipos, v)}
-          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <MultiSelect
+              label="Áreas de atuação"
+              obrigatorio
+              cor={roleBadgeColor("prestador")}
+              items={PRESTADOR_TIPOS.map((g) => ({ value: g.slug, label: g.label }))}
+              selected={scopePrestadorTipos}
+              onToggle={(v) => toggleItem(scopePrestadorTipos, setScopePrestadorTipos, v)}
+            />
+            <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+              O acesso efetivo combina a aba <strong style={{ color: t.text }}>Permissões</strong> (perfil Prestadores) com
+              a aba <strong style={{ color: t.text }}>Prestadores</strong>: só entram no menu as páginas permitidas para
+              as áreas selecionadas e que também estejam autorizadas nas permissões. Utilizadores com várias áreas veem a
+              união das páginas das respectivas colunas na aba Prestadores.
+            </p>
+          </div>
         ) : role === "agencia" ? (
           <ParesAgenciaUI
             pares={paresAgencia}
@@ -528,7 +564,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           />
         ) : (
           <>
-            {role !== "executivo" && role !== "operador" && (
+            {role !== "operador" && !ROLES_STAFF_APENAS_PERMISSOES.includes(role) && (
               <MultiSelect
                 label="Influencers (opcional)"
                 cor={roleBadgeColor("operador")}

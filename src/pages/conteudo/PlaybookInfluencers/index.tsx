@@ -19,7 +19,16 @@ const PLAYBOOK_SUBTITULO_PARAGRAFOS = [
 ] as const;
 
 /** Papéis que podem ver o painel de auditoria (além de usePermission.canEditarOk). Operador fica de fora. */
-const ROLES_AUDITORIA_PLAYBOOK: Role[] = ["admin", "gestor", "executivo", "agencia"];
+const ROLES_AUDITORIA_PLAYBOOK: Role[] = [
+  "admin",
+  "gestor",
+  "executivo",
+  "agencia",
+  "shift_leader",
+  "service_manager",
+  "figurino",
+  "rh",
+];
 
 /** Mapa id → status em `influencer_perfil` (ausência de linha = tratado como ativo, igual Lives → Influencers). */
 function mapaStatusPerfil(rows: { id: string; status: string | null }[] | null | undefined): Map<string, string | null> {

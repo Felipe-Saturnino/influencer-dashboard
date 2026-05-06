@@ -6,7 +6,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
-import type { Operadora, InfluencerOperadora } from "../../../types";
+import type { Operadora, InfluencerOperadora, Role } from "../../../types";
 import {
   Eye, EyeOff, Pencil, X, ChevronDown, Loader2, Shield,
   Mic, Users, AlertCircle, CheckCircle, Coins, Building2,
@@ -18,6 +18,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { DashboardPageHeader, SelectComIcone } from "../../../components/dashboard";
+import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
 // ─── LOGOS SVG DAS PLATAFORMAS ────────────────────────────────────────────────
 import { PLATAFORMAS, PLAT_COLOR, type Plataforma } from "../../../constants/platforms";
@@ -196,7 +197,8 @@ export default function Influencers() {
   const podeEditarInf = (infId: string) =>
     perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(infId));
   // Status só pode ser alterado por Admin ou Gestor
-  const podeAlterarStatus = user?.role === "admin" || user?.role === "gestor";
+  const podeAlterarStatus =
+    !!user?.role && ROLES_STAFF_OPERACOES_LIVES.includes(user.role as Role);
 
   const [list,           setList]           = useState<Influencer[]>([]);
   const [operadorasList, setOperadorasList] = useState<Operadora[]>([]);
@@ -1036,7 +1038,8 @@ function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDark }: {
     return () => window.clearTimeout(id);
   }, []);
   // Status e Cachê somente Gestores e Admin podem alterar
-  const podeAlterarStatusCache = user?.role === "admin" || user?.role === "gestor";
+  const podeAlterarStatusCache =
+    !!user?.role && ROLES_STAFF_OPERACOES_LIVES.includes(user.role as Role);
 
   const inicialOperadoras: OperadorasFormState = {};
   operadorasList.forEach((o) => {

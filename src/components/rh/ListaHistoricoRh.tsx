@@ -65,10 +65,17 @@ export function ListaHistoricoRh({
   items,
   loading,
   t,
+  variant = "default",
+  resolveAutor,
+  emptyMessage,
 }: {
   items: RhFuncionarioHistorico[];
   loading: boolean;
   t: { text: string; textMuted: string; cardBorder: string; inputBg: string };
+  /** Layout da Gestão de Staff: data/hora e usuário no topo; registro abaixo. */
+  variant?: "default" | "staff";
+  resolveAutor?: (h: RhFuncionarioHistorico) => string;
+  emptyMessage?: string;
 }) {
   if (loading) {
     return (
@@ -81,7 +88,7 @@ export function ListaHistoricoRh({
   if (items.length === 0) {
     return (
       <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-        Sem dados para o período selecionado.
+        {emptyMessage ?? "Sem dados para o período selecionado."}
       </div>
     );
   }
@@ -94,13 +101,14 @@ export function ListaHistoricoRh({
         const det = h.detalhes ?? {};
         const titulo = HIST_TIPO_LABEL[h.tipo] ?? h.tipo;
         const quando = new Date(h.created_at).toLocaleString("pt-BR");
-        return (
-          <li key={h.id} style={cardStyleHistoricoPorTipo(h.tipo, t)}>
-            <div style={{ fontWeight: 800, color: t.text, marginBottom: 6 }}>{titulo}</div>
-            <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
-              {quando}
-              {det.usuario_label ? ` · ${String(det.usuario_label)}` : ""}
-            </div>
+        const autorExibicao =
+          variant === "staff" && resolveAutor
+            ? resolveAutor(h)
+            : det.usuario_label
+              ? String(det.usuario_label)
+              : "";
+        const detalhesCorpo = (
+          <>
             {"alteracoes" in det && Array.isArray(det.alteracoes) ? (
               <ul style={{ margin: "6px 0 0", paddingLeft: 18, color: t.text }}>
                 {(det.alteracoes as { campo: string; antes: string; depois: string }[]).map((alt, j) => (
@@ -231,6 +239,41 @@ export function ListaHistoricoRh({
                 ))}
               </div>
             ) : null}
+          </>
+        );
+        return (
+          <li key={h.id} style={cardStyleHistoricoPorTipo(h.tipo, t)}>
+            {variant === "staff" ? (
+              <>
+                <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
+                  <span style={{ fontWeight: 700, color: t.text }}>Data/Hora:</span> {quando}
+                </div>
+                <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 10, fontFamily: FONT.body }}>
+                  <span style={{ fontWeight: 700, color: t.text }}>Usuário que registrou:</span>{" "}
+                  {autorExibicao.trim() || "—"}
+                </div>
+                <div
+                  style={{
+                    marginTop: 2,
+                    paddingTop: 12,
+                    borderTop: `1px solid ${t.cardBorder}`,
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <div style={{ fontWeight: 800, color: t.text, marginBottom: 8, fontSize: 13 }}>{titulo}</div>
+                  {detalhesCorpo}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontWeight: 800, color: t.text, marginBottom: 6 }}>{titulo}</div>
+                <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
+                  {quando}
+                  {autorExibicao ? ` · ${autorExibicao}` : ""}
+                </div>
+                {detalhesCorpo}
+              </>
+            )}
           </li>
         );
       })}

@@ -6,12 +6,12 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { Campanha } from "../../../types";
-import { Pencil, AlertCircle } from "lucide-react";
+import { Pencil, AlertCircle, Trash2 } from "lucide-react";
 import { GiMegaphone } from "react-icons/gi";
 import { PageHeader } from "../../../components/PageHeader";
 import { BlocoLabel } from "../../../components/BlocoLabel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 
@@ -37,6 +37,9 @@ export default function Campanhas() {
   const [editando, setEditando] = useState<Campanha | null>(null);
   type CampSortCol = "nome" | "operadora" | "classificacao" | "criada";
   const [sortCamp, setSortCamp] = useState<{ col: CampSortCol; dir: SortDir }>({ col: "classificacao", dir: "desc" });
+  const [campanhaParaExcluir, setCampanhaParaExcluir] = useState<Campanha | null>(null);
+  const [excluindoCampanha, setExcluindoCampanha] = useState(false);
+  const [erroExcluirCampanha, setErroExcluirCampanha] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -107,6 +110,29 @@ export default function Campanhas() {
     fontSize: 13,
     verticalAlign: "middle",
     borderBottom: `1px solid ${t.cardBorder}`,
+  };
+
+  const mostrarColunaAcoes = perm.canEditarOk || perm.canExcluirOk;
+
+  const confirmarExcluirCampanha = async () => {
+    if (!campanhaParaExcluir?.id) return;
+    setErroExcluirCampanha(null);
+    setExcluindoCampanha(true);
+    try {
+      const { error: errAlias } = await supabase
+        .from("utm_aliases")
+        .update({ campanha_id: null })
+        .eq("campanha_id", campanhaParaExcluir.id);
+      if (errAlias) throw errAlias;
+      const { error } = await supabase.from("campanhas").delete().eq("id", campanhaParaExcluir.id);
+      if (error) throw error;
+      setCampanhaParaExcluir(null);
+      await carregar();
+    } catch (e: unknown) {
+      setErroExcluirCampanha(e instanceof Error ? e.message : "Não foi possível excluir a campanha.");
+    } finally {
+      setExcluindoCampanha(false);
+    }
   };
 
   if (perm.canView === "nao") {
@@ -302,7 +328,7 @@ export default function Campanhas() {
                     }))
                   }
                 />
-                {perm.canEditarOk && <th scope="col" style={th}>Ações</th>}
+                {mostrarColunaAcoes && <th scope="col" style={th}>Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -342,30 +368,60 @@ export default function Campanhas() {
                   <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>
                     {c.created_at ? new Date(c.created_at).toLocaleDateString("pt-BR") : "—"}
                   </td>
-                  {perm.canEditarOk && (
+                  {mostrarColunaAcoes && (
                     <td style={td}>
-                      <button
-                        onClick={() => {
-                          setEditando(c);
-                          setModalOpen(true);
-                        }}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 5,
-                          background: "transparent",
-                          border: `1px solid ${t.cardBorder}`,
-                          borderRadius: 10,
-                          padding: "6px 14px",
-                          cursor: "pointer",
-                          fontFamily: FONT.body,
-                          fontSize: 12,
-                          color: t.text,
-                          fontWeight: 600,
-                        }}
-                      >
-                        <Pencil size={13} /> Editar
-                      </button>
+                      <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                        {perm.canEditarOk ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditando(c);
+                              setModalOpen(true);
+                            }}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                              background: "transparent",
+                              border: `1px solid ${t.cardBorder}`,
+                              borderRadius: 10,
+                              padding: "6px 14px",
+                              cursor: "pointer",
+                              fontFamily: FONT.body,
+                              fontSize: 12,
+                              color: t.text,
+                              fontWeight: 600,
+                            }}
+                          >
+                            <Pencil size={13} aria-hidden /> Editar
+                          </button>
+                        ) : null}
+                        {perm.canExcluirOk ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setErroExcluirCampanha(null);
+                              setCampanhaParaExcluir(c);
+                            }}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 5,
+                              background: "transparent",
+                              border: `1px solid ${BRAND.vermelho}66`,
+                              borderRadius: 10,
+                              padding: "6px 14px",
+                              cursor: "pointer",
+                              fontFamily: FONT.body,
+                              fontSize: 12,
+                              color: BRAND.vermelho,
+                              fontWeight: 600,
+                            }}
+                          >
+                            <Trash2 size={13} aria-hidden /> Excluir
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -386,6 +442,24 @@ export default function Campanhas() {
           onSalvo={carregar}
         />
       )}
+
+      {campanhaParaExcluir ? (
+        <ModalConfirmDelete
+          texto={`Excluir permanentemente a campanha «${campanhaParaExcluir.nome}»? Os vínculos desta campanha na Gestão de Links serão desfeitos.`}
+          onCancel={() => {
+            if (!excluindoCampanha) {
+              setErroExcluirCampanha(null);
+              setCampanhaParaExcluir(null);
+            }
+          }}
+          onConfirm={() => {
+            void confirmarExcluirCampanha();
+          }}
+          loading={excluindoCampanha}
+          error={erroExcluirCampanha}
+          zIndex={1001}
+        />
+      ) : null}
     </div>
   );
 }

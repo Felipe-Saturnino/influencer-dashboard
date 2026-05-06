@@ -13,8 +13,12 @@ import OperadoraTag from "../../../components/OperadoraTag";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { BannerPendencias } from "../solicitacoes/BannerPendencias";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
+import type { Role } from "../../../types";
+import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
-// ─── TIPOS ────────────────────────────────────────────────────────────────────
+function podeEscolherOperadoraNoRoteiro(role: string | undefined): boolean {
+  return !!role && ROLES_STAFF_OPERACOES_LIVES.includes(role as Role);
+}
 export type BlocoRoteiro = "abertura" | "durante_jogo" | "fechamento";
 export type TipoSugestao = "script" | "orientacao" | "alerta";
 export type JogoTag      = "todos" | "blackjack" | "roleta" | "baccarat";
@@ -183,7 +187,7 @@ function ModalRoteiro({ operadoraSlug, operadorasList, bloco, onClose, onSalvo, 
   const { theme: t, user, isDark } = useApp();
   const brand = useDashboardBrand();
   const dark = isDark ?? false;
-  const mostraCampoOperadora = user?.role === "gestor" || user?.role === "admin";
+  const mostraCampoOperadora = podeEscolherOperadoraNoRoteiro(user?.role);
   const [tipo, setTipo] = useState<TipoSugestao>("script");
   const [jogos, setJogos] = useState<JogoTag[]>(["todos"]);
   const [texto, setTexto] = useState("");
@@ -385,7 +389,7 @@ function ModalCampanha({ operadoraSlug, operadorasList, onClose, onSalvo, podeVe
   const { theme: t, user, isDark } = useApp();
   const brand = useDashboardBrand();
   const dark = isDark ?? false;
-  const mostraCampoOperadora = user?.role === "gestor" || user?.role === "admin";
+  const mostraCampoOperadora = podeEscolherOperadoraNoRoteiro(user?.role);
   const [titulo, setTitulo] = useState("");
   const [jogos, setJogos] = useState<JogoTag[]>(["todos"]);
   const [dataInicio, setDataInicio] = useState("");

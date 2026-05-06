@@ -107,9 +107,10 @@ export function AbaGestores({ t }: AbaGestoresProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <p style={{ fontFamily: FONT.body, fontSize: 12, color: t.textMuted, margin: 0 }}>
-        Marque as páginas que cada tipo de gestor pode acessar. Usuários com vários tipos veem a{" "}
-        <strong>união</strong> das páginas. As ações (criar/editar/excluir) continuam na aba Permissões para o perfil
-        Gestor. Alterações de menu exigem novo login.
+        Para cada <strong style={{ color: t.text }}>tipo de gestor</strong>, marque em que páginas esse tipo pode entrar no menu.
+        Quem tem vários tipos vê a <strong>união</strong> das páginas. Esse conjunto é cruzado com a matriz da aba{" "}
+        <strong style={{ color: t.text }}>Permissões</strong> (perfil Gestor — Ver/Criar/Editar/Excluir): só há acesso efetivo
+        quando as duas regras permitem. Alterações no menu podem exigir novo login.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>

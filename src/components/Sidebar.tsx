@@ -3,6 +3,8 @@ import { ChevronRight } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { MENU } from "../constants/menu";
 import { usePendenciasCount } from "../hooks/usePendenciasCount";
+import type { Role } from "../types";
+import { ROLES_VISAO_OPERACAO_SPIN } from "../lib/staffRoles";
 
 interface Props {
   activePage: string;
@@ -38,10 +40,7 @@ export default function Sidebar({ activePage, onNavigate, isDrawer = false, draw
   const badgeCentral =
     user?.role === "operador"
       ? pendOperadora
-      : user?.role === "gestor" ||
-          user?.role === "prestador" ||
-          user?.role === "admin" ||
-          user?.role === "executivo"
+      : user?.role && ROLES_VISAO_OPERACAO_SPIN.includes(user.role as Role)
         ? pendGestor
         : 0;
   const logoUrl = operadoraBrand?.logo_url || LOGO_DEFAULT;

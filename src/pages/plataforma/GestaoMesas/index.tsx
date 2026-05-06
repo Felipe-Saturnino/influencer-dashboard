@@ -11,6 +11,8 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import type { Role } from "../../../types";
+import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 
 const TIPOS_JOGO = ["Blackjack", "Roleta", "Baccarat", "Poker", "Game Show", "Outro"] as const;
 
@@ -557,7 +559,8 @@ function ModalMesa({
     if (!salvando) onClose();
   };
 
-  const desabilitaOperadora = Boolean(editando) && userRole !== "admin" && userRole !== "gestor";
+  const desabilitaOperadora =
+    Boolean(editando) && (!userRole || !ROLES_STAFF_OPERACOES_LIVES.includes(userRole as Role));
 
   return (
     <ModalBase maxWidth={480} onClose={tryClose}>

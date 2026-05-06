@@ -4,6 +4,10 @@ export type Role =
   | "gestor"
   | "prestador"
   | "executivo"
+  | "shift_leader"
+  | "service_manager"
+  | "figurino"
+  | "rh"
   | "influencer"
   | "operador"
   | "agencia";
@@ -51,6 +55,7 @@ export type PageKey =
   | "rh_gestao_escala"
   | "rh_staff"
   | "rh_calendario"
+  | "rh_portal"
   | "configuracoes"
   | "ajuda";
 
@@ -180,15 +185,7 @@ export type ScopeType =
   | "gestor_tipo"
   | "prestador_tipo";
 
-export type GestorTipoSlug =
-  | "operacoes"
-  | "marketing"
-  | "afiliados"
-  | "geral"
-  | "figurino"
-  | "recursos_humanos"
-  | "shift_leader"
-  | "service_manager";
+export type GestorTipoSlug = "operacoes" | "marketing" | "afiliados" | "geral";
 
 /** Áreas de atuação do perfil Prestadores (mapeiam prestador_tipo_pages). */
 export type PrestadorTipoSlug =

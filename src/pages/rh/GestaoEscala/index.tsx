@@ -8,6 +8,7 @@ import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { getThStyle, getTdStyle, TOTAL_ROW_BG } from "../../../lib/tableStyles";
 import { PageHeader } from "../../../components/PageHeader";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import {
   escalaPrestadorTemTurnosOperacionais,
@@ -49,10 +50,15 @@ type LinhaColaborador = {
   turnoStaffNome: string;
 };
 
+/** Estado persistido em `rh_gestao_escala_grade_status` (null = sem linha na BD ainda). */
+type GradeStatusMetaDb = "rascunho" | "aprovada";
+
 /** Estado da geração de escala por área (time). */
 type EscalaGerarEstadoFiltro = {
   celulas: Record<string, string>;
-  aprovado: boolean;
+  statusGradeDb?: GradeStatusMetaDb | null;
+  aprovadoEmDb?: string | null;
+  aprovadoPorDb?: string | null;
   baseline: Record<string, string> | null;
   /** Grade sanitizada igual à última carga/salvamento no Supabase (para exibir «Salvar» só se houver diferença). */
   celulasSincronizadasComDb?: Record<string, string> | null;
@@ -61,6 +67,10 @@ type EscalaGerarEstadoFiltro = {
   /** Legado (localStorage): tratar como `posSugestao`. */
   posSugestaoCs?: boolean;
 };
+
+function escalaGradeAprovadaNaBase(est: EscalaGerarEstadoFiltro | undefined): boolean {
+  return est?.statusGradeDb === "aprovada";
+}
 
 function posSugestaoAtiva(est: EscalaGerarEstadoFiltro | undefined): boolean {
   return Boolean(est?.posSugestao ?? est?.posSugestaoCs);
@@ -74,8 +84,15 @@ function carregarEscalaMesGravada(ano: number, mes0: number): Record<string, Esc
   try {
     const r = localStorage.getItem(chaveStorageEscalaMes(ano, mes0));
     if (!r) return {};
-    const p = JSON.parse(r) as Record<string, EscalaGerarEstadoFiltro>;
-    return p && typeof p === "object" ? p : {};
+    const p = JSON.parse(r) as Record<string, EscalaGerarEstadoFiltro & { aprovado?: boolean }>;
+    if (!p || typeof p !== "object") return {};
+    for (const k of Object.keys(p)) {
+      const v = p[k];
+      if (v && typeof v === "object" && "aprovado" in v) {
+        delete (v as { aprovado?: boolean }).aprovado;
+      }
+    }
+    return p;
   } catch {
     return {};
   }
@@ -101,6 +118,25 @@ type RpcGradeCarregarRow = {
 };
 
 type RpcGradeSalvarResult = {
+  ok?: boolean;
+  error?: string;
+};
+
+type RpcGradeMetaRow = {
+  area_key: string;
+  status: string;
+  aprovado_em: string | null;
+  aprovado_por: string | null;
+};
+
+type RpcGradeAprovarResult = {
+  ok?: boolean;
+  error?: string;
+  aprovado_em?: string;
+  aprovado_por?: string | null;
+};
+
+type RpcGradeResetarResult = {
   ok?: boolean;
   error?: string;
 };
@@ -433,6 +469,8 @@ export default function RhGestaoEscalaPage() {
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
   const [erroSalvarGrade, setErroSalvarGrade] = useState<string | null>(null);
   const [salvandoGrade, setSalvandoGrade] = useState(false);
+  const [novaEscalaModalArea, setNovaEscalaModalArea] = useState<AreaEscalaKey | null>(null);
+  const [resetandoGrade, setResetandoGrade] = useState(false);
   /** Área (time) para consolidado e grade de geração. */
   const [filtroArea, setFiltroArea] = useState<AreaEscalaKey>(DEFAULT_AREA_ESCALA);
   /** Filtro local da tabela Escala Diária (nickname). */
@@ -532,23 +570,31 @@ export default function RhGestaoEscalaPage() {
     gravarEscalaMes(ano, mes, gerarPorFiltro);
   }, [gerarPorFiltro, ano, mes]);
 
-  /** Mescla na grade de cada área os valores persistidos na base (sobrescreve chaves existentes). */
+  /** Mescla na grade de cada área os valores persistidos na base e o status (`rh_gestao_escala_grade_status`). */
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || loadingPrestadores) return;
     let cancelled = false;
     const ref = refMesISO(ano, mes);
     void (async () => {
       const areas = [...AREA_ESCALA_ORDEM_BOTOES] as AreaEscalaKey[];
-      const results = await Promise.all(
-        areas.map(async (areaKey) => {
+      const [{ data: metaData, error: metaError }, ...results] = await Promise.all([
+        supabase.rpc("rh_gestao_escala_grade_meta_listar", { p_ref_mes: ref }),
+        ...areas.map(async (areaKey) => {
           const { data, error } = await supabase.rpc("rh_gestao_escala_grade_carregar", {
             p_ref_mes: ref,
             p_area_key: areaKey,
           });
           return { areaKey, data, error };
         }),
-      );
+      ]);
       if (cancelled) return;
+      const metaPorArea: Partial<Record<AreaEscalaKey, RpcGradeMetaRow>> = {};
+      if (!metaError && metaData) {
+        for (const row of metaData as RpcGradeMetaRow[]) {
+          const ak = row.area_key as AreaEscalaKey;
+          if (areas.includes(ak)) metaPorArea[ak] = row;
+        }
+      }
       const fromDbPorArea: Partial<Record<AreaEscalaKey, Record<string, string>>> = {};
       for (const { areaKey, data, error } of results) {
         if (error) continue;
@@ -561,21 +607,34 @@ export default function RhGestaoEscalaPage() {
         }
         fromDbPorArea[areaKey] = fromDb;
       }
-      if (Object.keys(fromDbPorArea).length === 0) return;
+      if (Object.keys(fromDbPorArea).length === 0 && Object.keys(metaPorArea).length === 0) return;
       setGerarPorFiltro((prev) => {
         const next = { ...prev };
-        for (const ak of Object.keys(fromDbPorArea) as AreaEscalaKey[]) {
+        for (const ak of areas) {
           const fromDb = fromDbPorArea[ak];
-          if (!fromDb) continue;
+          const meta = metaPorArea[ak];
+          const statusRaw = (meta?.status ?? "").trim().toLowerCase();
+          const statusGradeDb: GradeStatusMetaDb | null =
+            statusRaw === "aprovada" || statusRaw === "rascunho" ? statusRaw : null;
+          const aprovadaNaBase = statusGradeDb === "aprovada";
           const cur = next[ak];
-          const merged = { ...(cur?.celulas ?? {}), ...fromDb };
+          if (!fromDb && !meta) continue;
+          const merged = { ...(cur?.celulas ?? {}), ...(fromDb ?? {}) };
           const linhasF = filtrarPorArea(prestadoresRaw, ak).map(mapLinhaPrestador);
           const snap = buildCelulasSnapshotGrade(linhasF, dias, merged);
+          const aprovadoEmIso =
+            meta?.aprovado_em == null
+              ? null
+              : typeof meta.aprovado_em === "string"
+                ? meta.aprovado_em.slice(0, 25)
+                : String(meta.aprovado_em);
           next[ak] = {
             celulas: merged,
-            aprovado: cur?.aprovado ?? false,
-            baseline: cur?.baseline ?? null,
-            posSugestao: cur?.posSugestao ?? cur?.posSugestaoCs ?? false,
+            statusGradeDb,
+            aprovadoEmDb: aprovadaNaBase ? aprovadoEmIso : null,
+            aprovadoPorDb: aprovadaNaBase ? meta?.aprovado_por ?? null : null,
+            baseline: aprovadaNaBase ? { ...merged } : cur?.baseline ?? null,
+            posSugestao: aprovadaNaBase ? true : cur?.posSugestao ?? cur?.posSugestaoCs ?? false,
             celulasSincronizadasComDb: snap,
           };
         }
@@ -611,11 +670,13 @@ export default function RhGestaoEscalaPage() {
           setErroSalvarGrade(
             code === "forbidden"
               ? "Sem permissão para salvar a grade."
-              : code === "prestador_fora_area"
-                ? `Um ou mais colaboradores não pertencem ao time ${labelAreaEscala(areaKey)}.`
-                : code
-                  ? `Não foi possível salvar: ${code}.`
-                  : "Não foi possível salvar a grade.",
+              : code === "escala_aprovada"
+                ? "Esta escala já está aprovada. Use «Nova Escala» para refazer (os compromissos saem do calendário até nova aprovação)."
+                : code === "prestador_fora_area"
+                  ? `Um ou mais colaboradores não pertencem ao time ${labelAreaEscala(areaKey)}.`
+                  : code
+                    ? `Não foi possível salvar: ${code}.`
+                    : "Não foi possível salvar a grade.",
           );
           return false;
         }
@@ -630,6 +691,7 @@ export default function RhGestaoEscalaPage() {
             [areaKey]: {
               ...estAtual,
               celulas: celulasFinais,
+              statusGradeDb: "rascunho" as const,
               celulasSincronizadasComDb: snap,
             },
           };
@@ -704,16 +766,19 @@ export default function RhGestaoEscalaPage() {
       }
 
       const celulas = gerarCelulasSugestaoCustomerService(linhasF, diasLite, { celulasMesAnterior });
-      setGerarPorFiltro((prev) => ({
-        ...prev,
-        [areaKey]: {
-          celulas,
-          aprovado: false,
-          baseline: null,
-          celulasSincronizadasComDb: null,
-          posSugestao: true,
-        },
-      }));
+      setGerarPorFiltro((prev) => {
+        const ant = prev[areaKey];
+        return {
+          ...prev,
+          [areaKey]: {
+            ...ant,
+            celulas,
+            baseline: null,
+            celulasSincronizadasComDb: null,
+            posSugestao: true,
+          },
+        };
+      });
     },
     [ano, mes, dias, linhasPorFiltroGerar],
   );
@@ -733,25 +798,107 @@ export default function RhGestaoEscalaPage() {
       const baseline = { ...merged };
       const ok = await salvarGradeEscalaDb(areaKey, merged);
       if (!ok) return;
-      setGerarPorFiltro((prev) => {
-        const estAtual = prev[areaKey];
-        if (!estAtual) return prev;
-        const next = {
-          ...prev,
-          [areaKey]: {
-            ...estAtual,
-            celulas: merged,
-            aprovado: true,
-            baseline,
-            posSugestao: true,
-            celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasF, dias, merged),
-          },
-        };
-        gravarEscalaMes(ano, mes, next);
-        return next;
-      });
+      const ref = refMesISO(ano, mes);
+      try {
+        const { data: aprovData, error: aprovErr } = await supabase.rpc("rh_gestao_escala_grade_aprovar", {
+          p_ref_mes: ref,
+          p_area_key: areaKey,
+        });
+        if (aprovErr) throw aprovErr;
+        const ap = aprovData as RpcGradeAprovarResult | null;
+        if (!ap?.ok) {
+          const code = ap?.error ?? "";
+          setErroSalvarGrade(
+            code === "forbidden"
+              ? "Sem permissão para aprovar a escala."
+              : code === "sem_grade"
+                ? "Não há grade gravada para aprovar. Preencha e salve antes de aprovar."
+                : code
+                  ? `Não foi possível aprovar: ${code}.`
+                  : "Não foi possível aprovar a escala.",
+          );
+          return;
+        }
+        const aprovadoEmDb = typeof ap.aprovado_em === "string" ? ap.aprovado_em : null;
+        const aprovadoPorDb = typeof ap.aprovado_por === "string" ? ap.aprovado_por : null;
+        setGerarPorFiltro((prev) => {
+          const estAtual = prev[areaKey];
+          if (!estAtual) return prev;
+          const next = {
+            ...prev,
+            [areaKey]: {
+              ...estAtual,
+              celulas: merged,
+              statusGradeDb: "aprovada" as const,
+              aprovadoEmDb,
+              aprovadoPorDb,
+              baseline,
+              posSugestao: true,
+              celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasF, dias, merged),
+            },
+          };
+          gravarEscalaMes(ano, mes, next);
+          return next;
+        });
+      } catch (e) {
+        setErroSalvarGrade(
+          e instanceof Error ? e.message : "Erro ao aprovar na base de dados. Verifique se a migration foi aplicada.",
+        );
+      }
     },
     [ano, mes, dias, gerarPorFiltro, linhasPorFiltroGerar, salvarGradeEscalaDb],
+  );
+
+  const resetarGradeEscalaDb = useCallback(
+    async (areaKey: AreaEscalaKey): Promise<boolean> => {
+      setErroSalvarGrade(null);
+      setResetandoGrade(true);
+      try {
+        const ref = refMesISO(ano, mes);
+        const { data, error } = await supabase.rpc("rh_gestao_escala_grade_resetar", {
+          p_ref_mes: ref,
+          p_area_key: areaKey,
+        });
+        if (error) throw error;
+        const payload = data as RpcGradeResetarResult | null;
+        if (!payload?.ok) {
+          const code = payload?.error ?? "";
+          setErroSalvarGrade(
+            code === "forbidden"
+              ? "Sem permissão para refazer a escala."
+              : code
+                ? `Não foi possível refazer: ${code}.`
+                : "Não foi possível refazer a escala.",
+          );
+          return false;
+        }
+        setGerarPorFiltro((prev) => {
+          const next = {
+            ...prev,
+            [areaKey]: {
+              celulas: {},
+              baseline: null,
+              celulasSincronizadasComDb: null,
+              posSugestao: false,
+              statusGradeDb: null,
+              aprovadoEmDb: null,
+              aprovadoPorDb: null,
+            },
+          };
+          gravarEscalaMes(ano, mes, next);
+          return next;
+        });
+        return true;
+      } catch (e) {
+        setErroSalvarGrade(
+          e instanceof Error ? e.message : "Erro ao refazer a escala na base de dados. Verifique se a migration foi aplicada.",
+        );
+        return false;
+      } finally {
+        setResetandoGrade(false);
+      }
+    },
+    [ano, mes],
   );
 
   const atualizarCelulaGerar = useCallback(
@@ -759,8 +906,8 @@ export default function RhGestaoEscalaPage() {
       const k = chaveCelulaGerar(rowId, iso);
       const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor, turnoStaffNome);
       setGerarPorFiltro((prev) => {
-        const cur = prev[areaKey] ?? { celulas: {}, aprovado: false, baseline: null };
-        if (cur.aprovado) return prev;
+        const cur = prev[areaKey] ?? { celulas: {}, baseline: null };
+        if (escalaGradeAprovadaNaBase(cur)) return prev;
         return {
           ...prev,
           [areaKey]: {
@@ -786,7 +933,7 @@ export default function RhGestaoEscalaPage() {
           return sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome).trim() !== "";
         }),
       );
-      if (estado?.aprovado && estado.baseline) {
+      if (escalaGradeAprovadaNaBase(estado) && estado.baseline) {
         const celSan: Record<string, string> = {};
         for (const row of linhasF) {
           for (const d of dias) {
@@ -909,7 +1056,7 @@ export default function RhGestaoEscalaPage() {
 
   const estGradeFiltro = gerarPorFiltro[filtroArea];
   const celulasGerarAtivas = estGradeFiltro?.celulas;
-  const podeEditarCelulasDia = Boolean(podeEditarGrade && !estGradeFiltro?.aprovado);
+  const podeEditarCelulasDia = Boolean(podeEditarGrade && !escalaGradeAprovadaNaBase(estGradeFiltro));
 
   const resumoTurnoDias = useMemo(() => {
     if (!mostrarFiltroArea) return null;
@@ -951,7 +1098,7 @@ export default function RhGestaoEscalaPage() {
 
   const mostrarSalvarAlteracoes = useMemo(() => {
     const est = gerarPorFiltro[filtroArea];
-    if (!mostrarFiltroArea || !posSugestaoAtiva(est)) return false;
+    if (!mostrarFiltroArea || !posSugestaoAtiva(est) || escalaGradeAprovadaNaBase(est)) return false;
     const linhasF = filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
     if (linhasF.length === 0) return false;
     const atual = buildCelulasSnapshotGrade(linhasF, dias, est?.celulas ?? {});
@@ -1501,15 +1648,22 @@ export default function RhGestaoEscalaPage() {
                           <button
                             type="button"
                             onClick={() => {
+                              const est = gerarPorFiltro[filtroArea];
+                              if (escalaGradeAprovadaNaBase(est)) {
+                                setNovaEscalaModalArea(filtroArea);
+                                return;
+                              }
                               setGerarPorFiltro((prev) => ({
                                 ...prev,
                                 [filtroArea]: {
                                   celulas: {},
-                                  aprovado: false,
                                   baseline: null,
                                   celulasSincronizadasComDb: null,
                                   posSugestao: false,
                                   posSugestaoCs: false,
+                                  statusGradeDb: null,
+                                  aprovadoEmDb: null,
+                                  aprovadoPorDb: null,
                                 },
                               }));
                             }}
@@ -1558,7 +1712,7 @@ export default function RhGestaoEscalaPage() {
                               Salvar Alterações
                             </button>
                           ) : null}
-                          {!gerarPorFiltro[filtroArea]?.aprovado ? (
+                          {!escalaGradeAprovadaNaBase(gerarPorFiltro[filtroArea]) ? (
                             <button
                               type="button"
                               disabled={salvandoGrade}
@@ -1931,6 +2085,77 @@ export default function RhGestaoEscalaPage() {
           </>
         )}
       </div>
+
+      {novaEscalaModalArea ? (
+        <ModalBase
+          maxWidth={440}
+          onClose={() => {
+            if (!resetandoGrade) setNovaEscalaModalArea(null);
+          }}
+        >
+          <ModalHeader
+            title="Refazer escala aprovada?"
+            onClose={() => {
+              if (!resetandoGrade) setNovaEscalaModalArea(null);
+            }}
+          />
+          <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
+            <p style={{ margin: "0 0 12px", fontSize: 14, color: t.text, lineHeight: 1.5 }}>
+              Esta escala já estava aprovada e disponibilizada para os Prestadores, deseja refazer?
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                disabled={resetandoGrade}
+                onClick={() => setNovaEscalaModalArea(null)}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontWeight: 600,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  cursor: resetandoGrade ? "not-allowed" : "pointer",
+                }}
+              >
+                Não
+              </button>
+              <button
+                type="button"
+                disabled={resetandoGrade}
+                onClick={() => {
+                  const ak = novaEscalaModalArea;
+                  void (async () => {
+                    const ok = await resetarGradeEscalaDb(ak);
+                    if (ok) setNovaEscalaModalArea(null);
+                  })();
+                }}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  border: `1px solid ${brand.accent}`,
+                  background: brand.useBrand
+                    ? "color-mix(in srgb, var(--brand-action, #7c3aed) 22%, transparent)"
+                    : "rgba(124,58,237,0.14)",
+                  color: brand.accent,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  cursor: resetandoGrade ? "wait" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {resetandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
+                Sim
+              </button>
+            </div>
+          </div>
+        </ModalBase>
+      ) : null}
     </div>
   );
 }

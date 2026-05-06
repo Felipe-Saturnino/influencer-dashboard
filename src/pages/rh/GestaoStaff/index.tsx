@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Search, Trash2, Upload, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Search, StickyNote, Trash2, Upload, Users } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -28,7 +28,7 @@ import type { Operadora } from "../../../types";
 import { PageHeader } from "../../../components/PageHeader";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import type { RhFuncionario, RhFuncionarioHistorico } from "../../../types/rhFuncionario";
+import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
 
@@ -61,6 +61,49 @@ function fmtDataHora(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+/** Nome do time do organograma normalizado para regras de UI (acentos, espaços). */
+function normStaffNomeTimeUi(nome: string | null | undefined): string {
+  return (nome ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/\s+/g, " ");
+}
+
+/** Times em que a tabela (vista time a time) troca Operadora por Horário do Turno e os modais ocultam operadora/bio/fotos. */
+function staffUiTimeSemOperadoraHorarioModaisRestritos(nomeTime: string): boolean {
+  const n = normStaffNomeTimeUi(nomeTime);
+  return (
+    n === "service manager" ||
+    n === "customer service" ||
+    n === "shift leader" ||
+    n === "performance coach"
+  );
+}
+
+/** Shuffler: só ocultar Bio e Fotos na aba Dados de função (visualizar). */
+function staffUiTimeShufflerOcultarBioFotosVer(nomeTime: string): boolean {
+  return normStaffNomeTimeUi(nomeTime) === "shuffler";
+}
+
+type OpTurnosStaffPick = Pick<Operadora, "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
+
+/** Texto da coluna «Horário do Turno» na tabela (com dados de operadora quando necessário). */
+function textoHorarioTurnoStaffEmTabela(row: RhFuncionario, opBySlug: Record<string, OpTurnosStaffPick | null>): string {
+  const te = turnoRhCoerenteComEscala(row.escala, row.staff_turno);
+  if (escalaUsaHorarioTurnoEditavel(row.escala, te)) {
+    return labelHorarioTurnoStaffPorValor(row.staff_horario_turno);
+  }
+  if (escalaComHorarioTurnoSomenteOperadora(row.escala)) {
+    const slug = row.staff_operadora_slug?.trim();
+    const op = slug ? opBySlug[slug] ?? null : null;
+    const txt = textoHorarioTurnoSomenteOperadora(row.escala, te, op).trim();
+    return txt || "—";
+  }
+  return "—";
 }
 
 function normalizarSkills(raw: Record<string, unknown> | null | undefined): Record<StaffSkillKey, StaffSkillStatus> {
@@ -103,7 +146,17 @@ const DEALER_GENERO_LABEL: Record<DealerGenero, string> = {
   masculino: "Masculino",
 };
 
-type StaffTabelaSortCol = "nome" | "nickname" | "time" | "funcao" | "escala" | "turno" | "operadora" | "status" | "id_op";
+type StaffTabelaSortCol =
+  | "nome"
+  | "nickname"
+  | "time"
+  | "funcao"
+  | "escala"
+  | "turno"
+  | "horario_turno"
+  | "operadora"
+  | "status"
+  | "id_op";
 
 function CampoLeitura({ k, v, t }: { k: string; v: string; t: { textMuted: string; text: string } }) {
   return (
@@ -111,6 +164,251 @@ function CampoLeitura({ k, v, t }: { k: string; v: string; t: { textMuted: strin
       <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>{k}</div>
       <div style={{ fontSize: 13, color: t.text, fontFamily: FONT.body, lineHeight: 1.45 }}>{v || "—"}</div>
     </div>
+  );
+}
+
+function ModalStaffAnotacoes({
+  row,
+  onClose,
+  t,
+  brand,
+  canEditarOk,
+}: {
+  row: RhFuncionario;
+  onClose: () => void;
+  t: ReturnType<typeof useApp>["theme"];
+  brand: ReturnType<typeof useDashboardBrand>;
+  canEditarOk: boolean;
+}) {
+  const [lista, setLista] = useState<RhStaffAnotacao[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [nomesAutor, setNomesAutor] = useState<Record<string, string>>({});
+  const [textoNovo, setTextoNovo] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [err, setErr] = useState("");
+
+  const labelStyle: CSSProperties = {
+    display: "block",
+    fontSize: 11,
+    fontWeight: 700,
+    color: t.textMuted,
+    marginBottom: 6,
+    fontFamily: FONT.body,
+  };
+  const inputStyle: CSSProperties = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg ?? t.cardBg,
+    color: t.text,
+    fontFamily: FONT.body,
+    fontSize: 13,
+    boxSizing: "border-box",
+    minHeight: 120,
+    resize: "vertical" as const,
+    lineHeight: 1.45,
+  };
+
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    setErr("");
+    const { data, error } = await supabase
+      .from("rh_staff_anotacoes")
+      .select("id, rh_funcionario_id, texto, created_at, created_by")
+      .eq("rh_funcionario_id", row.id)
+      .order("created_at", { ascending: false });
+    if (error) {
+      setLista([]);
+      setNomesAutor({});
+      setErr(error.message || "Não foi possível carregar as anotações.");
+      setLoading(false);
+      return;
+    }
+    const items = (data ?? []) as RhStaffAnotacao[];
+    setLista(items);
+    const ids = [...new Set(items.map((a) => a.created_by).filter(Boolean))] as string[];
+    if (ids.length === 0) {
+      setNomesAutor({});
+      setLoading(false);
+      return;
+    }
+    const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+    const m: Record<string, string> = {};
+    (profs ?? []).forEach((p: { id: string; name: string | null }) => {
+      m[p.id] = (p.name ?? "").trim() || p.id.slice(0, 8);
+    });
+    setNomesAutor(m);
+    setLoading(false);
+  }, [row.id]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  const nomeAutor = (a: RhStaffAnotacao) => {
+    if (!a.created_by) return "—";
+    return nomesAutor[a.created_by] ?? `${a.created_by.slice(0, 8)}…`;
+  };
+
+  const salvar = async () => {
+    const textoTrim = textoNovo.trim();
+    if (!textoTrim) {
+      setErr("Escreva a anotação antes de salvar.");
+      return;
+    }
+    setErr("");
+    setSalvando(true);
+    const { error } = await supabase.from("rh_staff_anotacoes").insert({
+      rh_funcionario_id: row.id,
+      texto: textoTrim,
+    });
+    if (error) {
+      setErr(error.message || "Não foi possível salvar a anotação.");
+      setSalvando(false);
+      return;
+    }
+    setTextoNovo("");
+    await carregar();
+    setSalvando(false);
+  };
+
+  return (
+    <ModalBase maxWidth={600} onClose={onClose}>
+      <ModalHeader title={`Anotações — ${row.nome}`} onClose={onClose} />
+      <div style={{ padding: "0 4px 16px", fontFamily: FONT.body }}>
+        <div
+          style={{
+            marginBottom: 20,
+            padding: "14px 16px",
+            borderRadius: 12,
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+          }}
+        >
+          <div style={{ ...labelStyle, fontSize: 12, color: t.text, marginBottom: 10 }}>Registrar anotações</div>
+          {canEditarOk ? (
+            <>
+              <label htmlFor="staff-anotacao-nova" style={labelStyle}>
+                Observações sobre este prestador
+              </label>
+              <textarea
+                id="staff-anotacao-nova"
+                value={textoNovo}
+                onChange={(e) => setTextoNovo(e.target.value)}
+                style={inputStyle}
+                rows={5}
+                placeholder="Escreva aqui anotações ou observações internas…"
+                aria-label="Texto da nova anotação"
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                <button
+                  type="button"
+                  disabled={salvando || !textoNovo.trim()}
+                  onClick={() => void salvar()}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: 10,
+                    border: "none",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    fontSize: 13,
+                    cursor: salvando || !textoNovo.trim() ? "not-allowed" : "pointer",
+                    opacity: salvando || !textoNovo.trim() ? 0.65 : 1,
+                    background: brand.useBrand
+                      ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                      : "linear-gradient(135deg, var(--brand-action, #7c3aed), var(--brand-contrast, #1e36f8))",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  {salvando ? <Loader2 size={16} color="#fff" className="app-lucide-spin" aria-hidden /> : null}
+                  Salvar anotação
+                </button>
+              </div>
+            </>
+          ) : (
+            <p style={{ margin: 0, fontSize: 13, color: t.textMuted, lineHeight: 1.5 }}>
+              Apenas utilizadores com permissão de edição em Gestão de Staff podem registrar novas anotações.
+            </p>
+          )}
+        </div>
+
+        <div style={{ ...labelStyle, fontSize: 12, color: t.text, marginBottom: 10 }}>Anotações anteriores</div>
+        <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, lineHeight: 1.45 }}>
+          Estas entradas são só desta página e não aparecem no histórico geral de RH nem na Gestão de Prestadores.
+        </p>
+        {err ? (
+          <div role="alert" style={{ color: "#e84025", fontSize: 12, marginBottom: 12 }}>
+            {err}
+          </div>
+        ) : null}
+        {loading ? (
+          <div style={{ color: t.textMuted, fontSize: 13 }}>
+            <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ marginRight: 8, verticalAlign: "middle" }} />
+            Carregando anotações…
+          </div>
+        ) : lista.length === 0 ? (
+          <div style={{ padding: "20px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Ainda não há anotações registradas.</div>
+        ) : (
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, maxHeight: "min(48dvh, 360px)", overflowY: "auto" }}>
+            {lista.map((a) => (
+              <li
+                key={a.id}
+                style={{
+                  marginBottom: 12,
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.cardBg,
+                }}
+              >
+                <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
+                  <span style={{ fontWeight: 700, color: t.text }}>Data/Hora:</span> {fmtDataHora(a.created_at)}
+                </div>
+                <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 10 }}>
+                  <span style={{ fontWeight: 700, color: t.text }}>Usuário que registrou:</span> {nomeAutor(a)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: t.text,
+                    lineHeight: 1.5,
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {a.texto}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div style={{ marginTop: 16 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: "100%",
+              padding: 12,
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </ModalBase>
   );
 }
 
@@ -133,6 +431,8 @@ export default function RhGestaoStaffPage() {
 
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
+  const [modalAnotacoes, setModalAnotacoes] = useState<RhFuncionario | null>(null);
+  const [opTurnosPorSlug, setOpTurnosPorSlug] = useState<Record<string, OpTurnosStaffPick | null>>({});
 
   const [sortCol, setSortCol] = useState<StaffTabelaSortCol>("nome");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -226,6 +526,56 @@ export default function RhGestaoStaffPage() {
     return m;
   }, [times]);
 
+  /** Vista time a time: tabela sem coluna Operadora e com Horário do Turno (times de serviço). */
+  const layoutTabelaSemOperadoraComHorario = useMemo(() => {
+    if (todosTimes || !times[idxTime]) return false;
+    return staffUiTimeSemOperadoraHorarioModaisRestritos(times[idxTime]!.nome);
+  }, [todosTimes, times, idxTime]);
+
+  const slugsParaFetchHorarioTabela = useMemo(() => {
+    if (!layoutTabelaSemOperadoraComHorario) return [] as string[];
+    const set = new Set<string>();
+    for (const r of linhasTabela) {
+      const slug = r.staff_operadora_slug?.trim();
+      if (slug) set.add(slug);
+    }
+    return [...set].sort();
+  }, [layoutTabelaSemOperadoraComHorario, linhasTabela]);
+
+  useEffect(() => {
+    if (!layoutTabelaSemOperadoraComHorario || slugsParaFetchHorarioTabela.length === 0) {
+      setOpTurnosPorSlug({});
+      return;
+    }
+    let cancel = false;
+    void supabase
+      .from("operadoras")
+      .select("slug, turno_manha_inicio, turno_tarde_inicio, turno_noite_inicio")
+      .in("slug", slugsParaFetchHorarioTabela)
+      .then(({ data, error }) => {
+        if (cancel) return;
+        if (error) {
+          setOpTurnosPorSlug({});
+          return;
+        }
+        const m: Record<string, OpTurnosStaffPick | null> = {};
+        (data ?? []).forEach((r: OpTurnosStaffPick & { slug: string }) => {
+          m[r.slug] = r;
+        });
+        setOpTurnosPorSlug(m);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [layoutTabelaSemOperadoraComHorario, slugsParaFetchHorarioTabela]);
+
+  useEffect(() => {
+    setSortCol((c) => {
+      if (layoutTabelaSemOperadoraComHorario) return c === "operadora" ? "nome" : c;
+      return c === "horario_turno" ? "nome" : c;
+    });
+  }, [layoutTabelaSemOperadoraComHorario]);
+
   const handleSortStaff = useCallback((col: StaffTabelaSortCol) => {
     setSortCol((prev) => {
       if (prev === col) {
@@ -265,6 +615,12 @@ export default function RhGestaoStaffPage() {
         case "turno":
           cmp = turnoStr(a).localeCompare(turnoStr(b), "pt-BR");
           break;
+        case "horario_turno":
+          cmp = textoHorarioTurnoStaffEmTabela(a, opTurnosPorSlug).localeCompare(
+            textoHorarioTurnoStaffEmTabela(b, opTurnosPorSlug),
+            "pt-BR",
+          );
+          break;
         case "operadora":
           cmp = opSlug(a).localeCompare(opSlug(b), "pt-BR");
           break;
@@ -279,7 +635,7 @@ export default function RhGestaoStaffPage() {
       }
       return cmp * dir;
     });
-  }, [linhasTabela, sortCol, sortDir, nomePorTimeId]);
+  }, [linhasTabela, sortCol, sortDir, nomePorTimeId, opTurnosPorSlug]);
 
   const timeLabelCentro = useMemo(() => {
     if (times.length === 0) return "—";
@@ -305,6 +661,20 @@ export default function RhGestaoStaffPage() {
   };
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
+  const btnIconTabela: CSSProperties = {
+    padding: "6px 10px",
+    borderRadius: 8,
+    border: `1px solid ${t.cardBorder}`,
+    background: t.inputBg,
+    color: t.text,
+    cursor: "pointer",
+    fontSize: 12,
+    fontFamily: FONT.body,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
 
   if (perm.loading) {
     return (
@@ -556,14 +926,25 @@ export default function RhGestaoStaffPage() {
                   onSort={handleSortStaff}
                   thStyle={getThStyle(t)}
                 />
-                <SortTableTh
-                  label="Operadora"
-                  col="operadora"
-                  sortCol={sortCol}
-                  sortDir={sortDir}
-                  onSort={handleSortStaff}
-                  thStyle={getThStyle(t)}
-                />
+                {layoutTabelaSemOperadoraComHorario ? (
+                  <SortTableTh
+                    label="Horário do Turno"
+                    col="horario_turno"
+                    sortCol={sortCol}
+                    sortDir={sortDir}
+                    onSort={handleSortStaff}
+                    thStyle={getThStyle(t)}
+                  />
+                ) : (
+                  <SortTableTh
+                    label="Operadora"
+                    col="operadora"
+                    sortCol={sortCol}
+                    sortDir={sortDir}
+                    onSort={handleSortStaff}
+                    thStyle={getThStyle(t)}
+                  />
+                )}
                 <SortTableTh
                   label="Status"
                   col="status"
@@ -619,59 +1000,40 @@ export default function RhGestaoStaffPage() {
                       >
                         {turnoRhCoerenteComEscala(row.escala, row.staff_turno) || "—"}
                       </td>
-                      <td style={getTdStyle(t)}>{opNome}</td>
+                      {layoutTabelaSemOperadoraComHorario ? (
+                        <td style={getTdStyle(t)} title="Horário do turno (Gestão de Staff)">
+                          {textoHorarioTurnoStaffEmTabela(row, opTurnosPorSlug)}
+                        </td>
+                      ) : (
+                        <td style={getTdStyle(t)}>{opNome}</td>
+                      )}
                       <td style={getTdStyle(t)}>{labelStatusPrestador(row.status)}</td>
                       <td style={getTdStyle(t)} title={row.staff_id_operacional?.trim() || undefined}>
                         {row.staff_id_operacional?.trim() || "—"}
                       </td>
                       <td style={{ ...getTdStyle(t), textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                           <button
                             type="button"
                             onClick={() => setModalVer(row)}
-                            aria-label={`Ver ${row.nome}`}
-                            style={{
-                              padding: "5px 12px",
-                              borderRadius: 8,
-                              border: `1px solid ${t.cardBorder}`,
-                              background: t.inputBg ?? "transparent",
-                              color: t.text,
-                              fontSize: 11,
-                              fontWeight: 700,
-                              fontFamily: FONT.body,
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                            }}
+                            style={btnIconTabela}
+                            aria-label={`Visualizar ${row.nome}`}
                           >
                             <Eye size={14} aria-hidden />
-                            Ver
                           </button>
                           {perm.canEditarOk ? (
-                            <button
-                              type="button"
-                              onClick={() => setModalEditar(row)}
-                              aria-label={`Editar ${row.nome}`}
-                              style={{
-                                padding: "5px 12px",
-                                borderRadius: 8,
-                                border: `1px solid color-mix(in srgb, var(--brand-action, #7c3aed) 35%, transparent)`,
-                                background: "color-mix(in srgb, var(--brand-action, #7c3aed) 10%, transparent)",
-                                color: "var(--brand-action, #7c3aed)",
-                                fontSize: 11,
-                                fontWeight: 700,
-                                fontFamily: FONT.body,
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                              }}
-                            >
+                            <button type="button" onClick={() => setModalEditar(row)} style={btnIconTabela} aria-label={`Editar ${row.nome}`}>
                               <Pencil size={14} aria-hidden />
-                              Editar
                             </button>
                           ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setModalAnotacoes(row)}
+                            style={btnIconTabela}
+                            aria-label={`Anotações de ${row.nome}`}
+                          >
+                            <StickyNote size={14} aria-hidden />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -688,6 +1050,15 @@ export default function RhGestaoStaffPage() {
           row={modalVer}
           nomeTimeOrganograma={modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : ""}
           operadorasNome={operadorasNome}
+          dadosFuncaoOcultarOperadora={staffUiTimeSemOperadoraHorarioModaisRestritos(
+            modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : "",
+          )}
+          dadosFuncaoOcultarBioFotos={
+            staffUiTimeSemOperadoraHorarioModaisRestritos(
+              modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : "",
+            ) ||
+            staffUiTimeShufflerOcultarBioFotosVer(modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : "")
+          }
           onClose={() => setModalVer(null)}
           t={t}
           brand={brand}
@@ -703,6 +1074,9 @@ export default function RhGestaoStaffPage() {
             (operadorasNome[a] ?? a).localeCompare(operadorasNome[b] ?? b, "pt-BR"),
           )}
           userEmail={user?.email ?? null}
+          ocultarCampoOperadora={staffUiTimeSemOperadoraHorarioModaisRestritos(
+            modalEditar.org_time_id ? nomePorTimeId.get(modalEditar.org_time_id) ?? "" : "",
+          )}
           onClose={() => setModalEditar(null)}
           onSalvo={(atualizado) => {
             setPrestadores((lista) => lista.map((p) => (p.id === atualizado.id ? atualizado : p)));
@@ -713,6 +1087,16 @@ export default function RhGestaoStaffPage() {
           brand={brand}
         />
       ) : null}
+
+      {modalAnotacoes ? (
+        <ModalStaffAnotacoes
+          row={modalAnotacoes}
+          onClose={() => setModalAnotacoes(null)}
+          t={t}
+          brand={brand}
+          canEditarOk={perm.canEditarOk}
+        />
+      ) : null}
     </div>
   );
 }
@@ -721,6 +1105,8 @@ function ModalStaffVer({
   row,
   nomeTimeOrganograma,
   operadorasNome,
+  dadosFuncaoOcultarOperadora = false,
+  dadosFuncaoOcultarBioFotos = false,
   onClose,
   t,
   brand,
@@ -729,6 +1115,10 @@ function ModalStaffVer({
   /** Nome do time no organograma (rh_org_times), mesma regra que na tabela. */
   nomeTimeOrganograma: string;
   operadorasNome: Record<string, string>;
+  /** Times Service Manager, Customer Service, Shift Leader, Performance Coach. */
+  dadosFuncaoOcultarOperadora?: boolean;
+  /** Inclui Shuffler (só bio/fotos) ou o grupo acima (operadora + bio + fotos). */
+  dadosFuncaoOcultarBioFotos?: boolean;
   onClose: () => void;
   t: ReturnType<typeof useApp>["theme"];
   brand: ReturnType<typeof useDashboardBrand>;
@@ -870,38 +1260,42 @@ function ModalStaffVer({
           ) : (
             <CampoLeitura k="Horário do Turno" v="—" t={t} />
           )}
-          <CampoLeitura k="Operadora" v={opNome} t={t} />
+          {!dadosFuncaoOcultarOperadora ? <CampoLeitura k="Operadora" v={opNome} t={t} /> : null}
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
           <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
-          <CampoLeitura k="Bio do Dealer" v={readStaffDealerBioForUi(row) || "—"} t={t} />
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>Fotos</div>
-            {(() => {
-              const urls = readStaffDealerFotosForUi(row);
-              if (urls.length === 0) {
-                return <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>—</div>;
-              }
-              return (
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  {urls.map((url) => (
-                    <div
-                      key={url}
-                      style={{
-                        width: 88,
-                        height: 88,
-                        borderRadius: 10,
-                        overflow: "hidden",
-                        border: `1px solid ${t.cardBorder}`,
-                        flexShrink: 0,
-                      }}
-                    >
-                      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {!dadosFuncaoOcultarBioFotos ? (
+            <>
+              <CampoLeitura k="Bio do Dealer" v={readStaffDealerBioForUi(row) || "—"} t={t} />
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>Fotos</div>
+                {(() => {
+                  const urls = readStaffDealerFotosForUi(row);
+                  if (urls.length === 0) {
+                    return <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>—</div>;
+                  }
+                  return (
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      {urls.map((url) => (
+                        <div
+                          key={url}
+                          style={{
+                            width: 88,
+                            height: 88,
+                            borderRadius: 10,
+                            overflow: "hidden",
+                            border: `1px solid ${t.cardBorder}`,
+                            flexShrink: 0,
+                          }}
+                        >
+                          <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              );
-            })()}
-          </div>
+                  );
+                })()}
+              </div>
+            </>
+          ) : null}
         </div>
       )}
 
@@ -1030,6 +1424,7 @@ function ModalStaffEditar({
   operadorasNome,
   operadoraSlugs,
   userEmail,
+  ocultarCampoOperadora = false,
   onClose,
   onSalvo,
   t,
@@ -1040,6 +1435,7 @@ function ModalStaffEditar({
   operadorasNome: Record<string, string>;
   operadoraSlugs: string[];
   userEmail: string | null;
+  ocultarCampoOperadora?: boolean;
   onClose: () => void;
   onSalvo: (r: RhFuncionario) => void;
   t: ReturnType<typeof useApp>["theme"];
@@ -1354,6 +1750,21 @@ function ModalStaffEditar({
             <span style={labelStyle}>Escala (somente leitura)</span>
             <input type="text" readOnly value={row.escala?.trim() || "—"} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
           </div>
+          {!ocultarCampoOperadora ? (
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle} htmlFor="staff-op">
+                Operadora
+              </label>
+              <select id="staff-op" value={opSlug} onChange={(e) => setOpSlug(e.target.value)} style={inputStyle} aria-label="Operadora">
+                <option value="">—</option>
+                {operadoraSlugs.map((slug) => (
+                  <option key={slug} value={slug}>
+                    {operadorasNome[slug] ?? slug}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div style={{ marginBottom: 14 }}>
             <span style={labelStyle}>Turno</span>
             <select
@@ -1413,25 +1824,6 @@ function ModalStaffEditar({
             </div>
           ) : null}
           <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle} htmlFor="staff-op">
-              Operadora
-            </label>
-            <select id="staff-op" value={opSlug} onChange={(e) => setOpSlug(e.target.value)} style={inputStyle} aria-label="Operadora">
-              <option value="">—</option>
-              {operadoraSlugs.map((slug) => (
-                <option key={slug} value={slug}>
-                  {operadorasNome[slug] ?? slug}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle} htmlFor="staff-barcode">
-              Barcode
-            </label>
-            <input id="staff-barcode" type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} style={inputStyle} />
-          </div>
-          <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-id-op">
               ID operacional
             </label>
@@ -1446,6 +1838,12 @@ function ModalStaffEditar({
             <div id="staff-id-op-hint" style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
               Código ou número usado na operação
             </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle} htmlFor="staff-barcode">
+              Barcode
+            </label>
+            <input id="staff-barcode" type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} style={inputStyle} />
           </div>
         </div>
       )}

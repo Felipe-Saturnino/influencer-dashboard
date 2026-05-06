@@ -1,4 +1,5 @@
 import type { Role, PageKey, PermissaoValor, GestorTipoSlug, PrestadorTipoSlug } from "../../../types";
+import { ROLES_STAFF_APENAS_PERMISSOES } from "../../../lib/staffRoles";
 import { BRAND_SEMANTIC, FONT_TITLE } from "../../../constants/theme";
 
 export { FONT_TITLE };
@@ -8,16 +9,12 @@ export const BRAND = {
   gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
-/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores) */
+/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Figurino e RH são perfis próprios. */
 export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "operacoes", label: "Estúdio" },
   { slug: "marketing", label: "Marketing" },
   { slug: "afiliados", label: "Afiliados" },
   { slug: "geral", label: "Geral" },
-  { slug: "figurino", label: "Figurino" },
-  { slug: "recursos_humanos", label: "Recursos Humanos" },
-  { slug: "shift_leader", label: "Shift Leader" },
-  { slug: "service_manager", label: "Service Manager" },
 ];
 
 /** Áreas de atuação do perfil Prestadores (multi no cadastro + colunas na aba Prestadores). */
@@ -28,16 +25,29 @@ export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
   { slug: "escritorio", label: "Escritório" },
 ];
 
+/** Ordem fixa em filtros da aba Usuários e no select «Perfil» do modal (aba Permissões usa `ROLES_PERMISSOES`). */
 export const ROLES: { value: Role; label: string }[] = [
   { value: "admin", label: "Administrador" },
-  { value: "gestor", label: "Gestor" },
-  { value: "prestador", label: "Prestadores" },
   { value: "executivo", label: "Executivo" },
-  { value: "influencer", label: "Influenciador" },
+  { value: "gestor", label: "Gestor" },
+  { value: "rh", label: "RH" },
+  { value: "figurino", label: "Figurino" },
+  { value: "service_manager", label: "Service Manager" },
+  { value: "shift_leader", label: "Shift Leader" },
+  { value: "prestador", label: "Prestadores" },
   { value: "operador", label: "Operador" },
   { value: "agencia", label: "Agência" },
+  { value: "influencer", label: "Influenciador" },
 ];
 
+/** Linhas de filtro por perfil na aba Usuários (título + botões na ordem pedida). */
+export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
+  { titulo: "Perfis Gerênciais", roles: ["admin", "executivo", "gestor"] },
+  { titulo: "Perfis Internos", roles: ["rh", "figurino", "service_manager", "shift_leader", "prestador"] },
+  { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer"] },
+];
+
+/** Ordem alinhada ao menu lateral (`constants/menu.ts`); secção Geral por último. */
 export const PAGES: {
   key: PageKey;
   label: string;
@@ -46,28 +56,25 @@ export const PAGES: {
   hasEditar: boolean;
   hasExcluir: boolean;
 }[] = [
+  // Dashboards
+  { key: "mesas_spin", label: "Overview Spin", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "streamers", label: "Streamers", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_midias_sociais", label: "Mídias Sociais", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  // Lives
   { key: "agenda", label: "Agenda", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "resultados", label: "Resultados", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "feedback", label: "Feedback", secao: "Lives", hasCriar: false, hasEditar: true, hasExcluir: true },
-  { key: "mesas_spin", label: "Overview Spin", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "streamers", label: "Streamers", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_midias_sociais", label: "Mídias Sociais", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "influencers", label: "Influencers", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "scout", label: "Scout", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
+  // Aquisição
   { key: "financeiro", label: "Financeiro", secao: "Aquisição", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "banca_jogo", label: "Banca de Jogo", secao: "Aquisição", hasCriar: true, hasEditar: true, hasExcluir: true },
+  // Marketing
+  { key: "campanhas", label: "Campanhas", secao: "Marketing", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_links", label: "Gestão de Links", secao: "Marketing", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "campanhas", label: "Campanhas", secao: "Marketing", hasCriar: true, hasEditar: true, hasExcluir: false },
-  { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_funcionarios", label: "Gestão de Prestadores", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_dados_cadastro", label: "Dados de Cadastro", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "rh_organograma", label: "Organograma", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_vagas", label: "Vagas", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: false },
-  { key: "rh_staff", label: "Gestão de Staff", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "rh_calendario", label: "Calendário", secao: "RH", hasCriar: false, hasEditar: false, hasExcluir: false },
+  // Estúdio (menu)
+  { key: "gestao_dealers", label: "Gestão de Dealers", secao: "Estúdio", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
     key: "central_notificacoes",
     label: "Central de Notificações",
@@ -76,22 +83,40 @@ export const PAGES: {
     hasEditar: true,
     hasExcluir: true,
   },
-  { key: "gestao_usuarios", label: "Gestão de Usuários", secao: "Plataforma", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "gestao_operadoras", label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
+  // RH
+  { key: "rh_portal", label: "Portal de RH", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "rh_funcionarios", label: "Gestão de Prestadores", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "rh_dados_cadastro", label: "Dados de Cadastro", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "rh_organograma", label: "Organograma", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "rh_vagas", label: "Vagas", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "rh_staff", label: "Gestão de Staff", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "rh_calendario", label: "Calendário", secao: "RH", hasCriar: false, hasEditar: false, hasExcluir: false },
+  // Conteúdo
+  { key: "playbook_influencers", label: "Playbook Influencers", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "links_materiais", label: "Links e Materiais", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
+  // Plataforma — Criar/Editar/Excluir alinhados a Novo usuário / modais e abas / desativação
+  { key: "gestao_usuarios", label: "Gestão de Usuários", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "gestao_operadoras", label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_mesas", label: "Gestão de Mesas", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "status_tecnico", label: "Status Técnico", secao: "Plataforma", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "playbook_influencers", label: "Playbook Influencers", secao: "Conteúdo", hasCriar: true, hasEditar: true, hasExcluir: false },
-  { key: "links_materiais", label: "Links e Materiais", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
+  // Geral (sempre por último)
   { key: "configuracoes", label: "Configurações", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "ajuda", label: "Ajuda", secao: "Geral", hasCriar: false, hasEditar: false, hasExcluir: false },
 ];
 
-/** Ordem na aba Permissões */
+/**
+ * Perfis editáveis na aba Permissões (Administrador não entra: acesso total fixo na plataforma).
+ */
 export const ROLES_PERMISSOES: Role[] = [
-  "admin",
   "executivo",
   "gestor",
+  "rh",
+  "figurino",
+  "service_manager",
+  "shift_leader",
   "prestador",
   "operador",
   "agencia",
@@ -114,6 +139,10 @@ export function roleBadgeColor(role: Role): string {
     gestor: BRAND.azul,
     prestador: BRAND.roxo,
     executivo: BRAND.ciano,
+    shift_leader: BRAND.amarelo,
+    service_manager: BRAND.azul,
+    figurino: BRAND.roxoVivo,
+    rh: BRAND.roxo,
     influencer: BRAND.verde,
     operador: BRAND.amarelo,
     agencia: BRAND.vermelho,
@@ -121,7 +150,7 @@ export function roleBadgeColor(role: Role): string {
   return map[role] ?? BRAND.cinza;
 }
 
-/** Admin não usa escopo de influencers/operadoras; gestor usa tipos (multi) na aba Usuários. */
+/** Admin, Executivo e staff Spin não usam escopo por operadora/influencer na Gestão de Usuários. */
 export function escopoBloqueado(role: Role): boolean {
-  return role === "admin";
+  return role === "admin" || role === "executivo" || ROLES_STAFF_APENAS_PERMISSOES.includes(role);
 }
