@@ -8,16 +8,12 @@ export const BRAND = {
   gradiente: `linear-gradient(135deg, ${BRAND_SEMANTIC.roxo}, ${BRAND_SEMANTIC.azul})`,
 } as const;
 
-/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores) */
+/** Tipos de gestor (multi-seleção no cadastro + colunas na aba Gestores). Shift Leader, Service Manager, Figurino e RH são perfis próprios. */
 export const GESTOR_TIPOS: { slug: GestorTipoSlug; label: string }[] = [
   { slug: "operacoes", label: "Estúdio" },
   { slug: "marketing", label: "Marketing" },
   { slug: "afiliados", label: "Afiliados" },
   { slug: "geral", label: "Geral" },
-  { slug: "figurino", label: "Figurino" },
-  { slug: "recursos_humanos", label: "Recursos Humanos" },
-  { slug: "shift_leader", label: "Shift Leader" },
-  { slug: "service_manager", label: "Service Manager" },
 ];
 
 /** Áreas de atuação do perfil Prestadores (multi no cadastro + colunas na aba Prestadores). */
@@ -33,6 +29,10 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "gestor", label: "Gestor" },
   { value: "prestador", label: "Prestadores" },
   { value: "executivo", label: "Executivo" },
+  { value: "shift_leader", label: "Shift Leader" },
+  { value: "service_manager", label: "Service Manager" },
+  { value: "figurino", label: "Figurino" },
+  { value: "rh", label: "RH" },
   { value: "influencer", label: "Influenciador" },
   { value: "operador", label: "Operador" },
   { value: "agencia", label: "Agência" },
@@ -92,6 +92,10 @@ export const ROLES_PERMISSOES: Role[] = [
   "admin",
   "executivo",
   "gestor",
+  "shift_leader",
+  "service_manager",
+  "figurino",
+  "rh",
   "prestador",
   "operador",
   "agencia",
@@ -114,6 +118,10 @@ export function roleBadgeColor(role: Role): string {
     gestor: BRAND.azul,
     prestador: BRAND.roxo,
     executivo: BRAND.ciano,
+    shift_leader: BRAND.amarelo,
+    service_manager: BRAND.azul,
+    figurino: BRAND.roxoVivo,
+    rh: BRAND.roxo,
     influencer: BRAND.verde,
     operador: BRAND.amarelo,
     agencia: BRAND.vermelho,

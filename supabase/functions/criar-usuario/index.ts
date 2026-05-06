@@ -25,10 +25,6 @@ const GESTOR_TIPO_SLUGS = [
   'marketing',
   'afiliados',
   'geral',
-  'figurino',
-  'recursos_humanos',
-  'shift_leader',
-  'service_manager',
 ] as const
 
 const PRESTADOR_TIPO_SLUGS = [

@@ -8,6 +8,8 @@ import OperadoraTag from "../../../components/OperadoraTag";
 import type { OperadoraTagDados } from "./BannerPendencias";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { corStatusSolicitacao, labelTipoSolicitacao, tempoRelativo, type SolicitacaoStatus, type SolicitacaoTipo } from "./solicitacoesUtils";
+import type { Role } from "../../../types";
+import { ROLES_VISAO_OPERACAO_SPIN } from "../../../lib/staffRoles";
 
 export type ThreadSolicitacaoOrigem = "dealer" | "campanha_roteiro" | "roteiro_mesa";
 
@@ -99,7 +101,7 @@ function papelMensagemFromUser(role: string | undefined): "operadora" | "gestor"
 }
 
 function isStaff(role: string | undefined): boolean {
-  return role === "admin" || role === "gestor" || role === "prestador" || role === "executivo";
+  return !!role && ROLES_VISAO_OPERACAO_SPIN.includes(role as Role);
 }
 
 export function ModalThreadSolicitacao({

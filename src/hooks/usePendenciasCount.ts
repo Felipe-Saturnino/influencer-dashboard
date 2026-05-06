@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useApp } from "../context/AppContext";
+import type { Role } from "../types";
 import { useDashboardFiltros } from "./useDashboardFiltros";
+import { ROLES_VISAO_OPERACAO_SPIN } from "../lib/staffRoles";
 
 type Modo = "gestor" | "operadora";
 
@@ -17,7 +19,7 @@ export function usePendenciasCount(modo: Modo): number {
 
   useEffect(() => {
     const role = user?.role ?? "";
-    if (modo === "gestor" && !["gestor", "prestador", "admin", "executivo"].includes(role)) {
+    if (modo === "gestor" && (!role || !ROLES_VISAO_OPERACAO_SPIN.includes(role as Role))) {
       setCount(0);
       return;
     }

@@ -8,6 +8,10 @@ import {
   aplicarDeepLinkAposRestaurarSessao,
   aplicarRedirecionamentoPosLoginOuHome,
 } from "../lib/rhLoginDadosCadastroDeepLink";
+import {
+  ROLES_ESCOPO_TIPO_EXECUTIVO,
+  ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM,
+} from "../lib/staffRoles";
 
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
@@ -200,8 +204,8 @@ async function carregarEscoposVisiveis(
     return { influencersVisiveis: [userId], operadorasVisiveis, semRestricaoEscopo: false };
   }
 
-  // Executivo: vê TODOS os influencers, escopo só para operadoras
-  if (role === "executivo") {
+  // Executivo, Shift Leader, Service Manager, Figurino, RH: mesma segregação que Executivo
+  if (ROLES_ESCOPO_TIPO_EXECUTIVO.includes(role)) {
     const operadorasVisiveis = lista
       .filter((s) => s.scope_type === "operadora")
       .map((s) => s.scope_ref);
@@ -274,7 +278,7 @@ async function carregarPermissoes(
   if (mapa.dash_overview_influencer === null && ["influencer", "agencia"].includes(role)) {
     mapa.dash_overview_influencer = "proprios";
   }
-  if (mapa.dash_overview_influencer === null && ["admin", "gestor", "prestador", "executivo"].includes(role)) {
+  if (mapa.dash_overview_influencer === null && ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM.includes(role)) {
     mapa.dash_overview_influencer = "sim";
   }
 

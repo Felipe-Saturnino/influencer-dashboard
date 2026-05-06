@@ -9,6 +9,7 @@ import { FONT } from "../../../constants/theme";
 import type { Role, UsuarioCompleto, Operadora } from "../../../types";
 import type { Theme } from "../../../constants/theme";
 import { BRAND, ROLES, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS } from "./constants";
+import { ROLES_ESCOPO_TIPO_EXECUTIVO } from "../../../lib/staffRoles";
 import { ParesAgenciaUI } from "./ParesAgenciaUI";
 
 interface ModalUsuarioProps {
@@ -528,7 +529,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
           />
         ) : (
           <>
-            {role !== "executivo" && role !== "operador" && (
+            {role !== "operador" && !ROLES_ESCOPO_TIPO_EXECUTIVO.includes(role) && (
               <MultiSelect
                 label="Influencers (opcional)"
                 cor={roleBadgeColor("operador")}

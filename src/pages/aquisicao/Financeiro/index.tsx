@@ -215,7 +215,16 @@ function cicloAberto(ciclo: CicloPagamento): boolean {
 }
 
 /** Só perfis de operação interna veem `pagamentos_agentes` (influencer e agência: apenas pagamentos dos influencers da gestão). */
-const ROLES_VER_PAGAMENTO_AGENTE: readonly Role[] = ["admin", "gestor", "executivo", "operador"];
+const ROLES_VER_PAGAMENTO_AGENTE: readonly Role[] = [
+  "admin",
+  "gestor",
+  "executivo",
+  "operador",
+  "shift_leader",
+  "service_manager",
+  "figurino",
+  "rh",
+];
 
 function podeVerPagamentosAgenteFinanceiro(role: string | undefined): boolean {
   return !!role && (ROLES_VER_PAGAMENTO_AGENTE as readonly string[]).includes(role);

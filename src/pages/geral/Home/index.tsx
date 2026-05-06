@@ -107,6 +107,10 @@ const ROLE_LABELS: Record<Role, string> = {
   gestor: "Gestor",
   prestador: "Prestadores",
   executivo: "Executivo",
+  shift_leader: "Shift Leader",
+  service_manager: "Service Manager",
+  figurino: "Figurino",
+  rh: "RH",
   influencer: "Influencer",
   operador: "Operador",
   agencia: "Agência",
@@ -133,6 +137,26 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Dashboard executivo",
     subtitle:
       "Visualize métricas gerais, conversão e performance dos influencers nas suas operadoras.",
+  },
+  shift_leader: {
+    title: "Shift Leader",
+    subtitle:
+      "Acompanhe operações e ferramentas liberadas para o seu perfil. Operadoras opcionais podem refinar o escopo de dados.",
+  },
+  service_manager: {
+    title: "Service Manager",
+    subtitle:
+      "Gerencie fluxos de serviço e páginas liberadas ao seu perfil. Ajuste fino em Gestão de Usuários.",
+  },
+  figurino: {
+    title: "Figurino",
+    subtitle:
+      "Foco em figurinos e fluxos de estúdio liberados ao seu perfil.",
+  },
+  rh: {
+    title: "RH",
+    subtitle:
+      "Foco em prestadores, escala e ferramentas de RH liberadas ao seu perfil.",
   },
   influencer: {
     title: "Seu dashboard",
