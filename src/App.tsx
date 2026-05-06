@@ -53,6 +53,7 @@ const CentralNotificacoes = lazyWithRetry(() => import("./pages/estudio/CentralN
 const RoteiroMesa = lazyWithRetry(() => import("./pages/estudio/RoteiroMesa"));
 const PlaybookInfluencers = lazyWithRetry(() => import("./pages/conteudo/PlaybookInfluencers"));
 const LinksMateriais = lazyWithRetry(() => import("./pages/conteudo/LinksMateriais"));
+const SpinNaRede = lazyWithRetry(() => import("./pages/conteudo/SpinNaRede"));
 const GestaoUsuarios = lazyWithRetry(() => import("./pages/plataforma/GestaoUsuarios"));
 const GestaoOperadoras = lazyWithRetry(() => import("./pages/plataforma/GestaoOperadoras"));
 const GestaoMesas = lazyWithRetry(() => import("./pages/plataforma/GestaoMesas"));
@@ -88,6 +89,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   roteiro_mesa:     RoteiroMesa,
   playbook_influencers: PlaybookInfluencers,
   links_materiais:  LinksMateriais,
+  spin_na_rede:     SpinNaRede,
   gestao_usuarios:  GestaoUsuarios,
   gestao_operadoras: GestaoOperadoras,
   gestao_mesas:     GestaoMesas,
