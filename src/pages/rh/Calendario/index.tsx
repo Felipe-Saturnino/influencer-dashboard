@@ -1225,6 +1225,8 @@ export default function RhCalendarioPage() {
                     triggerEmptyLabel="Staff"
                     ariaFilterPrefix="Filtrar por staff"
                     listboxAriaLabel="Selecionar membro do staff"
+                    enableSearch
+                    searchPlaceholder="Pesquisar prestador…"
                   />
                 ) : null}
               </>
