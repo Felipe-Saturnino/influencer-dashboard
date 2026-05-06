@@ -10,7 +10,8 @@ export type Role =
   | "rh"
   | "influencer"
   | "operador"
-  | "agencia";
+  | "agencia"
+  | "investidor";
 
 // ─── USER ────────────────────────────────────────────────────────────────────
 export interface User {

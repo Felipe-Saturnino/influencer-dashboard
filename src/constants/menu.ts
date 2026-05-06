@@ -94,7 +94,6 @@ export const MENU: MenuSection[] = [
   {
     section: "RH",
     items: [
-      { key: "rh_portal", label: "Portal de RH", icon: GiNewspaper },
       { key: "rh_funcionarios", label: "Gestão de Prestadores", icon: GiPerson },
       { key: "rh_dados_cadastro", label: "Dados de Cadastro", icon: GiFiles },
       { key: "rh_organograma", label: "Organograma", icon: GiOrganigram },
@@ -109,6 +108,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "playbook_influencers", label: "Playbook Influencers", icon: GiOpenBook },
       { key: "links_materiais", label: "Links e Materiais", icon: GiShare },
+      { key: "rh_portal", label: "Portal de RH", icon: GiNewspaper },
     ],
   },
   {

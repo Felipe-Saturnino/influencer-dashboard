@@ -112,6 +112,7 @@ const ROLE_LABELS: Record<Role, string> = {
   figurino: "Figurino",
   rh: "RH",
   influencer: "Influencer",
+  investidor: "Investidor",
   operador: "Operador",
   agencia: "Agência",
 };
@@ -169,6 +170,11 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
   agencia: {
     title: "Gestão de parceiros",
     subtitle: "Acompanhe os influencers e operadoras vinculados à sua agência.",
+  },
+  investidor: {
+    title: "Visão de investimento",
+    subtitle:
+      "Acompanhe métricas e páginas liberadas ao seu perfil — sem escopo fixo de operadora ou influencer; o acesso é definido na aba Permissões.",
   },
 };
 

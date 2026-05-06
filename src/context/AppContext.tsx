@@ -215,8 +215,8 @@ async function carregarEscoposVisiveis(
     return { influencersVisiveis: [userId], operadorasVisiveis, semRestricaoEscopo: false };
   }
 
-  // Executivo e staff Spin (Shift Leader, Service Manager, Figurino, RH): só role_permissions — sem user_scopes operadora.
-  if (role === "executivo" || ROLES_STAFF_APENAS_PERMISSOES.includes(role)) {
+  // Executivo, Investidor e staff Spin (Shift Leader, Service Manager, Figurino, RH): só role_permissions — sem user_scopes operadora.
+  if (role === "executivo" || role === "investidor" || ROLES_STAFF_APENAS_PERMISSOES.includes(role)) {
     return {
       influencersVisiveis: [],
       operadorasVisiveis: [],
