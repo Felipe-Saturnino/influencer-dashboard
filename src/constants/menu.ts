@@ -30,10 +30,14 @@ import {
   GiNewspaper,
 } from "react-icons/gi";
 import { createElement } from "react";
-import { CalendarRange } from "lucide-react";
+import { CalendarRange, Radio } from "lucide-react";
 
 function IconRhCalendarioMenu({ size = 15, color }: { size?: number; color?: string }) {
   return createElement(CalendarRange, { size, color, "aria-hidden": true });
+}
+
+function IconSpinNaRedeMenu({ size = 15, color }: { size?: number; color?: string }) {
+  return createElement(Radio, { size, color, "aria-hidden": true });
 }
 
 export interface MenuItem {
@@ -108,6 +112,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "playbook_influencers", label: "Playbook Influencers", icon: GiOpenBook },
       { key: "links_materiais", label: "Links e Materiais", icon: GiShare },
+      { key: "spin_na_rede", label: "Spin na Rede", icon: IconSpinNaRedeMenu },
       { key: "rh_portal", label: "Portal de RH", icon: GiNewspaper },
     ],
   },
