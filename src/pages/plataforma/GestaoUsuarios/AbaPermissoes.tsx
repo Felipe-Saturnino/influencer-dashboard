@@ -18,10 +18,6 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   useEffect(() => {
-    if (roleAtivo === "admin") {
-      setPerms({});
-      return;
-    }
     supabase
       .from("role_permissions")
       .select("*")
@@ -41,7 +37,6 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
   };
 
   const salvar = async () => {
-    if (roleAtivo === "admin") return;
     setSalvando(true);
     setSalvoOk(false);
     const rows = PAGES.map((p) => ({
@@ -210,8 +205,8 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
         Selecione um perfil abaixo para configurar permissões por página. O perfil{" "}
-        <strong style={{ color: t.text }}>Administrador</strong> mantém acesso total (Ver, Criar, Editar e Excluir) a
-        todas as páginas; ao escolhê-lo, o painel mostra apenas esta informação e não permite gravar alterações.
+        <strong style={{ color: t.text }}>Administrador</strong> não é configurado aqui: na plataforma mantém acesso total
+        (Ver, Criar, Editar e Excluir) a todas as páginas.
       </p>
       {roleAtivo === "gestor" ? (
         <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
@@ -280,49 +275,33 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
           overflow: "hidden",
         }}
       >
-        {roleAtivo === "admin" ? (
-          <div
-            style={{
-              padding: "36px 24px",
-              textAlign: "center",
-              fontFamily: FONT.body,
-              fontSize: 14,
-              color: t.textMuted,
-              background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
-            }}
-          >
-            Utilizadores com perfil <strong style={{ color: t.text }}>Administrador</strong> não utilizam esta matriz:
-            na plataforma possuem sempre permissão total em todas as páginas.
-          </div>
-        ) : (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: 0,
-            }}
-          >
-            <thead>
-              <tr>
-                <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
-                  Seção
-                </th>
-                <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
-                  Página
-                </th>
-                <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Ver</th>
-                <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Criar</th>
-                <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Editar</th>
-                <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Excluir</th>
-              </tr>
-            </thead>
-            <tbody>{linhas}</tbody>
-          </table>
-        )}
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "separate",
+            borderSpacing: 0,
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
+                Seção
+              </th>
+              <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
+                Página
+              </th>
+              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Ver</th>
+              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Criar</th>
+              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Editar</th>
+              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Excluir</th>
+            </tr>
+          </thead>
+          <tbody>{linhas}</tbody>
+        </table>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "stretch" }}>
-        {erroSalvar && roleAtivo !== "admin" && (
+        {erroSalvar && (
           <div
             role="alert"
             style={{
@@ -360,20 +339,18 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
           <button
             type="button"
             onClick={salvar}
-            disabled={salvando || roleAtivo === "admin"}
-            title={roleAtivo === "admin" ? "Perfil Administrador não pode ser alterado nesta aba" : undefined}
+            disabled={salvando}
             style={{
-              background:
-                salvando || roleAtivo === "admin" ? BRAND.cinza : BRAND.gradiente,
+              background: salvando ? BRAND.cinza : BRAND.gradiente,
               color: "#fff",
               border: "none",
               borderRadius: 10,
               padding: "10px 22px",
-              cursor: salvando || roleAtivo === "admin" ? "not-allowed" : "pointer",
+              cursor: salvando ? "not-allowed" : "pointer",
               fontFamily: FONT.body,
               fontSize: 13,
               fontWeight: 600,
-              opacity: salvando || roleAtivo === "admin" ? 0.7 : 1,
+              opacity: salvando ? 0.7 : 1,
               transition: "opacity 0.15s",
             }}
           >

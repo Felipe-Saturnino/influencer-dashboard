@@ -25,7 +25,7 @@ export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
   { slug: "escritorio", label: "Escritório" },
 ];
 
-/** Ordem fixa em filtros da aba Usuários, select «Perfil» do modal e aba Permissões (`ROLES_PERMISSOES`). */
+/** Ordem fixa em filtros da aba Usuários e no select «Perfil» do modal (aba Permissões usa `ROLES_PERMISSOES`). */
 export const ROLES: { value: Role; label: string }[] = [
   { value: "admin", label: "Administrador" },
   { value: "executivo", label: "Executivo" },
@@ -108,10 +108,9 @@ export const PAGES: {
 ];
 
 /**
- * Ordem dos botões na aba Permissões. Inclui `admin` primeiro (painel só leitura: acesso total, não editável).
+ * Perfis editáveis na aba Permissões (Administrador não entra: acesso total fixo na plataforma).
  */
 export const ROLES_PERMISSOES: Role[] = [
-  "admin",
   "executivo",
   "gestor",
   "rh",
