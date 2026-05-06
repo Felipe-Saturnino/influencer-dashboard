@@ -136,7 +136,7 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
   executivo: {
     title: "Dashboard executivo",
     subtitle:
-      "Visualize métricas gerais, conversão e performance dos influencers nas suas operadoras.",
+      "Visualize métricas e páginas liberadas ao seu perfil em Gestão de Usuários — dados de todas as operadoras onde houver permissão de visualização.",
   },
   shift_leader: {
     title: "Shift Leader",

@@ -1,16 +1,18 @@
 import type { Role } from "../types";
 
 /**
- * Mesmo modelo de escopo que Executivo (operadoras opcionais em user_scopes + vê todos os influencers).
- * Usado em AppContext e ModalUsuario.
+ * Perfis staff Spin: sem escopo por operadora na Gestão nem na app — só `role_permissions` (aba Permissões).
+ * Mesma visão ampla de operadoras/influencers nos filtros que Executivo (sem user_scopes).
  */
-export const ROLES_ESCOPO_TIPO_EXECUTIVO: readonly Role[] = [
-  "executivo",
+export const ROLES_STAFF_APENAS_PERMISSOES: readonly Role[] = [
   "shift_leader",
   "service_manager",
   "figurino",
   "rh",
 ];
+
+/** @deprecated usar ROLES_STAFF_APENAS_PERMISSOES */
+export const ROLES_ESCOPO_TIPO_EXECUTIVO = ROLES_STAFF_APENAS_PERMISSOES;
 
 /** Dashboards / filtros amplos / badge de pendentes como staff Spin. */
 export const ROLES_VISAO_OPERACAO_SPIN: readonly Role[] = [

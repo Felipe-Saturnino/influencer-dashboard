@@ -9,7 +9,7 @@ import {
   aplicarRedirecionamentoPosLoginOuHome,
 } from "../lib/rhLoginDadosCadastroDeepLink";
 import {
-  ROLES_ESCOPO_TIPO_EXECUTIVO,
+  ROLES_STAFF_APENAS_PERMISSOES,
   ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM,
 } from "../lib/staffRoles";
 
@@ -31,20 +31,24 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "rh_gestao_escala",
   "rh_staff",
   "rh_calendario",
+  "rh_portal",
   "configuracoes", "ajuda",
 ];
+
+/** Home e páginas gerais: só `role_permissions`; sem interseção com `gestor_tipo_pages` nem `prestador_tipo_pages`. */
+const PAGES_SEM_MATRIZ_ESCOPO_TIPO = new Set<PageKey>(["home", "configuracoes", "ajuda"]);
 
 // Tipo do mapa de permissões de visualização
 export type PermissoesMapa = Record<PageKey, PermissaoValor>;
 
 // Escopos visíveis
-// semRestricaoEscopo=true (admin/gestor): vê tudo, ignora arrays
-// semRestricaoEscopo=false ou undefined: só vê o que está em influencersVisiveis/operadorasVisiveis
+// semRestricaoEscopo=true (admin): vê todos influencers e operadoras no produto
+// semRestricaoEscopo=false: influencers/operadoras conforme listas; gestor vê todas as operadoras (como executivo), opcionalmente limita influencers
 export interface EscoposVisiveis {
   influencersVisiveis: string[];  // UUIDs
   operadorasVisiveis:  string[];  // slugs
-  semRestricaoEscopo?: boolean;   // true = admin/gestor, vê tudo (dados)
-  vêTodosInfluencers?: boolean;   // true = executivo, vê todos os influencers
+  semRestricaoEscopo?: boolean;   // true = só admin (dados globais)
+  vêTodosInfluencers?: boolean;   // true = executivo, perfis em ROLES_STAFF_APENAS_PERMISSOES, ou gestor sem influencers explícitos em user_scopes
   /** Tipos de gestor (user_scopes gestor_tipo); usado para filtrar menu vs gestor_tipo_pages */
   gestorTiposVisiveis?: string[];
   /** Áreas de prestador (user_scopes prestador_tipo); menu vs prestador_tipo_pages */
@@ -164,11 +168,18 @@ async function carregarEscoposVisiveis(
       .filter((s) => s.scope_type === "gestor_tipo")
       .map((s) => s.scope_ref)
       .filter(Boolean);
+    const influencersVisiveis = lista
+      .filter((s) => s.scope_type === "influencer")
+      .map((s) => s.scope_ref)
+      .filter(Boolean);
     return {
-      influencersVisiveis: [],
+      influencersVisiveis,
+      /** Gestor: mesma visão global de operadoras que executivo (sem segregação por escopo operadora). */
       operadorasVisiveis: [],
-      semRestricaoEscopo: true,
+      semRestricaoEscopo: false,
       gestorTiposVisiveis,
+      /** Sem influencers explícitos no cadastro: mantém visão ampla de influencers nos dashboards (com filtro por operadora). */
+      vêTodosInfluencers: influencersVisiveis.length === 0,
     };
   }
 
@@ -204,12 +215,14 @@ async function carregarEscoposVisiveis(
     return { influencersVisiveis: [userId], operadorasVisiveis, semRestricaoEscopo: false };
   }
 
-  // Executivo, Shift Leader, Service Manager, Figurino, RH: mesma segregação que Executivo
-  if (ROLES_ESCOPO_TIPO_EXECUTIVO.includes(role)) {
-    const operadorasVisiveis = lista
-      .filter((s) => s.scope_type === "operadora")
-      .map((s) => s.scope_ref);
-    return { influencersVisiveis: [], operadorasVisiveis, semRestricaoEscopo: false, vêTodosInfluencers: true };
+  // Executivo e staff Spin (Shift Leader, Service Manager, Figurino, RH): só role_permissions — sem user_scopes operadora.
+  if (role === "executivo" || ROLES_STAFF_APENAS_PERMISSOES.includes(role)) {
+    return {
+      influencersVisiveis: [],
+      operadorasVisiveis: [],
+      semRestricaoEscopo: true,
+      vêTodosInfluencers: true,
+    };
   }
 
   // Operador: vê TODOS os influencers, escopo só para operadoras
@@ -253,6 +266,13 @@ async function carregarPermissoes(
   const operadorasVisiveis = options?.operadorasVisiveis;
   const gestorTiposVisiveis = options?.gestorTiposVisiveis;
   const prestadorTiposVisiveis = options?.prestadorTiposVisiveis;
+
+  if (role === "admin") {
+    return Object.fromEntries(
+      ALL_PAGE_KEYS.map((k) => [k, "sim" as PermissaoValor])
+    ) as PermissoesMapa;
+  }
+
   const { data } = await supabase
     .from("role_permissions")
     .select("page_key, can_view")
@@ -268,11 +288,6 @@ async function carregarPermissoes(
       mapa[r.page_key as PageKey] = r.can_view as PermissaoValor;
     }
   });
-
-  // Gestão de Usuários: admin mantém acesso total (comportamento legado; demais perfis vêm do role_permissions + escopo por tipo).
-  if (role === "admin") {
-    mapa.gestao_usuarios = "sim";
-  }
 
   // Overview Influencer: padrão "proprios" para influencer e agencia (único dash para eles)
   if (mapa.dash_overview_influencer === null && ["influencer", "agencia"].includes(role)) {
@@ -301,17 +316,22 @@ async function carregarPermissoes(
     }
   }
 
-  // Gestor: união das páginas em gestor_tipo_pages para os tipos do usuário. Se não houver linhas na tabela
-  // para esses tipos ainda, mantém só role_permissions (transição até a aba Gestores ser preenchida).
-  if (role === "gestor" && gestorTiposVisiveis && gestorTiposVisiveis.length > 0) {
-    const { data: gtPages } = await supabase
-      .from("gestor_tipo_pages")
-      .select("page_key")
-      .in("gestor_tipo_slug", gestorTiposVisiveis);
-    const rows = gtPages ?? [];
-    if (rows.length > 0) {
-      const pagesPermitidas = new Set(rows.map((r) => r.page_key));
+  // Gestor: Ver efetivo = role_permissions ∩ união(gestor_tipo_pages dos tipos do utilizador).
+  // Tipos de gestor são obrigatórios no cadastro; sem tipos, páginas operacionais ficam bloqueadas.
+  // home / configuracoes / ajuda: só role_permissions (fora da matriz da aba Gestores — ver PAGES_SEM_MATRIZ_ESCOPO_TIPO).
+  if (role === "gestor") {
+    if (!gestorTiposVisiveis || gestorTiposVisiveis.length === 0) {
       ALL_PAGE_KEYS.forEach((k) => {
+        if (!PAGES_SEM_MATRIZ_ESCOPO_TIPO.has(k)) mapa[k] = "nao";
+      });
+    } else {
+      const { data: gtPages } = await supabase
+        .from("gestor_tipo_pages")
+        .select("page_key")
+        .in("gestor_tipo_slug", gestorTiposVisiveis);
+      const pagesPermitidas = new Set((gtPages ?? []).map((r) => r.page_key));
+      ALL_PAGE_KEYS.forEach((k) => {
+        if (PAGES_SEM_MATRIZ_ESCOPO_TIPO.has(k)) return;
         const cv = mapa[k];
         if (cv === "sim" || cv === "proprios") {
           if (!pagesPermitidas.has(k)) mapa[k] = "nao";
@@ -320,15 +340,22 @@ async function carregarPermissoes(
     }
   }
 
-  if (role === "prestador" && prestadorTiposVisiveis && prestadorTiposVisiveis.length > 0) {
-    const { data: ptPages } = await supabase
-      .from("prestador_tipo_pages")
-      .select("page_key")
-      .in("prestador_tipo_slug", prestadorTiposVisiveis);
-    const rows = ptPages ?? [];
-    if (rows.length > 0) {
-      const pagesPermitidas = new Set(rows.map((r) => r.page_key));
+  // Prestador: Ver efetivo = role_permissions ∩ união(prestador_tipo_pages das áreas do utilizador).
+  // Áreas obrigatórias no cadastro; sem áreas, páginas operacionais bloqueadas.
+  // home / configuracoes / ajuda: só role_permissions (fora da aba Prestadores).
+  if (role === "prestador") {
+    if (!prestadorTiposVisiveis || prestadorTiposVisiveis.length === 0) {
       ALL_PAGE_KEYS.forEach((k) => {
+        if (!PAGES_SEM_MATRIZ_ESCOPO_TIPO.has(k)) mapa[k] = "nao";
+      });
+    } else {
+      const { data: ptPages } = await supabase
+        .from("prestador_tipo_pages")
+        .select("page_key")
+        .in("prestador_tipo_slug", prestadorTiposVisiveis);
+      const pagesPermitidas = new Set((ptPages ?? []).map((r) => r.page_key));
+      ALL_PAGE_KEYS.forEach((k) => {
+        if (PAGES_SEM_MATRIZ_ESCOPO_TIPO.has(k)) return;
         const cv = mapa[k];
         if (cv === "sim" || cv === "proprios") {
           if (!pagesPermitidas.has(k)) mapa[k] = "nao";
@@ -528,8 +555,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const podeVerOperadora = useCallback(
     (slug: string) =>
-      escoposVisiveis.semRestricaoEscopo === true || escoposVisiveis.operadorasVisiveis.includes(slug),
-    [escoposVisiveis],
+      escoposVisiveis.semRestricaoEscopo === true ||
+      user?.role === "gestor" ||
+      escoposVisiveis.operadorasVisiveis.includes(slug),
+    [escoposVisiveis, user?.role],
   );
 
   const setTheme = (v: boolean) => {

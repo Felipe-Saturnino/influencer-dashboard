@@ -27,6 +27,7 @@ import {
   GiRoundTable,
   GiThreeFriends,
   GiFiles,
+  GiNewspaper,
 } from "react-icons/gi";
 import { createElement } from "react";
 import { CalendarRange } from "lucide-react";
@@ -93,6 +94,7 @@ export const MENU: MenuSection[] = [
   {
     section: "RH",
     items: [
+      { key: "rh_portal", label: "Portal de RH", icon: GiNewspaper },
       { key: "rh_funcionarios", label: "Gestão de Prestadores", icon: GiPerson },
       { key: "rh_dados_cadastro", label: "Dados de Cadastro", icon: GiFiles },
       { key: "rh_organograma", label: "Organograma", icon: GiOrganigram },

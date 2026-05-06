@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, KeyRound } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { callSupabaseEdgeFunction, isAbortError } from "../../../lib/supabaseEdgeFetch";
@@ -6,28 +6,20 @@ import { FONT } from "../../../constants/theme";
 import type { UsuarioCompleto, UserScope, Operadora } from "../../../types";
 import type { Role } from "../../../types";
 import type { Theme } from "../../../constants/theme";
-import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS, ROLES } from "./constants";
+import { BRAND, roleLabel, roleBadgeColor, GESTOR_TIPOS, PRESTADOR_TIPOS, ROLES, FILTROS_PERFIL_LINHAS } from "./constants";
 import { ModalUsuario } from "./ModalUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 
 interface AbaUsuariosProps {
   t: Theme;
-  /** Criar/editar usuários, reset senha e ver lista completa (sem filtro por «Emprestado para»). */
+  /** Atalhos administrativos (criar/editar/desativar) só quando o utilizador é admin na app. */
   modoAdmin: boolean;
-  /** Quando true (permissão «Próprios» e não admin), só entram perfis com `emprestado_para` igual ao nome do usuário logado. */
-  restringirListaProprios: boolean;
-  nomeUsuarioLogado: string;
-}
-
-function normalizarNomeEmprestado(s: string): string {
-  return s.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
-}
-
-/** Comparação alinhada ao texto «Emprestado para» (Figurinos / cadastro de usuário). */
-function emprestadoParaCoincideComUsuario(emprestadoPara: string | null | undefined, nomeLogado: string): boolean {
-  const a = normalizarNomeEmprestado(emprestadoPara ?? "");
-  const b = normalizarNomeEmprestado(nomeLogado);
-  return a.length > 0 && b.length > 0 && a === b;
+  /** Criar: botão «+ Novo Usuário» (matriz Gestão de Usuários / Criar). */
+  podeCriarUsuario: boolean;
+  /** Editar: modal Editar, reset senha, reativar. */
+  podeEditarUsuario: boolean;
+  /** Excluir: desativar utilizador. */
+  podeExcluirUsuario: boolean;
 }
 
 function formatarUltimoLogin(iso: string | null | undefined): string {
@@ -90,7 +82,13 @@ function formatarEscopo(scopes: UserScope[], ops: Operadora[]): string | null {
     .join(", ");
 }
 
-export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuarioLogado }: AbaUsuariosProps) {
+export function AbaUsuarios({
+  t,
+  modoAdmin,
+  podeCriarUsuario,
+  podeEditarUsuario,
+  podeExcluirUsuario,
+}: AbaUsuariosProps) {
   const [usuarios, setUsuarios] = useState<UsuarioCompleto[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,7 +114,7 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
     const [{ data: profiles }, { data: scopes }, { data: ops }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("id, name, email, role, ativo, created_at, last_sign_in_at, emprestado_para")
+        .select("id, name, email, role, ativo, created_at, last_sign_in_at")
         .order("created_at", { ascending: true }),
       supabase.from("user_scopes").select("*"),
       supabase.from("operadoras").select("*").order("nome"),
@@ -164,11 +162,6 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
     carregar();
   }, [carregar]);
 
-  const usuariosNaLista = useMemo(() => {
-    if (!restringirListaProprios) return usuarios;
-    return usuarios.filter((u) => emprestadoParaCoincideComUsuario(u.emprestado_para, nomeUsuarioLogado));
-  }, [usuarios, restringirListaProprios, nomeUsuarioLogado]);
-
   const abrirNovo = () => {
     setEditando(null);
     setModalOpen(true);
@@ -179,12 +172,12 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
   };
 
   const porBusca = busca.trim()
-    ? usuariosNaLista.filter(
+    ? usuarios.filter(
         (u) =>
           (u.name ?? "").toLowerCase().includes(busca.toLowerCase()) ||
           (u.email ?? "").toLowerCase().includes(busca.toLowerCase())
       )
-    : usuariosNaLista;
+    : usuarios;
 
   const baseContagemStatus = porBusca.filter((u) => passaFiltroPerfil(u, filtroPerfilSet));
   const qtdAtivos = baseContagemStatus.filter((u) => u.ativo !== false).length;
@@ -254,7 +247,7 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
             }}
           />
         </div>
-        {modoAdmin ? (
+        {modoAdmin && podeCriarUsuario ? (
           <button
             type="button"
             onClick={abrirNovo}
@@ -276,7 +269,7 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
         ) : null}
       </div>
 
-      {/* Linha 2: status (default: só Ativo) e perfis (nenhum perfil = todos) */}
+      {/* Status (default: só Ativo) e filtros por perfil em três linhas (gerênciais / internos / externos) */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
           <span
@@ -337,52 +330,58 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
             );
           })}
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: t.textMuted,
-              fontFamily: FONT.body,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              marginRight: 4,
-            }}
-          >
-            Perfis
-          </span>
-          {[...ROLES].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((r) => {
-            const cor = roleBadgeColor(r.value);
-            const sel = filtroPerfilSet.has(r.value);
-            const count = qtdPorPerfil[r.value];
-            return (
-              <button
-                key={r.value}
-                type="button"
-                aria-pressed={sel}
-                aria-label={`Filtrar por perfil ${r.label}`}
-                onClick={() => toggleFiltroPerfil(r.value)}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {FILTROS_PERFIL_LINHAS.map(({ titulo, roles }) => (
+            <div key={titulo} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+              <span
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 14px",
-                  borderRadius: 999,
-                  border: `1px solid ${sel ? cor : t.cardBorder}`,
-                  background: sel ? `${cor}22` : t.inputBg ?? "transparent",
-                  color: sel ? cor : t.textMuted,
-                  fontSize: 12,
-                  fontWeight: sel ? 700 : 500,
-                  cursor: "pointer",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: t.textMuted,
                   fontFamily: FONT.body,
-                  transition: "all 0.18s",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  marginRight: 4,
+                  flexShrink: 0,
                 }}
               >
-                {r.label}
-                <span style={{ fontSize: 11, fontWeight: 800, minWidth: 18, textAlign: "center" }}>{count}</span>
-              </button>
-            );
-          })}
+                {titulo}
+              </span>
+              {roles.map((roleVal) => {
+                const label = roleLabel(roleVal);
+                const cor = roleBadgeColor(roleVal);
+                const sel = filtroPerfilSet.has(roleVal);
+                const count = qtdPorPerfil[roleVal];
+                return (
+                  <button
+                    key={roleVal}
+                    type="button"
+                    aria-pressed={sel}
+                    aria-label={`Filtrar por perfil ${label}`}
+                    onClick={() => toggleFiltroPerfil(roleVal)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "6px 14px",
+                      borderRadius: 999,
+                      border: `1px solid ${sel ? cor : t.cardBorder}`,
+                      background: sel ? `${cor}22` : t.inputBg ?? "transparent",
+                      color: sel ? cor : t.textMuted,
+                      fontSize: 12,
+                      fontWeight: sel ? 700 : 500,
+                      cursor: "pointer",
+                      fontFamily: FONT.body,
+                      transition: "all 0.18s",
+                    }}
+                  >
+                    {label}
+                    <span style={{ fontSize: 11, fontWeight: 800, minWidth: 18, textAlign: "center" }}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -417,11 +416,7 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
             borderRadius: 14,
           }}
         >
-          {usuarios.length === 0
-            ? "Nenhum usuário cadastrado."
-            : restringirListaProprios && usuariosNaLista.length === 0
-              ? "Nenhum usuário com «Emprestado para» correspondente ao seu nome."
-              : "Nenhum usuário corresponde aos filtros ou à busca."}
+          {usuarios.length === 0 ? "Nenhum usuário cadastrado." : "Nenhum usuário corresponde aos filtros ou à busca."}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 16 }}>
@@ -512,74 +507,65 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
                   <span style={{ fontWeight: 600, color: t.textMuted }}>Último login:</span>{" "}
                   <span style={{ color: t.text }}>{formatarUltimoLogin(u.last_sign_in_at)}</span>
                 </div>
-                {(u.emprestado_para ?? "").trim() ? (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: t.textMuted,
-                      fontFamily: FONT.body,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    <span style={{ fontWeight: 600, color: t.textMuted }}>Emprestado para:</span>{" "}
-                    <span style={{ color: t.text }}>{(u.emprestado_para ?? "").trim()}</span>
-                  </div>
-                ) : null}
-                {modoAdmin ? (
+                {modoAdmin && (podeEditarUsuario || podeExcluirUsuario) ? (
                   <div style={{ display: "flex", gap: 8, marginTop: "auto", flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      disabled={isCardBusy(u.id)}
-                      onClick={() => abrirEditar(u)}
-                      style={{
-                        background: `${BRAND.roxoVivo}12`,
-                        border: `1px solid ${BRAND.roxoVivo}44`,
-                        borderRadius: 8,
-                        padding: "6px 14px",
-                        cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
-                        opacity: isCardBusy(u.id) ? 0.55 : 1,
-                        fontFamily: FONT.body,
-                        fontSize: 12,
-                        color: BRAND.roxoVivo,
-                        fontWeight: 600,
-                        transition: "all 0.15s",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (isCardBusy(u.id)) return;
-                        e.currentTarget.style.background = `${BRAND.roxoVivo}22`;
-                        e.currentTarget.style.borderColor = BRAND.roxoVivo;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = `${BRAND.roxoVivo}12`;
-                        e.currentTarget.style.borderColor = `${BRAND.roxoVivo}44`;
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isCardBusy(u.id)}
-                      onClick={() => setModalResetSenha(u)}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        background: `${BRAND.amarelo}18`,
-                        border: `1px solid ${BRAND.amarelo}`,
-                        borderRadius: 8,
-                        padding: "6px 14px",
-                        cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
-                        opacity: isCardBusy(u.id) ? 0.55 : 1,
-                        fontFamily: FONT.body,
-                        fontSize: 12,
-                        color: BRAND.amarelo,
-                        fontWeight: 600,
-                      }}
-                    >
-                      <KeyRound size={14} aria-hidden />
-                      {isEstaAcao(u.id, "reset_senha") ? "…" : "Reset senha"}
-                    </button>
-                    {ativo ? (
+                    {podeEditarUsuario ? (
+                      <button
+                        type="button"
+                        disabled={isCardBusy(u.id)}
+                        onClick={() => abrirEditar(u)}
+                        style={{
+                          background: `${BRAND.roxoVivo}12`,
+                          border: `1px solid ${BRAND.roxoVivo}44`,
+                          borderRadius: 8,
+                          padding: "6px 14px",
+                          cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
+                          opacity: isCardBusy(u.id) ? 0.55 : 1,
+                          fontFamily: FONT.body,
+                          fontSize: 12,
+                          color: BRAND.roxoVivo,
+                          fontWeight: 600,
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (isCardBusy(u.id)) return;
+                          e.currentTarget.style.background = `${BRAND.roxoVivo}22`;
+                          e.currentTarget.style.borderColor = BRAND.roxoVivo;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = `${BRAND.roxoVivo}12`;
+                          e.currentTarget.style.borderColor = `${BRAND.roxoVivo}44`;
+                        }}
+                      >
+                        Editar
+                      </button>
+                    ) : null}
+                    {podeEditarUsuario ? (
+                      <button
+                        type="button"
+                        disabled={isCardBusy(u.id)}
+                        onClick={() => setModalResetSenha(u)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          background: `${BRAND.amarelo}18`,
+                          border: `1px solid ${BRAND.amarelo}`,
+                          borderRadius: 8,
+                          padding: "6px 14px",
+                          cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
+                          opacity: isCardBusy(u.id) ? 0.55 : 1,
+                          fontFamily: FONT.body,
+                          fontSize: 12,
+                          color: BRAND.amarelo,
+                          fontWeight: 600,
+                        }}
+                      >
+                        <KeyRound size={14} aria-hidden />
+                        {isEstaAcao(u.id, "reset_senha") ? "…" : "Reset senha"}
+                      </button>
+                    ) : null}
+                    {ativo && podeExcluirUsuario ? (
                       <button
                         type="button"
                         disabled={isCardBusy(u.id)}
@@ -606,7 +592,8 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
                       >
                         {isEstaAcao(u.id, "desativar") ? "…" : "Desativar"}
                       </button>
-                    ) : (
+                    ) : null}
+                    {!ativo && podeEditarUsuario ? (
                       <button
                         type="button"
                         disabled={isCardBusy(u.id)}
@@ -626,7 +613,7 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
                       >
                         {isEstaAcao(u.id, "ativar") ? "…" : "ATIVAR"}
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -635,7 +622,7 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
         </div>
       )}
 
-      {modoAdmin && modalDesativar && (
+      {modoAdmin && podeExcluirUsuario && modalDesativar && (
         <ModalConfirmDelete
           title="Desativar usuário"
           texto={`O usuário ${modalDesativar.name} perderá acesso imediato à plataforma. Deseja continuar?`}
@@ -650,7 +637,7 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
         />
       )}
 
-      {modoAdmin && modalResetSenha && (
+      {modoAdmin && podeEditarUsuario && modalResetSenha && (
         <ModalConfirmDelete
           title="Redefinir senha"
           texto={`A senha de ${modalResetSenha.name} voltará à senha padrão (mesma do cadastro de novos usuários). No próximo login será obrigatório definir uma nova senha.`}
@@ -666,7 +653,9 @@ export function AbaUsuarios({ t, modoAdmin, restringirListaProprios, nomeUsuario
         />
       )}
 
-      {modoAdmin && modalOpen && (
+      {modoAdmin &&
+        modalOpen &&
+        ((!editando && podeCriarUsuario) || (!!editando && podeEditarUsuario)) && (
         <ModalUsuario
           key={editando?.id ?? "novo"}
           t={t}

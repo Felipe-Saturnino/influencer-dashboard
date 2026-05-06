@@ -27,13 +27,15 @@ export function usePermission(pageKey: PageKey): Permissoes {
   const { user, permissions } = useApp();
   const cvFromContext = permissions[pageKey];
   const cacheKey =
-    user?.role === "operador"
-      ? `operador:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
-      : user?.role === "gestor"
-        ? `gestor:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
-        : user?.role === "prestador"
-          ? `prestador:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
-          : `${user?.role ?? "none"}:${pageKey}`;
+    user?.role === "admin"
+      ? `admin:${pageKey}`
+      : user?.role === "operador"
+        ? `operador:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
+        : user?.role === "gestor"
+          ? `gestor:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
+          : user?.role === "prestador"
+            ? `prestador:${user.id}:${pageKey}:${cvFromContext ?? "null"}`
+            : `${user?.role ?? "none"}:${pageKey}`;
 
   const [perm, setPerm] = useState<Permissoes>(
     CACHE[cacheKey] ?? { canView: null, canCriar: null, canEditar: null, canExcluir: null, loading: true, canCriarOk: false, canEditarOk: false, canExcluirOk: false }
@@ -49,6 +51,22 @@ export function usePermission(pageKey: PageKey): Permissoes {
     const operadorCanView = user.role === "operador" && (cvFromContextVal === "sim" || cvFromContextVal === "proprios");
     const gestorCanView = user.role === "gestor" && (cvFromContextVal === "sim" || cvFromContextVal === "proprios");
     const prestadorCanView = user.role === "prestador" && (cvFromContextVal === "sim" || cvFromContextVal === "proprios");
+
+    if (user.role === "admin") {
+      const result: Permissoes = {
+        canView: "sim",
+        canCriar: "sim",
+        canEditar: "sim",
+        canExcluir: "sim",
+        loading: false,
+        canCriarOk: true,
+        canEditarOk: true,
+        canExcluirOk: true,
+      };
+      CACHE[cacheKey] = result;
+      setPerm(result);
+      return;
+    }
 
     if (user.role === "operador") {
       const cv = cvFromContextVal === "sim" || cvFromContextVal === "proprios" ? cvFromContextVal : "nao";
@@ -161,10 +179,7 @@ export function usePermission(pageKey: PageKey): Permissoes {
       .eq("page_key", pageKey)
       .single()
       .then(({ data }) => {
-        let cv = (data?.can_view as PermissaoValor) ?? "nao";
-        if (user.role === "admin" && pageKey === "gestao_usuarios") {
-          cv = "sim";
-        }
+        const cv = (data?.can_view as PermissaoValor) ?? "nao";
         const cc = (data?.can_criar as PermissaoValor) ?? null;
         const ce = (data?.can_editar as PermissaoValor) ?? null;
         const cx = (data?.can_excluir as PermissaoValor) ?? null;

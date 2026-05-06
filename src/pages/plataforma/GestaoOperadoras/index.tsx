@@ -6,10 +6,10 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT, FONT_TITLE } from "../../../constants/theme";
 import { Operadora } from "../../../types";
-import { Pencil, AlertCircle, Upload, Check } from "lucide-react";
+import { Pencil, AlertCircle, Upload, Check, Trash2 } from "lucide-react";
 import { GiShield } from "react-icons/gi";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { getThStyle, getTdStyle, getTdNumStyle, zebraStripe } from "../../../lib/tableStyles";
@@ -25,6 +25,9 @@ export default function GestaoOperadoras() {
   const [editando, setEditando] = useState<Operadora | null>(null);
   type OpSortCol = "slug" | "nome" | "status" | "criada";
   const [sortOp, setSortOp] = useState<{ col: OpSortCol; dir: SortDir }>({ col: "status", dir: "asc" });
+  const [operadoraParaExcluir, setOperadoraParaExcluir] = useState<Operadora | null>(null);
+  const [excluindoOperadora, setExcluindoOperadora] = useState(false);
+  const [erroExcluirOperadora, setErroExcluirOperadora] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -82,6 +85,30 @@ export default function GestaoOperadoras() {
   if (perm.canView === "nao") {
     return <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>Você não tem permissão para visualizar a Gestão de Operadoras.</div>;
   }
+
+  const mostrarColunaAcoes = perm.canEditarOk || perm.canExcluirOk;
+
+  const confirmarExcluirOperadora = async () => {
+    if (!operadoraParaExcluir?.slug) return;
+    setErroExcluirOperadora(null);
+    setExcluindoOperadora(true);
+    try {
+      const { error } = await supabase.from("operadoras").delete().eq("slug", operadoraParaExcluir.slug);
+      if (error) throw error;
+      setOperadoraParaExcluir(null);
+      await carregar();
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error && /foreign key|violates|referência/i.test(e.message)
+          ? "Não é possível excluir: existem registros vinculados a esta operadora (mesas, RH, figurinos, etc.). Remova ou altere esses vínculos antes, ou desative a operadora em Editar."
+          : e instanceof Error
+            ? e.message
+            : "Não foi possível excluir a operadora.";
+      setErroExcluirOperadora(msg);
+    } finally {
+      setExcluindoOperadora(false);
+    }
+  };
 
   return (
     <div className="app-page-shell">
@@ -222,7 +249,7 @@ export default function GestaoOperadoras() {
                     }))
                   }
                 />
-                {perm.canEditarOk && <th style={th}>Ações</th>}
+                {mostrarColunaAcoes && <th style={th}>Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -253,20 +280,41 @@ export default function GestaoOperadoras() {
                   <td style={{ ...td, color: t.textMuted, fontSize: 12 }}>
                     {op.criado_em ? new Date(op.criado_em).toLocaleDateString("pt-BR") : "—"}
                   </td>
-                  {perm.canEditarOk && (
+                  {mostrarColunaAcoes && (
                     <td style={td}>
-                      <button
-                        type="button"
-                        onClick={() => { setEditando(op); setModalOpen(true); }}
-                        style={{
-                          display: "inline-flex", alignItems: "center", gap: 5,
-                          background: "transparent", border: `1px solid ${t.cardBorder}`,
-                          borderRadius: 10, padding: "6px 14px", cursor: "pointer",
-                          fontFamily: FONT.body, fontSize: 12, color: t.text, fontWeight: 600,
-                        }}
-                      >
-                        <Pencil size={13} /> Editar
-                      </button>
+                      <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                        {perm.canEditarOk ? (
+                          <button
+                            type="button"
+                            onClick={() => { setEditando(op); setModalOpen(true); }}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 5,
+                              background: "transparent", border: `1px solid ${t.cardBorder}`,
+                              borderRadius: 10, padding: "6px 14px", cursor: "pointer",
+                              fontFamily: FONT.body, fontSize: 12, color: t.text, fontWeight: 600,
+                            }}
+                          >
+                            <Pencil size={13} aria-hidden /> Editar
+                          </button>
+                        ) : null}
+                        {perm.canExcluirOk ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setErroExcluirOperadora(null);
+                              setOperadoraParaExcluir(op);
+                            }}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 5,
+                              background: "transparent", border: `1px solid ${BRAND.vermelho}66`,
+                              borderRadius: 10, padding: "6px 14px", cursor: "pointer",
+                              fontFamily: FONT.body, fontSize: 12, color: BRAND.vermelho, fontWeight: 600,
+                            }}
+                          >
+                            <Trash2 size={13} aria-hidden /> Excluir
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -287,6 +335,24 @@ export default function GestaoOperadoras() {
           onSalvo={carregar}
         />
       )}
+
+      {operadoraParaExcluir ? (
+        <ModalConfirmDelete
+          texto={`Excluir permanentemente a operadora «${operadoraParaExcluir.nome ?? operadoraParaExcluir.slug}» (${operadoraParaExcluir.slug})? Só é possível se não houver dados vinculados no sistema.`}
+          onCancel={() => {
+            if (!excluindoOperadora) {
+              setErroExcluirOperadora(null);
+              setOperadoraParaExcluir(null);
+            }
+          }}
+          onConfirm={() => {
+            void confirmarExcluirOperadora();
+          }}
+          loading={excluindoOperadora}
+          error={erroExcluirOperadora}
+          zIndex={1001}
+        />
+      ) : null}
     </div>
   );
 }

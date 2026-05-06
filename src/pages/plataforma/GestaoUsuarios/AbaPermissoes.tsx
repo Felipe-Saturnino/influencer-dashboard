@@ -18,6 +18,10 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   useEffect(() => {
+    if (roleAtivo === "admin") {
+      setPerms({});
+      return;
+    }
     supabase
       .from("role_permissions")
       .select("*")
@@ -37,6 +41,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
   };
 
   const salvar = async () => {
+    if (roleAtivo === "admin") return;
     setSalvando(true);
     setSalvoOk(false);
     const rows = PAGES.map((p) => ({
@@ -89,20 +94,8 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
     padding: "10px 14px",
   };
 
-  const ordemSecoes = [
-    "Dashboards",
-    "Lives",
-    "Aquisição",
-    "Marketing",
-    "Estúdio",
-    "RH",
-    "Conteúdo",
-    "Plataforma",
-    "Geral",
-  ];
-  const secoes = [...new Set(PAGES.map((p) => p.secao))].sort(
-    (a, b) => ordemSecoes.indexOf(a) - ordemSecoes.indexOf(b) || a.localeCompare(b, "pt-BR")
-  );
+  /** Secções na ordem em que aparecem em `PAGES` (alinhado ao menu lateral; Geral por último). */
+  const secoes = [...new Set(PAGES.map((p) => p.secao))];
 
   // ── Renderização das linhas ──────────────────────────────────────────────────
   // Estratégia: para cada seção, inserimos:
@@ -111,9 +104,7 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
   const linhas: React.ReactNode[] = [];
 
   secoes.forEach((secao, secaoIdx) => {
-    const pagesDaSec = PAGES
-      .filter((p) => p.secao === secao)
-      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+    const pagesDaSec = PAGES.filter((p) => p.secao === secao);
 
     // Linha separadora de seção — colspan 6, de ponta a ponta
     if (secaoIdx > 0) {
@@ -217,6 +208,35 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
+        Selecione um perfil abaixo para configurar permissões por página. O perfil{" "}
+        <strong style={{ color: t.text }}>Administrador</strong> mantém acesso total (Ver, Criar, Editar e Excluir) a
+        todas as páginas; ao escolhê-lo, o painel mostra apenas esta informação e não permite gravar alterações.
+      </p>
+      {roleAtivo === "gestor" ? (
+        <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
+          Perfil <strong style={{ color: t.text }}>Gestor</strong>: aqui define-se por página o que o perfil pode{" "}
+          <strong style={{ color: t.text }}>Ver</strong>, <strong style={{ color: t.text }}>Criar</strong>,{" "}
+          <strong style={{ color: t.text }}>Editar</strong> e <strong style={{ color: t.text }}>Excluir</strong>. Cada
+          utilizador gestor precisa de pelo menos um <strong style={{ color: t.text }}>tipo de gestor</strong> (aba Usuários); o menu
+          operacional cruza estas permissões com a união das páginas marcadas para esses tipos na aba{" "}
+          <strong style={{ color: t.text }}>Gestores</strong>.{" "}
+          <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong> e{" "}
+          <strong style={{ color: t.text }}>Ajuda</strong> não passam pela aba Gestores.
+        </p>
+      ) : null}
+      {roleAtivo === "prestador" ? (
+        <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, maxWidth: 720 }}>
+          Perfil <strong style={{ color: t.text }}>Prestadores</strong>: nesta aba configuram-se, por página,{" "}
+          <strong style={{ color: t.text }}>Ver</strong>, <strong style={{ color: t.text }}>Criar</strong>,{" "}
+          <strong style={{ color: t.text }}>Editar</strong> e <strong style={{ color: t.text }}>Excluir</strong> para
+          qualquer utilizador com este perfil. No cadastro (aba Usuários), cada prestador tem de ter pelo menos uma{" "}
+          <strong style={{ color: t.text }}>área de atuação</strong>; o menu cruza estas permissões com a união das páginas
+          marcadas para essas áreas na aba <strong style={{ color: t.text }}>Prestadores</strong>.{" "}
+          <strong style={{ color: t.text }}>Home</strong>, <strong style={{ color: t.text }}>Configurações</strong> e{" "}
+          <strong style={{ color: t.text }}>Ajuda</strong> não passam pela aba Prestadores.
+        </p>
+      ) : null}
       <div role="tablist" aria-label="Perfil de permissões" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {ROLES_PERMISSOES.map((r) => {
           const ativo = roleAtivo === r;
@@ -260,33 +280,49 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
           overflow: "hidden",
         }}
       >
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "separate",
-            borderSpacing: 0,
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
-                Seção
-              </th>
-              <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
-                Página
-              </th>
-              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Ver</th>
-              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Criar</th>
-              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Editar</th>
-              <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Excluir</th>
-            </tr>
-          </thead>
-          <tbody>{linhas}</tbody>
-        </table>
+        {roleAtivo === "admin" ? (
+          <div
+            style={{
+              padding: "36px 24px",
+              textAlign: "center",
+              fontFamily: FONT.body,
+              fontSize: 14,
+              color: t.textMuted,
+              background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+            }}
+          >
+            Utilizadores com perfil <strong style={{ color: t.text }}>Administrador</strong> não utilizam esta matriz:
+            na plataforma possuem sempre permissão total em todas as páginas.
+          </div>
+        ) : (
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "separate",
+              borderSpacing: 0,
+            }}
+          >
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
+                  Seção
+                </th>
+                <th style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
+                  Página
+                </th>
+                <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Ver</th>
+                <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Criar</th>
+                <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Editar</th>
+                <th style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Excluir</th>
+              </tr>
+            </thead>
+            <tbody>{linhas}</tbody>
+          </table>
+        )}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "stretch" }}>
-        {erroSalvar && (
+        {erroSalvar && roleAtivo !== "admin" && (
           <div
             role="alert"
             style={{
@@ -324,18 +360,20 @@ export function AbaPermissoes({ t }: AbaPermissoesProps) {
           <button
             type="button"
             onClick={salvar}
-            disabled={salvando}
+            disabled={salvando || roleAtivo === "admin"}
+            title={roleAtivo === "admin" ? "Perfil Administrador não pode ser alterado nesta aba" : undefined}
             style={{
-              background: salvando ? BRAND.cinza : BRAND.gradiente,
+              background:
+                salvando || roleAtivo === "admin" ? BRAND.cinza : BRAND.gradiente,
               color: "#fff",
               border: "none",
               borderRadius: 10,
               padding: "10px 22px",
-              cursor: salvando ? "not-allowed" : "pointer",
+              cursor: salvando || roleAtivo === "admin" ? "not-allowed" : "pointer",
               fontFamily: FONT.body,
               fontSize: 13,
               fontWeight: 600,
-              opacity: salvando ? 0.7 : 1,
+              opacity: salvando || roleAtivo === "admin" ? 0.7 : 1,
               transition: "opacity 0.15s",
             }}
           >

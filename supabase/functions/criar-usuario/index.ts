@@ -18,7 +18,16 @@ interface CriarUsuarioRequest {
   loginUrl?: string  // URL da aplicação para o link no e-mail (ex: window.location.origin)
 }
 
-const ROLES_BLOQUEADOS = ['admin', 'gestor', 'prestador'] // sem escopo genérico influencer/operadora
+const ROLES_BLOQUEADOS = [
+  'admin',
+  'gestor',
+  'prestador',
+  'executivo',
+  'shift_leader',
+  'service_manager',
+  'figurino',
+  'rh',
+] // sem user_scopes genérico; staff Spin só role_permissions (aba Permissões)
 
 const GESTOR_TIPO_SLUGS = [
   'operacoes',
@@ -421,7 +430,14 @@ serve(async (req) => {
         scope_type: 'gestor_tipo',
         scope_ref,
       }))
-      const { error: scopeErr } = await supabase.from('user_scopes').insert(novasTipos)
+      const influenciadoresUnicos = [...new Set(scopeInfluencersArr)]
+      const novasInf = influenciadoresUnicos.map((scope_ref) => ({
+        user_id: uid,
+        scope_type: 'influencer',
+        scope_ref,
+      }))
+      const novasLinhas = [...novasTipos, ...novasInf]
+      const { error: scopeErr } = await supabase.from('user_scopes').insert(novasLinhas)
       if (scopeErr) {
         await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
         return new Response(

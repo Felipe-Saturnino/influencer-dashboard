@@ -25,6 +25,10 @@ export default function GestaoUsuarios() {
     if (!isAdmin && aba !== "usuarios") setAba("usuarios");
   }, [isAdmin, aba]);
 
+  useEffect(() => {
+    if (isAdmin && !perm.canEditarOk && aba !== "usuarios") setAba("usuarios");
+  }, [isAdmin, perm.canEditarOk, aba]);
+
   if (perm.loading) {
     return (
       <div className="app-page-shell" style={{ textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
@@ -50,14 +54,15 @@ export default function GestaoUsuarios() {
     boxShadow: cardShadow,
   };
 
+  const abasConfigPlataforma: { key: Exclude<AbaGestao, "usuarios">; label: string; icon: React.ReactNode }[] = [
+    { key: "permissoes", label: "Permissões", icon: <GiLockedChest size={13} /> },
+    { key: "operadora", label: "Operadora", icon: <GiOfficeChair size={13} /> },
+    { key: "gestores", label: "Gestores", icon: <GiBriefcase size={13} /> },
+    { key: "prestadores", label: "Prestadores", icon: <UserCog size={13} aria-hidden /> },
+  ];
+
   const ABAS: { key: AbaGestao; label: string; icon: React.ReactNode }[] = isAdmin
-    ? [
-        { key: "usuarios", label: "Usuários", icon: <GiPerson size={13} /> },
-        { key: "permissoes", label: "Permissões", icon: <GiLockedChest size={13} /> },
-        { key: "operadora", label: "Operadora", icon: <GiOfficeChair size={13} /> },
-        { key: "gestores", label: "Gestores", icon: <GiBriefcase size={13} /> },
-        { key: "prestadores", label: "Prestadores", icon: <UserCog size={13} aria-hidden /> },
-      ]
+    ? [{ key: "usuarios", label: "Usuários", icon: <GiPerson size={13} /> }, ...(perm.canEditarOk ? abasConfigPlataforma : [])]
     : [{ key: "usuarios", label: "Usuários", icon: <GiPerson size={13} /> }];
 
   return (
@@ -97,9 +102,7 @@ export default function GestaoUsuarios() {
             <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, margin: "5px 0 0" }}>
               {isAdmin
                 ? "Gerencie usuários, acessos e permissões da plataforma."
-                : perm.canView === "proprios"
-                  ? "Lista de usuários vinculados a você pelo campo «Emprestado para»."
-                  : "Visualização de usuários da plataforma."}
+                : "Visualização de usuários da plataforma."}
             </p>
           </div>
         </div>
@@ -152,8 +155,9 @@ export default function GestaoUsuarios() {
           <AbaUsuarios
             t={t}
             modoAdmin={isAdmin}
-            restringirListaProprios={perm.canView === "proprios" && !isAdmin}
-            nomeUsuarioLogado={(user?.name ?? "").trim()}
+            podeCriarUsuario={perm.canCriarOk}
+            podeEditarUsuario={perm.canEditarOk}
+            podeExcluirUsuario={perm.canExcluirOk}
           />
         )}
         {aba === "permissoes" && <AbaPermissoes t={t} />}
