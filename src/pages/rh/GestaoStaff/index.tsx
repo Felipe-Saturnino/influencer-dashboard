@@ -567,7 +567,7 @@ export default function RhGestaoStaffPage() {
     return () => {
       cancel = true;
     };
-  }, [layoutTabelaSemOperadoraComHorario, slugsParaFetchHorarioTabela.join(",")]);
+  }, [layoutTabelaSemOperadoraComHorario, slugsParaFetchHorarioTabela]);
 
   useEffect(() => {
     setSortCol((c) => {
