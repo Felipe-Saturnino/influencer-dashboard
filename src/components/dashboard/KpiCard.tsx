@@ -18,6 +18,8 @@ interface Props {
   subValue?: { label: string; value: string };
   /** Quando true, queda no valor é considerada “positiva” (ex.: saques, WD ratio). */
   isInverso?: boolean;
+  /** Sufixo da legenda “vs … · …” (período de referência do valor anterior). */
+  vsLegendaSuffix?: string;
 }
 
 export default function KpiCard({
@@ -32,6 +34,7 @@ export default function KpiCard({
   isHistorico,
   subValue,
   isInverso,
+  vsLegendaSuffix,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -152,7 +155,8 @@ export default function KpiCard({
               {up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
             </span>
             <span style={{ color: t.textMuted, fontSize: 10 }}>
-              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} · mesmo período mês ant.
+              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} ·{" "}
+              {vsLegendaSuffix ?? "mesmo período mês ant."}
             </span>
           </div>
         )}

@@ -64,6 +64,9 @@ const BRAND = {
   rosa: "#ec4899",
 } as const;
 
+/** Legenda MoM do card UAP: referência é o mês anterior fechado (mensal), não o recorte MTD. */
+const KPI_UAP_VS_LEGENDA = "período completo do mês ant.";
+
 /** Paleta A/B — mesmo padrão do Comparativo de Funil (Conversão). */
 const COR_MESA_A = {
   accent: "var(--brand-action, #7c3aed)",
@@ -3434,6 +3437,7 @@ export default function OverviewSpin() {
                   atual={nKpi(kpiExibir?.uap)}
                   anterior={nKpi(kpiAntExibir?.uap)}
                   isHistorico={isHistoricoKpi}
+                  vsLegendaSuffix={KPI_UAP_VS_LEGENDA}
                 />
                 <KpiCard
                   label="ARPU"
@@ -3513,6 +3517,7 @@ export default function OverviewSpin() {
                   atual={nKpi(kpiExibir?.uap)}
                   anterior={nKpi(kpiAntExibir?.uap)}
                   isHistorico={isHistoricoKpi}
+                  vsLegendaSuffix={KPI_UAP_VS_LEGENDA}
                 />
                 <KpiCard
                   label="ARPU"

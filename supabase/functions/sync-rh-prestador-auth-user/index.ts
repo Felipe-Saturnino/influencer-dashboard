@@ -4,12 +4,28 @@ import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
 
 /**
  * Edge: sync-rh-prestador-auth-user
- * Cria ou atualiza usuário Auth + profile (role prestador) + user_scopes (prestador_tipo)
- * E-mail de login: `email_spin` se preenchido; senão `email` (pessoal). Body opcional reforça valores após save.
+ * Cria usuário Auth + profile + user_scopes (prestador_tipo) quando aplicável.
+ * Nome na plataforma: nome completo do prestador (`rh_funcionarios.nome`).
+ * E-mail de login: E-mail Spin se válido; senão e-mail pessoal. Body opcional reforça valores após save.
+ * Perfil / escopo: gerências (Figurino, RH, Facilities, Financeiro, Tech Ops, TI, Treinamento) >
+ *   times (Performance Coach, Shift Leader, Service Manager, GP, CS, Shuffler) >
+ *   área de atuação do cadastro (Escritório / Estúdio) > default Escritório.
  * Chamada após salvar na Gestão de Prestadores (JWT do operador; mesma regra que _rh_funcionario_perm: admin, rh_funcionarios ou rh_staff com editar/criar).
  */
 
-type PrestadorTipoSlug = 'customer_service' | 'game_presenter' | 'shuffler' | 'escritorio'
+type PrestadorTipoSlug =
+  | 'customer_service'
+  | 'game_presenter'
+  | 'shuffler'
+  | 'escritorio'
+  | 'facilities'
+  | 'financeiro'
+  | 'tech_ops'
+  | 'ti'
+  | 'treinamento'
+  | 'estudio'
+
+type PerfilRhSync = 'figurino' | 'rh' | 'shift_leader' | 'service_manager' | 'prestador'
 
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -156,13 +172,6 @@ async function goTrueAdminDeleteUser(supabaseUrl: string, serviceRoleKey: string
   }
 }
 
-function primeiroUltimoNome(nomeCompleto: string): string {
-  const parts = nomeCompleto.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return ''
-  if (parts.length === 1) return parts[0]!
-  return `${parts[0]!} ${parts[parts.length - 1]!}`
-}
-
 function normTimeNome(s: string | null | undefined): string {
   return (s ?? '')
     .trim()
@@ -172,14 +181,66 @@ function normTimeNome(s: string | null | undefined): string {
     .replace(/\s+/g, ' ')
 }
 
-function prestadorTipoSlugFromRow(area: string | null | undefined, timeNome: string | null | undefined): PrestadorTipoSlug {
-  const a = String(area ?? '').trim().toLowerCase()
-  if (a !== 'estudio') return 'escritorio'
+/**
+ * Prioridade: gerências específicas → perfil staff ou Prestador + `prestador_tipo`;
+ * depois times; por fim `rh_funcionarios.area_atuacao` (escritorio | estudio); default Escritório.
+ */
+function resolvePerfilEscopo(
+  gerenciaNome: string | null | undefined,
+  timeNome: string | null | undefined,
+  areaAtuacaoRh: string | null | undefined,
+): { role: PerfilRhSync; prestadorTipo: PrestadorTipoSlug | null } {
+  const g = normTimeNome(gerenciaNome)
+  if (g === 'figurino') {
+    return { role: 'figurino', prestadorTipo: null }
+  }
+  if (g === 'rh' || g === 'recursos humanos') {
+    return { role: 'rh', prestadorTipo: null }
+  }
+  if (g === 'facilities') {
+    return { role: 'prestador', prestadorTipo: 'facilities' }
+  }
+  if (g === 'financeiro') {
+    return { role: 'prestador', prestadorTipo: 'financeiro' }
+  }
+  if (g === 'tech ops') {
+    return { role: 'prestador', prestadorTipo: 'tech_ops' }
+  }
+  if (g === 'ti') {
+    return { role: 'prestador', prestadorTipo: 'ti' }
+  }
+  if (g === 'treinamento') {
+    return { role: 'prestador', prestadorTipo: 'treinamento' }
+  }
+
   const t = normTimeNome(timeNome)
-  if (t === 'game presenter') return 'game_presenter'
-  if (t === 'shuffler') return 'shuffler'
-  if (t === 'customer service') return 'customer_service'
-  return 'escritorio'
+  if (t === 'performance coach') {
+    return { role: 'prestador', prestadorTipo: 'treinamento' }
+  }
+  if (t === 'shift leader') {
+    return { role: 'shift_leader', prestadorTipo: null }
+  }
+  if (t === 'service manager') {
+    return { role: 'service_manager', prestadorTipo: null }
+  }
+  if (t === 'game presenter') {
+    return { role: 'prestador', prestadorTipo: 'game_presenter' }
+  }
+  if (t === 'customer service') {
+    return { role: 'prestador', prestadorTipo: 'customer_service' }
+  }
+  if (t === 'shuffler') {
+    return { role: 'prestador', prestadorTipo: 'shuffler' }
+  }
+
+  const a = normTimeNome(areaAtuacaoRh)
+  if (a === 'escritorio') {
+    return { role: 'prestador', prestadorTipo: 'escritorio' }
+  }
+  if (a === 'estudio') {
+    return { role: 'prestador', prestadorTipo: 'estudio' }
+  }
+  return { role: 'prestador', prestadorTipo: 'escritorio' }
 }
 
 function corsHeaders(req: Request) {
@@ -352,7 +413,7 @@ serve(async (req) => {
 
   const { data: row, error: rowErr } = await supabase
     .from('rh_funcionarios')
-    .select('id, nome, email, email_spin, area_atuacao, org_time_id')
+    .select('id, nome, email, email_spin, area_atuacao, org_time_id, org_gerencia_id')
     .eq('id', rhId)
     .maybeSingle()
 
@@ -393,8 +454,19 @@ serve(async (req) => {
     timeNome = (tr as { nome?: string } | null)?.nome ?? null
   }
 
-  const nomePlataforma = primeiroUltimoNome(String(row.nome ?? '')).trim() || loginEmail.split('@')[0] || 'Prestador'
-  const tipoSlug = prestadorTipoSlugFromRow(row.area_atuacao as string, timeNome)
+  let gerenciaNome: string | null = null
+  const gerId = (row as { org_gerencia_id?: string | null }).org_gerencia_id
+  if (gerId) {
+    const { data: gr } = await supabase.from('rh_org_gerencias').select('nome').eq('id', gerId).maybeSingle()
+    gerenciaNome = (gr as { nome?: string } | null)?.nome ?? null
+  }
+
+  const nomePlataforma = String(row.nome ?? '').trim() || loginEmail.split('@')[0] || 'Prestador'
+  const { role: perfilRole, prestadorTipo: tipoSlug } = resolvePerfilEscopo(
+    gerenciaNome,
+    timeNome,
+    (row as { area_atuacao?: string | null }).area_atuacao,
+  )
 
   const created = await goTrueAdminCreateUser(
     supabaseUrl,
@@ -402,7 +474,7 @@ serve(async (req) => {
     loginEmail,
     senhaPadrao,
     nomePlataforma,
-    'prestador',
+    perfilRole,
   )
   if ('error' in created) {
     const dup = /already|registered|exists|duplicate/i.test(created.error)
@@ -425,7 +497,7 @@ serve(async (req) => {
       id: uid,
       name: nomePlataforma,
       email: loginEmail,
-      role: 'prestador',
+      role: perfilRole,
       must_change_password: true,
     },
     { onConflict: 'id' },
@@ -439,18 +511,20 @@ serve(async (req) => {
     })
   }
 
-  const { error: scopeErr } = await supabase.from('user_scopes').insert({
-    user_id: uid,
-    scope_type: 'prestador_tipo',
-    scope_ref: tipoSlug,
-  })
-  if (scopeErr) {
-    await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
-    await supabase.from('profiles').delete().eq('id', uid)
-    return new Response(JSON.stringify({ error: `Erro ao salvar área de atuação: ${scopeErr.message}` }), {
-      status: 500,
-      headers: { ...cors, 'Content-Type': 'application/json' },
+  if (tipoSlug !== null) {
+    const { error: scopeErr } = await supabase.from('user_scopes').insert({
+      user_id: uid,
+      scope_type: 'prestador_tipo',
+      scope_ref: tipoSlug,
     })
+    if (scopeErr) {
+      await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
+      await supabase.from('profiles').delete().eq('id', uid)
+      return new Response(JSON.stringify({ error: `Erro ao salvar área de atuação: ${scopeErr.message}` }), {
+        status: 500,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
   }
 
   if (

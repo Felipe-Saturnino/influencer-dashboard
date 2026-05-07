@@ -13,8 +13,9 @@ export function normRhOrgTimeNomeParaUsuarioSync(nome: string | null | undefined
 }
 
 /**
- * Mapeia Área de atuação + nome do time (organograma) → slug de `user_scopes` (prestador_tipo),
- * alinhado à Gestão de Usuários / PRESTADOR_TIPOS.
+ * Mapeia Área de atuação + nome do time (organograma) → slug de `user_scopes` (prestador_tipo).
+ * A criação automática de usuário a partir da Gestão de Prestadores usa a Edge `sync-rh-prestador-auth-user`
+ * (gerências, times, `area_atuacao` escritório/estúdio) — fonte de verdade lá.
  */
 export function prestadorTipoSlugDeAreaETimeRh(
   area: RhAreaAtuacao | "" | null | undefined,
@@ -36,6 +37,7 @@ export type SyncRhPrestadorAuthUserResponse = {
   reason?: string;
   created?: boolean;
   userId?: string;
+  /** Presente em algumas respostas de erro (corpo JSON). */
   error?: string;
 };
 
@@ -44,14 +46,18 @@ export type SyncRhPrestadorAuthUserResponse = {
  */
 export function mensagemFeedbackSyncPrestador(res: SyncRhPrestadorAuthUserResponse | null | undefined): string | null {
   if (!res || typeof res !== "object") return null;
+  if (typeof res.error === "string" && res.error.trim()) {
+    return `Sincronização com Gestão de Usuários: ${res.error.trim()}`;
+  }
+  if (res.created === true) return null;
   if (!res.skipped) return null;
   if (res.reason === "usuario_email_ja_existe" || res.reason === "usuario_email_ja_existe_auth") {
     return "Prestador salvo, mas não foi criado novo usuário na plataforma: já existe conta com o e-mail usado para login (E-mail Spin ou e-mail pessoal). Ajuste em Gestão de Usuários, se necessário.";
   }
   if (res.reason === "sem_email" || res.reason === "sem_email_spin") {
-    return "Prestador salvo, mas não há e-mail válido para criar o login (preencha E-mail Spin ou e-mail pessoal).";
+    return "Prestador salvo, mas não há e-mail válido para criar o login (preencha E-mail Spin ou e-mail pessoal no cadastro e guarde de novo).";
   }
-  return null;
+  return `Prestador salvo, mas o utilizador não foi criado automaticamente (${String(res.reason ?? "motivo não indicado")}).`;
 }
 
 /**

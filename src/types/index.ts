@@ -10,7 +10,8 @@ export type Role =
   | "rh"
   | "influencer"
   | "operador"
-  | "agencia";
+  | "agencia"
+  | "investidor";
 
 // ─── USER ────────────────────────────────────────────────────────────────────
 export interface User {
@@ -47,6 +48,7 @@ export type PageKey =
   | "roteiro_mesa"
   | "playbook_influencers"
   | "links_materiais"
+  | "spin_na_rede"
   | "rh_figurinos"
   | "rh_funcionarios"
   | "rh_dados_cadastro"
@@ -192,7 +194,13 @@ export type PrestadorTipoSlug =
   | "customer_service"
   | "game_presenter"
   | "shuffler"
-  | "escritorio";
+  | "escritorio"
+  | "facilities"
+  | "financeiro"
+  | "tech_ops"
+  | "ti"
+  | "treinamento"
+  | "estudio";
 
 export interface UserScope {
   id:          string;

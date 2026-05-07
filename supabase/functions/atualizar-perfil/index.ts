@@ -23,6 +23,7 @@ const ROLES_BLOQUEADOS = [
   'gestor',
   'prestador',
   'executivo',
+  'investidor',
   'shift_leader',
   'service_manager',
   'figurino',
@@ -41,6 +42,12 @@ const PRESTADOR_TIPO_SLUGS = [
   'game_presenter',
   'shuffler',
   'escritorio',
+  'facilities',
+  'financeiro',
+  'tech_ops',
+  'ti',
+  'treinamento',
+  'estudio',
 ] as const
 
 const supabaseServiceOptions = {
@@ -305,13 +312,7 @@ serve(async (req) => {
         scope_type: 'gestor_tipo',
         scope_ref,
       }))
-      const influenciadoresUnicos = [...new Set(scopeInfluencersArr)]
-      const novasInf = influenciadoresUnicos.map((scope_ref) => ({
-        user_id: userId,
-        scope_type: 'influencer',
-        scope_ref,
-      }))
-      const novasLinhas = [...novasTipos, ...novasInf]
+      const novasLinhas = [...novasTipos]
       const { error: scopeErr } = await supabase.from('user_scopes').insert(novasLinhas)
       if (scopeErr) {
         return new Response(

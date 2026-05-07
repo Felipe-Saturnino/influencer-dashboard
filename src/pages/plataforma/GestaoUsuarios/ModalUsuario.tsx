@@ -69,9 +69,13 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
   useEffect(() => {
     const scopes = editando?.scopes ?? [];
     const r = editando?.role ?? role;
-    setScopeInfluencers(scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref));
+    setScopeInfluencers(
+      r === "gestor" || r === "executivo" || r === "investidor"
+        ? []
+        : scopes.filter((s) => s.scope_type === "influencer").map((s) => s.scope_ref)
+    );
     setScopeOperadoras(
-      r === "gestor" || ROLES_STAFF_APENAS_PERMISSOES.includes(r as Role)
+      r === "gestor" || r === "executivo" || r === "investidor" || ROLES_STAFF_APENAS_PERMISSOES.includes(r as Role)
         ? []
         : scopes.filter((s) => s.scope_type === "operadora").map((s) => s.scope_ref)
     );
@@ -183,11 +187,13 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
         role === "agencia"
           ? paresAgencia.filter((p) => p.influencerId && p.operadoraSlug).map((p) => `${p.influencerId}:${p.operadoraSlug}`)
           : scopePares;
-      const scopeInfluencersArr = Array.isArray(scopeInfluencers) ? scopeInfluencers : [];
+      const scopeInfluencersArrRaw = Array.isArray(scopeInfluencers) ? scopeInfluencers : [];
+      const scopeInfluencersArr =
+        role === "gestor" || role === "executivo" || role === "investidor" ? [] : scopeInfluencersArrRaw;
       const scopeOperadorasArr =
         role === "operador"
           ? (Array.isArray(scopeOperadoras) ? scopeOperadoras : []).slice(0, 1)
-          : role === "gestor"
+          : role === "gestor" || role === "executivo" || role === "investidor"
             ? []
             : ROLES_STAFF_APENAS_PERMISSOES.includes(role)
               ? []
@@ -463,7 +469,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
             ))}
           </select>
         </div>
-        {role === "admin" || role === "executivo" || ROLES_STAFF_APENAS_PERMISSOES.includes(role) ? (
+        {role === "admin" || ROLES_STAFF_APENAS_PERMISSOES.includes(role) ? (
           <div style={field}>
             <label style={labelStyle}>Escopo de acesso</label>
             <div
@@ -483,7 +489,7 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
                 : "Todos os influencers e todas as operadoras — permissões apenas pela aba Permissões (sem escopo por operadora)."}
             </div>
           </div>
-        ) : role === "gestor" ? (
+        ) : role === "executivo" || role === "investidor" ? null : role === "gestor" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <MultiSelect
               label="Tipos de gestor"
@@ -493,35 +499,6 @@ export function ModalUsuario({ t, editando, operadoras, onClose, onSalvo }: Moda
               selected={scopeGestorTipos}
               onToggle={(v) => toggleItem(scopeGestorTipos, setScopeGestorTipos, v)}
             />
-            <div style={field}>
-              <label style={labelStyle}>Operadoras</label>
-              <div
-                style={{
-                  background: t.inputBg ?? t.cardBg,
-                  border: `1px solid ${t.cardBorder}`,
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                  fontFamily: FONT.body,
-                  fontSize: 14,
-                  color: t.textMuted,
-                  fontStyle: "italic",
-                }}
-              >
-                Todas as operadoras — igual ao perfil Executivo. Permissões de menu combinam tipos de gestor (aba Gestores)
-                com a aba Permissões.
-              </div>
-            </div>
-            <MultiSelect
-              label="Influencers"
-              cor={roleBadgeColor("operador")}
-              items={influencers.map((i) => ({ value: i.id, label: i.nome }))}
-              selected={scopeInfluencers}
-              onToggle={(v) => toggleItem(scopeInfluencers, setScopeInfluencers, v)}
-            />
-            <p style={{ margin: 0, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-              Influencers opcionais limitam a visão nos dashboards quando indicados; sem seleção, aplicam-se todos os
-              influencers permitidos pelo restante das permissões.
-            </p>
           </div>
         ) : role === "prestador" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

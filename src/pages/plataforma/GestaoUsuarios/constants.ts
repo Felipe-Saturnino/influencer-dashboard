@@ -23,6 +23,12 @@ export const PRESTADOR_TIPOS: { slug: PrestadorTipoSlug; label: string }[] = [
   { slug: "game_presenter", label: "Game Presenter" },
   { slug: "shuffler", label: "Shuffler" },
   { slug: "escritorio", label: "Escritório" },
+  { slug: "facilities", label: "Facilities" },
+  { slug: "financeiro", label: "Financeiro" },
+  { slug: "tech_ops", label: "Tech Ops" },
+  { slug: "ti", label: "TI" },
+  { slug: "treinamento", label: "Treinamento" },
+  { slug: "estudio", label: "Estúdio" },
 ];
 
 /** Ordem fixa em filtros da aba Usuários e no select «Perfil» do modal (aba Permissões usa `ROLES_PERMISSOES`). */
@@ -38,13 +44,14 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "operador", label: "Operador" },
   { value: "agencia", label: "Agência" },
   { value: "influencer", label: "Influenciador" },
+  { value: "investidor", label: "Investidor" },
 ];
 
 /** Linhas de filtro por perfil na aba Usuários (título + botões na ordem pedida). */
 export const FILTROS_PERFIL_LINHAS: { titulo: string; roles: Role[] }[] = [
   { titulo: "Perfis Gerênciais", roles: ["admin", "executivo", "gestor"] },
   { titulo: "Perfis Internos", roles: ["rh", "figurino", "service_manager", "shift_leader", "prestador"] },
-  { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer"] },
+  { titulo: "Perfis Externos", roles: ["operador", "agencia", "influencer", "investidor"] },
 ];
 
 /** Ordem alinhada ao menu lateral (`constants/menu.ts`); secção Geral por último. */
@@ -86,7 +93,6 @@ export const PAGES: {
   { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
   // RH
-  { key: "rh_portal", label: "Portal de RH", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "rh_funcionarios", label: "Gestão de Prestadores", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_dados_cadastro", label: "Dados de Cadastro", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "rh_organograma", label: "Organograma", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
@@ -97,6 +103,8 @@ export const PAGES: {
   // Conteúdo
   { key: "playbook_influencers", label: "Playbook Influencers", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "links_materiais", label: "Links e Materiais", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "spin_na_rede", label: "Spin na Rede", secao: "Conteúdo", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "rh_portal", label: "Portal de RH", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Plataforma — Criar/Editar/Excluir alinhados a Novo usuário / modais e abas / desativação
   { key: "gestao_usuarios", label: "Gestão de Usuários", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_operadoras", label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
@@ -121,6 +129,7 @@ export const ROLES_PERMISSOES: Role[] = [
   "operador",
   "agencia",
   "influencer",
+  "investidor",
 ];
 
 export const PERM_OPCOES: { value: PermissaoValor; label: string }[] = [
@@ -146,11 +155,17 @@ export function roleBadgeColor(role: Role): string {
     influencer: BRAND.verde,
     operador: BRAND.amarelo,
     agencia: BRAND.vermelho,
+    investidor: BRAND.roxo,
   };
   return map[role] ?? BRAND.cinza;
 }
 
-/** Admin, Executivo e staff Spin não usam escopo por operadora/influencer na Gestão de Usuários. */
+/** Admin, Executivo, Investidor e staff Spin não usam escopo por operadora/influencer na Gestão de Usuários. */
 export function escopoBloqueado(role: Role): boolean {
-  return role === "admin" || role === "executivo" || ROLES_STAFF_APENAS_PERMISSOES.includes(role);
+  return (
+    role === "admin" ||
+    role === "executivo" ||
+    role === "investidor" ||
+    ROLES_STAFF_APENAS_PERMISSOES.includes(role)
+  );
 }
